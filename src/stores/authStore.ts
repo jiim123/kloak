@@ -1,24 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '@/integrations/supabase/client';
-import { generateSecretKey, hashSecretKey } from '@/lib/crypto';
-
-interface User {
-  id: string;
-  username: string;
-  display_name: string | null;
-  avatar_url: string | null;
-  banner_color: string;
-  bio: string | null;
-  status: 'online' | 'idle' | 'dnd' | 'offline';
-  custom_status: string | null;
-  created_at: string;
-  last_seen: string;
-}
+import { generateSecretKey, hashSecretKey, isValidSecretKey } from '@/lib/crypto';
+import type { User, UserStatus } from '@/types';
 
 interface AuthState {
   user: User | null;
   secretKey: string | null;
+  isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
   
@@ -29,11 +18,13 @@ interface AuthState {
   setError: (error: string | null) => void;
   
   // Auth methods
-  register: (username: string) => Promise<{ secretKey: string; user: User } | null>;
+  checkAuth: () => Promise<boolean>;
+  createAccount: (username: string) => Promise<{ secretKey: string; user: User } | null>;
   login: (secretKey: string) => Promise<boolean>;
   logout: () => void;
-  updateStatus: (status: User['status']) => Promise<void>;
-  updateCustomStatus: (customStatus: string | null) => Promise<void>;
+  updateUser: (updates: Partial<User>) => Promise<void>;
+  updateStatus: (status: UserStatus) => Promise<void>;
+  updateLastSeen: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -41,27 +32,39 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       user: null,
       secretKey: null,
+      isAuthenticated: false,
       isLoading: false,
       error: null,
 
-      setUser: (user) => set({ user }),
+      setUser: (user) => set({ user, isAuthenticated: !!user }),
       setSecretKey: (key) => set({ secretKey: key }),
       setLoading: (loading) => set({ isLoading: loading }),
       setError: (error) => set({ error }),
 
-      register: async (username: string) => {
+      checkAuth: async () => {
+        const { secretKey, login } = get();
+        if (!secretKey || !isValidSecretKey(secretKey)) {
+          set({ isAuthenticated: false, user: null });
+          return false;
+        }
+        
+        set({ isLoading: true });
+        const success = await login(secretKey);
+        set({ isLoading: false });
+        return success;
+      },
+
+      createAccount: async (username: string) => {
         set({ isLoading: true, error: null });
         
         try {
-          // Generate secret key and hash it
           const secretKey = generateSecretKey();
           const keyHash = await hashSecretKey(secretKey);
 
-          // Insert user into database
           const { data, error } = await supabase
             .from('users')
             .insert({
-              username,
+              username: username.toLowerCase().trim(),
               key_hash: keyHash,
               status: 'online',
               banner_color: '#5865F2',
@@ -82,15 +85,15 @@ export const useAuthStore = create<AuthState>()(
             username: data.username,
             display_name: data.display_name,
             avatar_url: data.avatar_url,
-            banner_color: data.banner_color,
+            banner_color: data.banner_color || '#5865F2',
             bio: data.bio,
-            status: data.status as User['status'],
+            status: data.status as UserStatus,
             custom_status: data.custom_status,
             created_at: data.created_at,
             last_seen: data.last_seen,
           };
 
-          set({ user, secretKey, isLoading: false });
+          set({ user, secretKey, isAuthenticated: true, isLoading: false });
           return { secretKey, user };
         } catch (error) {
           console.error('Registration error:', error);
@@ -102,6 +105,11 @@ export const useAuthStore = create<AuthState>()(
       login: async (secretKey: string) => {
         set({ isLoading: true, error: null });
         
+        if (!isValidSecretKey(secretKey)) {
+          set({ error: 'Invalid secret key format', isLoading: false });
+          return false;
+        }
+
         try {
           const keyHash = await hashSecretKey(secretKey);
 
@@ -112,7 +120,7 @@ export const useAuthStore = create<AuthState>()(
             .single();
 
           if (error || !data) {
-            set({ error: 'Invalid secret key', isLoading: false });
+            set({ error: 'Invalid secret key', isLoading: false, isAuthenticated: false });
             return false;
           }
 
@@ -127,7 +135,7 @@ export const useAuthStore = create<AuthState>()(
             username: data.username,
             display_name: data.display_name,
             avatar_url: data.avatar_url,
-            banner_color: data.banner_color,
+            banner_color: data.banner_color || '#5865F2',
             bio: data.bio,
             status: 'online',
             custom_status: data.custom_status,
@@ -135,7 +143,7 @@ export const useAuthStore = create<AuthState>()(
             last_seen: new Date().toISOString(),
           };
 
-          set({ user, secretKey, isLoading: false });
+          set({ user, secretKey, isAuthenticated: true, isLoading: false });
           return true;
         } catch (error) {
           console.error('Login error:', error);
@@ -147,14 +155,30 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         const { user } = get();
         if (user) {
-          // Update status to offline
           supabase
             .from('users')
             .update({ status: 'offline', last_seen: new Date().toISOString() })
             .eq('id', user.id)
             .then(() => {});
         }
-        set({ user: null, secretKey: null, error: null });
+        set({ user: null, secretKey: null, isAuthenticated: false, error: null });
+      },
+
+      updateUser: async (updates) => {
+        const { user } = get();
+        if (!user) return;
+
+        try {
+          const { error } = await supabase
+            .from('users')
+            .update(updates)
+            .eq('id', user.id);
+
+          if (error) throw error;
+          set({ user: { ...user, ...updates } });
+        } catch (error) {
+          console.error('Failed to update user:', error);
+        }
       },
 
       updateStatus: async (status) => {
@@ -173,19 +197,20 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      updateCustomStatus: async (customStatus) => {
+      updateLastSeen: async () => {
         const { user } = get();
         if (!user) return;
 
+        const now = new Date().toISOString();
         try {
           await supabase
             .from('users')
-            .update({ custom_status: customStatus })
+            .update({ last_seen: now })
             .eq('id', user.id);
 
-          set({ user: { ...user, custom_status: customStatus } });
+          set({ user: { ...user, last_seen: now } });
         } catch (error) {
-          console.error('Failed to update custom status:', error);
+          console.error('Failed to update last seen:', error);
         }
       },
     }),
@@ -196,11 +221,8 @@ export const useAuthStore = create<AuthState>()(
   )
 );
 
-// Auto-login on app load if secretKey exists
+// Initialize auth on app load
 export const initializeAuth = async () => {
-  const { secretKey, login, setLoading } = useAuthStore.getState();
-  if (secretKey) {
-    setLoading(true);
-    await login(secretKey);
-  }
+  const { checkAuth } = useAuthStore.getState();
+  await checkAuth();
 };

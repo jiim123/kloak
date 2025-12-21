@@ -1,0 +1,460 @@
+import { create } from 'zustand';
+import { supabase } from '@/integrations/supabase/client';
+import type { 
+  Server, 
+  ServerWithMembership, 
+  ServerMember, 
+  Channel, 
+  ChannelCategory,
+  ChannelType,
+  ServerRole 
+} from '@/types';
+
+interface ServerState {
+  servers: ServerWithMembership[];
+  currentServer: Server | null;
+  currentChannel: Channel | null;
+  categories: ChannelCategory[];
+  channels: Channel[];
+  members: ServerMember[];
+  isLoading: boolean;
+  error: string | null;
+
+  // Server actions
+  fetchServers: (userId: string) => Promise<void>;
+  createServer: (name: string, ownerId: string) => Promise<Server | null>;
+  joinServer: (inviteCode: string, userId: string) => Promise<boolean>;
+  leaveServer: (serverId: string, userId: string) => Promise<void>;
+  deleteServer: (serverId: string) => Promise<void>;
+  setCurrentServer: (server: Server | null) => void;
+  setCurrentChannel: (channel: Channel | null) => void;
+
+  // Channel actions
+  fetchChannels: (serverId: string) => Promise<void>;
+  createCategory: (serverId: string, name: string) => Promise<ChannelCategory | null>;
+  createChannel: (serverId: string, name: string, type: ChannelType, categoryId?: string) => Promise<Channel | null>;
+  updateChannel: (channelId: string, updates: Partial<Channel>) => Promise<void>;
+  deleteChannel: (channelId: string) => Promise<void>;
+
+  // Member actions
+  fetchMembers: (serverId: string) => Promise<void>;
+  updateMember: (memberId: string, updates: Partial<ServerMember>) => Promise<void>;
+  kickMember: (serverId: string, userId: string) => Promise<void>;
+  banMember: (serverId: string, userId: string) => Promise<void>;
+
+  // Utility
+  clearServerState: () => void;
+}
+
+export const useServerStore = create<ServerState>((set, get) => ({
+  servers: [],
+  currentServer: null,
+  currentChannel: null,
+  categories: [],
+  channels: [],
+  members: [],
+  isLoading: false,
+  error: null,
+
+  fetchServers: async (userId: string) => {
+    set({ isLoading: true });
+    try {
+      const { data, error } = await supabase
+        .from('server_members')
+        .select(`
+          server_id,
+          role,
+          nickname,
+          joined_at,
+          servers (*)
+        `)
+        .eq('user_id', userId)
+        .eq('is_banned', false);
+
+      if (error) throw error;
+
+      const servers: ServerWithMembership[] = (data || []).map((item: any) => ({
+        ...item.servers,
+        role: item.role,
+        nickname: item.nickname,
+        joined_at: item.joined_at,
+      }));
+
+      set({ servers, isLoading: false });
+    } catch (error) {
+      console.error('Failed to fetch servers:', error);
+      set({ error: 'Failed to load servers', isLoading: false });
+    }
+  },
+
+  createServer: async (name: string, ownerId: string) => {
+    try {
+      // Generate invite code
+      const { data: inviteCode } = await supabase.rpc('generate_invite_code');
+
+      // Create server
+      const { data: server, error: serverError } = await supabase
+        .from('servers')
+        .insert({
+          name,
+          owner_id: ownerId,
+          invite_code: inviteCode,
+        })
+        .select()
+        .single();
+
+      if (serverError) throw serverError;
+
+      // Add owner as member with owner role
+      const { error: memberError } = await supabase
+        .from('server_members')
+        .insert({
+          server_id: server.id,
+          user_id: ownerId,
+          role: 'owner',
+        });
+
+      if (memberError) throw memberError;
+
+      // Create default #general channel
+      const { error: channelError } = await supabase
+        .from('channels')
+        .insert({
+          server_id: server.id,
+          name: 'general',
+          type: 'text',
+          position: 0,
+        });
+
+      if (channelError) throw channelError;
+
+      // Refresh servers list
+      await get().fetchServers(ownerId);
+
+      return server as Server;
+    } catch (error) {
+      console.error('Failed to create server:', error);
+      set({ error: 'Failed to create server' });
+      return null;
+    }
+  },
+
+  joinServer: async (inviteCode: string, userId: string) => {
+    try {
+      // Find server by invite code
+      const { data: server, error: serverError } = await supabase
+        .from('servers')
+        .select('*')
+        .eq('invite_code', inviteCode.toUpperCase())
+        .single();
+
+      if (serverError || !server) {
+        set({ error: 'Invalid invite code' });
+        return false;
+      }
+
+      // Check if already a member
+      const { data: existingMember } = await supabase
+        .from('server_members')
+        .select('*')
+        .eq('server_id', server.id)
+        .eq('user_id', userId)
+        .single();
+
+      if (existingMember) {
+        if (existingMember.is_banned) {
+          set({ error: 'You are banned from this server' });
+          return false;
+        }
+        set({ error: 'You are already a member of this server' });
+        return false;
+      }
+
+      // Join server
+      const { error: joinError } = await supabase
+        .from('server_members')
+        .insert({
+          server_id: server.id,
+          user_id: userId,
+          role: 'member',
+        });
+
+      if (joinError) throw joinError;
+
+      // Refresh servers list
+      await get().fetchServers(userId);
+      return true;
+    } catch (error) {
+      console.error('Failed to join server:', error);
+      set({ error: 'Failed to join server' });
+      return false;
+    }
+  },
+
+  leaveServer: async (serverId: string, userId: string) => {
+    try {
+      const { error } = await supabase
+        .from('server_members')
+        .delete()
+        .eq('server_id', serverId)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      set((state) => ({
+        servers: state.servers.filter((s) => s.id !== serverId),
+        currentServer: state.currentServer?.id === serverId ? null : state.currentServer,
+        currentChannel: state.currentServer?.id === serverId ? null : state.currentChannel,
+      }));
+    } catch (error) {
+      console.error('Failed to leave server:', error);
+      set({ error: 'Failed to leave server' });
+    }
+  },
+
+  deleteServer: async (serverId: string) => {
+    try {
+      const { error } = await supabase
+        .from('servers')
+        .delete()
+        .eq('id', serverId);
+
+      if (error) throw error;
+
+      set((state) => ({
+        servers: state.servers.filter((s) => s.id !== serverId),
+        currentServer: state.currentServer?.id === serverId ? null : state.currentServer,
+        currentChannel: null,
+        channels: [],
+        categories: [],
+        members: [],
+      }));
+    } catch (error) {
+      console.error('Failed to delete server:', error);
+      set({ error: 'Failed to delete server' });
+    }
+  },
+
+  setCurrentServer: (server) => set({ currentServer: server }),
+  setCurrentChannel: (channel) => set({ currentChannel: channel }),
+
+  fetchChannels: async (serverId: string) => {
+    try {
+      // Fetch categories
+      const { data: categories, error: catError } = await supabase
+        .from('channel_categories')
+        .select('*')
+        .eq('server_id', serverId)
+        .order('position');
+
+      if (catError) throw catError;
+
+      // Fetch channels
+      const { data: channels, error: chanError } = await supabase
+        .from('channels')
+        .select('*')
+        .eq('server_id', serverId)
+        .order('position');
+
+      if (chanError) throw chanError;
+
+      set({
+        categories: categories as ChannelCategory[],
+        channels: channels as Channel[],
+      });
+    } catch (error) {
+      console.error('Failed to fetch channels:', error);
+    }
+  },
+
+  createCategory: async (serverId: string, name: string) => {
+    try {
+      const { categories } = get();
+      const position = categories.length;
+
+      const { data, error } = await supabase
+        .from('channel_categories')
+        .insert({
+          server_id: serverId,
+          name,
+          position,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const category = data as ChannelCategory;
+      set((state) => ({
+        categories: [...state.categories, category],
+      }));
+
+      return category;
+    } catch (error) {
+      console.error('Failed to create category:', error);
+      return null;
+    }
+  },
+
+  createChannel: async (serverId: string, name: string, type: ChannelType, categoryId?: string) => {
+    try {
+      const { channels } = get();
+      const categoryChannels = channels.filter((c) => c.category_id === categoryId);
+      const position = categoryChannels.length;
+
+      const { data, error } = await supabase
+        .from('channels')
+        .insert({
+          server_id: serverId,
+          name: name.toLowerCase().replace(/\s+/g, '-'),
+          type,
+          category_id: categoryId || null,
+          position,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const channel = data as Channel;
+      set((state) => ({
+        channels: [...state.channels, channel],
+      }));
+
+      return channel;
+    } catch (error) {
+      console.error('Failed to create channel:', error);
+      return null;
+    }
+  },
+
+  updateChannel: async (channelId: string, updates: Partial<Channel>) => {
+    try {
+      const { error } = await supabase
+        .from('channels')
+        .update(updates)
+        .eq('id', channelId);
+
+      if (error) throw error;
+
+      set((state) => ({
+        channels: state.channels.map((c) =>
+          c.id === channelId ? { ...c, ...updates } : c
+        ),
+        currentChannel:
+          state.currentChannel?.id === channelId
+            ? { ...state.currentChannel, ...updates }
+            : state.currentChannel,
+      }));
+    } catch (error) {
+      console.error('Failed to update channel:', error);
+    }
+  },
+
+  deleteChannel: async (channelId: string) => {
+    try {
+      const { error } = await supabase
+        .from('channels')
+        .delete()
+        .eq('id', channelId);
+
+      if (error) throw error;
+
+      set((state) => ({
+        channels: state.channels.filter((c) => c.id !== channelId),
+        currentChannel:
+          state.currentChannel?.id === channelId ? null : state.currentChannel,
+      }));
+    } catch (error) {
+      console.error('Failed to delete channel:', error);
+    }
+  },
+
+  fetchMembers: async (serverId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('server_members')
+        .select(`
+          *,
+          user:users (*)
+        `)
+        .eq('server_id', serverId)
+        .eq('is_banned', false);
+
+      if (error) throw error;
+
+      const members: ServerMember[] = (data || []).map((item: any) => ({
+        ...item,
+        user: item.user,
+      }));
+
+      set({ members });
+    } catch (error) {
+      console.error('Failed to fetch members:', error);
+    }
+  },
+
+  updateMember: async (memberId: string, updates: Partial<ServerMember>) => {
+    try {
+      const { error } = await supabase
+        .from('server_members')
+        .update(updates)
+        .eq('id', memberId);
+
+      if (error) throw error;
+
+      set((state) => ({
+        members: state.members.map((m) =>
+          m.id === memberId ? { ...m, ...updates } : m
+        ),
+      }));
+    } catch (error) {
+      console.error('Failed to update member:', error);
+    }
+  },
+
+  kickMember: async (serverId: string, userId: string) => {
+    try {
+      const { error } = await supabase
+        .from('server_members')
+        .delete()
+        .eq('server_id', serverId)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      set((state) => ({
+        members: state.members.filter((m) => m.user_id !== userId),
+      }));
+    } catch (error) {
+      console.error('Failed to kick member:', error);
+    }
+  },
+
+  banMember: async (serverId: string, userId: string) => {
+    try {
+      const { error } = await supabase
+        .from('server_members')
+        .update({ is_banned: true })
+        .eq('server_id', serverId)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      set((state) => ({
+        members: state.members.filter((m) => m.user_id !== userId),
+      }));
+    } catch (error) {
+      console.error('Failed to ban member:', error);
+    }
+  },
+
+  clearServerState: () =>
+    set({
+      currentServer: null,
+      currentChannel: null,
+      categories: [],
+      channels: [],
+      members: [],
+    }),
+}));
