@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '@/integrations/supabase/client';
+import { generateSecretKey, hashSecretKey } from '@/lib/crypto';
 
 interface User {
   id: string;
@@ -34,22 +35,6 @@ interface AuthState {
   updateStatus: (status: User['status']) => Promise<void>;
   updateCustomStatus: (customStatus: string | null) => Promise<void>;
 }
-
-// Generate a cryptographically secure secret key
-const generateSecretKey = (): string => {
-  const array = new Uint8Array(32);
-  crypto.getRandomValues(array);
-  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
-};
-
-// Hash the secret key using SHA-256
-const hashSecretKey = async (secretKey: string): Promise<string> => {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(secretKey);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(byte => byte.toString(16).padStart(2, '0')).join('');
-};
 
 export const useAuthStore = create<AuthState>()(
   persist(
