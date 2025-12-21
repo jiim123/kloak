@@ -1,0 +1,168 @@
+/**
+ * Message parsing and processing utilities for Nomo
+ * Handles markdown, mentions, URLs, and content extraction
+ */
+
+export interface Mention {
+  type: 'user' | 'everyone' | 'here' | 'role';
+  id?: string;
+  raw: string;
+}
+
+/**
+ * Extract mentions from message content
+ * Supports @username, @everyone, @here patterns
+ */
+export const extractMentions = (content: string): Mention[] => {
+  const mentions: Mention[] = [];
+  
+  // Match @everyone
+  if (/@everyone\b/gi.test(content)) {
+    mentions.push({ type: 'everyone', raw: '@everyone' });
+  }
+  
+  // Match @here
+  if (/@here\b/gi.test(content)) {
+    mentions.push({ type: 'here', raw: '@here' });
+  }
+  
+  // Match user mentions: @username or <@userId>
+  const userMentionPattern = /<@(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})>/g;
+  let match;
+  while ((match = userMentionPattern.exec(content)) !== null) {
+    mentions.push({ type: 'user', id: match[1], raw: match[0] });
+  }
+  
+  return mentions;
+};
+
+/**
+ * Escape HTML entities
+ */
+const escapeHtml = (text: string): string => {
+  const entities: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  };
+  return text.replace(/[&<>"']/g, char => entities[char]);
+};
+
+/**
+ * Parse message content and convert to HTML
+ * - Markdown: **bold**, *italic*, `code`, ```codeblock```
+ * - URLs: Convert to clickable links
+ * - Mentions: Highlight @mentions
+ */
+export const parseMessageContent = (
+  content: string,
+  options: {
+    highlightMentions?: boolean;
+    currentUserId?: string;
+  } = {}
+): string => {
+  const { highlightMentions = true, currentUserId } = options;
+  
+  // First escape HTML
+  let parsed = escapeHtml(content);
+  
+  // Code blocks (must be done first to prevent other parsing inside code)
+  // Multi-line code blocks ```code```
+  parsed = parsed.replace(
+    /```(\w+)?\n?([\s\S]*?)```/g,
+    '<pre class="code-block"><code class="language-$1">$2</code></pre>'
+  );
+  
+  // Inline code `code`
+  parsed = parsed.replace(
+    /`([^`]+)`/g,
+    '<code class="inline-code">$1</code>'
+  );
+  
+  // Bold **text**
+  parsed = parsed.replace(
+    /\*\*([^*]+)\*\*/g,
+    '<strong>$1</strong>'
+  );
+  
+  // Italic *text* (but not inside URLs or after certain characters)
+  parsed = parsed.replace(
+    /(?<![:/])\*([^*]+)\*(?!\*)/g,
+    '<em>$1</em>'
+  );
+  
+  // Strikethrough ~~text~~
+  parsed = parsed.replace(
+    /~~([^~]+)~~/g,
+    '<del>$1</del>'
+  );
+  
+  // Underline __text__
+  parsed = parsed.replace(
+    /__([^_]+)__/g,
+    '<u>$1</u>'
+  );
+  
+  // Spoiler ||text||
+  parsed = parsed.replace(
+    /\|\|([^|]+)\|\|/g,
+    '<span class="spoiler">$1</span>'
+  );
+  
+  // URLs - convert to clickable links
+  const urlPattern = /https?:\/\/[^\s<]+/g;
+  parsed = parsed.replace(
+    urlPattern,
+    (url) => `<a href="${url}" target="_blank" rel="noopener noreferrer" class="message-link">${url}</a>`
+  );
+  
+  // Mentions
+  if (highlightMentions) {
+    // @everyone and @here
+    parsed = parsed.replace(
+      /@(everyone|here)\b/gi,
+      '<span class="mention mention-everyone">@$1</span>'
+    );
+    
+    // User mentions <@userId>
+    parsed = parsed.replace(
+      /&lt;@(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})&gt;/g,
+      (match, userId) => {
+        const isSelf = userId === currentUserId;
+        return `<span class="mention${isSelf ? ' mention-self' : ''}" data-user-id="${userId}">@user</span>`;
+      }
+    );
+  }
+  
+  // Convert newlines to <br>
+  parsed = parsed.replace(/\n/g, '<br>');
+  
+  return parsed;
+};
+
+/**
+ * Strip markdown and HTML from message content for previews
+ */
+export const stripMarkdown = (content: string): string => {
+  return content
+    .replace(/```[\s\S]*?```/g, '[code]')
+    .replace(/`[^`]+`/g, '[code]')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/~~([^~]+)~~/g, '$1')
+    .replace(/__([^_]+)__/g, '$1')
+    .replace(/\|\|([^|]+)\|\|/g, '[spoiler]')
+    .replace(/\n/g, ' ')
+    .trim();
+};
+
+/**
+ * Get plain text preview of message content
+ */
+export const getMessagePreview = (content: string, maxLength = 100): string => {
+  const stripped = stripMarkdown(content);
+  if (stripped.length <= maxLength) return stripped;
+  return stripped.slice(0, maxLength - 3) + '...';
+};
