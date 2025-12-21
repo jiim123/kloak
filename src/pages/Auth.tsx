@@ -13,7 +13,7 @@ const Auth = () => {
   const [searchParams] = useSearchParams();
   const mode = searchParams.get('mode') || 'login';
   
-  const { user, isLoading, error, register, login, setError } = useAuthStore();
+  const { user, isLoading, error, createAccount, login, setError } = useAuthStore();
   const { toast } = useToast();
 
   // Registration state
@@ -59,7 +59,7 @@ const Auth = () => {
       return;
     }
 
-    const result = await register(username.trim());
+    const result = await createAccount(username.trim());
     if (result) {
       setGeneratedKey(result.secretKey);
       toast({

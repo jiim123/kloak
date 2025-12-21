@@ -113,6 +113,12 @@ export interface ChannelRead {
 // Message Types
 // ============================================
 
+export interface MessageReply {
+  id: string;
+  content: string;
+  user?: User;
+}
+
 export interface Message {
   id: string;
   channel_id: string;
@@ -125,7 +131,7 @@ export interface Message {
   user?: User;
   attachments?: MessageAttachment[];
   reactions?: ReactionGroup[];
-  reply_to?: Message;
+  reply_to?: MessageReply;
   mentions?: Mention[];
 }
 
