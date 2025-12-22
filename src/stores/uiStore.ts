@@ -7,6 +7,7 @@ export type ModalType =
   | 'join-server'
   | 'server-settings'
   | 'create-channel'
+  | 'edit-channel'
   | 'user-settings'
   | 'user-profile'
   | 'invite'
@@ -14,6 +15,10 @@ export type ModalType =
   | 'leave-server'
   | 'kick-member'
   | 'ban-member'
+  | 'quickSwitcher'
+  | 'shortcuts'
+  | 'pinned-messages'
+  | 'search'
   | null;
 
 interface ModalData {
