@@ -55,7 +55,7 @@ export const ChannelSidebar = () => {
   };
 
   return (
-    <div className="w-60 bg-card flex flex-col border-r border-border">
+    <div className="h-full flex flex-col border-r border-border">
       {/* Server header */}
       <div className="h-12 px-4 flex items-center justify-between border-b border-border hover:bg-secondary/50 cursor-pointer">
         <h2 className="font-semibold text-foreground truncate">Server Name</h2>
@@ -113,7 +113,7 @@ export const ChannelSidebar = () => {
       </div>
 
       {/* User panel */}
-      <div className="h-14 px-2 flex items-center gap-2 bg-sidebar border-t border-border">
+      <div className="h-14 px-2 flex items-center gap-2 bg-layout-sidebar border-t border-border">
         {/* Avatar */}
         <div className="relative">
           <div 
@@ -122,7 +122,7 @@ export const ChannelSidebar = () => {
           >
             {user?.username?.[0]?.toUpperCase() || '?'}
           </div>
-          <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-sidebar status-online" />
+          <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-layout-sidebar status-online" />
         </div>
 
         {/* User info */}

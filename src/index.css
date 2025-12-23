@@ -51,6 +51,12 @@
     --sidebar-border: 228 6% 88%;
     --sidebar-ring: 235 86% 65%;
 
+    /* Layout-specific backgrounds (Discord-style light) */
+    --sidebar: 228 6% 96%;
+    --sidebar-secondary: 228 6% 93%;
+    --chat: 0 0% 100%;
+    --members: 228 6% 93%;
+
     /* Nomo specific tokens */
     --nomo-success: 142 76% 36%;
     --nomo-warning: 38 92% 50%;
@@ -62,7 +68,7 @@
 
   .dark {
     /* Discord-inspired dark theme with neutral tones */
-    --background: 228 6% 10%;
+    --background: 228 6% 17%;
     --foreground: 228 6% 93%;
 
     --card: 228 6% 13%;
@@ -89,6 +95,12 @@
     --border: 228 6% 20%;
     --input: 228 6% 20%;
     --ring: 235 86% 65%;
+
+    /* Layout-specific backgrounds (Discord-style) */
+    --sidebar: 228 6% 8%;
+    --sidebar-secondary: 228 6% 12%;
+    --chat: 228 6% 17%;
+    --members: 228 6% 12%;
 
     --sidebar-background: 228 6% 8%;
     --sidebar-foreground: 228 6% 65%;

@@ -93,7 +93,7 @@ export const MembersSidebar = () => {
         </div>
         <div 
           className={cn(
-            'absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-card',
+            'absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-layout-members',
             getStatusClass(member.status)
           )}
         />
@@ -120,7 +120,7 @@ export const MembersSidebar = () => {
   );
 
   return (
-    <div className="w-60 bg-card border-l border-border hidden lg:flex flex-col">
+    <div className="h-full flex flex-col border-l border-border w-60">
       <div className="flex-1 overflow-y-auto p-2">
         {/* Online section */}
         {onlineMembers.length > 0 && (

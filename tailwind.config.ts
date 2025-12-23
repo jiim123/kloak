@@ -69,6 +69,12 @@ export default {
           dnd: "hsl(var(--nomo-dnd))",
           offline: "hsl(var(--nomo-offline))",
         },
+        layout: {
+          sidebar: "hsl(var(--sidebar))",
+          "sidebar-secondary": "hsl(var(--sidebar-secondary))",
+          chat: "hsl(var(--chat))",
+          members: "hsl(var(--members))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
