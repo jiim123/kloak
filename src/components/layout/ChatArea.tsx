@@ -57,9 +57,9 @@ export const ChatArea = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col min-w-0">
+    <div className="h-full flex flex-col min-w-0">
       {/* Channel header */}
-      <div className="h-12 px-4 flex items-center justify-between border-b border-border bg-background">
+      <div className="h-12 px-4 flex items-center justify-between border-b border-border">
         <div className="flex items-center gap-2">
           <Hash className="w-5 h-5 text-muted-foreground" />
           <span className="font-semibold text-foreground">general</span>

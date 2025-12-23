@@ -16,7 +16,7 @@ export const ServerSidebar = () => {
   ];
 
   return (
-    <div className="w-[72px] bg-sidebar flex flex-col items-center py-3 gap-2">
+    <div className="h-full flex flex-col items-center py-3 gap-2 overflow-y-auto scrollbar-hide">
       {/* Home button */}
       <Tooltip>
         <TooltipTrigger asChild>
