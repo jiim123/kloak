@@ -6,8 +6,13 @@ import { ServerSidebar } from '@/components/layout/ServerSidebar';
 import { ChannelSidebar } from '@/components/layout/ChannelSidebar';
 import { ChatArea } from '@/components/layout/ChatArea';
 import { MembersSidebar } from '@/components/layout/MembersSidebar';
+import { 
+  CreateServerModal, 
+  JoinServerModal, 
+  InviteModal, 
+  ServerSettingsModal 
+} from '@/components/modals';
 import { cn } from '@/lib/utils';
-
 const AppLayout = () => {
   const navigate = useNavigate();
   const { user, isLoading } = useAuthStore();
@@ -38,32 +43,40 @@ const AppLayout = () => {
   }
 
   return (
-    <div className="h-screen flex overflow-hidden">
-      {/* Server list sidebar - 72px fixed */}
-      <div className="w-[72px] flex-shrink-0 bg-layout-sidebar">
-        <ServerSidebar />
+    <>
+      <div className="h-screen flex overflow-hidden">
+        {/* Server list sidebar - 72px fixed */}
+        <div className="w-[72px] flex-shrink-0 bg-layout-sidebar">
+          <ServerSidebar />
+        </div>
+        
+        {/* Channel sidebar - 240px fixed */}
+        <div className="w-60 flex-shrink-0 bg-layout-sidebar-secondary">
+          <ChannelSidebar />
+        </div>
+        
+        {/* Main chat area - flexible */}
+        <div className="flex-1 min-w-0 bg-layout-chat">
+          <ChatArea />
+        </div>
+        
+        {/* Members sidebar - 240px, collapsible */}
+        <div 
+          className={cn(
+            "flex-shrink-0 bg-layout-members transition-all duration-200",
+            isMemberSidebarOpen ? "w-60" : "w-0 overflow-hidden"
+          )}
+        >
+          <MembersSidebar />
+        </div>
       </div>
-      
-      {/* Channel sidebar - 240px fixed */}
-      <div className="w-60 flex-shrink-0 bg-layout-sidebar-secondary">
-        <ChannelSidebar />
-      </div>
-      
-      {/* Main chat area - flexible */}
-      <div className="flex-1 min-w-0 bg-layout-chat">
-        <ChatArea />
-      </div>
-      
-      {/* Members sidebar - 240px, collapsible */}
-      <div 
-        className={cn(
-          "flex-shrink-0 bg-layout-members transition-all duration-200",
-          isMemberSidebarOpen ? "w-60" : "w-0 overflow-hidden"
-        )}
-      >
-        <MembersSidebar />
-      </div>
-    </div>
+
+      {/* Modals */}
+      <CreateServerModal />
+      <JoinServerModal />
+      <InviteModal />
+      <ServerSettingsModal />
+    </>
   );
 };
 
