@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
-import { MessageCircle, UserPlus, UserMinus, Loader2 } from 'lucide-react';
+import { MessageCircle, UserPlus, UserMinus, Loader2, Check, X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -29,7 +29,7 @@ export const UserProfilePopup = () => {
   const { activeModal, modalData, closeModal } = useUIStore();
   const { user: currentUser } = useAuthStore();
   const { servers } = useServerStore();
-  const { friends, pendingRequests, outgoingRequests, sendRequest, removeFriend } = useFriendStore();
+  const { friends, pendingRequests, outgoingRequests, sendRequest, removeFriend, acceptRequest, declineRequest } = useFriendStore();
   const { openConversation, setCurrentConversation } = useDMStore();
   
   const [profileUser, setProfileUser] = useState<User | null>(null);
@@ -116,6 +116,22 @@ export const UserProfilePopup = () => {
     } else if (!hasPendingRequest && !hasSentRequest) {
       await sendRequest(currentUser.id, profileUser.username);
       toast.success('Friend request sent!');
+    }
+  };
+
+  const handleAcceptRequest = async () => {
+    const pendingFriend = pendingRequests.find(f => f.id === userId);
+    if (pendingFriend) {
+      await acceptRequest(pendingFriend.friendship_id);
+      toast.success('Friend request accepted!');
+    }
+  };
+
+  const handleDeclineRequest = async () => {
+    const pendingFriend = pendingRequests.find(f => f.id === userId);
+    if (pendingFriend) {
+      await declineRequest(pendingFriend.friendship_id);
+      toast.success('Friend request declined');
     }
   };
 
@@ -226,28 +242,46 @@ export const UserProfilePopup = () => {
                     <MessageCircle className="w-4 h-4 mr-2" />
                     Message
                   </Button>
-                  <Button 
-                    variant={isFriend ? 'destructive' : 'secondary'}
-                    onClick={handleFriendAction}
-                    disabled={hasPendingRequest || hasSentRequest}
-                    className="flex-1"
-                  >
-                    {isFriend ? (
-                      <>
-                        <UserMinus className="w-4 h-4 mr-2" />
-                        Remove
-                      </>
-                    ) : hasSentRequest ? (
-                      'Request Sent'
-                    ) : hasPendingRequest ? (
-                      'Accept Request'
-                    ) : (
-                      <>
-                        <UserPlus className="w-4 h-4 mr-2" />
-                        Add Friend
-                      </>
-                    )}
-                  </Button>
+                  {hasPendingRequest ? (
+                    // Show accept/decline buttons for pending requests
+                    <>
+                      <Button 
+                        variant="default"
+                        onClick={handleAcceptRequest}
+                        size="icon"
+                      >
+                        <Check className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        onClick={handleDeclineRequest}
+                        size="icon"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </>
+                  ) : (
+                    <Button 
+                      variant={isFriend ? 'destructive' : 'secondary'}
+                      onClick={handleFriendAction}
+                      disabled={hasSentRequest}
+                      className="flex-1"
+                    >
+                      {isFriend ? (
+                        <>
+                          <UserMinus className="w-4 h-4 mr-2" />
+                          Remove
+                        </>
+                      ) : hasSentRequest ? (
+                        'Request Sent'
+                      ) : (
+                        <>
+                          <UserPlus className="w-4 h-4 mr-2" />
+                          Add Friend
+                        </>
+                      )}
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
