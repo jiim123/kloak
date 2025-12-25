@@ -328,13 +328,54 @@ export const ServerSettingsModal = () => {
 
             {/* Bans Tab */}
             <TabsContent value="bans" className="mt-4">
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <Ban className="w-12 h-12 text-muted-foreground/50 mb-3" />
-                <p className="text-sm text-muted-foreground">No banned users</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Users you ban will appear here
-                </p>
-              </div>
+              {members.filter(m => m.is_banned).length > 0 ? (
+                <ScrollArea className="h-[300px] pr-4">
+                  <div className="space-y-2">
+                    {members.filter(m => m.is_banned).map((member) => (
+                      <div 
+                        key={member.id}
+                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/50"
+                      >
+                        <Avatar className="w-10 h-10">
+                          <AvatarImage src={member.user?.avatar_url || undefined} />
+                          <AvatarFallback style={{ backgroundColor: member.user?.banner_color || '#5865F2' }}>
+                            {member.user?.username?.[0]?.toUpperCase() || '?'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <span className="font-medium truncate">
+                            {member.user?.username}
+                          </span>
+                        </div>
+                        {isAdmin && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                await updateMember(server.id, member.user_id, { is_banned: false } as Partial<ServerMember>);
+                                toast.success(`${member.user?.username} has been unbanned`);
+                              } catch {
+                                toast.error('Failed to unban');
+                              }
+                            }}
+                          >
+                            Unban
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <Ban className="w-12 h-12 text-muted-foreground/50 mb-3" />
+                  <p className="text-sm text-muted-foreground">No banned users</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Users you ban will appear here
+                  </p>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </DialogContent>
