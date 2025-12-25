@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/authStore';
 import { useServerStore } from '@/stores/serverStore';
 import { useUIStore } from '@/stores/uiStore';
+import { useUnread } from '@/hooks/useUnread';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   DropdownMenu,
@@ -56,6 +57,10 @@ export const ChannelSidebar = () => {
 
   // Track collapsed categories locally
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+
+  // Get all channel IDs for this server
+  const channelIds = useMemo(() => channels.map(c => c.id), [channels]);
+  const { getChannelUnread, markAsRead } = useUnread(channelIds);
 
   // Get current user's role in this server
   const currentMembership = useMemo(() => {
@@ -101,11 +106,14 @@ export const ChannelSidebar = () => {
     await leaveServer(currentServer.id, user.id);
   };
 
+  const handleMarkAsRead = async (channelId: string) => {
+    await markAsRead(channelId);
+  };
+
   const renderChannel = (channel: Channel) => {
     const isActive = currentChannel?.id === channel.id;
-    // TODO: Add unread/mention tracking
-    const isUnread = false;
-    const mentionCount = 0;
+    const { unreadCount, mentionCount } = getChannelUnread(channel.id);
+    const isUnread = unreadCount > 0;
 
     return (
       <ContextMenu key={channel.id}>
@@ -121,16 +129,22 @@ export const ChannelSidebar = () => {
             onClick={() => setCurrentChannel(channel)}
           >
             {channel.type === 'text' ? (
-              <Hash className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+              <Hash className={cn(
+                'w-4 h-4 flex-shrink-0',
+                isUnread && !isActive ? 'text-foreground' : 'text-muted-foreground'
+              )} />
             ) : (
-              <Volume2 className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+              <Volume2 className={cn(
+                'w-4 h-4 flex-shrink-0',
+                isUnread && !isActive ? 'text-foreground' : 'text-muted-foreground'
+              )} />
             )}
             <span className="truncate flex-1 text-left">{channel.name}</span>
             
             {/* Mention badge */}
             {mentionCount > 0 && (
               <span className="ml-auto px-1.5 py-0.5 text-xs font-bold rounded-full bg-destructive text-destructive-foreground">
-                {mentionCount}
+                {mentionCount > 99 ? '99+' : mentionCount}
               </span>
             )}
 
@@ -162,7 +176,7 @@ export const ChannelSidebar = () => {
               <ContextMenuSeparator />
             </>
           )}
-          <ContextMenuItem>
+          <ContextMenuItem onClick={() => handleMarkAsRead(channel.id)}>
             Mark as Read
           </ContextMenuItem>
         </ContextMenuContent>
