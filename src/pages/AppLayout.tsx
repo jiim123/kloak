@@ -14,7 +14,13 @@ import {
   InviteModal, 
   ServerSettingsModal,
   CreateChannelModal,
-  EditChannelModal 
+  EditChannelModal,
+  UserSettingsModal,
+  UserProfilePopup,
+  PinnedMessagesPanel,
+  SearchModal,
+  QuickSwitcherModal,
+  KeyboardShortcutsModal
 } from '@/components/modals';
 import { cn } from '@/lib/utils';
 import { useDMStore } from '@/stores/dmStore';
@@ -122,6 +128,12 @@ const AppLayout = () => {
       <ServerSettingsModal />
       <CreateChannelModal />
       <EditChannelModal />
+      <UserSettingsModal />
+      <UserProfilePopup />
+      <PinnedMessagesPanel />
+      <SearchModal />
+      <QuickSwitcherModal />
+      <KeyboardShortcutsModal />
     </>
   );
 };
