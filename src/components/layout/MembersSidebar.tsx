@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { Crown, ChevronDown, ChevronRight, MessageSquare, Edit3, UserX, Ban, VolumeX, Volume2, Shield, ShieldAlert, ShieldOff, UserCog, Circle, Moon, MinusCircle } from 'lucide-react';
 import { useServerStore } from '@/stores/serverStore';
@@ -15,8 +15,32 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { ServerMember } from '@/types';
 
+const OFFLINE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
+
+// Helper to determine if a user should be shown as offline based on last_seen
+const isUserOffline = (member: ServerMember): boolean => {
+  // If status is explicitly offline or invisible, they're offline
+  if (member.user?.status === 'offline') return true;
+  
+  // Check last_seen - if more than 5 minutes ago, consider offline
+  if (member.user?.last_seen) {
+    const lastSeen = new Date(member.user.last_seen).getTime();
+    const now = Date.now();
+    if (now - lastSeen > OFFLINE_THRESHOLD_MS) {
+      return true;
+    }
+  }
+  
+  return false;
+};
+
 // Status indicator component with proper icons
-const StatusIndicator = ({ status, className }: { status?: string; className?: string }) => {
+const StatusIndicator = ({ status, isStale, className }: { status?: string; isStale?: boolean; className?: string }) => {
+  // If stale (last_seen > 5 min), show as offline regardless of status
+  if (isStale) {
+    return <div className={cn('w-3 h-3 rounded-full bg-gray-500', className)} />;
+  }
+  
   switch (status) {
     case 'online':
       return <div className={cn('w-3 h-3 rounded-full bg-green-500', className)} />;
@@ -51,8 +75,21 @@ export const MembersSidebar = () => {
   const isAdmin = currentUserMember?.role === 'owner' || currentUserMember?.role === 'admin';
   const isOwner = currentUserMember?.role === 'owner';
 
-  const onlineMembers = members.filter(m => m.user?.status !== 'offline');
-  const offlineMembers = members.filter(m => m.user?.status === 'offline');
+  // Categorize members based on presence (considering last_seen)
+  const { onlineMembers, offlineMembers } = useMemo(() => {
+    const online: ServerMember[] = [];
+    const offline: ServerMember[] = [];
+    
+    members.forEach(member => {
+      if (isUserOffline(member)) {
+        offline.push(member);
+      } else {
+        online.push(member);
+      }
+    });
+    
+    return { onlineMembers: online, offlineMembers: offline };
+  }, [members]);
 
   const getRoleColor = (role?: string) => {
     switch (role) {
@@ -126,7 +163,7 @@ export const MembersSidebar = () => {
 
   const MemberItem = ({ member }: { member: ServerMember }) => {
     const displayName = member.nickname || member.user?.display_name || member.user?.username || 'Unknown';
-    const isOffline = member.user?.status === 'offline';
+    const memberIsOffline = isUserOffline(member);
     const isSelf = member.user_id === user?.id;
     const canManage = isAdmin && !isSelf && member.role !== 'owner';
     const isServerOwner = member.role === 'owner';
@@ -141,7 +178,7 @@ export const MembersSidebar = () => {
           <div 
             className={cn(
               'w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium',
-              isOffline && 'opacity-50'
+              memberIsOffline && 'opacity-50'
             )}
             style={{ backgroundColor: member.user?.banner_color || '#5865F2' }}
           >
@@ -156,7 +193,8 @@ export const MembersSidebar = () => {
             )}
           </div>
           <StatusIndicator 
-            status={member.user?.status} 
+            status={member.user?.status}
+            isStale={memberIsOffline && member.user?.status !== 'offline'}
             className="absolute -bottom-0.5 -right-0.5 border-2 border-layout-members" 
           />
         </div>
@@ -169,7 +207,7 @@ export const MembersSidebar = () => {
             )}
             <span className={cn(
               'text-sm truncate font-medium',
-              isOffline ? 'text-muted-foreground' : getRoleColor(member.role)
+              memberIsOffline ? 'text-muted-foreground' : getRoleColor(member.role)
             )}>
               {displayName}
             </span>
