@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   Smile, Reply, Pencil, Trash2, Pin, MoreHorizontal, 
   CornerUpLeft 
@@ -19,22 +19,26 @@ import { useMessageStore } from '@/stores/messageStore';
 import { useServerStore } from '@/stores/serverStore';
 import { parseMessageContent, getMessagePreview } from '@/lib/message';
 import { formatMessageTimestamp } from '@/lib/format';
+import { DeleteMessageModal } from '@/components/modals/DeleteMessageModal';
 import type { Message, ServerRole } from '@/types';
 
 interface MessageItemProps {
   message: Message;
   isGrouped: boolean;
   showNewDivider?: boolean;
+  onStartEdit?: () => void;
 }
 
-export const MessageItem = ({ message, isGrouped, showNewDivider }: MessageItemProps) => {
+export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }: MessageItemProps) => {
   const { user } = useAuthStore();
-  const { setReplyingTo, editMessage, deleteMessage, pinMessage, addReaction, removeReaction } = useMessageStore();
+  const { setReplyingTo, editMessage, pinMessage, addReaction, removeReaction } = useMessageStore();
   const { members } = useServerStore();
   
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [isHovered, setIsHovered] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const isOwnMessage = user?.id === message.user_id;
   const messageUser = message.user;
@@ -54,6 +58,34 @@ export const MessageItem = ({ message, isGrouped, showNewDivider }: MessageItemP
     }
   };
 
+  // Focus textarea when editing starts
+  useEffect(() => {
+    if (isEditing && textareaRef.current) {
+      textareaRef.current.focus();
+      textareaRef.current.setSelectionRange(editContent.length, editContent.length);
+    }
+  }, [isEditing]);
+
+  // Start editing externally (for Up arrow)
+  const startEditing = () => {
+    if (isOwnMessage) {
+      setEditContent(message.content);
+      setIsEditing(true);
+      onStartEdit?.();
+    }
+  };
+
+  // Expose startEditing via a custom event
+  useEffect(() => {
+    const handler = (e: CustomEvent) => {
+      if (e.detail.messageId === message.id) {
+        startEditing();
+      }
+    };
+    window.addEventListener('startEditMessage' as any, handler);
+    return () => window.removeEventListener('startEditMessage' as any, handler);
+  }, [message.id, isOwnMessage, message.content]);
+
   const handleEdit = async () => {
     if (editContent.trim() && editContent !== message.content) {
       await editMessage(message.id, editContent.trim());
@@ -61,8 +93,9 @@ export const MessageItem = ({ message, isGrouped, showNewDivider }: MessageItemP
     setIsEditing(false);
   };
 
-  const handleDelete = async () => {
-    await deleteMessage(message.id);
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditContent(message.content);
   };
 
   const handlePin = async () => {
@@ -142,6 +175,7 @@ export const MessageItem = ({ message, isGrouped, showNewDivider }: MessageItemP
           {isEditing ? (
             <div className="flex flex-col gap-2">
               <Textarea
+                ref={textareaRef}
                 value={editContent}
                 onChange={(e) => setEditContent(e.target.value)}
                 className="min-h-[60px] resize-none"
@@ -151,15 +185,13 @@ export const MessageItem = ({ message, isGrouped, showNewDivider }: MessageItemP
                     handleEdit();
                   }
                   if (e.key === 'Escape') {
-                    setIsEditing(false);
-                    setEditContent(message.content);
+                    handleCancelEdit();
                   }
                 }}
-                autoFocus
               />
               <div className="flex gap-2 text-xs">
                 <span className="text-muted-foreground">
-                  escape to <button className="text-primary hover:underline" onClick={() => setIsEditing(false)}>cancel</button>
+                  escape to <button className="text-primary hover:underline" onClick={handleCancelEdit}>cancel</button>
                   {' • '}
                   enter to <button className="text-primary hover:underline" onClick={handleEdit}>save</button>
                 </span>
@@ -178,7 +210,14 @@ export const MessageItem = ({ message, isGrouped, showNewDivider }: MessageItemP
 
           {/* Edited indicator */}
           {message.edited_at && !isEditing && (
-            <span className="text-xs text-muted-foreground">(edited)</span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-xs text-muted-foreground cursor-help">(edited)</span>
+              </TooltipTrigger>
+              <TooltipContent>
+                {new Date(message.edited_at).toLocaleString()}
+              </TooltipContent>
+            </Tooltip>
           )}
 
           {/* Attachments */}
@@ -298,7 +337,7 @@ export const MessageItem = ({ message, isGrouped, showNewDivider }: MessageItemP
                     variant="ghost" 
                     size="icon" 
                     className="w-7 h-7 text-destructive hover:text-destructive"
-                    onClick={handleDelete}
+                    onClick={() => setShowDeleteModal(true)}
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
@@ -341,6 +380,12 @@ export const MessageItem = ({ message, isGrouped, showNewDivider }: MessageItemP
           </div>
         )}
       </div>
+
+      {/* Delete confirmation modal */}
+      <DeleteMessageModal 
+        message={showDeleteModal ? message : null} 
+        onClose={() => setShowDeleteModal(false)} 
+      />
     </>
   );
 };

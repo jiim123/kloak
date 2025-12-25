@@ -11,3 +11,4 @@ export { PinnedMessagesPanel } from './PinnedMessagesPanel';
 export { SearchModal } from './SearchModal';
 export { QuickSwitcherModal } from './QuickSwitcherModal';
 export { KeyboardShortcutsModal } from './KeyboardShortcutsModal';
+export { DeleteMessageModal } from './DeleteMessageModal';
