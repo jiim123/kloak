@@ -41,6 +41,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useRealtimeMembers } from '@/hooks';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { ServerRole, ServerMember } from '@/types';
@@ -112,6 +113,9 @@ export const ServerSettingsModal = () => {
     resolver: zodResolver(serverSettingsSchema),
     defaultValues: { name: server?.name || '' },
   });
+
+  // Real-time members updates
+  useRealtimeMembers(isOpen && server ? server.id : null);
 
   // Fetch members when modal opens
   useEffect(() => {

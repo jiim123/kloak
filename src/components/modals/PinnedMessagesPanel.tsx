@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { Pin, X, Loader2 } from 'lucide-react';
 import {
@@ -14,70 +13,28 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
 import { useMessageStore } from '@/stores/messageStore';
-import { supabase } from '@/integrations/supabase/client';
+import { useRealtimePinnedMessages } from '@/hooks/useRealtimePinnedMessages';
 import { toast } from 'sonner';
-import type { Message } from '@/types';
 
 export const PinnedMessagesPanel = () => {
   const { activeModal, closeModal } = useUIStore();
   const { currentChannel, members } = useServerStore();
   const { pinMessage } = useMessageStore();
   
-  const [pinnedMessages, setPinnedMessages] = useState<Message[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-
   const isOpen = activeModal === 'pinned-messages';
+  const { pinnedMessages, isLoading, refetch } = useRealtimePinnedMessages(
+    isOpen && currentChannel ? currentChannel.id : null
+  );
 
   // Check if current user is admin
   const isAdmin = members.some(m => 
     m.role === 'owner' || m.role === 'admin' || m.role === 'moderator'
   );
 
-  useEffect(() => {
-    if (!isOpen || !currentChannel) return;
-
-    const fetchPinnedMessages = async () => {
-      setIsLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('messages')
-          .select(`
-            *,
-            user:users(id, username, display_name, avatar_url, banner_color, bio, status, custom_status, created_at, last_seen)
-          `)
-          .eq('channel_id', currentChannel.id)
-          .eq('is_pinned', true)
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-        
-        setPinnedMessages(data.map(msg => ({
-          id: msg.id,
-          channel_id: msg.channel_id,
-          user_id: msg.user_id,
-          content: msg.content,
-          is_pinned: msg.is_pinned ?? false,
-          reply_to_id: msg.reply_to_id,
-          edited_at: msg.edited_at,
-          created_at: msg.created_at ?? new Date().toISOString(),
-          user: msg.user,
-          reactions: [],
-          attachments: [],
-        })));
-      } catch (error) {
-        console.error('Failed to fetch pinned messages:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchPinnedMessages();
-  }, [isOpen, currentChannel]);
-
   const handleUnpin = async (messageId: string) => {
     try {
       await pinMessage(messageId, false);
-      setPinnedMessages(prev => prev.filter(m => m.id !== messageId));
+      refetch();
       toast.success('Message unpinned');
     } catch (error) {
       toast.error('Failed to unpin message');

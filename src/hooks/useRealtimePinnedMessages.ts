@@ -1,0 +1,73 @@
+import { useEffect, useState, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import type { Message } from '@/types';
+
+export const useRealtimePinnedMessages = (channelId: string | null) => {
+  const [pinnedMessages, setPinnedMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const fetchPinnedMessages = useCallback(async () => {
+    if (!channelId) {
+      setPinnedMessages([]);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select(`
+          *,
+          user:users (*)
+        `)
+        .eq('channel_id', channelId)
+        .eq('is_pinned', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const messages: Message[] = (data || []).map((msg: any) => ({
+        ...msg,
+        user: msg.user,
+      }));
+
+      setPinnedMessages(messages);
+    } catch (error) {
+      console.error('Failed to fetch pinned messages:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [channelId]);
+
+  useEffect(() => {
+    fetchPinnedMessages();
+  }, [fetchPinnedMessages]);
+
+  useEffect(() => {
+    if (!channelId) return;
+
+    const channel = supabase
+      .channel(`pinned:${channelId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `channel_id=eq.${channelId}`,
+        },
+        (payload) => {
+          const updatedMessage = payload.new as any;
+          // Refetch if is_pinned changed
+          fetchPinnedMessages();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [channelId, fetchPinnedMessages]);
+
+  return { pinnedMessages, isLoading, refetch: fetchPinnedMessages };
+};
