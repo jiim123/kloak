@@ -9,12 +9,18 @@ export const usePresence = () => {
   const idleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSeenIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isIdleRef = useRef(false);
+  const manualStatusRef = useRef<string | null>(null);
 
   const resetIdleTimer = useCallback(() => {
     if (!isAuthenticated || !user) return;
 
+    // Don't override manual DND or invisible status
+    if (manualStatusRef.current === 'dnd' || manualStatusRef.current === 'offline') {
+      return;
+    }
+
     // If was idle, set back to online
-    if (isIdleRef.current) {
+    if (isIdleRef.current && user.status !== 'dnd') {
       isIdleRef.current = false;
       updateStatus('online');
     }
@@ -24,12 +30,29 @@ export const usePresence = () => {
       clearTimeout(idleTimeoutRef.current);
     }
 
-    // Set new idle timeout
-    idleTimeoutRef.current = setTimeout(() => {
-      isIdleRef.current = true;
-      updateStatus('idle');
-    }, IDLE_TIMEOUT_MS);
+    // Set new idle timeout (only if not DND or invisible)
+    if (user.status !== 'dnd' && manualStatusRef.current !== 'offline') {
+      idleTimeoutRef.current = setTimeout(() => {
+        if (manualStatusRef.current !== 'dnd' && manualStatusRef.current !== 'offline') {
+          isIdleRef.current = true;
+          updateStatus('idle');
+        }
+      }, IDLE_TIMEOUT_MS);
+    }
   }, [isAuthenticated, user, updateStatus]);
+
+  // Track manual status changes
+  useEffect(() => {
+    if (user?.status) {
+      // If user manually sets DND or invisible, remember it
+      if (user.status === 'dnd' || user.status === 'offline') {
+        manualStatusRef.current = user.status;
+      } else if (user.status === 'online' && !isIdleRef.current) {
+        // Reset manual status when going online
+        manualStatusRef.current = null;
+      }
+    }
+  }, [user?.status]);
 
   // Set up activity listeners
   useEffect(() => {
@@ -83,13 +106,37 @@ export const usePresence = () => {
     if (!isAuthenticated) return;
 
     const handleBeforeUnload = () => {
-      updateStatus('offline');
+      // Use sendBeacon for reliable delivery
+      const { user } = useAuthStore.getState();
+      if (user) {
+        navigator.sendBeacon(
+          `https://foquucurnwpqcvgqukpz.supabase.co/rest/v1/users?id=eq.${user.id}`,
+          JSON.stringify({ status: 'offline', last_seen: new Date().toISOString() })
+        );
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        // Tab is hidden, could set to idle
+        if (manualStatusRef.current !== 'dnd' && manualStatusRef.current !== 'offline') {
+          updateStatus('idle');
+        }
+      } else if (document.visibilityState === 'visible') {
+        // Tab is visible again, set back to online if not manually set
+        if (manualStatusRef.current !== 'dnd' && manualStatusRef.current !== 'offline') {
+          isIdleRef.current = false;
+          updateStatus('online');
+        }
+      }
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [isAuthenticated, updateStatus]);
 };

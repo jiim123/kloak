@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { Crown, ChevronDown, ChevronRight, MessageSquare, Edit3, UserX, Ban, VolumeX, Volume2, Shield, ShieldAlert, ShieldOff, UserCog } from 'lucide-react';
+import { Crown, ChevronDown, ChevronRight, MessageSquare, Edit3, UserX, Ban, VolumeX, Volume2, Shield, ShieldAlert, ShieldOff, UserCog, Circle, Moon, MinusCircle } from 'lucide-react';
 import { useServerStore } from '@/stores/serverStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -14,6 +14,28 @@ import {
 } from '@/components/ui/context-menu';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { ServerMember } from '@/types';
+
+// Status indicator component with proper icons
+const StatusIndicator = ({ status, className }: { status?: string; className?: string }) => {
+  switch (status) {
+    case 'online':
+      return <div className={cn('w-3 h-3 rounded-full bg-green-500', className)} />;
+    case 'idle':
+      return (
+        <div className={cn('w-3 h-3 rounded-full bg-yellow-500 relative', className)}>
+          <div className="absolute inset-0.5 bg-layout-members rounded-full" style={{ clipPath: 'polygon(50% 0%, 100% 0%, 100% 100%, 50% 100%)' }} />
+        </div>
+      );
+    case 'dnd':
+      return (
+        <div className={cn('w-3 h-3 rounded-full bg-red-500 flex items-center justify-center', className)}>
+          <div className="w-1.5 h-0.5 bg-layout-members rounded-full" />
+        </div>
+      );
+    default:
+      return <div className={cn('w-3 h-3 rounded-full bg-gray-500', className)} />;
+  }
+};
 
 export const MembersSidebar = () => {
   const { members, currentServer } = useServerStore();
@@ -31,15 +53,6 @@ export const MembersSidebar = () => {
 
   const onlineMembers = members.filter(m => m.user?.status !== 'offline');
   const offlineMembers = members.filter(m => m.user?.status === 'offline');
-
-  const getStatusClass = (status?: string) => {
-    switch (status) {
-      case 'online': return 'status-online';
-      case 'idle': return 'status-idle';
-      case 'dnd': return 'status-dnd';
-      default: return 'status-offline';
-    }
-  };
 
   const getRoleColor = (role?: string) => {
     switch (role) {
@@ -142,11 +155,9 @@ export const MembersSidebar = () => {
               (member.user?.username?.[0] || '?').toUpperCase()
             )}
           </div>
-          <div 
-            className={cn(
-              'absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-layout-members',
-              getStatusClass(member.user?.status)
-            )}
+          <StatusIndicator 
+            status={member.user?.status} 
+            className="absolute -bottom-0.5 -right-0.5 border-2 border-layout-members" 
           />
         </div>
 
