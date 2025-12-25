@@ -5,8 +5,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuthStore } from '@/stores/authStore';
 import { useMessageStore } from '@/stores/messageStore';
 import { useServerStore } from '@/stores/serverStore';
+import { useNotificationStore } from '@/stores/notificationStore';
 import { saveDraft, getDraft, clearDraft } from '@/lib/storage';
-import { getMessagePreview } from '@/lib/message';
+import { getMessagePreview, extractMentions } from '@/lib/message';
+import { MentionAutocomplete } from './MentionAutocomplete';
+import { supabase } from '@/integrations/supabase/client';
 
 interface MessageInputProps {
   channelId: string;
@@ -20,15 +23,22 @@ const MAX_LENGTH = 2000;
 export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }: MessageInputProps) => {
   const { user } = useAuthStore();
   const { replyingTo, setReplyingTo, sendMessage } = useMessageStore();
-  const { members } = useServerStore();
+  const { members, currentServer } = useServerStore();
+  const { createMentionNotification } = useNotificationStore();
   
   const [content, setContent] = useState('');
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 });
+  const [mentionStartIndex, setMentionStartIndex] = useState(-1);
+  
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Check if user is muted
+  // Check if user is muted or admin
   const currentMember = members.find(m => m.user_id === user?.id);
   const isMuted = currentMember?.is_muted || false;
+  const isAdmin = currentMember?.role === 'owner' || currentMember?.role === 'admin' || currentMember?.role === 'moderator';
 
   // Load draft on mount and channel change
   useEffect(() => {
@@ -62,6 +72,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     adjustHeight();
   }, [content, adjustHeight]);
 
+  // Handle mention detection
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     if (value.length <= MAX_LENGTH) {
@@ -79,7 +90,57 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       typingTimeoutRef.current = setTimeout(() => {
         onStopTyping();
       }, 2000);
+
+      // Check for @ mentions
+      const cursorPosition = e.target.selectionStart;
+      const textBeforeCursor = value.slice(0, cursorPosition);
+      const atIndex = textBeforeCursor.lastIndexOf('@');
+      
+      if (atIndex !== -1) {
+        const textAfterAt = textBeforeCursor.slice(atIndex + 1);
+        // Only show if there's no space after @ (still typing the mention)
+        if (!textAfterAt.includes(' ') && !textAfterAt.includes('\n')) {
+          setMentionQuery(textAfterAt);
+          setMentionStartIndex(atIndex);
+          setShowMentions(true);
+          
+          // Calculate position
+          if (textareaRef.current) {
+            setMentionPosition({
+              top: 40, // Position above input
+              left: 0,
+            });
+          }
+        } else {
+          setShowMentions(false);
+        }
+      } else {
+        setShowMentions(false);
+      }
     }
+  };
+
+  const handleMentionSelect = (option: { type: string; id?: string; label: string }) => {
+    if (mentionStartIndex === -1) return;
+    
+    // Replace the @query with the selected mention
+    const beforeMention = content.slice(0, mentionStartIndex);
+    const afterMention = content.slice(mentionStartIndex + mentionQuery.length + 1);
+    
+    let mentionText: string;
+    if (option.type === 'user' && option.id) {
+      mentionText = `<@${option.id}> `;
+    } else {
+      mentionText = `@${option.type} `;
+    }
+    
+    const newContent = beforeMention + mentionText + afterMention;
+    setContent(newContent);
+    setShowMentions(false);
+    setMentionStartIndex(-1);
+    
+    // Focus back on textarea
+    textareaRef.current?.focus();
   };
 
   const handleSubmit = async () => {
@@ -89,11 +150,63 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     setContent('');
     clearDraft(channelId);
     onStopTyping();
+    setShowMentions(false);
 
-    await sendMessage(channelId, user.id, messageContent, replyingTo?.id);
+    const message = await sendMessage(channelId, user.id, messageContent, replyingTo?.id);
+    
+    if (message && currentServer) {
+      // Parse and track mentions
+      const mentions = extractMentions(messageContent);
+      
+      for (const mention of mentions) {
+        if (mention.type === 'user' && mention.id && mention.id !== user.id) {
+          // Create mention record
+          await supabase.from('mentions').insert({
+            message_id: message.id,
+            user_id: mention.id,
+            mention_type: 'user',
+          });
+          
+          // Create notification
+          await createMentionNotification(
+            mention.id,
+            user.id,
+            channelId,
+            channelName,
+            currentServer.id
+          );
+        } else if (mention.type === 'everyone' || mention.type === 'here') {
+          // Notify all server members (or online members for @here)
+          const targetMembers = mention.type === 'here'
+            ? members.filter(m => m.user?.status === 'online' && m.user_id !== user.id)
+            : members.filter(m => m.user_id !== user.id);
+          
+          for (const member of targetMembers.slice(0, 50)) { // Limit to 50 to prevent spam
+            await supabase.from('mentions').insert({
+              message_id: message.id,
+              user_id: member.user_id,
+              mention_type: mention.type,
+            });
+            
+            await createMentionNotification(
+              member.user_id,
+              user.id,
+              channelId,
+              channelName,
+              currentServer.id
+            );
+          }
+        }
+      }
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Let mention autocomplete handle these keys
+    if (showMentions && ['ArrowDown', 'ArrowUp', 'Enter', 'Tab', 'Escape'].includes(e.key)) {
+      return;
+    }
+    
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
@@ -117,7 +230,18 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   }
 
   return (
-    <div className="px-4 pb-6">
+    <div className="px-4 pb-6 relative">
+      {/* Mention Autocomplete */}
+      {showMentions && (
+        <MentionAutocomplete
+          query={mentionQuery}
+          position={mentionPosition}
+          onSelect={handleMentionSelect}
+          onClose={() => setShowMentions(false)}
+          isAdmin={isAdmin}
+        />
+      )}
+
       {/* Reply preview */}
       {replyingTo && (
         <div className="flex items-center gap-2 px-4 py-2 bg-secondary rounded-t-lg border-b border-border">

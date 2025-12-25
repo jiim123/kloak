@@ -4,6 +4,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Separator } from '@/components/ui/separator';
 import { useServerStore } from '@/stores/serverStore';
 import { useUIStore } from '@/stores/uiStore';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import type { Channel } from '@/types';
 
 interface ChannelHeaderProps {
@@ -32,6 +33,8 @@ export const ChannelHeader = ({ channel }: ChannelHeaderProps) => {
       </div>
 
       <div className="flex items-center gap-1 flex-shrink-0">
+        <NotificationBell />
+
         <Tooltip>
           <TooltipTrigger asChild>
             <Button 

@@ -24,7 +24,7 @@ import {
 } from '@/components/modals';
 import { cn } from '@/lib/utils';
 import { useDMStore } from '@/stores/dmStore';
-import { useRealtimeFriendships, useRealtimeUsers, useRealtimeServer } from '@/hooks';
+import { useRealtimeFriendships, useRealtimeUsers, useRealtimeServer, useRealtimeNotifications } from '@/hooks';
 
 const AppLayout = () => {
   const navigate = useNavigate();
@@ -40,6 +40,7 @@ const AppLayout = () => {
   useRealtimeFriendships(user?.id || null);
   useRealtimeUsers();
   useRealtimeServer(currentServer?.id || null);
+  useRealtimeNotifications(user?.id || null);
 
   useEffect(() => {
     initializeAuth();
