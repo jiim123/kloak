@@ -18,6 +18,7 @@ import {
 } from '@/components/modals';
 import { cn } from '@/lib/utils';
 import { useDMStore } from '@/stores/dmStore';
+import { useRealtimeFriendships, useRealtimeUsers, useRealtimeServer } from '@/hooks';
 
 const AppLayout = () => {
   const navigate = useNavigate();
@@ -28,6 +29,11 @@ const AppLayout = () => {
   
   // Track if showing friends list in DM view
   const [showFriends, setShowFriends] = useState(true);
+
+  // Real-time updates
+  useRealtimeFriendships(user?.id || null);
+  useRealtimeUsers();
+  useRealtimeServer(currentServer?.id || null);
 
   useEffect(() => {
     initializeAuth();

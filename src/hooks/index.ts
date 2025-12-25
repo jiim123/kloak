@@ -1,6 +1,10 @@
 export { useRealtimeMessages } from './useRealtimeMessages';
 export { useRealtimeReactions } from './useRealtimeReactions';
 export { useRealtimeMembers } from './useRealtimeMembers';
+export { useRealtimeFriendships } from './useRealtimeFriendships';
+export { useRealtimeUsers } from './useRealtimeUsers';
+export { useRealtimePinnedMessages } from './useRealtimePinnedMessages';
+export { useRealtimeServer } from './useRealtimeServer';
 export { useTyping } from './useTyping';
 export { usePresence } from './usePresence';
 export { useUnread } from './useUnread';
