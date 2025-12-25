@@ -10,7 +10,9 @@ import {
   CreateServerModal, 
   JoinServerModal, 
   InviteModal, 
-  ServerSettingsModal 
+  ServerSettingsModal,
+  CreateChannelModal,
+  EditChannelModal 
 } from '@/components/modals';
 import { cn } from '@/lib/utils';
 const AppLayout = () => {
@@ -76,6 +78,8 @@ const AppLayout = () => {
       <JoinServerModal />
       <InviteModal />
       <ServerSettingsModal />
+      <CreateChannelModal />
+      <EditChannelModal />
     </>
   );
 };
