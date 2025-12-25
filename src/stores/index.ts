@@ -5,3 +5,4 @@ export { useUIStore, initializeTheme } from './uiStore';
 export { useMessageStore } from './messageStore';
 export { useDMStore } from './dmStore';
 export { useFriendStore } from './friendStore';
+export { useNotificationStore } from './notificationStore';

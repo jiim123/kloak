@@ -211,4 +211,46 @@
   .channel-item.active {
     @apply bg-secondary;
   }
+
+  /* Mention styling */
+  .mention {
+    @apply bg-primary/20 text-primary px-1 rounded cursor-pointer hover:bg-primary/30;
+  }
+
+  .mention-self {
+    @apply bg-primary/40;
+  }
+
+  .mention-everyone {
+    @apply bg-yellow-500/20 text-yellow-500;
+  }
+
+  /* Message link styling */
+  .message-link {
+    @apply text-primary hover:underline;
+  }
+
+  /* Inline code styling */
+  .inline-code {
+    @apply bg-secondary px-1.5 py-0.5 rounded font-mono text-sm;
+  }
+
+  /* Code block styling */
+  .code-block {
+    @apply bg-secondary rounded-lg p-3 my-2 overflow-x-auto;
+  }
+
+  .code-block code {
+    @apply font-mono text-sm;
+  }
+
+  /* Spoiler styling */
+  .spoiler {
+    @apply bg-foreground text-foreground rounded cursor-pointer transition-all;
+  }
+
+  .spoiler:hover,
+  .spoiler.revealed {
+    @apply bg-transparent;
+  }
 }
