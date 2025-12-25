@@ -3,6 +3,7 @@ import { ChevronDown, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MessageItem } from './MessageItem';
 import { useMessageStore } from '@/stores/messageStore';
+import { useAuthStore } from '@/stores/authStore';
 import { useRealtimeMessages } from '@/hooks/useRealtimeMessages';
 import { useUnread } from '@/hooks/useUnread';
 import type { Message } from '@/types';
@@ -26,6 +27,7 @@ const shouldGroupMessages = (current: Message, previous: Message | null): boolea
 };
 
 export const MessageList = ({ channelId, channelName }: MessageListProps) => {
+  const { user } = useAuthStore();
   const { messages, isLoading, hasMore, fetchMessages, clearMessages } = useMessageStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -41,6 +43,26 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
 
   // Enable realtime updates
   useRealtimeMessages(channelId);
+
+  // Listen for Up arrow edit event
+  useEffect(() => {
+    const handleEditLastMessage = (e: CustomEvent<{ userId: string; channelId: string }>) => {
+      if (e.detail.channelId !== channelId || !e.detail.userId) return;
+      
+      // Find the last message by this user in this channel
+      const userMessages = messages.filter(m => m.user_id === e.detail.userId);
+      if (userMessages.length > 0) {
+        const lastOwnMessage = userMessages[userMessages.length - 1];
+        // Dispatch event to trigger edit on that specific message
+        window.dispatchEvent(new CustomEvent('startEditMessage', { 
+          detail: { messageId: lastOwnMessage.id } 
+        }));
+      }
+    };
+
+    window.addEventListener('editLastMessage' as any, handleEditLastMessage);
+    return () => window.removeEventListener('editLastMessage' as any, handleEditLastMessage);
+  }, [channelId, messages]);
 
   // Fetch messages on channel change
   useEffect(() => {

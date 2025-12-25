@@ -211,6 +211,15 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       e.preventDefault();
       handleSubmit();
     }
+
+    // Up arrow to edit last message when input is empty
+    if (e.key === 'ArrowUp' && !content.trim()) {
+      e.preventDefault();
+      // Dispatch custom event to trigger edit on the last own message
+      window.dispatchEvent(new CustomEvent('editLastMessage', { 
+        detail: { userId: user?.id, channelId } 
+      }));
+    }
   };
 
   const cancelReply = () => {
