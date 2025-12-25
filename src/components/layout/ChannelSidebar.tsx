@@ -316,7 +316,7 @@ export const ChannelSidebar = () => {
           <div 
             className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium text-white cursor-pointer hover:opacity-80 transition-opacity"
             style={{ backgroundColor: user?.banner_color || '#5865F2' }}
-            onClick={() => openModal('user-profile', { userId: user?.id })}
+            onClick={() => openModal('userProfile', { userId: user?.id })}
           >
             {user?.avatar_url ? (
               <img src={user.avatar_url} alt={user.username} className="w-full h-full rounded-full object-cover" />

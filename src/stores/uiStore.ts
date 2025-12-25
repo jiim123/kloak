@@ -9,7 +9,7 @@ export type ModalType =
   | 'create-channel'
   | 'edit-channel'
   | 'user-settings'
-  | 'user-profile'
+  | 'userProfile'
   | 'invite'
   | 'delete-message'
   | 'leave-server'
@@ -19,6 +19,8 @@ export type ModalType =
   | 'shortcuts'
   | 'pinned-messages'
   | 'search'
+  | 'changeNickname'
+  | 'confirmAction'
   | null;
 
 interface ModalData {
