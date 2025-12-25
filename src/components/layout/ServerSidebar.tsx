@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Home, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuthStore } from '@/stores/authStore';
 import { useServerStore } from '@/stores/serverStore';
 import { useUIStore } from '@/stores/uiStore';
+import { useUnread } from '@/hooks/useUnread';
+import { supabase } from '@/integrations/supabase/client';
+import type { Channel } from '@/types';
 
 // Status colors
 const statusColors: Record<string, string> = {
@@ -17,10 +20,48 @@ const statusColors: Record<string, string> = {
   offline: 'bg-gray-500',
 };
 
+interface ServerChannels {
+  [serverId: string]: string[];
+}
+
 export const ServerSidebar = () => {
   const { user } = useAuthStore();
   const { servers, currentServer, setCurrentServer } = useServerStore();
   const { openModal } = useUIStore();
+  const [serverChannels, setServerChannels] = useState<ServerChannels>({});
+
+  // Fetch all channels for all servers
+  useEffect(() => {
+    const fetchAllChannels = async () => {
+      if (servers.length === 0) return;
+      
+      const serverIds = servers.map(s => s.id);
+      const { data: channels } = await supabase
+        .from('channels')
+        .select('id, server_id')
+        .in('server_id', serverIds);
+
+      if (channels) {
+        const channelsByServer: ServerChannels = {};
+        channels.forEach((ch: { id: string; server_id: string }) => {
+          if (!channelsByServer[ch.server_id]) {
+            channelsByServer[ch.server_id] = [];
+          }
+          channelsByServer[ch.server_id].push(ch.id);
+        });
+        setServerChannels(channelsByServer);
+      }
+    };
+
+    fetchAllChannels();
+  }, [servers]);
+
+  // Get all channel IDs for unread tracking
+  const allChannelIds = useMemo(() => {
+    return Object.values(serverChannels).flat();
+  }, [serverChannels]);
+
+  const { getServerUnreadInfo } = useUnread(allChannelIds);
   
   // Track which server is being hovered for pill animation
   const [hoveredServer, setHoveredServer] = useState<string | null>(null);
@@ -86,6 +127,8 @@ export const ServerSidebar = () => {
         {servers.map((server) => {
           const isActive = currentServer?.id === server.id;
           const isHovered = hoveredServer === server.id;
+          const channelIds = serverChannels[server.id] || [];
+          const { hasUnread, totalMentions } = getServerUnreadInfo(channelIds);
           
           return (
             <Tooltip key={server.id}>
@@ -99,7 +142,7 @@ export const ServerSidebar = () => {
                   <span 
                     className={cn(
                       'absolute -left-3 top-1/2 -translate-y-1/2 w-1 bg-foreground rounded-r-full transition-all duration-200',
-                      isActive ? 'h-10' : isHovered ? 'h-5' : 'h-0'
+                      isActive ? 'h-10' : isHovered ? 'h-5' : hasUnread && !isActive ? 'h-2' : 'h-0'
                     )} 
                   />
                   
@@ -128,11 +171,17 @@ export const ServerSidebar = () => {
                     )}
                   </Button>
 
-                  {/* Unread indicator dot - placeholder for future */}
-                  {/* <span className="absolute bottom-0 right-0 w-3 h-3 bg-white rounded-full border-2 border-layout-sidebar" /> */}
+                  {/* Unread indicator dot */}
+                  {hasUnread && !isActive && totalMentions === 0 && (
+                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-white rounded-full border-2 border-layout-sidebar" />
+                  )}
                   
-                  {/* Mention badge - placeholder for future */}
-                  {/* <span className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-red-500 rounded-full text-xs text-white flex items-center justify-center px-1">3</span> */}
+                  {/* Mention badge */}
+                  {totalMentions > 0 && (
+                    <span className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-full text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold">
+                      {totalMentions > 99 ? '99+' : totalMentions}
+                    </span>
+                  )}
                 </div>
               </TooltipTrigger>
               <TooltipContent side="right" className="font-semibold">

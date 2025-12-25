@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { ChevronDown, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MessageItem } from './MessageItem';
 import { useMessageStore } from '@/stores/messageStore';
 import { useRealtimeMessages } from '@/hooks/useRealtimeMessages';
+import { useUnread } from '@/hooks/useUnread';
 import type { Message } from '@/types';
 
 interface MessageListProps {
@@ -31,6 +32,12 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   const [showJumpToPresent, setShowJumpToPresent] = useState(false);
   const [newMessageCount, setNewMessageCount] = useState(0);
   const isNearBottomRef = useRef(true);
+  const hasMarkedAsReadRef = useRef(false);
+
+  // Unread tracking
+  const channelIds = useMemo(() => [channelId], [channelId]);
+  const { getChannelUnread, markAsRead } = useUnread(channelIds);
+  const { lastReadAt, firstUnreadMessageId } = getChannelUnread(channelId);
 
   // Enable realtime updates
   useRealtimeMessages(channelId);
@@ -39,6 +46,7 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   useEffect(() => {
     clearMessages();
     fetchMessages(channelId);
+    hasMarkedAsReadRef.current = false;
   }, [channelId, fetchMessages, clearMessages]);
 
   // Auto-scroll when new messages arrive (if near bottom)
@@ -50,6 +58,17 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
       setNewMessageCount((prev) => prev + 1);
     }
   }, [messages.length]);
+
+  // Mark as read when viewing channel (automatic)
+  useEffect(() => {
+    if (messages.length > 0 && !hasMarkedAsReadRef.current && isNearBottomRef.current) {
+      const latestMessage = messages[messages.length - 1];
+      if (latestMessage) {
+        markAsRead(channelId, latestMessage.id);
+        hasMarkedAsReadRef.current = true;
+      }
+    }
+  }, [messages, channelId, markAsRead]);
 
   // Handle scroll events
   const handleScroll = useCallback(() => {
@@ -76,7 +95,26 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     setShowJumpToPresent(false);
     setNewMessageCount(0);
+    // Mark as read when jumping to present
+    if (messages.length > 0) {
+      const latestMessage = messages[messages.length - 1];
+      markAsRead(channelId, latestMessage.id);
+    }
   };
+
+  // Find the index where the NEW divider should appear
+  const newMessagesDividerIndex = useMemo(() => {
+    if (!lastReadAt || !firstUnreadMessageId) return -1;
+    
+    const lastReadTime = new Date(lastReadAt).getTime();
+    for (let i = 0; i < messages.length; i++) {
+      const msgTime = new Date(messages[i].created_at).getTime();
+      if (msgTime > lastReadTime) {
+        return i;
+      }
+    }
+    return -1;
+  }, [messages, lastReadAt, firstUnreadMessageId]);
 
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
@@ -112,13 +150,25 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
           {messages.map((message, index) => {
             const previousMessage = index > 0 ? messages[index - 1] : null;
             const isGrouped = shouldGroupMessages(message, previousMessage);
+            const showNewDivider = index === newMessagesDividerIndex && !hasMarkedAsReadRef.current;
             
             return (
-              <MessageItem
-                key={message.id}
-                message={message}
-                isGrouped={isGrouped}
-              />
+              <div key={message.id}>
+                {/* New messages divider */}
+                {showNewDivider && (
+                  <div className="flex items-center gap-2 px-4 my-2">
+                    <div className="flex-1 h-px bg-destructive" />
+                    <span className="text-xs font-semibold text-destructive uppercase px-2">
+                      New
+                    </span>
+                    <div className="flex-1 h-px bg-destructive" />
+                  </div>
+                )}
+                <MessageItem
+                  message={message}
+                  isGrouped={isGrouped}
+                />
+              </div>
             );
           })}
         </div>
