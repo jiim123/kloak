@@ -20,6 +20,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useServerStore } from '@/stores/serverStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useUnread } from '@/hooks/useUnread';
+import { StatusSelector } from '@/components/StatusSelector';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   DropdownMenu,
@@ -325,29 +326,30 @@ export const ChannelSidebar = () => {
 
       {/* User panel */}
       <div className="h-14 px-2 flex items-center gap-2 bg-layout-sidebar border-t border-border">
-        {/* Avatar with status */}
-        <div className="relative flex-shrink-0">
-          <div 
-            className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium text-white cursor-pointer hover:opacity-80 transition-opacity"
-            style={{ backgroundColor: user?.banner_color || '#5865F2' }}
-            onClick={() => openModal('userProfile', { userId: user?.id })}
-          >
-            {user?.avatar_url ? (
-              <img src={user.avatar_url} alt={user.username} className="w-full h-full rounded-full object-cover" />
-            ) : (
-              user?.username?.[0]?.toUpperCase() || '?'
-            )}
-          </div>
-          <div 
-            className={cn(
-              'absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-layout-sidebar',
-              user?.status === 'online' && 'bg-green-500',
-              user?.status === 'idle' && 'bg-yellow-500',
-              user?.status === 'dnd' && 'bg-red-500',
-              user?.status === 'offline' && 'bg-gray-500'
-            )} 
-          />
-        </div>
+        {/* Avatar with status - click to change status */}
+        <StatusSelector side="top" align="start">
+          <button className="relative flex-shrink-0">
+            <div 
+              className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium text-white cursor-pointer hover:opacity-80 transition-opacity"
+              style={{ backgroundColor: user?.banner_color || '#5865F2' }}
+            >
+              {user?.avatar_url ? (
+                <img src={user.avatar_url} alt={user.username} className="w-full h-full rounded-full object-cover" />
+              ) : (
+                user?.username?.[0]?.toUpperCase() || '?'
+              )}
+            </div>
+            <div 
+              className={cn(
+                'absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-layout-sidebar',
+                user?.status === 'online' && 'bg-green-500',
+                user?.status === 'idle' && 'bg-yellow-500',
+                user?.status === 'dnd' && 'bg-red-500',
+                user?.status === 'offline' && 'bg-gray-500'
+              )} 
+            />
+          </button>
+        </StatusSelector>
 
         {/* User info */}
         <div className="flex-1 min-w-0">
@@ -355,7 +357,7 @@ export const ChannelSidebar = () => {
             {user?.display_name || user?.username}
           </p>
           <p className="text-xs text-muted-foreground truncate">
-            {user?.custom_status || (user?.status === 'online' ? 'Online' : user?.status || 'Online')}
+            {user?.custom_status || (user?.status === 'online' ? 'Online' : user?.status === 'idle' ? 'Idle' : user?.status === 'dnd' ? 'Do Not Disturb' : 'Offline')}
           </p>
         </div>
 
