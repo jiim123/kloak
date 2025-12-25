@@ -86,9 +86,9 @@ export const UserProfilePopup = () => {
   }, [isOpen, userId, servers]);
 
   const isSelf = currentUser?.id === userId;
-  const isFriend = friends.some(f => f.friend?.id === userId);
-  const hasPendingRequest = pendingRequests.some(f => f.friend?.id === userId);
-  const hasSentRequest = outgoingRequests.some(f => f.friend?.id === userId);
+  const isFriend = friends.some(f => f.id === userId);
+  const hasPendingRequest = pendingRequests.some(f => f.id === userId);
+  const hasSentRequest = outgoingRequests.some(f => f.id === userId);
 
   const handleMessage = async () => {
     if (!currentUser || !profileUser) return;
@@ -108,9 +108,9 @@ export const UserProfilePopup = () => {
     if (!currentUser || !profileUser) return;
     
     if (isFriend) {
-      const friendship = friends.find(f => f.friend?.id === profileUser.id);
+      const friendship = friends.find(f => f.id === profileUser.id);
       if (friendship) {
-        await removeFriend(friendship.id);
+        await removeFriend(friendship.friendship_id);
         toast.success('Friend removed');
       }
     } else if (!hasPendingRequest && !hasSentRequest) {

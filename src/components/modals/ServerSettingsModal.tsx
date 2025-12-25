@@ -353,7 +353,7 @@ export const ServerSettingsModal = () => {
                             size="sm"
                             onClick={async () => {
                               try {
-                                await updateMember(server.id, member.user_id, { is_banned: false } as Partial<ServerMember>);
+                                await updateMember(member.id, { is_banned: false });
                                 toast.success(`${member.user?.username} has been unbanned`);
                               } catch {
                                 toast.error('Failed to unban');
