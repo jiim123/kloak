@@ -1,15 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { PlusCircle, Smile, Send, X, Loader2 } from 'lucide-react';
+import { PlusCircle, Smile, Send, X, Loader2, WifiOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuthStore } from '@/stores/authStore';
 import { useMessageStore } from '@/stores/messageStore';
 import { useServerStore } from '@/stores/serverStore';
 import { useNotificationStore } from '@/stores/notificationStore';
+import { useOfflineQueueStore } from '@/stores/offlineQueueStore';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { saveDraft, getDraft, clearDraft } from '@/lib/storage';
 import { getMessagePreview, extractMentions } from '@/lib/message';
 import { MentionAutocomplete } from './MentionAutocomplete';
 import { supabase } from '@/integrations/supabase/client';
+import { showSuccess, handleError } from '@/lib/errorHandler';
 
 interface MessageInputProps {
   channelId: string;
@@ -25,6 +28,8 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const { replyingTo, setReplyingTo, sendMessage } = useMessageStore();
   const { members, currentServer } = useServerStore();
   const { createMentionNotification } = useNotificationStore();
+  const { addToQueue, getQueuedForChannel } = useOfflineQueueStore();
+  const { isOnline } = useOnlineStatus();
   
   const [content, setContent] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -154,6 +159,20 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     onStopTyping();
     setShowMentions(false);
 
+    // If offline, queue the message
+    if (!isOnline) {
+      addToQueue({
+        channelId,
+        userId: user.id,
+        content: messageContent,
+        replyToId: replyingTo?.id,
+      });
+      setIsSending(false);
+      setReplyingTo(null);
+      showSuccess('Message queued', 'Will be sent when you reconnect.');
+      return;
+    }
+
     try {
       const message = await sendMessage(channelId, user.id, messageContent, replyingTo?.id);
     
@@ -202,6 +221,10 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
           }
         }
       }
+    } catch (error) {
+      handleError(error, 'Failed to send message');
+      // Restore content if sending failed
+      setContent(messageContent);
     } finally {
       setIsSending(false);
     }
@@ -228,6 +251,9 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     }
   };
 
+  // Get queued messages for this channel
+  const queuedMessages = getQueuedForChannel(channelId);
+
   const cancelReply = () => {
     setReplyingTo(null);
   };
@@ -246,6 +272,14 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
 
   return (
     <div className="px-4 pb-6 relative">
+      {/* Queued messages indicator */}
+      {queuedMessages.length > 0 && (
+        <div className="flex items-center gap-2 px-4 py-2 mb-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-sm text-yellow-500">
+          <WifiOff className="w-4 h-4" />
+          <span>{queuedMessages.length} message{queuedMessages.length > 1 ? 's' : ''} waiting to send</span>
+        </div>
+      )}
+
       {/* Mention Autocomplete */}
       {showMentions && (
         <MentionAutocomplete
