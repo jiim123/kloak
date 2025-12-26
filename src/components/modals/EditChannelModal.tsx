@@ -26,7 +26,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Hash, Trash2 } from 'lucide-react';
+import { Hash, Trash2, FolderOpen } from 'lucide-react';
 import { toast } from 'sonner';
 
 const SLOWMODE_OPTIONS = [
@@ -42,7 +42,7 @@ const SLOWMODE_OPTIONS = [
 
 export const EditChannelModal = () => {
   const { activeModal, modalData, closeModal } = useUIStore();
-  const { channels, updateChannel, deleteChannel } = useServerStore();
+  const { channels, categories, updateChannel, deleteChannel, updateCategory, deleteCategory } = useServerStore();
   
   const [name, setName] = useState('');
   const [topic, setTopic] = useState('');
@@ -54,16 +54,25 @@ export const EditChannelModal = () => {
 
   const isOpen = activeModal === 'edit-channel';
   const channelId = modalData?.channelId as string | undefined;
+  const categoryId = modalData?.categoryId as string | undefined;
+  const isCategory = modalData?.isCategory === true;
+  
   const channel = channels.find(c => c.id === channelId);
+  const category = categories.find(c => c.id === categoryId);
 
   useEffect(() => {
-    if (channel) {
+    if (isCategory && category) {
+      setName(category.name);
+      setTopic('');
+      setIsNsfw(false);
+      setSlowmodeSeconds('0');
+    } else if (channel) {
       setName(channel.name);
       setTopic(channel.topic || '');
       setIsNsfw(channel.is_nsfw);
       setSlowmodeSeconds(String(channel.slowmode_seconds));
     }
-  }, [channel]);
+  }, [channel, category, isCategory]);
 
   const handleClose = () => {
     setError('');
@@ -78,44 +87,144 @@ export const EditChannelModal = () => {
     e.preventDefault();
     
     if (!name.trim()) {
-      setError('Channel name is required');
+      setError(isCategory ? 'Category name is required' : 'Channel name is required');
       return;
     }
-
-    if (!channelId) return;
 
     setIsSubmitting(true);
     setError('');
 
     try {
-      await updateChannel(channelId, {
-        name: formatChannelName(name.trim()),
-        topic: topic.trim() || null,
-        is_nsfw: isNsfw,
-        slowmode_seconds: parseInt(slowmodeSeconds, 10),
-      });
-      toast.success('Channel updated');
+      if (isCategory && categoryId) {
+        await updateCategory(categoryId, {
+          name: name.trim(),
+        });
+        toast.success('Category updated');
+      } else if (channelId) {
+        await updateChannel(channelId, {
+          name: formatChannelName(name.trim()),
+          topic: topic.trim() || null,
+          is_nsfw: isNsfw,
+          slowmode_seconds: parseInt(slowmodeSeconds, 10),
+        });
+        toast.success('Channel updated');
+      }
       handleClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update channel');
+      setError(err instanceof Error ? err.message : `Failed to update ${isCategory ? 'category' : 'channel'}`);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!channelId) return;
-    
     try {
-      await deleteChannel(channelId);
-      toast.success('Channel deleted');
+      if (isCategory && categoryId) {
+        await deleteCategory(categoryId);
+        toast.success('Category deleted');
+      } else if (channelId) {
+        await deleteChannel(channelId);
+        toast.success('Channel deleted');
+      }
       setShowDeleteConfirm(false);
       handleClose();
     } catch (err) {
-      toast.error('Failed to delete channel');
+      toast.error(`Failed to delete ${isCategory ? 'category' : 'channel'}`);
     }
   };
 
+  // Category editing mode
+  if (isCategory) {
+    if (!category) return null;
+
+    return (
+      <>
+        <Dialog open={isOpen} onOpenChange={handleClose}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <FolderOpen className="h-5 w-5" />
+                Edit Category
+              </DialogTitle>
+              <DialogDescription>
+                Modify category settings for {category.name}
+              </DialogDescription>
+            </DialogHeader>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Category name */}
+              <div className="space-y-2">
+                <Label htmlFor="category-name">Category Name</Label>
+                <Input
+                  id="category-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Category name"
+                  maxLength={50}
+                />
+              </div>
+
+              {error && (
+                <p className="text-sm text-destructive">{error}</p>
+              )}
+
+              {/* Danger zone */}
+              <div className="border border-destructive/50 rounded-lg p-4 space-y-3">
+                <div className="space-y-1">
+                  <Label className="text-destructive">Danger Zone</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Deleting a category will move all its channels to uncategorized.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Category
+                </Button>
+              </div>
+
+              <DialogFooter>
+                <Button type="button" variant="ghost" onClick={handleClose}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting || !name.trim()}>
+                  {isSubmitting ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete confirmation dialog */}
+        <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Category</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete <strong>{category.name}</strong>? 
+                All channels in this category will be moved to uncategorized.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete Category
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </>
+    );
+  }
+
+  // Channel editing mode
   if (!channel) return null;
 
   return (
