@@ -176,8 +176,8 @@ export const DMChatArea = () => {
 
   return (
     <div className="h-full flex flex-col bg-layout-chat">
-      {/* Header */}
-      <div className="h-12 px-4 flex items-center gap-3 border-b border-border shadow-sm">
+      {/* Header - hidden on mobile since we have MobileHeader */}
+      <div className="h-12 px-4 hidden md:flex items-center gap-3 border-b border-border shadow-sm">
         <div className="relative flex-shrink-0">
           <div
             className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"

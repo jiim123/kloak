@@ -17,7 +17,7 @@ export const ChannelHeader = ({ channel }: ChannelHeaderProps) => {
   const ChannelIcon = channel.type === 'voice' ? Volume2 : Hash;
 
   return (
-    <div className="h-12 px-4 flex items-center justify-between border-b border-border flex-shrink-0">
+    <div className="h-12 px-4 hidden md:flex items-center justify-between border-b border-border flex-shrink-0">
       <div className="flex items-center gap-2 min-w-0 flex-1">
         <ChannelIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
         <span className="font-semibold text-foreground truncate">{channel.name}</span>

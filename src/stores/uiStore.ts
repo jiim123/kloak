@@ -52,6 +52,10 @@ interface UIState {
   modalData: ModalData | null;
   linkPreviewsEnabled: boolean;
   linkPreviewNoticeDismissed: boolean;
+  
+  // Mobile sidebar states
+  isMobileSidebarOpen: boolean;
+  isMobileChannelSidebarOpen: boolean;
 
   // Theme actions
   toggleTheme: () => void;
@@ -61,6 +65,11 @@ interface UIState {
   // Sidebar actions
   toggleMemberSidebar: () => void;
   setMemberSidebarOpen: (open: boolean) => void;
+  
+  // Mobile sidebar actions
+  setMobileSidebarOpen: (open: boolean) => void;
+  setMobileChannelSidebarOpen: (open: boolean) => void;
+  closeMobileSidebars: () => void;
 
   // Modal actions
   openModal: (modal: ModalType, data?: ModalData) => void;
@@ -98,6 +107,8 @@ export const useUIStore = create<UIState>()(
       modalData: null,
       linkPreviewsEnabled: true,
       linkPreviewNoticeDismissed: false,
+      isMobileSidebarOpen: false,
+      isMobileChannelSidebarOpen: false,
 
       toggleTheme: () => {
         const currentTheme = get().theme;
@@ -126,6 +137,18 @@ export const useUIStore = create<UIState>()(
 
       setMemberSidebarOpen: (open) => {
         set({ isMemberSidebarOpen: open });
+      },
+
+      setMobileSidebarOpen: (open) => {
+        set({ isMobileSidebarOpen: open });
+      },
+
+      setMobileChannelSidebarOpen: (open) => {
+        set({ isMobileChannelSidebarOpen: open });
+      },
+
+      closeMobileSidebars: () => {
+        set({ isMobileSidebarOpen: false, isMobileChannelSidebarOpen: false });
       },
 
       openModal: (modal, data = null) => {

@@ -7,6 +7,9 @@ import { ServerSidebar } from '@/components/layout/ServerSidebar';
 import { ChannelSidebar } from '@/components/layout/ChannelSidebar';
 import { ChatArea } from '@/components/layout/ChatArea';
 import { MembersSidebar } from '@/components/layout/MembersSidebar';
+import { MobileHeader } from '@/components/layout/MobileHeader';
+import { MobileSidebar } from '@/components/layout/MobileSidebar';
+import { MobileMembersSidebar } from '@/components/layout/MobileMembersSidebar';
 import { DMSidebar, FriendsList, DMChatArea } from '@/components/dm';
 import { 
   CreateServerModal, 
@@ -27,13 +30,15 @@ import {
 import { cn } from '@/lib/utils';
 import { useDMStore } from '@/stores/dmStore';
 import { useRealtimeFriendships, useRealtimeUsers, useRealtimeServer, useRealtimeNotifications } from '@/hooks';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const AppLayout = () => {
   const navigate = useNavigate();
   const { user, isLoading } = useAuthStore();
-  const { isMemberSidebarOpen } = useUIStore();
-  const { currentServer } = useServerStore();
-  const { currentConversation } = useDMStore();
+  const { isMemberSidebarOpen, closeMobileSidebars } = useUIStore();
+  const { currentServer, currentChannel, setCurrentChannel } = useServerStore();
+  const { currentConversation, setCurrentConversation } = useDMStore();
+  const isMobile = useIsMobile();
   
   // Track if showing friends list in DM view
   const [showFriends, setShowFriends] = useState(true);
@@ -61,6 +66,21 @@ const AppLayout = () => {
     }
   }, [currentServer, currentConversation]);
 
+  // Close mobile sidebars when navigating
+  useEffect(() => {
+    if (currentChannel || currentConversation) {
+      closeMobileSidebars();
+    }
+  }, [currentChannel, currentConversation, closeMobileSidebars]);
+
+  // Handle mobile back navigation
+  const handleMobileBack = () => {
+    if (currentConversation) {
+      setCurrentConversation(null);
+      setShowFriends(true);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="h-screen bg-layout-chat flex items-center justify-center">
@@ -80,26 +100,61 @@ const AppLayout = () => {
 
   return (
     <>
-      <div className="h-screen flex overflow-hidden">
-        {/* Server list sidebar - 72px fixed */}
-        <div className="w-[72px] flex-shrink-0 bg-layout-sidebar">
-          <ServerSidebar />
-        </div>
-        
-        {/* Secondary sidebar - 240px fixed */}
-        <div className="w-60 flex-shrink-0 bg-layout-sidebar-secondary">
-          {isDMView ? (
-            <DMSidebar 
-              showFriends={showFriends} 
-              onShowFriendsChange={setShowFriends} 
-            />
-          ) : (
-            <ChannelSidebar />
+      <div className="h-screen flex flex-col md:flex-row overflow-hidden">
+        {/* Mobile header */}
+        <MobileHeader 
+          isDMView={isDMView} 
+          showFriends={showFriends}
+          onBack={handleMobileBack}
+        />
+
+        {/* Desktop layout */}
+        <div className="hidden md:flex flex-1 overflow-hidden">
+          {/* Server list sidebar - 72px fixed */}
+          <div className="w-[72px] flex-shrink-0 bg-layout-sidebar">
+            <ServerSidebar />
+          </div>
+          
+          {/* Secondary sidebar - 240px fixed */}
+          <div className="w-60 flex-shrink-0 bg-layout-sidebar-secondary">
+            {isDMView ? (
+              <DMSidebar 
+                showFriends={showFriends} 
+                onShowFriendsChange={setShowFriends} 
+              />
+            ) : (
+              <ChannelSidebar />
+            )}
+          </div>
+          
+          {/* Main area - flexible */}
+          <div className="flex-1 min-w-0 bg-layout-chat relative">
+            {isDMView ? (
+              showFriends ? (
+                <FriendsList onOpenDM={() => setShowFriends(false)} />
+              ) : (
+                <DMChatArea />
+              )
+            ) : (
+              <ChatArea />
+            )}
+          </div>
+          
+          {/* Members sidebar - 240px, collapsible, only in server view */}
+          {!isDMView && (
+            <div 
+              className={cn(
+                "flex-shrink-0 bg-layout-members transition-all duration-200",
+                isMemberSidebarOpen ? "w-60" : "w-0 overflow-hidden"
+              )}
+            >
+              <MembersSidebar />
+            </div>
           )}
         </div>
-        
-        {/* Main area - flexible */}
-        <div className="flex-1 min-w-0 bg-layout-chat relative">
+
+        {/* Mobile layout */}
+        <div className="flex-1 md:hidden overflow-hidden bg-layout-chat">
           {isDMView ? (
             showFriends ? (
               <FriendsList onOpenDM={() => setShowFriends(false)} />
@@ -110,19 +165,15 @@ const AppLayout = () => {
             <ChatArea />
           )}
         </div>
-        
-        {/* Members sidebar - 240px, collapsible, only in server view */}
-        {!isDMView && (
-          <div 
-            className={cn(
-              "flex-shrink-0 bg-layout-members transition-all duration-200",
-              isMemberSidebarOpen ? "w-60" : "w-0 overflow-hidden"
-            )}
-          >
-            <MembersSidebar />
-          </div>
-        )}
       </div>
+
+      {/* Mobile Sidebars */}
+      <MobileSidebar 
+        isDMView={isDMView}
+        showFriends={showFriends}
+        onShowFriendsChange={setShowFriends}
+      />
+      <MobileMembersSidebar />
 
       {/* Modals */}
       <CreateServerModal />

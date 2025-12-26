@@ -262,8 +262,8 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
 
   return (
     <div className="h-full flex flex-col bg-layout-chat">
-      {/* Header */}
-      <div className="h-12 px-4 flex items-center justify-between border-b border-border shadow-sm">
+      {/* Header - hidden on mobile since we have MobileHeader */}
+      <div className="h-12 px-4 hidden md:flex items-center justify-between border-b border-border shadow-sm">
         <div className="flex items-center gap-4">
           <h2 className="font-semibold text-foreground">Friends</h2>
         </div>
@@ -272,6 +272,19 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
           variant={showAddFriend ? "secondary" : "default"}
           onClick={() => setShowAddFriend(!showAddFriend)}
           className="gap-2"
+        >
+          <UserPlus className="w-4 h-4" />
+          Add Friend
+        </Button>
+      </div>
+      
+      {/* Mobile add friend button */}
+      <div className="md:hidden p-2 border-b border-border">
+        <Button
+          size="sm"
+          variant={showAddFriend ? "secondary" : "default"}
+          onClick={() => setShowAddFriend(!showAddFriend)}
+          className="w-full gap-2"
         >
           <UserPlus className="w-4 h-4" />
           Add Friend
