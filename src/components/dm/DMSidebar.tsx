@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useDMStore } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
 import { formatRelativeTime } from '@/lib/format';
+import { ConversationItemSkeleton } from '@/components/ui/skeletons';
 import type { DMConversation } from '@/types';
 
 interface DMSidebarProps {
@@ -15,7 +16,7 @@ interface DMSidebarProps {
 
 export const DMSidebar = ({ showFriends, onShowFriendsChange }: DMSidebarProps) => {
   const { user } = useAuthStore();
-  const { conversations, currentConversation, fetchConversations, setCurrentConversation } = useDMStore();
+  const { conversations, currentConversation, fetchConversations, setCurrentConversation, isLoading } = useDMStore();
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
@@ -98,12 +99,34 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange }: DMSidebarProps) 
 
       {/* Conversations list */}
       <div className="flex-1 overflow-y-auto px-2 space-y-0.5">
-        {filteredConversations.length === 0 ? (
-          <div className="px-2 py-8 text-center text-muted-foreground text-sm">
-            {searchQuery ? 'No conversations found' : 'No direct messages yet'}
+        {/* Loading state */}
+        {isLoading && conversations.length === 0 && (
+          <>
+            <ConversationItemSkeleton />
+            <ConversationItemSkeleton />
+            <ConversationItemSkeleton />
+          </>
+        )}
+
+        {/* Empty state */}
+        {!isLoading && filteredConversations.length === 0 && (
+          <div className="px-2 py-8 text-center">
+            <div className="w-12 h-12 rounded-full bg-secondary/50 flex items-center justify-center mx-auto mb-3">
+              <MessageSquare className="w-6 h-6 text-muted-foreground" />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {searchQuery ? 'No conversations found' : 'No direct messages yet'}
+            </p>
+            {!searchQuery && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Start a conversation with a friend!
+              </p>
+            )}
           </div>
-        ) : (
-          filteredConversations.map((conversation) => (
+        )}
+
+        {/* Conversations */}
+        {filteredConversations.map((conversation) => (
             <div
               key={conversation.id}
               className={cn(
@@ -165,8 +188,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange }: DMSidebarProps) 
                 <X className="w-4 h-4 text-muted-foreground" />
               </button>
             </div>
-          ))
-        )}
+        ))}
       </div>
     </div>
   );

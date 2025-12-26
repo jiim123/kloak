@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { Crown, ChevronDown, ChevronRight, MessageSquare, Edit3, UserX, Ban, VolumeX, Volume2, Shield, ShieldAlert, ShieldOff } from 'lucide-react';
+import { Crown, ChevronDown, ChevronRight, MessageSquare, Edit3, UserX, Ban, VolumeX, Volume2, Shield, ShieldAlert, ShieldOff, Users } from 'lucide-react';
 import { useServerStore } from '@/stores/serverStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/context-menu';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
+import { MembersSidebarSkeleton } from '@/components/ui/skeletons';
 import type { ServerMember, ServerRole } from '@/types';
 
 const OFFLINE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
@@ -87,13 +88,18 @@ const RoleBadge = ({ role }: { role: ServerRole }) => {
 };
 
 export const MembersSidebar = () => {
-  const { members, currentServer } = useServerStore();
+  const { members, currentServer, isLoading } = useServerStore();
   const { user } = useAuthStore();
   const { openModal } = useUIStore();
   const [offlineExpanded, setOfflineExpanded] = useState(false);
 
   // Subscribe to realtime member updates
   useRealtimeMembers(currentServer?.id || null);
+
+  // Show skeleton while loading
+  if (isLoading) {
+    return <MembersSidebarSkeleton />;
+  }
 
   // Get current user's role in this server
   const currentUserMember = members.find(m => m.user_id === user?.id);
@@ -433,8 +439,9 @@ export const MembersSidebar = () => {
 
         {/* Empty state */}
         {members.length === 0 && (
-          <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
-            No members
+          <div className="flex flex-col items-center justify-center h-32 text-center px-4">
+            <Users className="w-10 h-10 text-muted-foreground/50 mb-2" />
+            <p className="text-sm text-muted-foreground">No members to display</p>
           </div>
         )}
       </div>

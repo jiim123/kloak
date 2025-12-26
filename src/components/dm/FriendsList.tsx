@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Check, X, MessageSquare, MoreHorizontal, UserPlus, Ban, UserX } from 'lucide-react';
+import { Check, X, MessageSquare, MoreHorizontal, UserPlus, Ban, UserX, Users, Search, Inbox } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import {
 import { useFriendStore } from '@/stores/friendStore';
 import { useDMStore } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
+import { FriendItemSkeleton } from '@/components/ui/skeletons';
 import { toast } from 'sonner';
 import type { FriendWithUser } from '@/types';
 
@@ -347,10 +348,20 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
         <div className="flex-1 overflow-y-auto p-4">
           <TabsContent value="online" className="m-0">
             {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">Loading...</div>
+              <div className="space-y-1">
+                <FriendItemSkeleton />
+                <FriendItemSkeleton />
+                <FriendItemSkeleton />
+              </div>
             ) : onlineFriends.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No friends online
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
+                  <Users className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <h3 className="font-medium text-foreground mb-1">No one's around...</h3>
+                <p className="text-sm text-muted-foreground">
+                  {friends.length > 0 ? 'None of your friends are online right now.' : 'Add some friends to see who\'s online!'}
+                </p>
               </div>
             ) : (
               <div className="space-y-1">
@@ -363,10 +374,24 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
 
           <TabsContent value="all" className="m-0">
             {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">Loading...</div>
+              <div className="space-y-1">
+                <FriendItemSkeleton />
+                <FriendItemSkeleton />
+                <FriendItemSkeleton />
+              </div>
             ) : allFriends.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No friends yet. Add someone!
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
+                  <UserPlus className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <h3 className="font-medium text-foreground mb-1">No friends yet</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Wumpus is waiting for you to add a friend!
+                </p>
+                <Button onClick={() => setShowAddFriend(true)} className="gap-2">
+                  <UserPlus className="w-4 h-4" />
+                  Add Friend
+                </Button>
               </div>
             ) : (
               <div className="space-y-1">
@@ -379,8 +404,14 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
 
           <TabsContent value="pending" className="m-0">
             {pendingRequests.length === 0 && outgoingRequests.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No pending friend requests
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
+                  <Inbox className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <h3 className="font-medium text-foreground mb-1">No pending requests</h3>
+                <p className="text-sm text-muted-foreground">
+                  Friend requests will appear here.
+                </p>
               </div>
             ) : (
               <div className="space-y-1">
@@ -396,8 +427,14 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
 
           <TabsContent value="blocked" className="m-0">
             {blockedUsers.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No blocked users
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
+                  <Ban className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <h3 className="font-medium text-foreground mb-1">No blocked users</h3>
+                <p className="text-sm text-muted-foreground">
+                  You haven't blocked anyone.
+                </p>
               </div>
             ) : (
               <div className="space-y-1">
