@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { PlusCircle, Smile, Send, X } from 'lucide-react';
+import { PlusCircle, Smile, Send, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuthStore } from '@/stores/authStore';
@@ -27,6 +27,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const { createMentionNotification } = useNotificationStore();
   
   const [content, setContent] = useState('');
+  const [isSending, setIsSending] = useState(false);
   const [showMentions, setShowMentions] = useState(false);
   const [mentionQuery, setMentionQuery] = useState('');
   const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 });
@@ -144,60 +145,65 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   };
 
   const handleSubmit = async () => {
-    if (!content.trim() || !user || isMuted) return;
+    if (!content.trim() || !user || isMuted || isSending) return;
 
     const messageContent = content.trim();
     setContent('');
+    setIsSending(true);
     clearDraft(channelId);
     onStopTyping();
     setShowMentions(false);
 
-    const message = await sendMessage(channelId, user.id, messageContent, replyingTo?.id);
+    try {
+      const message = await sendMessage(channelId, user.id, messageContent, replyingTo?.id);
     
-    if (message && currentServer) {
-      // Parse and track mentions
-      const mentions = extractMentions(messageContent);
-      
-      for (const mention of mentions) {
-        if (mention.type === 'user' && mention.id && mention.id !== user.id) {
-          // Create mention record
-          await supabase.from('mentions').insert({
-            message_id: message.id,
-            user_id: mention.id,
-            mention_type: 'user',
-          });
-          
-          // Create notification
-          await createMentionNotification(
-            mention.id,
-            user.id,
-            channelId,
-            channelName,
-            currentServer.id
-          );
-        } else if (mention.type === 'everyone' || mention.type === 'here') {
-          // Notify all server members (or online members for @here)
-          const targetMembers = mention.type === 'here'
-            ? members.filter(m => m.user?.status === 'online' && m.user_id !== user.id)
-            : members.filter(m => m.user_id !== user.id);
-          
-          for (const member of targetMembers.slice(0, 50)) { // Limit to 50 to prevent spam
+      if (message && currentServer) {
+        // Parse and track mentions
+        const mentions = extractMentions(messageContent);
+        
+        for (const mention of mentions) {
+          if (mention.type === 'user' && mention.id && mention.id !== user.id) {
+            // Create mention record
             await supabase.from('mentions').insert({
               message_id: message.id,
-              user_id: member.user_id,
-              mention_type: mention.type,
+              user_id: mention.id,
+              mention_type: 'user',
             });
             
+            // Create notification
             await createMentionNotification(
-              member.user_id,
+              mention.id,
               user.id,
               channelId,
               channelName,
               currentServer.id
             );
+          } else if (mention.type === 'everyone' || mention.type === 'here') {
+            // Notify all server members (or online members for @here)
+            const targetMembers = mention.type === 'here'
+              ? members.filter(m => m.user?.status === 'online' && m.user_id !== user.id)
+              : members.filter(m => m.user_id !== user.id);
+            
+            for (const member of targetMembers.slice(0, 50)) { // Limit to 50 to prevent spam
+              await supabase.from('mentions').insert({
+                message_id: message.id,
+                user_id: member.user_id,
+                mention_type: mention.type,
+              });
+              
+              await createMentionNotification(
+                member.user_id,
+                user.id,
+                channelId,
+                channelName,
+                currentServer.id
+              );
+            }
           }
         }
       }
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -296,8 +302,17 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
           </Button>
 
           {content.trim() && (
-            <Button size="icon" className="w-8 h-8" onClick={handleSubmit}>
-              <Send className="w-4 h-4" />
+            <Button 
+              size="icon" 
+              className="w-8 h-8" 
+              onClick={handleSubmit}
+              disabled={isSending}
+            >
+              {isSending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
             </Button>
           )}
         </div>

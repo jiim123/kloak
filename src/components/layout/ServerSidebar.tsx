@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Home, Plus } from 'lucide-react';
+import { Home, Plus, Users, MessageSquarePlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -10,6 +10,7 @@ import { useServerStore } from '@/stores/serverStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useUnread } from '@/hooks/useUnread';
 import { StatusSelector } from '@/components/StatusSelector';
+import { ServerIconSkeleton } from '@/components/ui/skeletons';
 import { supabase } from '@/integrations/supabase/client';
 import type { Channel } from '@/types';
 
@@ -27,7 +28,7 @@ interface ServerChannels {
 
 export const ServerSidebar = () => {
   const { user } = useAuthStore();
-  const { servers, currentServer, setCurrentServer } = useServerStore();
+  const { servers, currentServer, setCurrentServer, isLoading } = useServerStore();
   const { openModal } = useUIStore();
   const [serverChannels, setServerChannels] = useState<ServerChannels>({});
 
@@ -125,6 +126,25 @@ export const ServerSidebar = () => {
 
       {/* Server list */}
       <div className="flex-1 flex flex-col items-center gap-2 overflow-y-auto scrollbar-hide w-full px-3">
+        {/* Loading skeletons */}
+        {isLoading && servers.length === 0 && (
+          <>
+            <ServerIconSkeleton />
+            <ServerIconSkeleton />
+            <ServerIconSkeleton />
+          </>
+        )}
+
+        {/* Empty state */}
+        {!isLoading && servers.length === 0 && (
+          <div className="flex flex-col items-center py-4 text-center">
+            <div className="w-12 h-12 rounded-full bg-secondary/50 flex items-center justify-center mb-2">
+              <Users className="w-6 h-6 text-muted-foreground" />
+            </div>
+            <p className="text-[10px] text-muted-foreground px-2">No servers yet</p>
+          </div>
+        )}
+
         {servers.map((server) => {
           const isActive = currentServer?.id === server.id;
           const isHovered = hoveredServer === server.id;

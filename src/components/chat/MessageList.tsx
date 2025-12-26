@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { ChevronDown, Loader2 } from 'lucide-react';
+import { ChevronDown, Loader2, Hash, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MessageItem } from './MessageItem';
+import { MessageListSkeleton } from '@/components/ui/skeletons';
 import { useMessageStore } from '@/stores/messageStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useRealtimeMessages } from '@/hooks/useRealtimeMessages';
@@ -145,25 +146,34 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
         className="flex-1 overflow-y-auto"
         onScroll={handleScroll}
       >
-        {/* Loading indicator at top */}
-        {isLoading && (
+        {/* Loading skeleton for initial load */}
+        {isLoading && messages.length === 0 && (
+          <MessageListSkeleton />
+        )}
+
+        {/* Loading indicator for pagination */}
+        {isLoading && messages.length > 0 && (
           <div className="flex justify-center py-4">
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
         )}
 
-        {/* Channel welcome message */}
+        {/* Channel welcome message - enhanced empty state */}
         {!isLoading && messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-center px-4">
-            <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mb-4">
-              <span className="text-4xl">#</span>
+          <div className="flex flex-col items-start px-4 pt-16 pb-8">
+            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+              <Hash className="w-10 h-10 text-primary" />
             </div>
-            <h2 className="text-2xl font-bold text-foreground mb-2">
+            <h2 className="text-3xl font-bold text-foreground mb-2">
               Welcome to #{channelName}!
             </h2>
-            <p className="text-muted-foreground">
-              This is the start of the #{channelName} channel.
+            <p className="text-muted-foreground mb-4">
+              This is the start of the <span className="font-semibold">#{channelName}</span> channel.
             </p>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Sparkles className="w-4 h-4 text-yellow-500" />
+              <span>Be the first to send a message!</span>
+            </div>
           </div>
         )}
 
