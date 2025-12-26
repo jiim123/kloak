@@ -12,7 +12,8 @@ import {
   Sun,
   Moon,
   Check,
-  Copy
+  Copy,
+  Link
 } from 'lucide-react';
 import {
   Dialog,
@@ -36,6 +37,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useUIStore } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -45,7 +47,14 @@ import { useNavigate } from 'react-router-dom';
 
 export const UserSettingsModal = () => {
   const navigate = useNavigate();
-  const { activeModal, closeModal, theme, toggleTheme } = useUIStore();
+  const { 
+    activeModal, 
+    closeModal, 
+    theme, 
+    toggleTheme,
+    linkPreviewsEnabled,
+    setLinkPreviewsEnabled,
+  } = useUIStore();
   const { user, secretKey, updateUser, logout } = useAuthStore();
   
   const [activeTab, setActiveTab] = useState('account');
@@ -388,6 +397,23 @@ export const UserSettingsModal = () => {
                     Dark
                   </Button>
                 </div>
+              </div>
+
+              {/* Link Previews Toggle */}
+              <div className="flex items-center justify-between py-2">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Link className="w-4 h-4 text-muted-foreground" />
+                    <Label>Link Previews</Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Show previews for links in messages
+                  </p>
+                </div>
+                <Switch
+                  checked={linkPreviewsEnabled}
+                  onCheckedChange={setLinkPreviewsEnabled}
+                />
               </div>
 
               <div className="bg-secondary/50 rounded-lg p-4">
