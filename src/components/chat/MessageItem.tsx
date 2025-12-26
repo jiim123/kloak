@@ -17,7 +17,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuthStore } from '@/stores/authStore';
 import { useMessageStore } from '@/stores/messageStore';
 import { useServerStore } from '@/stores/serverStore';
-import { parseMessageContent, getMessagePreview } from '@/lib/message';
+import { MessageContent } from './MessageContent';
+import { getMessagePreview } from '@/lib/message';
 import { formatMessageTimestamp } from '@/lib/format';
 import { DeleteMessageModal } from '@/components/modals/DeleteMessageModal';
 import type { Message, ServerRole } from '@/types';
@@ -198,13 +199,9 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }:
               </div>
             </div>
           ) : (
-            <div 
-              className="text-foreground break-words"
-              dangerouslySetInnerHTML={{ 
-                __html: parseMessageContent(message.content, { 
-                  currentUserId: user?.id 
-                }) 
-              }}
+            <MessageContent 
+              content={message.content} 
+              currentUserId={user?.id} 
             />
           )}
 

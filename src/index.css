@@ -64,6 +64,9 @@
     --nomo-idle: 38 95% 54%;
     --nomo-dnd: 0 84% 60%;
     --nomo-offline: 228 6% 45%;
+    
+    /* Code block */
+    --code-block-bg: 228 6% 96%;
   }
 
   .dark {
@@ -118,6 +121,9 @@
     --nomo-idle: 38 95% 60%;
     --nomo-dnd: 0 70% 55%;
     --nomo-offline: 228 6% 45%;
+    
+    /* Code block */
+    --code-block-bg: 228 8% 12%;
   }
 }
 
@@ -253,4 +259,115 @@
   .spoiler.revealed {
     @apply bg-transparent;
   }
+}
+
+/* Prism.js Dark Theme - Custom for Nomo */
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: hsl(228 6% 50%);
+}
+
+.token.punctuation {
+  color: hsl(228 6% 70%);
+}
+
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol,
+.token.deleted {
+  color: hsl(355 65% 65%);
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted {
+  color: hsl(95 38% 62%);
+}
+
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string {
+  color: hsl(39 67% 69%);
+}
+
+.token.atrule,
+.token.attr-value,
+.token.keyword {
+  color: hsl(207 82% 66%);
+}
+
+.token.function,
+.token.class-name {
+  color: hsl(286 60% 67%);
+}
+
+.token.regex,
+.token.important,
+.token.variable {
+  color: hsl(31 100% 71%);
+}
+
+.token.important,
+.token.bold {
+  font-weight: bold;
+}
+
+.token.italic {
+  font-style: italic;
+}
+
+.token.entity {
+  cursor: help;
+}
+
+/* Light mode overrides for Prism */
+:root:not(.dark) .token.comment,
+:root:not(.dark) .token.prolog,
+:root:not(.dark) .token.doctype,
+:root:not(.dark) .token.cdata {
+  color: hsl(228 6% 45%);
+}
+
+:root:not(.dark) .token.punctuation {
+  color: hsl(228 6% 35%);
+}
+
+:root:not(.dark) .token.property,
+:root:not(.dark) .token.tag,
+:root:not(.dark) .token.boolean,
+:root:not(.dark) .token.number,
+:root:not(.dark) .token.constant,
+:root:not(.dark) .token.symbol,
+:root:not(.dark) .token.deleted {
+  color: hsl(355 70% 45%);
+}
+
+:root:not(.dark) .token.selector,
+:root:not(.dark) .token.attr-name,
+:root:not(.dark) .token.string,
+:root:not(.dark) .token.char,
+:root:not(.dark) .token.builtin,
+:root:not(.dark) .token.inserted {
+  color: hsl(95 50% 35%);
+}
+
+:root:not(.dark) .token.atrule,
+:root:not(.dark) .token.attr-value,
+:root:not(.dark) .token.keyword {
+  color: hsl(207 82% 45%);
+}
+
+:root:not(.dark) .token.function,
+:root:not(.dark) .token.class-name {
+  color: hsl(286 60% 50%);
 }
