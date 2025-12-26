@@ -38,6 +38,8 @@ interface UIState {
   isSettingsOpen: boolean;
   activeModal: ModalType;
   modalData: ModalData | null;
+  linkPreviewsEnabled: boolean;
+  linkPreviewNoticeDismissed: boolean;
 
   // Theme actions
   toggleTheme: () => void;
@@ -54,6 +56,10 @@ interface UIState {
   // Settings actions
   openSettings: () => void;
   closeSettings: () => void;
+
+  // Link preview actions
+  setLinkPreviewsEnabled: (enabled: boolean) => void;
+  dismissLinkPreviewNotice: () => void;
 }
 
 const applyTheme = (theme: Theme) => {
@@ -75,6 +81,8 @@ export const useUIStore = create<UIState>()(
       isSettingsOpen: false,
       activeModal: null,
       modalData: null,
+      linkPreviewsEnabled: true,
+      linkPreviewNoticeDismissed: false,
 
       toggleTheme: () => {
         const newTheme = get().theme === 'dark' ? 'light' : 'dark';
@@ -110,12 +118,22 @@ export const useUIStore = create<UIState>()(
       closeSettings: () => {
         set({ isSettingsOpen: false });
       },
+
+      setLinkPreviewsEnabled: (enabled) => {
+        set({ linkPreviewsEnabled: enabled });
+      },
+
+      dismissLinkPreviewNotice: () => {
+        set({ linkPreviewNoticeDismissed: true });
+      },
     }),
     {
       name: 'nomo-ui',
       partialize: (state) => ({
         theme: state.theme,
         isMemberSidebarOpen: state.isMemberSidebarOpen,
+        linkPreviewsEnabled: state.linkPreviewsEnabled,
+        linkPreviewNoticeDismissed: state.linkPreviewNoticeDismissed,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {

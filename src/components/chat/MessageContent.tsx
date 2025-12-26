@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { CodeBlock, InlineCode } from './CodeBlock';
-import { cn } from '@/lib/utils';
+import { LinkPreview } from './LinkPreview';
+import { useUIStore } from '@/stores/uiStore';
 
 interface MessageContentProps {
   content: string;
@@ -12,6 +13,14 @@ interface ParsedSegment {
   content: string;
   language?: string;
 }
+
+// Extract URLs from content
+const extractUrls = (content: string): string[] => {
+  const urlPattern = /https?:\/\/[^\s<>`\]]+/g;
+  const matches = content.match(urlPattern) || [];
+  // Return unique URLs
+  return [...new Set(matches)];
+};
 
 // Parse message into segments (text, code blocks, inline code)
 const parseMessageSegments = (content: string): ParsedSegment[] => {
@@ -156,7 +165,17 @@ const parseTextContent = (content: string, currentUserId?: string): string => {
 };
 
 export const MessageContent = ({ content, currentUserId }: MessageContentProps) => {
+  const { linkPreviewsEnabled } = useUIStore();
   const segments = useMemo(() => parseMessageSegments(content), [content]);
+  
+  // Extract URLs for link previews (only from text segments, not code blocks)
+  const urls = useMemo(() => {
+    const textContent = segments
+      .filter(s => s.type === 'text')
+      .map(s => s.content)
+      .join(' ');
+    return extractUrls(textContent);
+  }, [segments]);
   
   return (
     <div className="break-words">
@@ -185,6 +204,19 @@ export const MessageContent = ({ content, currentUserId }: MessageContentProps) 
             return null;
         }
       })}
+      
+      {/* Link previews */}
+      {linkPreviewsEnabled && urls.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {urls.slice(0, 3).map((url, index) => (
+            <LinkPreview 
+              key={`${url}-${index}`} 
+              url={url} 
+              disabled={!linkPreviewsEnabled}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
