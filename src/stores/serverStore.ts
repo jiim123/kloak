@@ -35,6 +35,11 @@ interface ServerState {
   createChannel: (serverId: string, name: string, type: ChannelType, categoryId?: string) => Promise<Channel | null>;
   updateChannel: (channelId: string, updates: Partial<Channel>) => Promise<void>;
   deleteChannel: (channelId: string) => Promise<void>;
+  updateCategory: (categoryId: string, updates: Partial<ChannelCategory>) => Promise<void>;
+  deleteCategory: (categoryId: string) => Promise<void>;
+  reorderCategories: (categoryIds: string[]) => Promise<void>;
+  reorderChannels: (channelId: string, newCategoryId: string | null, newPosition: number) => Promise<void>;
+  moveChannelToCategory: (channelId: string, categoryId: string | null) => Promise<void>;
 
   // Member actions
   fetchMembers: (serverId: string) => Promise<void>;
@@ -367,6 +372,148 @@ export const useServerStore = create<ServerState>((set, get) => ({
       }));
     } catch (error) {
       console.error('Failed to delete channel:', error);
+    }
+  },
+
+  updateCategory: async (categoryId: string, updates: Partial<ChannelCategory>) => {
+    try {
+      const { error } = await supabase
+        .from('channel_categories')
+        .update(updates)
+        .eq('id', categoryId);
+
+      if (error) throw error;
+
+      set((state) => ({
+        categories: state.categories.map((c) =>
+          c.id === categoryId ? { ...c, ...updates } : c
+        ),
+      }));
+    } catch (error) {
+      console.error('Failed to update category:', error);
+    }
+  },
+
+  deleteCategory: async (categoryId: string) => {
+    try {
+      // First, move all channels in this category to uncategorized
+      const { channels } = get();
+      const categoryChannels = channels.filter(c => c.category_id === categoryId);
+      
+      for (const channel of categoryChannels) {
+        await supabase
+          .from('channels')
+          .update({ category_id: null })
+          .eq('id', channel.id);
+      }
+
+      // Then delete the category
+      const { error } = await supabase
+        .from('channel_categories')
+        .delete()
+        .eq('id', categoryId);
+
+      if (error) throw error;
+
+      set((state) => ({
+        categories: state.categories.filter((c) => c.id !== categoryId),
+        channels: state.channels.map((c) =>
+          c.category_id === categoryId ? { ...c, category_id: null } : c
+        ),
+      }));
+    } catch (error) {
+      console.error('Failed to delete category:', error);
+    }
+  },
+
+  reorderCategories: async (categoryIds: string[]) => {
+    try {
+      // Update positions in database
+      const updates = categoryIds.map((id, index) => 
+        supabase
+          .from('channel_categories')
+          .update({ position: index })
+          .eq('id', id)
+      );
+
+      await Promise.all(updates);
+
+      // Update local state
+      set((state) => ({
+        categories: state.categories
+          .map((cat) => ({
+            ...cat,
+            position: categoryIds.indexOf(cat.id),
+          }))
+          .sort((a, b) => (a.position ?? 0) - (b.position ?? 0)),
+      }));
+    } catch (error) {
+      console.error('Failed to reorder categories:', error);
+    }
+  },
+
+  reorderChannels: async (channelId: string, newCategoryId: string | null, newPosition: number) => {
+    try {
+      const { channels } = get();
+      const channel = channels.find(c => c.id === channelId);
+      if (!channel) return;
+
+      // Get channels in the target category
+      const targetChannels = channels
+        .filter(c => c.category_id === newCategoryId && c.id !== channelId)
+        .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+
+      // Insert at new position
+      targetChannels.splice(newPosition, 0, { ...channel, category_id: newCategoryId });
+
+      // Update all positions in target category
+      const updates = targetChannels.map((c, index) =>
+        supabase
+          .from('channels')
+          .update({ position: index, category_id: newCategoryId })
+          .eq('id', c.id)
+      );
+
+      await Promise.all(updates);
+
+      // Update local state
+      set((state) => ({
+        channels: state.channels.map((c) => {
+          if (c.id === channelId) {
+            return { ...c, category_id: newCategoryId, position: newPosition };
+          }
+          const idx = targetChannels.findIndex(tc => tc.id === c.id);
+          if (idx !== -1 && c.category_id === newCategoryId) {
+            return { ...c, position: idx };
+          }
+          return c;
+        }),
+      }));
+    } catch (error) {
+      console.error('Failed to reorder channels:', error);
+    }
+  },
+
+  moveChannelToCategory: async (channelId: string, categoryId: string | null) => {
+    try {
+      const { channels } = get();
+      const targetChannels = channels.filter(c => c.category_id === categoryId);
+      const newPosition = targetChannels.length;
+
+      const { error } = await supabase
+        .from('channels')
+        .update({ category_id: categoryId, position: newPosition })
+        .eq('id', channelId);
+
+      if (error) throw error;
+
+      set((state) => ({
+        channels: state.channels.map((c) =>
+          c.id === channelId ? { ...c, category_id: categoryId, position: newPosition } : c
+        ),
+      }));
+    } catch (error) {
+      console.error('Failed to move channel:', error);
     }
   },
 
