@@ -12,3 +12,5 @@ export { useUnread } from './useUnread';
 export { useKeyboardShortcuts } from './useKeyboardShortcuts';
 export { useIsMobile } from './use-mobile';
 export { useToast } from './use-toast';
+export { useOnlineStatus } from './useOnlineStatus';
+export { useOfflineSync } from './useOfflineSync';

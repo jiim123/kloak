@@ -10,6 +10,7 @@ import { MembersSidebar } from '@/components/layout/MembersSidebar';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { MobileSidebar } from '@/components/layout/MobileSidebar';
 import { MobileMembersSidebar } from '@/components/layout/MobileMembersSidebar';
+import { OfflineBanner } from '@/components/ui/OfflineBanner';
 import { DMSidebar, FriendsList, DMChatArea } from '@/components/dm';
 import { 
   CreateServerModal, 
@@ -31,6 +32,7 @@ import { cn } from '@/lib/utils';
 import { useDMStore } from '@/stores/dmStore';
 import { useRealtimeFriendships, useRealtimeUsers, useRealtimeServer, useRealtimeNotifications } from '@/hooks';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useOfflineSync } from '@/hooks/useOfflineSync';
 
 const AppLayout = () => {
   const navigate = useNavigate();
@@ -48,6 +50,9 @@ const AppLayout = () => {
   useRealtimeUsers();
   useRealtimeServer(currentServer?.id || null);
   useRealtimeNotifications(user?.id || null);
+  
+  // Offline message sync
+  useOfflineSync();
 
   useEffect(() => {
     initializeAuth();
@@ -100,6 +105,9 @@ const AppLayout = () => {
 
   return (
     <>
+      {/* Offline Banner */}
+      <OfflineBanner />
+      
       <div className="h-screen flex flex-col md:flex-row overflow-hidden">
         {/* Mobile header */}
         <MobileHeader 
