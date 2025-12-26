@@ -10,8 +10,11 @@
 }
 
 @layer base {
-  :root {
-    /* Light mode - kept for potential future use */
+  /* ========================================
+     LIGHT THEME (default root)
+     ======================================== */
+  :root,
+  .light {
     --background: 0 0% 100%;
     --foreground: 228 6% 15%;
 
@@ -51,7 +54,7 @@
     --sidebar-border: 228 6% 88%;
     --sidebar-ring: 235 86% 65%;
 
-    /* Layout-specific backgrounds (Discord-style light) */
+    /* Layout-specific backgrounds */
     --sidebar: 228 6% 96%;
     --sidebar-secondary: 228 6% 93%;
     --chat: 0 0% 100%;
@@ -69,8 +72,10 @@
     --code-block-bg: 228 6% 96%;
   }
 
+  /* ========================================
+     DARK THEME
+     ======================================== */
   .dark {
-    /* Discord-inspired dark theme with neutral tones */
     --background: 228 6% 17%;
     --foreground: 228 6% 93%;
 
@@ -83,10 +88,10 @@
     --primary: 235 86% 65%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 228 6% 18%;
+    --secondary: 228 6% 22%;
     --secondary-foreground: 228 6% 93%;
 
-    --muted: 228 6% 18%;
+    --muted: 228 6% 22%;
     --muted-foreground: 228 6% 60%;
 
     --accent: 235 86% 65%;
@@ -99,7 +104,6 @@
     --input: 228 6% 20%;
     --ring: 235 86% 65%;
 
-    /* Layout-specific backgrounds (Discord-style) */
     --sidebar: 228 6% 8%;
     --sidebar-secondary: 228 6% 12%;
     --chat: 228 6% 17%;
@@ -114,7 +118,6 @@
     --sidebar-border: 228 6% 15%;
     --sidebar-ring: 235 86% 65%;
 
-    /* Nomo specific tokens */
     --nomo-success: 142 76% 42%;
     --nomo-warning: 38 92% 55%;
     --nomo-online: 142 76% 52%;
@@ -122,8 +125,287 @@
     --nomo-dnd: 0 70% 55%;
     --nomo-offline: 228 6% 45%;
     
-    /* Code block */
     --code-block-bg: 228 8% 12%;
+  }
+
+  /* ========================================
+     MIDNIGHT THEME - Deep blue night vibes
+     ======================================== */
+  .midnight {
+    --background: 230 25% 12%;
+    --foreground: 220 20% 92%;
+
+    --card: 230 25% 10%;
+    --card-foreground: 220 20% 92%;
+
+    --popover: 230 25% 11%;
+    --popover-foreground: 220 20% 92%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 230 25% 18%;
+    --secondary-foreground: 220 20% 92%;
+
+    --muted: 230 20% 20%;
+    --muted-foreground: 220 15% 55%;
+
+    --accent: 217 91% 60%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 63% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 230 20% 18%;
+    --input: 230 20% 18%;
+    --ring: 217 91% 60%;
+
+    --sidebar: 230 28% 7%;
+    --sidebar-secondary: 230 25% 10%;
+    --chat: 230 25% 12%;
+    --members: 230 25% 10%;
+
+    --sidebar-background: 230 28% 7%;
+    --sidebar-foreground: 220 15% 60%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 230 25% 14%;
+    --sidebar-accent-foreground: 220 20% 92%;
+    --sidebar-border: 230 20% 14%;
+    --sidebar-ring: 217 91% 60%;
+
+    --nomo-success: 142 76% 42%;
+    --nomo-warning: 38 92% 55%;
+    --nomo-online: 142 76% 52%;
+    --nomo-idle: 38 95% 60%;
+    --nomo-dnd: 0 70% 55%;
+    --nomo-offline: 220 10% 45%;
+    
+    --code-block-bg: 230 28% 9%;
+  }
+
+  /* ========================================
+     FOREST THEME - Natural green tones
+     ======================================== */
+  .forest {
+    --background: 150 10% 14%;
+    --foreground: 140 15% 90%;
+
+    --card: 150 12% 11%;
+    --card-foreground: 140 15% 90%;
+
+    --popover: 150 12% 12%;
+    --popover-foreground: 140 15% 90%;
+
+    --primary: 142 70% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 150 12% 20%;
+    --secondary-foreground: 140 15% 90%;
+
+    --muted: 150 10% 22%;
+    --muted-foreground: 140 10% 55%;
+
+    --accent: 142 70% 45%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 63% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 150 10% 20%;
+    --input: 150 10% 20%;
+    --ring: 142 70% 45%;
+
+    --sidebar: 150 14% 8%;
+    --sidebar-secondary: 150 12% 11%;
+    --chat: 150 10% 14%;
+    --members: 150 12% 11%;
+
+    --sidebar-background: 150 14% 8%;
+    --sidebar-foreground: 140 10% 58%;
+    --sidebar-primary: 142 70% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 150 12% 15%;
+    --sidebar-accent-foreground: 140 15% 90%;
+    --sidebar-border: 150 10% 15%;
+    --sidebar-ring: 142 70% 45%;
+
+    --nomo-success: 142 76% 42%;
+    --nomo-warning: 38 92% 55%;
+    --nomo-online: 142 76% 52%;
+    --nomo-idle: 38 95% 60%;
+    --nomo-dnd: 0 70% 55%;
+    --nomo-offline: 140 5% 45%;
+    
+    --code-block-bg: 150 14% 10%;
+  }
+
+  /* ========================================
+     SUNSET THEME - Warm orange and amber
+     ======================================== */
+  .sunset {
+    --background: 20 15% 14%;
+    --foreground: 30 20% 92%;
+
+    --card: 20 18% 11%;
+    --card-foreground: 30 20% 92%;
+
+    --popover: 20 18% 12%;
+    --popover-foreground: 30 20% 92%;
+
+    --primary: 25 95% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 20 15% 20%;
+    --secondary-foreground: 30 20% 92%;
+
+    --muted: 20 12% 22%;
+    --muted-foreground: 30 15% 55%;
+
+    --accent: 25 95% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 63% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 20 12% 20%;
+    --input: 20 12% 20%;
+    --ring: 25 95% 55%;
+
+    --sidebar: 20 20% 8%;
+    --sidebar-secondary: 20 18% 11%;
+    --chat: 20 15% 14%;
+    --members: 20 18% 11%;
+
+    --sidebar-background: 20 20% 8%;
+    --sidebar-foreground: 30 12% 58%;
+    --sidebar-primary: 25 95% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 20 18% 15%;
+    --sidebar-accent-foreground: 30 20% 92%;
+    --sidebar-border: 20 12% 15%;
+    --sidebar-ring: 25 95% 55%;
+
+    --nomo-success: 142 76% 42%;
+    --nomo-warning: 38 92% 55%;
+    --nomo-online: 142 76% 52%;
+    --nomo-idle: 38 95% 60%;
+    --nomo-dnd: 0 70% 55%;
+    --nomo-offline: 30 5% 45%;
+    
+    --code-block-bg: 20 20% 10%;
+  }
+
+  /* ========================================
+     OCEAN THEME - Cool cyan depths
+     ======================================== */
+  .ocean {
+    --background: 195 20% 14%;
+    --foreground: 190 15% 92%;
+
+    --card: 195 22% 11%;
+    --card-foreground: 190 15% 92%;
+
+    --popover: 195 22% 12%;
+    --popover-foreground: 190 15% 92%;
+
+    --primary: 187 85% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 195 18% 20%;
+    --secondary-foreground: 190 15% 92%;
+
+    --muted: 195 15% 22%;
+    --muted-foreground: 190 10% 55%;
+
+    --accent: 187 85% 45%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 63% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 195 15% 20%;
+    --input: 195 15% 20%;
+    --ring: 187 85% 45%;
+
+    --sidebar: 195 25% 8%;
+    --sidebar-secondary: 195 22% 11%;
+    --chat: 195 20% 14%;
+    --members: 195 22% 11%;
+
+    --sidebar-background: 195 25% 8%;
+    --sidebar-foreground: 190 10% 58%;
+    --sidebar-primary: 187 85% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 195 22% 15%;
+    --sidebar-accent-foreground: 190 15% 92%;
+    --sidebar-border: 195 15% 15%;
+    --sidebar-ring: 187 85% 45%;
+
+    --nomo-success: 142 76% 42%;
+    --nomo-warning: 38 92% 55%;
+    --nomo-online: 142 76% 52%;
+    --nomo-idle: 38 95% 60%;
+    --nomo-dnd: 0 70% 55%;
+    --nomo-offline: 190 5% 45%;
+    
+    --code-block-bg: 195 25% 10%;
+  }
+
+  /* ========================================
+     LAVENDER THEME - Soft purple hues
+     ======================================== */
+  .lavender {
+    --background: 270 15% 15%;
+    --foreground: 265 15% 92%;
+
+    --card: 270 18% 12%;
+    --card-foreground: 265 15% 92%;
+
+    --popover: 270 18% 13%;
+    --popover-foreground: 265 15% 92%;
+
+    --primary: 270 70% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 270 15% 22%;
+    --secondary-foreground: 265 15% 92%;
+
+    --muted: 270 12% 24%;
+    --muted-foreground: 265 10% 55%;
+
+    --accent: 270 70% 60%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 63% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 270 12% 22%;
+    --input: 270 12% 22%;
+    --ring: 270 70% 60%;
+
+    --sidebar: 270 20% 9%;
+    --sidebar-secondary: 270 18% 12%;
+    --chat: 270 15% 15%;
+    --members: 270 18% 12%;
+
+    --sidebar-background: 270 20% 9%;
+    --sidebar-foreground: 265 10% 58%;
+    --sidebar-primary: 270 70% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 270 18% 16%;
+    --sidebar-accent-foreground: 265 15% 92%;
+    --sidebar-border: 270 12% 16%;
+    --sidebar-ring: 270 70% 60%;
+
+    --nomo-success: 142 76% 42%;
+    --nomo-warning: 38 92% 55%;
+    --nomo-online: 142 76% 52%;
+    --nomo-idle: 38 95% 60%;
+    --nomo-dnd: 0 70% 55%;
+    --nomo-offline: 265 5% 45%;
+    
+    --code-block-bg: 270 20% 11%;
   }
 }
 
@@ -147,7 +429,7 @@
     line-height: 1.2;
   }
 
-  /* Scrollbar styling for dark theme */
+  /* Scrollbar styling */
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -261,16 +543,16 @@
   }
 }
 
-/* Prism.js Dark Theme - Custom for Nomo */
+/* Prism.js Theme - Works across all dark themes */
 .token.comment,
 .token.prolog,
 .token.doctype,
 .token.cdata {
-  color: hsl(228 6% 50%);
+  color: hsl(var(--muted-foreground));
 }
 
 .token.punctuation {
-  color: hsl(228 6% 70%);
+  color: hsl(var(--foreground) / 0.7);
 }
 
 .token.property,
@@ -331,43 +613,43 @@
 }
 
 /* Light mode overrides for Prism */
-:root:not(.dark) .token.comment,
-:root:not(.dark) .token.prolog,
-:root:not(.dark) .token.doctype,
-:root:not(.dark) .token.cdata {
+.light .token.comment,
+.light .token.prolog,
+.light .token.doctype,
+.light .token.cdata {
   color: hsl(228 6% 45%);
 }
 
-:root:not(.dark) .token.punctuation {
+.light .token.punctuation {
   color: hsl(228 6% 35%);
 }
 
-:root:not(.dark) .token.property,
-:root:not(.dark) .token.tag,
-:root:not(.dark) .token.boolean,
-:root:not(.dark) .token.number,
-:root:not(.dark) .token.constant,
-:root:not(.dark) .token.symbol,
-:root:not(.dark) .token.deleted {
+.light .token.property,
+.light .token.tag,
+.light .token.boolean,
+.light .token.number,
+.light .token.constant,
+.light .token.symbol,
+.light .token.deleted {
   color: hsl(355 70% 45%);
 }
 
-:root:not(.dark) .token.selector,
-:root:not(.dark) .token.attr-name,
-:root:not(.dark) .token.string,
-:root:not(.dark) .token.char,
-:root:not(.dark) .token.builtin,
-:root:not(.dark) .token.inserted {
+.light .token.selector,
+.light .token.attr-name,
+.light .token.string,
+.light .token.char,
+.light .token.builtin,
+.light .token.inserted {
   color: hsl(95 50% 35%);
 }
 
-:root:not(.dark) .token.atrule,
-:root:not(.dark) .token.attr-value,
-:root:not(.dark) .token.keyword {
+.light .token.atrule,
+.light .token.attr-value,
+.light .token.keyword {
   color: hsl(207 82% 45%);
 }
 
-:root:not(.dark) .token.function,
-:root:not(.dark) .token.class-name {
+.light .token.function,
+.light .token.class-name {
   color: hsl(286 60% 50%);
 }

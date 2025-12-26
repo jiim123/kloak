@@ -3,11 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Nomo - Private Chat</title>
+    <title>Kloak - Private Chat</title>
     <meta name="description" content="Privacy-first Discord alternative. No email, no passwords, no tracking." />
-    <meta name="author" content="Nomo" />
+    <meta name="author" content="Kloak" />
 
-    <meta property="og:title" content="Nomo - Private Chat" />
+    <meta property="og:title" content="Kloak - Private Chat" />
     <meta property="og:description" content="Privacy-first Discord alternative. No email, no passwords, no tracking." />
     <meta property="og:type" content="website" />
 
@@ -17,6 +17,27 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Theme initialization script - runs before React to prevent flash -->
+    <script>
+      (function() {
+        try {
+          var stored = localStorage.getItem('nomo-ui');
+          if (stored) {
+            var parsed = JSON.parse(stored);
+            var theme = parsed.state && parsed.state.theme;
+            if (theme) {
+              document.documentElement.className = theme;
+              document.documentElement.setAttribute('data-theme', theme);
+            }
+          }
+        } catch (e) {
+          // Fallback to dark theme
+          document.documentElement.className = 'dark';
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      })();
+    </script>
   </head>
 
   <body>

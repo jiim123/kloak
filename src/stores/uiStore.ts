@@ -1,7 +1,19 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type Theme = 'dark' | 'light';
+// All available themes
+export const THEMES = [
+  { id: 'dark', name: 'Dark', description: 'Classic dark theme' },
+  { id: 'light', name: 'Light', description: 'Clean light theme' },
+  { id: 'midnight', name: 'Midnight', description: 'Deep blue night vibes' },
+  { id: 'forest', name: 'Forest', description: 'Natural green tones' },
+  { id: 'sunset', name: 'Sunset', description: 'Warm orange and amber' },
+  { id: 'ocean', name: 'Ocean', description: 'Cool cyan depths' },
+  { id: 'lavender', name: 'Lavender', description: 'Soft purple hues' },
+] as const;
+
+export type Theme = typeof THEMES[number]['id'];
+
 export type ModalType = 
   | 'create-server'
   | 'join-server'
@@ -44,6 +56,7 @@ interface UIState {
   // Theme actions
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
+  cycleTheme: () => void;
 
   // Sidebar actions
   toggleMemberSidebar: () => void;
@@ -62,15 +75,17 @@ interface UIState {
   dismissLinkPreviewNotice: () => void;
 }
 
-const applyTheme = (theme: Theme) => {
+export const applyTheme = (theme: Theme) => {
   const root = document.documentElement;
-  if (theme === 'dark') {
-    root.classList.add('dark');
-    root.classList.remove('light');
-  } else {
-    root.classList.add('light');
-    root.classList.remove('dark');
-  }
+  
+  // Remove all theme classes
+  THEMES.forEach(t => root.classList.remove(t.id));
+  
+  // Add the new theme class
+  root.classList.add(theme);
+  
+  // Also set data-theme attribute for potential CSS usage
+  root.setAttribute('data-theme', theme);
 };
 
 export const useUIStore = create<UIState>()(
@@ -85,7 +100,8 @@ export const useUIStore = create<UIState>()(
       linkPreviewNoticeDismissed: false,
 
       toggleTheme: () => {
-        const newTheme = get().theme === 'dark' ? 'light' : 'dark';
+        const currentTheme = get().theme;
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
         applyTheme(newTheme);
         set({ theme: newTheme });
       },
@@ -93,6 +109,15 @@ export const useUIStore = create<UIState>()(
       setTheme: (theme) => {
         applyTheme(theme);
         set({ theme });
+      },
+
+      cycleTheme: () => {
+        const currentTheme = get().theme;
+        const currentIndex = THEMES.findIndex(t => t.id === currentTheme);
+        const nextIndex = (currentIndex + 1) % THEMES.length;
+        const newTheme = THEMES[nextIndex].id;
+        applyTheme(newTheme);
+        set({ theme: newTheme });
       },
 
       toggleMemberSidebar: () => {
