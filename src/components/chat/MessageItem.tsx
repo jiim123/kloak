@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Smile, Reply, Pencil, Trash2, Pin, MoreHorizontal, 
   CornerUpLeft 
@@ -39,7 +39,9 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }:
   const [editContent, setEditContent] = useState(message.content);
   const [isHovered, setIsHovered] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showMobileActions, setShowMobileActions] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const isOwnMessage = user?.id === message.user_id;
   const messageUser = message.user;
@@ -112,6 +114,27 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }:
     }
   };
 
+  // Long press handlers for mobile
+  const handleTouchStart = useCallback(() => {
+    longPressTimerRef.current = setTimeout(() => {
+      setShowMobileActions(true);
+    }, 500);
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  const handleTouchMove = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
   const quickReactions = ['👍', '❤️', '😂', '😮', '😢', '🎉'];
 
   return (
@@ -125,9 +148,12 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }:
       )}
       
       <div 
-        className={`group relative flex gap-4 py-0.5 px-4 hover:bg-accent/30 ${isGrouped ? 'mt-0' : 'mt-4'}`}
+        className={`group relative flex gap-4 py-1 md:py-0.5 px-4 hover:bg-accent/30 ${isGrouped ? 'mt-0' : 'mt-4'}`}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchMove={handleTouchMove}
       >
         {/* Avatar or spacer */}
         <div className="w-10 flex-shrink-0">
@@ -269,9 +295,9 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }:
           )}
         </div>
 
-        {/* Hover actions */}
+        {/* Hover actions - Desktop */}
         {isHovered && !isEditing && (
-          <div className="absolute right-4 -top-4 flex items-center gap-0.5 bg-secondary border border-border rounded-lg shadow-lg p-0.5">
+          <div className="absolute right-4 -top-4 hidden md:flex items-center gap-0.5 bg-secondary border border-border rounded-lg shadow-lg p-0.5">
             {/* Quick reactions */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -374,6 +400,109 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }:
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+          </div>
+        )}
+
+        {/* Mobile action sheet */}
+        {showMobileActions && (
+          <div 
+            className="fixed inset-0 z-50 md:hidden"
+            onClick={() => setShowMobileActions(false)}
+          >
+            <div className="absolute inset-0 bg-black/50" />
+            <div 
+              className="absolute bottom-0 left-0 right-0 bg-secondary rounded-t-2xl p-4 pb-8"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Quick reactions */}
+              <div className="flex justify-center gap-4 mb-4 pb-4 border-b border-border">
+                {quickReactions.map((emoji) => (
+                  <button
+                    key={emoji}
+                    onClick={() => {
+                      user && addReaction(message.id, user.id, emoji);
+                      setShowMobileActions(false);
+                    }}
+                    className="text-2xl p-2 hover:bg-accent rounded-full active:scale-90 transition-transform"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+              
+              {/* Action buttons */}
+              <div className="space-y-1">
+                <button
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-accent active:bg-accent text-left"
+                  onClick={() => {
+                    setReplyingTo(message);
+                    setShowMobileActions(false);
+                  }}
+                >
+                  <Reply className="w-5 h-5" />
+                  <span>Reply</span>
+                </button>
+                
+                {isOwnMessage && (
+                  <button
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-accent active:bg-accent text-left"
+                    onClick={() => {
+                      setEditContent(message.content);
+                      setIsEditing(true);
+                      setShowMobileActions(false);
+                    }}
+                  >
+                    <Pencil className="w-5 h-5" />
+                    <span>Edit</span>
+                  </button>
+                )}
+                
+                <button
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-accent active:bg-accent text-left"
+                  onClick={() => {
+                    navigator.clipboard.writeText(message.content);
+                    setShowMobileActions(false);
+                  }}
+                >
+                  <MoreHorizontal className="w-5 h-5" />
+                  <span>Copy Text</span>
+                </button>
+                
+                {isAdmin && (
+                  <button
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-accent active:bg-accent text-left"
+                    onClick={() => {
+                      handlePin();
+                      setShowMobileActions(false);
+                    }}
+                  >
+                    <Pin className={`w-5 h-5 ${message.is_pinned ? 'text-primary' : ''}`} />
+                    <span>{message.is_pinned ? 'Unpin' : 'Pin'}</span>
+                  </button>
+                )}
+                
+                {(isOwnMessage || isAdmin) && (
+                  <button
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-destructive/10 active:bg-destructive/10 text-left text-destructive"
+                    onClick={() => {
+                      setShowDeleteModal(true);
+                      setShowMobileActions(false);
+                    }}
+                  >
+                    <Trash2 className="w-5 h-5" />
+                    <span>Delete</span>
+                  </button>
+                )}
+              </div>
+              
+              {/* Cancel */}
+              <button
+                className="w-full mt-4 py-3 text-center text-muted-foreground"
+                onClick={() => setShowMobileActions(false)}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         )}
       </div>
