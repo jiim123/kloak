@@ -20,7 +20,9 @@ import {
   PinnedMessagesPanel,
   SearchModal,
   QuickSwitcherModal,
-  KeyboardShortcutsModal
+  KeyboardShortcutsModal,
+  ConfirmActionModal,
+  ChangeNicknameModal
 } from '@/components/modals';
 import { cn } from '@/lib/utils';
 import { useDMStore } from '@/stores/dmStore';
@@ -135,6 +137,8 @@ const AppLayout = () => {
       <SearchModal />
       <QuickSwitcherModal />
       <KeyboardShortcutsModal />
+      <ConfirmActionModal />
+      <ChangeNicknameModal />
     </>
   );
 };
