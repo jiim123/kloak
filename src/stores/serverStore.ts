@@ -46,6 +46,7 @@ interface ServerState {
   updateMember: (memberId: string, updates: Partial<ServerMember>) => Promise<void>;
   kickMember: (serverId: string, userId: string) => Promise<void>;
   banMember: (serverId: string, userId: string) => Promise<void>;
+  transferOwnership: (serverId: string, currentOwnerId: string, newOwnerId: string) => Promise<void>;
 
   // Utility
   clearServerState: () => void;
@@ -593,6 +594,57 @@ export const useServerStore = create<ServerState>((set, get) => ({
       }));
     } catch (error) {
       console.error('Failed to ban member:', error);
+    }
+  },
+
+  transferOwnership: async (serverId: string, currentOwnerId: string, newOwnerId: string) => {
+    try {
+      const { members } = get();
+      const currentOwnerMember = members.find(m => m.user_id === currentOwnerId && m.server_id === serverId);
+      const newOwnerMember = members.find(m => m.user_id === newOwnerId && m.server_id === serverId);
+
+      if (!currentOwnerMember || !newOwnerMember) {
+        throw new Error('Member not found');
+      }
+
+      // Update the new owner's role to owner
+      const { error: newOwnerError } = await supabase
+        .from('server_members')
+        .update({ role: 'owner' })
+        .eq('id', newOwnerMember.id);
+
+      if (newOwnerError) throw newOwnerError;
+
+      // Update the current owner's role to admin
+      const { error: currentOwnerError } = await supabase
+        .from('server_members')
+        .update({ role: 'admin' })
+        .eq('id', currentOwnerMember.id);
+
+      if (currentOwnerError) throw currentOwnerError;
+
+      // Update the server's owner_id
+      const { error: serverError } = await supabase
+        .from('servers')
+        .update({ owner_id: newOwnerId })
+        .eq('id', serverId);
+
+      if (serverError) throw serverError;
+
+      // Update local state
+      set((state) => ({
+        members: state.members.map((m) => {
+          if (m.id === newOwnerMember.id) return { ...m, role: 'owner' as const };
+          if (m.id === currentOwnerMember.id) return { ...m, role: 'admin' as const };
+          return m;
+        }),
+        currentServer: state.currentServer?.id === serverId 
+          ? { ...state.currentServer, owner_id: newOwnerId }
+          : state.currentServer,
+      }));
+    } catch (error) {
+      console.error('Failed to transfer ownership:', error);
+      throw error;
     }
   },
 

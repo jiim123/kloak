@@ -1,28 +1,38 @@
 import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { Crown, ChevronDown, ChevronRight, MessageSquare, Edit3, UserX, Ban, VolumeX, Volume2, Shield, ShieldAlert, ShieldOff, UserCog, Circle, Moon, MinusCircle } from 'lucide-react';
+import { Crown, ChevronDown, ChevronRight, MessageSquare, Edit3, UserX, Ban, VolumeX, Volume2, Shield, ShieldAlert, ShieldOff } from 'lucide-react';
 import { useServerStore } from '@/stores/serverStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useRealtimeMembers } from '@/hooks/useRealtimeMembers';
+import { 
+  hasPermission, 
+  canModerate, 
+  canAssignRole, 
+  getAssignableRoles, 
+  getRoleInfo,
+  canTransferOwnership 
+} from '@/lib/permissions';
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import type { ServerMember } from '@/types';
+import { Badge } from '@/components/ui/badge';
+import type { ServerMember, ServerRole } from '@/types';
 
 const OFFLINE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 
 // Helper to determine if a user should be shown as offline based on last_seen
 const isUserOffline = (member: ServerMember): boolean => {
-  // If status is explicitly offline or invisible, they're offline
   if (member.user?.status === 'offline') return true;
   
-  // Check last_seen - if more than 5 minutes ago, consider offline
   if (member.user?.last_seen) {
     const lastSeen = new Date(member.user.last_seen).getTime();
     const now = Date.now();
@@ -34,9 +44,8 @@ const isUserOffline = (member: ServerMember): boolean => {
   return false;
 };
 
-// Status indicator component with proper icons
+// Status indicator component
 const StatusIndicator = ({ status, isStale, className }: { status?: string; isStale?: boolean; className?: string }) => {
-  // If stale (last_seen > 5 min), show as offline regardless of status
   if (isStale) {
     return <div className={cn('w-3 h-3 rounded-full bg-gray-500', className)} />;
   }
@@ -61,6 +70,22 @@ const StatusIndicator = ({ status, isStale, className }: { status?: string; isSt
   }
 };
 
+// Role badge component
+const RoleBadge = ({ role }: { role: ServerRole }) => {
+  const info = getRoleInfo(role);
+  
+  if (role === 'member') return null;
+  
+  return (
+    <Badge 
+      variant="outline" 
+      className={cn('text-[10px] px-1 py-0 h-4 font-medium border-0', info.bgColor, info.color)}
+    >
+      {info.label}
+    </Badge>
+  );
+};
+
 export const MembersSidebar = () => {
   const { members, currentServer } = useServerStore();
   const { user } = useAuthStore();
@@ -72,10 +97,9 @@ export const MembersSidebar = () => {
 
   // Get current user's role in this server
   const currentUserMember = members.find(m => m.user_id === user?.id);
-  const isAdmin = currentUserMember?.role === 'owner' || currentUserMember?.role === 'admin';
-  const isOwner = currentUserMember?.role === 'owner';
+  const currentUserRole = currentUserMember?.role;
 
-  // Categorize members based on presence (considering last_seen)
+  // Categorize members based on presence
   const { onlineMembers, offlineMembers } = useMemo(() => {
     const online: ServerMember[] = [];
     const offline: ServerMember[] = [];
@@ -88,24 +112,29 @@ export const MembersSidebar = () => {
       }
     });
     
-    return { onlineMembers: online, offlineMembers: offline };
+    // Sort by role hierarchy then alphabetically
+    const sortMembers = (a: ServerMember, b: ServerMember) => {
+      const roleOrder = { owner: 0, admin: 1, moderator: 2, member: 3 };
+      const roleA = roleOrder[a.role as keyof typeof roleOrder] ?? 3;
+      const roleB = roleOrder[b.role as keyof typeof roleOrder] ?? 3;
+      if (roleA !== roleB) return roleA - roleB;
+      
+      const nameA = a.nickname || a.user?.display_name || a.user?.username || '';
+      const nameB = b.nickname || b.user?.display_name || b.user?.username || '';
+      return nameA.localeCompare(nameB);
+    };
+    
+    return { 
+      onlineMembers: online.sort(sortMembers), 
+      offlineMembers: offline.sort(sortMembers) 
+    };
   }, [members]);
-
-  const getRoleColor = (role?: string) => {
-    switch (role) {
-      case 'owner': return 'text-yellow-400';
-      case 'admin': return 'text-red-400';
-      case 'moderator': return 'text-blue-400';
-      default: return 'text-foreground';
-    }
-  };
 
   const handleMemberClick = (member: ServerMember) => {
     openModal('userProfile', { userId: member.user_id, user: member.user });
   };
 
   const handleMessage = (member: ServerMember) => {
-    // Open DM with this user
     openModal('userProfile', { userId: member.user_id, user: member.user, openDM: true });
   };
 
@@ -127,7 +156,7 @@ export const MembersSidebar = () => {
       action: 'ban', 
       member,
       title: `Ban ${member.nickname || member.user?.username}`,
-      message: `Are you sure you want to ban ${member.nickname || member.user?.username} from the server?`
+      message: `Are you sure you want to ban ${member.nickname || member.user?.username} from the server? They will not be able to rejoin.`
     });
   };
 
@@ -138,7 +167,7 @@ export const MembersSidebar = () => {
       title: member.is_muted ? `Unmute ${member.nickname || member.user?.username}` : `Mute ${member.nickname || member.user?.username}`,
       message: member.is_muted 
         ? `Are you sure you want to unmute ${member.nickname || member.user?.username}?`
-        : `Are you sure you want to mute ${member.nickname || member.user?.username}?`
+        : `Are you sure you want to mute ${member.nickname || member.user?.username}? They will be able to view but not send messages.`
     });
   };
 
@@ -151,13 +180,14 @@ export const MembersSidebar = () => {
     });
   };
 
-  const handleChangeRole = (member: ServerMember, newRole: 'admin' | 'moderator' | 'member') => {
+  const handleChangeRole = (member: ServerMember, newRole: ServerRole) => {
+    const roleInfo = getRoleInfo(newRole);
     openModal('confirmAction', { 
       action: 'changeRole', 
       member,
       newRole,
       title: 'Change Role',
-      message: `Change ${member.nickname || member.user?.username}'s role to ${newRole}?`
+      message: `Change ${member.nickname || member.user?.username}'s role to ${roleInfo.label}?`
     });
   };
 
@@ -165,12 +195,25 @@ export const MembersSidebar = () => {
     const displayName = member.nickname || member.user?.display_name || member.user?.username || 'Unknown';
     const memberIsOffline = isUserOffline(member);
     const isSelf = member.user_id === user?.id;
-    const canManage = isAdmin && !isSelf && member.role !== 'owner';
     const isServerOwner = member.role === 'owner';
+    
+    // Permission checks using the permission system
+    const canKick = hasPermission(currentUserRole, 'kick_members') && canModerate(currentUserRole, member.role) && !isSelf;
+    const canBan = hasPermission(currentUserRole, 'ban_members') && canModerate(currentUserRole, member.role) && !isSelf;
+    const canMute = hasPermission(currentUserRole, 'mute_members') && canModerate(currentUserRole, member.role) && !isSelf;
+    const canChangeNickname = hasPermission(currentUserRole, 'manage_nicknames') && (canModerate(currentUserRole, member.role) || isSelf);
+    const canTransfer = canTransferOwnership(currentUserRole) && !isSelf && member.role !== 'owner';
+    const assignableRoles = getAssignableRoles(currentUserRole).filter(role => 
+      canAssignRole(currentUserRole, member.role, role) && role !== member.role
+    );
+    
+    const hasAdminActions = canKick || canBan || canMute || canChangeNickname || canTransfer || assignableRoles.length > 0;
+
+    const roleInfo = getRoleInfo(member.role);
 
     const content = (
       <div 
-        className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-secondary/50 cursor-pointer transition-smooth"
+        className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-secondary/50 cursor-pointer transition-smooth group"
         onClick={() => handleMemberClick(member)}
       >
         {/* Avatar with status */}
@@ -199,30 +242,38 @@ export const MembersSidebar = () => {
           />
         </div>
 
-        {/* Name and status */}
+        {/* Name and info */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             {isServerOwner && (
               <Crown className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0" />
             )}
             <span className={cn(
               'text-sm truncate font-medium',
-              memberIsOffline ? 'text-muted-foreground' : getRoleColor(member.role)
+              memberIsOffline ? 'text-muted-foreground' : roleInfo.color
             )}>
               {displayName}
             </span>
+            {member.is_muted && (
+              <VolumeX className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+            )}
           </div>
-          {member.user?.custom_status && (
-            <p className="text-xs text-muted-foreground truncate">
-              {member.user.custom_status}
-            </p>
-          )}
+          <div className="flex items-center gap-1">
+            {!isServerOwner && member.role !== 'member' && (
+              <RoleBadge role={member.role} />
+            )}
+            {member.user?.custom_status && (
+              <p className="text-xs text-muted-foreground truncate">
+                {member.user.custom_status}
+              </p>
+            )}
+          </div>
         </div>
       </div>
     );
 
-    // Only show context menu for admin users managing other members
-    if (!canManage) {
+    // Only show context menu if there are any actions available
+    if (!hasAdminActions && isSelf) {
       return content;
     }
 
@@ -231,47 +282,94 @@ export const MembersSidebar = () => {
         <ContextMenuTrigger asChild>
           {content}
         </ContextMenuTrigger>
-        <ContextMenuContent className="w-48">
+        <ContextMenuContent className="w-52">
+          {/* Basic actions */}
           <ContextMenuItem onClick={() => handleMessage(member)}>
             <MessageSquare className="w-4 h-4 mr-2" />
             Message
           </ContextMenuItem>
-          <ContextMenuItem onClick={() => handleChangeNickname(member)}>
-            <Edit3 className="w-4 h-4 mr-2" />
-            Change Nickname
-          </ContextMenuItem>
           
-          <ContextMenuSeparator />
+          {canChangeNickname && (
+            <ContextMenuItem onClick={() => handleChangeNickname(member)}>
+              <Edit3 className="w-4 h-4 mr-2" />
+              Change Nickname
+            </ContextMenuItem>
+          )}
           
-          <ContextMenuItem 
-            onClick={() => handleKick(member)}
-            className="text-orange-400 focus:text-orange-400"
-          >
-            <UserX className="w-4 h-4 mr-2" />
-            Kick {displayName}
-          </ContextMenuItem>
-          <ContextMenuItem 
-            onClick={() => handleBan(member)}
-            className="text-destructive focus:text-destructive"
-          >
-            <Ban className="w-4 h-4 mr-2" />
-            Ban {displayName}
-          </ContextMenuItem>
-          <ContextMenuItem onClick={() => handleToggleMute(member)}>
-            {member.is_muted ? (
-              <>
-                <Volume2 className="w-4 h-4 mr-2" />
-                Unmute
-              </>
-            ) : (
-              <>
-                <VolumeX className="w-4 h-4 mr-2" />
-                Mute
-              </>
-            )}
-          </ContextMenuItem>
+          {/* Moderation actions */}
+          {(canKick || canBan || canMute) && (
+            <>
+              <ContextMenuSeparator />
+              
+              {canMute && (
+                <ContextMenuItem onClick={() => handleToggleMute(member)}>
+                  {member.is_muted ? (
+                    <>
+                      <Volume2 className="w-4 h-4 mr-2" />
+                      Unmute
+                    </>
+                  ) : (
+                    <>
+                      <VolumeX className="w-4 h-4 mr-2" />
+                      Mute
+                    </>
+                  )}
+                </ContextMenuItem>
+              )}
+              
+              {canKick && (
+                <ContextMenuItem 
+                  onClick={() => handleKick(member)}
+                  className="text-orange-400 focus:text-orange-400"
+                >
+                  <UserX className="w-4 h-4 mr-2" />
+                  Kick
+                </ContextMenuItem>
+              )}
+              
+              {canBan && (
+                <ContextMenuItem 
+                  onClick={() => handleBan(member)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Ban className="w-4 h-4 mr-2" />
+                  Ban
+                </ContextMenuItem>
+              )}
+            </>
+          )}
 
-          {isOwner && (
+          {/* Role management */}
+          {assignableRoles.length > 0 && (
+            <>
+              <ContextMenuSeparator />
+              <ContextMenuSub>
+                <ContextMenuSubTrigger>
+                  <Shield className="w-4 h-4 mr-2" />
+                  Change Role
+                </ContextMenuSubTrigger>
+                <ContextMenuSubContent className="w-40">
+                  {assignableRoles.map(role => {
+                    const info = getRoleInfo(role);
+                    return (
+                      <ContextMenuItem 
+                        key={role}
+                        onClick={() => handleChangeRole(member, role)}
+                      >
+                        {role === 'admin' && <ShieldAlert className={cn('w-4 h-4 mr-2', info.color)} />}
+                        {role === 'moderator' && <Shield className={cn('w-4 h-4 mr-2', info.color)} />}
+                        {role === 'member' && <ShieldOff className="w-4 h-4 mr-2 text-muted-foreground" />}
+                        <span className={info.color}>{info.label}</span>
+                      </ContextMenuItem>
+                    );
+                  })}
+                </ContextMenuSubContent>
+              </ContextMenuSub>
+            </>
+          )}
+          
+          {/* Ownership transfer */}
+          {canTransfer && (
             <>
               <ContextMenuSeparator />
               <ContextMenuItem 
@@ -282,27 +380,6 @@ export const MembersSidebar = () => {
                 Transfer Ownership
               </ContextMenuItem>
             </>
-          )}
-
-          <ContextMenuSeparator />
-          
-          {member.role !== 'admin' && (
-            <ContextMenuItem onClick={() => handleChangeRole(member, 'admin')}>
-              <ShieldAlert className="w-4 h-4 mr-2 text-red-400" />
-              Make Admin
-            </ContextMenuItem>
-          )}
-          {member.role !== 'moderator' && (
-            <ContextMenuItem onClick={() => handleChangeRole(member, 'moderator')}>
-              <Shield className="w-4 h-4 mr-2 text-blue-400" />
-              Make Moderator
-            </ContextMenuItem>
-          )}
-          {member.role !== 'member' && (
-            <ContextMenuItem onClick={() => handleChangeRole(member, 'member')}>
-              <ShieldOff className="w-4 h-4 mr-2" />
-              Remove Role
-            </ContextMenuItem>
           )}
         </ContextMenuContent>
       </ContextMenu>
