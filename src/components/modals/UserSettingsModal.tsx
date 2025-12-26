@@ -9,8 +9,6 @@ import {
   Trash2, 
   Eye,
   EyeOff,
-  Sun,
-  Moon,
   Check,
   Copy,
   Link
@@ -39,11 +37,23 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useUIStore } from '@/stores/uiStore';
+import { useUIStore, THEMES, type Theme } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { cn } from '@/lib/utils';
+
+// Theme preview colors for the selector
+const THEME_PREVIEWS: Record<Theme, { bg: string; sidebar: string; accent: string }> = {
+  dark: { bg: '#2b2d31', sidebar: '#1e1f22', accent: '#5865f2' },
+  light: { bg: '#ffffff', sidebar: '#f2f3f5', accent: '#5865f2' },
+  midnight: { bg: '#1a1f36', sidebar: '#131827', accent: '#3b82f6' },
+  forest: { bg: '#1f2a24', sidebar: '#161d19', accent: '#22c55e' },
+  sunset: { bg: '#2a2320', sidebar: '#1c1816', accent: '#f97316' },
+  ocean: { bg: '#1f2a2e', sidebar: '#161f22', accent: '#06b6d4' },
+  lavender: { bg: '#28232e', sidebar: '#1c1820', accent: '#a855f7' },
+};
 
 export const UserSettingsModal = () => {
   const navigate = useNavigate();
@@ -51,7 +61,7 @@ export const UserSettingsModal = () => {
     activeModal, 
     closeModal, 
     theme, 
-    toggleTheme,
+    setTheme,
     linkPreviewsEnabled,
     setLinkPreviewsEnabled,
   } = useUIStore();
@@ -375,32 +385,64 @@ export const UserSettingsModal = () => {
             </TabsContent>
 
             {/* Appearance Tab */}
-            <TabsContent value="appearance" className="space-y-4 mt-4">
-              {/* Theme Toggle */}
-              <div className="space-y-2">
+            <TabsContent value="appearance" className="space-y-4 mt-4 overflow-y-auto max-h-[50vh]">
+              {/* Theme Selector */}
+              <div className="space-y-3">
                 <Label>Theme</Label>
-                <div className="flex gap-2">
-                  <Button
-                    variant={theme === 'light' ? 'default' : 'outline'}
-                    onClick={() => theme !== 'light' && toggleTheme()}
-                    className="flex-1"
-                  >
-                    <Sun className="w-4 h-4 mr-2" />
-                    Light
-                  </Button>
-                  <Button
-                    variant={theme === 'dark' ? 'default' : 'outline'}
-                    onClick={() => theme !== 'dark' && toggleTheme()}
-                    className="flex-1"
-                  >
-                    <Moon className="w-4 h-4 mr-2" />
-                    Dark
-                  </Button>
+                <div className="grid grid-cols-2 gap-3">
+                  {THEMES.map((t) => {
+                    const preview = THEME_PREVIEWS[t.id];
+                    const isActive = theme === t.id;
+                    
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => setTheme(t.id)}
+                        className={cn(
+                          'group relative flex flex-col overflow-hidden rounded-lg border-2 transition-all',
+                          isActive 
+                            ? 'border-primary ring-2 ring-primary/20' 
+                            : 'border-border hover:border-primary/50'
+                        )}
+                      >
+                        {/* Theme preview */}
+                        <div 
+                          className="h-16 w-full flex"
+                          style={{ backgroundColor: preview.bg }}
+                        >
+                          {/* Sidebar preview */}
+                          <div 
+                            className="w-1/4 h-full"
+                            style={{ backgroundColor: preview.sidebar }}
+                          />
+                          {/* Chat area with accent message */}
+                          <div className="flex-1 p-2 flex items-end">
+                            <div 
+                              className="h-3 w-3/4 rounded-sm"
+                              style={{ backgroundColor: preview.accent }}
+                            />
+                          </div>
+                        </div>
+                        {/* Theme info */}
+                        <div className="px-3 py-2 bg-card flex items-center justify-between">
+                          <div className="text-left">
+                            <p className="text-sm font-medium">{t.name}</p>
+                            <p className="text-xs text-muted-foreground">{t.description}</p>
+                          </div>
+                          {isActive && (
+                            <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                              <Check className="w-3 h-3 text-primary-foreground" />
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               {/* Link Previews Toggle */}
-              <div className="flex items-center justify-between py-2">
+              <div className="flex items-center justify-between py-2 border-t pt-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <Link className="w-4 h-4 text-muted-foreground" />
@@ -414,12 +456,6 @@ export const UserSettingsModal = () => {
                   checked={linkPreviewsEnabled}
                   onCheckedChange={setLinkPreviewsEnabled}
                 />
-              </div>
-
-              <div className="bg-secondary/50 rounded-lg p-4">
-                <p className="text-sm text-muted-foreground">
-                  More appearance options coming soon: accent color, font size, and more.
-                </p>
               </div>
             </TabsContent>
           </Tabs>

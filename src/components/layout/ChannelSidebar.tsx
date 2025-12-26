@@ -12,7 +12,8 @@ import {
   Mic,
   Headphones,
   GripVertical,
-  Trash2
+  Trash2,
+  Palette
 } from 'lucide-react';
 import {
   DndContext,
@@ -703,6 +704,23 @@ export const ChannelSidebar = () => {
               </Button>
             </TooltipTrigger>
             <TooltipContent>Deafen</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="w-8 h-8 text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  const { cycleTheme } = useUIStore.getState();
+                  cycleTheme();
+                }}
+              >
+                <Palette className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Cycle Theme</TooltipContent>
           </Tooltip>
 
           <Tooltip>
