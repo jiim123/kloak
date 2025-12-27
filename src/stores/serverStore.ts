@@ -358,22 +358,21 @@ export const useServerStore = create<ServerState>((set, get) => ({
   },
 
   deleteChannel: async (channelId: string) => {
-    try {
-      const { error } = await supabase
-        .from('channels')
-        .delete()
-        .eq('id', channelId);
+    const { error } = await supabase
+      .from('channels')
+      .delete()
+      .eq('id', channelId);
 
-      if (error) throw error;
-
-      set((state) => ({
-        channels: state.channels.filter((c) => c.id !== channelId),
-        currentChannel:
-          state.currentChannel?.id === channelId ? null : state.currentChannel,
-      }));
-    } catch (error) {
+    if (error) {
       console.error('Failed to delete channel:', error);
+      throw new Error(error.message || 'Failed to delete channel');
     }
+
+    set((state) => ({
+      channels: state.channels.filter((c) => c.id !== channelId),
+      currentChannel:
+        state.currentChannel?.id === channelId ? null : state.currentChannel,
+    }));
   },
 
   updateCategory: async (categoryId: string, updates: Partial<ChannelCategory>) => {
@@ -396,35 +395,34 @@ export const useServerStore = create<ServerState>((set, get) => ({
   },
 
   deleteCategory: async (categoryId: string) => {
-    try {
-      // First, move all channels in this category to uncategorized
-      const { channels } = get();
-      const categoryChannels = channels.filter(c => c.category_id === categoryId);
-      
-      for (const channel of categoryChannels) {
-        await supabase
-          .from('channels')
-          .update({ category_id: null })
-          .eq('id', channel.id);
-      }
-
-      // Then delete the category
-      const { error } = await supabase
-        .from('channel_categories')
-        .delete()
-        .eq('id', categoryId);
-
-      if (error) throw error;
-
-      set((state) => ({
-        categories: state.categories.filter((c) => c.id !== categoryId),
-        channels: state.channels.map((c) =>
-          c.category_id === categoryId ? { ...c, category_id: null } : c
-        ),
-      }));
-    } catch (error) {
-      console.error('Failed to delete category:', error);
+    // First, move all channels in this category to uncategorized
+    const { channels } = get();
+    const categoryChannels = channels.filter(c => c.category_id === categoryId);
+    
+    for (const channel of categoryChannels) {
+      await supabase
+        .from('channels')
+        .update({ category_id: null })
+        .eq('id', channel.id);
     }
+
+    // Then delete the category
+    const { error } = await supabase
+      .from('channel_categories')
+      .delete()
+      .eq('id', categoryId);
+
+    if (error) {
+      console.error('Failed to delete category:', error);
+      throw new Error(error.message || 'Failed to delete category');
+    }
+
+    set((state) => ({
+      categories: state.categories.filter((c) => c.id !== categoryId),
+      channels: state.channels.map((c) =>
+        c.category_id === categoryId ? { ...c, category_id: null } : c
+      ),
+    }));
   },
 
   reorderCategories: async (categoryIds: string[]) => {

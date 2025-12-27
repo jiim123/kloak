@@ -592,7 +592,7 @@ export const ChannelSidebar = () => {
                       isAdmin={isAdmin}
                       onSelect={() => setCurrentChannel(channel)}
                       onEdit={() => openModal('edit-channel', { channelId: channel.id })}
-                      onDelete={() => openModal('delete-message', { channelId: channel.id, type: 'channel' })}
+                      onDelete={() => openModal('edit-channel', { channelId: channel.id, showDelete: true })}
                       onMarkAsRead={() => handleMarkAsRead(channel.id)}
                     />
                   );
@@ -618,7 +618,7 @@ export const ChannelSidebar = () => {
                 onEditCategory={() => openModal('edit-channel', { categoryId: category.id, isCategory: true })}
                 onDeleteCategory={() => deleteCategoryAction(category.id)}
                 onEditChannel={(channelId) => openModal('edit-channel', { channelId })}
-                onDeleteChannel={(channelId) => openModal('delete-message', { channelId, type: 'channel' })}
+                onDeleteChannel={(channelId) => openModal('edit-channel', { channelId, showDelete: true })}
                 onMarkAsRead={handleMarkAsRead}
               />
             ))}
