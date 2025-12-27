@@ -133,9 +133,13 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange }: Emo
         side="top" 
         align="end"
         sideOffset={8}
+        onOpenAutoFocus={(e) => {
+          // Prevent auto-focus on mobile to avoid keyboard popup
+          e.preventDefault();
+        }}
       >
         {/* Search */}
-        <div className="p-2 border-b">
+        <div className="p-2 border-b border-border">
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -143,6 +147,15 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange }: Emo
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search emoji..."
               className="pl-8 h-8"
+              // Prevent keyboard on mobile by using inputMode
+              inputMode="none"
+              onFocus={(e) => {
+                // Allow keyboard on desktop, prevent on touch devices
+                if ('ontouchstart' in window) {
+                  e.target.blur();
+                  // Fallback: show a simple filter UI instead
+                }
+              }}
             />
             {search && (
               <Button
@@ -159,20 +172,20 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange }: Emo
 
         {/* Category Tabs */}
         {!search && (
-          <div className="flex border-b overflow-x-auto scrollbar-hide">
+          <div className="flex border-b border-border overflow-x-auto scrollbar-hide">
             {categories.map(cat => (
               <Button
                 key={cat.key}
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  "flex-shrink-0 px-3 py-2 rounded-none border-b-2 border-transparent",
+                  "flex-shrink-0 px-3 py-2 rounded-none border-b-2 border-transparent font-emoji",
                   activeCategory === cat.key && "border-primary bg-accent"
                 )}
                 onClick={() => setActiveCategory(cat.key)}
                 title={cat.name}
               >
-                <span className="text-lg">{cat.icon}</span>
+                <span className="text-lg font-emoji">{cat.icon}</span>
               </Button>
             ))}
           </div>
@@ -186,15 +199,15 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange }: Emo
               filteredEmojis && filteredEmojis.length > 0 ? (
                 <div className="grid grid-cols-8 gap-1">
                   {filteredEmojis.map((emoji, i) => (
-                    <Button
+                    <button
                       key={`${emoji}-${i}`}
-                      variant="ghost"
-                      size="sm"
-                      className="w-8 h-8 p-0 text-xl hover:bg-accent"
+                      type="button"
+                      className="w-8 h-8 p-0 text-xl hover:bg-accent rounded-md flex items-center justify-center font-emoji transition-colors"
                       onClick={() => handleSelect(emoji)}
+                      onMouseDown={(e) => e.preventDefault()} // Prevent focus
                     >
                       {emoji}
-                    </Button>
+                    </button>
                   ))}
                 </div>
               ) : (
@@ -205,27 +218,28 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange }: Emo
             ) : (
               // Category view
               categories.map(cat => (
-                cat.key === activeCategory && cat.emojis.length > 0 && (
+                cat.key === activeCategory && (
                   <div key={cat.key}>
                     <h3 className="text-xs font-semibold text-muted-foreground mb-2 uppercase">
                       {cat.name}
                     </h3>
-                    <div className="grid grid-cols-8 gap-1">
-                      {cat.emojis.map((emoji, i) => (
-                        <Button
-                          key={`${emoji}-${i}`}
-                          variant="ghost"
-                          size="sm"
-                          className="w-8 h-8 p-0 text-xl hover:bg-accent"
-                          onClick={() => handleSelect(emoji)}
-                        >
-                          {emoji}
-                        </Button>
-                      ))}
-                    </div>
-                    {cat.emojis.length === 0 && cat.key === 'recent' && (
+                    {cat.emojis.length > 0 ? (
+                      <div className="grid grid-cols-8 gap-1">
+                        {cat.emojis.map((emoji, i) => (
+                          <button
+                            key={`${emoji}-${i}`}
+                            type="button"
+                            className="w-8 h-8 p-0 text-xl hover:bg-accent rounded-md flex items-center justify-center font-emoji transition-colors"
+                            onClick={() => handleSelect(emoji)}
+                            onMouseDown={(e) => e.preventDefault()} // Prevent focus
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
                       <p className="text-sm text-muted-foreground text-center py-4">
-                        No recently used emoji
+                        {cat.key === 'recent' ? 'No recently used emoji' : 'No emojis available'}
                       </p>
                     )}
                   </div>
