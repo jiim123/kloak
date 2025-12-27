@@ -38,7 +38,7 @@ const AppLayout = () => {
   const navigate = useNavigate();
   const { user, isLoading } = useAuthStore();
   const { isMemberSidebarOpen, closeMobileSidebars } = useUIStore();
-  const { currentServer, currentChannel, setCurrentChannel, fetchChannels, fetchMembers, channels } = useServerStore();
+  const { currentServer, currentChannel, setCurrentChannel, fetchChannels, fetchMembers } = useServerStore();
   const { currentConversation, setCurrentConversation } = useDMStore();
   const isMobile = useIsMobile();
   
@@ -61,16 +61,6 @@ const AppLayout = () => {
       fetchMembers(currentServer.id);
     }
   }, [currentServer?.id, fetchChannels, fetchMembers]);
-
-  // Auto-select first channel when switching to a server with no channel selected
-  useEffect(() => {
-    if (currentServer && channels.length > 0 && !currentChannel) {
-      const firstChannel = channels.find(c => c.type === 'text') || channels[0];
-      if (firstChannel) {
-        setCurrentChannel(firstChannel);
-      }
-    }
-  }, [currentServer, channels, currentChannel, setCurrentChannel]);
 
   useEffect(() => {
     initializeAuth();
