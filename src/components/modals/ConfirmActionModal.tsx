@@ -112,8 +112,6 @@ export const ConfirmActionModal = () => {
     }
   };
 
-  if (!member) return null;
-
   return (
     <AlertDialog open={isOpen} onOpenChange={handleClose}>
       <AlertDialogContent>
@@ -194,7 +192,9 @@ export const ChangeNicknameModal = () => {
     }
   };
 
-  if (!member) return null;
+  if (!member) {
+    return <AlertDialog open={false} onOpenChange={handleClose}><AlertDialogContent /></AlertDialog>;
+  }
 
   return (
     <AlertDialog open={isOpen} onOpenChange={handleClose}>
