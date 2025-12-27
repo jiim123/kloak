@@ -7,11 +7,9 @@ export const MobileMembersSidebar = () => {
   const { isMemberSidebarOpen, setMemberSidebarOpen } = useUIStore();
   const isMobile = useIsMobile();
 
-  // Only render on mobile
-  if (!isMobile) return null;
-
+  // Return closed sheet for non-mobile - keeps hook count consistent
   return (
-    <Sheet open={isMemberSidebarOpen} onOpenChange={setMemberSidebarOpen}>
+    <Sheet open={isMobile && isMemberSidebarOpen} onOpenChange={setMemberSidebarOpen}>
       <SheetContent side="right" className="p-0 w-60 max-w-[80vw]">
         <SheetHeader className="sr-only">
           <SheetTitle>Members</SheetTitle>

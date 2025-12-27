@@ -185,7 +185,15 @@ export const ServerSettingsModal = () => {
   };
 
   if (!server) {
-    return <Dialog open={false}><DialogContent /></Dialog>;
+    return (
+      <Dialog open={false}>
+        <DialogContent aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>Server Settings</DialogTitle>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+    );
   }
 
   return (

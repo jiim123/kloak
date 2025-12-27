@@ -193,7 +193,15 @@ export const ChangeNicknameModal = () => {
   };
 
   if (!member) {
-    return <AlertDialog open={false} onOpenChange={handleClose}><AlertDialogContent /></AlertDialog>;
+    return (
+      <AlertDialog open={false} onOpenChange={handleClose}>
+        <AlertDialogContent aria-describedby={undefined}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change Nickname</AlertDialogTitle>
+          </AlertDialogHeader>
+        </AlertDialogContent>
+      </AlertDialog>
+    );
   }
 
   return (

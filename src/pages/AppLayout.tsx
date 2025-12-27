@@ -86,6 +86,10 @@ const AppLayout = () => {
     }
   };
 
+  // DM View (no server selected)
+  const isDMView = currentServer === null;
+
+  // Show loading state - AFTER all hooks
   if (isLoading) {
     return (
       <div className="h-screen bg-layout-chat flex items-center justify-center">
@@ -99,9 +103,6 @@ const AppLayout = () => {
   if (!user) {
     return null;
   }
-
-  // DM View (no server selected)
-  const isDMView = currentServer === null;
 
   return (
     <>
