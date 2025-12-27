@@ -184,8 +184,6 @@ export const ServerSettingsModal = () => {
     closeModal();
   };
 
-  if (!server) return null;
-
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>

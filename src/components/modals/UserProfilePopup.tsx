@@ -140,8 +140,6 @@ export const UserProfilePopup = () => {
     closeModal();
   };
 
-  if (!profileUser && !isLoading) return null;
-
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="sm:max-w-sm p-0 overflow-hidden">

@@ -135,7 +135,9 @@ export const EditChannelModal = () => {
 
   // Category editing mode
   if (isCategory) {
-    if (!category) return null;
+    if (!category) {
+      return <Dialog open={false}><DialogContent /></Dialog>;
+    }
 
     return (
       <>
@@ -225,7 +227,9 @@ export const EditChannelModal = () => {
   }
 
   // Channel editing mode
-  if (!channel) return null;
+  if (!channel) {
+    return <Dialog open={false}><DialogContent /></Dialog>;
+  }
 
   return (
     <>
