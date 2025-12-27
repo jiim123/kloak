@@ -241,7 +241,14 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }
   },
 
-  setCurrentServer: (server) => set({ currentServer: server }),
+  setCurrentServer: (server) => set({ 
+    currentServer: server,
+    // Clear channel state when switching servers to ensure proper isolation
+    currentChannel: null,
+    channels: [],
+    categories: [],
+    members: [],
+  }),
   setCurrentChannel: (channel) => set({ currentChannel: channel }),
 
   fetchChannels: async (serverId: string) => {
