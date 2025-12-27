@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '@/integrations/supabase/client';
 import { generateSecretKey, hashSecretKey, isValidSecretKey } from '@/lib/crypto';
+import { authRateLimiter, validateUsername } from '@/lib/security';
 import type { User, UserStatus } from '@/types';
 
 interface AuthState {
@@ -57,6 +58,13 @@ export const useAuthStore = create<AuthState>()(
       createAccount: async (username: string) => {
         set({ isLoading: true, error: null });
         
+        // Validate username
+        const usernameValidation = validateUsername(username);
+        if (!usernameValidation.valid) {
+          set({ error: usernameValidation.error, isLoading: false });
+          return null;
+        }
+        
         try {
           const secretKey = generateSecretKey();
           const keyHash = await hashSecretKey(secretKey);
@@ -107,6 +115,14 @@ export const useAuthStore = create<AuthState>()(
         
         if (!isValidSecretKey(secretKey)) {
           set({ error: 'Invalid secret key format', isLoading: false });
+          return false;
+        }
+
+        // Rate limiting check - use a hash of the key prefix to avoid logging the full key
+        const rateLimitKey = `login_${secretKey.slice(0, 8)}`;
+        if (!authRateLimiter.isAllowed(rateLimitKey)) {
+          const remaining = authRateLimiter.getRemainingTime(rateLimitKey);
+          set({ error: `Too many attempts. Try again in ${remaining} seconds.`, isLoading: false });
           return false;
         }
 
