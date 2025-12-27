@@ -60,6 +60,10 @@ export const EditChannelModal = () => {
   const channel = channels.find(c => c.id === channelId);
   const category = categories.find(c => c.id === categoryId);
 
+  // Determine what we're editing
+  const hasValidTarget = isCategory ? !!category : !!channel;
+  const targetName = isCategory ? category?.name : channel?.name;
+
   useEffect(() => {
     if (isCategory && category) {
       setName(category.name);
@@ -76,6 +80,7 @@ export const EditChannelModal = () => {
 
   const handleClose = () => {
     setError('');
+    setShowDeleteConfirm(false);
     closeModal();
   };
 
@@ -133,164 +138,57 @@ export const EditChannelModal = () => {
     }
   };
 
-  // Category editing mode
-  if (isCategory) {
-    if (!category) {
-      return <Dialog open={false}><DialogContent /></Dialog>;
-    }
-
-    return (
-      <>
-        <Dialog open={isOpen} onOpenChange={handleClose}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <FolderOpen className="h-5 w-5" />
-                Edit Category
-              </DialogTitle>
-              <DialogDescription>
-                Modify category settings for {category.name}
-              </DialogDescription>
-            </DialogHeader>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Category name */}
-              <div className="space-y-2">
-                <Label htmlFor="category-name">Category Name</Label>
-                <Input
-                  id="category-name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Category name"
-                  maxLength={50}
-                />
-              </div>
-
-              {error && (
-                <p className="text-sm text-destructive">{error}</p>
-              )}
-
-              {/* Danger zone */}
-              <div className="border border-destructive/50 rounded-lg p-4 space-y-3">
-                <div className="space-y-1">
-                  <Label className="text-destructive">Danger Zone</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Deleting a category will move all its channels to uncategorized.
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setShowDeleteConfirm(true)}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Category
-                </Button>
-              </div>
-
-              <DialogFooter>
-                <Button type="button" variant="ghost" onClick={handleClose}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isSubmitting || !name.trim()}>
-                  {isSubmitting ? 'Saving...' : 'Save Changes'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-
-        {/* Delete confirmation dialog */}
-        <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Category</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to delete <strong>{category.name}</strong>? 
-                All channels in this category will be moved to uncategorized.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDelete}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                Delete Category
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </>
-    );
-  }
-
-  // Channel editing mode
-  if (!channel) {
-    return <Dialog open={false}><DialogContent /></Dialog>;
-  }
-
+  // Single return statement - conditionally render content
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Hash className="h-5 w-5" />
-              Edit Channel
-            </DialogTitle>
-            <DialogDescription>
-              Modify channel settings for #{channel.name}
-            </DialogDescription>
-          </DialogHeader>
+      <Dialog open={isOpen && hasValidTarget} onOpenChange={(open) => !open && handleClose()}>
+        <DialogContent className={isCategory ? "sm:max-w-md" : "sm:max-w-lg"}>
+          {isCategory && category ? (
+            // Category editing content
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <FolderOpen className="h-5 w-5" />
+                  Edit Category
+                </DialogTitle>
+                <DialogDescription>
+                  Modify category settings for {category.name}
+                </DialogDescription>
+              </DialogHeader>
 
-          <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="permissions">Settings</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="overview" className="space-y-4 mt-4">
               <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Channel name */}
                 <div className="space-y-2">
-                  <Label htmlFor="channel-name">Channel Name</Label>
-                  <div className="relative">
-                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="channel-name"
-                      value={name}
-                      onChange={(e) => setName(formatChannelName(e.target.value))}
-                      placeholder="channel-name"
-                      className="pl-9"
-                      maxLength={50}
-                    />
-                  </div>
-                </div>
-
-                {/* Channel topic */}
-                <div className="space-y-2">
-                  <Label htmlFor="channel-topic">
-                    Channel Topic
-                    <span className="text-muted-foreground font-normal ml-1">(optional)</span>
-                  </Label>
-                  <Textarea
-                    id="channel-topic"
-                    value={topic}
-                    onChange={(e) => setTopic(e.target.value)}
-                    placeholder="Let everyone know what this channel is for..."
-                    maxLength={1024}
-                    rows={3}
+                  <Label htmlFor="category-name">Category Name</Label>
+                  <Input
+                    id="category-name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Category name"
+                    maxLength={50}
                   />
-                  <p className="text-xs text-muted-foreground text-right">
-                    {topic.length}/1024
-                  </p>
                 </div>
 
                 {error && (
                   <p className="text-sm text-destructive">{error}</p>
                 )}
+
+                <div className="border border-destructive/50 rounded-lg p-4 space-y-3">
+                  <div className="space-y-1">
+                    <Label className="text-destructive">Danger Zone</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Deleting a category will move all its channels to uncategorized.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setShowDeleteConfirm(true)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Category
+                  </Button>
+                </div>
 
                 <DialogFooter>
                   <Button type="button" variant="ghost" onClick={handleClose}>
@@ -301,71 +199,138 @@ export const EditChannelModal = () => {
                   </Button>
                 </DialogFooter>
               </form>
-            </TabsContent>
+            </>
+          ) : channel ? (
+            // Channel editing content
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Hash className="h-5 w-5" />
+                  Edit Channel
+                </DialogTitle>
+                <DialogDescription>
+                  Modify channel settings for #{channel.name}
+                </DialogDescription>
+              </DialogHeader>
 
-            <TabsContent value="permissions" className="space-y-4 mt-4">
-              {/* Slowmode */}
-              <div className="space-y-2">
-                <Label>Slowmode</Label>
-                <Select value={slowmodeSeconds} onValueChange={setSlowmodeSeconds}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SLOWMODE_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Members will only be able to send one message per this time period
-                </p>
-              </div>
+              <Tabs defaultValue="overview" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="overview">Overview</TabsTrigger>
+                  <TabsTrigger value="permissions">Settings</TabsTrigger>
+                </TabsList>
 
-              {/* NSFW toggle */}
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <Label>Age-Restricted Channel</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Mark this channel as NSFW
-                  </p>
-                </div>
-                <Switch
-                  checked={isNsfw}
-                  onCheckedChange={setIsNsfw}
-                />
-              </div>
+                <TabsContent value="overview" className="space-y-4 mt-4">
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="channel-name">Channel Name</Label>
+                      <div className="relative">
+                        <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="channel-name"
+                          value={name}
+                          onChange={(e) => setName(formatChannelName(e.target.value))}
+                          placeholder="channel-name"
+                          className="pl-9"
+                          maxLength={50}
+                        />
+                      </div>
+                    </div>
 
-              {/* Danger zone */}
-              <div className="border border-destructive/50 rounded-lg p-4 space-y-3">
-                <div className="space-y-1">
-                  <Label className="text-destructive">Danger Zone</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Deleting a channel is irreversible. All messages will be permanently lost.
-                  </p>
-                </div>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setShowDeleteConfirm(true)}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Channel
-                </Button>
-              </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="channel-topic">
+                        Channel Topic
+                        <span className="text-muted-foreground font-normal ml-1">(optional)</span>
+                      </Label>
+                      <Textarea
+                        id="channel-topic"
+                        value={topic}
+                        onChange={(e) => setTopic(e.target.value)}
+                        placeholder="Let everyone know what this channel is for..."
+                        maxLength={1024}
+                        rows={3}
+                      />
+                      <p className="text-xs text-muted-foreground text-right">
+                        {topic.length}/1024
+                      </p>
+                    </div>
 
-              <DialogFooter>
-                <Button type="button" variant="ghost" onClick={handleClose}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSubmit} disabled={isSubmitting || !name.trim()}>
-                  {isSubmitting ? 'Saving...' : 'Save Changes'}
-                </Button>
-              </DialogFooter>
-            </TabsContent>
-          </Tabs>
+                    {error && (
+                      <p className="text-sm text-destructive">{error}</p>
+                    )}
+
+                    <DialogFooter>
+                      <Button type="button" variant="ghost" onClick={handleClose}>
+                        Cancel
+                      </Button>
+                      <Button type="submit" disabled={isSubmitting || !name.trim()}>
+                        {isSubmitting ? 'Saving...' : 'Save Changes'}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </TabsContent>
+
+                <TabsContent value="permissions" className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <Label>Slowmode</Label>
+                    <Select value={slowmodeSeconds} onValueChange={setSlowmodeSeconds}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SLOWMODE_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Members will only be able to send one message per this time period
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <Label>Age-Restricted Channel</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Mark this channel as NSFW
+                      </p>
+                    </div>
+                    <Switch
+                      checked={isNsfw}
+                      onCheckedChange={setIsNsfw}
+                    />
+                  </div>
+
+                  <div className="border border-destructive/50 rounded-lg p-4 space-y-3">
+                    <div className="space-y-1">
+                      <Label className="text-destructive">Danger Zone</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Deleting a channel is irreversible. All messages will be permanently lost.
+                      </p>
+                    </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setShowDeleteConfirm(true)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Channel
+                    </Button>
+                  </div>
+
+                  <DialogFooter>
+                    <Button type="button" variant="ghost" onClick={handleClose}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleSubmit} disabled={isSubmitting || !name.trim()}>
+                      {isSubmitting ? 'Saving...' : 'Save Changes'}
+                    </Button>
+                  </DialogFooter>
+                </TabsContent>
+              </Tabs>
+            </>
+          ) : null}
         </DialogContent>
       </Dialog>
 
@@ -373,10 +338,13 @@ export const EditChannelModal = () => {
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Channel</AlertDialogTitle>
+            <AlertDialogTitle>Delete {isCategory ? 'Category' : 'Channel'}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>#{channel.name}</strong>? 
-              This action cannot be undone and all messages in this channel will be permanently deleted.
+              Are you sure you want to delete <strong>{isCategory ? targetName : `#${targetName}`}</strong>? 
+              {isCategory 
+                ? ' All channels in this category will be moved to uncategorized.'
+                : ' This action cannot be undone and all messages in this channel will be permanently deleted.'
+              }
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -385,7 +353,7 @@ export const EditChannelModal = () => {
               onClick={handleDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete Channel
+              Delete {isCategory ? 'Category' : 'Channel'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
