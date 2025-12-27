@@ -152,8 +152,17 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         reactions: [],
       };
 
-      // Clear reply state
-      set({ replyingTo: null });
+      // Add message to local state immediately (optimistic update)
+      set((state) => {
+        // Avoid duplicates
+        if (state.messages.some((m) => m.id === message.id)) {
+          return { replyingTo: null };
+        }
+        return { 
+          messages: [...state.messages, message],
+          replyingTo: null 
+        };
+      });
 
       return message;
     } catch (error) {

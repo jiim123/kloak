@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { PlusCircle, Smile, Send, X, Loader2, WifiOff } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { Paperclip, Smile, Send, X, Loader2, WifiOff } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useMessageStore } from '@/stores/messageStore';
 import { useServerStore } from '@/stores/serverStore';
@@ -33,6 +31,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const { isOnline } = useOnlineStatus();
   
   const [content, setContent] = useState('');
+  const [isFocused, setIsFocused] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [showMentions, setShowMentions] = useState(false);
   const [mentionQuery, setMentionQuery] = useState('');
@@ -66,18 +65,13 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   }, [replyingTo]);
 
   // Auto-resize textarea
-  const adjustHeight = useCallback(() => {
+  useEffect(() => {
     const textarea = textareaRef.current;
     if (textarea) {
       textarea.style.height = 'auto';
-      const maxHeight = 5 * 24; // Approximately 5 lines
-      textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
+      textarea.style.height = Math.min(textarea.scrollHeight, 160) + 'px';
     }
-  }, []);
-
-  useEffect(() => {
-    adjustHeight();
-  }, [content, adjustHeight]);
+  }, [content]);
 
   // Handle mention detection
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -279,7 +273,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   if (isMuted) {
     return (
       <div className="px-4 pb-6">
-        <div className="flex items-center justify-center py-4 px-4 bg-secondary rounded-lg">
+        <div className="flex items-center justify-center py-4 px-4 bg-secondary rounded-2xl">
           <span className="text-muted-foreground">You are muted in this server</span>
         </div>
       </div>
@@ -290,7 +284,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     <div className="px-4 pb-6 relative">
       {/* Queued messages indicator */}
       {queuedMessages.length > 0 && (
-        <div className="flex items-center gap-2 px-4 py-2 mb-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-sm text-yellow-500">
+        <div className="flex items-center gap-2 px-4 py-2 mb-2 bg-[hsl(var(--nomo-warning))]/10 border border-[hsl(var(--nomo-warning))]/20 rounded-xl text-sm text-[hsl(var(--nomo-warning))]">
           <WifiOff className="w-4 h-4" />
           <span>{queuedMessages.length} message{queuedMessages.length > 1 ? 's' : ''} waiting to send</span>
         </div>
@@ -309,62 +303,81 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
 
       {/* Reply preview */}
       {replyingTo && (
-        <div className="flex items-center gap-2 px-4 py-2 bg-secondary rounded-t-lg border-b border-border">
+        <div className="flex items-center gap-2 px-4 py-2 bg-secondary rounded-t-2xl border-b border-border">
           <span className="text-sm text-muted-foreground">
             Replying to <span className="font-medium text-primary">@{replyingTo.user?.username}</span>
           </span>
           <span className="text-sm text-muted-foreground truncate flex-1">
             {getMessagePreview(replyingTo.content, 50)}
           </span>
-          <Button variant="ghost" size="icon" className="w-6 h-6" onClick={cancelReply}>
+          <button 
+            onClick={cancelReply}
+            className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
+          >
             <X className="w-4 h-4" />
-          </Button>
+          </button>
         </div>
       )}
 
-      {/* Input container */}
-      <div className={`flex items-end gap-2 bg-secondary px-4 py-2 ${replyingTo ? 'rounded-b-lg' : 'rounded-lg'}`}>
-        <Button type="button" variant="ghost" size="icon" className="w-8 h-8 flex-shrink-0">
-          <PlusCircle className="w-5 h-5" />
-        </Button>
+      {/* Floating input container */}
+      <div 
+        className={`
+          rounded-2xl bg-secondary border transition-all duration-200 ease-out
+          ${isFocused ? 'border-border -translate-y-[3px] shadow-lg' : 'border-transparent translate-y-0'}
+          ${replyingTo ? 'rounded-t-none' : ''}
+        `}
+      >
+        <div className="flex items-end gap-2 p-3">
+          {/* Attachment button */}
+          <button className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150 mb-0.5">
+            <Paperclip className="w-5 h-5" />
+          </button>
 
-        <div className="flex-1 relative">
-          <Textarea
+          {/* Textarea */}
+          <textarea
             ref={textareaRef}
             value={content}
             onChange={handleChange}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
             onKeyDown={handleKeyDown}
             placeholder={`Message #${channelName}`}
-            className="min-h-[24px] max-h-[120px] border-0 bg-transparent focus-visible:ring-0 p-0 resize-none overflow-hidden"
             rows={1}
+            className="flex-1 bg-transparent resize-none outline-none text-foreground placeholder:text-muted-foreground text-[15px] leading-relaxed py-2 px-1 font-light"
+            style={{ fontFamily: "system-ui, -apple-system, sans-serif, 'Noto Color Emoji'" }}
           />
-        </div>
 
-        <div className="flex items-center gap-1 flex-shrink-0">
-          {showCharacterWarning && (
-            <span className={`text-xs ${content.length > MAX_LENGTH - 50 ? 'text-destructive' : 'text-muted-foreground'}`}>
-              {MAX_LENGTH - content.length}
-            </span>
-          )}
+          {/* Action buttons */}
+          <div className="flex items-center gap-1 mb-0.5">
+            {/* Character count warning */}
+            {showCharacterWarning && (
+              <span className={`text-xs mr-1 ${content.length > MAX_LENGTH - 50 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                {MAX_LENGTH - content.length}
+              </span>
+            )}
 
-          <Button type="button" variant="ghost" size="icon" className="w-8 h-8">
-            <Smile className="w-5 h-5" />
-          </Button>
+            {/* Emoji button */}
+            <button className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150">
+              <Smile className="w-5 h-5" />
+            </button>
 
-          {content.trim() && (
-            <Button 
-              size="icon" 
-              className="w-8 h-8" 
+            {/* Send button */}
+            <button
               onClick={handleSubmit}
-              disabled={isSending}
+              disabled={!content.trim() || isSending}
+              className={`p-2 rounded-xl transition-all duration-150 ${
+                content.trim() && !isSending
+                  ? 'bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95'
+                  : 'bg-muted text-muted-foreground cursor-not-allowed'
+              }`}
             >
               {isSending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
-                <Send className="w-4 h-4" />
+                <Send className="w-5 h-5" />
               )}
-            </Button>
-          )}
+            </button>
+          </div>
         </div>
       </div>
     </div>
