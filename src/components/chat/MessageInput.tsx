@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Paperclip, Smile, Send, X, Loader2, WifiOff } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useMessageStore } from '@/stores/messageStore';
@@ -9,6 +9,7 @@ import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { saveDraft, getDraft, clearDraft } from '@/lib/storage';
 import { getMessagePreview, extractMentions } from '@/lib/message';
 import { MentionAutocomplete } from './MentionAutocomplete';
+import { EmojiPicker } from '@/components/modals/EmojiPicker';
 import { supabase } from '@/integrations/supabase/client';
 import { showSuccess, showWarning, handleError } from '@/lib/errorHandler';
 import { messageRateLimiter, validateMessageContent } from '@/lib/security';
@@ -37,6 +38,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const [mentionQuery, setMentionQuery] = useState('');
   const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 });
   const [mentionStartIndex, setMentionStartIndex] = useState(-1);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -140,8 +142,8 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     setShowMentions(false);
     setMentionStartIndex(-1);
     
-    // Focus back on textarea
-    textareaRef.current?.focus();
+    // Focus back on textarea after a brief delay to prevent mobile keyboard
+    setTimeout(() => textareaRef.current?.focus(), 50);
   };
 
   const handleSubmit = async () => {
@@ -268,6 +270,36 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     setReplyingTo(null);
   };
 
+  // Handle emoji selection - insert at cursor position
+  const handleEmojiSelect = (emoji: string) => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const newContent = content.slice(0, start) + emoji + content.slice(end);
+      
+      if (newContent.length <= MAX_LENGTH) {
+        setContent(newContent);
+        
+        // Don't focus immediately on mobile to prevent keyboard popup
+        // Use requestAnimationFrame to ensure content is updated first
+        requestAnimationFrame(() => {
+          const newCursorPos = start + emoji.length;
+          textarea.setSelectionRange(newCursorPos, newCursorPos);
+        });
+      }
+    } else {
+      // Fallback: append to end
+      const newContent = content + emoji;
+      if (newContent.length <= MAX_LENGTH) {
+        setContent(newContent);
+      }
+    }
+    
+    // Close picker
+    setShowEmojiPicker(false);
+  };
+
   const showCharacterWarning = content.length > MAX_LENGTH - 200;
 
   if (isMuted) {
@@ -356,10 +388,23 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
               </span>
             )}
 
-            {/* Emoji button */}
-            <button className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150">
-              <Smile className="w-5 h-5" />
-            </button>
+            {/* Emoji button with picker */}
+            <EmojiPicker
+              open={showEmojiPicker}
+              onOpenChange={setShowEmojiPicker}
+              onEmojiSelect={handleEmojiSelect}
+            >
+              <button 
+                type="button"
+                className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
+                onMouseDown={(e) => {
+                  // Prevent focus loss from textarea on desktop
+                  e.preventDefault();
+                }}
+              >
+                <Smile className="w-5 h-5" />
+              </button>
+            </EmojiPicker>
 
             {/* Send button */}
             <button
