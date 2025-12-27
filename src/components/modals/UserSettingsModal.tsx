@@ -190,8 +190,6 @@ export const UserSettingsModal = () => {
     closeModal();
   };
 
-  if (!user) return null;
-
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
