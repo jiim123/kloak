@@ -28,9 +28,16 @@ interface ServerChannels {
 
 export const ServerSidebar = () => {
   const { user } = useAuthStore();
-  const { servers, currentServer, setCurrentServer, isLoading } = useServerStore();
+  const { servers, currentServer, setCurrentServer, isLoading, fetchServers } = useServerStore();
   const { openModal } = useUIStore();
   const [serverChannels, setServerChannels] = useState<ServerChannels>({});
+
+  // Fetch servers when user is available (on login/mount)
+  useEffect(() => {
+    if (user?.id) {
+      fetchServers(user.id);
+    }
+  }, [user?.id, fetchServers]);
 
   // Fetch all channels for all servers
   useEffect(() => {
