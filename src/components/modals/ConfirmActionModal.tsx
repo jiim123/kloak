@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -163,6 +163,15 @@ export const ChangeNicknameModal = () => {
   const isOpen = activeModal === 'changeNickname';
   const member = modalData?.member as ServerMember | undefined;
 
+  // Initialize nickname when modal opens - must be in useEffect, not during render
+  useEffect(() => {
+    if (isOpen && member?.nickname) {
+      setNickname(member.nickname);
+    } else if (!isOpen) {
+      setNickname('');
+    }
+  }, [isOpen, member?.nickname]);
+
   const handleClose = () => {
     setNickname('');
     closeModal();
@@ -184,11 +193,6 @@ export const ChangeNicknameModal = () => {
       setIsSubmitting(false);
     }
   };
-
-  // Initialize nickname when modal opens
-  if (isOpen && member && nickname === '' && member.nickname) {
-    setNickname(member.nickname);
-  }
 
   if (!member) return null;
 
