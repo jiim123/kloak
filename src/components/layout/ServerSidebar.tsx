@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Home, Plus, Users, MessageSquarePlus } from 'lucide-react';
+import { Home, Plus, Users, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -9,7 +9,6 @@ import { useAuthStore } from '@/stores/authStore';
 import { useServerStore } from '@/stores/serverStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useUnread } from '@/hooks/useUnread';
-import { StatusSelector } from '@/components/StatusSelector';
 import { ServerIconSkeleton } from '@/components/ui/skeletons';
 import { supabase } from '@/integrations/supabase/client';
 import type { Channel } from '@/types';
@@ -238,25 +237,21 @@ export const ServerSidebar = () => {
 
       <Separator className="w-8 h-0.5 bg-border rounded-full" />
 
-      {/* User settings button - click to change status */}
-      <StatusSelector side="right" align="end">
-        <button className="relative w-10 h-10 p-0 rounded-full hover:opacity-80 transition-opacity">
-          <Avatar className="w-10 h-10">
-            <AvatarImage src={user?.avatar_url || undefined} alt={user?.username} />
-            <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-              {getUserInitials(user?.username)}
-            </AvatarFallback>
-          </Avatar>
-          
-          {/* Status indicator */}
-          <span 
-            className={cn(
-              'absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-layout-sidebar',
-              statusColors[user?.status || 'offline']
-            )} 
-          />
-        </button>
-      </StatusSelector>
+      {/* User settings button */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            className="w-12 h-12 p-0 rounded-full bg-secondary hover:bg-secondary/80 transition-all duration-200"
+            onClick={() => openModal('user-settings')}
+          >
+            <Settings className="w-5 h-5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="right" className="font-semibold">
+          User Settings
+        </TooltipContent>
+      </Tooltip>
     </div>
   );
 };
