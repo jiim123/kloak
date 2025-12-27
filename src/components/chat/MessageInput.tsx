@@ -12,7 +12,8 @@ import { saveDraft, getDraft, clearDraft } from '@/lib/storage';
 import { getMessagePreview, extractMentions } from '@/lib/message';
 import { MentionAutocomplete } from './MentionAutocomplete';
 import { supabase } from '@/integrations/supabase/client';
-import { showSuccess, handleError } from '@/lib/errorHandler';
+import { showSuccess, showWarning, handleError } from '@/lib/errorHandler';
+import { messageRateLimiter, validateMessageContent } from '@/lib/security';
 
 interface MessageInputProps {
   channelId: string;
@@ -153,6 +154,21 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     if (!content.trim() || !user || isMuted || isSending) return;
 
     const messageContent = content.trim();
+    
+    // Validate message content
+    const validation = validateMessageContent(messageContent);
+    if (!validation.valid) {
+      showWarning('Invalid message', validation.error || 'Please check your message');
+      return;
+    }
+    
+    // Rate limiting check
+    if (!messageRateLimiter.isAllowed(user.id)) {
+      const remaining = messageRateLimiter.getRemainingTime(user.id);
+      showWarning('Slow down cowboy!', `Try again in ${remaining} seconds`);
+      return;
+    }
+    
     setContent('');
     setIsSending(true);
     clearDraft(channelId);
