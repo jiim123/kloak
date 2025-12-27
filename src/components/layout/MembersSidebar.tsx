@@ -96,16 +96,11 @@ export const MembersSidebar = () => {
   // Subscribe to realtime member updates
   useRealtimeMembers(currentServer?.id || null);
 
-  // Show skeleton while loading
-  if (isLoading) {
-    return <MembersSidebarSkeleton />;
-  }
-
   // Get current user's role in this server
   const currentUserMember = members.find(m => m.user_id === user?.id);
   const currentUserRole = currentUserMember?.role;
 
-  // Categorize members based on presence
+  // Categorize members based on presence - MUST be called before any early returns
   const { onlineMembers, offlineMembers } = useMemo(() => {
     const online: ServerMember[] = [];
     const offline: ServerMember[] = [];
@@ -135,6 +130,11 @@ export const MembersSidebar = () => {
       offlineMembers: offline.sort(sortMembers) 
     };
   }, [members]);
+
+  // Show skeleton while loading - AFTER all hooks
+  if (isLoading) {
+    return <MembersSidebarSkeleton />;
+  }
 
   const handleMemberClick = (member: ServerMember) => {
     openModal('userProfile', { userId: member.user_id, user: member.user });
