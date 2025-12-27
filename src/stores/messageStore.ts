@@ -63,16 +63,12 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     set({ isLoading: true });
 
     try {
+      // Fetch messages without self-referential join to avoid PostgREST issues
       let query = supabase
         .from('messages')
         .select(`
           *,
           user:users (*),
-          reply_to:messages!messages_reply_to_id_fkey (
-            id,
-            content,
-            user:users (*)
-          ),
           attachments:message_attachments (*),
           reactions (*)
         `)
@@ -88,10 +84,34 @@ export const useMessageStore = create<MessageState>((set, get) => ({
 
       if (error) throw error;
 
+      // Get reply_to_ids that need to be fetched
+      const replyToIds = (data || [])
+        .filter((msg: any) => msg.reply_to_id)
+        .map((msg: any) => msg.reply_to_id);
+
+      // Fetch reply messages separately if there are any
+      let replyMap: Record<string, MessageReply> = {};
+      if (replyToIds.length > 0) {
+        const { data: replyData } = await supabase
+          .from('messages')
+          .select('id, content, user:users (*)')
+          .in('id', replyToIds);
+
+        if (replyData) {
+          replyData.forEach((reply: any) => {
+            replyMap[reply.id] = {
+              id: reply.id,
+              content: reply.content,
+              user: reply.user as User,
+            };
+          });
+        }
+      }
+
       const messages: Message[] = (data || []).reverse().map((msg: any) => ({
         ...msg,
         user: msg.user,
-        reply_to: msg.reply_to,
+        reply_to: msg.reply_to_id ? replyMap[msg.reply_to_id] : undefined,
         attachments: msg.attachments || [],
         reactions: groupReactions(msg.reactions || []),
       }));
@@ -116,6 +136,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
 
   sendMessage: async (channelId: string, userId: string, content: string, replyToId?: string) => {
     try {
+      // Insert message without complex self-join to avoid PostgREST issues
       const { data, error } = await supabase
         .from('messages')
         .insert({
@@ -126,16 +147,29 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         })
         .select(`
           *,
-          user:users (*),
-          reply_to:messages!messages_reply_to_id_fkey (
-            id,
-            content,
-            user:users (*)
-          )
+          user:users (*)
         `)
         .single();
 
       if (error) throw error;
+
+      // If there's a reply_to_id, fetch the reply data separately
+      let replyData: MessageReply | undefined;
+      if (replyToId) {
+        const { data: replyMsg } = await supabase
+          .from('messages')
+          .select('id, content, user:users (*)')
+          .eq('id', replyToId)
+          .single();
+        
+        if (replyMsg) {
+          replyData = {
+            id: replyMsg.id,
+            content: replyMsg.content,
+            user: replyMsg.user as User,
+          };
+        }
+      }
 
       const message: Message = {
         id: data.id,
@@ -147,7 +181,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         edited_at: data.edited_at,
         created_at: data.created_at,
         user: data.user as User,
-        reply_to: (Array.isArray(data.reply_to) ? data.reply_to[0] : data.reply_to) as MessageReply | undefined,
+        reply_to: replyData,
         attachments: [],
         reactions: [],
       };
