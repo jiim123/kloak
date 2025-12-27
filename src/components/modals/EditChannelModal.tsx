@@ -56,6 +56,7 @@ export const EditChannelModal = () => {
   const channelId = modalData?.channelId as string | undefined;
   const categoryId = modalData?.categoryId as string | undefined;
   const isCategory = modalData?.isCategory === true;
+  const showDeleteImmediately = modalData?.showDelete === true;
   
   const channel = channels.find(c => c.id === channelId);
   const category = categories.find(c => c.id === categoryId);
@@ -76,7 +77,12 @@ export const EditChannelModal = () => {
       setIsNsfw(channel.is_nsfw);
       setSlowmodeSeconds(String(channel.slowmode_seconds));
     }
-  }, [channel, category, isCategory]);
+    
+    // If showDelete flag is set, immediately show delete confirmation
+    if (showDeleteImmediately && hasValidTarget) {
+      setShowDeleteConfirm(true);
+    }
+  }, [channel, category, isCategory, showDeleteImmediately, hasValidTarget]);
 
   const handleClose = () => {
     setError('');
