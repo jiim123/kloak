@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/integrations/supabase/client';
 import { markWelcomeSeen } from '@/lib/storage';
-import { Shield, Key, Copy, Check, AlertCircle, Eye, EyeOff, Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { Shield, Key, Copy, Check, AlertCircle, Eye, EyeOff, Loader2, CheckCircle2, XCircle, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -227,8 +227,14 @@ const Auth = () => {
           {authStep === 'form' ? (
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'create' | 'login')}>
               <TabsList className="w-full grid grid-cols-2 mb-6">
-                <TabsTrigger value="create">Create Account</TabsTrigger>
-                <TabsTrigger value="login">I Have a Key</TabsTrigger>
+                <TabsTrigger value="create">
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Create Account
+                </TabsTrigger>
+                <TabsTrigger value="login">
+                  <Key className="w-4 h-4 mr-2" />
+                  I Have a Key
+                </TabsTrigger>
               </TabsList>
 
               {/* Error display */}
