@@ -86,7 +86,14 @@ export const useServerStore = create<ServerState>((set, get) => ({
         joined_at: item.joined_at,
       }));
 
-      set({ servers, isLoading: false });
+      const { currentServer } = get();
+      
+      // Auto-select the first server if user has servers and none is selected
+      if (servers.length > 0 && !currentServer) {
+        set({ servers, currentServer: servers[0], isLoading: false });
+      } else {
+        set({ servers, isLoading: false });
+      }
     } catch (error) {
       console.error('Failed to fetch servers:', error);
       set({ error: 'Failed to load servers', isLoading: false });
