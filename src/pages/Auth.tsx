@@ -188,8 +188,8 @@ const Auth = () => {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary mb-4">
             <Shield className="w-8 h-8 text-primary-foreground" />
           </div>
-          <h1 className="text-3xl font-bold text-foreground">Kloak</h1>
-          <p className="text-muted-foreground mt-1">Privacy-first messaging</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Kloak</h1>
+          <p className="text-muted-foreground mt-1 font-medium">Privacy-first messaging</p>
         </div>
 
         {/* Auth card */}
@@ -315,7 +315,7 @@ const Auth = () => {
                 <div className="flex items-start gap-3">
                   <Shield className="w-6 h-6 text-[hsl(var(--nomo-warning))] flex-shrink-0 mt-0.5" />
                   <div>
-                    <h3 className="font-semibold text-foreground">Save Your Secret Key</h3>
+                    <h3 className="font-semibold tracking-tight text-foreground">Save Your Secret Key</h3>
                     <p className="text-sm text-muted-foreground mt-1">
                       This is the <span className="font-medium text-foreground">only way</span> to access your account. 
                       We cannot recover it. Store it safely — in a password manager or written down securely.

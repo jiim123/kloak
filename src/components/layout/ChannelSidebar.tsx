@@ -257,7 +257,7 @@ const SortableCategory = ({
       {/* Category header */}
       <div className="group flex items-center gap-1 px-0.5 mb-1">
         <button
-          className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground uppercase tracking-wide flex-1 py-1"
+          className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground uppercase tracking-wider flex-1 py-1"
           onClick={onToggle}
         >
           <motion.div
