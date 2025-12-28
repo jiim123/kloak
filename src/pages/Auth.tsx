@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/integrations/supabase/client';
+import { hasSeenWelcome, markWelcomeSeen } from '@/lib/storage';
 import { Shield, Key, Copy, Check, AlertCircle, Eye, EyeOff, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { WelcomeModal } from '@/components/modals/WelcomeModal';
 
 type AuthStep = 'form' | 'key-display';
 
@@ -31,6 +33,7 @@ const Auth = () => {
   const [showGeneratedKey, setShowGeneratedKey] = useState(false);
   const [keyCopied, setKeyCopied] = useState(false);
   const [keyConfirmed, setKeyConfirmed] = useState(false);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
   // Login state
   const [secretKey, setSecretKey] = useState('');
@@ -167,6 +170,18 @@ const Auth = () => {
 
   // Continue to app after confirming key saved
   const continueToApp = () => {
+    // Show welcome modal for new users
+    if (!hasSeenWelcome()) {
+      setShowWelcomeModal(true);
+    } else {
+      navigate('/app');
+    }
+  };
+
+  // Handle welcome modal close
+  const handleWelcomeClose = () => {
+    markWelcomeSeen();
+    setShowWelcomeModal(false);
     navigate('/app');
   };
 
@@ -396,6 +411,9 @@ const Auth = () => {
           No email. No password. No tracking.
         </p>
       </div>
+
+      {/* Welcome Modal for new users */}
+      <WelcomeModal open={showWelcomeModal} onClose={handleWelcomeClose} />
     </div>
   );
 };
