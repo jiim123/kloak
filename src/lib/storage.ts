@@ -7,6 +7,7 @@ const STORAGE_KEYS = {
   SECRET_KEY: 'nomo-secret-key',
   THEME: 'nomo-theme',
   DRAFTS: 'nomo-drafts',
+  WELCOME_SHOWN: 'nomo-welcome-shown',
 } as const;
 
 // Secret Key Storage
@@ -74,4 +75,13 @@ export const clearDraft = (channelId: string): void => {
 
 export const clearAllDrafts = (): void => {
   localStorage.removeItem(STORAGE_KEYS.DRAFTS);
+};
+
+// Welcome Modal Storage
+export const hasSeenWelcome = (): boolean => {
+  return localStorage.getItem(STORAGE_KEYS.WELCOME_SHOWN) === 'true';
+};
+
+export const markWelcomeSeen = (): void => {
+  localStorage.setItem(STORAGE_KEYS.WELCOME_SHOWN, 'true');
 };
