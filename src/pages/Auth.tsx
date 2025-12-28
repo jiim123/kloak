@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/integrations/supabase/client';
 import { markWelcomeSeen } from '@/lib/storage';
-import { Shield, Key, Copy, Check, AlertCircle, Eye, EyeOff, Loader2, CheckCircle2, XCircle, UserPlus } from 'lucide-react';
+import { Key, Copy, Check, AlertCircle, Eye, EyeOff, Loader2, CheckCircle2, XCircle, UserPlus, Shield } from 'lucide-react';
+import kloakLogo from '@/assets/kloak-logo.svg';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -215,10 +216,7 @@ const Auth = () => {
       <div className="w-full max-w-md relative z-10">
         {/* Logo and branding */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary mb-4">
-            <Shield className="w-8 h-8 text-primary-foreground" />
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Kloak</h1>
+          <img src={kloakLogo} alt="Kloak" className="h-12 mx-auto mb-4" />
           <p className="text-muted-foreground mt-1 font-medium">Privacy-first messaging</p>
         </div>
 
