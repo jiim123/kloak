@@ -128,7 +128,7 @@ const AppLayout = () => {
         {/* Desktop layout */}
         <div className="hidden md:flex flex-1 overflow-hidden">
           {/* Server list sidebar - 72px fixed */}
-          <div className="w-[72px] flex-shrink-0 bg-layout-sidebar">
+          <div className="w-[72px] flex-shrink-0 bg-layout-sidebar border-r border-border">
             <ServerSidebar />
           </div>
           
