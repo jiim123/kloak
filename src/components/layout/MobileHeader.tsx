@@ -42,7 +42,7 @@ export const MobileHeader = ({ isDMView, showFriends }: MobileHeaderProps) => {
   return (
     <div className="px-4 pt-4 pb-2 md:hidden">
       <div className="flex items-center gap-2">
-        {/* Section 1: Sidebar Toggle (separate container) */}
+        {/* Section 1: Sidebar Toggle */}
         <button
           onClick={() => setMobileSidebarOpen(true)}
           className="p-2 rounded-2xl bg-secondary text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
@@ -50,26 +50,23 @@ export const MobileHeader = ({ isDMView, showFriends }: MobileHeaderProps) => {
           <Menu className="w-5 h-5" />
         </button>
 
-        {/* Section 2 & 3: Channel + Members Toggle */}
-        <div className="flex-1 flex items-center gap-2 p-2 bg-secondary rounded-2xl border border-transparent">
-          {/* Current Channel/View */}
-          <div className="flex-1 flex items-center gap-2 min-w-0 px-2">
-            {getChannelIcon()}
-            <span className="font-medium text-foreground truncate text-[15px]">
-              {getTitle()}
-            </span>
-          </div>
-
-          {/* Members Toggle (only for server view) */}
-          {!isDMView && currentServer && (
-            <button
-              onClick={toggleMemberSidebar}
-              className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
-            >
-              <Users className="w-5 h-5" />
-            </button>
-          )}
+        {/* Section 2: Current Channel/View */}
+        <div className="flex-1 flex items-center gap-2 min-w-0 p-2 bg-secondary rounded-2xl">
+          {getChannelIcon()}
+          <span className="font-medium text-foreground truncate text-[15px]">
+            {getTitle()}
+          </span>
         </div>
+
+        {/* Section 3: Members Toggle (only for server view) */}
+        {!isDMView && currentServer && (
+          <button
+            onClick={toggleMemberSidebar}
+            className="p-2 rounded-2xl bg-secondary text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
+          >
+            <Users className="w-5 h-5" />
+          </button>
+        )}
       </div>
     </div>
   );
