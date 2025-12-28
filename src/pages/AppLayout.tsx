@@ -133,7 +133,7 @@ const AppLayout = () => {
           </div>
           
           {/* Secondary sidebar - 240px fixed */}
-          <div className="w-60 flex-shrink-0 bg-layout-sidebar-secondary border-l border-border">
+          <div className="w-60 flex-shrink-0 bg-layout-sidebar-secondary border-l-[1px] border-border/30">
             {isDMView ? (
               <DMSidebar 
                 showFriends={showFriends} 
