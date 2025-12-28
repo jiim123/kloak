@@ -15,6 +15,8 @@ interface LinkPreview {
   favicon?: string;
   type?: string;
   videoId?: string; // For YouTube
+  spotifyType?: string; // For Spotify (track, album, playlist, episode, show)
+  spotifyId?: string; // For Spotify
 }
 
 // Extract Open Graph and meta tags from HTML
@@ -95,6 +97,25 @@ function isTwitterUrl(url: string): boolean {
   return /(?:twitter\.com|x\.com)\/\w+\/status\/\d+/.test(url);
 }
 
+// Extract Spotify track/album/playlist/episode ID and type
+function getSpotifyInfo(url: string): { type: string; id: string } | null {
+  const patterns = [
+    /open\.spotify\.com\/(track|album|playlist|episode|show)\/([a-zA-Z0-9]+)/,
+    /spotify\.link\/([a-zA-Z0-9]+)/, // Short links - treat as track
+  ];
+  
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) {
+      if (pattern.source.includes('spotify\\.link')) {
+        return { type: 'track', id: match[1] };
+      }
+      return { type: match[1], id: match[2] };
+    }
+  }
+  return null;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -173,6 +194,55 @@ serve(async (req) => {
           type: 'twitter',
           siteName: 'X (Twitter)',
           favicon: 'https://www.google.com/s2/favicons?domain=x.com&sz=32',
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Handle Spotify
+    const spotifyInfo = getSpotifyInfo(url);
+    if (spotifyInfo) {
+      // Fetch the page to get Open Graph metadata for title/description
+      try {
+        const response = await fetch(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; LinkPreviewBot/1.0)',
+            'Accept': 'text/html,application/xhtml+xml',
+          },
+        });
+        
+        if (response.ok) {
+          const html = await response.text();
+          const preview = extractMetadata(html, url);
+          
+          return new Response(
+            JSON.stringify({
+              url,
+              type: 'spotify',
+              spotifyType: spotifyInfo.type,
+              spotifyId: spotifyInfo.id,
+              title: preview.title,
+              description: preview.description,
+              image: preview.image,
+              siteName: 'Spotify',
+              favicon: 'https://www.google.com/s2/favicons?domain=spotify.com&sz=32',
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      } catch (e) {
+        console.log('Spotify metadata fetch failed, using basic info');
+      }
+      
+      // Fallback for Spotify
+      return new Response(
+        JSON.stringify({
+          url,
+          type: 'spotify',
+          spotifyType: spotifyInfo.type,
+          spotifyId: spotifyInfo.id,
+          siteName: 'Spotify',
+          favicon: 'https://www.google.com/s2/favicons?domain=spotify.com&sz=32',
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
