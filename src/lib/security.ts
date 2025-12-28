@@ -20,10 +20,71 @@ export const sanitizeInput = (input: string): string => {
 };
 
 /**
+ * Reserved usernames that cannot be used
+ * Includes admin-related, system, and potentially confusing names
+ */
+const RESERVED_USERNAMES = new Set([
+  // Admin variations
+  'admin', 'admin1', 'admin2', 'admin3', 'admin4', 'admin5',
+  'administrator', 'administrator1', 'administrator2',
+  'sysadmin', 'superadmin', 'rootadmin',
+  
+  // Moderator variations
+  'mod', 'mod1', 'mod2', 'mod3',
+  'moderator', 'moderator1', 'moderator2',
+  
+  // User variations
+  'user', 'user1', 'user2', 'user3', 'user4', 'user5',
+  
+  // System/official accounts
+  'system', 'kloak', 'kloakbot', 'bot', 'official',
+  'support', 'help', 'helpdesk', 'staff',
+  'root', 'sudo', 'superuser',
+  
+  // Common impersonation targets
+  'owner', 'founder', 'ceo', 'dev', 'developer',
+  'server', 'channel', 'everyone', 'here', 'all',
+  
+  // Potentially misleading
+  'anonymous', 'unknown', 'deleted', 'null', 'undefined',
+  'test', 'testing', 'demo', 'guest', 'default',
+]);
+
+/**
+ * Check if username matches a reserved pattern
+ * Handles numbered variations like admin123
+ */
+const isReservedUsername = (username: string): boolean => {
+  const lower = username.toLowerCase();
+  
+  // Direct match
+  if (RESERVED_USERNAMES.has(lower)) {
+    return true;
+  }
+  
+  // Check for numbered variations of core reserved words
+  const reservedPatterns = [
+    /^admin\d*$/,
+    /^administrator\d*$/,
+    /^mod\d*$/,
+    /^moderator\d*$/,
+    /^user\d*$/,
+    /^staff\d*$/,
+    /^support\d*$/,
+    /^system\d*$/,
+    /^kloak\d*$/,
+    /^official\d*$/,
+  ];
+  
+  return reservedPatterns.some(pattern => pattern.test(lower));
+};
+
+/**
  * Validate username format
  * - 3-20 characters
  * - Only alphanumeric and underscores
  * - No consecutive underscores
+ * - Not a reserved username
  */
 export const validateUsername = (username: string): { valid: boolean; error?: string } => {
   if (!username) {
@@ -50,6 +111,10 @@ export const validateUsername = (username: string): { valid: boolean; error?: st
   
   if (trimmed.startsWith('_') || trimmed.endsWith('_')) {
     return { valid: false, error: 'Username cannot start or end with underscore' };
+  }
+  
+  if (isReservedUsername(trimmed)) {
+    return { valid: false, error: 'This username is reserved' };
   }
   
   return { valid: true };
