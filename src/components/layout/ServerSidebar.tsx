@@ -24,9 +24,10 @@ const pillVariants = {
 
 const iconVariants = {
   initial: { scale: 0.8, opacity: 0 },
-  animate: { scale: 1, opacity: 1 },
-  hover: { scale: 1.1 },
+  animate: { scale: 1, opacity: 1, borderRadius: 6 },
+  hover: { scale: 1.05, borderRadius: 10 },
   tap: { scale: 0.95 },
+  active: { scale: 1, borderRadius: 12 },
 };
 
 const serverItemVariants = {
@@ -143,10 +144,15 @@ export const ServerSidebar = () => {
             
             <motion.div
               variants={iconVariants}
+              initial="animate"
+              animate={currentServer === null ? 'active' : 'animate'}
+              whileHover="hover"
+              whileTap="tap"
+              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
               className={cn(
-                'w-12 h-12 flex items-center justify-center transition-all duration-200 rounded-[6px]',
+                'w-12 h-12 flex items-center justify-center',
                 currentServer === null 
-                  ? 'bg-primary text-primary-foreground' 
+                  ? 'bg-primary text-primary-foreground ring-2 ring-primary/50' 
                   : 'bg-secondary hover:bg-primary hover:text-primary-foreground'
               )}
             >
@@ -217,8 +223,14 @@ export const ServerSidebar = () => {
                       
                       <motion.div
                         variants={iconVariants}
+                        initial="animate"
+                        animate={isActive ? 'active' : 'animate'}
+                        whileHover="hover"
+                        whileTap="tap"
+                        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                         className={cn(
-                          'w-12 h-12 overflow-hidden transition-all duration-200 rounded-[6px]',
+                          'w-12 h-12 overflow-hidden',
+                          isActive && 'ring-2 ring-primary/50',
                           !server.icon_url && getServerColor(server.name)
                         )}
                       >
