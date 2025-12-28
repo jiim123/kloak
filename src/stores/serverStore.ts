@@ -32,7 +32,7 @@ interface ServerState {
   // Channel actions
   fetchChannels: (serverId: string) => Promise<void>;
   createCategory: (serverId: string, name: string) => Promise<ChannelCategory | null>;
-  createChannel: (serverId: string, name: string, type: ChannelType, categoryId?: string) => Promise<Channel | null>;
+  createChannel: (serverId: string, name: string, type: ChannelType, categoryId?: string, icon?: string) => Promise<Channel | null>;
   updateChannel: (channelId: string, updates: Partial<Channel>) => Promise<void>;
   deleteChannel: (channelId: string) => Promise<void>;
   updateCategory: (categoryId: string, updates: Partial<ChannelCategory>) => Promise<void>;
@@ -309,7 +309,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }
   },
 
-  createChannel: async (serverId: string, name: string, type: ChannelType, categoryId?: string) => {
+  createChannel: async (serverId: string, name: string, type: ChannelType, categoryId?: string, icon?: string) => {
     try {
       const { channels } = get();
       const categoryChannels = channels.filter((c) => c.category_id === categoryId);
@@ -323,6 +323,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
           type,
           category_id: categoryId || null,
           position,
+          icon: icon || null,
         })
         .select()
         .single();
