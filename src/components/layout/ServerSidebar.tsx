@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Home, Plus, Settings } from 'lucide-react';
+import { MessageCircle, Plus, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -150,7 +150,7 @@ export const ServerSidebar = () => {
                   : 'bg-secondary hover:bg-primary hover:text-primary-foreground rounded-full hover:rounded-2xl'
               )}
             >
-              <Home className="w-5 h-5" />
+              <MessageCircle className="w-5 h-5" />
             </motion.div>
           </motion.button>
         </TooltipTrigger>
