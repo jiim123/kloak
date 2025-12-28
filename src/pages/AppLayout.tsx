@@ -122,7 +122,6 @@ const AppLayout = () => {
         <MobileHeader 
           isDMView={isDMView} 
           showFriends={showFriends}
-          onBack={handleMobileBack}
         />
 
         {/* Desktop layout */}
