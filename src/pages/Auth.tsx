@@ -12,6 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { WelcomeModal } from '@/components/modals/WelcomeModal';
+import { GrainGradient } from '@paper-design/shaders-react';
 
 type AuthStep = 'form' | 'key-display';
 
@@ -194,8 +195,24 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[hsl(228_6%_10%)] flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background shader */}
+      <div className="absolute inset-0 z-0">
+        <GrainGradient
+          style={{ width: '100%', height: '100%' }}
+          colors={["#fb6704", "#e77d36", "#ccb67f"]}
+          colorBack="#121212"
+          softness={0.76}
+          intensity={0.08}
+          noise={0.5}
+          shape="wave"
+          speed={1}
+          scale={1.68}
+          rotation={304}
+          offsetX={-0.06}
+        />
+      </div>
+      <div className="w-full max-w-md relative z-10">
         {/* Logo and branding */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary mb-4">
