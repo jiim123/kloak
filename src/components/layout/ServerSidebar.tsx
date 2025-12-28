@@ -299,7 +299,7 @@ export const ServerSidebar = () => {
             </motion.button>
           </TooltipTrigger>
           <TooltipContent side="right" className="font-medium">
-            Add a Server
+            Add or Join a Server
           </TooltipContent>
         </Tooltip>
       </div>
