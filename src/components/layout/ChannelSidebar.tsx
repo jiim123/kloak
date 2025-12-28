@@ -130,13 +130,26 @@ const SortableChannel = ({
       <button
         onClick={onSelect}
         className={cn(
-          'group w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-all duration-150 select-none',
+          'group relative w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-all duration-150 select-none',
           'hover:bg-secondary/80',
           isActive && 'bg-secondary text-foreground',
           !isActive && 'text-muted-foreground hover:text-foreground',
           isUnread && !isActive && 'text-foreground font-semibold'
         )}
       >
+        {/* Active indicator */}
+        <AnimatePresence>
+          {isActive && (
+            <motion.div
+              layoutId="channel-indicator"
+              className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-4 bg-primary rounded-full"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            />
+          )}
+        </AnimatePresence>
+
         {/* Channel icon */}
         <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
           {getChannelIcon()}
@@ -191,19 +204,6 @@ const SortableChannel = ({
           </div>
         )}
       </button>
-
-      {/* Active indicator */}
-      <AnimatePresence>
-        {isActive && (
-          <motion.div
-            layoutId="channel-indicator"
-            className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-full"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          />
-        )}
-      </AnimatePresence>
     </motion.div>
   );
 };
