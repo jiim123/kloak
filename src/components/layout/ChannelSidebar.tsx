@@ -144,6 +144,13 @@ const SortableChannel = ({
         
         {/* Channel name */}
         <span className="truncate flex-1 text-left">{channel.name}</span>
+
+        {/* NSFW badge */}
+        {channel.is_nsfw && (
+          <span className="px-1 py-0.5 text-[10px] font-semibold rounded bg-destructive/20 text-destructive uppercase tracking-wide flex-shrink-0">
+            NSFW
+          </span>
+        )}
         
         {/* Mention badge */}
         <AnimatePresence>
