@@ -17,6 +17,7 @@ interface LinkPreview {
   videoId?: string; // For YouTube
   spotifyType?: string; // For Spotify (track, album, playlist, episode, show)
   spotifyId?: string; // For Spotify
+  soundcloudUrl?: string; // For SoundCloud embed URL
 }
 
 // Extract Open Graph and meta tags from HTML
@@ -114,6 +115,11 @@ function getSpotifyInfo(url: string): { type: string; id: string } | null {
     }
   }
   return null;
+}
+
+// Check if URL is SoundCloud
+function isSoundCloudUrl(url: string): boolean {
+  return /soundcloud\.com\/[\w-]+\/[\w-]+/.test(url);
 }
 
 serve(async (req) => {
@@ -248,7 +254,53 @@ serve(async (req) => {
       );
     }
 
-    // Fetch the page
+    // Handle SoundCloud
+    if (isSoundCloudUrl(url)) {
+      try {
+        // Use oEmbed API to get the embed URL
+        const oembedUrl = `https://soundcloud.com/oembed?format=json&url=${encodeURIComponent(url)}`;
+        const response = await fetch(oembedUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; LinkPreviewBot/1.0)',
+          },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          // Extract the iframe src from the html field
+          const iframeSrcMatch = data.html?.match(/src="([^"]+)"/);
+          const embedUrl = iframeSrcMatch ? iframeSrcMatch[1] : null;
+          
+          return new Response(
+            JSON.stringify({
+              url,
+              type: 'soundcloud',
+              title: data.title,
+              description: data.description,
+              image: data.thumbnail_url,
+              siteName: 'SoundCloud',
+              favicon: 'https://www.google.com/s2/favicons?domain=soundcloud.com&sz=32',
+              soundcloudUrl: embedUrl,
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      } catch (e) {
+        console.log('SoundCloud oEmbed fetch failed:', e);
+      }
+      
+      // Fallback for SoundCloud
+      return new Response(
+        JSON.stringify({
+          url,
+          type: 'soundcloud',
+          siteName: 'SoundCloud',
+          favicon: 'https://www.google.com/s2/favicons?domain=soundcloud.com&sz=32',
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; LinkPreviewBot/1.0)',
