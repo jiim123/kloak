@@ -123,7 +123,7 @@ export const ServerSidebar = () => {
   return (
     <div className="h-full flex flex-col items-center py-3 gap-2 bg-layout-sidebar">
       {/* Home button */}
-      <Tooltip>
+      <Tooltip delayDuration={300}>
         <TooltipTrigger asChild>
           <motion.button
             className="relative group"
@@ -202,7 +202,7 @@ export const ServerSidebar = () => {
                 exit={{ opacity: 0, x: -20, transition: { duration: 0.15 } }}
                 layout
               >
-                <Tooltip>
+                <Tooltip delayDuration={300}>
                   <TooltipTrigger asChild>
                     <motion.button
                       className="relative group"
@@ -287,7 +287,7 @@ export const ServerSidebar = () => {
         </AnimatePresence>
 
         {/* Add Server button */}
-        <Tooltip>
+        <Tooltip delayDuration={300}>
           <TooltipTrigger asChild>
             <motion.button
               whileHover={{ scale: 1.1 }}
@@ -308,7 +308,7 @@ export const ServerSidebar = () => {
       <div className="w-8 h-0.5 bg-border rounded-full" />
 
       {/* User settings button */}
-      <Tooltip>
+      <Tooltip delayDuration={300}>
         <TooltipTrigger asChild>
           <motion.button
             whileHover={{ scale: 1.05, rotate: 90 }}
