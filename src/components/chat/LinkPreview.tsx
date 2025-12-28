@@ -12,6 +12,8 @@ interface LinkPreviewData {
   favicon?: string;
   type?: string;
   videoId?: string;
+  spotifyType?: string;
+  spotifyId?: string;
   error?: string;
 }
 
@@ -173,6 +175,43 @@ export const LinkPreview = ({ url, disabled }: LinkPreviewProps) => {
             </p>
           )}
         </div>
+      </div>
+    );
+  }
+
+  // Spotify embed
+  if (preview.type === 'spotify' && preview.spotifyId && preview.spotifyType) {
+    const embedHeight = preview.spotifyType === 'track' || preview.spotifyType === 'episode' ? 152 : 352;
+    
+    return (
+      <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[400px] bg-[#121212]">
+        <iframe
+          src={`https://open.spotify.com/embed/${preview.spotifyType}/${preview.spotifyId}?utm_source=generator&theme=0`}
+          width="100%"
+          height={embedHeight}
+          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+          loading="lazy"
+          className="border-0"
+          title={preview.title || 'Spotify embed'}
+        />
+        {preview.title && (
+          <div className="p-3 bg-secondary/50">
+            <div className="flex items-center gap-2 mb-1">
+              {preview.favicon && (
+                <img src={preview.favicon} alt="" className="w-4 h-4" />
+              )}
+              <span className="text-xs text-muted-foreground">{preview.siteName}</span>
+            </div>
+            <a 
+              href={url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="font-medium text-sm text-primary hover:underline line-clamp-1"
+            >
+              {preview.title}
+            </a>
+          </div>
+        )}
       </div>
     );
   }
