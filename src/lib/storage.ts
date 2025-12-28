@@ -77,11 +77,11 @@ export const clearAllDrafts = (): void => {
   localStorage.removeItem(STORAGE_KEYS.DRAFTS);
 };
 
-// Welcome Modal Storage
-export const hasSeenWelcome = (): boolean => {
-  return localStorage.getItem(STORAGE_KEYS.WELCOME_SHOWN) === 'true';
+// Welcome Modal Storage (per-user)
+export const hasSeenWelcome = (userId: string): boolean => {
+  return localStorage.getItem(`${STORAGE_KEYS.WELCOME_SHOWN}-${userId}`) === 'true';
 };
 
-export const markWelcomeSeen = (): void => {
-  localStorage.setItem(STORAGE_KEYS.WELCOME_SHOWN, 'true');
+export const markWelcomeSeen = (userId: string): void => {
+  localStorage.setItem(`${STORAGE_KEYS.WELCOME_SHOWN}-${userId}`, 'true');
 };

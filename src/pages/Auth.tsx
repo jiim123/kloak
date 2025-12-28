@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/integrations/supabase/client';
-import { hasSeenWelcome, markWelcomeSeen } from '@/lib/storage';
+import { markWelcomeSeen } from '@/lib/storage';
 import { Shield, Key, Copy, Check, AlertCircle, Eye, EyeOff, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -121,6 +121,8 @@ const Auth = () => {
     if (result) {
       setGeneratedKey(result.secretKey);
       setAuthStep('key-display');
+      // Show welcome modal for newly created accounts
+      setShowWelcomeModal(true);
     }
   };
 
@@ -170,19 +172,15 @@ const Auth = () => {
 
   // Continue to app after confirming key saved
   const continueToApp = () => {
-    // Show welcome modal for new users
-    if (!hasSeenWelcome()) {
-      setShowWelcomeModal(true);
-    } else {
-      navigate('/app');
-    }
+    navigate('/app');
   };
 
   // Handle welcome modal close
   const handleWelcomeClose = () => {
-    markWelcomeSeen();
+    if (user) {
+      markWelcomeSeen(user.id);
+    }
     setShowWelcomeModal(false);
-    navigate('/app');
   };
 
   // Render username input status icon
