@@ -172,7 +172,7 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }:
           {/* Header (username + timestamp) - only on first message of group */}
           {!isGrouped && messageUser && (
             <div className="flex items-baseline gap-2">
-              <span className={`font-medium hover:underline cursor-pointer ${getRoleColor(messageMember?.role)}`}>
+              <span className={`font-semibold tracking-tight hover:underline cursor-pointer ${getRoleColor(messageMember?.role)}`}>
                 {messageMember?.nickname || messageUser.display_name || messageUser.username}
               </span>
               <span className="text-xs text-muted-foreground">

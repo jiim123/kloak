@@ -417,12 +417,30 @@
   }
 
   html {
-    font-family: 'Inter', 'Noto Color Emoji', system-ui, sans-serif;
+    font-family: 'Schibsted Grotesk', 'Noto Color Emoji', system-ui, sans-serif;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    letter-spacing: -0.01em;
+  }
+  
+  /* Heading styles optimized for Schibsted Grotesk */
+  h1, h2, h3, h4, h5, h6 {
+    letter-spacing: -0.02em;
+  }
+  
+  h1 {
+    @apply font-bold;
+  }
+  
+  h2, h3 {
+    @apply font-semibold;
+  }
+  
+  h4, h5, h6 {
+    @apply font-medium;
   }
 
   /* Emoji-only message styling - 2.5x size */
