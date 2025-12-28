@@ -144,10 +144,10 @@ export const ServerSidebar = () => {
             <motion.div
               variants={iconVariants}
               className={cn(
-                'w-12 h-12 flex items-center justify-center transition-all duration-200',
+                'w-12 h-12 flex items-center justify-center transition-all duration-200 rounded-[6px]',
                 currentServer === null 
-                  ? 'bg-primary text-primary-foreground rounded-2xl' 
-                  : 'bg-secondary hover:bg-primary hover:text-primary-foreground rounded-full hover:rounded-2xl'
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'bg-secondary hover:bg-primary hover:text-primary-foreground'
               )}
             >
               <MessageCircle className="w-5 h-5" />
@@ -170,7 +170,7 @@ export const ServerSidebar = () => {
             {[...Array(3)].map((_, i) => (
               <motion.div
                 key={i}
-                className="w-12 h-12 rounded-full bg-secondary/50"
+                className="w-12 h-12 rounded-[6px] bg-secondary/50"
                 animate={{ opacity: [0.5, 1, 0.5] }}
                 transition={{ repeat: Infinity, duration: 1.5, delay: i * 0.2 }}
               />
@@ -218,9 +218,7 @@ export const ServerSidebar = () => {
                       <motion.div
                         variants={iconVariants}
                         className={cn(
-                          'w-12 h-12 overflow-hidden transition-all duration-200',
-                          isActive ? 'rounded-2xl' : 'rounded-full',
-                          !isActive && 'hover:rounded-2xl',
+                          'w-12 h-12 overflow-hidden transition-all duration-200 rounded-[6px]',
                           !server.icon_url && getServerColor(server.name)
                         )}
                       >
@@ -247,7 +245,7 @@ export const ServerSidebar = () => {
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
                             exit={{ scale: 0 }}
-                            className="absolute bottom-0 right-0 w-3 h-3 bg-white rounded-full border-2 border-layout-sidebar"
+                            className="absolute bottom-0 right-0 w-3 h-3 bg-white rounded-[3px] border-2 border-layout-sidebar"
                           />
                         )}
                       </AnimatePresence>
@@ -259,7 +257,7 @@ export const ServerSidebar = () => {
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
                             exit={{ scale: 0 }}
-                            className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-full text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
+                            className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
                           >
                             {totalMentions > 99 ? '99+' : totalMentions}
                           </motion.span>
@@ -283,7 +281,7 @@ export const ServerSidebar = () => {
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => openModal('create-server')}
-              className="w-12 h-12 rounded-full border-2 border-dashed border-nomo-success text-nomo-success hover:bg-nomo-success hover:text-white hover:border-solid transition-all duration-200 flex items-center justify-center"
+              className="w-12 h-12 rounded-[6px] border-2 border-dashed border-nomo-success text-nomo-success hover:bg-nomo-success hover:text-white hover:border-solid transition-all duration-200 flex items-center justify-center"
             >
               <Plus className="w-5 h-5" />
             </motion.button>
@@ -305,7 +303,7 @@ export const ServerSidebar = () => {
             whileTap={{ scale: 0.95 }}
             transition={{ type: 'spring', stiffness: 400, damping: 17 }}
             onClick={() => openModal('user-settings')}
-            className="w-12 h-12 rounded-full bg-secondary hover:bg-secondary/80 transition-colors flex items-center justify-center"
+            className="w-12 h-12 rounded-[6px] bg-secondary hover:bg-secondary/80 transition-colors flex items-center justify-center"
           >
             <Settings className="w-5 h-5" />
           </motion.button>
