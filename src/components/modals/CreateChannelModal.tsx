@@ -61,8 +61,7 @@ export const CreateChannelModal = () => {
         await createCategory(currentServer.id, name.trim());
       } else {
         const selectedCategoryId = presetCategoryId || (categoryId === 'none' ? undefined : categoryId);
-        await createChannel(currentServer.id, name.trim(), channelType, selectedCategoryId);
-        // TODO: Add icon support once the store is updated
+        await createChannel(currentServer.id, name.trim(), channelType, selectedCategoryId, channelIcon || undefined);
       }
       handleClose();
     } catch (err) {
