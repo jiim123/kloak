@@ -130,7 +130,7 @@ const SortableChannel = ({
       <button
         onClick={onSelect}
         className={cn(
-          'group w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-all duration-150',
+          'group w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-all duration-150 select-none',
           'hover:bg-secondary/80',
           isActive && 'bg-secondary text-foreground',
           !isActive && 'text-muted-foreground hover:text-foreground',
