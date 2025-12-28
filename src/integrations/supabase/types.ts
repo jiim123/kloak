@@ -102,6 +102,7 @@ export type Database = {
         Row: {
           category_id: string | null
           created_at: string | null
+          icon: string | null
           id: string
           is_nsfw: boolean | null
           name: string
@@ -114,6 +115,7 @@ export type Database = {
         Insert: {
           category_id?: string | null
           created_at?: string | null
+          icon?: string | null
           id?: string
           is_nsfw?: boolean | null
           name: string
@@ -126,6 +128,7 @@ export type Database = {
         Update: {
           category_id?: string | null
           created_at?: string | null
+          icon?: string | null
           id?: string
           is_nsfw?: boolean | null
           name?: string

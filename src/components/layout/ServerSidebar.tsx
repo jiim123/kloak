@@ -1,44 +1,61 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Home, Plus, Users, Settings } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Home, Plus, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuthStore } from '@/stores/authStore';
 import { useServerStore } from '@/stores/serverStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useUnread } from '@/hooks/useUnread';
-import { ServerIconSkeleton } from '@/components/ui/skeletons';
 import { supabase } from '@/integrations/supabase/client';
-import type { Channel } from '@/types';
-
-// Status colors
-const statusColors: Record<string, string> = {
-  online: 'bg-green-500',
-  idle: 'bg-yellow-500',
-  dnd: 'bg-red-500',
-  offline: 'bg-gray-500',
-};
 
 interface ServerChannels {
   [serverId: string]: string[];
 }
+
+// Animation variants
+const pillVariants = {
+  hidden: { height: 0, opacity: 0 },
+  hover: { height: 20, opacity: 1 },
+  unread: { height: 8, opacity: 1 },
+  active: { height: 40, opacity: 1 },
+};
+
+const iconVariants = {
+  initial: { scale: 0.8, opacity: 0 },
+  animate: { scale: 1, opacity: 1 },
+  hover: { scale: 1.1 },
+  tap: { scale: 0.95 },
+};
+
+const serverItemVariants = {
+  hidden: { opacity: 0, x: -20 },
+  visible: (i: number) => ({
+    opacity: 1,
+    x: 0,
+    transition: {
+      delay: i * 0.05,
+      type: 'spring' as const,
+      stiffness: 300,
+      damping: 24,
+    },
+  }),
+};
 
 export const ServerSidebar = () => {
   const { user } = useAuthStore();
   const { servers, currentServer, setCurrentServer, isLoading, fetchServers } = useServerStore();
   const { openModal } = useUIStore();
   const [serverChannels, setServerChannels] = useState<ServerChannels>({});
+  const [hoveredServer, setHoveredServer] = useState<string | null>(null);
 
-  // Fetch servers when user is available (on login/mount)
   useEffect(() => {
     if (user?.id) {
       fetchServers(user.id);
     }
   }, [user?.id, fetchServers]);
 
-  // Fetch all channels for all servers
   useEffect(() => {
     const fetchAllChannels = async () => {
       if (servers.length === 0) return;
@@ -64,17 +81,12 @@ export const ServerSidebar = () => {
     fetchAllChannels();
   }, [servers]);
 
-  // Get all channel IDs for unread tracking
   const allChannelIds = useMemo(() => {
     return Object.values(serverChannels).flat();
   }, [serverChannels]);
 
   const { getServerUnreadInfo } = useUnread(allChannelIds);
-  
-  // Track which server is being hovered for pill animation
-  const [hoveredServer, setHoveredServer] = useState<string | null>(null);
 
-  // Get initials from server name
   const getServerInitials = (name: string) => {
     return name
       .split(' ')
@@ -84,171 +96,221 @@ export const ServerSidebar = () => {
       .toUpperCase();
   };
 
-  // Get initials from username
-  const getUserInitials = (username?: string) => {
-    if (!username) return '?';
-    return username.slice(0, 2).toUpperCase();
-  };
-
-  // Generate a color based on server name
   const getServerColor = (name: string) => {
     const colors = [
       'bg-indigo-500', 'bg-purple-500', 'bg-pink-500', 
-      'bg-red-500', 'bg-orange-500', 'bg-yellow-500',
-      'bg-green-500', 'bg-teal-500', 'bg-cyan-500', 'bg-blue-500',
+      'bg-red-500', 'bg-orange-500', 'bg-amber-500',
+      'bg-emerald-500', 'bg-teal-500', 'bg-cyan-500', 'bg-blue-500',
     ];
     const index = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     return colors[index % colors.length];
   };
 
+  const getPillState = (serverId: string | null, hasUnread: boolean) => {
+    if (currentServer?.id === serverId || (serverId === null && currentServer === null)) {
+      return 'active';
+    }
+    if (hoveredServer === serverId) {
+      return 'hover';
+    }
+    if (hasUnread) {
+      return 'unread';
+    }
+    return 'hidden';
+  };
+
   return (
-    <div className="h-full flex flex-col items-center py-3 gap-2">
+    <div className="h-full flex flex-col items-center py-3 gap-2 bg-layout-sidebar">
       {/* Home button */}
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            className={cn(
-              'relative w-12 h-12 p-0 transition-all duration-200',
-              currentServer === null 
-                ? 'bg-primary text-primary-foreground rounded-2xl' 
-                : 'bg-secondary hover:bg-primary hover:text-primary-foreground rounded-full hover:rounded-2xl'
-            )}
+          <motion.button
+            className="relative group"
+            onMouseEnter={() => setHoveredServer(null)}
+            onMouseLeave={() => setHoveredServer(null)}
             onClick={() => setCurrentServer(null)}
+            whileHover="hover"
+            whileTap="tap"
           >
-            {/* Active indicator pill */}
-            {currentServer === null && (
-              <span className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 h-10 bg-foreground rounded-r-full" />
-            )}
-            <Home className="w-5 h-5" />
-          </Button>
+            {/* Indicator pill */}
+            <motion.span
+              className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 bg-foreground rounded-r-full"
+              variants={pillVariants}
+              initial="hidden"
+              animate={getPillState(null, false)}
+              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+            />
+            
+            <motion.div
+              variants={iconVariants}
+              className={cn(
+                'w-12 h-12 flex items-center justify-center transition-all duration-200',
+                currentServer === null 
+                  ? 'bg-primary text-primary-foreground rounded-2xl' 
+                  : 'bg-secondary hover:bg-primary hover:text-primary-foreground rounded-full hover:rounded-2xl'
+              )}
+            >
+              <Home className="w-5 h-5" />
+            </motion.div>
+          </motion.button>
         </TooltipTrigger>
-        <TooltipContent side="right" className="font-semibold">
+        <TooltipContent side="right" className="font-medium">
           Direct Messages
         </TooltipContent>
       </Tooltip>
 
-      <Separator className="w-8 h-0.5 bg-border rounded-full" />
+      {/* Separator */}
+      <div className="w-8 h-0.5 bg-border rounded-full" />
 
       {/* Server list */}
       <div className="flex-1 flex flex-col items-center gap-2 overflow-y-auto scrollbar-hide w-full px-3">
-        {/* Loading skeletons */}
+        {/* Loading skeleton */}
         {isLoading && servers.length === 0 && (
-          <>
-            <ServerIconSkeleton />
-            <ServerIconSkeleton />
-            <ServerIconSkeleton />
-          </>
-        )}
-
-        {/* Empty state */}
-        {!isLoading && servers.length === 0 && (
-          <div className="flex flex-col items-center py-4 text-center">
-            <div className="w-12 h-12 rounded-full bg-secondary/50 flex items-center justify-center mb-2">
-              <Users className="w-6 h-6 text-muted-foreground" />
-            </div>
-            <p className="text-[10px] text-muted-foreground px-2">No servers yet</p>
+          <div className="space-y-2">
+            {[...Array(3)].map((_, i) => (
+              <motion.div
+                key={i}
+                className="w-12 h-12 rounded-full bg-secondary/50"
+                animate={{ opacity: [0.5, 1, 0.5] }}
+                transition={{ repeat: Infinity, duration: 1.5, delay: i * 0.2 }}
+              />
+            ))}
           </div>
         )}
 
-        {servers.map((server) => {
-          const isActive = currentServer?.id === server.id;
-          const isHovered = hoveredServer === server.id;
-          const channelIds = serverChannels[server.id] || [];
-          const { hasUnread, totalMentions } = getServerUnreadInfo(channelIds);
-          
-          return (
-            <Tooltip key={server.id}>
-              <TooltipTrigger asChild>
-                <div
-                  className="relative"
-                  onMouseEnter={() => setHoveredServer(server.id)}
-                  onMouseLeave={() => setHoveredServer(null)}
-                >
-                  {/* Active/Hover indicator pill */}
-                  <span 
-                    className={cn(
-                      'absolute -left-3 top-1/2 -translate-y-1/2 w-1 bg-foreground rounded-r-full transition-all duration-200',
-                      isActive ? 'h-10' : isHovered ? 'h-5' : hasUnread && !isActive ? 'h-2' : 'h-0'
-                    )} 
-                  />
-                  
-                  <Button
-                    variant="ghost"
-                    className={cn(
-                      'w-12 h-12 p-0 transition-all duration-200 overflow-hidden',
-                      isActive 
-                        ? 'rounded-2xl' 
-                        : 'rounded-full hover:rounded-2xl',
-                      !server.icon_url && getServerColor(server.name)
-                    )}
-                    onClick={() => setCurrentServer(server)}
-                  >
-                    {server.icon_url ? (
-                      <Avatar className="w-12 h-12">
-                        <AvatarImage src={server.icon_url} alt={server.name} />
-                        <AvatarFallback className={getServerColor(server.name)}>
-                          {getServerInitials(server.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                    ) : (
-                      <span className="text-sm font-semibold text-white">
-                        {getServerInitials(server.name)}
-                      </span>
-                    )}
-                  </Button>
+        {/* Server items */}
+        <AnimatePresence mode="popLayout">
+          {servers.map((server, index) => {
+            const isActive = currentServer?.id === server.id;
+            const isHovered = hoveredServer === server.id;
+            const channelIds = serverChannels[server.id] || [];
+            const { hasUnread, totalMentions } = getServerUnreadInfo(channelIds);
+            
+            return (
+              <motion.div
+                key={server.id}
+                custom={index}
+                variants={serverItemVariants}
+                initial="hidden"
+                animate="visible"
+                exit={{ opacity: 0, x: -20, transition: { duration: 0.15 } }}
+                layout
+              >
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <motion.button
+                      className="relative group"
+                      onMouseEnter={() => setHoveredServer(server.id)}
+                      onMouseLeave={() => setHoveredServer(null)}
+                      onClick={() => setCurrentServer(server)}
+                      whileHover="hover"
+                      whileTap="tap"
+                    >
+                      {/* Indicator pill */}
+                      <motion.span
+                        className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 bg-foreground rounded-r-full"
+                        variants={pillVariants}
+                        initial="hidden"
+                        animate={getPillState(server.id, hasUnread)}
+                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                      />
+                      
+                      <motion.div
+                        variants={iconVariants}
+                        className={cn(
+                          'w-12 h-12 overflow-hidden transition-all duration-200',
+                          isActive ? 'rounded-2xl' : 'rounded-full',
+                          !isActive && 'hover:rounded-2xl',
+                          !server.icon_url && getServerColor(server.name)
+                        )}
+                      >
+                        {server.icon_url ? (
+                          <Avatar className="w-12 h-12">
+                            <AvatarImage src={server.icon_url} alt={server.name} className="object-cover" />
+                            <AvatarFallback className={getServerColor(server.name)}>
+                              {getServerInitials(server.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <span className="text-sm font-bold text-white">
+                              {getServerInitials(server.name)}
+                            </span>
+                          </div>
+                        )}
+                      </motion.div>
 
-                  {/* Unread indicator dot */}
-                  {hasUnread && !isActive && totalMentions === 0 && (
-                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-white rounded-full border-2 border-layout-sidebar" />
-                  )}
-                  
-                  {/* Mention badge */}
-                  {totalMentions > 0 && (
-                    <span className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-full text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold">
-                      {totalMentions > 99 ? '99+' : totalMentions}
-                    </span>
-                  )}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="font-semibold">
-                {server.name}
-              </TooltipContent>
-            </Tooltip>
-          );
-        })}
+                      {/* Unread dot */}
+                      <AnimatePresence>
+                        {hasUnread && !isActive && totalMentions === 0 && (
+                          <motion.span
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            exit={{ scale: 0 }}
+                            className="absolute bottom-0 right-0 w-3 h-3 bg-white rounded-full border-2 border-layout-sidebar"
+                          />
+                        )}
+                      </AnimatePresence>
+                      
+                      {/* Mention badge */}
+                      <AnimatePresence>
+                        {totalMentions > 0 && (
+                          <motion.span
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            exit={{ scale: 0 }}
+                            className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-full text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
+                          >
+                            {totalMentions > 99 ? '99+' : totalMentions}
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+                    </motion.button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="font-medium">
+                    {server.name}
+                  </TooltipContent>
+                </Tooltip>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
 
         {/* Add Server button */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              className="w-12 h-12 p-0 rounded-full border-2 border-dashed border-green-500 text-green-500 hover:bg-green-500 hover:text-white hover:border-solid transition-all duration-200"
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => openModal('create-server')}
+              className="w-12 h-12 rounded-full border-2 border-dashed border-nomo-success text-nomo-success hover:bg-nomo-success hover:text-white hover:border-solid transition-all duration-200 flex items-center justify-center"
             >
               <Plus className="w-5 h-5" />
-            </Button>
+            </motion.button>
           </TooltipTrigger>
-          <TooltipContent side="right" className="font-semibold">
+          <TooltipContent side="right" className="font-medium">
             Add a Server
           </TooltipContent>
         </Tooltip>
       </div>
 
-      <Separator className="w-8 h-0.5 bg-border rounded-full" />
+      {/* Separator */}
+      <div className="w-8 h-0.5 bg-border rounded-full" />
 
       {/* User settings button */}
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            className="w-12 h-12 p-0 rounded-full bg-secondary hover:bg-secondary/80 transition-all duration-200"
+          <motion.button
+            whileHover={{ scale: 1.05, rotate: 90 }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 17 }}
             onClick={() => openModal('user-settings')}
+            className="w-12 h-12 rounded-full bg-secondary hover:bg-secondary/80 transition-colors flex items-center justify-center"
           >
             <Settings className="w-5 h-5" />
-          </Button>
+          </motion.button>
         </TooltipTrigger>
-        <TooltipContent side="right" className="font-semibold">
+        <TooltipContent side="right" className="font-medium">
           User Settings
         </TooltipContent>
       </Tooltip>
