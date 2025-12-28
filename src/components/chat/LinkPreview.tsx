@@ -14,6 +14,7 @@ interface LinkPreviewData {
   videoId?: string;
   spotifyType?: string;
   spotifyId?: string;
+  soundcloudUrl?: string;
   error?: string;
 }
 
@@ -213,6 +214,63 @@ export const LinkPreview = ({ url, disabled }: LinkPreviewProps) => {
           </div>
         )}
       </div>
+    );
+  }
+
+  // SoundCloud embed
+  if (preview.type === 'soundcloud') {
+    if (preview.soundcloudUrl) {
+      return (
+        <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[400px] bg-[#f2f2f2] dark:bg-[#1a1a1a]">
+          <iframe
+            src={preview.soundcloudUrl}
+            width="100%"
+            height={166}
+            allow="autoplay"
+            loading="lazy"
+            className="border-0"
+            title={preview.title || 'SoundCloud embed'}
+          />
+          {preview.title && (
+            <div className="p-3 bg-secondary/50">
+              <div className="flex items-center gap-2 mb-1">
+                {preview.favicon && (
+                  <img src={preview.favicon} alt="" className="w-4 h-4" />
+                )}
+                <span className="text-xs text-muted-foreground">{preview.siteName}</span>
+              </div>
+              <a 
+                href={url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="font-medium text-sm text-primary hover:underline line-clamp-1"
+              >
+                {preview.title}
+              </a>
+            </div>
+          )}
+        </div>
+      );
+    }
+    
+    // Fallback card if no embed URL available
+    return (
+      <a 
+        href={url} 
+        target="_blank" 
+        rel="noopener noreferrer"
+        className="mt-2 block rounded-lg border border-border bg-secondary/50 p-3 max-w-[400px] hover:bg-secondary/70 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          {preview.favicon && (
+            <img src={preview.favicon} alt="" className="w-4 h-4" />
+          )}
+          <span className="text-xs text-muted-foreground">{preview.siteName}</span>
+        </div>
+        {preview.title && (
+          <p className="font-medium text-sm mt-1 line-clamp-2">{preview.title}</p>
+        )}
+      </a>
     );
   }
 
