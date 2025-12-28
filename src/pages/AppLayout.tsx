@@ -128,12 +128,12 @@ const AppLayout = () => {
         {/* Desktop layout */}
         <div className="hidden md:flex flex-1 overflow-hidden">
           {/* Server list sidebar - 72px fixed */}
-          <div className="w-[72px] flex-shrink-0 bg-layout-sidebar border-r border-border">
+          <div className="w-[72px] flex-shrink-0 bg-layout-sidebar">
             <ServerSidebar />
           </div>
           
           {/* Secondary sidebar - 240px fixed */}
-          <div className="w-60 flex-shrink-0 bg-layout-sidebar-secondary">
+          <div className="w-60 flex-shrink-0 bg-layout-sidebar-secondary border-l border-border">
             {isDMView ? (
               <DMSidebar 
                 showFriends={showFriends} 
