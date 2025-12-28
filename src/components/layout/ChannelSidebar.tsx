@@ -134,7 +134,7 @@ const SortableChannel = ({
           'hover:bg-secondary/80',
           isActive && 'bg-secondary text-foreground',
           !isActive && 'text-muted-foreground hover:text-foreground',
-          isUnread && !isActive && 'text-foreground font-medium'
+          isUnread && !isActive && 'text-foreground font-semibold'
         )}
       >
         {/* Channel icon */}
@@ -398,6 +398,12 @@ export const ChannelSidebar = () => {
     });
   };
 
+  const handleSelectChannel = useCallback((channel: Channel) => {
+    setCurrentChannel(channel);
+    // Mark channel as read when selected
+    markAsRead(channel.id);
+  }, [setCurrentChannel, markAsRead]);
+
   const handleLeaveServer = async () => {
     if (!currentServer || !user || isOwner) return;
     await leaveServer(currentServer.id, user.id);
@@ -578,7 +584,7 @@ export const ChannelSidebar = () => {
                       isUnread={unreadCount > 0}
                       mentionCount={mentionCount}
                       isAdmin={isAdmin}
-                      onSelect={() => setCurrentChannel(channel)}
+                      onSelect={() => handleSelectChannel(channel)}
                       onEdit={() => openModal('edit-channel', { channelId: channel.id })}
                     />
                   );
@@ -599,7 +605,7 @@ export const ChannelSidebar = () => {
                 currentChannelId={currentChannel?.id}
                 getChannelUnread={getChannelUnread}
                 onToggle={() => toggleCategory(category.id)}
-                onSelectChannel={setCurrentChannel}
+                onSelectChannel={handleSelectChannel}
                 onAddChannel={() => openModal('create-channel', { categoryId: category.id })}
                 onEditChannel={(channelId) => openModal('edit-channel', { channelId })}
               />
