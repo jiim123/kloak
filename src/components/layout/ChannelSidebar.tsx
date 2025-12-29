@@ -146,7 +146,7 @@ const SortableChannel = ({
           {isActive && (
             <motion.div
               layoutId="channel-indicator"
-              className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-full"
+              className="absolute -left-2 top-1 -translate-y-1/2 w-1 h-3 bg-primary rounded-full"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
