@@ -713,32 +713,28 @@ export const ChannelSidebar = () => {
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <motion.div whileHover={{ rotate: 30 }} transition={{ type: 'spring', stiffness: 300 }}>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="w-8 h-8 text-muted-foreground hover:text-foreground"
-                  onClick={cycleTheme}
-                >
-                  <Palette className="w-4 h-4" />
-                </Button>
-              </motion.div>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="w-8 h-8 text-muted-foreground hover:text-foreground"
+                onClick={cycleTheme}
+              >
+                <Palette className="w-4 h-4" />
+              </Button>
             </TooltipTrigger>
             <TooltipContent>Theme</TooltipContent>
           </Tooltip>
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <motion.div whileHover={{ rotate: 90 }} transition={{ type: 'spring', stiffness: 300 }}>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="w-8 h-8 text-muted-foreground hover:text-foreground"
-                  onClick={() => openModal('user-settings')}
-                >
-                  <Settings className="w-4 h-4" />
-                </Button>
-              </motion.div>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="w-8 h-8 text-muted-foreground hover:text-foreground"
+                onClick={() => openModal('user-settings')}
+              >
+                <Settings className="w-4 h-4" />
+              </Button>
             </TooltipTrigger>
             <TooltipContent>Settings</TooltipContent>
           </Tooltip>
