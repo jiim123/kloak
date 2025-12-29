@@ -1,14 +1,14 @@
-import { useState, useMemo, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, Plus, Settings } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useAuthStore } from '@/stores/authStore';
-import { useServerStore } from '@/stores/serverStore';
-import { useUIStore } from '@/stores/uiStore';
-import { useUnread } from '@/hooks/useUnread';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useMemo, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { MessageCircle, Plus, Settings } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuthStore } from "@/stores/authStore";
+import { useServerStore } from "@/stores/serverStore";
+import { useUIStore } from "@/stores/uiStore";
+import { useUnread } from "@/hooks/useUnread";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ServerChannels {
   [serverId: string]: string[];
@@ -37,7 +37,7 @@ const serverItemVariants = {
     x: 0,
     transition: {
       delay: i * 0.05,
-      type: 'spring' as const,
+      type: "spring" as const,
       stiffness: 300,
       damping: 24,
     },
@@ -60,12 +60,9 @@ export const ServerSidebar = () => {
   useEffect(() => {
     const fetchAllChannels = async () => {
       if (servers.length === 0) return;
-      
-      const serverIds = servers.map(s => s.id);
-      const { data: channels } = await supabase
-        .from('channels')
-        .select('id, server_id')
-        .in('server_id', serverIds);
+
+      const serverIds = servers.map((s) => s.id);
+      const { data: channels } = await supabase.from("channels").select("id, server_id").in("server_id", serverIds);
 
       if (channels) {
         const channelsByServer: ServerChannels = {};
@@ -90,34 +87,41 @@ export const ServerSidebar = () => {
 
   const getServerInitials = (name: string) => {
     return name
-      .split(' ')
-      .map(word => word[0])
-      .join('')
+      .split(" ")
+      .map((word) => word[0])
+      .join("")
       .slice(0, 2)
       .toUpperCase();
   };
 
   const getServerColor = (name: string) => {
     const colors = [
-      'bg-indigo-500', 'bg-purple-500', 'bg-pink-500', 
-      'bg-red-500', 'bg-orange-500', 'bg-amber-500',
-      'bg-emerald-500', 'bg-teal-500', 'bg-cyan-500', 'bg-blue-500',
+      "bg-indigo-500",
+      "bg-purple-500",
+      "bg-pink-500",
+      "bg-red-500",
+      "bg-orange-500",
+      "bg-amber-500",
+      "bg-emerald-500",
+      "bg-teal-500",
+      "bg-cyan-500",
+      "bg-blue-500",
     ];
-    const index = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const index = name.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
     return colors[index % colors.length];
   };
 
   const getPillState = (serverId: string | null, hasUnread: boolean) => {
     if (currentServer?.id === serverId || (serverId === null && currentServer === null)) {
-      return 'active';
+      return "active";
     }
     if (hoveredServer === serverId) {
-      return 'hover';
+      return "hover";
     }
     if (hasUnread) {
-      return 'unread';
+      return "unread";
     }
-    return 'hidden';
+    return "hidden";
   };
 
   return (
@@ -139,21 +143,21 @@ export const ServerSidebar = () => {
               variants={pillVariants}
               initial="hidden"
               animate={getPillState(null, false)}
-              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
             />
-            
+
             <motion.div
               variants={iconVariants}
               initial="animate"
-              animate={currentServer === null ? 'active' : 'animate'}
+              animate={currentServer === null ? "active" : "animate"}
               whileHover="hover"
               whileTap="tap"
-              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+              transition={{ type: "spring", stiffness: 400, damping: 25 }}
               className={cn(
-                'w-12 h-12 flex items-center justify-center',
-                currentServer === null 
-                  ? 'bg-primary text-primary-foreground ring-2 ring-primary/50' 
-                  : 'bg-secondary hover:bg-primary hover:text-primary-foreground'
+                "w-12 h-12 flex items-center justify-center",
+                currentServer === null
+                  ? "bg-primary text-primary-foreground ring-2 ring-primary/50"
+                  : "bg-secondary hover:bg-primary hover:text-primary-foreground",
               )}
             >
               <MessageCircle className="w-5 h-5" />
@@ -191,7 +195,7 @@ export const ServerSidebar = () => {
             const isHovered = hoveredServer === server.id;
             const channelIds = serverChannels[server.id] || [];
             const { hasUnread, totalMentions } = getServerUnreadInfo(channelIds);
-            
+
             return (
               <motion.div
                 key={server.id}
@@ -218,20 +222,20 @@ export const ServerSidebar = () => {
                         variants={pillVariants}
                         initial="hidden"
                         animate={getPillState(server.id, hasUnread)}
-                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
                       />
-                      
+
                       <motion.div
                         variants={iconVariants}
                         initial="animate"
-                        animate={isActive ? 'active' : 'animate'}
+                        animate={isActive ? "active" : "animate"}
                         whileHover="hover"
                         whileTap="tap"
-                        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
                         className={cn(
-                          'w-12 h-12 overflow-hidden',
-                          isActive && 'ring-2 ring-primary/50',
-                          !server.icon_url && getServerColor(server.name)
+                          "w-12 h-12 overflow-hidden",
+                          isActive && "ring-2 ring-primary/50",
+                          !server.icon_url && getServerColor(server.name),
                         )}
                       >
                         {server.icon_url ? (
@@ -243,9 +247,7 @@ export const ServerSidebar = () => {
                           </Avatar>
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
-                            <span className="text-sm font-bold text-white">
-                              {getServerInitials(server.name)}
-                            </span>
+                            <span className="text-sm font-bold text-white">{getServerInitials(server.name)}</span>
                           </div>
                         )}
                       </motion.div>
@@ -261,7 +263,7 @@ export const ServerSidebar = () => {
                           />
                         )}
                       </AnimatePresence>
-                      
+
                       {/* Mention badge */}
                       <AnimatePresence>
                         {totalMentions > 0 && (
@@ -271,7 +273,7 @@ export const ServerSidebar = () => {
                             exit={{ scale: 0 }}
                             className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
                           >
-                            {totalMentions > 99 ? '99+' : totalMentions}
+                            {totalMentions > 99 ? "99+" : totalMentions}
                           </motion.span>
                         )}
                       </AnimatePresence>
@@ -291,10 +293,55 @@ export const ServerSidebar = () => {
           <TooltipTrigger asChild>
             <motion.button
               whileTap={{ scale: 0.95 }}
-              onClick={() => openModal('create-server')}
-              className="w-12 h-12 rounded-[6px] border-2 border-dashed border-nomo-success text-nomo-success hover:bg-nomo-success hover:text-white hover:border-solid transition-all duration-200 flex items-center justify-center"
+              whileHover="hover"
+              onClick={() => openModal("create-server")}
+              className="relative w-12 h-12 rounded-[6px] text-nomo-success hover:bg-nomo-success hover:text-white transition-colors duration-200 flex items-center justify-center overflow-hidden"
             >
-              <Plus className="w-5 h-5" />
+              {/* Animated dashed border */}
+              <motion.svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 48 48">
+                <motion.rect
+                  x="1"
+                  y="1"
+                  width="46"
+                  height="46"
+                  rx="5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeDasharray="6 4"
+                  variants={{
+                    hover: {
+                      strokeDashoffset: [0, -10],
+                      stroke: "rgba(255, 255, 255, 0)",
+                    },
+                  }}
+                  transition={{
+                    strokeDashoffset: {
+                      duration: 0.6,
+                      ease: "linear",
+                      repeat: Infinity,
+                    },
+                    stroke: {
+                      duration: 0.2,
+                    },
+                  }}
+                  initial={{ strokeDashoffset: 0 }}
+                />
+              </motion.svg>
+
+              {/* Solid border on hover */}
+              <motion.div
+                className="absolute inset-0 rounded-[6px] border-2 border-nomo-success pointer-events-none"
+                variants={{
+                  hover: {
+                    opacity: 1,
+                  },
+                }}
+                initial={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              />
+
+              <Plus className="w-5 h-5 relative z-10" />
             </motion.button>
           </TooltipTrigger>
           <TooltipContent side="right" className="font-medium">
@@ -311,7 +358,7 @@ export const ServerSidebar = () => {
         <TooltipTrigger asChild>
           <motion.button
             whileTap={{ scale: 0.95 }}
-            onClick={() => openModal('user-settings')}
+            onClick={() => openModal("user-settings")}
             className="w-12 h-12 rounded-[6px] bg-secondary hover:bg-secondary/80 transition-colors flex items-center justify-center"
           >
             <Settings className="w-5 h-5" />
