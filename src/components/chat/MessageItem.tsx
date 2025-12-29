@@ -40,6 +40,8 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }:
   const [isHovered, setIsHovered] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showMobileActions, setShowMobileActions] = useState(false);
+  const [isEmojiDropdownOpen, setIsEmojiDropdownOpen] = useState(false);
+  const [isMoreDropdownOpen, setIsMoreDropdownOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -296,10 +298,10 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }:
         </div>
 
         {/* Hover actions - Desktop */}
-        {isHovered && !isEditing && (
+        {(isHovered || isEmojiDropdownOpen || isMoreDropdownOpen) && !isEditing && (
           <div className="absolute right-4 -top-4 hidden md:flex items-center gap-0.5 bg-secondary border border-border rounded-lg shadow-lg p-0.5">
             {/* Quick reactions */}
-            <DropdownMenu>
+            <DropdownMenu open={isEmojiDropdownOpen} onOpenChange={setIsEmojiDropdownOpen}>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="w-7 h-7">
                   <Smile className="w-4 h-4" />
@@ -310,7 +312,10 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }:
                   {quickReactions.map((emoji) => (
                     <button
                       key={emoji}
-                      onClick={() => user && addReaction(message.id, user.id, emoji)}
+                      onClick={() => {
+                        user && addReaction(message.id, user.id, emoji);
+                        setIsEmojiDropdownOpen(false);
+                      }}
                       className="text-xl hover:scale-125 transition-transform p-1"
                     >
                       {emoji}
@@ -385,17 +390,23 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }:
               </Tooltip>
             )}
 
-            <DropdownMenu>
+            <DropdownMenu open={isMoreDropdownOpen} onOpenChange={setIsMoreDropdownOpen}>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="w-7 h-7">
                   <MoreHorizontal className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => navigator.clipboard.writeText(message.content)}>
+                <DropdownMenuItem onClick={() => {
+                  navigator.clipboard.writeText(message.content);
+                  setIsMoreDropdownOpen(false);
+                }}>
                   Copy Text
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigator.clipboard.writeText(message.id)}>
+                <DropdownMenuItem onClick={() => {
+                  navigator.clipboard.writeText(message.id);
+                  setIsMoreDropdownOpen(false);
+                }}>
                   Copy Message ID
                 </DropdownMenuItem>
               </DropdownMenuContent>
