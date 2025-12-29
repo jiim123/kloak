@@ -290,7 +290,6 @@ export const ServerSidebar = () => {
         <Tooltip delayDuration={300}>
           <TooltipTrigger asChild>
             <motion.button
-              whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => openModal('create-server')}
               className="w-12 h-12 rounded-[6px] border-2 border-dashed border-nomo-success text-nomo-success hover:bg-nomo-success hover:text-white hover:border-solid transition-all duration-200 flex items-center justify-center"
@@ -311,9 +310,7 @@ export const ServerSidebar = () => {
       <Tooltip delayDuration={300}>
         <TooltipTrigger asChild>
           <motion.button
-            whileHover={{ scale: 1.05, rotate: 90 }}
             whileTap={{ scale: 0.95 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 17 }}
             onClick={() => openModal('user-settings')}
             className="w-12 h-12 rounded-[6px] bg-secondary hover:bg-secondary/80 transition-colors flex items-center justify-center"
           >
