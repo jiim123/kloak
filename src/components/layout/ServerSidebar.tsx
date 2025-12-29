@@ -293,61 +293,10 @@ export const ServerSidebar = () => {
           <TooltipTrigger asChild>
             <motion.button
               whileTap={{ scale: 0.95 }}
-              whileHover="hover"
-              initial="default"
               onClick={() => openModal("create-server")}
-              className="relative w-12 h-12 rounded-[6px] text-nomo-success hover:bg-nomo-success hover:text-white transition-colors duration-200 flex items-center justify-center overflow-hidden"
+              className="w-12 h-12 rounded-[6px] border-2 border-dashed border-kloak-success text-kloak-success hover:bg-kloak-success hover:text-white hover:border-solid transition-all duration-200 flex items-center justify-center"
             >
-              {/* Animated dashed border */}
-              <motion.svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 48 48">
-                <motion.rect
-                  x="1"
-                  y="1"
-                  width="46"
-                  height="46"
-                  rx="5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeDasharray="6 4"
-                  variants={{
-                    default: {
-                      strokeDashoffset: 0,
-                      opacity: 1,
-                    },
-                    hover: {
-                      strokeDashoffset: -10,
-                      opacity: 0,
-                      transition: {
-                        strokeDashoffset: {
-                          duration: 0.6,
-                          ease: "linear",
-                        },
-                        opacity: {
-                          duration: 0.2,
-                          delay: 0.4,
-                        },
-                      },
-                    },
-                  }}
-                />
-              </motion.svg>
-
-              {/* Solid border on hover */}
-              <motion.div
-                className="absolute inset-0 rounded-[6px] border-2 border-white pointer-events-none"
-                variants={{
-                  default: {
-                    opacity: 0,
-                  },
-                  hover: {
-                    opacity: 1,
-                  },
-                }}
-                transition={{ duration: 0.2 }}
-              />
-
-              <Plus className="w-5 h-5 relative z-10" />
+              <Plus className="w-5 h-5" />
             </motion.button>
           </TooltipTrigger>
           <TooltipContent side="right" className="font-medium">
