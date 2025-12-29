@@ -148,7 +148,7 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }:
       )}
       
       <div 
-        className={`group relative flex gap-4 py-1 md:py-0.5 px-4 hover:bg-accent/30 ${isGrouped ? 'mt-0' : 'mt-4'}`}
+        className={`group relative flex gap-4 py-2 px-4 hover:bg-accent/30 ${isGrouped ? 'mt-0' : 'mt-4'}`}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         onTouchStart={handleTouchStart}
