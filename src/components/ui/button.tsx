@@ -35,37 +35,12 @@ export interface ButtonProps
   asChild?: boolean;
 }
 
-{
-  /* Jump to present button */
-}
-{
-  showJumpToPresent && (
-    <motion.div
-      initial={{ opacity: 0, y: 20, scale: 0.9 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 20, scale: 0.9 }}
-      transition={{ duration: 0.3, ease: "easeOut" }}
-      className="absolute bottom-4 right-4 z-10"
-    >
-      <Button
-        onClick={scrollToBottom}
-        className="relative overflow-hidden rounded-full shadow-xl backdrop-blur-md bg-background/80 border-2 border-primary/30 hover:bg-background/90 hover:border-primary/50 transition-all px-4 py-2 h-auto"
-        size="sm"
-      >
-        {/* Animated border pulse */}
-        <span className="absolute inset-0 rounded-full border-2 border-primary/50 animate-pulse-border" />
-
-        {/* Content */}
-        <div className="relative flex items-center gap-2">
-          <ChevronDown className="w-4 h-4" />
-          <span className="text-sm font-medium">
-            {newMessageCount > 0 ? `${newMessageCount} new` : "Jump to present"}
-          </span>
-        </div>
-      </Button>
-    </motion.div>
-  );
-}
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, size, asChild = false, ...props }, ref) => {
+    const Comp = asChild ? Slot : "button";
+    return <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />;
+  },
+);
 Button.displayName = "Button";
 
 export { Button, buttonVariants };
