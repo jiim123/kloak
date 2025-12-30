@@ -30,7 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -197,273 +197,307 @@ export const UserSettingsModal = () => {
     closeModal();
   };
 
+  const navItems = [
+    { id: 'account', label: 'Account', icon: Key },
+    { id: 'profile', label: 'Profile', icon: User },
+    { id: 'appearance', label: 'Appearance', icon: Palette },
+  ];
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-        <DialogContent className="sm:max-w-lg max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle>User Settings</DialogTitle>
-            <DialogDescription>
-              Manage your account and preferences
-            </DialogDescription>
-          </DialogHeader>
-
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="account" className="flex items-center gap-2">
-                <Key className="w-4 h-4" />
-                Account
-              </TabsTrigger>
-              <TabsTrigger value="profile" className="flex items-center gap-2">
-                <User className="w-4 h-4" />
-                Profile
-              </TabsTrigger>
-              <TabsTrigger value="appearance" className="flex items-center gap-2">
-                <Palette className="w-4 h-4" />
-                Appearance
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Account Tab */}
-            <TabsContent value="account" className="space-y-4 mt-4">
-              {/* Username Display */}
-              <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase text-muted-foreground">
-                  Username
-                </Label>
-                <div className="flex items-center gap-2 p-3 bg-secondary rounded-lg">
-                  <span className="font-medium">{user.username}</span>
-                  <span className="text-xs text-muted-foreground">(cannot be changed)</span>
-                </div>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] p-0 gap-0 overflow-hidden">
+          <div className="flex h-[70vh]">
+            {/* Sidebar Navigation */}
+            <div className="w-48 bg-secondary/50 border-r border-border flex flex-col">
+              <div className="p-4 border-b border-border">
+                <h2 className="font-semibold text-sm">User Settings</h2>
               </div>
+              <nav className="flex-1 p-2 space-y-1">
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveTab(item.id)}
+                      className={cn(
+                        'w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors',
+                        isActive 
+                          ? 'bg-primary text-primary-foreground' 
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                      )}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
 
-              {/* Secret Key Section */}
-              <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase text-muted-foreground">
-                  Secret Key
-                </Label>
-                {!keyRevealed ? (
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setShowKeyConfirm(true)}
-                    className="w-full"
-                  >
-                    <Eye className="w-4 h-4 mr-2" />
-                    View Secret Key
-                  </Button>
-                ) : (
-                  <div className="space-y-2">
-                    <div className="flex gap-2">
-                      <Input
-                        type={showSecretKey ? 'text' : 'password'}
-                        value={secretKey || ''}
-                        readOnly
-                        className="font-mono text-xs"
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setShowSecretKey(!showSecretKey)}
+            {/* Content Area */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <DialogHeader className="px-6 py-4 border-b border-border">
+                <DialogTitle>
+                  {navItems.find(n => n.id === activeTab)?.label}
+                </DialogTitle>
+                <DialogDescription>
+                  {activeTab === 'account' && 'Manage your account credentials and security'}
+                  {activeTab === 'profile' && 'Customize how others see you'}
+                  {activeTab === 'appearance' && 'Personalize your app experience'}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="flex-1 overflow-y-auto p-6">
+                {/* Account Section */}
+                {activeTab === 'account' && (
+                  <div className="space-y-4">
+                    {/* Username Display */}
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold uppercase text-muted-foreground">
+                        Username
+                      </Label>
+                      <div className="flex items-center gap-2 p-3 bg-secondary rounded-lg">
+                        <span className="font-medium">{user?.username}</span>
+                        <span className="text-xs text-muted-foreground">(cannot be changed)</span>
+                      </div>
+                    </div>
+
+                    {/* Secret Key Section */}
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold uppercase text-muted-foreground">
+                        Secret Key
+                      </Label>
+                      {!keyRevealed ? (
+                        <Button 
+                          variant="outline" 
+                          onClick={() => setShowKeyConfirm(true)}
+                          className="w-full"
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          View Secret Key
+                        </Button>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="flex gap-2">
+                            <Input
+                              type={showSecretKey ? 'text' : 'password'}
+                              value={secretKey || ''}
+                              readOnly
+                              className="font-mono text-xs"
+                            />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setShowSecretKey(!showSecretKey)}
+                            >
+                              {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={handleCopyKey}
+                            >
+                              {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                            </Button>
+                          </div>
+                          <p className="text-xs text-destructive">
+                            Keep this key safe! It's the only way to access your account.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Log Out */}
+                    <Button variant="outline" onClick={handleLogout} className="w-full">
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Log Out
+                    </Button>
+
+                    {/* Danger Zone */}
+                    <div className="border-t border-destructive/20 pt-4 mt-6">
+                      <h4 className="text-sm font-semibold text-destructive mb-2">Danger Zone</h4>
+                      <p className="text-xs text-muted-foreground mb-3">
+                        Deleting your account will permanently remove all your data.
+                      </p>
+                      <Button 
+                        variant="destructive" 
+                        size="sm"
+                        onClick={() => setShowDeleteConfirm(true)}
                       >
-                        {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={handleCopyKey}
-                      >
-                        {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete Account
                       </Button>
                     </div>
-                    <p className="text-xs text-destructive">
-                      Keep this key safe! It's the only way to access your account.
-                    </p>
+                  </div>
+                )}
+
+                {/* Profile Section */}
+                {activeTab === 'profile' && (
+                  <div className="space-y-4">
+                    {/* Avatar Upload */}
+                    <div className="flex items-center gap-4">
+                      <Avatar className="w-20 h-20 cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                        <AvatarImage src={user?.avatar_url || undefined} />
+                        <AvatarFallback style={{ backgroundColor: bannerColor }}>
+                          {user?.username?.[0]?.toUpperCase() || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={isLoading}
+                        >
+                          <Upload className="w-4 h-4 mr-2" />
+                          Upload Avatar
+                        </Button>
+                        <p className="text-xs text-muted-foreground mt-1">Max 5MB, JPG or PNG</p>
+                      </div>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleAvatarUpload}
+                      />
+                    </div>
+
+                    {/* Display Name */}
+                    <div className="space-y-2">
+                      <Label htmlFor="displayName">Display Name</Label>
+                      <Input
+                        id="displayName"
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                        placeholder="How others see you"
+                        maxLength={32}
+                      />
+                    </div>
+
+                    {/* Bio */}
+                    <div className="space-y-2">
+                      <Label htmlFor="bio">Bio</Label>
+                      <Textarea
+                        id="bio"
+                        value={bio}
+                        onChange={(e) => setBio(e.target.value)}
+                        placeholder="Tell us about yourself"
+                        rows={3}
+                      />
+                    </div>
+
+                    {/* Banner Color */}
+                    <div className="space-y-2">
+                      <Label>Banner Color</Label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="color"
+                          value={bannerColor}
+                          onChange={(e) => setBannerColor(e.target.value)}
+                          className="w-12 h-10 rounded cursor-pointer border-0"
+                        />
+                        <Input
+                          value={bannerColor}
+                          onChange={(e) => setBannerColor(e.target.value)}
+                          placeholder="#5865F2"
+                          className="w-28 font-mono"
+                        />
+                        <div 
+                          className="flex-1 h-10 rounded"
+                          style={{ backgroundColor: bannerColor }}
+                        />
+                      </div>
+                    </div>
+
+                    <Button onClick={handleSaveProfile} disabled={isLoading} className="w-full">
+                      {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      Save Profile
+                    </Button>
+                  </div>
+                )}
+
+                {/* Appearance Section */}
+                {activeTab === 'appearance' && (
+                  <div className="space-y-4">
+                    {/* Theme Selector */}
+                    <div className="space-y-3">
+                      <Label>Theme</Label>
+                      <div className="grid grid-cols-2 gap-3">
+                        {THEMES.map((t) => {
+                          const preview = THEME_PREVIEWS[t.id];
+                          const isActive = theme === t.id;
+                          
+                          return (
+                            <button
+                              key={t.id}
+                              onClick={() => setTheme(t.id)}
+                              className={cn(
+                                'group relative flex flex-col overflow-hidden rounded-lg border-2 transition-all',
+                                isActive 
+                                  ? 'border-primary ring-2 ring-primary/20' 
+                                  : 'border-border hover:border-primary/50'
+                              )}
+                            >
+                              {/* Theme preview */}
+                              <div 
+                                className="h-16 w-full flex"
+                                style={{ backgroundColor: preview.bg }}
+                              >
+                                {/* Sidebar preview */}
+                                <div 
+                                  className="w-1/4 h-full"
+                                  style={{ backgroundColor: preview.sidebar }}
+                                />
+                                {/* Chat area with accent message */}
+                                <div className="flex-1 p-2 flex items-end">
+                                  <div 
+                                    className="h-3 w-3/4 rounded-sm"
+                                    style={{ backgroundColor: preview.accent }}
+                                  />
+                                </div>
+                              </div>
+                              {/* Theme info */}
+                              <div className="px-3 py-2 bg-card flex items-center justify-between">
+                                <div className="text-left">
+                                  <p className="text-sm font-medium">{t.name}</p>
+                                  <p className="text-xs text-muted-foreground">{t.description}</p>
+                                </div>
+                                {isActive && (
+                                  <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                                    <Check className="w-3 h-3 text-primary-foreground" />
+                                  </div>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Link Previews Toggle */}
+                    <div className="flex items-center justify-between py-2 border-t pt-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Link className="w-4 h-4 text-muted-foreground" />
+                          <Label>Link Previews</Label>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Show previews for links in messages
+                        </p>
+                      </div>
+                      <Switch
+                        checked={linkPreviewsEnabled}
+                        onCheckedChange={setLinkPreviewsEnabled}
+                      />
+                    </div>
                   </div>
                 )}
               </div>
-
-              {/* Log Out */}
-              <Button variant="outline" onClick={handleLogout} className="w-full">
-                <LogOut className="w-4 h-4 mr-2" />
-                Log Out
-              </Button>
-
-              {/* Danger Zone */}
-              <div className="border-t border-destructive/20 pt-4 mt-6">
-                <h4 className="text-sm font-semibold text-destructive mb-2">Danger Zone</h4>
-                <p className="text-xs text-muted-foreground mb-3">
-                  Deleting your account will permanently remove all your data.
-                </p>
-                <Button 
-                  variant="destructive" 
-                  size="sm"
-                  onClick={() => setShowDeleteConfirm(true)}
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete Account
-                </Button>
-              </div>
-            </TabsContent>
-
-            {/* Profile Tab */}
-            <TabsContent value="profile" className="space-y-4 mt-4">
-              {/* Avatar Upload */}
-              <div className="flex items-center gap-4">
-                <Avatar className="w-20 h-20 cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-                  <AvatarImage src={user.avatar_url || undefined} />
-                  <AvatarFallback style={{ backgroundColor: bannerColor }}>
-                    {user.username[0].toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isLoading}
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload Avatar
-                  </Button>
-                  <p className="text-xs text-muted-foreground mt-1">Max 5MB, JPG or PNG</p>
-                </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleAvatarUpload}
-                />
-              </div>
-
-              {/* Display Name */}
-              <div className="space-y-2">
-                <Label htmlFor="displayName">Display Name</Label>
-                <Input
-                  id="displayName"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="How others see you"
-                  maxLength={32}
-                />
-              </div>
-
-              {/* Bio */}
-              <div className="space-y-2">
-                <Label htmlFor="bio">Bio</Label>
-                <Textarea
-                  id="bio"
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  placeholder="Tell us about yourself"
-                  rows={3}
-                />
-              </div>
-
-              {/* Banner Color */}
-              <div className="space-y-2">
-                <Label>Banner Color</Label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={bannerColor}
-                    onChange={(e) => setBannerColor(e.target.value)}
-                    className="w-12 h-10 rounded cursor-pointer border-0"
-                  />
-                  <Input
-                    value={bannerColor}
-                    onChange={(e) => setBannerColor(e.target.value)}
-                    placeholder="#5865F2"
-                    className="w-28 font-mono"
-                  />
-                  <div 
-                    className="flex-1 h-10 rounded"
-                    style={{ backgroundColor: bannerColor }}
-                  />
-                </div>
-              </div>
-
-              <Button onClick={handleSaveProfile} disabled={isLoading} className="w-full">
-                {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Save Profile
-              </Button>
-            </TabsContent>
-
-            {/* Appearance Tab */}
-            <TabsContent value="appearance" className="space-y-4 mt-4 overflow-y-auto max-h-[50vh]">
-              {/* Theme Selector */}
-              <div className="space-y-3">
-                <Label>Theme</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  {THEMES.map((t) => {
-                    const preview = THEME_PREVIEWS[t.id];
-                    const isActive = theme === t.id;
-                    
-                    return (
-                      <button
-                        key={t.id}
-                        onClick={() => setTheme(t.id)}
-                        className={cn(
-                          'group relative flex flex-col overflow-hidden rounded-lg border-2 transition-all',
-                          isActive 
-                            ? 'border-primary ring-2 ring-primary/20' 
-                            : 'border-border hover:border-primary/50'
-                        )}
-                      >
-                        {/* Theme preview */}
-                        <div 
-                          className="h-16 w-full flex"
-                          style={{ backgroundColor: preview.bg }}
-                        >
-                          {/* Sidebar preview */}
-                          <div 
-                            className="w-1/4 h-full"
-                            style={{ backgroundColor: preview.sidebar }}
-                          />
-                          {/* Chat area with accent message */}
-                          <div className="flex-1 p-2 flex items-end">
-                            <div 
-                              className="h-3 w-3/4 rounded-sm"
-                              style={{ backgroundColor: preview.accent }}
-                            />
-                          </div>
-                        </div>
-                        {/* Theme info */}
-                        <div className="px-3 py-2 bg-card flex items-center justify-between">
-                          <div className="text-left">
-                            <p className="text-sm font-medium">{t.name}</p>
-                            <p className="text-xs text-muted-foreground">{t.description}</p>
-                          </div>
-                          {isActive && (
-                            <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                              <Check className="w-3 h-3 text-primary-foreground" />
-                            </div>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Link Previews Toggle */}
-              <div className="flex items-center justify-between py-2 border-t pt-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Link className="w-4 h-4 text-muted-foreground" />
-                    <Label>Link Previews</Label>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Show previews for links in messages
-                  </p>
-                </div>
-                <Switch
-                  checked={linkPreviewsEnabled}
-                  onCheckedChange={setLinkPreviewsEnabled}
-                />
-              </div>
-            </TabsContent>
-          </Tabs>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
