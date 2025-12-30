@@ -177,7 +177,7 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }:
               <span
                 className={`text-[10px] text-muted-foreground transition-opacity duration-150 ${isHovered ? "opacity-100" : "opacity-0"}`}
               >
-                {formatMessageTimestamp(message.created_at, true)}
+                {format(new Date(message.created_at), "h:mm a")}
               </span>
             )}
           </div>
