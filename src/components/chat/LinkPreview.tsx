@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
-import { ExternalLink, Play, AlertTriangle } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { cn } from '@/lib/utils';
+import { useState, useEffect } from "react";
+import { ExternalLink, Play, AlertTriangle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
 interface LinkPreviewData {
   url: string;
@@ -15,6 +15,17 @@ interface LinkPreviewData {
   spotifyType?: string;
   spotifyId?: string;
   soundcloudUrl?: string;
+  twitchChannel?: string;
+  twitchVideo?: string;
+  twitchClip?: string;
+  kickChannel?: string;
+  kickVideo?: string;
+  vimeoId?: string;
+  steamId?: string;
+  tiktokId?: string;
+  instagramId?: string;
+  facebookVideoId?: string;
+  twitterId?: string;
   error?: string;
 }
 
@@ -34,7 +45,7 @@ export const LinkPreview = ({ url, disabled }: LinkPreviewProps) => {
 
   useEffect(() => {
     if (disabled) return;
-    
+
     // Check cache first
     if (previewCache.has(url)) {
       setPreview(previewCache.get(url)!);
@@ -44,15 +55,15 @@ export const LinkPreview = ({ url, disabled }: LinkPreviewProps) => {
     const fetchPreview = async () => {
       setIsLoading(true);
       setError(null);
-      
+
       try {
-        const { data, error: fnError } = await supabase.functions.invoke('fetch-link-preview', {
+        const { data, error: fnError } = await supabase.functions.invoke("fetch-link-preview", {
           body: { url },
         });
 
         if (fnError) {
-          console.error('Link preview error:', fnError);
-          setError('Failed to load preview');
+          console.error("Link preview error:", fnError);
+          setError("Failed to load preview");
           return;
         }
 
@@ -64,8 +75,8 @@ export const LinkPreview = ({ url, disabled }: LinkPreviewProps) => {
         setPreview(data);
         previewCache.set(url, data);
       } catch (err) {
-        console.error('Link preview fetch error:', err);
-        setError('Failed to load preview');
+        console.error("Link preview fetch error:", err);
+        setError("Failed to load preview");
       } finally {
         setIsLoading(false);
       }
@@ -91,20 +102,15 @@ export const LinkPreview = ({ url, disabled }: LinkPreviewProps) => {
   if (error || !preview) return null;
 
   // Direct image
-  if (preview.type === 'image') {
+  if (preview.type === "image") {
     return (
-      <a 
-        href={url} 
-        target="_blank" 
-        rel="noopener noreferrer"
-        className="block mt-2"
-      >
-        <img 
-          src={preview.image} 
+      <a href={url} target="_blank" rel="noopener noreferrer" className="block mt-2">
+        <img
+          src={preview.image}
           alt="Linked image"
           className="max-w-[400px] max-h-[300px] rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
           onError={(e) => {
-            (e.target as HTMLImageElement).style.display = 'none';
+            (e.target as HTMLImageElement).style.display = "none";
           }}
         />
       </a>
@@ -112,7 +118,7 @@ export const LinkPreview = ({ url, disabled }: LinkPreviewProps) => {
   }
 
   // YouTube embed
-  if (preview.type === 'youtube' && preview.videoId) {
+  if (preview.type === "youtube" && preview.videoId) {
     if (showEmbed) {
       return (
         <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[480px]">
@@ -120,7 +126,7 @@ export const LinkPreview = ({ url, disabled }: LinkPreviewProps) => {
             width="480"
             height="270"
             src={`https://www.youtube.com/embed/${preview.videoId}?autoplay=1`}
-            title={preview.title || 'YouTube video'}
+            title={preview.title || "YouTube video"}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
             className="w-full aspect-video"
@@ -131,18 +137,14 @@ export const LinkPreview = ({ url, disabled }: LinkPreviewProps) => {
 
     return (
       <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[400px] bg-secondary/50">
-        <div 
-          className="relative cursor-pointer group"
-          onClick={() => setShowEmbed(true)}
-        >
-          <img 
-            src={preview.image} 
-            alt={preview.title || 'YouTube video'}
+        <div className="relative cursor-pointer group" onClick={() => setShowEmbed(true)}>
+          <img
+            src={preview.image}
+            alt={preview.title || "YouTube video"}
             className="w-full aspect-video object-cover"
             onError={(e) => {
-              // Fallback to hqdefault if maxresdefault fails
               const img = e.target as HTMLImageElement;
-              if (img.src.includes('maxresdefault')) {
+              if (img.src.includes("maxresdefault")) {
                 img.src = `https://img.youtube.com/vi/${preview.videoId}/hqdefault.jpg`;
               }
             }}
@@ -155,15 +157,13 @@ export const LinkPreview = ({ url, disabled }: LinkPreviewProps) => {
         </div>
         <div className="p-3">
           <div className="flex items-center gap-2 mb-1">
-            {preview.favicon && (
-              <img src={preview.favicon} alt="" className="w-4 h-4" />
-            )}
+            {preview.favicon && <img src={preview.favicon} alt="" className="w-4 h-4" />}
             <span className="text-xs text-muted-foreground">{preview.siteName}</span>
           </div>
           {preview.title && (
-            <a 
-              href={url} 
-              target="_blank" 
+            <a
+              href={url}
+              target="_blank"
               rel="noopener noreferrer"
               className="font-medium text-sm text-primary hover:underline line-clamp-2"
             >
@@ -171,19 +171,269 @@ export const LinkPreview = ({ url, disabled }: LinkPreviewProps) => {
             </a>
           )}
           {preview.description && (
-            <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
-              {preview.description}
-            </p>
+            <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{preview.description}</p>
           )}
         </div>
       </div>
     );
   }
 
+  // Vimeo embed
+  if (preview.type === "vimeo" && preview.vimeoId) {
+    if (showEmbed) {
+      return (
+        <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[480px]">
+          <iframe
+            src={`https://player.vimeo.com/video/${preview.vimeoId}?autoplay=1`}
+            width="480"
+            height="270"
+            allow="autoplay; fullscreen; picture-in-picture"
+            allowFullScreen
+            className="w-full aspect-video"
+            title={preview.title || "Vimeo video"}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[400px] bg-secondary/50">
+        <div className="relative cursor-pointer group" onClick={() => setShowEmbed(true)}>
+          {preview.image ? (
+            <img
+              src={preview.image}
+              alt={preview.title || "Vimeo video"}
+              className="w-full aspect-video object-cover"
+            />
+          ) : (
+            <div className="w-full aspect-video bg-[#1ab7ea] flex items-center justify-center">
+              <Play className="w-16 h-16 text-white" />
+            </div>
+          )}
+          <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
+            <div className="w-16 h-16 rounded-full bg-[#1ab7ea] flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+              <Play className="w-8 h-8 text-white fill-white ml-1" />
+            </div>
+          </div>
+        </div>
+        <div className="p-3">
+          <div className="flex items-center gap-2 mb-1">
+            {preview.favicon && <img src={preview.favicon} alt="" className="w-4 h-4" />}
+            <span className="text-xs text-muted-foreground">{preview.siteName || "Vimeo"}</span>
+          </div>
+          {preview.title && (
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-sm text-primary hover:underline line-clamp-2"
+            >
+              {preview.title}
+            </a>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Twitch embed
+  if (preview.type === "twitch") {
+    if (preview.twitchChannel) {
+      return (
+        <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[480px]">
+          <iframe
+            src={`https://player.twitch.tv/?channel=${preview.twitchChannel}&parent=${window.location.hostname}&autoplay=false`}
+            height="270"
+            width="480"
+            allowFullScreen
+            className="w-full aspect-video"
+            title={`${preview.twitchChannel} on Twitch`}
+          />
+        </div>
+      );
+    }
+
+    if (preview.twitchVideo) {
+      return (
+        <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[480px]">
+          <iframe
+            src={`https://player.twitch.tv/?video=${preview.twitchVideo}&parent=${window.location.hostname}&autoplay=false`}
+            height="270"
+            width="480"
+            allowFullScreen
+            className="w-full aspect-video"
+            title="Twitch video"
+          />
+        </div>
+      );
+    }
+
+    if (preview.twitchClip) {
+      return (
+        <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[480px]">
+          <iframe
+            src={`https://clips.twitch.tv/embed?clip=${preview.twitchClip}&parent=${window.location.hostname}&autoplay=false`}
+            height="270"
+            width="480"
+            allowFullScreen
+            className="w-full aspect-video"
+            title="Twitch clip"
+          />
+        </div>
+      );
+    }
+  }
+
+  // Kick embed
+  if (preview.type === "kick") {
+    if (preview.kickChannel) {
+      return (
+        <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[480px]">
+          <iframe
+            src={`https://player.kick.com/${preview.kickChannel}`}
+            height="270"
+            width="480"
+            allowFullScreen
+            className="w-full aspect-video"
+            title={`${preview.kickChannel} on Kick`}
+          />
+        </div>
+      );
+    }
+
+    if (preview.kickVideo) {
+      return (
+        <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[480px]">
+          <iframe
+            src={`https://player.kick.com/video/${preview.kickVideo}`}
+            height="270"
+            width="480"
+            allowFullScreen
+            className="w-full aspect-video"
+            title="Kick video"
+          />
+        </div>
+      );
+    }
+  }
+
+  // Steam embed
+  if (preview.type === "steam" && preview.steamId) {
+    return (
+      <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[400px]">
+        <iframe
+          src={`https://store.steampowered.com/widget/${preview.steamId}/`}
+          width="400"
+          height="190"
+          className="w-full border-0"
+          title={preview.title || "Steam game"}
+        />
+      </div>
+    );
+  }
+
+  // TikTok embed
+  if (preview.type === "tiktok" && preview.tiktokId) {
+    return (
+      <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[325px] mx-auto">
+        <blockquote
+          className="tiktok-embed"
+          cite={url}
+          data-video-id={preview.tiktokId}
+          style={{ maxWidth: "605px", minWidth: "325px" }}
+        >
+          <section>
+            <a
+              target="_blank"
+              rel="noopener noreferrer"
+              href={url}
+              className="block p-4 bg-secondary/50 hover:bg-secondary/70 transition-colors"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                {preview.favicon && <img src={preview.favicon} alt="" className="w-4 h-4" />}
+                <span className="text-xs text-muted-foreground">TikTok</span>
+              </div>
+              {preview.title && <p className="font-medium text-sm line-clamp-2">{preview.title}</p>}
+              {preview.description && (
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{preview.description}</p>
+              )}
+              <p className="text-xs text-primary mt-2">View on TikTok →</p>
+            </a>
+          </section>
+        </blockquote>
+      </div>
+    );
+  }
+
+  // Instagram embed
+  if (preview.type === "instagram" && preview.instagramId) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-2 block rounded-lg border border-border bg-secondary/50 p-3 max-w-[400px] hover:bg-secondary/70 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          {preview.favicon && <img src={preview.favicon} alt="" className="w-4 h-4" />}
+          <span className="text-xs text-muted-foreground">Instagram</span>
+          <ExternalLink className="w-3 h-3 text-muted-foreground ml-auto" />
+        </div>
+        {preview.image && <img src={preview.image} alt={preview.title || ""} className="w-full rounded-lg mt-2" />}
+        {preview.title && <p className="font-medium text-sm mt-2 line-clamp-2">{preview.title}</p>}
+        <p className="text-xs text-primary mt-1">View on Instagram →</p>
+      </a>
+    );
+  }
+
+  // X/Twitter embed
+  if (preview.type === "twitter" && preview.twitterId) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-2 block rounded-lg border border-border bg-secondary/50 p-3 max-w-[400px] hover:bg-secondary/70 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          {preview.favicon && <img src={preview.favicon} alt="" className="w-4 h-4" />}
+          <span className="text-xs text-muted-foreground">{preview.siteName || "X (Twitter)"}</span>
+          <ExternalLink className="w-3 h-3 text-muted-foreground ml-auto" />
+        </div>
+        {preview.title && <p className="font-medium text-sm mt-2 line-clamp-3">{preview.title}</p>}
+        {preview.description && (
+          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{preview.description}</p>
+        )}
+        <p className="text-xs text-primary mt-2">View post on X →</p>
+      </a>
+    );
+  }
+
+  // Facebook video embed
+  if (preview.type === "facebook" && preview.facebookVideoId) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-2 block rounded-lg border border-border bg-secondary/50 p-3 max-w-[400px] hover:bg-secondary/70 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          {preview.favicon && <img src={preview.favicon} alt="" className="w-4 h-4" />}
+          <span className="text-xs text-muted-foreground">Facebook</span>
+          <ExternalLink className="w-3 h-3 text-muted-foreground ml-auto" />
+        </div>
+        {preview.image && <img src={preview.image} alt={preview.title || ""} className="w-full rounded-lg mt-2" />}
+        {preview.title && <p className="font-medium text-sm mt-2 line-clamp-2">{preview.title}</p>}
+        <p className="text-xs text-primary mt-1">View on Facebook →</p>
+      </a>
+    );
+  }
+
   // Spotify embed
-  if (preview.type === 'spotify' && preview.spotifyId && preview.spotifyType) {
-    const embedHeight = preview.spotifyType === 'track' || preview.spotifyType === 'episode' ? 152 : 352;
-    
+  if (preview.type === "spotify" && preview.spotifyId && preview.spotifyType) {
+    const embedHeight = preview.spotifyType === "track" || preview.spotifyType === "episode" ? 152 : 352;
+
     return (
       <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[400px] bg-[#121212]">
         <iframe
@@ -193,19 +443,17 @@ export const LinkPreview = ({ url, disabled }: LinkPreviewProps) => {
           allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
           loading="lazy"
           className="border-0"
-          title={preview.title || 'Spotify embed'}
+          title={preview.title || "Spotify embed"}
         />
         {preview.title && (
           <div className="p-3 bg-secondary/50">
             <div className="flex items-center gap-2 mb-1">
-              {preview.favicon && (
-                <img src={preview.favicon} alt="" className="w-4 h-4" />
-              )}
+              {preview.favicon && <img src={preview.favicon} alt="" className="w-4 h-4" />}
               <span className="text-xs text-muted-foreground">{preview.siteName}</span>
             </div>
-            <a 
-              href={url} 
-              target="_blank" 
+            <a
+              href={url}
+              target="_blank"
               rel="noopener noreferrer"
               className="font-medium text-sm text-primary hover:underline line-clamp-1"
             >
@@ -218,7 +466,7 @@ export const LinkPreview = ({ url, disabled }: LinkPreviewProps) => {
   }
 
   // SoundCloud embed
-  if (preview.type === 'soundcloud') {
+  if (preview.type === "soundcloud") {
     if (preview.soundcloudUrl) {
       return (
         <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[400px] bg-[#f2f2f2] dark:bg-[#1a1a1a]">
@@ -229,19 +477,17 @@ export const LinkPreview = ({ url, disabled }: LinkPreviewProps) => {
             allow="autoplay"
             loading="lazy"
             className="border-0"
-            title={preview.title || 'SoundCloud embed'}
+            title={preview.title || "SoundCloud embed"}
           />
           {preview.title && (
             <div className="p-3 bg-secondary/50">
               <div className="flex items-center gap-2 mb-1">
-                {preview.favicon && (
-                  <img src={preview.favicon} alt="" className="w-4 h-4" />
-                )}
+                {preview.favicon && <img src={preview.favicon} alt="" className="w-4 h-4" />}
                 <span className="text-xs text-muted-foreground">{preview.siteName}</span>
               </div>
-              <a 
-                href={url} 
-                target="_blank" 
+              <a
+                href={url}
+                target="_blank"
                 rel="noopener noreferrer"
                 className="font-medium text-sm text-primary hover:underline line-clamp-1"
               >
@@ -252,86 +498,52 @@ export const LinkPreview = ({ url, disabled }: LinkPreviewProps) => {
         </div>
       );
     }
-    
-    // Fallback card if no embed URL available
-    return (
-      <a 
-        href={url} 
-        target="_blank" 
-        rel="noopener noreferrer"
-        className="mt-2 block rounded-lg border border-border bg-secondary/50 p-3 max-w-[400px] hover:bg-secondary/70 transition-colors"
-      >
-        <div className="flex items-center gap-2">
-          {preview.favicon && (
-            <img src={preview.favicon} alt="" className="w-4 h-4" />
-          )}
-          <span className="text-xs text-muted-foreground">{preview.siteName}</span>
-        </div>
-        {preview.title && (
-          <p className="font-medium text-sm mt-1 line-clamp-2">{preview.title}</p>
-        )}
-      </a>
-    );
-  }
 
-  // Twitter/X - simple card with link
-  if (preview.type === 'twitter') {
     return (
-      <a 
-        href={url} 
-        target="_blank" 
+      <a
+        href={url}
+        target="_blank"
         rel="noopener noreferrer"
         className="mt-2 block rounded-lg border border-border bg-secondary/50 p-3 max-w-[400px] hover:bg-secondary/70 transition-colors"
       >
         <div className="flex items-center gap-2">
-          {preview.favicon && (
-            <img src={preview.favicon} alt="" className="w-4 h-4" />
-          )}
+          {preview.favicon && <img src={preview.favicon} alt="" className="w-4 h-4" />}
           <span className="text-xs text-muted-foreground">{preview.siteName}</span>
-          <ExternalLink className="w-3 h-3 text-muted-foreground ml-auto" />
         </div>
-        <p className="text-sm text-primary mt-1">View post on X</p>
+        {preview.title && <p className="font-medium text-sm mt-1 line-clamp-2">{preview.title}</p>}
       </a>
     );
   }
 
   // Standard Open Graph card
   return (
-    <a 
-      href={url} 
-      target="_blank" 
+    <a
+      href={url}
+      target="_blank"
       rel="noopener noreferrer"
       className="mt-2 block rounded-lg border border-border bg-secondary/50 overflow-hidden max-w-[400px] hover:bg-secondary/70 transition-colors group"
     >
       {preview.image && (
         <div className="relative">
-          <img 
-            src={preview.image} 
-            alt={preview.title || ''}
+          <img
+            src={preview.image}
+            alt={preview.title || ""}
             className="w-full h-40 object-cover"
             onError={(e) => {
-              (e.target as HTMLImageElement).style.display = 'none';
+              (e.target as HTMLImageElement).style.display = "none";
             }}
           />
         </div>
       )}
       <div className="p-3">
         <div className="flex items-center gap-2 mb-1">
-          {preview.favicon && (
-            <img src={preview.favicon} alt="" className="w-4 h-4" />
-          )}
+          {preview.favicon && <img src={preview.favicon} alt="" className="w-4 h-4" />}
           <span className="text-xs text-muted-foreground">{preview.siteName}</span>
           <ExternalLink className="w-3 h-3 text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
-        {preview.title && (
-          <p className="font-medium text-sm text-primary line-clamp-2">
-            {preview.title}
-          </p>
-        )}
+        {preview.title && <p className="font-medium text-sm text-primary line-clamp-2">{preview.title}</p>}
         {preview.description && (
-          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-            {preview.description}
-          </p>
+          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{preview.description}</p>
         )}
       </div>
     </a>
@@ -343,13 +555,8 @@ export const LinkPreviewNotice = ({ onDismiss }: { onDismiss: () => void }) => (
   <div className="flex items-start gap-2 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-sm">
     <AlertTriangle className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" />
     <div className="flex-1">
-      <p className="text-foreground">
-        Link previews make external requests to fetch website information.
-      </p>
-      <button 
-        onClick={onDismiss}
-        className="text-primary hover:underline text-xs mt-1"
-      >
+      <p className="text-foreground">Link previews make external requests to fetch website information.</p>
+      <button onClick={onDismiss} className="text-primary hover:underline text-xs mt-1">
         Dismiss
       </button>
     </div>
