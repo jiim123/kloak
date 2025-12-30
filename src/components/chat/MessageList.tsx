@@ -214,7 +214,7 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
               className="relative overflow-hidden rounded-full shadow-xl backdrop-blur-md bg-background/80 border-2 border-primary/30 hover:bg-background/90 hover:border-primary/50 transition-all px-4 py-2 h-auto"
             >
               {/* Animated border pulse */}
-              <span className="absolute inset-0 rounded-full border-2 border-primary/50 animate-pulse-border pointer-events-none" />
+              <span className="absolute inset-0 rounded-full border-1 border-primary/50 animate-pulse-border pointer-events-none" />
 
               {/* Content */}
               <div className="relative flex items-center gap-2">
