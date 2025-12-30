@@ -19,6 +19,7 @@ import { getMessagePreview } from "@/lib/message";
 import { formatMessageTimestamp } from "@/lib/format";
 import { DeleteMessageModal } from "@/components/modals/DeleteMessageModal";
 import type { Message, ServerRole } from "@/types";
+import { format } from "date-fns";
 
 interface MessageItemProps {
   message: Message;
