@@ -33,6 +33,7 @@ import { useDMStore } from '@/stores/dmStore';
 import { useRealtimeFriendships, useRealtimeUsers, useRealtimeServer, useRealtimeNotifications } from '@/hooks';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
+import { usePreferencesSync } from '@/hooks/usePreferencesSync';
 
 const AppLayout = () => {
   const navigate = useNavigate();
@@ -53,6 +54,9 @@ const AppLayout = () => {
   
   // Offline message sync
   useOfflineSync();
+  
+  // Sync preferences (theme, etc.) with database
+  usePreferencesSync();
 
   // Fetch channels and members when server changes
   useEffect(() => {

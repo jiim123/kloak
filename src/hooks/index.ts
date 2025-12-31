@@ -1,4 +1,5 @@
 export { useRealtimeMessages } from './useRealtimeMessages';
+export { usePreferencesSync } from './usePreferencesSync';
 export { useRealtimeReactions } from './useRealtimeReactions';
 export { useRealtimeMembers } from './useRealtimeMembers';
 export { useRealtimeFriendships } from './useRealtimeFriendships';
