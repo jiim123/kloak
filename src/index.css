@@ -112,763 +112,252 @@
   }
 
   /* ========================================
-     LIGHT THEME
+     NOSTALGIA THEME
+     Warm, muted, vintage feel
      ======================================== */
-  .light {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 9%;
+  .nostalgia {
+    /* #452829 -> hsl(359, 28%, 21%) */
+    --background: 359 28% 21%;
+    --foreground: 26 38% 93%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 9%;
+    /* #3a2223 -> hsl(358, 27%, 18%) */
+    --card: 358 27% 18%;
+    --card-foreground: 26 38% 93%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 9%;
+    --popover: 358 27% 18%;
+    --popover-foreground: 26 38% 93%;
 
-    --primary: 24 97% 45%;
-    --primary-foreground: 0 0% 100%;
+    /* #E8D1C5 -> hsl(18, 38%, 84%) - dusty rose accent */
+    --primary: 18 38% 84%;
+    --primary-foreground: 359 28% 15%;
 
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 9%;
+    /* #57595B -> hsl(210, 2%, 35%) - slate gray surface */
+    --secondary: 210 2% 35%;
+    --secondary-foreground: 26 38% 93%;
 
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 45%;
+    /* #2e1a1b -> hsl(356, 28%, 14%) */
+    --muted: 356 28% 14%;
+    --muted-foreground: 18 38% 65%;
 
-    --accent: 24 97% 45%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 18 38% 84%;
+    --accent-foreground: 359 28% 15%;
 
-    --destructive: 358 75% 50%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 65% 50%;
+    --destructive-foreground: 26 38% 93%;
 
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
-    --ring: 24 97% 45%;
+    --border: 210 2% 35%;
+    --input: 358 27% 18%;
+    --ring: 18 38% 84%;
 
-    --sidebar: 0 0% 98%;
-    --sidebar-secondary: 0 0% 96%;
-    --chat: 0 0% 100%;
-    --members: 0 0% 96%;
+    --sidebar: 356 28% 14%;
+    --sidebar-secondary: 358 27% 18%;
+    --chat: 359 28% 21%;
+    --members: 358 27% 18%;
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 0 0% 35%;
-    --sidebar-primary: 24 97% 45%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 93%;
-    --sidebar-accent-foreground: 0 0% 9%;
-    --sidebar-border: 0 0% 90%;
-    --sidebar-ring: 24 97% 45%;
+    --sidebar-background: 356 28% 14%;
+    --sidebar-foreground: 18 38% 65%;
+    --sidebar-primary: 18 38% 84%;
+    --sidebar-primary-foreground: 359 28% 15%;
+    --sidebar-accent: 358 27% 22%;
+    --sidebar-accent-foreground: 26 38% 93%;
+    --sidebar-border: 210 2% 30%;
+    --sidebar-ring: 18 38% 84%;
 
-    --kloak-success: 142 76% 36%;
-    --kloak-warning: 53 96% 45%;
-    --kloak-online: 142 76% 46%;
-    --kloak-idle: 38 95% 50%;
-    --kloak-dnd: 358 75% 50%;
-    --kloak-offline: 0 0% 45%;
-
-    --code-block-bg: 0 0% 96%;
-  }
-
-  /* ========================================
-     DARK THEME (Neutral gray)
-     ======================================== */
-  .dark {
-    --background: 0 0% 9%;
-    --foreground: 0 0% 98%;
-
-    --card: 0 0% 7%;
-    --card-foreground: 0 0% 98%;
-
-    --popover: 0 0% 8%;
-    --popover-foreground: 0 0% 98%;
-
-    --primary: 24 97% 50%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 0 0% 15%;
-    --secondary-foreground: 0 0% 98%;
-
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 64%;
-
-    --accent: 24 97% 50%;
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 358 63% 45%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
-    --ring: 24 97% 50%;
-
-    --sidebar: 0 0% 4%;
-    --sidebar-secondary: 0 0% 7%;
-    --chat: 0 0% 9%;
-    --members: 0 0% 7%;
-
-    --sidebar-background: 0 0% 4%;
-    --sidebar-foreground: 0 0% 64%;
-    --sidebar-primary: 24 97% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 12%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 0 0% 15%;
-    --sidebar-ring: 24 97% 50%;
-
-    --kloak-success: 142 76% 42%;
-    --kloak-warning: 53 96% 55%;
+    --kloak-success: 142 76% 52%;
+    --kloak-warning: 38 95% 60%;
     --kloak-online: 142 76% 52%;
     --kloak-idle: 38 95% 60%;
     --kloak-dnd: 358 70% 55%;
-    --kloak-offline: 0 0% 45%;
+    --kloak-offline: 210 2% 40%;
 
-    --code-block-bg: 0 0% 6%;
+    --code-block-bg: 356 28% 12%;
   }
 
   /* ========================================
-     MIDNIGHT THEME - Deep blue night
+     LO-FI THEME
+     Bold, retro, high contrast anime aesthetic
      ======================================== */
-  .midnight {
-    --background: 230 25% 12%;
-    --foreground: 220 20% 92%;
+  .lofi {
+    /* #293462 -> hsl(230, 42%, 27%) */
+    --background: 230 42% 27%;
+    --foreground: 47 100% 88%;
 
-    --card: 230 25% 10%;
-    --card-foreground: 220 20% 92%;
+    /* #1e2747 -> hsl(226, 41%, 20%) */
+    --card: 226 41% 20%;
+    --card-foreground: 47 100% 88%;
 
-    --popover: 230 25% 11%;
-    --popover-foreground: 220 20% 92%;
+    --popover: 226 41% 20%;
+    --popover-foreground: 47 100% 88%;
 
-    --primary: 24 97% 50%;
-    --primary-foreground: 0 0% 100%;
+    /* #FE5F55 -> hsl(3, 99%, 66%) - coral red */
+    --primary: 3 99% 66%;
+    --primary-foreground: 230 42% 15%;
 
-    --secondary: 230 25% 18%;
-    --secondary-foreground: 220 20% 92%;
+    /* #354178 -> hsl(230, 39%, 34%) */
+    --secondary: 230 39% 34%;
+    --secondary-foreground: 47 100% 88%;
 
-    --muted: 230 20% 20%;
-    --muted-foreground: 220 15% 55%;
+    /* #161c35 -> hsl(228, 41%, 15%) */
+    --muted: 228 41% 15%;
+    --muted-foreground: 47 100% 70%;
 
-    --accent: 24 97% 50%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 3 99% 66%;
+    --accent-foreground: 230 42% 15%;
 
-    --destructive: 358 63% 50%;
-    --destructive-foreground: 0 0% 100%;
+    /* #A64942 -> hsl(4, 43%, 46%) - muted burgundy red */
+    --destructive: 4 43% 46%;
+    --destructive-foreground: 47 100% 95%;
 
-    --border: 230 20% 18%;
-    --input: 230 20% 18%;
-    --ring: 24 97% 50%;
+    --border: 230 39% 34%;
+    --input: 226 41% 20%;
+    --ring: 3 99% 66%;
 
-    --sidebar: 230 28% 7%;
-    --sidebar-secondary: 230 25% 10%;
-    --chat: 230 25% 12%;
-    --members: 230 25% 10%;
+    --sidebar: 228 41% 15%;
+    --sidebar-secondary: 226 41% 20%;
+    --chat: 230 42% 27%;
+    --members: 226 41% 20%;
 
-    --sidebar-background: 230 28% 7%;
-    --sidebar-foreground: 220 15% 60%;
-    --sidebar-primary: 24 97% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 230 25% 14%;
-    --sidebar-accent-foreground: 220 20% 92%;
-    --sidebar-border: 230 20% 14%;
-    --sidebar-ring: 24 97% 50%;
+    --sidebar-background: 228 41% 15%;
+    --sidebar-foreground: 47 100% 70%;
+    --sidebar-primary: 3 99% 66%;
+    --sidebar-primary-foreground: 230 42% 15%;
+    --sidebar-accent: 230 39% 28%;
+    --sidebar-accent-foreground: 47 100% 88%;
+    --sidebar-border: 230 39% 30%;
+    --sidebar-ring: 3 99% 66%;
 
-    --kloak-success: 142 76% 42%;
-    --kloak-warning: 53 96% 55%;
+    --kloak-success: 142 76% 52%;
+    --kloak-warning: 38 95% 60%;
+    --kloak-online: 142 76% 52%;
+    --kloak-idle: 38 95% 60%;
+    --kloak-dnd: 4 43% 46%;
+    --kloak-offline: 230 30% 45%;
+
+    --code-block-bg: 228 41% 12%;
+  }
+
+  /* ========================================
+     CAPPUCCINO THEME
+     Warm, cozy coffee house aesthetic
+     ======================================== */
+  .cappuccino {
+    /* #493628 -> hsl(24, 31%, 22%) */
+    --background: 24 31% 22%;
+    --foreground: 300 4% 88%;
+
+    /* #3a2b20 -> hsl(25, 30%, 18%) */
+    --card: 25 30% 18%;
+    --card-foreground: 300 4% 88%;
+
+    --popover: 25 30% 18%;
+    --popover-foreground: 300 4% 88%;
+
+    /* #AB886D -> hsl(27, 26%, 55%) - caramel */
+    --primary: 27 26% 55%;
+    --primary-foreground: 24 31% 12%;
+
+    /* #5a4535 -> hsl(26, 27%, 28%) */
+    --secondary: 26 27% 28%;
+    --secondary-foreground: 300 4% 88%;
+
+    /* #2c2018 -> hsl(24, 31%, 13%) */
+    --muted: 24 31% 13%;
+    --muted-foreground: 24 24% 60%;
+
+    --accent: 27 26% 55%;
+    --accent-foreground: 24 31% 12%;
+
+    --destructive: 0 65% 50%;
+    --destructive-foreground: 300 4% 95%;
+
+    --border: 27 26% 35%;
+    --input: 25 30% 18%;
+    --ring: 27 26% 55%;
+
+    --sidebar: 24 31% 13%;
+    --sidebar-secondary: 25 30% 18%;
+    --chat: 24 31% 22%;
+    --members: 25 30% 18%;
+
+    --sidebar-background: 24 31% 13%;
+    --sidebar-foreground: 24 24% 60%;
+    --sidebar-primary: 27 26% 55%;
+    --sidebar-primary-foreground: 24 31% 12%;
+    --sidebar-accent: 26 27% 24%;
+    --sidebar-accent-foreground: 300 4% 88%;
+    --sidebar-border: 27 26% 30%;
+    --sidebar-ring: 27 26% 55%;
+
+    --kloak-success: 142 76% 52%;
+    --kloak-warning: 38 95% 60%;
     --kloak-online: 142 76% 52%;
     --kloak-idle: 38 95% 60%;
     --kloak-dnd: 358 70% 55%;
-    --kloak-offline: 220 10% 45%;
+    --kloak-offline: 24 15% 45%;
 
-    --code-block-bg: 230 28% 9%;
+    --code-block-bg: 24 31% 10%;
   }
 
   /* ========================================
-     FOREST THEME - Natural green tones
+     HOKORI THEME
+     Stark, Japanese-inspired, dramatic minimalism
      ======================================== */
-  .forest {
-    --background: 150 10% 14%;
-    --foreground: 140 15% 90%;
-
-    --card: 150 12% 11%;
-    --card-foreground: 140 15% 90%;
-
-    --popover: 150 12% 12%;
-    --popover-foreground: 140 15% 90%;
-
-    --primary: 24 97% 50%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 150 12% 20%;
-    --secondary-foreground: 140 15% 90%;
-
-    --muted: 150 10% 22%;
-    --muted-foreground: 140 10% 55%;
-
-    --accent: 24 97% 50%;
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 358 63% 50%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 150 10% 20%;
-    --input: 150 10% 20%;
-    --ring: 24 97% 50%;
-
-    --sidebar: 150 14% 8%;
-    --sidebar-secondary: 150 12% 11%;
-    --chat: 150 10% 14%;
-    --members: 150 12% 11%;
-
-    --sidebar-background: 150 14% 8%;
-    --sidebar-foreground: 140 10% 58%;
-    --sidebar-primary: 24 97% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 150 12% 15%;
-    --sidebar-accent-foreground: 140 15% 90%;
-    --sidebar-border: 150 10% 15%;
-    --sidebar-ring: 24 97% 50%;
-
-    --kloak-success: 142 76% 42%;
-    --kloak-warning: 53 96% 55%;
-    --kloak-online: 142 76% 52%;
-    --kloak-idle: 38 95% 60%;
-    --kloak-dnd: 358 70% 55%;
-    --kloak-offline: 140 5% 45%;
-
-    --code-block-bg: 150 14% 10%;
-  }
-
-  /* ========================================
-     SUNSET THEME - Warm orange and amber
-     ======================================== */
-  .sunset {
-    --background: 20 15% 14%;
-    --foreground: 30 20% 92%;
-
-    --card: 20 18% 11%;
-    --card-foreground: 30 20% 92%;
-
-    --popover: 20 18% 12%;
-    --popover-foreground: 30 20% 92%;
-
-    --primary: 24 97% 50%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 20 15% 20%;
-    --secondary-foreground: 30 20% 92%;
-
-    --muted: 20 12% 22%;
-    --muted-foreground: 30 15% 55%;
-
-    --accent: 24 97% 50%;
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 358 63% 50%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 20 12% 20%;
-    --input: 20 12% 20%;
-    --ring: 24 97% 50%;
-
-    --sidebar: 20 20% 8%;
-    --sidebar-secondary: 20 18% 11%;
-    --chat: 20 15% 14%;
-    --members: 20 18% 11%;
-
-    --sidebar-background: 20 20% 8%;
-    --sidebar-foreground: 30 12% 58%;
-    --sidebar-primary: 24 97% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 20 18% 15%;
-    --sidebar-accent-foreground: 30 20% 92%;
-    --sidebar-border: 20 12% 15%;
-    --sidebar-ring: 24 97% 50%;
-
-    --kloak-success: 142 76% 42%;
-    --kloak-warning: 53 96% 55%;
-    --kloak-online: 142 76% 52%;
-    --kloak-idle: 38 95% 60%;
-    --kloak-dnd: 358 70% 55%;
-    --kloak-offline: 30 5% 45%;
-
-    --code-block-bg: 20 20% 10%;
-  }
-
-  /* ========================================
-     OCEAN THEME - Cool cyan depths
-     ======================================== */
-  .ocean {
-    --background: 195 20% 14%;
-    --foreground: 190 15% 92%;
-
-    --card: 195 22% 11%;
-    --card-foreground: 190 15% 92%;
-
-    --popover: 195 22% 12%;
-    --popover-foreground: 190 15% 92%;
-
-    --primary: 24 97% 50%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 195 18% 20%;
-    --secondary-foreground: 190 15% 92%;
-
-    --muted: 195 15% 22%;
-    --muted-foreground: 190 10% 55%;
-
-    --accent: 24 97% 50%;
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 358 63% 50%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 195 15% 20%;
-    --input: 195 15% 20%;
-    --ring: 24 97% 50%;
-
-    --sidebar: 195 25% 8%;
-    --sidebar-secondary: 195 22% 11%;
-    --chat: 195 20% 14%;
-    --members: 195 22% 11%;
-
-    --sidebar-background: 195 25% 8%;
-    --sidebar-foreground: 190 10% 58%;
-    --sidebar-primary: 24 97% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 195 22% 15%;
-    --sidebar-accent-foreground: 190 15% 92%;
-    --sidebar-border: 195 15% 15%;
-    --sidebar-ring: 24 97% 50%;
-
-    --kloak-success: 142 76% 42%;
-    --kloak-warning: 53 96% 55%;
-    --kloak-online: 142 76% 52%;
-    --kloak-idle: 38 95% 60%;
-    --kloak-dnd: 358 70% 55%;
-    --kloak-offline: 190 5% 45%;
-
-    --code-block-bg: 195 25% 10%;
-  }
-
-  /* ========================================
-     LAVENDER THEME - Soft purple hues
-     ======================================== */
-  .lavender {
-    --background: 270 15% 15%;
-    --foreground: 265 15% 92%;
-
-    --card: 270 18% 12%;
-    --card-foreground: 265 15% 92%;
-
-    --popover: 270 18% 13%;
-    --popover-foreground: 265 15% 92%;
-
-    --primary: 24 97% 50%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 270 15% 22%;
-    --secondary-foreground: 265 15% 92%;
-
-    --muted: 270 12% 24%;
-    --muted-foreground: 265 10% 55%;
-
-    --accent: 24 97% 50%;
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 358 63% 50%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 270 12% 22%;
-    --input: 270 12% 22%;
-    --ring: 24 97% 50%;
-
-    --sidebar: 270 20% 9%;
-    --sidebar-secondary: 270 18% 12%;
-    --chat: 270 15% 15%;
-    --members: 270 18% 12%;
-
-    --sidebar-background: 270 20% 9%;
-    --sidebar-foreground: 265 10% 58%;
-    --sidebar-primary: 24 97% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 270 18% 16%;
-    --sidebar-accent-foreground: 265 15% 92%;
-    --sidebar-border: 270 12% 16%;
-    --sidebar-ring: 24 97% 50%;
-
-    --kloak-success: 142 76% 42%;
-    --kloak-warning: 53 96% 55%;
-    --kloak-online: 142 76% 52%;
-    --kloak-idle: 38 95% 60%;
-    --kloak-dnd: 358 70% 55%;
-    --kloak-offline: 265 5% 45%;
-
-    --code-block-bg: 270 20% 11%;
-  }
-
-  /* ========================================
-     HIGH CONTRAST THEME
-     Maximum contrast for low vision users
-     WCAG AAA compliant (7:1+ contrast ratio)
-     ======================================== */
-  .high-contrast {
+  .hokori {
+    /* Pure black */
     --background: 0 0% 0%;
-    --foreground: 0 0% 100%;
+    --foreground: 49 59% 91%;
 
-    --card: 0 0% 5%;
-    --card-foreground: 0 0% 100%;
+    /* Near black */
+    --card: 0 0% 4%;
+    --card-foreground: 49 59% 91%;
 
-    --popover: 0 0% 5%;
-    --popover-foreground: 0 0% 100%;
+    --popover: 0 0% 4%;
+    --popover-foreground: 49 59% 91%;
 
-    --primary: 45 100% 50%;
-    --primary-foreground: 0 0% 0%;
-
-    --secondary: 0 0% 15%;
-    --secondary-foreground: 0 0% 100%;
-
-    --muted: 0 0% 20%;
-    --muted-foreground: 0 0% 80%;
-
-    --accent: 45 100% 50%;
-    --accent-foreground: 0 0% 0%;
-
-    --destructive: 0 100% 60%;
-    --destructive-foreground: 0 0% 0%;
-
-    --border: 0 0% 50%;
-    --input: 0 0% 30%;
-    --ring: 45 100% 50%;
-
-    --sidebar: 0 0% 0%;
-    --sidebar-secondary: 0 0% 5%;
-    --chat: 0 0% 0%;
-    --members: 0 0% 5%;
-
-    --sidebar-background: 0 0% 0%;
-    --sidebar-foreground: 0 0% 90%;
-    --sidebar-primary: 45 100% 50%;
-    --sidebar-primary-foreground: 0 0% 0%;
-    --sidebar-accent: 0 0% 15%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 0 0% 40%;
-    --sidebar-ring: 45 100% 50%;
-
-    /* High contrast status - distinct hues with maximum saturation */
-    --kloak-success: 120 100% 45%;
-    --kloak-warning: 45 100% 50%;
-    --kloak-online: 120 100% 45%;
-    --kloak-idle: 45 100% 50%;
-    --kloak-dnd: 0 100% 55%;
-    --kloak-offline: 0 0% 50%;
-
-    --code-block-bg: 0 0% 8%;
-  }
-
-  /* ========================================
-     PROTANOPIA THEME
-     Red-blind friendly (1% of males)
-     Avoids red-green distinctions
-     Uses blue-yellow-white spectrum
-     ======================================== */
-  .protanopia {
-    --background: 220 15% 10%;
-    --foreground: 220 10% 95%;
-
-    --card: 220 15% 8%;
-    --card-foreground: 220 10% 95%;
-
-    --popover: 220 15% 9%;
-    --popover-foreground: 220 10% 95%;
-
-    /* Blue primary - safe for protanopia */
-    --primary: 210 100% 55%;
+    /* #E43636 -> hsl(0, 76%, 55%) - vibrant red */
+    --primary: 0 76% 55%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 15% 18%;
-    --secondary-foreground: 220 10% 95%;
+    /* Charcoal */
+    --secondary: 0 0% 8%;
+    --secondary-foreground: 49 59% 91%;
 
-    --muted: 220 12% 22%;
-    --muted-foreground: 220 8% 60%;
+    /* Deep black */
+    --muted: 0 0% 3%;
+    --muted-foreground: 49 40% 60%;
 
-    --accent: 210 100% 55%;
+    --accent: 0 76% 55%;
     --accent-foreground: 0 0% 100%;
 
-    /* Yellow for destructive - visible to protanopes */
-    --destructive: 45 100% 50%;
-    --destructive-foreground: 0 0% 0%;
-
-    --border: 220 12% 22%;
-    --input: 220 12% 22%;
-    --ring: 210 100% 55%;
-
-    --sidebar: 220 18% 6%;
-    --sidebar-secondary: 220 15% 8%;
-    --chat: 220 15% 10%;
-    --members: 220 15% 8%;
-
-    --sidebar-background: 220 18% 6%;
-    --sidebar-foreground: 220 8% 60%;
-    --sidebar-primary: 210 100% 55%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 15% 14%;
-    --sidebar-accent-foreground: 220 10% 95%;
-    --sidebar-border: 220 12% 18%;
-    --sidebar-ring: 210 100% 55%;
-
-    /* Status colors - blue/yellow/white spectrum */
-    --kloak-success: 210 100% 55%;
-    --kloak-warning: 45 100% 55%;
-    --kloak-online: 180 80% 50%;
-    --kloak-idle: 45 100% 55%;
-    --kloak-dnd: 30 100% 60%;
-    --kloak-offline: 220 8% 45%;
-
-    --code-block-bg: 220 18% 8%;
-  }
-
-  /* ========================================
-     DEUTERANOPIA THEME
-     Green-blind friendly (6% of males)
-     Most common color blindness
-     Uses blue-yellow-magenta spectrum
-     ======================================== */
-  .deuteranopia {
-    --background: 240 12% 10%;
-    --foreground: 240 8% 95%;
-
-    --card: 240 12% 8%;
-    --card-foreground: 240 8% 95%;
-
-    --popover: 240 12% 9%;
-    --popover-foreground: 240 8% 95%;
-
-    /* Blue-violet primary - safe for deuteranopia */
-    --primary: 250 90% 60%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 240 12% 18%;
-    --secondary-foreground: 240 8% 95%;
-
-    --muted: 240 10% 22%;
-    --muted-foreground: 240 6% 60%;
-
-    --accent: 250 90% 60%;
-    --accent-foreground: 0 0% 100%;
-
-    /* Orange for destructive - visible to deuteranopes */
-    --destructive: 30 100% 55%;
-    --destructive-foreground: 0 0% 0%;
-
-    --border: 240 10% 22%;
-    --input: 240 10% 22%;
-    --ring: 250 90% 60%;
-
-    --sidebar: 240 14% 6%;
-    --sidebar-secondary: 240 12% 8%;
-    --chat: 240 12% 10%;
-    --members: 240 12% 8%;
-
-    --sidebar-background: 240 14% 6%;
-    --sidebar-foreground: 240 6% 60%;
-    --sidebar-primary: 250 90% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 12% 14%;
-    --sidebar-accent-foreground: 240 8% 95%;
-    --sidebar-border: 240 10% 18%;
-    --sidebar-ring: 250 90% 60%;
-
-    /* Status colors - blue/yellow/magenta spectrum */
-    --kloak-success: 200 100% 50%;
-    --kloak-warning: 45 100% 55%;
-    --kloak-online: 200 100% 50%;
-    --kloak-idle: 45 100% 55%;
-    --kloak-dnd: 320 90% 55%;
-    --kloak-offline: 240 6% 45%;
-
-    --code-block-bg: 240 14% 8%;
-  }
-
-  /* ========================================
-     TRITANOPIA THEME
-     Blue-blind friendly (rare, ~0.01%)
-     Avoids blue-yellow distinctions
-     Uses red-cyan-green spectrum
-     ======================================== */
-  .tritanopia {
-    --background: 350 8% 10%;
-    --foreground: 350 5% 95%;
-
-    --card: 350 8% 8%;
-    --card-foreground: 350 5% 95%;
-
-    --popover: 350 8% 9%;
-    --popover-foreground: 350 5% 95%;
-
-    /* Cyan-teal primary - safe for tritanopia */
-    --primary: 175 100% 40%;
-    --primary-foreground: 0 0% 0%;
-
-    --secondary: 350 8% 18%;
-    --secondary-foreground: 350 5% 95%;
-
-    --muted: 350 6% 22%;
-    --muted-foreground: 350 4% 60%;
-
-    --accent: 175 100% 40%;
-    --accent-foreground: 0 0% 0%;
-
-    /* Magenta for destructive - visible to tritanopes */
-    --destructive: 330 100% 55%;
+    --destructive: 0 76% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 350 6% 22%;
-    --input: 350 6% 22%;
-    --ring: 175 100% 40%;
+    --border: 49 40% 15%;
+    --input: 0 0% 4%;
+    --ring: 0 76% 55%;
 
-    --sidebar: 350 10% 6%;
-    --sidebar-secondary: 350 8% 8%;
-    --chat: 350 8% 10%;
-    --members: 350 8% 8%;
+    --sidebar: 0 0% 2%;
+    --sidebar-secondary: 0 0% 4%;
+    --chat: 0 0% 0%;
+    --members: 0 0% 4%;
 
-    --sidebar-background: 350 10% 6%;
-    --sidebar-foreground: 350 4% 60%;
-    --sidebar-primary: 175 100% 40%;
-    --sidebar-primary-foreground: 0 0% 0%;
-    --sidebar-accent: 350 8% 14%;
-    --sidebar-accent-foreground: 350 5% 95%;
-    --sidebar-border: 350 6% 18%;
-    --sidebar-ring: 175 100% 40%;
+    --sidebar-background: 0 0% 2%;
+    --sidebar-foreground: 49 40% 55%;
+    --sidebar-primary: 0 76% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 10%;
+    --sidebar-accent-foreground: 49 59% 91%;
+    --sidebar-border: 49 40% 12%;
+    --sidebar-ring: 0 76% 55%;
 
-    /* Status colors - red/cyan/magenta spectrum */
-    --kloak-success: 160 80% 45%;
-    --kloak-warning: 15 100% 60%;
-    --kloak-online: 160 80% 45%;
-    --kloak-idle: 15 100% 60%;
-    --kloak-dnd: 330 100% 55%;
-    --kloak-offline: 350 4% 45%;
-
-    --code-block-bg: 350 10% 8%;
-  }
-
-  /* ========================================
-     MONOCHROMACY THEME
-     Complete color blindness (achromatopsia)
-     Pure grayscale with texture/shape focus
-     Uses luminance differences only
-     ======================================== */
-  .monochromacy {
-    --background: 0 0% 8%;
-    --foreground: 0 0% 95%;
-
-    --card: 0 0% 6%;
-    --card-foreground: 0 0% 95%;
-
-    --popover: 0 0% 7%;
-    --popover-foreground: 0 0% 95%;
-
-    /* White primary - maximum luminance contrast */
-    --primary: 0 0% 90%;
-    --primary-foreground: 0 0% 8%;
-
-    --secondary: 0 0% 18%;
-    --secondary-foreground: 0 0% 95%;
-
-    --muted: 0 0% 22%;
-    --muted-foreground: 0 0% 60%;
-
-    --accent: 0 0% 90%;
-    --accent-foreground: 0 0% 8%;
-
-    /* Light gray for destructive with underline hint */
-    --destructive: 0 0% 75%;
-    --destructive-foreground: 0 0% 8%;
-
-    --border: 0 0% 28%;
-    --input: 0 0% 22%;
-    --ring: 0 0% 90%;
-
-    --sidebar: 0 0% 4%;
-    --sidebar-secondary: 0 0% 6%;
-    --chat: 0 0% 8%;
-    --members: 0 0% 6%;
-
-    --sidebar-background: 0 0% 4%;
-    --sidebar-foreground: 0 0% 60%;
-    --sidebar-primary: 0 0% 90%;
-    --sidebar-primary-foreground: 0 0% 8%;
-    --sidebar-accent: 0 0% 14%;
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 0 0% 22%;
-    --sidebar-ring: 0 0% 90%;
-
-    /* Status - distinct grayscale levels */
-    --kloak-success: 0 0% 85%;
-    --kloak-warning: 0 0% 70%;
-    --kloak-online: 0 0% 85%;
-    --kloak-idle: 0 0% 55%;
-    --kloak-dnd: 0 0% 40%;
-    --kloak-offline: 0 0% 30%;
+    --kloak-success: 142 76% 52%;
+    --kloak-warning: 38 95% 60%;
+    --kloak-online: 142 76% 52%;
+    --kloak-idle: 38 95% 60%;
+    --kloak-dnd: 0 76% 55%;
+    --kloak-offline: 0 0% 35%;
 
     --code-block-bg: 0 0% 5%;
-  }
-
-  /* ========================================
-     LOW VISION THEME
-     Optimized for users with low vision
-     Large contrast, warm tones, reduced strain
-     ======================================== */
-  .low-vision {
-    --background: 40 10% 8%;
-    --foreground: 40 15% 95%;
-
-    --card: 40 10% 6%;
-    --card-foreground: 40 15% 95%;
-
-    --popover: 40 10% 7%;
-    --popover-foreground: 40 15% 95%;
-
-    /* Warm yellow-gold primary - easier on eyes */
-    --primary: 45 95% 55%;
-    --primary-foreground: 0 0% 0%;
-
-    --secondary: 40 10% 18%;
-    --secondary-foreground: 40 15% 95%;
-
-    --muted: 40 8% 22%;
-    --muted-foreground: 40 10% 65%;
-
-    --accent: 45 95% 55%;
-    --accent-foreground: 0 0% 0%;
-
-    /* Bright orange for destructive */
-    --destructive: 20 100% 55%;
-    --destructive-foreground: 0 0% 0%;
-
-    --border: 40 10% 30%;
-    --input: 40 8% 25%;
-    --ring: 45 95% 55%;
-
-    --sidebar: 40 12% 4%;
-    --sidebar-secondary: 40 10% 6%;
-    --chat: 40 10% 8%;
-    --members: 40 10% 6%;
-
-    --sidebar-background: 40 12% 4%;
-    --sidebar-foreground: 40 10% 65%;
-    --sidebar-primary: 45 95% 55%;
-    --sidebar-primary-foreground: 0 0% 0%;
-    --sidebar-accent: 40 10% 14%;
-    --sidebar-accent-foreground: 40 15% 95%;
-    --sidebar-border: 40 10% 25%;
-    --sidebar-ring: 45 95% 55%;
-
-    /* Warm, distinct status colors */
-    --kloak-success: 90 80% 50%;
-    --kloak-warning: 45 100% 55%;
-    --kloak-online: 90 80% 50%;
-    --kloak-idle: 45 100% 55%;
-    --kloak-dnd: 15 100% 55%;
-    --kloak-offline: 40 8% 45%;
-
-    --code-block-bg: 40 12% 6%;
   }
 }
 
@@ -970,21 +459,6 @@
     @apply bg-primary/30;
   }
 
-  /* High contrast mode - thicker borders */
-  .high-contrast ::selection {
-    @apply bg-primary/50;
-  }
-
-  .high-contrast *:focus-visible {
-    outline: 3px solid hsl(var(--ring));
-    outline-offset: 2px;
-  }
-
-  /* Low vision - larger focus indicators */
-  .low-vision *:focus-visible {
-    outline: 4px solid hsl(var(--ring));
-    outline-offset: 3px;
-  }
 }
 
 @layer utilities {
@@ -1191,222 +665,6 @@
 
 .token.entity {
   cursor: help;
-}
-
-/* Light mode overrides for Prism */
-.light .token.comment,
-.light .token.prolog,
-.light .token.doctype,
-.light .token.cdata {
-  color: hsl(0 0% 45%);
-}
-
-.light .token.punctuation {
-  color: hsl(0 0% 35%);
-}
-
-.light .token.property,
-.light .token.tag,
-.light .token.boolean,
-.light .token.number,
-.light .token.constant,
-.light .token.symbol,
-.light .token.deleted {
-  color: hsl(355 70% 45%);
-}
-
-.light .token.selector,
-.light .token.attr-name,
-.light .token.string,
-.light .token.char,
-.light .token.builtin,
-.light .token.inserted {
-  color: hsl(95 50% 35%);
-}
-
-.light .token.atrule,
-.light .token.attr-value,
-.light .token.keyword {
-  color: hsl(207 82% 45%);
-}
-
-.light .token.function,
-.light .token.class-name {
-  color: hsl(286 60% 50%);
-}
-
-/* Accessibility themes - adjusted syntax colors */
-
-/* High contrast syntax */
-.high-contrast .token.comment,
-.high-contrast .token.prolog,
-.high-contrast .token.doctype,
-.high-contrast .token.cdata {
-  color: hsl(0 0% 60%);
-}
-
-.high-contrast .token.property,
-.high-contrast .token.tag,
-.high-contrast .token.boolean,
-.high-contrast .token.number,
-.high-contrast .token.constant,
-.high-contrast .token.symbol,
-.high-contrast .token.deleted {
-  color: hsl(0 100% 70%);
-}
-
-.high-contrast .token.selector,
-.high-contrast .token.attr-name,
-.high-contrast .token.string,
-.high-contrast .token.char,
-.high-contrast .token.builtin,
-.high-contrast .token.inserted {
-  color: hsl(120 100% 60%);
-}
-
-.high-contrast .token.atrule,
-.high-contrast .token.attr-value,
-.high-contrast .token.keyword {
-  color: hsl(45 100% 60%);
-}
-
-.high-contrast .token.function,
-.high-contrast .token.class-name {
-  color: hsl(180 100% 60%);
-}
-
-/* Protanopia syntax - blue/yellow safe */
-.protanopia .token.property,
-.protanopia .token.tag,
-.protanopia .token.boolean,
-.protanopia .token.number,
-.protanopia .token.constant,
-.protanopia .token.symbol,
-.protanopia .token.deleted {
-  color: hsl(45 100% 65%);
-}
-
-.protanopia .token.selector,
-.protanopia .token.attr-name,
-.protanopia .token.string,
-.protanopia .token.char,
-.protanopia .token.builtin,
-.protanopia .token.inserted {
-  color: hsl(180 80% 55%);
-}
-
-.protanopia .token.atrule,
-.protanopia .token.attr-value,
-.protanopia .token.keyword {
-  color: hsl(210 100% 70%);
-}
-
-.protanopia .token.function,
-.protanopia .token.class-name {
-  color: hsl(280 70% 70%);
-}
-
-/* Deuteranopia syntax - blue/magenta safe */
-.deuteranopia .token.property,
-.deuteranopia .token.tag,
-.deuteranopia .token.boolean,
-.deuteranopia .token.number,
-.deuteranopia .token.constant,
-.deuteranopia .token.symbol,
-.deuteranopia .token.deleted {
-  color: hsl(30 100% 65%);
-}
-
-.deuteranopia .token.selector,
-.deuteranopia .token.attr-name,
-.deuteranopia .token.string,
-.deuteranopia .token.char,
-.deuteranopia .token.builtin,
-.deuteranopia .token.inserted {
-  color: hsl(200 100% 60%);
-}
-
-.deuteranopia .token.atrule,
-.deuteranopia .token.attr-value,
-.deuteranopia .token.keyword {
-  color: hsl(260 90% 70%);
-}
-
-.deuteranopia .token.function,
-.deuteranopia .token.class-name {
-  color: hsl(320 80% 65%);
-}
-
-/* Tritanopia syntax - red/cyan safe */
-.tritanopia .token.property,
-.tritanopia .token.tag,
-.tritanopia .token.boolean,
-.tritanopia .token.number,
-.tritanopia .token.constant,
-.tritanopia .token.symbol,
-.tritanopia .token.deleted {
-  color: hsl(0 90% 65%);
-}
-
-.tritanopia .token.selector,
-.tritanopia .token.attr-name,
-.tritanopia .token.string,
-.tritanopia .token.char,
-.tritanopia .token.builtin,
-.tritanopia .token.inserted {
-  color: hsl(175 100% 50%);
-}
-
-.tritanopia .token.atrule,
-.tritanopia .token.attr-value,
-.tritanopia .token.keyword {
-  color: hsl(330 90% 65%);
-}
-
-.tritanopia .token.function,
-.tritanopia .token.class-name {
-  color: hsl(150 80% 55%);
-}
-
-/* Monochromacy syntax - grayscale only */
-.monochromacy .token.comment,
-.monochromacy .token.prolog,
-.monochromacy .token.doctype,
-.monochromacy .token.cdata {
-  color: hsl(0 0% 50%);
-}
-
-.monochromacy .token.property,
-.monochromacy .token.tag,
-.monochromacy .token.boolean,
-.monochromacy .token.number,
-.monochromacy .token.constant,
-.monochromacy .token.symbol,
-.monochromacy .token.deleted {
-  color: hsl(0 0% 90%);
-  font-weight: 600;
-}
-
-.monochromacy .token.selector,
-.monochromacy .token.attr-name,
-.monochromacy .token.string,
-.monochromacy .token.char,
-.monochromacy .token.builtin,
-.monochromacy .token.inserted {
-  color: hsl(0 0% 75%);
-}
-
-.monochromacy .token.atrule,
-.monochromacy .token.attr-value,
-.monochromacy .token.keyword {
-  color: hsl(0 0% 100%);
-  font-weight: 500;
-}
-
-.monochromacy .token.function,
-.monochromacy .token.class-name {
-  color: hsl(0 0% 85%);
-  font-style: italic;
 }
 
 @keyframes pulse-border {

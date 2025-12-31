@@ -47,19 +47,10 @@ import { cn } from '@/lib/utils';
 // Theme preview colors for the selector
 const THEME_PREVIEWS: Record<Theme, { bg: string; sidebar: string; accent: string }> = {
   default: { bg: '#0a0a0a', sidebar: '#171717', accent: '#f97316' },
-  light: { bg: '#ffffff', sidebar: '#fafafa', accent: '#ea580c' },
-  dark: { bg: '#171717', sidebar: '#0a0a0a', accent: '#f97316' },
-  midnight: { bg: '#1a1f36', sidebar: '#0f1321', accent: '#f97316' },
-  forest: { bg: '#1f2a24', sidebar: '#141a16', accent: '#f97316' },
-  sunset: { bg: '#2a2320', sidebar: '#1a1512', accent: '#f97316' },
-  ocean: { bg: '#1f2a2e', sidebar: '#141c1f', accent: '#f97316' },
-  lavender: { bg: '#28232e', sidebar: '#1a161f', accent: '#f97316' },
-  'high-contrast': { bg: '#000000', sidebar: '#0d0d0d', accent: '#facc15' },
-  protanopia: { bg: '#1a1d24', sidebar: '#12141a', accent: '#3b82f6' },
-  deuteranopia: { bg: '#1a1a24', sidebar: '#121218', accent: '#7c3aed' },
-  tritanopia: { bg: '#1c1a1a', sidebar: '#141212', accent: '#14b8a6' },
-  monochromacy: { bg: '#141414', sidebar: '#0a0a0a', accent: '#e5e5e5' },
-  'low-vision': { bg: '#1a1611', sidebar: '#100e0a', accent: '#eab308' },
+  nostalgia: { bg: '#452829', sidebar: '#2e1a1b', accent: '#E8D1C5' },
+  lofi: { bg: '#293462', sidebar: '#161c35', accent: '#FE5F55' },
+  cappuccino: { bg: '#493628', sidebar: '#2c2018', accent: '#AB886D' },
+  hokori: { bg: '#000000', sidebar: '#050505', accent: '#E43636' },
 };
 
 export const UserSettingsModal = () => {
