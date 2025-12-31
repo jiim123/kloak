@@ -4,19 +4,10 @@ import { persist } from 'zustand/middleware';
 // All available themes
 export const THEMES = [
   { id: 'default', name: 'Default', description: 'Orange/Amber brand dark theme' },
-  { id: 'light', name: 'Light', description: 'Clean light theme' },
-  { id: 'dark', name: 'Dark', description: 'Neutral gray dark theme' },
-  { id: 'midnight', name: 'Midnight', description: 'Deep blue night vibes' },
-  { id: 'forest', name: 'Forest', description: 'Natural green tones' },
-  { id: 'sunset', name: 'Sunset', description: 'Warm orange and amber' },
-  { id: 'ocean', name: 'Ocean', description: 'Cool cyan depths' },
-  { id: 'lavender', name: 'Lavender', description: 'Soft purple hues' },
-  { id: 'high-contrast', name: 'High Contrast', description: 'WCAG AAA compliant' },
-  { id: 'protanopia', name: 'Protanopia', description: 'Red-blind friendly' },
-  { id: 'deuteranopia', name: 'Deuteranopia', description: 'Green-blind friendly' },
-  { id: 'tritanopia', name: 'Tritanopia', description: 'Blue-blind friendly' },
-  { id: 'monochromacy', name: 'Monochromacy', description: 'Grayscale theme' },
-  { id: 'low-vision', name: 'Low Vision', description: 'High contrast, warm tones' },
+  { id: 'nostalgia', name: 'Nostalgia', description: 'Warm, muted, vintage feel' },
+  { id: 'lofi', name: 'Lo-fi', description: 'Bold, retro, high contrast anime aesthetic' },
+  { id: 'cappuccino', name: 'Cappuccino', description: 'Warm, cozy coffee house aesthetic' },
+  { id: 'hokori', name: 'Hokori', description: 'Stark, Japanese-inspired, dramatic minimalism' },
 ] as const;
 
 export type Theme = typeof THEMES[number]['id'];
@@ -119,7 +110,7 @@ export const useUIStore = create<UIState>()(
 
       toggleTheme: () => {
         const currentTheme = get().theme;
-        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        const newTheme = currentTheme === 'default' ? 'nostalgia' : 'default';
         applyTheme(newTheme);
         set({ theme: newTheme });
       },
