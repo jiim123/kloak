@@ -671,25 +671,43 @@ export type Database = {
       }
       user_preferences: {
         Row: {
+          animate_emojis: boolean
+          compact_mode: boolean
           created_at: string
+          desktop_notifications_enabled: boolean
           id: string
           link_previews_enabled: boolean
+          notification_sound_enabled: boolean
+          show_message_preview: boolean
+          show_timestamps: boolean
           theme: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          animate_emojis?: boolean
+          compact_mode?: boolean
           created_at?: string
+          desktop_notifications_enabled?: boolean
           id?: string
           link_previews_enabled?: boolean
+          notification_sound_enabled?: boolean
+          show_message_preview?: boolean
+          show_timestamps?: boolean
           theme?: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          animate_emojis?: boolean
+          compact_mode?: boolean
           created_at?: string
+          desktop_notifications_enabled?: boolean
           id?: string
           link_previews_enabled?: boolean
+          notification_sound_enabled?: boolean
+          show_message_preview?: boolean
+          show_timestamps?: boolean
           theme?: string
           updated_at?: string
           user_id?: string
