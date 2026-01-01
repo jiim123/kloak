@@ -445,12 +445,27 @@ export const UserSettingsModal = () => {
                             <Label>Desktop Notifications</Label>
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            Show desktop notifications for new messages
+                            {Notification.permission === 'denied' 
+                              ? 'Notifications are blocked in your browser settings'
+                              : 'Show desktop notifications for new messages'}
                           </p>
                         </div>
                         <Switch
                           checked={desktopNotificationsEnabled}
-                          onCheckedChange={setDesktopNotificationsEnabled}
+                          disabled={Notification.permission === 'denied'}
+                          onCheckedChange={async (checked) => {
+                            if (checked && Notification.permission === 'default') {
+                              const permission = await Notification.requestPermission();
+                              if (permission === 'granted') {
+                                setDesktopNotificationsEnabled(true);
+                                toast.success('Desktop notifications enabled!');
+                              } else if (permission === 'denied') {
+                                toast.error('Notification permission denied. Enable in browser settings.');
+                              }
+                            } else {
+                              setDesktopNotificationsEnabled(checked);
+                            }
+                          }}
                         />
                       </div>
 
