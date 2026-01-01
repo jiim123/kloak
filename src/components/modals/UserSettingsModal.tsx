@@ -11,7 +11,12 @@ import {
   EyeOff,
   Check,
   Copy,
-  Link
+  Link,
+  Bell,
+  MessageSquare,
+  Clock,
+  Sparkles,
+  Volume2,
 } from 'lucide-react';
 import {
   Dialog,
@@ -62,6 +67,18 @@ export const UserSettingsModal = () => {
     setTheme,
     linkPreviewsEnabled,
     setLinkPreviewsEnabled,
+    desktopNotificationsEnabled,
+    setDesktopNotificationsEnabled,
+    notificationSoundEnabled,
+    setNotificationSoundEnabled,
+    showMessagePreview,
+    setShowMessagePreview,
+    compactMode,
+    setCompactMode,
+    showTimestamps,
+    setShowTimestamps,
+    animateEmojis,
+    setAnimateEmojis,
   } = useUIStore();
   const { user, secretKey, updateUser, logout } = useAuthStore();
   
@@ -191,6 +208,7 @@ export const UserSettingsModal = () => {
   const navItems = [
     { id: 'account', label: 'Account', icon: Key },
     { id: 'profile', label: 'Profile', icon: User },
+    { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'appearance', label: 'Appearance', icon: Palette },
   ];
 
@@ -236,6 +254,7 @@ export const UserSettingsModal = () => {
                 <DialogDescription>
                   {activeTab === 'account' && 'Manage your account credentials and security'}
                   {activeTab === 'profile' && 'Customize how others see you'}
+                  {activeTab === 'notifications' && 'Control how you receive notifications'}
                   {activeTab === 'appearance' && 'Personalize your app experience'}
                 </DialogDescription>
               </DialogHeader>
@@ -410,6 +429,68 @@ export const UserSettingsModal = () => {
                   </div>
                 )}
 
+                {/* Notifications Section */}
+                {activeTab === 'notifications' && (
+                  <div className="space-y-4">
+                    <div className="space-y-3">
+                      <Label className="text-xs font-bold uppercase text-muted-foreground">
+                        Notification Settings
+                      </Label>
+                      
+                      {/* Desktop Notifications */}
+                      <div className="flex items-center justify-between py-2">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <Bell className="w-4 h-4 text-muted-foreground" />
+                            <Label>Desktop Notifications</Label>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Show desktop notifications for new messages
+                          </p>
+                        </div>
+                        <Switch
+                          checked={desktopNotificationsEnabled}
+                          onCheckedChange={setDesktopNotificationsEnabled}
+                        />
+                      </div>
+
+                      {/* Notification Sound */}
+                      <div className="flex items-center justify-between py-2 border-t pt-4">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <Volume2 className="w-4 h-4 text-muted-foreground" />
+                            <Label>Notification Sound</Label>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Play a sound when receiving notifications
+                          </p>
+                        </div>
+                        <Switch
+                          checked={notificationSoundEnabled}
+                          onCheckedChange={setNotificationSoundEnabled}
+                        />
+                      </div>
+
+                      {/* Message Preview */}
+                      <div className="flex items-center justify-between py-2 border-t pt-4">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                            <Label>Show Message Preview</Label>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Show message content in notifications
+                          </p>
+                        </div>
+                        <Switch
+                          checked={showMessagePreview}
+                          onCheckedChange={setShowMessagePreview}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Appearance Section */}
                 {activeTab === 'appearance' && (
                   <div className="space-y-4">
@@ -468,7 +549,65 @@ export const UserSettingsModal = () => {
                       </div>
                     </div>
 
-                    {/* Link Previews Toggle */}
+                    {/* Message Display Section */}
+                    <div className="space-y-3 border-t pt-4">
+                      <Label className="text-xs font-bold uppercase text-muted-foreground">
+                        Message Display
+                      </Label>
+
+                      {/* Compact Mode */}
+                      <div className="flex items-center justify-between py-2">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                            <Label>Compact Mode</Label>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Display messages in a condensed format
+                          </p>
+                        </div>
+                        <Switch
+                          checked={compactMode}
+                          onCheckedChange={setCompactMode}
+                        />
+                      </div>
+
+                      {/* Show Timestamps */}
+                      <div className="flex items-center justify-between py-2 border-t pt-4">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-muted-foreground" />
+                            <Label>Show Timestamps</Label>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Display time on each message
+                          </p>
+                        </div>
+                        <Switch
+                          checked={showTimestamps}
+                          onCheckedChange={setShowTimestamps}
+                        />
+                      </div>
+
+                      {/* Animate Emojis */}
+                      <div className="flex items-center justify-between py-2 border-t pt-4">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="w-4 h-4 text-muted-foreground" />
+                            <Label>Animate Emojis</Label>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Enable animated emoji effects
+                          </p>
+                        </div>
+                        <Switch
+                          checked={animateEmojis}
+                          onCheckedChange={setAnimateEmojis}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Link Previews */}
                     <div className="flex items-center justify-between py-2 border-t pt-4">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">

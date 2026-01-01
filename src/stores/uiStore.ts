@@ -55,6 +55,16 @@ interface UIState {
   isMobileSidebarOpen: boolean;
   isMobileChannelSidebarOpen: boolean;
 
+  // Notification preferences
+  desktopNotificationsEnabled: boolean;
+  notificationSoundEnabled: boolean;
+  showMessagePreview: boolean;
+
+  // Message display preferences
+  compactMode: boolean;
+  showTimestamps: boolean;
+  animateEmojis: boolean;
+
   // Theme actions
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
@@ -80,6 +90,16 @@ interface UIState {
   // Link preview actions
   setLinkPreviewsEnabled: (enabled: boolean) => void;
   dismissLinkPreviewNotice: () => void;
+
+  // Notification preference actions
+  setDesktopNotificationsEnabled: (enabled: boolean) => void;
+  setNotificationSoundEnabled: (enabled: boolean) => void;
+  setShowMessagePreview: (enabled: boolean) => void;
+
+  // Message display preference actions
+  setCompactMode: (enabled: boolean) => void;
+  setShowTimestamps: (enabled: boolean) => void;
+  setAnimateEmojis: (enabled: boolean) => void;
 }
 
 export const applyTheme = (theme: Theme) => {
@@ -107,6 +127,16 @@ export const useUIStore = create<UIState>()(
       linkPreviewNoticeDismissed: false,
       isMobileSidebarOpen: false,
       isMobileChannelSidebarOpen: false,
+
+      // Notification preferences
+      desktopNotificationsEnabled: true,
+      notificationSoundEnabled: true,
+      showMessagePreview: true,
+
+      // Message display preferences
+      compactMode: false,
+      showTimestamps: true,
+      animateEmojis: true,
 
       toggleTheme: () => {
         const currentTheme = get().theme;
@@ -172,6 +202,32 @@ export const useUIStore = create<UIState>()(
       dismissLinkPreviewNotice: () => {
         set({ linkPreviewNoticeDismissed: true });
       },
+
+      // Notification preference actions
+      setDesktopNotificationsEnabled: (enabled) => {
+        set({ desktopNotificationsEnabled: enabled });
+      },
+
+      setNotificationSoundEnabled: (enabled) => {
+        set({ notificationSoundEnabled: enabled });
+      },
+
+      setShowMessagePreview: (enabled) => {
+        set({ showMessagePreview: enabled });
+      },
+
+      // Message display preference actions
+      setCompactMode: (enabled) => {
+        set({ compactMode: enabled });
+      },
+
+      setShowTimestamps: (enabled) => {
+        set({ showTimestamps: enabled });
+      },
+
+      setAnimateEmojis: (enabled) => {
+        set({ animateEmojis: enabled });
+      },
     }),
     {
       name: 'nomo-ui',
@@ -180,6 +236,12 @@ export const useUIStore = create<UIState>()(
         isMemberSidebarOpen: state.isMemberSidebarOpen,
         linkPreviewsEnabled: state.linkPreviewsEnabled,
         linkPreviewNoticeDismissed: state.linkPreviewNoticeDismissed,
+        desktopNotificationsEnabled: state.desktopNotificationsEnabled,
+        notificationSoundEnabled: state.notificationSoundEnabled,
+        showMessagePreview: state.showMessagePreview,
+        compactMode: state.compactMode,
+        showTimestamps: state.showTimestamps,
+        animateEmojis: state.animateEmojis,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
