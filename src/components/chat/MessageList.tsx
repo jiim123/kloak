@@ -68,10 +68,17 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
     return () => window.removeEventListener("editLastMessage" as any, handleEditLastMessage);
   }, [channelId, messages]);
 
-  // Fetch messages on channel change
+  // Fetch messages on channel change and scroll to bottom
   useEffect(() => {
     clearMessages();
-    fetchMessages(channelId);
+    fetchMessages(channelId).then(() => {
+      // Scroll to bottom after messages load
+      setTimeout(() => {
+        bottomRef.current?.scrollIntoView({ behavior: "instant" });
+        isNearBottomRef.current = true;
+        setShowJumpToPresent(false);
+      }, 50);
+    });
     hasMarkedAsReadRef.current = false;
   }, [channelId, fetchMessages, clearMessages]);
 
