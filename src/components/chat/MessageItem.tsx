@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuthStore } from "@/stores/authStore";
 import { useMessageStore } from "@/stores/messageStore";
 import { useServerStore } from "@/stores/serverStore";
+import { useUIStore } from "@/stores/uiStore";
 import { MessageContent } from "./MessageContent";
 import { getMessagePreview } from "@/lib/message";
 import { formatMessageTimestamp } from "@/lib/format";
@@ -32,6 +33,7 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }:
   const { user } = useAuthStore();
   const { setReplyingTo, editMessage, pinMessage, addReaction, removeReaction } = useMessageStore();
   const { members } = useServerStore();
+  const { compactMode, showTimestamps } = useUIStore();
 
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
@@ -153,49 +155,80 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }:
       )}
 
       {/* Outer wrapper with padding from edges */}
-      <div className={`px-2 ${isGrouped ? "py-0.5" : "py-1"}`}>
+      <div className={`px-2 ${compactMode ? "py-0" : isGrouped ? "py-0.5" : "py-1"}`}>
         {/* Inner wrapper with hover effect and rounded borders */}
         <div
-          className="group relative flex gap-3 px-3 py-1.5 rounded-lg transition-colors hover:bg-muted/40"
+          className={`group relative flex px-3 rounded-lg transition-colors hover:bg-muted/40 ${compactMode ? "gap-2 py-0.5" : "gap-3 py-1.5"}`}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
           onTouchMove={handleTouchMove}
         >
-          {/* Avatar or spacer */}
-          <div className="w-10 flex-shrink-0">
-            {!isGrouped && messageUser && (
-              <Avatar className="w-10 h-10 cursor-pointer">
-                <AvatarImage src={messageUser.avatar_url || undefined} />
-                <AvatarFallback style={{ backgroundColor: messageUser.banner_color || "#5865F2" }}>
-                  {messageUser.username[0].toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-            )}
-            {/* Show timestamp on hover for grouped messages */}
-            {isGrouped && (
-              <span
-                className={`text-[10px] text-muted-foreground transition-opacity duration-150 ${isHovered ? "opacity-100" : "opacity-0"}`}
-              >
-                {format(new Date(message.created_at), "h:mm a")}
-              </span>
-            )}
-          </div>
+          {/* Avatar or spacer - hidden in compact mode for grouped messages */}
+          {compactMode ? (
+            // Compact mode: show inline timestamp instead of avatar
+            <div className="w-12 flex-shrink-0 flex items-start pt-0.5">
+              {showTimestamps ? (
+                <span className={`text-[10px] text-muted-foreground ${isGrouped && !isHovered ? "opacity-0" : "opacity-100"} transition-opacity duration-150`}>
+                  {format(new Date(message.created_at), "h:mm a")}
+                </span>
+              ) : (
+                <span className={`text-[10px] text-muted-foreground ${isHovered ? "opacity-100" : "opacity-0"} transition-opacity duration-150`}>
+                  {format(new Date(message.created_at), "h:mm a")}
+                </span>
+              )}
+            </div>
+          ) : (
+            // Normal mode: show avatar
+            <div className="w-10 flex-shrink-0">
+              {!isGrouped && messageUser && (
+                <Avatar className="w-10 h-10 cursor-pointer">
+                  <AvatarImage src={messageUser.avatar_url || undefined} />
+                  <AvatarFallback style={{ backgroundColor: messageUser.banner_color || "#5865F2" }}>
+                    {messageUser.username[0].toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              )}
+              {/* Show timestamp on hover for grouped messages */}
+              {isGrouped && (
+                <span
+                  className={`text-[10px] text-muted-foreground transition-opacity duration-150 ${isHovered ? "opacity-100" : "opacity-0"}`}
+                >
+                  {format(new Date(message.created_at), "h:mm a")}
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Content */}
           <div className="flex-1 min-w-0">
-            {/* Header (username + timestamp) - only on first message of group */}
-            {!isGrouped && messageUser && (
-              <div className="flex items-baseline gap-2 mb-0.5">
+            {/* Header (username + timestamp) - only on first message of group in normal mode, or inline in compact */}
+            {compactMode ? (
+              // Compact mode: inline username before content
+              <span className="inline">
                 <span
-                  className={`text-sm font-semibold tracking-tight hover:underline cursor-pointer ${getRoleColor(messageMember?.role)}`}
+                  className={`text-sm font-semibold tracking-tight hover:underline cursor-pointer mr-1.5 ${getRoleColor(messageMember?.role)}`}
                 >
-                  {messageMember?.nickname || messageUser.display_name || messageUser.username}
+                  {messageMember?.nickname || messageUser?.display_name || messageUser?.username}
                 </span>
-                <span className="text-[11px] text-muted-foreground">{formatMessageTimestamp(message.created_at)}</span>
-                {message.is_pinned && <Pin className="w-3 h-3 text-muted-foreground" />}
-              </div>
+                {message.is_pinned && <Pin className="w-3 h-3 text-muted-foreground inline mr-1" />}
+              </span>
+            ) : (
+              // Normal mode: header row
+              !isGrouped && messageUser && (
+                <div className="flex items-baseline gap-2 mb-0.5">
+                  <span
+                    className={`text-sm font-semibold tracking-tight hover:underline cursor-pointer ${getRoleColor(messageMember?.role)}`}
+                  >
+                    {messageMember?.nickname || messageUser.display_name || messageUser.username}
+                  </span>
+                  {showTimestamps && (
+                    <span className="text-[11px] text-muted-foreground">{formatMessageTimestamp(message.created_at)}</span>
+                  )}
+                  {message.is_pinned && <Pin className="w-3 h-3 text-muted-foreground" />}
+                </div>
+              )
             )}
 
             {/* Reply reference */}
