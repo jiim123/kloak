@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
-import { ExternalLink, Play, AlertTriangle } from "lucide-react";
+import { ExternalLink, Play, X, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { useEmbedStore, ActiveEmbed } from "@/stores/embedStore";
+import { useServerStore } from "@/stores/serverStore";
 
 interface LinkPreviewData {
   url: string;
@@ -32,16 +34,23 @@ interface LinkPreviewData {
 interface LinkPreviewProps {
   url: string;
   disabled?: boolean;
+  messageId?: string; // For persistent embed tracking
 }
 
 // Cache for link previews to avoid refetching
 const previewCache = new Map<string, LinkPreviewData>();
 
-export const LinkPreview = ({ url, disabled }: LinkPreviewProps) => {
+// Generate a stable ID for an embed
+const getEmbedId = (url: string, messageId: string) => `${messageId}-${btoa(url).slice(0, 16)}`;
+
+export const LinkPreview = ({ url, disabled, messageId }: LinkPreviewProps) => {
   const [preview, setPreview] = useState<LinkPreviewData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showEmbed, setShowEmbed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  const { activeEmbeds, addEmbed, removeEmbed } = useEmbedStore();
+  const { currentChannel } = useServerStore();
 
   useEffect(() => {
     if (disabled) return;
@@ -236,86 +245,41 @@ export const LinkPreview = ({ url, disabled }: LinkPreviewProps) => {
     );
   }
 
-  // Twitch embed
-  if (preview.type === "twitch") {
-    if (preview.twitchChannel) {
+  // Twitch embed - uses persistent embed tracking
+  if (preview.type === "twitch" && messageId && currentChannel) {
+    const embedId = getEmbedId(url, messageId);
+    const existingEmbed = activeEmbeds.find(e => e.id === embedId);
+    
+    const embedType: ActiveEmbed['type'] | null = 
+      preview.twitchChannel ? 'twitch-channel' : 
+      preview.twitchVideo ? 'twitch-video' : 
+      preview.twitchClip ? 'twitch-clip' : null;
+    
+    const channelOrVideoId = preview.twitchChannel || preview.twitchVideo || preview.twitchClip;
+    
+    if (embedType && channelOrVideoId) {
+      // Register this embed if not already registered
+      if (!existingEmbed) {
+        addEmbed({
+          id: embedId,
+          url,
+          type: embedType,
+          channelOrVideoId,
+          messageId,
+          channelId: currentChannel.id,
+        });
+      }
+      
+      // Render a placeholder div that the PersistentEmbedContainer will portal into
       return (
-        <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[480px]">
-          <iframe
-            src={`https://player.twitch.tv/?channel=${preview.twitchChannel}&parent=${window.location.hostname}&autoplay=false`}
-            height="270"
-            width="480"
-            allowFullScreen
-            className="w-full aspect-video"
-            title={`${preview.twitchChannel} on Twitch`}
-          />
-        </div>
-      );
-    }
-
-    if (preview.twitchVideo) {
-      return (
-        <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[480px]">
-          <iframe
-            src={`https://player.twitch.tv/?video=${preview.twitchVideo}&parent=${window.location.hostname}&autoplay=false`}
-            height="270"
-            width="480"
-            allowFullScreen
-            className="w-full aspect-video"
-            title="Twitch video"
-          />
-        </div>
-      );
-    }
-
-    if (preview.twitchClip) {
-      return (
-        <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[480px]">
-          <iframe
-            src={`https://clips.twitch.tv/embed?clip=${preview.twitchClip}&parent=${window.location.hostname}&autoplay=false`}
-            height="270"
-            width="480"
-            allowFullScreen
-            className="w-full aspect-video"
-            title="Twitch clip"
-          />
-        </div>
+        <div 
+          id={`embed-placeholder-${embedId}`}
+          className="mt-2 rounded-lg overflow-hidden border border-border max-w-[480px] aspect-video bg-secondary/50"
+        />
       );
     }
   }
 
-  // Kick embed
-  if (preview.type === "kick") {
-    if (preview.kickChannel) {
-      return (
-        <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[480px]">
-          <iframe
-            src={`https://player.kick.com/${preview.kickChannel}`}
-            height="270"
-            width="480"
-            allowFullScreen
-            className="w-full aspect-video"
-            title={`${preview.kickChannel} on Kick`}
-          />
-        </div>
-      );
-    }
-
-    if (preview.kickVideo) {
-      return (
-        <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[480px]">
-          <iframe
-            src={`https://player.kick.com/video/${preview.kickVideo}`}
-            height="270"
-            width="480"
-            allowFullScreen
-            className="w-full aspect-video"
-            title="Kick video"
-          />
-        </div>
-      );
-    }
-  }
 
   // Steam embed
   if (preview.type === "steam" && preview.steamId) {

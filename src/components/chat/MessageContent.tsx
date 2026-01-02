@@ -6,6 +6,7 @@ import { useUIStore } from '@/stores/uiStore';
 interface MessageContentProps {
   content: string;
   currentUserId?: string;
+  messageId?: string;
 }
 
 interface ParsedSegment {
@@ -164,7 +165,7 @@ const parseTextContent = (content: string, currentUserId?: string): string => {
   return parsed;
 };
 
-export const MessageContent = ({ content, currentUserId }: MessageContentProps) => {
+export const MessageContent = ({ content, currentUserId, messageId }: MessageContentProps) => {
   const { linkPreviewsEnabled } = useUIStore();
   const segments = useMemo(() => parseMessageSegments(content), [content]);
   
@@ -213,6 +214,7 @@ export const MessageContent = ({ content, currentUserId }: MessageContentProps) 
               key={`${url}-${index}`} 
               url={url} 
               disabled={!linkPreviewsEnabled}
+              messageId={messageId}
             />
           ))}
         </div>

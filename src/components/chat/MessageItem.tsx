@@ -275,7 +275,7 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }:
               </div>
             ) : (
               <div className="text-sm leading-relaxed">
-                <MessageContent content={message.content} currentUserId={user?.id} />
+                <MessageContent content={message.content} currentUserId={user?.id} messageId={message.id} />
               </div>
             )}
 

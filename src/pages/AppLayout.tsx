@@ -28,6 +28,7 @@ import {
   ConfirmActionModal,
   ChangeNicknameModal
 } from '@/components/modals';
+import { PersistentEmbedContainer } from '@/components/chat/PersistentEmbedContainer';
 import { cn } from '@/lib/utils';
 import { useDMStore } from '@/stores/dmStore';
 import { useRealtimeFriendships, useRealtimeUsers, useRealtimeServer, useRealtimeNotifications } from '@/hooks';
@@ -210,6 +211,9 @@ const AppLayout = () => {
       <KeyboardShortcutsModal />
       <ConfirmActionModal />
       <ChangeNicknameModal />
+      
+      {/* Persistent embed container for Twitch/Kick streams */}
+      <PersistentEmbedContainer />
     </>
   );
 };
