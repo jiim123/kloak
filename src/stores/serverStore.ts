@@ -88,9 +88,38 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
       const { currentServer } = get();
       
-      // Auto-select the first server if user has servers and none is selected
+      // Try to restore persisted server/channel from localStorage
+      const persistedServerId = localStorage.getItem('kloak-current-server-id');
+      const persistedChannelId = localStorage.getItem('kloak-current-channel-id');
+      
       if (servers.length > 0 && !currentServer) {
-        set({ servers, currentServer: servers[0], isLoading: false });
+        // Check if persisted server exists in user's servers
+        const restoredServer = persistedServerId 
+          ? servers.find(s => s.id === persistedServerId) 
+          : null;
+        
+        if (restoredServer) {
+          set({ servers, currentServer: restoredServer, isLoading: false });
+          // Restore channel after fetching channels
+          if (persistedChannelId) {
+            // Fetch channels and then restore the channel
+            const { data: channels } = await supabase
+              .from('channels')
+              .select('*')
+              .eq('server_id', restoredServer.id)
+              .order('position');
+            
+            if (channels) {
+              const restoredChannel = channels.find(c => c.id === persistedChannelId);
+              if (restoredChannel) {
+                set({ currentChannel: restoredChannel as Channel });
+              }
+            }
+          }
+        } else {
+          // Fall back to first server
+          set({ servers, currentServer: servers[0], isLoading: false });
+        }
       } else {
         set({ servers, isLoading: false });
       }
@@ -254,6 +283,13 @@ export const useServerStore = create<ServerState>((set, get) => ({
     if (server?.id === currentServer?.id) {
       return;
     }
+    // Persist to localStorage
+    if (server) {
+      localStorage.setItem('kloak-current-server-id', server.id);
+    } else {
+      localStorage.removeItem('kloak-current-server-id');
+      localStorage.removeItem('kloak-current-channel-id');
+    }
     set({ 
       currentServer: server,
       // Clear channel state when switching servers to ensure proper isolation
@@ -263,7 +299,15 @@ export const useServerStore = create<ServerState>((set, get) => ({
       members: [],
     });
   },
-  setCurrentChannel: (channel) => set({ currentChannel: channel }),
+  setCurrentChannel: (channel) => {
+    // Persist to localStorage
+    if (channel) {
+      localStorage.setItem('kloak-current-channel-id', channel.id);
+    } else {
+      localStorage.removeItem('kloak-current-channel-id');
+    }
+    set({ currentChannel: channel });
+  },
 
   fetchChannels: async (serverId: string) => {
     try {
