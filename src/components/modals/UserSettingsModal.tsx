@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { 
   Loader2, 
   Upload, 
@@ -18,6 +18,7 @@ import {
   Sparkles,
   Volume2,
 } from 'lucide-react';
+import { motion, AnimatePresence, type PanInfo } from 'framer-motion';
 import {
   Dialog,
   DialogContent,
@@ -48,6 +49,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // Theme preview colors for the selector
 const THEME_PREVIEWS: Record<Theme, { bg: string; sidebar: string; accent: string }> = {
@@ -60,6 +62,7 @@ const THEME_PREVIEWS: Record<Theme, { bg: string; sidebar: string; accent: strin
 
 export const UserSettingsModal = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { 
     activeModal, 
     closeModal, 
@@ -89,6 +92,7 @@ export const UserSettingsModal = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [keyRevealed, setKeyRevealed] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [swipeDirection, setSwipeDirection] = useState<'left' | 'right'>('right');
   
   // Profile form state
   const [displayName, setDisplayName] = useState(user?.display_name || '');
@@ -97,7 +101,28 @@ export const UserSettingsModal = () => {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const navItems = [
+    { id: 'account', label: 'Account', icon: Key },
+    { id: 'profile', label: 'Profile', icon: User },
+    { id: 'notifications', label: 'Notifications', icon: Bell },
+    { id: 'appearance', label: 'Appearance', icon: Palette },
+  ];
+
   const isOpen = activeModal === 'user-settings';
+
+  // Swipe gesture handling
+  const handleSwipe = useCallback((info: PanInfo) => {
+    const swipeThreshold = 50;
+    const currentIndex = navItems.findIndex(item => item.id === activeTab);
+    
+    if (info.offset.x < -swipeThreshold && currentIndex < navItems.length - 1) {
+      setSwipeDirection('left');
+      setActiveTab(navItems[currentIndex + 1].id);
+    } else if (info.offset.x > swipeThreshold && currentIndex > 0) {
+      setSwipeDirection('right');
+      setActiveTab(navItems[currentIndex - 1].id);
+    }
+  }, [activeTab, navItems]);
 
   const handleSaveProfile = async () => {
     if (!user) return;
@@ -205,18 +230,12 @@ export const UserSettingsModal = () => {
     closeModal();
   };
 
-  const navItems = [
-    { id: 'account', label: 'Account', icon: Key },
-    { id: 'profile', label: 'Profile', icon: User },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
-    { id: 'appearance', label: 'Appearance', icon: Palette },
-  ];
 
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-        <DialogContent className="sm:max-w-2xl max-w-[calc(100vw-2rem)] h-[calc(100vh-3rem)] sm:h-auto sm:max-h-[80vh] p-0 gap-0 overflow-hidden">
-          <div className="flex flex-col sm:flex-row h-full sm:h-[70vh]">
+        <DialogContent className="sm:max-w-2xl max-w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] sm:max-h-[80vh] p-0 gap-0 overflow-hidden">
+          <div className="flex flex-col sm:flex-row h-full max-h-[calc(100vh-2rem)] sm:max-h-[70vh]">
             {/* Mobile Tab Navigation */}
             <div className="sm:hidden border-b border-border">
               <div className="p-3">
@@ -275,11 +294,11 @@ export const UserSettingsModal = () => {
 
             {/* Content Area */}
             <div className="flex-1 flex flex-col overflow-hidden min-h-0">
-              <DialogHeader className="px-4 sm:px-6 py-3 sm:py-4 border-b border-border shrink-0">
-                <DialogTitle className="text-base sm:text-lg">
+              <DialogHeader className="px-4 sm:px-6 py-2 sm:py-4 border-b border-border shrink-0">
+                <DialogTitle className="text-sm sm:text-lg">
                   {navItems.find(n => n.id === activeTab)?.label}
                 </DialogTitle>
-                <DialogDescription className="text-xs sm:text-sm">
+                <DialogDescription className="text-[10px] sm:text-sm">
                   {activeTab === 'account' && 'Manage your account credentials and security'}
                   {activeTab === 'profile' && 'Customize how others see you'}
                   {activeTab === 'notifications' && 'Control how you receive notifications'}
@@ -287,7 +306,20 @@ export const UserSettingsModal = () => {
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="flex-1 overflow-y-auto p-3 sm:p-6">
+              <div className="flex-1 overflow-hidden min-h-0">
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={activeTab}
+                    initial={isMobile ? { opacity: 0, x: swipeDirection === 'left' ? 50 : -50 } : { opacity: 1 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={isMobile ? { opacity: 0, x: swipeDirection === 'left' ? -50 : 50 } : { opacity: 0 }}
+                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                    drag={isMobile ? 'x' : false}
+                    dragConstraints={{ left: 0, right: 0 }}
+                    dragElastic={0.2}
+                    onDragEnd={(_, info) => handleSwipe(info)}
+                    className="h-full overflow-y-auto p-3 sm:p-6 touch-pan-y"
+                  >
                 {/* Account Section */}
                 {activeTab === 'account' && (
                   <div className="space-y-3 sm:space-y-4">
@@ -674,6 +706,8 @@ export const UserSettingsModal = () => {
                     </div>
                   </div>
                 )}
+                  </motion.div>
+                </AnimatePresence>
               </div>
             </div>
           </div>
