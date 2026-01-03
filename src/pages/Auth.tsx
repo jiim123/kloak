@@ -201,8 +201,8 @@ const Auth = () => {
       <div className="absolute inset-0 z-0">
         <GrainGradient
           style={{ width: '100%', height: '100%' }}
-          colors={["#fb6704", "#e77d36", "#ccb67f"]}
-          colorBack="#121212"
+          colors={["#6b6557", "#8a8274", "#a39e8c"]}
+          colorBack="#0d0d0c"
           softness={0.76}
           intensity={0.08}
           noise={0.5}
