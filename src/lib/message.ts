@@ -61,9 +61,10 @@ export const parseMessageContent = (
   options: {
     highlightMentions?: boolean;
     currentUserId?: string;
+    usersMap?: Map<string, { username: string; display_name?: string | null; nickname?: string | null }>;
   } = {}
 ): string => {
-  const { highlightMentions = true, currentUserId } = options;
+  const { highlightMentions = true, currentUserId, usersMap } = options;
   
   // First escape HTML
   let parsed = escapeHtml(content);
@@ -131,7 +132,10 @@ export const parseMessageContent = (
       /&lt;@(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})&gt;/g,
       (match, userId) => {
         const isSelf = userId === currentUserId;
-        return `<span class="mention${isSelf ? ' mention-self' : ''}" data-user-id="${userId}">@user</span>`;
+        const userInfo = usersMap?.get(userId);
+        // Use nickname first, then display_name, then username, fallback to 'user'
+        const displayName = userInfo?.nickname || userInfo?.display_name || userInfo?.username || 'user';
+        return `<span class="mention${isSelf ? ' mention-self' : ''}" data-user-id="${userId}">@${escapeHtml(displayName)}</span>`;
       }
     );
   }
