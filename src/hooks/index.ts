@@ -15,3 +15,7 @@ export { useIsMobile } from './use-mobile';
 export { useToast } from './use-toast';
 export { useOnlineStatus } from './useOnlineStatus';
 export { useOfflineSync } from './useOfflineSync';
+export { useOptimisticMessage } from './useOptimisticMessage';
+export { useBackgroundSync } from './useBackgroundSync';
+export { useVirtualizedMessages } from './useVirtualizedMessages';
+export { useConnectionStatus } from './useConnectionStatus';
