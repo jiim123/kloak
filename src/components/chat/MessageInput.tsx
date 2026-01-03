@@ -6,6 +6,7 @@ import { useServerStore } from '@/stores/serverStore';
 import { useNotificationStore } from '@/stores/notificationStore';
 import { useOfflineQueueStore } from '@/stores/offlineQueueStore';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { useOptimisticMessage } from '@/hooks/useOptimisticMessage';
 import { saveDraft, getDraft, clearDraft } from '@/lib/storage';
 import { getMessagePreview, extractMentions } from '@/lib/message';
 import { MentionAutocomplete } from './MentionAutocomplete';
@@ -25,11 +26,12 @@ const MAX_LENGTH = 2000;
 
 export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }: MessageInputProps) => {
   const { user } = useAuthStore();
-  const { replyingTo, setReplyingTo, sendMessage } = useMessageStore();
+  const { replyingTo, setReplyingTo } = useMessageStore();
   const { members, currentServer } = useServerStore();
   const { createMentionNotification } = useNotificationStore();
-  const { addToQueue, getQueuedForChannel } = useOfflineQueueStore();
+  const { getQueuedForChannel } = useOfflineQueueStore();
   const { isOnline } = useOnlineStatus();
+  const { sendOptimistic } = useOptimisticMessage();
   
   const [content, setContent] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -165,43 +167,35 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       return;
     }
     
+    // Clear input immediately for instant feedback
     setContent('');
-    setIsSending(true);
     clearDraft(channelId);
     onStopTyping();
     setShowMentions(false);
+    const currentReplyTo = replyingTo;
+    setReplyingTo(null);
 
-    // If offline, queue the message
-    if (!isOnline) {
-      addToQueue({
-        channelId,
-        userId: user.id,
-        content: messageContent,
-        replyToId: replyingTo?.id,
-      });
-      setIsSending(false);
-      setReplyingTo(null);
-      showSuccess('Message queued', 'Will be sent when you reconnect.');
-      return;
-    }
-
-    try {
-      const message = await sendMessage(channelId, user.id, messageContent, replyingTo?.id);
+    // Use optimistic send - message appears instantly, syncs in background
+    const message = await sendOptimistic({
+      channelId,
+      content: messageContent,
+      replyToId: currentReplyTo?.id,
+    });
     
-      if (message && currentServer) {
-        // Parse and track mentions
-        const mentions = extractMentions(messageContent);
-        
+    // Handle mentions in background (non-blocking)
+    if (message && currentServer && !message.id.startsWith('temp-')) {
+      const mentions = extractMentions(messageContent);
+      
+      // Process mentions asynchronously without blocking
+      Promise.resolve().then(async () => {
         for (const mention of mentions) {
           if (mention.type === 'user' && mention.id && mention.id !== user.id) {
-            // Create mention record
             await supabase.from('mentions').insert({
               message_id: message.id,
               user_id: mention.id,
               mention_type: 'user',
             });
             
-            // Create notification
             await createMentionNotification(
               mention.id,
               user.id,
@@ -210,12 +204,11 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
               currentServer.id
             );
           } else if (mention.type === 'everyone' || mention.type === 'here') {
-            // Notify all server members (or online members for @here)
             const targetMembers = mention.type === 'here'
               ? members.filter(m => m.user?.status === 'online' && m.user_id !== user.id)
               : members.filter(m => m.user_id !== user.id);
             
-            for (const member of targetMembers.slice(0, 50)) { // Limit to 50 to prevent spam
+            for (const member of targetMembers.slice(0, 50)) {
               await supabase.from('mentions').insert({
                 message_id: message.id,
                 user_id: member.user_id,
@@ -232,13 +225,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
             }
           }
         }
-      }
-    } catch (error) {
-      handleError(error, 'Failed to send message');
-      // Restore content if sending failed
-      setContent(messageContent);
-    } finally {
-      setIsSending(false);
+      }).catch(err => console.error('Failed to process mentions:', err));
     }
   };
 

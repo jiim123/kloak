@@ -7,3 +7,4 @@ export { useDMStore } from './dmStore';
 export { useFriendStore } from './friendStore';
 export { useNotificationStore } from './notificationStore';
 export { useOfflineQueueStore } from './offlineQueueStore';
+export { useSyncStore } from './syncStore';

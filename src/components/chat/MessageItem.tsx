@@ -15,7 +15,9 @@ import { useAuthStore } from "@/stores/authStore";
 import { useMessageStore } from "@/stores/messageStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useUIStore } from "@/stores/uiStore";
+import { useSyncStore } from "@/stores/syncStore";
 import { MessageContent } from "./MessageContent";
+import { OptimisticMessageIndicator } from "./OptimisticMessageIndicator";
 import { getMessagePreview } from "@/lib/message";
 import { formatMessageTimestamp } from "@/lib/format";
 import { DeleteMessageModal } from "@/components/modals/DeleteMessageModal";
@@ -31,9 +33,10 @@ interface MessageItemProps {
 
 export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }: MessageItemProps) => {
   const { user } = useAuthStore();
-  const { setReplyingTo, editMessage, pinMessage, addReaction, removeReaction } = useMessageStore();
+  const { setReplyingTo, editMessage, pinMessage, addReaction, removeReaction, removeMessage } = useMessageStore();
   const { members } = useServerStore();
   const { compactMode, showTimestamps } = useUIStore();
+  const { getOptimisticStatus, removeOptimisticItem } = useSyncStore();
 
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
@@ -44,6 +47,11 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }:
   const [isMoreDropdownOpen, setIsMoreDropdownOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Check if this is an optimistic/pending message
+  const optimisticStatus = message.id.startsWith('temp-') ? getOptimisticStatus(message.id) || 'pending' : null;
+  const isPending = optimisticStatus === 'pending';
+  const isFailed = optimisticStatus === 'failed';
 
   const isOwnMessage = user?.id === message.user_id;
   const messageUser = message.user;
@@ -158,7 +166,7 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }:
       <div className={`px-2 ${compactMode ? "py-0" : isGrouped ? "py-0.5" : "py-1"}`}>
         {/* Inner wrapper with hover effect and rounded borders */}
         <div
-          className={`group relative flex px-3 rounded-lg transition-colors hover:bg-muted/40 ${compactMode ? "gap-2 py-0.5" : "gap-3 py-1.5"}`}
+          className={`group relative flex px-3 rounded-lg transition-colors hover:bg-muted/40 ${compactMode ? "gap-2 py-0.5" : "gap-3 py-1.5"} ${isPending ? "opacity-70" : ""} ${isFailed ? "bg-destructive/5 border border-destructive/20" : ""}`}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
           onTouchStart={handleTouchStart}
@@ -287,6 +295,22 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }:
                 </TooltipTrigger>
                 <TooltipContent>{new Date(message.edited_at).toLocaleString()}</TooltipContent>
               </Tooltip>
+            )}
+
+            {/* Optimistic status indicator */}
+            {(isPending || isFailed) && (
+              <OptimisticMessageIndicator
+                status={optimisticStatus as 'pending' | 'failed'}
+                onRetry={isFailed ? () => {
+                  // Re-queue the message
+                  removeOptimisticItem(message.id);
+                } : undefined}
+                onCancel={isFailed ? () => {
+                  removeMessage(message.id);
+                  removeOptimisticItem(message.id);
+                } : undefined}
+                className="ml-2 inline-flex"
+              />
             )}
 
             {/* Attachments */}

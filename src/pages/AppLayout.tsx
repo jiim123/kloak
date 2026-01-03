@@ -10,7 +10,7 @@ import { MembersSidebar } from '@/components/layout/MembersSidebar';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { MobileSidebar } from '@/components/layout/MobileSidebar';
 import { MobileMembersSidebar } from '@/components/layout/MobileMembersSidebar';
-import { OfflineBanner } from '@/components/ui/OfflineBanner';
+import { ConnectionStatus } from '@/components/ui/ConnectionStatus';
 import { DMSidebar, FriendsList, DMChatArea } from '@/components/dm';
 import { 
   CreateServerModal, 
@@ -33,7 +33,7 @@ import { cn } from '@/lib/utils';
 import { useDMStore } from '@/stores/dmStore';
 import { useRealtimeFriendships, useRealtimeUsers, useRealtimeServer, useRealtimeNotifications } from '@/hooks';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useOfflineSync } from '@/hooks/useOfflineSync';
+import { useBackgroundSync } from '@/hooks/useBackgroundSync';
 import { usePreferencesSync } from '@/hooks/usePreferencesSync';
 
 const AppLayout = () => {
@@ -53,8 +53,8 @@ const AppLayout = () => {
   useRealtimeServer(currentServer?.id || null);
   useRealtimeNotifications(user?.id || null);
   
-  // Offline message sync
-  useOfflineSync();
+  // Background sync (handles offline queue, reconnection, periodic refresh)
+  useBackgroundSync();
   
   // Sync preferences (theme, etc.) with database
   usePreferencesSync();
@@ -119,8 +119,8 @@ const AppLayout = () => {
 
   return (
     <>
-      {/* Offline Banner */}
-      <OfflineBanner />
+      {/* Connection Status Banner */}
+      <ConnectionStatus />
       
       <div className="h-screen flex flex-col md:flex-row overflow-hidden">
         {/* Mobile header */}
