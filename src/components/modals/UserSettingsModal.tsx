@@ -215,8 +215,8 @@ export const UserSettingsModal = () => {
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-        <DialogContent className="sm:max-w-2xl max-w-[calc(100vw-2rem)] max-h-[90vh] sm:max-h-[80vh] p-0 gap-0 overflow-hidden">
-          <div className="flex flex-col sm:flex-row h-[85vh] sm:h-[70vh]">
+        <DialogContent className="sm:max-w-2xl max-w-[calc(100vw-2rem)] h-[calc(100vh-3rem)] sm:h-auto sm:max-h-[80vh] p-0 gap-0 overflow-hidden">
+          <div className="flex flex-col sm:flex-row h-full sm:h-[70vh]">
             {/* Mobile Tab Navigation */}
             <div className="sm:hidden border-b border-border">
               <div className="p-3">
