@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useDMStore } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useUnreadDMs } from '@/hooks/useUnreadDMs';
 import { formatRelativeTime } from '@/lib/format';
 import { ConversationItemSkeleton } from '@/components/ui/skeletons';
 import type { DMConversation } from '@/types';
@@ -17,6 +18,7 @@ interface DMSidebarProps {
 export const DMSidebar = ({ showFriends, onShowFriendsChange }: DMSidebarProps) => {
   const { user } = useAuthStore();
   const { conversations, currentConversation, fetchConversations, setCurrentConversation, isLoading } = useDMStore();
+  const { getUnreadCount, markAsRead } = useUnreadDMs(user?.id || null);
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
@@ -35,6 +37,8 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange }: DMSidebarProps) 
   const handleSelectConversation = (conversation: DMConversation) => {
     setCurrentConversation(conversation);
     onShowFriendsChange(false);
+    // Mark as read when selecting
+    markAsRead(conversation.id);
   };
 
   const handleCloseConversation = (e: React.MouseEvent, conversationId: string) => {
@@ -126,7 +130,11 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange }: DMSidebarProps) 
         )}
 
         {/* Conversations */}
-        {filteredConversations.map((conversation) => (
+        {filteredConversations.map((conversation) => {
+          const unreadCount = getUnreadCount(conversation.id);
+          const hasUnread = unreadCount > 0;
+          
+          return (
             <div
               key={conversation.id}
               className={cn(
@@ -164,31 +172,46 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange }: DMSidebarProps) 
               {/* Name and last message */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-foreground truncate">
+                  <span className={cn(
+                    "text-sm truncate",
+                    hasUnread ? "font-semibold text-foreground" : "font-medium text-foreground"
+                  )}>
                     {conversation.other_user?.display_name || conversation.other_user?.username || 'Unknown'}
                   </span>
-                  {conversation.last_message && (
-                    <span className="text-xs text-muted-foreground">
-                      {formatRelativeTime(conversation.last_message.created_at || '')}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {conversation.last_message && (
+                      <span className="text-xs text-muted-foreground">
+                        {formatRelativeTime(conversation.last_message.created_at || '')}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 {conversation.last_message && (
-                  <p className="text-xs text-muted-foreground truncate">
+                  <p className={cn(
+                    "text-xs truncate",
+                    hasUnread ? "text-foreground" : "text-muted-foreground"
+                  )}>
                     {conversation.last_message.content}
                   </p>
                 )}
               </div>
 
-              {/* Close button */}
-              <button
-                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-secondary rounded transition-opacity"
-                onClick={(e) => handleCloseConversation(e, conversation.id)}
-              >
-                <X className="w-4 h-4 text-muted-foreground" />
-              </button>
+              {/* Unread badge or close button */}
+              {hasUnread ? (
+                <span className="min-w-[20px] h-5 bg-destructive rounded-full text-xs text-destructive-foreground flex items-center justify-center px-1.5 font-bold">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              ) : (
+                <button
+                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-secondary rounded transition-opacity"
+                  onClick={(e) => handleCloseConversation(e, conversation.id)}
+                >
+                  <X className="w-4 h-4 text-muted-foreground" />
+                </button>
+              )}
             </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

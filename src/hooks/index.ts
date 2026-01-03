@@ -1,5 +1,6 @@
 export { useRealtimeMessages } from './useRealtimeMessages';
-export { usePreferencesSync } from './usePreferencesSync';
+export { useRealtimeDMs } from './useRealtimeDMs';
+export { useUnreadDMs } from './useUnreadDMs';
 export { useRealtimeReactions } from './useRealtimeReactions';
 export { useRealtimeMembers } from './useRealtimeMembers';
 export { useRealtimeFriendships } from './useRealtimeFriendships';
@@ -19,3 +20,4 @@ export { useOptimisticMessage } from './useOptimisticMessage';
 export { useBackgroundSync } from './useBackgroundSync';
 export { useVirtualizedMessages } from './useVirtualizedMessages';
 export { useConnectionStatus } from './useConnectionStatus';
+export { usePreferencesSync } from './usePreferencesSync';

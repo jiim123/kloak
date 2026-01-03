@@ -8,6 +8,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useUnread } from "@/hooks/useUnread";
+import { useUnreadDMs } from "@/hooks/useUnreadDMs";
 import { supabase } from "@/integrations/supabase/client";
 
 interface ServerChannels {
@@ -84,6 +85,7 @@ export const ServerSidebar = () => {
   }, [serverChannels]);
 
   const { getServerUnreadInfo } = useUnread(allChannelIds);
+  const { totalUnread: totalDMUnread, hasUnread: hasDMUnread } = useUnreadDMs(user?.id || null);
 
   const getServerInitials = (name: string) => {
     return name
@@ -329,7 +331,7 @@ export const ServerSidebar = () => {
               className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 bg-foreground rounded-r-full"
               variants={pillVariants}
               initial="hidden"
-              animate={getPillState(null, false)}
+              animate={getPillState(null, hasDMUnread)}
               transition={{ type: "spring", stiffness: 500, damping: 30 }}
             />
 
@@ -349,10 +351,24 @@ export const ServerSidebar = () => {
             >
               <MessageCircle className="w-5 h-5" />
             </motion.div>
+
+            {/* Unread DM badge */}
+            <AnimatePresence>
+              {totalDMUnread > 0 && currentServer !== null && (
+                <motion.span
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  exit={{ scale: 0 }}
+                  className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
+                >
+                  {totalDMUnread > 99 ? "99+" : totalDMUnread}
+                </motion.span>
+              )}
+            </AnimatePresence>
           </motion.button>
         </TooltipTrigger>
         <TooltipContent side="right" className="font-medium">
-          Direct Messages
+          Direct Messages{totalDMUnread > 0 ? ` (${totalDMUnread} unread)` : ''}
         </TooltipContent>
       </Tooltip>
 
