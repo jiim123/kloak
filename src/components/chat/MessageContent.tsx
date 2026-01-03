@@ -2,11 +2,20 @@ import { useMemo } from 'react';
 import { CodeBlock, InlineCode } from './CodeBlock';
 import { LinkPreview } from './LinkPreview';
 import { useUIStore } from '@/stores/uiStore';
+import { useServerStore } from '@/stores/serverStore';
+
+interface UserInfo {
+  id: string;
+  username: string;
+  display_name?: string | null;
+  nickname?: string | null;
+}
 
 interface MessageContentProps {
   content: string;
   currentUserId?: string;
   messageId?: string;
+  users?: UserInfo[];
 }
 
 interface ParsedSegment {
@@ -116,7 +125,7 @@ const escapeHtml = (text: string): string => {
 };
 
 // Parse text content (markdown, URLs, mentions)
-const parseTextContent = (content: string, currentUserId?: string): string => {
+const parseTextContent = (content: string, currentUserId?: string, usersMap?: Map<string, UserInfo>): string => {
   let parsed = escapeHtml(content);
   
   // Bold **text**
@@ -155,7 +164,10 @@ const parseTextContent = (content: string, currentUserId?: string): string => {
     /&lt;@(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})&gt;/g,
     (match, userId) => {
       const isSelf = userId === currentUserId;
-      return `<span class="mention${isSelf ? ' mention-self' : ''}" data-user-id="${userId}">@user</span>`;
+      const userInfo = usersMap?.get(userId);
+      // Use nickname first, then display_name, then username, fallback to 'user'
+      const displayName = userInfo?.nickname || userInfo?.display_name || userInfo?.username || 'user';
+      return `<span class="mention${isSelf ? ' mention-self' : ''}" data-user-id="${userId}">@${escapeHtml(displayName)}</span>`;
     }
   );
   
@@ -165,9 +177,34 @@ const parseTextContent = (content: string, currentUserId?: string): string => {
   return parsed;
 };
 
-export const MessageContent = ({ content, currentUserId, messageId }: MessageContentProps) => {
+export const MessageContent = ({ content, currentUserId, messageId, users }: MessageContentProps) => {
   const { linkPreviewsEnabled } = useUIStore();
+  const { members } = useServerStore();
   const segments = useMemo(() => parseMessageSegments(content), [content]);
+  
+  // Build a map of userId -> user info for quick lookup
+  const usersMap = useMemo(() => {
+    const map = new Map<string, UserInfo>();
+    
+    // Add users from props (for DMs)
+    if (users) {
+      users.forEach(u => map.set(u.id, u));
+    }
+    
+    // Add members from server store (for channel messages)
+    members.forEach(member => {
+      if (member.user) {
+        map.set(member.user_id, {
+          id: member.user_id,
+          username: member.user.username,
+          display_name: member.user.display_name,
+          nickname: member.nickname,
+        });
+      }
+    });
+    
+    return map;
+  }, [users, members]);
   
   // Extract URLs for link previews (only from text segments, not code blocks)
   const urls = useMemo(() => {
@@ -197,7 +234,7 @@ export const MessageContent = ({ content, currentUserId, messageId }: MessageCon
               <span
                 key={index}
                 dangerouslySetInnerHTML={{
-                  __html: parseTextContent(segment.content, currentUserId),
+                  __html: parseTextContent(segment.content, currentUserId, usersMap),
                 }}
               />
             );
