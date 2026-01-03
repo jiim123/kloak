@@ -17,9 +17,17 @@ interface DMState {
   // Message actions
   fetchMessages: (conversationId: string, limit?: number, before?: string) => Promise<void>;
   sendMessage: (conversationId: string, senderId: string, content: string, replyToId?: string) => Promise<DirectMessage | null>;
+  editMessage: (messageId: string, content: string) => Promise<void>;
+  deleteMessage: (messageId: string) => Promise<void>;
+
+  // Reaction actions
+  addReaction: (messageId: string, userId: string, emoji: string) => Promise<void>;
+  removeReaction: (messageId: string, userId: string, emoji: string) => Promise<void>;
 
   // Realtime actions
   addMessage: (conversationId: string, message: DirectMessage) => void;
+  updateMessage: (conversationId: string, messageId: string, updates: Partial<DirectMessage>) => void;
+  removeMessage: (conversationId: string, messageId: string) => void;
   updateConversation: (conversationId: string, updates: Partial<DMConversation>) => void;
   
   // Getters
@@ -301,6 +309,131 @@ export const useDMStore = create<DMState>((set, get) => ({
     }
   },
 
+  editMessage: async (messageId: string, content: string) => {
+    try {
+      const { error } = await supabase
+        .from('direct_messages')
+        .update({ content, edited_at: new Date().toISOString() })
+        .eq('id', messageId);
+
+      if (error) throw error;
+
+      // Update local state
+      set((state) => {
+        const newMessagesByConversation = { ...state.messagesByConversation };
+        for (const conversationId in newMessagesByConversation) {
+          newMessagesByConversation[conversationId] = newMessagesByConversation[conversationId].map((m) =>
+            m.id === messageId ? { ...m, content, edited_at: new Date().toISOString() } : m
+          );
+        }
+        return { messagesByConversation: newMessagesByConversation };
+      });
+    } catch (error) {
+      console.error('Failed to edit DM:', error);
+    }
+  },
+
+  deleteMessage: async (messageId: string) => {
+    try {
+      const { error } = await supabase
+        .from('direct_messages')
+        .delete()
+        .eq('id', messageId);
+
+      if (error) throw error;
+
+      // Update local state
+      set((state) => {
+        const newMessagesByConversation = { ...state.messagesByConversation };
+        for (const conversationId in newMessagesByConversation) {
+          newMessagesByConversation[conversationId] = newMessagesByConversation[conversationId].filter(
+            (m) => m.id !== messageId
+          );
+        }
+        return { messagesByConversation: newMessagesByConversation };
+      });
+    } catch (error) {
+      console.error('Failed to delete DM:', error);
+    }
+  },
+
+  addReaction: async (messageId: string, userId: string, emoji: string) => {
+    try {
+      const { error } = await supabase
+        .from('dm_reactions')
+        .insert({ message_id: messageId, user_id: userId, emoji });
+
+      if (error) throw error;
+
+      // Update local state optimistically
+      set((state) => {
+        const newMessagesByConversation = { ...state.messagesByConversation };
+        for (const conversationId in newMessagesByConversation) {
+          newMessagesByConversation[conversationId] = newMessagesByConversation[conversationId].map((m) => {
+            if (m.id === messageId) {
+              const reactions = [...(m.reactions || [])];
+              const existingReaction = reactions.find((r) => r.emoji === emoji);
+              if (existingReaction) {
+                existingReaction.count++;
+                existingReaction.users.push(userId);
+                existingReaction.hasReacted = true;
+              } else {
+                reactions.push({ emoji, count: 1, users: [userId], hasReacted: true });
+              }
+              return { ...m, reactions };
+            }
+            return m;
+          });
+        }
+        return { messagesByConversation: newMessagesByConversation };
+      });
+    } catch (error) {
+      console.error('Failed to add reaction:', error);
+    }
+  },
+
+  removeReaction: async (messageId: string, userId: string, emoji: string) => {
+    try {
+      const { error } = await supabase
+        .from('dm_reactions')
+        .delete()
+        .eq('message_id', messageId)
+        .eq('user_id', userId)
+        .eq('emoji', emoji);
+
+      if (error) throw error;
+
+      // Update local state
+      set((state) => {
+        const newMessagesByConversation = { ...state.messagesByConversation };
+        for (const conversationId in newMessagesByConversation) {
+          newMessagesByConversation[conversationId] = newMessagesByConversation[conversationId].map((m) => {
+            if (m.id === messageId) {
+              const reactions = (m.reactions || [])
+                .map((r) => {
+                  if (r.emoji === emoji) {
+                    return {
+                      ...r,
+                      count: r.count - 1,
+                      users: r.users.filter((u) => u !== userId),
+                      hasReacted: false,
+                    };
+                  }
+                  return r;
+                })
+                .filter((r) => r.count > 0);
+              return { ...m, reactions };
+            }
+            return m;
+          });
+        }
+        return { messagesByConversation: newMessagesByConversation };
+      });
+    } catch (error) {
+      console.error('Failed to remove reaction:', error);
+    }
+  },
+
   addMessage: (conversationId: string, message: DirectMessage) => {
     set((state) => {
       const currentMessages = state.messagesByConversation[conversationId] || [];
@@ -314,6 +447,32 @@ export const useDMStore = create<DMState>((set, get) => ({
         messagesByConversation: {
           ...state.messagesByConversation,
           [conversationId]: [...currentMessages, message],
+        },
+      };
+    });
+  },
+
+  updateMessage: (conversationId: string, messageId: string, updates: Partial<DirectMessage>) => {
+    set((state) => {
+      const currentMessages = state.messagesByConversation[conversationId] || [];
+      return {
+        messagesByConversation: {
+          ...state.messagesByConversation,
+          [conversationId]: currentMessages.map((m) =>
+            m.id === messageId ? { ...m, ...updates } : m
+          ),
+        },
+      };
+    });
+  },
+
+  removeMessage: (conversationId: string, messageId: string) => {
+    set((state) => {
+      const currentMessages = state.messagesByConversation[conversationId] || [];
+      return {
+        messagesByConversation: {
+          ...state.messagesByConversation,
+          [conversationId]: currentMessages.filter((m) => m.id !== messageId),
         },
       };
     });

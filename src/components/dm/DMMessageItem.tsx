@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Reply, Copy, CornerUpLeft } from 'lucide-react';
+import { Reply, Pencil, Trash2, Copy, CornerUpLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Drawer,
@@ -7,6 +7,8 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
+import { Textarea } from '@/components/ui/textarea';
+import { useDMStore } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
 import { formatMessageTimestamp } from '@/lib/format';
 import type { DirectMessage } from '@/types';
@@ -19,9 +21,15 @@ interface DMMessageItemProps {
 
 export const DMMessageItem = ({ message, isFirst, onReply }: DMMessageItemProps) => {
   const { user } = useAuthStore();
+  const { editMessage, deleteMessage, addReaction, removeReaction } = useDMStore();
   
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(message.content);
   const [showMobileActions, setShowMobileActions] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const isOwnMessage = user?.id === message.sender_id;
 
   // Long press handlers for mobile
   const handleTouchStart = useCallback(() => {
@@ -43,6 +51,34 @@ export const DMMessageItem = ({ message, isFirst, onReply }: DMMessageItemProps)
       longPressTimerRef.current = null;
     }
   }, []);
+
+  const handleEdit = async () => {
+    if (editContent.trim() && editContent !== message.content) {
+      await editMessage(message.id, editContent.trim());
+    }
+    setIsEditing(false);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditContent(message.content);
+  };
+
+  const handleDelete = async () => {
+    await deleteMessage(message.id);
+    setShowMobileActions(false);
+  };
+
+  const handleReactionClick = async (emoji: string) => {
+    if (!user) return;
+    const existingReaction = message.reactions?.find((r) => r.emoji === emoji);
+    if (existingReaction?.hasReacted) {
+      await removeReaction(message.id, user.id, emoji);
+    } else {
+      await addReaction(message.id, user.id, emoji);
+    }
+    setShowMobileActions(false);
+  };
 
   const quickReactions = ['👍', '❤️', '😂', '😮', '😢', '🎉'];
 
@@ -101,12 +137,67 @@ export const DMMessageItem = ({ message, isFirst, onReply }: DMMessageItemProps)
             </div>
           )}
 
-          <p className="text-foreground whitespace-pre-wrap break-words">
-            {message.content}
-          </p>
+          {isEditing ? (
+            <div className="flex flex-col gap-2">
+              <Textarea
+                ref={textareaRef}
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                className="min-h-[60px] resize-none text-sm"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleEdit();
+                  }
+                  if (e.key === 'Escape') {
+                    handleCancelEdit();
+                  }
+                }}
+                autoFocus
+              />
+              <div className="flex gap-2 text-[11px]">
+                <span className="text-muted-foreground">
+                  escape to{' '}
+                  <button className="text-primary hover:underline" onClick={handleCancelEdit}>
+                    cancel
+                  </button>
+                  {' • '}
+                  enter to{' '}
+                  <button className="text-primary hover:underline" onClick={handleEdit}>
+                    save
+                  </button>
+                </span>
+              </div>
+            </div>
+          ) : (
+            <p className="text-foreground whitespace-pre-wrap break-words">
+              {message.content}
+            </p>
+          )}
 
-          {message.edited_at && (
+          {message.edited_at && !isEditing && (
             <span className="text-xs text-muted-foreground">(edited)</span>
+          )}
+
+          {/* Reactions */}
+          {message.reactions && message.reactions.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {message.reactions.map((reaction) => (
+                <button
+                  key={reaction.emoji}
+                  onClick={() => handleReactionClick(reaction.emoji)}
+                  className={cn(
+                    'flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border transition-colors',
+                    reaction.hasReacted
+                      ? 'bg-primary/20 border-primary text-primary'
+                      : 'bg-secondary border-transparent hover:border-border'
+                  )}
+                >
+                  <span>{reaction.emoji}</span>
+                  <span className="text-[11px]">{reaction.count}</span>
+                </button>
+              ))}
+            </div>
           )}
         </div>
       </div>
@@ -121,19 +212,21 @@ export const DMMessageItem = ({ message, isFirst, onReply }: DMMessageItemProps)
           <div className="px-4 pb-8">
             {/* Quick reactions */}
             <div className="flex justify-center gap-3 mb-4 pb-4 border-b border-border">
-              {quickReactions.map((emoji) => (
-                <button
-                  key={emoji}
-                  onClick={() => {
-                    // DM reactions not implemented yet, just close
-                    setShowMobileActions(false);
-                  }}
-                  className="text-2xl p-2 hover:bg-accent rounded-full active:scale-90 transition-transform opacity-50"
-                  disabled
-                >
-                  {emoji}
-                </button>
-              ))}
+              {quickReactions.map((emoji) => {
+                const existingReaction = message.reactions?.find((r) => r.emoji === emoji);
+                return (
+                  <button
+                    key={emoji}
+                    onClick={() => handleReactionClick(emoji)}
+                    className={cn(
+                      'text-2xl p-2 rounded-full active:scale-90 transition-transform',
+                      existingReaction?.hasReacted ? 'bg-primary/20' : 'hover:bg-accent'
+                    )}
+                  >
+                    {emoji}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Action buttons */}
@@ -149,6 +242,20 @@ export const DMMessageItem = ({ message, isFirst, onReply }: DMMessageItemProps)
                 <span>Reply</span>
               </button>
 
+              {isOwnMessage && (
+                <button
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-accent active:bg-accent text-left"
+                  onClick={() => {
+                    setEditContent(message.content);
+                    setIsEditing(true);
+                    setShowMobileActions(false);
+                  }}
+                >
+                  <Pencil className="w-5 h-5 text-muted-foreground" />
+                  <span>Edit</span>
+                </button>
+              )}
+
               <button
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-accent active:bg-accent text-left"
                 onClick={() => {
@@ -159,6 +266,16 @@ export const DMMessageItem = ({ message, isFirst, onReply }: DMMessageItemProps)
                 <Copy className="w-5 h-5 text-muted-foreground" />
                 <span>Copy Text</span>
               </button>
+
+              {isOwnMessage && (
+                <button
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-destructive/10 active:bg-destructive/10 text-left text-destructive"
+                  onClick={handleDelete}
+                >
+                  <Trash2 className="w-5 h-5" />
+                  <span>Delete</span>
+                </button>
+              )}
             </div>
           </div>
         </DrawerContent>
