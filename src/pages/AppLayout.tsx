@@ -31,7 +31,7 @@ import {
 import { PersistentEmbedContainer } from '@/components/chat/PersistentEmbedContainer';
 import { cn } from '@/lib/utils';
 import { useDMStore } from '@/stores/dmStore';
-import { useRealtimeFriendships, useRealtimeUsers, useRealtimeServer, useRealtimeNotifications } from '@/hooks';
+import { useRealtimeFriendships, useRealtimeUsers, useRealtimeServer, useRealtimeNotifications, useRealtimeDMs, useUnreadDMs } from '@/hooks';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useBackgroundSync } from '@/hooks/useBackgroundSync';
 import { usePreferencesSync } from '@/hooks/usePreferencesSync';
@@ -52,6 +52,19 @@ const AppLayout = () => {
   useRealtimeUsers();
   useRealtimeServer(currentServer?.id || null);
   useRealtimeNotifications(user?.id || null);
+  
+  // Real-time DMs at app level so messages are received even when not viewing DMs
+  const { incrementUnread } = useUnreadDMs(user?.id || null);
+  useRealtimeDMs({
+    userId: user?.id || null,
+    currentConversationId: currentConversation?.id || null,
+    onNewMessage: (message, conversationId) => {
+      // Increment unread if not viewing that conversation
+      if (conversationId !== currentConversation?.id) {
+        incrementUnread(conversationId);
+      }
+    },
+  });
   
   // Background sync (handles offline queue, reconnection, periodic refresh)
   useBackgroundSync();
