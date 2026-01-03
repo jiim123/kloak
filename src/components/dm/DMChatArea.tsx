@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { useDMStore } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useUnreadDMs } from '@/hooks/useUnreadDMs';
-import { formatMessageTimestamp } from '@/lib/format';
 import { DMMessageInput } from './DMMessageInput';
+import { DMMessageItem } from './DMMessageItem';
 import type { DirectMessage } from '@/types';
 
 export const DMChatArea = () => {
@@ -177,65 +177,12 @@ export const DMChatArea = () => {
         ) : (
           <div className="space-y-0.5">
             {groupedMessages.map(({ message, isFirst }) => (
-              <div
+              <DMMessageItem
                 key={message.id}
-                className={cn(
-                  'group flex gap-4 py-0.5 px-2 -mx-2 rounded hover:bg-secondary/30 transition-smooth',
-                  isFirst && 'mt-4 pt-1'
-                )}
-              >
-                {/* Avatar or spacer */}
-                <div className="w-10 flex-shrink-0">
-                  {isFirst && (
-                    <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-medium"
-                      style={{ backgroundColor: message.sender?.banner_color || '#5865F2' }}
-                    >
-                      {message.sender?.avatar_url ? (
-                        <img
-                          src={message.sender.avatar_url}
-                          alt={message.sender.username}
-                          className="w-full h-full rounded-full object-cover"
-                        />
-                      ) : (
-                        (message.sender?.username?.[0] || '?').toUpperCase()
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  {isFirst && (
-                    <div className="flex items-baseline gap-2 mb-1">
-                      <span className="font-medium text-foreground">
-                        {message.sender?.display_name || message.sender?.username}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {formatMessageTimestamp(message.created_at || '')}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Reply preview */}
-                  {message.reply_to && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1 pl-3 border-l-2 border-muted">
-                      <span className="font-medium">
-                        @{message.reply_to.sender?.username}
-                      </span>
-                      <span className="truncate">{message.reply_to.content}</span>
-                    </div>
-                  )}
-
-                  <p className="text-foreground whitespace-pre-wrap break-words">
-                    {message.content}
-                  </p>
-
-                  {message.edited_at && (
-                    <span className="text-xs text-muted-foreground">(edited)</span>
-                  )}
-                </div>
-              </div>
+                message={message}
+                isFirst={isFirst}
+                onReply={setReplyingTo}
+              />
             ))}
           </div>
         )}
