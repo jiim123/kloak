@@ -15,7 +15,6 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Hash, Volume2 } from 'lucide-react';
-import { ChannelIconPicker } from './ChannelIconPicker';
 import type { ChannelType } from '@/types';
 
 export const CreateChannelModal = () => {
@@ -26,7 +25,6 @@ export const CreateChannelModal = () => {
   const [name, setName] = useState('');
   const [channelType, setChannelType] = useState<ChannelType>('text');
   const [categoryId, setCategoryId] = useState<string>('none');
-  const [channelIcon, setChannelIcon] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -37,7 +35,6 @@ export const CreateChannelModal = () => {
     setName('');
     setChannelType('text');
     setCategoryId(presetCategoryId || 'none');
-    setChannelIcon(null);
     setError('');
     setMode('channel');
     closeModal();
@@ -61,7 +58,7 @@ export const CreateChannelModal = () => {
         await createCategory(currentServer.id, name.trim());
       } else {
         const selectedCategoryId = presetCategoryId || (categoryId === 'none' ? undefined : categoryId);
-        await createChannel(currentServer.id, name.trim(), channelType, selectedCategoryId, channelIcon || undefined);
+        await createChannel(currentServer.id, name.trim(), channelType, selectedCategoryId);
       }
       handleClose();
     } catch (err) {
@@ -113,48 +110,39 @@ export const CreateChannelModal = () => {
 
           {mode === 'channel' && (
             <>
-              {/* Channel Icon & Type Row */}
-              <div className="flex gap-4">
-                {/* Icon picker */}
-                <div className="space-y-2">
-                  <Label>Icon</Label>
-                  <ChannelIconPicker value={channelIcon} onChange={setChannelIcon} />
-                </div>
-
-                {/* Channel Type */}
-                <div className="flex-1 space-y-2">
-                  <Label>Channel Type</Label>
-                  <RadioGroup
-                    value={channelType}
-                    onValueChange={(value) => setChannelType(value as ChannelType)}
-                    className="gap-2"
+              {/* Channel Type */}
+              <div className="space-y-2">
+                <Label>Channel Type</Label>
+                <RadioGroup
+                  value={channelType}
+                  onValueChange={(value) => setChannelType(value as ChannelType)}
+                  className="gap-2"
+                >
+                  <Label
+                    htmlFor="text"
+                    className={`flex items-center gap-3 p-3 rounded-md cursor-pointer border transition-colors ${
+                      channelType === 'text' 
+                        ? 'bg-accent/20 border-primary' 
+                        : 'bg-secondary/50 border-border hover:bg-secondary'
+                    }`}
                   >
-                    <Label
-                      htmlFor="text"
-                      className={`flex items-center gap-3 p-3 rounded-md cursor-pointer border transition-colors ${
-                        channelType === 'text' 
-                          ? 'bg-accent/20 border-primary' 
-                          : 'bg-secondary/50 border-border hover:bg-secondary'
-                      }`}
-                    >
-                      <RadioGroupItem value="text" id="text" />
-                      <Hash className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium text-sm">Text</span>
-                    </Label>
-                    <Label
-                      htmlFor="voice"
-                      className={`flex items-center gap-3 p-3 rounded-md cursor-pointer border transition-colors ${
-                        channelType === 'voice' 
-                          ? 'bg-accent/20 border-primary' 
-                          : 'bg-secondary/50 border-border hover:bg-secondary'
-                      }`}
-                    >
-                      <RadioGroupItem value="voice" id="voice" />
-                      <Volume2 className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium text-sm">Voice</span>
-                    </Label>
-                  </RadioGroup>
-                </div>
+                    <RadioGroupItem value="text" id="text" />
+                    <Hash className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium text-sm">Text</span>
+                  </Label>
+                  <Label
+                    htmlFor="voice"
+                    className={`flex items-center gap-3 p-3 rounded-md cursor-pointer border transition-colors ${
+                      channelType === 'voice' 
+                        ? 'bg-accent/20 border-primary' 
+                        : 'bg-secondary/50 border-border hover:bg-secondary'
+                    }`}
+                  >
+                    <RadioGroupItem value="voice" id="voice" />
+                    <Volume2 className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium text-sm">Voice</span>
+                  </Label>
+                </RadioGroup>
               </div>
 
               {/* Category selector */}
@@ -185,11 +173,8 @@ export const CreateChannelModal = () => {
               {mode === 'category' ? 'Category Name' : 'Channel Name'}
             </Label>
             <div className="relative">
-              {mode === 'channel' && !channelIcon && (
+              {mode === 'channel' && (
                 <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              )}
-              {mode === 'channel' && channelIcon && (
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-base font-emoji">{channelIcon}</span>
               )}
               <Input
                 id="name"
@@ -206,7 +191,7 @@ export const CreateChannelModal = () => {
             </div>
             {mode === 'channel' && name && (
               <p className="text-xs text-muted-foreground">
-                Preview: {channelIcon || '#'}{name}
+                Preview: #{name}
               </p>
             )}
           </div>
