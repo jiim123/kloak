@@ -215,10 +215,38 @@ export const UserSettingsModal = () => {
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-        <DialogContent className="sm:max-w-2xl max-h-[80vh] p-0 gap-0 overflow-hidden">
-          <div className="flex h-[70vh]">
-            {/* Sidebar Navigation */}
-            <div className="w-48 bg-secondary/50 border-r border-border flex flex-col">
+        <DialogContent className="sm:max-w-2xl max-w-[calc(100vw-2rem)] max-h-[90vh] sm:max-h-[80vh] p-0 gap-0 overflow-hidden">
+          <div className="flex flex-col sm:flex-row h-[85vh] sm:h-[70vh]">
+            {/* Mobile Tab Navigation */}
+            <div className="sm:hidden border-b border-border">
+              <div className="p-3">
+                <h2 className="font-semibold text-sm">User Settings</h2>
+              </div>
+              <nav className="flex overflow-x-auto px-2 pb-2 gap-1">
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveTab(item.id)}
+                      className={cn(
+                        'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0',
+                        isActive 
+                          ? 'bg-primary text-primary-foreground' 
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                      )}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+
+            {/* Desktop Sidebar Navigation */}
+            <div className="hidden sm:flex w-48 bg-secondary/50 border-r border-border flex-col">
               <div className="p-4 border-b border-border">
                 <h2 className="font-semibold text-sm">User Settings</h2>
               </div>
@@ -246,12 +274,12 @@ export const UserSettingsModal = () => {
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 flex flex-col overflow-hidden">
-              <DialogHeader className="px-6 py-4 border-b border-border">
-                <DialogTitle>
+            <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+              <DialogHeader className="px-4 sm:px-6 py-3 sm:py-4 border-b border-border shrink-0">
+                <DialogTitle className="text-base sm:text-lg">
                   {navItems.find(n => n.id === activeTab)?.label}
                 </DialogTitle>
-                <DialogDescription>
+                <DialogDescription className="text-xs sm:text-sm">
                   {activeTab === 'account' && 'Manage your account credentials and security'}
                   {activeTab === 'profile' && 'Customize how others see you'}
                   {activeTab === 'notifications' && 'Control how you receive notifications'}
@@ -259,7 +287,7 @@ export const UserSettingsModal = () => {
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6">
                 {/* Account Section */}
                 {activeTab === 'account' && (
                   <div className="space-y-4">
@@ -511,8 +539,8 @@ export const UserSettingsModal = () => {
                   <div className="space-y-4">
                     {/* Theme Selector */}
                     <div className="space-y-3">
-                      <Label>Theme</Label>
-                      <div className="grid grid-cols-2 gap-3">
+                      <Label className="text-sm">Theme</Label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {THEMES.map((t) => {
                           const preview = THEME_PREVIEWS[t.id];
                           const isActive = theme === t.id;
@@ -648,15 +676,15 @@ export const UserSettingsModal = () => {
 
       {/* View Key Confirmation */}
       <AlertDialog open={showKeyConfirm} onOpenChange={setShowKeyConfirm}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-lg">
           <AlertDialogHeader>
-            <AlertDialogTitle>Reveal Secret Key?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-base sm:text-lg">Reveal Secret Key?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm">
               Make sure no one is looking at your screen. Your secret key is the only way to access your account.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel className="m-0">Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={() => {
               setKeyRevealed(true);
               setShowKeyConfirm(false);
@@ -669,15 +697,15 @@ export const UserSettingsModal = () => {
 
       {/* Delete Account Confirmation */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-lg">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Account?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-base sm:text-lg">Delete Account?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm">
               This action cannot be undone. All your data will be permanently deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel className="m-0">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteAccount}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
