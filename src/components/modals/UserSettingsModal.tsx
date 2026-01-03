@@ -287,60 +287,62 @@ export const UserSettingsModal = () => {
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+              <div className="flex-1 overflow-y-auto p-3 sm:p-6">
                 {/* Account Section */}
                 {activeTab === 'account' && (
-                  <div className="space-y-4">
+                  <div className="space-y-3 sm:space-y-4">
                     {/* Username Display */}
-                    <div className="space-y-2">
-                      <Label className="text-xs font-bold uppercase text-muted-foreground">
+                    <div className="space-y-1.5 sm:space-y-2">
+                      <Label className="text-[10px] sm:text-xs font-bold uppercase text-muted-foreground">
                         Username
                       </Label>
-                      <div className="flex items-center gap-2 p-3 bg-secondary rounded-lg">
-                        <span className="font-medium">{user?.username}</span>
-                        <span className="text-xs text-muted-foreground">(cannot be changed)</span>
+                      <div className="flex items-center gap-2 p-2 sm:p-3 bg-secondary rounded-lg">
+                        <span className="text-sm sm:text-base font-medium">{user?.username}</span>
+                        <span className="text-[10px] sm:text-xs text-muted-foreground">(cannot be changed)</span>
                       </div>
                     </div>
 
                     {/* Secret Key Section */}
-                    <div className="space-y-2">
-                      <Label className="text-xs font-bold uppercase text-muted-foreground">
+                    <div className="space-y-1.5 sm:space-y-2">
+                      <Label className="text-[10px] sm:text-xs font-bold uppercase text-muted-foreground">
                         Secret Key
                       </Label>
                       {!keyRevealed ? (
                         <Button 
                           variant="outline" 
                           onClick={() => setShowKeyConfirm(true)}
-                          className="w-full"
+                          className="w-full h-9 sm:h-10 text-xs sm:text-sm"
                         >
-                          <Eye className="w-4 h-4 mr-2" />
+                          <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2" />
                           View Secret Key
                         </Button>
                       ) : (
                         <div className="space-y-2">
-                          <div className="flex gap-2">
+                          <div className="flex gap-1.5 sm:gap-2">
                             <Input
                               type={showSecretKey ? 'text' : 'password'}
                               value={secretKey || ''}
                               readOnly
-                              className="font-mono text-xs"
+                              className="font-mono text-[10px] sm:text-xs h-9 sm:h-10"
                             />
                             <Button
                               variant="ghost"
                               size="icon"
                               onClick={() => setShowSecretKey(!showSecretKey)}
+                              className="h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0"
                             >
-                              {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                              {showSecretKey ? <EyeOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
                             </Button>
                             <Button
                               variant="ghost"
                               size="icon"
                               onClick={handleCopyKey}
+                              className="h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0"
                             >
-                              {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                              {copied ? <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500" /> : <Copy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
                             </Button>
                           </div>
-                          <p className="text-xs text-destructive">
+                          <p className="text-[10px] sm:text-xs text-destructive">
                             Keep this key safe! It's the only way to access your account.
                           </p>
                         </div>
@@ -348,23 +350,24 @@ export const UserSettingsModal = () => {
                     </div>
 
                     {/* Log Out */}
-                    <Button variant="outline" onClick={handleLogout} className="w-full">
-                      <LogOut className="w-4 h-4 mr-2" />
+                    <Button variant="outline" onClick={handleLogout} className="w-full h-9 sm:h-10 text-xs sm:text-sm">
+                      <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2" />
                       Log Out
                     </Button>
 
                     {/* Danger Zone */}
-                    <div className="border-t border-destructive/20 pt-4 mt-6">
-                      <h4 className="text-sm font-semibold text-destructive mb-2">Danger Zone</h4>
-                      <p className="text-xs text-muted-foreground mb-3">
+                    <div className="border-t border-destructive/20 pt-3 sm:pt-4 mt-4 sm:mt-6">
+                      <h4 className="text-xs sm:text-sm font-semibold text-destructive mb-1.5 sm:mb-2">Danger Zone</h4>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground mb-2 sm:mb-3">
                         Deleting your account will permanently remove all your data.
                       </p>
                       <Button 
                         variant="destructive" 
                         size="sm"
                         onClick={() => setShowDeleteConfirm(true)}
+                        className="text-xs h-8 sm:h-9"
                       >
-                        <Trash2 className="w-4 h-4 mr-2" />
+                        <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
                         Delete Account
                       </Button>
                     </div>
@@ -373,26 +376,27 @@ export const UserSettingsModal = () => {
 
                 {/* Profile Section */}
                 {activeTab === 'profile' && (
-                  <div className="space-y-4">
+                  <div className="space-y-3 sm:space-y-4">
                     {/* Avatar Upload */}
-                    <div className="flex items-center gap-4">
-                      <Avatar className="w-20 h-20 cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <Avatar className="w-14 h-14 sm:w-20 sm:h-20 cursor-pointer flex-shrink-0" onClick={() => fileInputRef.current?.click()}>
                         <AvatarImage src={user?.avatar_url || undefined} />
                         <AvatarFallback style={{ backgroundColor: bannerColor }}>
                           {user?.username?.[0]?.toUpperCase() || 'U'}
                         </AvatarFallback>
                       </Avatar>
-                      <div>
+                      <div className="min-w-0">
                         <Button 
                           variant="outline" 
                           size="sm"
                           onClick={() => fileInputRef.current?.click()}
                           disabled={isLoading}
+                          className="text-xs h-8 sm:h-9"
                         >
-                          <Upload className="w-4 h-4 mr-2" />
+                          <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
                           Upload Avatar
                         </Button>
-                        <p className="text-xs text-muted-foreground mt-1">Max 5MB, JPG or PNG</p>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">Max 5MB, JPG or PNG</p>
                       </div>
                       <input
                         ref={fileInputRef}
@@ -404,54 +408,56 @@ export const UserSettingsModal = () => {
                     </div>
 
                     {/* Display Name */}
-                    <div className="space-y-2">
-                      <Label htmlFor="displayName">Display Name</Label>
+                    <div className="space-y-1.5 sm:space-y-2">
+                      <Label htmlFor="displayName" className="text-xs sm:text-sm">Display Name</Label>
                       <Input
                         id="displayName"
                         value={displayName}
                         onChange={(e) => setDisplayName(e.target.value)}
                         placeholder="How others see you"
                         maxLength={32}
+                        className="h-9 sm:h-10 text-sm"
                       />
                     </div>
 
                     {/* Bio */}
-                    <div className="space-y-2">
-                      <Label htmlFor="bio">Bio</Label>
+                    <div className="space-y-1.5 sm:space-y-2">
+                      <Label htmlFor="bio" className="text-xs sm:text-sm">Bio</Label>
                       <Textarea
                         id="bio"
                         value={bio}
                         onChange={(e) => setBio(e.target.value)}
                         placeholder="Tell us about yourself"
-                        rows={3}
+                        rows={2}
+                        className="text-sm resize-none"
                       />
                     </div>
 
                     {/* Banner Color */}
-                    <div className="space-y-2">
-                      <Label>Banner Color</Label>
-                      <div className="flex items-center gap-3">
+                    <div className="space-y-1.5 sm:space-y-2">
+                      <Label className="text-xs sm:text-sm">Banner Color</Label>
+                      <div className="flex items-center gap-2 sm:gap-3">
                         <input
                           type="color"
                           value={bannerColor}
                           onChange={(e) => setBannerColor(e.target.value)}
-                          className="w-12 h-10 rounded cursor-pointer border-0"
+                          className="w-10 h-9 sm:w-12 sm:h-10 rounded cursor-pointer border-0 flex-shrink-0"
                         />
                         <Input
                           value={bannerColor}
                           onChange={(e) => setBannerColor(e.target.value)}
                           placeholder="#5865F2"
-                          className="w-28 font-mono"
+                          className="w-20 sm:w-28 font-mono text-xs sm:text-sm h-9 sm:h-10"
                         />
                         <div 
-                          className="flex-1 h-10 rounded"
+                          className="flex-1 h-9 sm:h-10 rounded min-w-[40px]"
                           style={{ backgroundColor: bannerColor }}
                         />
                       </div>
                     </div>
 
-                    <Button onClick={handleSaveProfile} disabled={isLoading} className="w-full">
-                      {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    <Button onClick={handleSaveProfile} disabled={isLoading} className="w-full h-9 sm:h-10 text-xs sm:text-sm">
+                      {isLoading && <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2 animate-spin" />}
                       Save Profile
                     </Button>
                   </div>
@@ -459,23 +465,23 @@ export const UserSettingsModal = () => {
 
                 {/* Notifications Section */}
                 {activeTab === 'notifications' && (
-                  <div className="space-y-4">
-                    <div className="space-y-3">
-                      <Label className="text-xs font-bold uppercase text-muted-foreground">
+                  <div className="space-y-3 sm:space-y-4">
+                    <div className="space-y-2 sm:space-y-3">
+                      <Label className="text-[10px] sm:text-xs font-bold uppercase text-muted-foreground">
                         Notification Settings
                       </Label>
                       
                       {/* Desktop Notifications */}
-                      <div className="flex items-center justify-between py-2">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <Bell className="w-4 h-4 text-muted-foreground" />
-                            <Label>Desktop Notifications</Label>
+                      <div className="flex items-center justify-between py-1.5 sm:py-2 gap-3">
+                        <div className="space-y-0.5 sm:space-y-1 min-w-0">
+                          <div className="flex items-center gap-1.5 sm:gap-2">
+                            <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
+                            <Label className="text-xs sm:text-sm">Desktop Notifications</Label>
                           </div>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-[10px] sm:text-xs text-muted-foreground">
                             {Notification.permission === 'denied' 
-                              ? 'Notifications are blocked in your browser settings'
-                              : 'Show desktop notifications for new messages'}
+                              ? 'Blocked in browser'
+                              : 'Show desktop alerts'}
                           </p>
                         </div>
                         <Switch
@@ -498,14 +504,14 @@ export const UserSettingsModal = () => {
                       </div>
 
                       {/* Notification Sound */}
-                      <div className="flex items-center justify-between py-2 border-t pt-4">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <Volume2 className="w-4 h-4 text-muted-foreground" />
-                            <Label>Notification Sound</Label>
+                      <div className="flex items-center justify-between py-1.5 sm:py-2 border-t pt-3 sm:pt-4 gap-3">
+                        <div className="space-y-0.5 sm:space-y-1 min-w-0">
+                          <div className="flex items-center gap-1.5 sm:gap-2">
+                            <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
+                            <Label className="text-xs sm:text-sm">Notification Sound</Label>
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            Play a sound when receiving notifications
+                          <p className="text-[10px] sm:text-xs text-muted-foreground">
+                            Play sound on notification
                           </p>
                         </div>
                         <Switch
@@ -515,14 +521,14 @@ export const UserSettingsModal = () => {
                       </div>
 
                       {/* Message Preview */}
-                      <div className="flex items-center justify-between py-2 border-t pt-4">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <MessageSquare className="w-4 h-4 text-muted-foreground" />
-                            <Label>Show Message Preview</Label>
+                      <div className="flex items-center justify-between py-1.5 sm:py-2 border-t pt-3 sm:pt-4 gap-3">
+                        <div className="space-y-0.5 sm:space-y-1 min-w-0">
+                          <div className="flex items-center gap-1.5 sm:gap-2">
+                            <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
+                            <Label className="text-xs sm:text-sm">Message Preview</Label>
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            Show message content in notifications
+                          <p className="text-[10px] sm:text-xs text-muted-foreground">
+                            Show content in notifications
                           </p>
                         </div>
                         <Switch
@@ -536,11 +542,11 @@ export const UserSettingsModal = () => {
 
                 {/* Appearance Section */}
                 {activeTab === 'appearance' && (
-                  <div className="space-y-4">
+                  <div className="space-y-3 sm:space-y-4">
                     {/* Theme Selector */}
-                    <div className="space-y-3">
-                      <Label className="text-sm">Theme</Label>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-2 sm:space-y-3">
+                      <Label className="text-xs sm:text-sm">Theme</Label>
+                      <div className="grid grid-cols-2 gap-2 sm:gap-3">
                         {THEMES.map((t) => {
                           const preview = THEME_PREVIEWS[t.id];
                           const isActive = theme === t.id;
@@ -558,7 +564,7 @@ export const UserSettingsModal = () => {
                             >
                               {/* Theme preview */}
                               <div 
-                                className="h-16 w-full flex"
+                                className="h-10 sm:h-16 w-full flex"
                                 style={{ backgroundColor: preview.bg }}
                               >
                                 {/* Sidebar preview */}
@@ -567,22 +573,22 @@ export const UserSettingsModal = () => {
                                   style={{ backgroundColor: preview.sidebar }}
                                 />
                                 {/* Chat area with accent message */}
-                                <div className="flex-1 p-2 flex items-end">
+                                <div className="flex-1 p-1.5 sm:p-2 flex items-end">
                                   <div 
-                                    className="h-3 w-3/4 rounded-sm"
+                                    className="h-2 sm:h-3 w-3/4 rounded-sm"
                                     style={{ backgroundColor: preview.accent }}
                                   />
                                 </div>
                               </div>
                               {/* Theme info */}
-                              <div className="px-3 py-2 bg-card flex items-center justify-between">
-                                <div className="text-left">
-                                  <p className="text-sm font-medium">{t.name}</p>
-                                  <p className="text-xs text-muted-foreground">{t.description}</p>
+                              <div className="px-2 sm:px-3 py-1.5 sm:py-2 bg-card flex items-center justify-between">
+                                <div className="text-left min-w-0">
+                                  <p className="text-xs sm:text-sm font-medium truncate">{t.name}</p>
+                                  <p className="text-[10px] sm:text-xs text-muted-foreground truncate hidden sm:block">{t.description}</p>
                                 </div>
                                 {isActive && (
-                                  <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                                    <Check className="w-3 h-3 text-primary-foreground" />
+                                  <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                                    <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-primary-foreground" />
                                   </div>
                                 )}
                               </div>
@@ -593,20 +599,20 @@ export const UserSettingsModal = () => {
                     </div>
 
                     {/* Message Display Section */}
-                    <div className="space-y-3 border-t pt-4">
-                      <Label className="text-xs font-bold uppercase text-muted-foreground">
+                    <div className="space-y-2 sm:space-y-3 border-t pt-3 sm:pt-4">
+                      <Label className="text-[10px] sm:text-xs font-bold uppercase text-muted-foreground">
                         Message Display
                       </Label>
 
                       {/* Compact Mode */}
-                      <div className="flex items-center justify-between py-2">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <MessageSquare className="w-4 h-4 text-muted-foreground" />
-                            <Label>Compact Mode</Label>
+                      <div className="flex items-center justify-between py-1.5 sm:py-2 gap-3">
+                        <div className="space-y-0.5 sm:space-y-1 min-w-0">
+                          <div className="flex items-center gap-1.5 sm:gap-2">
+                            <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
+                            <Label className="text-xs sm:text-sm">Compact Mode</Label>
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            Display messages in a condensed format
+                          <p className="text-[10px] sm:text-xs text-muted-foreground">
+                            Condensed message format
                           </p>
                         </div>
                         <Switch
@@ -616,14 +622,14 @@ export const UserSettingsModal = () => {
                       </div>
 
                       {/* Show Timestamps */}
-                      <div className="flex items-center justify-between py-2 border-t pt-4">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-muted-foreground" />
-                            <Label>Show Timestamps</Label>
+                      <div className="flex items-center justify-between py-1.5 sm:py-2 border-t pt-3 sm:pt-4 gap-3">
+                        <div className="space-y-0.5 sm:space-y-1 min-w-0">
+                          <div className="flex items-center gap-1.5 sm:gap-2">
+                            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
+                            <Label className="text-xs sm:text-sm">Show Timestamps</Label>
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            Display time on each message
+                          <p className="text-[10px] sm:text-xs text-muted-foreground">
+                            Display time on messages
                           </p>
                         </div>
                         <Switch
@@ -633,14 +639,14 @@ export const UserSettingsModal = () => {
                       </div>
 
                       {/* Animate Emojis */}
-                      <div className="flex items-center justify-between py-2 border-t pt-4">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <Sparkles className="w-4 h-4 text-muted-foreground" />
-                            <Label>Animate Emojis</Label>
+                      <div className="flex items-center justify-between py-1.5 sm:py-2 border-t pt-3 sm:pt-4 gap-3">
+                        <div className="space-y-0.5 sm:space-y-1 min-w-0">
+                          <div className="flex items-center gap-1.5 sm:gap-2">
+                            <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
+                            <Label className="text-xs sm:text-sm">Animate Emojis</Label>
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            Enable animated emoji effects
+                          <p className="text-[10px] sm:text-xs text-muted-foreground">
+                            Enable emoji animations
                           </p>
                         </div>
                         <Switch
@@ -651,14 +657,14 @@ export const UserSettingsModal = () => {
                     </div>
 
                     {/* Link Previews */}
-                    <div className="flex items-center justify-between py-2 border-t pt-4">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <Link className="w-4 h-4 text-muted-foreground" />
-                          <Label>Link Previews</Label>
+                    <div className="flex items-center justify-between py-1.5 sm:py-2 border-t pt-3 sm:pt-4 gap-3">
+                      <div className="space-y-0.5 sm:space-y-1 min-w-0">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <Link className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
+                          <Label className="text-xs sm:text-sm">Link Previews</Label>
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                          Show previews for links in messages
+                        <p className="text-[10px] sm:text-xs text-muted-foreground">
+                          Show link previews in messages
                         </p>
                       </div>
                       <Switch
