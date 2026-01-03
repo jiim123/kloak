@@ -31,6 +31,13 @@ export const DMMessageItem = ({ message, isFirst, onReply }: DMMessageItemProps)
 
   const isOwnMessage = user?.id === message.sender_id;
 
+  // Check if current user is mentioned in this message
+  const isMentioned = user?.id && (
+    message.content.includes(`<@${user.id}>`) ||
+    message.content.includes('@everyone') ||
+    message.content.includes('@here')
+  );
+
   // Long press handlers for mobile
   const handleTouchStart = useCallback(() => {
     longPressTimerRef.current = setTimeout(() => {
@@ -87,7 +94,8 @@ export const DMMessageItem = ({ message, isFirst, onReply }: DMMessageItemProps)
       <div
         className={cn(
           'group flex gap-4 py-0.5 px-2 -mx-2 rounded hover:bg-secondary/30 transition-smooth',
-          isFirst && 'mt-4 pt-1'
+          isFirst && 'mt-4 pt-1',
+          isMentioned && 'bg-primary/10 border-l-2 border-l-primary'
         )}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
