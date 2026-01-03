@@ -217,7 +217,7 @@ const Auth = () => {
         {/* Logo and branding */}
         <div className="text-center mb-8">
           <img src={kloakLogo} alt="Kloak" className="h-12 mx-auto mb-4" />
-          <p className="text-muted-foreground mt-1 font-medium">Privacy-first messaging</p>
+          <p className="text-white mt-1 font-medium">Privacy-first messaging</p>
         </div>
 
         {/* Auth card */}
@@ -294,6 +294,10 @@ const Auth = () => {
                     )}
                     Create Account
                   </Button>
+                  
+                  <p className="text-center text-xs text-muted-foreground mt-4">
+                    No email. No password. No tracking.
+                  </p>
                 </form>
               </TabsContent>
 
@@ -338,6 +342,10 @@ const Auth = () => {
                     ) : null}
                     Login
                   </Button>
+                  
+                  <p className="text-center text-xs text-muted-foreground mt-4">
+                    No email. No password. No tracking.
+                  </p>
                 </form>
               </TabsContent>
             </Tabs>
@@ -424,11 +432,6 @@ const Auth = () => {
             </div>
           )}
         </div>
-
-        {/* Footer */}
-        <p className="text-center text-xs text-muted-foreground mt-6">
-          No email. No password. No tracking.
-        </p>
       </div>
 
       {/* Welcome Modal for new users */}
