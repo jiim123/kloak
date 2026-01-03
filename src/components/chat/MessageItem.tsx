@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Smile, Reply, Pencil, Trash2, Pin, MoreHorizontal, CornerUpLeft } from "lucide-react";
+import { Smile, Reply, Pencil, Trash2, Pin, MoreHorizontal, CornerUpLeft, Copy, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -7,9 +7,14 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuthStore } from "@/stores/authStore";
 import { useMessageStore } from "@/stores/messageStore";
@@ -483,16 +488,16 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }:
         </div>
       </div>
 
-      {/* Mobile action sheet */}
-      {showMobileActions && (
-        <div className="fixed inset-0 z-50 md:hidden" onClick={() => setShowMobileActions(false)}>
-          <div className="absolute inset-0 bg-black/50" />
-          <div
-            className="absolute bottom-0 left-0 right-0 bg-secondary rounded-t-2xl p-4 pb-8"
-            onClick={(e) => e.stopPropagation()}
-          >
+      {/* Mobile action drawer */}
+      <Drawer open={showMobileActions} onOpenChange={setShowMobileActions}>
+        <DrawerContent className="max-h-[85vh]">
+          <DrawerHeader className="pb-2">
+            <DrawerTitle className="text-sm font-medium text-muted-foreground">Message Actions</DrawerTitle>
+          </DrawerHeader>
+          
+          <div className="px-4 pb-8">
             {/* Quick reactions */}
-            <div className="flex justify-center gap-4 mb-4 pb-4 border-b border-border">
+            <div className="flex justify-center gap-3 mb-4 pb-4 border-b border-border">
               {quickReactions.map((emoji) => (
                 <button
                   key={emoji}
@@ -516,7 +521,7 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }:
                   setShowMobileActions(false);
                 }}
               >
-                <Reply className="w-5 h-5" />
+                <Reply className="w-5 h-5 text-muted-foreground" />
                 <span>Reply</span>
               </button>
 
@@ -529,7 +534,7 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }:
                     setShowMobileActions(false);
                   }}
                 >
-                  <Pencil className="w-5 h-5" />
+                  <Pencil className="w-5 h-5 text-muted-foreground" />
                   <span>Edit</span>
                 </button>
               )}
@@ -541,7 +546,7 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }:
                   setShowMobileActions(false);
                 }}
               >
-                <MoreHorizontal className="w-5 h-5" />
+                <Copy className="w-5 h-5 text-muted-foreground" />
                 <span>Copy Text</span>
               </button>
 
@@ -553,7 +558,7 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }:
                     setShowMobileActions(false);
                   }}
                 >
-                  <Pin className={`w-5 h-5 ${message.is_pinned ? "text-primary" : ""}`} />
+                  <Pin className={`w-5 h-5 ${message.is_pinned ? "text-primary" : "text-muted-foreground"}`} />
                   <span>{message.is_pinned ? "Unpin" : "Pin"}</span>
                 </button>
               )}
@@ -571,17 +576,9 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }:
                 </button>
               )}
             </div>
-
-            {/* Cancel */}
-            <button
-              className="w-full mt-4 py-3 text-center text-muted-foreground"
-              onClick={() => setShowMobileActions(false)}
-            >
-              Cancel
-            </button>
           </div>
-        </div>
-      )}
+        </DrawerContent>
+      </Drawer>
 
       {/* Delete confirmation modal */}
       <DeleteMessageModal message={showDeleteModal ? message : null} onClose={() => setShowDeleteModal(false)} />
