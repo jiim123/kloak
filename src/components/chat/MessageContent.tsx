@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { CodeBlock, InlineCode } from './CodeBlock';
 import { LinkPreview } from './LinkPreview';
 import { useUIStore } from '@/stores/uiStore';
@@ -159,7 +159,7 @@ const parseTextContent = (content: string, currentUserId?: string, usersMap?: Ma
     '<span class="mention mention-everyone">@$1</span>'
   );
   
-  // User mentions <@userId>
+  // User mentions <@userId> - make them clickable with cursor pointer
   parsed = parsed.replace(
     /&lt;@(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})&gt;/g,
     (match, userId) => {
@@ -167,7 +167,7 @@ const parseTextContent = (content: string, currentUserId?: string, usersMap?: Ma
       const userInfo = usersMap?.get(userId);
       // Use nickname first, then display_name, then username, fallback to 'user'
       const displayName = userInfo?.nickname || userInfo?.display_name || userInfo?.username || 'user';
-      return `<span class="mention${isSelf ? ' mention-self' : ''}" data-user-id="${userId}">@${escapeHtml(displayName)}</span>`;
+      return `<span class="mention mention-clickable${isSelf ? ' mention-self' : ''}" data-user-id="${userId}" role="button" tabindex="0">@${escapeHtml(displayName)}</span>`;
     }
   );
   
@@ -178,7 +178,7 @@ const parseTextContent = (content: string, currentUserId?: string, usersMap?: Ma
 };
 
 export const MessageContent = ({ content, currentUserId, messageId, users }: MessageContentProps) => {
-  const { linkPreviewsEnabled } = useUIStore();
+  const { linkPreviewsEnabled, openModal } = useUIStore();
   const { members } = useServerStore();
   const segments = useMemo(() => parseMessageSegments(content), [content]);
   
@@ -214,9 +214,29 @@ export const MessageContent = ({ content, currentUserId, messageId, users }: Mes
       .join(' ');
     return extractUrls(textContent);
   }, [segments]);
+  // Handle click on mentions using event delegation
+  const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.classList.contains('mention-clickable') && target.dataset.userId) {
+      e.preventDefault();
+      e.stopPropagation();
+      openModal('userProfile', { userId: target.dataset.userId });
+    }
+  }, [openModal]);
+
+  // Handle keyboard activation for accessibility
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      const target = e.target as HTMLElement;
+      if (target.classList.contains('mention-clickable') && target.dataset.userId) {
+        e.preventDefault();
+        openModal('userProfile', { userId: target.dataset.userId });
+      }
+    }
+  }, [openModal]);
   
   return (
-    <div className="break-words">
+    <div className="break-words" onClick={handleClick} onKeyDown={handleKeyDown}>
       {segments.map((segment, index) => {
         switch (segment.type) {
           case 'code-block':
