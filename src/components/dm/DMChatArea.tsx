@@ -1,43 +1,25 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { ArrowDown, Smile, Plus, Send } from 'lucide-react';
+import { ArrowDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { useDMStore } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useUnreadDMs } from '@/hooks/useUnreadDMs';
-import { useRealtimeDMs } from '@/hooks/useRealtimeDMs';
 import { formatMessageTimestamp } from '@/lib/format';
-import { getDraft, saveDraft, clearDraft } from '@/lib/storage';
+import { DMMessageInput } from './DMMessageInput';
 import type { DirectMessage } from '@/types';
 
 export const DMChatArea = () => {
   const { user } = useAuthStore();
-  const { currentConversation, messages, isLoading, fetchMessages, sendMessage, clearMessages } = useDMStore();
-  const { markAsRead, incrementUnread } = useUnreadDMs(user?.id || null);
+  const { currentConversation, messages, isLoading, fetchMessages, clearMessages } = useDMStore();
+  const { markAsRead } = useUnreadDMs(user?.id || null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   
-  const [content, setContent] = useState('');
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [newMessageCount, setNewMessageCount] = useState(0);
   const [replyingTo, setReplyingTo] = useState<DirectMessage | null>(null);
-
-  // Use real-time DM hook for all conversations
-  useRealtimeDMs({
-    userId: user?.id || null,
-    currentConversationId: currentConversation?.id || null,
-    onNewMessage: (message, conversationId) => {
-      // Only increment unread if not viewing that conversation
-      if (conversationId !== currentConversation?.id) {
-        incrementUnread(conversationId);
-      } else if (!isAtBottom) {
-        setNewMessageCount((prev) => prev + 1);
-      }
-    },
-  });
 
   // Fetch messages and mark as read when conversation changes
   useEffect(() => {
@@ -45,10 +27,6 @@ export const DMChatArea = () => {
       clearMessages();
       fetchMessages(currentConversation.id);
       markAsRead(currentConversation.id);
-      
-      // Restore draft
-      const draft = getDraft(`dm-${currentConversation.id}`);
-      if (draft) setContent(draft);
     }
   }, [currentConversation?.id, fetchMessages, clearMessages, markAsRead]);
 
@@ -56,8 +34,18 @@ export const DMChatArea = () => {
   useEffect(() => {
     if (isAtBottom) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    } else if (messages.length > 0) {
+      // Count new messages when not at bottom
+      setNewMessageCount((prev) => prev + 1);
     }
-  }, [messages, isAtBottom]);
+  }, [messages.length, isAtBottom]);
+
+  // Reset new message count when scrolling to bottom
+  useEffect(() => {
+    if (isAtBottom) {
+      setNewMessageCount(0);
+    }
+  }, [isAtBottom]);
 
   // Check scroll position
   const handleScroll = useCallback(() => {
@@ -67,41 +55,12 @@ export const DMChatArea = () => {
     const { scrollTop, scrollHeight, clientHeight } = container;
     const atBottom = scrollHeight - scrollTop - clientHeight < 100;
     setIsAtBottom(atBottom);
-
-    if (atBottom) {
-      setNewMessageCount(0);
-    }
   }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     setNewMessageCount(0);
     setIsAtBottom(true);
-  };
-
-  const handleSend = async () => {
-    if (!content.trim() || !currentConversation?.id || !user?.id) return;
-
-    const messageContent = content.trim();
-    setContent('');
-    clearDraft(`dm-${currentConversation.id}`);
-    setReplyingTo(null);
-
-    await sendMessage(currentConversation.id, user.id, messageContent, replyingTo?.id);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
-  const handleContentChange = (value: string) => {
-    setContent(value);
-    if (currentConversation?.id) {
-      saveDraft(`dm-${currentConversation.id}`, value);
-    }
   };
 
   // Group messages by sender within 5 minutes
@@ -296,81 +255,13 @@ export const DMChatArea = () => {
         </div>
       )}
 
-      {/* Reply preview */}
-      {replyingTo && (
-        <div className="px-4 py-2 bg-secondary/50 border-t border-border flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Replying to</span>
-            <span className="font-medium text-foreground">
-              @{replyingTo.sender?.username}
-            </span>
-          </div>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-6 w-6"
-            onClick={() => setReplyingTo(null)}
-          >
-            <span className="text-lg">×</span>
-          </Button>
-        </div>
-      )}
-
-      {/* Message input */}
-      <div className="p-4 pt-0">
-        <div className="relative bg-secondary/50 rounded-lg border border-border">
-          <div className="flex items-end gap-2 p-2">
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-8 w-8 flex-shrink-0"
-            >
-              <Plus className="w-5 h-5" />
-            </Button>
-
-            <Textarea
-              ref={textareaRef}
-              value={content}
-              onChange={(e) => handleContentChange(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={`Message @${otherUser?.username || 'user'}`}
-              className="min-h-[40px] max-h-[120px] resize-none border-0 bg-transparent focus-visible:ring-0 p-0"
-              rows={1}
-            />
-
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8"
-              >
-                <Smile className="w-5 h-5" />
-              </Button>
-
-              {content.trim() && (
-                <Button
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={handleSend}
-                >
-                  <Send className="w-4 h-4" />
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Character count */}
-          {content.length > 1800 && (
-            <div className="absolute bottom-2 right-16 text-xs">
-              <span className={cn(
-                content.length > 2000 ? 'text-destructive' : 'text-muted-foreground'
-              )}>
-                {content.length}/2000
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Message input - matches channel input style */}
+      <DMMessageInput
+        conversationId={currentConversation.id}
+        otherUsername={otherUser?.username || 'user'}
+        replyingTo={replyingTo}
+        onCancelReply={() => setReplyingTo(null)}
+      />
     </div>
   );
 };

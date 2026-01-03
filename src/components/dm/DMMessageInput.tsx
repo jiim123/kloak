@@ -1,0 +1,211 @@
+import { useState, useEffect, useRef } from 'react';
+import { Paperclip, Smile, Send, X } from 'lucide-react';
+import { useAuthStore } from '@/stores/authStore';
+import { useDMStore } from '@/stores/dmStore';
+import { saveDraft, getDraft, clearDraft } from '@/lib/storage';
+import { EmojiPicker } from '@/components/modals/EmojiPicker';
+import { cn } from '@/lib/utils';
+
+interface DMMessageInputProps {
+  conversationId: string;
+  otherUsername: string;
+  replyingTo?: { id: string; sender?: { username?: string }; content: string } | null;
+  onCancelReply?: () => void;
+}
+
+const MAX_LENGTH = 2000;
+
+export const DMMessageInput = ({ 
+  conversationId, 
+  otherUsername, 
+  replyingTo,
+  onCancelReply 
+}: DMMessageInputProps) => {
+  const { user } = useAuthStore();
+  const { sendMessage } = useDMStore();
+  
+  const [content, setContent] = useState('');
+  const [isFocused, setIsFocused] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Load draft on mount and conversation change
+  useEffect(() => {
+    const draft = getDraft(`dm-${conversationId}`);
+    setContent(draft);
+  }, [conversationId]);
+
+  // Save draft on content change
+  useEffect(() => {
+    saveDraft(`dm-${conversationId}`, content);
+  }, [conversationId, content]);
+
+  // Focus textarea when replying
+  useEffect(() => {
+    if (replyingTo && textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [replyingTo]);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = Math.min(textarea.scrollHeight, 160) + 'px';
+    }
+  }, [content]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    if (value.length <= MAX_LENGTH) {
+      setContent(value);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!content.trim() || !user || isSending) return;
+
+    const messageContent = content.trim();
+    
+    // Clear input immediately for instant feedback
+    setContent('');
+    clearDraft(`dm-${conversationId}`);
+    const currentReplyTo = replyingTo;
+    onCancelReply?.();
+    
+    setIsSending(true);
+    try {
+      await sendMessage(conversationId, user.id, messageContent, currentReplyTo?.id);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
+  // Handle emoji selection - insert at cursor position
+  const handleEmojiSelect = (emoji: string) => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const newContent = content.slice(0, start) + emoji + content.slice(end);
+      
+      if (newContent.length <= MAX_LENGTH) {
+        setContent(newContent);
+        
+        requestAnimationFrame(() => {
+          const newCursorPos = start + emoji.length;
+          textarea.setSelectionRange(newCursorPos, newCursorPos);
+        });
+      }
+    } else {
+      const newContent = content + emoji;
+      if (newContent.length <= MAX_LENGTH) {
+        setContent(newContent);
+      }
+    }
+    
+    setShowEmojiPicker(false);
+  };
+
+  const showCharacterWarning = content.length > MAX_LENGTH - 200;
+
+  return (
+    <div className="px-4 pb-6 relative">
+      {/* Reply preview */}
+      {replyingTo && (
+        <div className="flex items-center gap-2 px-4 py-2 bg-secondary rounded-t-2xl border-b border-border">
+          <span className="text-sm text-muted-foreground">
+            Replying to <span className="font-medium text-primary">@{replyingTo.sender?.username}</span>
+          </span>
+          <span className="text-sm text-muted-foreground truncate flex-1">
+            {replyingTo.content.slice(0, 50)}{replyingTo.content.length > 50 ? '...' : ''}
+          </span>
+          <button 
+            onClick={onCancelReply}
+            className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Floating input container */}
+      <div 
+        className={cn(
+          "rounded-2xl bg-secondary border transition-all duration-200 ease-out",
+          isFocused ? 'border-border -translate-y-[3px] shadow-lg' : 'border-transparent translate-y-0',
+          replyingTo ? 'rounded-t-none' : ''
+        )}
+      >
+        <div className="flex items-end gap-2 p-3">
+          {/* Attachment button */}
+          <button className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150 mb-0.5">
+            <Paperclip className="w-5 h-5" />
+          </button>
+
+          {/* Textarea */}
+          <textarea
+            ref={textareaRef}
+            value={content}
+            onChange={handleChange}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            onKeyDown={handleKeyDown}
+            placeholder={`Message @${otherUsername}`}
+            rows={1}
+            className="flex-1 bg-transparent resize-none outline-none text-foreground placeholder:text-muted-foreground text-[15px] leading-relaxed py-2 px-1 font-light"
+            style={{ fontFamily: "system-ui, -apple-system, sans-serif, 'Noto Color Emoji'" }}
+          />
+
+          {/* Action buttons */}
+          <div className="flex items-center gap-1 mb-0.5">
+            {/* Character count warning */}
+            {showCharacterWarning && (
+              <span className={`text-xs mr-1 ${content.length > MAX_LENGTH - 50 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                {MAX_LENGTH - content.length}
+              </span>
+            )}
+
+            {/* Emoji button with picker */}
+            <EmojiPicker
+              open={showEmojiPicker}
+              onOpenChange={setShowEmojiPicker}
+              onEmojiSelect={handleEmojiSelect}
+            >
+              <button 
+                type="button"
+                className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
+                onMouseDown={(e) => e.preventDefault()}
+              >
+                <Smile className="w-5 h-5" />
+              </button>
+            </EmojiPicker>
+
+            {/* Send button */}
+            <button
+              onClick={handleSubmit}
+              disabled={!content.trim() || isSending}
+              className={`p-2 rounded-xl transition-all duration-150 ${
+                content.trim() && !isSending
+                  ? 'bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95'
+                  : 'bg-muted text-muted-foreground cursor-not-allowed'
+              }`}
+            >
+              <Send className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
