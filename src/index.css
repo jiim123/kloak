@@ -506,7 +506,11 @@
 
   /* Mention styling */
   .mention {
-    @apply bg-primary/20 text-primary px-1 rounded cursor-pointer hover:bg-primary/30;
+    @apply bg-primary/20 text-primary px-1 rounded;
+  }
+
+  .mention-clickable {
+    @apply cursor-pointer hover:bg-primary/30 hover:underline transition-colors;
   }
 
   .mention-self {
@@ -514,7 +518,7 @@
   }
 
   .mention-everyone {
-    @apply bg-[hsl(var(--kloak-warning))]/20 text-[hsl(var(--kloak-warning))];
+    @apply bg-[hsl(var(--kloak-warning))]/20 text-[hsl(var(--kloak-warning))] cursor-default;
   }
 
   /* Message link styling */
