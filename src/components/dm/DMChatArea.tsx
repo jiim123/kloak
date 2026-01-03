@@ -11,8 +11,11 @@ import type { DirectMessage } from '@/types';
 
 export const DMChatArea = () => {
   const { user } = useAuthStore();
-  const { currentConversation, messages, isLoading, fetchMessages, clearMessages } = useDMStore();
+  const { currentConversation, isLoading, fetchMessages, getMessages } = useDMStore();
   const { markAsRead } = useUnreadDMs(user?.id || null);
+  
+  // Get messages for current conversation from cache
+  const messages = currentConversation ? getMessages(currentConversation.id) : [];
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -24,11 +27,10 @@ export const DMChatArea = () => {
   // Fetch messages and mark as read when conversation changes
   useEffect(() => {
     if (currentConversation?.id) {
-      clearMessages();
       fetchMessages(currentConversation.id);
       markAsRead(currentConversation.id);
     }
-  }, [currentConversation?.id, fetchMessages, clearMessages, markAsRead]);
+  }, [currentConversation?.id, fetchMessages, markAsRead]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {

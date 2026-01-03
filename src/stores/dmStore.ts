@@ -5,7 +5,8 @@ import type { DMConversation, DirectMessage, User, ReactionGroup } from '@/types
 interface DMState {
   conversations: DMConversation[];
   currentConversation: DMConversation | null;
-  messages: DirectMessage[];
+  // Store messages per conversation to persist them
+  messagesByConversation: Record<string, DirectMessage[]>;
   isLoading: boolean;
 
   // Conversation actions
@@ -18,9 +19,11 @@ interface DMState {
   sendMessage: (conversationId: string, senderId: string, content: string, replyToId?: string) => Promise<DirectMessage | null>;
 
   // Realtime actions
-  addMessage: (message: DirectMessage) => void;
+  addMessage: (conversationId: string, message: DirectMessage) => void;
   updateConversation: (conversationId: string, updates: Partial<DMConversation>) => void;
-  clearMessages: () => void;
+  
+  // Getters
+  getMessages: (conversationId: string) => DirectMessage[];
 }
 
 const groupReactions = (reactions: any[], currentUserId?: string): ReactionGroup[] => {
@@ -48,7 +51,7 @@ const groupReactions = (reactions: any[], currentUserId?: string): ReactionGroup
 export const useDMStore = create<DMState>((set, get) => ({
   conversations: [],
   currentConversation: null,
-  messages: [],
+  messagesByConversation: {},
   isLoading: false,
 
   fetchConversations: async (userId: string) => {
@@ -206,6 +209,13 @@ export const useDMStore = create<DMState>((set, get) => ({
   setCurrentConversation: (conversation) => set({ currentConversation: conversation }),
 
   fetchMessages: async (conversationId: string, limit = 50, before?: string) => {
+    // Check if we already have messages cached for this conversation
+    const existingMessages = get().messagesByConversation[conversationId];
+    if (existingMessages && existingMessages.length > 0 && !before) {
+      // Already have messages, skip loading
+      return;
+    }
+
     set({ isLoading: true });
 
     try {
@@ -242,14 +252,29 @@ export const useDMStore = create<DMState>((set, get) => ({
         reactions: groupReactions(msg.reactions || []),
       }));
 
-      if (before) {
-        set((state) => ({
-          messages: [...messages, ...state.messages],
-          isLoading: false,
-        }));
-      } else {
-        set({ messages, isLoading: false });
-      }
+      set((state) => {
+        const currentMessages = state.messagesByConversation[conversationId] || [];
+        
+        if (before) {
+          // Prepend older messages
+          return {
+            messagesByConversation: {
+              ...state.messagesByConversation,
+              [conversationId]: [...messages, ...currentMessages],
+            },
+            isLoading: false,
+          };
+        } else {
+          // Replace with fresh messages
+          return {
+            messagesByConversation: {
+              ...state.messagesByConversation,
+              [conversationId]: messages,
+            },
+            isLoading: false,
+          };
+        }
+      });
     } catch (error) {
       console.error('Failed to fetch DM messages:', error);
       set({ isLoading: false });
@@ -288,12 +313,21 @@ export const useDMStore = create<DMState>((set, get) => ({
     }
   },
 
-  addMessage: (message) => {
+  addMessage: (conversationId: string, message: DirectMessage) => {
     set((state) => {
-      if (state.messages.some((m) => m.id === message.id)) {
+      const currentMessages = state.messagesByConversation[conversationId] || [];
+      
+      // Check for duplicate
+      if (currentMessages.some((m) => m.id === message.id)) {
         return state;
       }
-      return { messages: [...state.messages, message] };
+      
+      return {
+        messagesByConversation: {
+          ...state.messagesByConversation,
+          [conversationId]: [...currentMessages, message],
+        },
+      };
     });
   },
 
@@ -305,5 +339,7 @@ export const useDMStore = create<DMState>((set, get) => ({
     }));
   },
 
-  clearMessages: () => set({ messages: [] }),
+  getMessages: (conversationId: string) => {
+    return get().messagesByConversation[conversationId] || [];
+  },
 }));
