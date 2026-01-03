@@ -40,10 +40,8 @@ export const useRealtimeDMs = ({
         reactions: [],
       };
 
-      // If this is for the current conversation, add to messages
-      if (newMessageData.conversation_id === currentConversationId) {
-        addMessage(message);
-      }
+      // Add message to the conversation's cache
+      addMessage(newMessageData.conversation_id, message);
 
       // Update conversation's last message
       updateConversation(newMessageData.conversation_id, {
