@@ -126,52 +126,6 @@ export const ServerSidebar = () => {
 
   return (
     <div className="h-full flex flex-col items-center py-3 gap-2 bg-layout-sidebar">
-      {/* Home button */}
-      <Tooltip delayDuration={300}>
-        <TooltipTrigger asChild>
-          <motion.button
-            className="relative group"
-            onMouseEnter={() => setHoveredServer(null)}
-            onMouseLeave={() => setHoveredServer(null)}
-            onClick={() => setCurrentServer(null)}
-            whileHover="hover"
-            whileTap="tap"
-          >
-            {/* Indicator pill */}
-            <motion.span
-              className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 bg-foreground rounded-r-full"
-              variants={pillVariants}
-              initial="hidden"
-              animate={getPillState(null, false)}
-              transition={{ type: "spring", stiffness: 500, damping: 30 }}
-            />
-
-            <motion.div
-              variants={iconVariants}
-              initial="animate"
-              animate={currentServer === null ? "active" : "animate"}
-              whileHover="hover"
-              whileTap="tap"
-              transition={{ type: "spring", stiffness: 400, damping: 25 }}
-              className={cn(
-                "w-12 h-12 flex items-center justify-center",
-                currentServer === null
-                  ? "bg-primary text-primary-foreground ring-2 ring-primary/50"
-                  : "bg-secondary hover:bg-primary hover:text-primary-foreground",
-              )}
-            >
-              <MessageCircle className="w-5 h-5" />
-            </motion.div>
-          </motion.button>
-        </TooltipTrigger>
-        <TooltipContent side="right" className="font-medium">
-          Direct Messages
-        </TooltipContent>
-      </Tooltip>
-
-      {/* Separator */}
-      <div className="w-8 h-0.5 bg-border rounded-full" />
-
       {/* Server list */}
       <div className="flex-1 flex flex-col items-center gap-2 overflow-y-auto scrollbar-hide w-full px-3">
         {/* Loading skeleton */}
@@ -358,6 +312,49 @@ export const ServerSidebar = () => {
 
       {/* Separator */}
       <div className="w-8 h-0.5 bg-border rounded-full" />
+
+      {/* Direct Messages button */}
+      <Tooltip delayDuration={300}>
+        <TooltipTrigger asChild>
+          <motion.button
+            className="relative group"
+            onMouseEnter={() => setHoveredServer(null)}
+            onMouseLeave={() => setHoveredServer(null)}
+            onClick={() => setCurrentServer(null)}
+            whileHover="hover"
+            whileTap="tap"
+          >
+            {/* Indicator pill */}
+            <motion.span
+              className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 bg-foreground rounded-r-full"
+              variants={pillVariants}
+              initial="hidden"
+              animate={getPillState(null, false)}
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            />
+
+            <motion.div
+              variants={iconVariants}
+              initial="animate"
+              animate={currentServer === null ? "active" : "animate"}
+              whileHover="hover"
+              whileTap="tap"
+              transition={{ type: "spring", stiffness: 400, damping: 25 }}
+              className={cn(
+                "w-12 h-12 flex items-center justify-center",
+                currentServer === null
+                  ? "bg-primary text-primary-foreground ring-2 ring-primary/50"
+                  : "bg-secondary hover:bg-primary hover:text-primary-foreground",
+              )}
+            >
+              <MessageCircle className="w-5 h-5" />
+            </motion.div>
+          </motion.button>
+        </TooltipTrigger>
+        <TooltipContent side="right" className="font-medium">
+          Direct Messages
+        </TooltipContent>
+      </Tooltip>
 
       {/* User settings button */}
       <Tooltip delayDuration={300}>
