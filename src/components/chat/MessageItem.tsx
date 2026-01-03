@@ -61,6 +61,13 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }:
   const isOwnMessage = user?.id === message.user_id;
   const messageUser = message.user;
 
+  // Check if current user is mentioned in this message
+  const isMentioned = user?.id && (
+    message.content.includes(`<@${user.id}>`) ||
+    message.content.includes('@everyone') ||
+    message.content.includes('@here')
+  );
+
   // Check if current user is admin
   const currentMember = members.find((m) => m.user_id === user?.id);
   const isAdmin =
@@ -171,7 +178,7 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }:
       <div className={`px-2 ${compactMode ? "py-0" : isGrouped ? "py-0.5" : "py-1"}`}>
         {/* Inner wrapper with hover effect and rounded borders */}
         <div
-          className={`group relative flex px-3 rounded-lg transition-colors hover:bg-muted/40 ${compactMode ? "gap-2 py-0.5" : "gap-3 py-1.5"} ${isPending ? "opacity-70" : ""} ${isFailed ? "bg-destructive/5 border border-destructive/20" : ""}`}
+          className={`group relative flex px-3 rounded-lg transition-colors hover:bg-muted/40 ${compactMode ? "gap-2 py-0.5" : "gap-3 py-1.5"} ${isPending ? "opacity-70" : ""} ${isFailed ? "bg-destructive/5 border border-destructive/20" : ""} ${isMentioned ? "bg-primary/10 border-l-2 border-l-primary" : ""}`}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
           onTouchStart={handleTouchStart}
