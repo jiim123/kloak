@@ -5,14 +5,16 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useDMStore } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
-import { supabase } from '@/integrations/supabase/client';
-import { formatMessageTimestamp, formatRelativeTime } from '@/lib/format';
+import { useUnreadDMs } from '@/hooks/useUnreadDMs';
+import { useRealtimeDMs } from '@/hooks/useRealtimeDMs';
+import { formatMessageTimestamp } from '@/lib/format';
 import { getDraft, saveDraft, clearDraft } from '@/lib/storage';
 import type { DirectMessage } from '@/types';
 
 export const DMChatArea = () => {
   const { user } = useAuthStore();
-  const { currentConversation, messages, isLoading, fetchMessages, sendMessage, addMessage, clearMessages } = useDMStore();
+  const { currentConversation, messages, isLoading, fetchMessages, sendMessage, clearMessages } = useDMStore();
+  const { markAsRead, incrementUnread } = useUnreadDMs(user?.id || null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -23,64 +25,32 @@ export const DMChatArea = () => {
   const [newMessageCount, setNewMessageCount] = useState(0);
   const [replyingTo, setReplyingTo] = useState<DirectMessage | null>(null);
 
-  // Fetch messages when conversation changes
+  // Use real-time DM hook for all conversations
+  useRealtimeDMs({
+    userId: user?.id || null,
+    currentConversationId: currentConversation?.id || null,
+    onNewMessage: (message, conversationId) => {
+      // Only increment unread if not viewing that conversation
+      if (conversationId !== currentConversation?.id) {
+        incrementUnread(conversationId);
+      } else if (!isAtBottom) {
+        setNewMessageCount((prev) => prev + 1);
+      }
+    },
+  });
+
+  // Fetch messages and mark as read when conversation changes
   useEffect(() => {
     if (currentConversation?.id) {
       clearMessages();
       fetchMessages(currentConversation.id);
+      markAsRead(currentConversation.id);
       
       // Restore draft
       const draft = getDraft(`dm-${currentConversation.id}`);
       if (draft) setContent(draft);
     }
-  }, [currentConversation?.id, fetchMessages, clearMessages]);
-
-  // Subscribe to realtime messages
-  useEffect(() => {
-    if (!currentConversation?.id) return;
-
-    const channel = supabase
-      .channel(`dm-messages:${currentConversation.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'direct_messages',
-          filter: `conversation_id=eq.${currentConversation.id}`,
-        },
-        async (payload) => {
-          // Fetch the complete message with relations
-          const { data } = await supabase
-            .from('direct_messages')
-            .select(`
-              *,
-              sender:users (*)
-            `)
-            .eq('id', payload.new.id)
-            .single();
-
-          if (data) {
-            const newMessage: DirectMessage = {
-              ...data,
-              sender: data.sender,
-              attachments: [],
-              reactions: [],
-            };
-            addMessage(newMessage);
-
-            if (!isAtBottom) {
-              setNewMessageCount((prev) => prev + 1);
-            }
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [currentConversation?.id, addMessage, isAtBottom]);
+  }, [currentConversation?.id, fetchMessages, clearMessages, markAsRead]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
