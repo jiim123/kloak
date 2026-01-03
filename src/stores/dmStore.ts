@@ -209,13 +209,6 @@ export const useDMStore = create<DMState>((set, get) => ({
   setCurrentConversation: (conversation) => set({ currentConversation: conversation }),
 
   fetchMessages: async (conversationId: string, limit = 50, before?: string) => {
-    // Check if we already have messages cached for this conversation
-    const existingMessages = get().messagesByConversation[conversationId];
-    if (existingMessages && existingMessages.length > 0 && !before) {
-      // Already have messages, skip loading
-      return;
-    }
-
     set({ isLoading: true });
 
     try {
@@ -224,11 +217,6 @@ export const useDMStore = create<DMState>((set, get) => ({
         .select(`
           *,
           sender:users (*),
-          reply_to:direct_messages!direct_messages_reply_to_id_fkey (
-            id,
-            content,
-            sender:users (*)
-          ),
           attachments:dm_attachments (*),
           reactions:dm_reactions (*)
         `)
@@ -247,7 +235,7 @@ export const useDMStore = create<DMState>((set, get) => ({
       const messages: DirectMessage[] = (data || []).reverse().map((msg: any) => ({
         ...msg,
         sender: msg.sender,
-        reply_to: msg.reply_to,
+        reply_to: null, // Self-referencing joins not supported by PostgREST
         attachments: msg.attachments || [],
         reactions: groupReactions(msg.reactions || []),
       }));
