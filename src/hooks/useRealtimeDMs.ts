@@ -1,7 +1,7 @@
 import { useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useDMStore } from '@/stores/dmStore';
-import type { DirectMessage } from '@/types';
+import type { DirectMessage, ReactionGroup } from '@/types';
 
 interface UseRealtimeDMsOptions {
   userId: string | null;
@@ -9,12 +9,34 @@ interface UseRealtimeDMsOptions {
   onNewMessage?: (message: DirectMessage, conversationId: string) => void;
 }
 
+const groupReactions = (reactions: any[], currentUserId?: string): ReactionGroup[] => {
+  const groups: Record<string, ReactionGroup> = {};
+
+  reactions.forEach((reaction) => {
+    if (!groups[reaction.emoji]) {
+      groups[reaction.emoji] = {
+        emoji: reaction.emoji,
+        count: 0,
+        users: [],
+        hasReacted: false,
+      };
+    }
+    groups[reaction.emoji].count++;
+    groups[reaction.emoji].users.push(reaction.user_id);
+    if (reaction.user_id === currentUserId) {
+      groups[reaction.emoji].hasReacted = true;
+    }
+  });
+
+  return Object.values(groups);
+};
+
 export const useRealtimeDMs = ({
   userId,
   currentConversationId,
   onNewMessage,
 }: UseRealtimeDMsOptions) => {
-  const { addMessage, updateConversation, fetchConversations } = useDMStore();
+  const { addMessage, updateMessage, removeMessage, updateConversation, fetchConversations, getMessages } = useDMStore();
 
   // Handle incoming message
   const handleNewMessage = useCallback(
@@ -26,7 +48,8 @@ export const useRealtimeDMs = ({
         .from('direct_messages')
         .select(`
           *,
-          sender:users (*)
+          sender:users (*),
+          reactions:dm_reactions (*)
         `)
         .eq('id', newMessageData.id)
         .single();
@@ -37,7 +60,7 @@ export const useRealtimeDMs = ({
         ...data,
         sender: data.sender,
         attachments: [],
-        reactions: [],
+        reactions: groupReactions(data.reactions || [], userId || undefined),
       };
 
       // Add message to the conversation's cache
@@ -56,11 +79,64 @@ export const useRealtimeDMs = ({
     [currentConversationId, addMessage, updateConversation, onNewMessage, userId]
   );
 
+  // Handle message updates (edits)
+  const handleMessageUpdate = useCallback(
+    (payload: any) => {
+      const updatedData = payload.new;
+      if (updatedData.conversation_id) {
+        updateMessage(updatedData.conversation_id, updatedData.id, {
+          content: updatedData.content,
+          edited_at: updatedData.edited_at,
+        });
+      }
+    },
+    [updateMessage]
+  );
+
+  // Handle message deletes
+  const handleMessageDelete = useCallback(
+    (payload: any) => {
+      const deletedData = payload.old;
+      if (deletedData.conversation_id) {
+        removeMessage(deletedData.conversation_id, deletedData.id);
+      }
+    },
+    [removeMessage]
+  );
+
+  // Handle reaction changes
+  const handleReactionChange = useCallback(
+    async (payload: any) => {
+      const messageId = payload.new?.message_id || payload.old?.message_id;
+      if (!messageId) return;
+
+      // Fetch the message to get its conversation_id and updated reactions
+      const { data: messageData } = await supabase
+        .from('direct_messages')
+        .select('conversation_id')
+        .eq('id', messageId)
+        .single();
+
+      if (!messageData) return;
+
+      // Fetch updated reactions for this message
+      const { data: reactionsData } = await supabase
+        .from('dm_reactions')
+        .select('*')
+        .eq('message_id', messageId);
+
+      const reactions = groupReactions(reactionsData || [], userId || undefined);
+
+      // Update the message in store
+      updateMessage(messageData.conversation_id, messageId, { reactions });
+    },
+    [userId, updateMessage]
+  );
+
   useEffect(() => {
     if (!userId) return;
 
     // Subscribe to all direct_messages where user is a participant
-    // We'll filter by conversation on the client side for now
     const channel = supabase
       .channel(`all-dms:${userId}`)
       .on(
@@ -91,12 +167,7 @@ export const useRealtimeDMs = ({
           schema: 'public',
           table: 'direct_messages',
         },
-        async (payload) => {
-          // Handle message edits - refetch if it's in current conversation
-          if (payload.new.conversation_id === currentConversationId) {
-            // Could implement updateMessage here if needed
-          }
-        }
+        handleMessageUpdate
       )
       .on(
         'postgres_changes',
@@ -105,16 +176,45 @@ export const useRealtimeDMs = ({
           schema: 'public',
           table: 'direct_messages',
         },
-        async (payload) => {
-          // Handle message deletions if needed
-        }
+        handleMessageDelete
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, currentConversationId, handleNewMessage]);
+  }, [userId, currentConversationId, handleNewMessage, handleMessageUpdate, handleMessageDelete]);
+
+  // Subscribe to DM reactions
+  useEffect(() => {
+    if (!userId) return;
+
+    const channel = supabase
+      .channel(`dm-reactions:${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'dm_reactions',
+        },
+        handleReactionChange
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'dm_reactions',
+        },
+        handleReactionChange
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId, handleReactionChange]);
 
   // Also listen for new conversations
   useEffect(() => {
