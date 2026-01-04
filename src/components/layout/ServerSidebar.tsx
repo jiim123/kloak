@@ -51,6 +51,15 @@ export const ServerSidebar = () => {
   const { openModal } = useUIStore();
   const [serverChannels, setServerChannels] = useState<ServerChannels>({});
   const [hoveredServer, setHoveredServer] = useState<string | null>(null);
+  const [tooltipsEnabled, setTooltipsEnabled] = useState(false);
+
+  // Disable tooltips initially to prevent them from showing when sidebar opens
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setTooltipsEnabled(true);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (user?.id) {
@@ -162,7 +171,7 @@ export const ServerSidebar = () => {
                 exit={{ opacity: 0, x: -20, transition: { duration: 0.15 } }}
                 layout
               >
-                <Tooltip delayDuration={300}>
+                <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
                   <TooltipTrigger asChild>
                     <motion.button
                       className="relative group"
@@ -245,7 +254,7 @@ export const ServerSidebar = () => {
         </AnimatePresence>
 
         {/* Add Server button */}
-        <Tooltip delayDuration={300}>
+        <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
           <TooltipTrigger asChild>
             <motion.button
               whileTap={{ scale: 0.95 }}
@@ -316,7 +325,7 @@ export const ServerSidebar = () => {
       <div className="w-8 h-0.5 bg-border rounded-full" />
 
       {/* Direct Messages button */}
-      <Tooltip delayDuration={300}>
+      <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
         <TooltipTrigger asChild>
           <motion.button
             className="relative group"
@@ -373,7 +382,7 @@ export const ServerSidebar = () => {
       </Tooltip>
 
       {/* User settings button */}
-      <Tooltip delayDuration={300}>
+      <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
         <TooltipTrigger asChild>
           <motion.button
             whileTap={{ scale: 0.95 }}
