@@ -49,43 +49,107 @@ const languageAliases: Record<string, string> = {
 // Simple language detection heuristics
 const detectLanguage = (code: string): string => {
   const trimmed = code.trim();
+  const lines = trimmed.split('\n');
+  const firstLine = lines[0] || '';
   
-  // Check for specific patterns
-  if (/^import\s+.*from\s+['"]/.test(trimmed) || /^export\s+(default\s+)?/.test(trimmed)) {
-    return trimmed.includes(': ') ? 'typescript' : 'javascript';
-  }
-  if (/^(const|let|var)\s+\w+\s*[:=]/.test(trimmed)) {
-    return trimmed.includes(': ') ? 'typescript' : 'javascript';
-  }
-  if (/^(def|class)\s+\w+/.test(trimmed) || /^import\s+\w+$/.test(trimmed)) {
-    return 'python';
-  }
-  if (/^(package|func)\s+\w+/.test(trimmed)) {
-    return 'go';
-  }
-  if (/^(fn|let\s+mut|impl)\s+/.test(trimmed)) {
-    return 'rust';
-  }
-  if (/^(public|private|class)\s+(class|static|void)/.test(trimmed)) {
-    return 'java';
-  }
-  if (/^\s*<[a-zA-Z]/.test(trimmed) && />\s*$/.test(trimmed)) {
-    return 'markup';
-  }
-  if (/^SELECT|^INSERT|^UPDATE|^DELETE|^CREATE\s+TABLE/i.test(trimmed)) {
-    return 'sql';
-  }
-  if (/^\{[\s\S]*\}$/.test(trimmed) || /^\[[\s\S]*\]$/.test(trimmed)) {
+  // Check for shebang first
+  if (/^#!.*python/i.test(firstLine)) return 'python';
+  if (/^#!.*node|^#!.*bash|^#!.*sh/i.test(firstLine)) return 'bash';
+  
+  // Python patterns - check multiple indicators
+  const pythonPatterns = [
+    /^(def|class|async def)\s+\w+\s*\(/m,
+    /^from\s+\w+\s+import/m,
+    /^import\s+\w+(\s*,\s*\w+)*\s*$/m,
+    /^\s*if\s+__name__\s*==\s*['"]__main__['"]/m,
+    /:\s*$\n\s+(pass|return|raise|yield)/m,
+    /\bprint\s*\(/,
+    /\bself\./,
+    /\bNone\b|\bTrue\b|\bFalse\b/,
+  ];
+  if (pythonPatterns.some(p => p.test(trimmed))) return 'python';
+  
+  // TypeScript patterns (before JavaScript)
+  const tsPatterns = [
+    /:\s*(string|number|boolean|any|void|never|unknown)\b/,
+    /interface\s+\w+/,
+    /type\s+\w+\s*=/,
+    /<[A-Z]\w*>/,  // Generics
+    /as\s+(string|number|boolean|any)/,
+  ];
+  if (tsPatterns.some(p => p.test(trimmed))) return 'typescript';
+  
+  // JavaScript/ES6 patterns
+  const jsPatterns = [
+    /^import\s+.*from\s+['"]/m,
+    /^export\s+(default\s+)?(function|class|const|let|var)/m,
+    /^(const|let|var)\s+\w+\s*=/m,
+    /=>\s*{/,
+    /\bconsole\.(log|error|warn)\s*\(/,
+    /document\.|window\./,
+    /\bfunction\s+\w+\s*\(/,
+    /\bnew\s+(Promise|Map|Set|Array|Object)\(/,
+  ];
+  if (jsPatterns.some(p => p.test(trimmed))) return 'javascript';
+  
+  // HTML/XML
+  if (/^\s*<(!DOCTYPE|html|head|body|div|span|p|a|script|style)/i.test(trimmed)) return 'markup';
+  if (/^\s*<\?xml/i.test(trimmed)) return 'markup';
+  if (/^\s*<[a-zA-Z][\s\S]*>\s*$/m.test(trimmed) && /<\/[a-zA-Z]+>\s*$/.test(trimmed)) return 'markup';
+  
+  // CSS
+  if (/^\s*(\.|#|@media|@keyframes|:root)\s*[\w-]+\s*{/m.test(trimmed)) return 'css';
+  if (/{\s*(color|background|margin|padding|display|flex|grid):/m.test(trimmed)) return 'css';
+  
+  // SQL
+  if (/^(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|TRUNCATE)\s/im.test(trimmed)) return 'sql';
+  
+  // JSON
+  if (/^\s*[\[{]/.test(trimmed) && /[\]}]\s*$/.test(trimmed)) {
     try {
       JSON.parse(trimmed);
       return 'json';
     } catch {}
   }
-  if (/^#!/.test(trimmed) || /^\s*\$\s/.test(trimmed)) {
-    return 'bash';
-  }
   
-  return 'plaintext';
+  // YAML
+  if (/^\s*[\w-]+:\s*(\n|$)/m.test(trimmed) && !/{/.test(firstLine)) return 'yaml';
+  
+  // Bash/Shell
+  if (/^(#!/.test(trimmed) || /^\s*\$\s/.test(trimmed)) return 'bash';
+  if (/^(if|for|while|case|function)\s.*;\s*(then|do)/m.test(trimmed)) return 'bash';
+  
+  // Go
+  if (/^package\s+\w+/m.test(trimmed) || /^func\s+(\(\w+\s+\*?\w+\)\s+)?\w+\s*\(/m.test(trimmed)) return 'go';
+  
+  // Rust
+  if (/^(fn|pub fn|impl|struct|enum|trait|use)\s+/m.test(trimmed)) return 'rust';
+  if (/let\s+mut\s+\w+/.test(trimmed)) return 'rust';
+  
+  // Java
+  if (/^(public|private|protected)\s+(class|interface|enum|static|void)/m.test(trimmed)) return 'java';
+  if (/System\.out\.print/.test(trimmed)) return 'java';
+  
+  // C#
+  if (/^(public|private|protected|internal)\s+.*\s+(class|interface|struct|enum)/m.test(trimmed)) return 'csharp';
+  if (/\bConsole\.(WriteLine|ReadLine)/.test(trimmed)) return 'csharp';
+  
+  // C/C++
+  if (/^#include\s*[<"]/m.test(trimmed)) return 'cpp';
+  if (/^(int|void|char|float|double)\s+main\s*\(/m.test(trimmed)) return 'c';
+  if (/std::|cout|cin|endl/.test(trimmed)) return 'cpp';
+  
+  // PHP
+  if (/^<\?php/i.test(trimmed) || /\$\w+\s*=/.test(trimmed)) return 'php';
+  
+  // Ruby
+  if (/^(def|class|module|require|gem)\s+/m.test(trimmed)) return 'ruby';
+  if (/\bputs\s+/.test(trimmed) || /\.each\s+do\s*\|/.test(trimmed)) return 'ruby';
+  
+  // Markdown
+  if (/^#{1,6}\s+\w/m.test(trimmed) || /^\s*[-*+]\s+\w/m.test(trimmed)) return 'markdown';
+  
+  return 'javascript'; // Default to JavaScript for better highlighting than plaintext
 };
 
 export const CodeBlock = ({ code, language }: CodeBlockProps) => {
@@ -97,12 +161,12 @@ export const CodeBlock = ({ code, language }: CodeBlockProps) => {
     ? languageAliases[language.toLowerCase()] || language.toLowerCase()
     : detectLanguage(code);
   
-  // Check if Prism has this language
+  // Check if Prism has this language, fallback to javascript for better highlighting
   const hasLanguage = Prism.languages[normalizedLang] !== undefined;
-  const finalLang = hasLanguage ? normalizedLang : 'plaintext';
+  const finalLang = hasLanguage ? normalizedLang : 'javascript';
 
   useEffect(() => {
-    if (codeRef.current && hasLanguage) {
+    if (codeRef.current && Prism.languages[finalLang]) {
       Prism.highlightElement(codeRef.current);
     }
   }, [code, finalLang, hasLanguage]);
