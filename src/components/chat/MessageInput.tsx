@@ -11,6 +11,7 @@ import { saveDraft, getDraft, clearDraft } from '@/lib/storage';
 import { getMessagePreview, extractMentions } from '@/lib/message';
 import { MentionAutocomplete } from './MentionAutocomplete';
 import { EmojiGifPicker } from '@/components/modals/EmojiGifPicker';
+import { ImageUploadDialog } from '@/components/modals/ImageUploadDialog';
 import { FormatToolbar, FORMAT_SYNTAX, getColorSyntax, getCodeBlockSyntax } from './FormatToolbar';
 import { supabase } from '@/integrations/supabase/client';
 import { showSuccess, showWarning, handleError } from '@/lib/errorHandler';
@@ -43,6 +44,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const [mentionStartIndex, setMentionStartIndex] = useState(-1);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showFormatToolbar, setShowFormatToolbar] = useState(false);
+  const [showImageUpload, setShowImageUpload] = useState(false);
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -427,6 +429,45 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     }
   };
 
+  // Handle image upload
+  const handleImageUpload = async (file: File) => {
+    if (!user) throw new Error('Not authenticated');
+
+    // Generate unique filename with timestamp for 14-day cleanup tracking
+    const timestamp = Date.now();
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${user.id}/${timestamp}-${crypto.randomUUID()}.${fileExt}`;
+
+    // Upload to Supabase Storage
+    const { data, error } = await supabase.storage
+      .from('attachments')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (error) throw error;
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('attachments')
+      .getPublicUrl(data.path);
+
+    // Send the image URL as a message
+    await sendOptimistic({
+      channelId,
+      content: urlData.publicUrl,
+      replyToId: replyingTo?.id,
+    });
+
+    // Clear reply if any
+    if (replyingTo) {
+      setReplyingTo(null);
+    }
+
+    showSuccess('Image uploaded successfully');
+  };
+
   const showCharacterWarning = content.length > MAX_LENGTH - 200;
 
   if (isMuted) {
@@ -488,7 +529,11 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       >
         <div className="flex items-end gap-2 p-3">
           {/* Attachment button */}
-          <button className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150 mb-0.5">
+          <button 
+            onClick={() => setShowImageUpload(true)}
+            className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150 mb-0.5"
+            title="Upload image"
+          >
             <Paperclip className="w-5 h-5" />
           </button>
 
@@ -578,6 +623,13 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
           </div>
         </div>
       </div>
+
+      {/* Image upload dialog */}
+      <ImageUploadDialog
+        open={showImageUpload}
+        onOpenChange={setShowImageUpload}
+        onUpload={handleImageUpload}
+      />
     </div>
   );
 };
