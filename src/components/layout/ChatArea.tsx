@@ -1,15 +1,97 @@
+import { useState, useCallback } from "react";
 import { ChannelHeader } from "@/components/chat/ChannelHeader";
 import { MessageList } from "@/components/chat/MessageList";
 import { MessageInput } from "@/components/chat/MessageInput";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { useServerStore } from "@/stores/serverStore";
+import { useAuthStore } from "@/stores/authStore";
 import { useTyping } from "@/hooks/useTyping";
-import { MessageSquare, Hash } from "lucide-react";
-import { motion } from "framer-motion";
+import { useOptimisticMessage } from "@/hooks/useOptimisticMessage";
+import { MessageSquare, Hash, ImageIcon } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
+import { showSuccess, handleError } from "@/lib/errorHandler";
+
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 export const ChatArea = () => {
   const { currentChannel } = useServerStore();
+  const { user } = useAuthStore();
   const { typingUsers, startTyping, stopTyping } = useTyping(currentChannel?.id || null);
+  const { sendOptimistic } = useOptimisticMessage();
+  
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.types.includes('Files')) {
+      setIsDragging(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only set to false if we're leaving the container entirely
+    if (e.currentTarget === e.target) {
+      setIsDragging(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    if (!user || !currentChannel) return;
+
+    const files = Array.from(e.dataTransfer.files);
+    const imageFiles = files.filter(file => ALLOWED_IMAGE_TYPES.includes(file.type));
+
+    if (imageFiles.length === 0) return;
+
+    // Process only the first valid image
+    const file = imageFiles[0];
+    
+    if (file.size > MAX_FILE_SIZE) {
+      handleError(new Error('File size must be less than 10MB'));
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const timestamp = Date.now();
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${timestamp}-${crypto.randomUUID()}.${fileExt}`;
+
+      const { data, error } = await supabase.storage
+        .from('attachments')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false,
+        });
+
+      if (error) throw error;
+
+      const { data: urlData } = supabase.storage
+        .from('attachments')
+        .getPublicUrl(data.path);
+
+      await sendOptimistic({
+        channelId: currentChannel.id,
+        content: urlData.publicUrl,
+      });
+
+      showSuccess('Image uploaded successfully');
+    } catch (error) {
+      handleError(error, 'Failed to upload image');
+    } finally {
+      setIsUploading(false);
+    }
+  }, [user, currentChannel, sendOptimistic]);
 
   if (!currentChannel) {
     return (
@@ -61,7 +143,12 @@ export const ChatArea = () => {
   }
 
   return (
-    <div className="h-full flex flex-col min-w-0 bg-background">
+    <div 
+      className="h-full flex flex-col min-w-0 bg-background relative"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       {/* Channel header */}
       <ChannelHeader channel={currentChannel} />
 
@@ -78,6 +165,32 @@ export const ChatArea = () => {
         onTyping={startTyping}
         onStopTyping={stopTyping}
       />
+
+      {/* Drag overlay */}
+      <AnimatePresence>
+        {(isDragging || isUploading) && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-sm border-2 border-dashed border-primary rounded-lg pointer-events-none"
+          >
+            <div className="flex flex-col items-center gap-3 text-center">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <ImageIcon className="w-8 h-8 text-primary" />
+              </div>
+              <div>
+                <p className="text-lg font-medium text-foreground">
+                  {isUploading ? 'Uploading...' : 'Drop image to upload'}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Images are deleted after 14 days
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
