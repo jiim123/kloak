@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, Heart, Shield, Eye, EyeOff, Lock, Coins, MessageCircle, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import kloakLogo from "@/assets/kloak-logo.svg";
 
 const Philosophy = () => {
   return (
@@ -14,11 +15,15 @@ const Philosophy = () => {
           </Button>
         </Link>
 
-        <div className="flex items-center gap-3 mb-2">
-          <Heart className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-semibold tracking-tight">Our Philosophy</h1>
+        <div className="flex items-center gap-4 mb-2">
+          <img src={kloakLogo} alt="Kloak" className="h-8" />
+          <div className="h-8 w-px bg-border" />
+          <div className="flex items-center gap-2">
+            <Heart className="h-6 w-6 text-primary" />
+            <h1 className="text-2xl font-semibold tracking-tight">Our Philosophy</h1>
+          </div>
         </div>
-        <p className="text-muted-foreground mb-8">Why we built Kloak the way we did</p>
+        <p className="text-muted-foreground mb-8 ml-[52px]">Why we built Kloak the way we did</p>
 
         <div className="p-6 bg-primary/5 border border-primary/20 rounded-xl mb-8">
           <p className="text-lg text-foreground/90 leading-relaxed font-medium text-center">

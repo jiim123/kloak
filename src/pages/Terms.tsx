@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, Shield, FileText, AlertTriangle, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import kloakLogo from "@/assets/kloak-logo.svg";
 
 const Terms = () => {
   return (
@@ -14,11 +15,15 @@ const Terms = () => {
           </Button>
         </Link>
 
-        <div className="flex items-center gap-3 mb-2">
-          <FileText className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-semibold tracking-tight">Terms of Service</h1>
+        <div className="flex items-center gap-4 mb-2">
+          <img src={kloakLogo} alt="Kloak" className="h-8" />
+          <div className="h-8 w-px bg-border" />
+          <div className="flex items-center gap-2">
+            <FileText className="h-6 w-6 text-primary" />
+            <h1 className="text-2xl font-semibold tracking-tight">Terms of Service</h1>
+          </div>
         </div>
-        <p className="text-muted-foreground mb-8">Last updated: January 2025</p>
+        <p className="text-muted-foreground mb-8 ml-[52px]">Last updated: January 2025</p>
 
         <div className="space-y-8 text-foreground/90">
           <section>
