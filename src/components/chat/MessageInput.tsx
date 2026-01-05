@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Paperclip, Smile, Send, X, Loader2, WifiOff } from 'lucide-react';
+import { Paperclip, Smile, Send, X, Loader2, WifiOff, Type } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useMessageStore } from '@/stores/messageStore';
 import { useServerStore } from '@/stores/serverStore';
@@ -11,6 +11,7 @@ import { saveDraft, getDraft, clearDraft } from '@/lib/storage';
 import { getMessagePreview, extractMentions } from '@/lib/message';
 import { MentionAutocomplete } from './MentionAutocomplete';
 import { EmojiPicker } from '@/components/modals/EmojiPicker';
+import { FormatToolbar, FORMAT_SYNTAX, getColorSyntax } from './FormatToolbar';
 import { supabase } from '@/integrations/supabase/client';
 import { showSuccess, showWarning, handleError } from '@/lib/errorHandler';
 import { messageRateLimiter, validateMessageContent } from '@/lib/security';
@@ -41,6 +42,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 });
   const [mentionStartIndex, setMentionStartIndex] = useState(-1);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showFormatToolbar, setShowFormatToolbar] = useState(false);
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -287,6 +289,54 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     setShowEmojiPicker(false);
   };
 
+  // Handle format selection from toolbar
+  const handleFormat = (formatType: string, color?: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = content.slice(start, end);
+
+    let syntax: { prefix: string; suffix: string };
+    
+    if (formatType === 'color' && color) {
+      syntax = getColorSyntax(color);
+    } else {
+      syntax = FORMAT_SYNTAX[formatType];
+    }
+
+    if (!syntax) return;
+
+    const { prefix, suffix } = syntax;
+    
+    // If text is selected, wrap it with format syntax
+    // If no selection, insert format syntax and place cursor between
+    const textToWrap = selectedText || 'text';
+    const newContent = 
+      content.slice(0, start) + 
+      prefix + textToWrap + suffix + 
+      content.slice(end);
+
+    if (newContent.length <= MAX_LENGTH) {
+      setContent(newContent);
+      
+      requestAnimationFrame(() => {
+        if (selectedText) {
+          // Move cursor after the formatted text
+          const newPos = start + prefix.length + selectedText.length + suffix.length;
+          textarea.setSelectionRange(newPos, newPos);
+        } else {
+          // Select the placeholder 'text' for easy replacement
+          const selectStart = start + prefix.length;
+          const selectEnd = selectStart + 4; // length of 'text'
+          textarea.setSelectionRange(selectStart, selectEnd);
+        }
+        textarea.focus();
+      });
+    }
+  };
+
   const showCharacterWarning = content.length > MAX_LENGTH - 200;
 
   if (isMuted) {
@@ -367,13 +417,38 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
           />
 
           {/* Action buttons */}
-          <div className="flex items-center gap-1 mb-0.5">
+          <div className="flex items-center gap-1 mb-0.5 relative">
+            {/* Format toolbar */}
+            {showFormatToolbar && (
+              <div className="absolute bottom-full right-0 mb-2 z-50">
+                <FormatToolbar 
+                  onFormat={handleFormat} 
+                  onClose={() => setShowFormatToolbar(false)} 
+                />
+              </div>
+            )}
+
             {/* Character count warning */}
             {showCharacterWarning && (
               <span className={`text-xs mr-1 ${content.length > MAX_LENGTH - 50 ? 'text-destructive' : 'text-muted-foreground'}`}>
                 {MAX_LENGTH - content.length}
               </span>
             )}
+
+            {/* Format button */}
+            <button
+              type="button"
+              onClick={() => setShowFormatToolbar(!showFormatToolbar)}
+              className={`p-2 rounded-xl transition-colors duration-150 ${
+                showFormatToolbar 
+                  ? 'text-primary bg-primary/10' 
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+              }`}
+              onMouseDown={(e) => e.preventDefault()}
+              title="Format text"
+            >
+              <Type className="w-5 h-5" />
+            </button>
 
             {/* Emoji button with picker */}
             <EmojiPicker
