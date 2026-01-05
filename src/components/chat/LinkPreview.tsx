@@ -281,17 +281,39 @@ export const LinkPreview = ({ url, disabled, messageId }: LinkPreviewProps) => {
   }
 
 
-  // Steam embed
+  // Steam embed - improved layout with game info, price, and buttons
   if (preview.type === "steam" && preview.steamId) {
     return (
-      <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[400px]">
+      <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[308px] bg-[#1b2838]">
+        {/* Steam widget iframe - sized to show game art, title, price and buttons */}
         <iframe
           src={`https://store.steampowered.com/widget/${preview.steamId}/`}
-          width="400"
+          width="308"
           height="190"
           className="w-full border-0"
           title={preview.title || "Steam game"}
+          loading="lazy"
         />
+        {/* Additional info below the widget */}
+        <div className="p-2.5 bg-[#1b2838] border-t border-[#2a475e]">
+          <div className="flex items-center gap-2">
+            <img 
+              src="https://store.steampowered.com/favicon.ico" 
+              alt="Steam" 
+              className="w-4 h-4" 
+            />
+            <span className="text-xs text-[#66c0f4]">Steam Store</span>
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-auto text-xs text-[#66c0f4] hover:text-white transition-colors flex items-center gap-1"
+            >
+              View on Steam
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+        </div>
       </div>
     );
   }
