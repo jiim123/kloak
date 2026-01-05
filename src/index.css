@@ -540,14 +540,46 @@
     @apply font-mono text-sm;
   }
 
-  /* Spoiler styling */
+  /* Spoiler styling - hidden until revealed */
   .spoiler {
-    @apply bg-foreground text-foreground rounded cursor-pointer transition-all;
+    @apply bg-muted-foreground/80 text-transparent rounded px-0.5 cursor-pointer transition-all select-none;
   }
 
-  .spoiler:hover,
+  .spoiler:hover {
+    @apply bg-muted-foreground/60;
+  }
+
   .spoiler.revealed {
-    @apply bg-transparent;
+    @apply bg-muted text-foreground select-auto;
+  }
+
+  /* Text color utilities for formatted messages */
+  .text-color-red {
+    color: hsl(0 70% 60%);
+  }
+
+  .text-color-orange {
+    color: hsl(25 90% 55%);
+  }
+
+  .text-color-yellow {
+    color: hsl(45 90% 55%);
+  }
+
+  .text-color-green {
+    color: hsl(142 70% 50%);
+  }
+
+  .text-color-blue {
+    color: hsl(210 90% 60%);
+  }
+
+  .text-color-purple {
+    color: hsl(270 70% 65%);
+  }
+
+  .text-color-pink {
+    color: hsl(330 80% 65%);
   }
 
   /* Brand color utilities */

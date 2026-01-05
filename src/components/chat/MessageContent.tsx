@@ -124,7 +124,7 @@ const escapeHtml = (text: string): string => {
   return text.replace(/[&<>"']/g, char => entities[char]);
 };
 
-// Parse text content (markdown, URLs, mentions)
+// Parse text content (markdown, URLs, mentions, colors)
 const parseTextContent = (content: string, currentUserId?: string, usersMap?: Map<string, UserInfo>): string => {
   let parsed = escapeHtml(content);
   
@@ -140,10 +140,16 @@ const parseTextContent = (content: string, currentUserId?: string, usersMap?: Ma
   // Underline __text__
   parsed = parsed.replace(/__([^_]+)__/g, '<u>$1</u>');
   
-  // Spoiler ||text||
+  // Spoiler ||text|| - interactive reveal on click
   parsed = parsed.replace(
     /\|\|([^|]+)\|\|/g,
-    '<span class="spoiler">$1</span>'
+    '<span class="spoiler" onclick="this.classList.toggle(\'revealed\')" role="button" tabindex="0" onkeydown="if(event.key===\'Enter\'||event.key===\' \')this.classList.toggle(\'revealed\')">$1</span>'
+  );
+  
+  // Color syntax [color:text] - supports red, orange, yellow, green, blue, purple, pink
+  parsed = parsed.replace(
+    /\[(red|orange|yellow|green|blue|purple|pink):([^\]]+)\]/gi,
+    (_, color, text) => `<span class="text-color-${color.toLowerCase()}">${text}</span>`
   );
   
   // URLs

@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { Paperclip, Smile, Send, X } from 'lucide-react';
+import { Paperclip, Smile, Send, X, Type } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useDMStore } from '@/stores/dmStore';
 import { saveDraft, getDraft, clearDraft } from '@/lib/storage';
 import { EmojiPicker } from '@/components/modals/EmojiPicker';
+import { FormatToolbar, FORMAT_SYNTAX, getColorSyntax } from '@/components/chat/FormatToolbar';
 import { cn } from '@/lib/utils';
 
 interface DMMessageInputProps {
@@ -28,6 +29,7 @@ export const DMMessageInput = ({
   const [isFocused, setIsFocused] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showFormatToolbar, setShowFormatToolbar] = useState(false);
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -117,6 +119,50 @@ export const DMMessageInput = ({
     setShowEmojiPicker(false);
   };
 
+  // Handle format selection from toolbar
+  const handleFormat = (formatType: string, color?: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = content.slice(start, end);
+
+    let syntax: { prefix: string; suffix: string };
+    
+    if (formatType === 'color' && color) {
+      syntax = getColorSyntax(color);
+    } else {
+      syntax = FORMAT_SYNTAX[formatType];
+    }
+
+    if (!syntax) return;
+
+    const { prefix, suffix } = syntax;
+    
+    const textToWrap = selectedText || 'text';
+    const newContent = 
+      content.slice(0, start) + 
+      prefix + textToWrap + suffix + 
+      content.slice(end);
+
+    if (newContent.length <= MAX_LENGTH) {
+      setContent(newContent);
+      
+      requestAnimationFrame(() => {
+        if (selectedText) {
+          const newPos = start + prefix.length + selectedText.length + suffix.length;
+          textarea.setSelectionRange(newPos, newPos);
+        } else {
+          const selectStart = start + prefix.length;
+          const selectEnd = selectStart + 4;
+          textarea.setSelectionRange(selectStart, selectEnd);
+        }
+        textarea.focus();
+      });
+    }
+  };
+
   const showCharacterWarning = content.length > MAX_LENGTH - 200;
 
   return (
@@ -168,13 +214,39 @@ export const DMMessageInput = ({
           />
 
           {/* Action buttons */}
-          <div className="flex items-center gap-1 mb-0.5">
+          <div className="flex items-center gap-1 mb-0.5 relative">
+            {/* Format toolbar */}
+            {showFormatToolbar && (
+              <div className="absolute bottom-full right-0 mb-2 z-50">
+                <FormatToolbar 
+                  onFormat={handleFormat} 
+                  onClose={() => setShowFormatToolbar(false)} 
+                />
+              </div>
+            )}
+
             {/* Character count warning */}
             {showCharacterWarning && (
               <span className={`text-xs mr-1 ${content.length > MAX_LENGTH - 50 ? 'text-destructive' : 'text-muted-foreground'}`}>
                 {MAX_LENGTH - content.length}
               </span>
             )}
+
+            {/* Format button */}
+            <button
+              type="button"
+              onClick={() => setShowFormatToolbar(!showFormatToolbar)}
+              className={cn(
+                "p-2 rounded-xl transition-colors duration-150",
+                showFormatToolbar 
+                  ? 'text-primary bg-primary/10' 
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+              )}
+              onMouseDown={(e) => e.preventDefault()}
+              title="Format text"
+            >
+              <Type className="w-5 h-5" />
+            </button>
 
             {/* Emoji button with picker */}
             <EmojiPicker
