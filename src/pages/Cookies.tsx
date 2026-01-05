@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, Cookie, CheckCircle, XCircle, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import kloakLogo from "@/assets/kloak-logo.svg";
 
 const Cookies = () => {
   return (
@@ -14,11 +15,15 @@ const Cookies = () => {
           </Button>
         </Link>
 
-        <div className="flex items-center gap-3 mb-2">
-          <Cookie className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-semibold tracking-tight">Cookie Policy</h1>
+        <div className="flex items-center gap-4 mb-2">
+          <img src={kloakLogo} alt="Kloak" className="h-8" />
+          <div className="h-8 w-px bg-border" />
+          <div className="flex items-center gap-2">
+            <Cookie className="h-6 w-6 text-primary" />
+            <h1 className="text-2xl font-semibold tracking-tight">Cookie Policy</h1>
+          </div>
         </div>
-        <p className="text-muted-foreground mb-8">Last updated: January 2025</p>
+        <p className="text-muted-foreground mb-8 ml-[52px]">Last updated: January 2025</p>
 
         <div className="p-6 bg-green-500/10 border border-green-500/20 rounded-xl mb-8">
           <h2 className="text-lg font-medium mb-2 flex items-center gap-2">
