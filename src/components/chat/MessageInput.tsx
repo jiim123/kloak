@@ -11,7 +11,7 @@ import { saveDraft, getDraft, clearDraft } from '@/lib/storage';
 import { getMessagePreview, extractMentions } from '@/lib/message';
 import { MentionAutocomplete } from './MentionAutocomplete';
 import { EmojiPicker } from '@/components/modals/EmojiPicker';
-import { FormatToolbar, FORMAT_SYNTAX, getColorSyntax } from './FormatToolbar';
+import { FormatToolbar, FORMAT_SYNTAX, getColorSyntax, getCodeBlockSyntax } from './FormatToolbar';
 import { supabase } from '@/integrations/supabase/client';
 import { showSuccess, showWarning, handleError } from '@/lib/errorHandler';
 import { messageRateLimiter, validateMessageContent } from '@/lib/security';
@@ -357,7 +357,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   };
 
   // Handle format selection from toolbar
-  const handleFormat = (formatType: string, color?: string) => {
+  const handleFormat = (formatType: string, value?: string) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
@@ -367,8 +367,10 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
 
     let syntax: { prefix: string; suffix: string };
     
-    if (formatType === 'color' && color) {
-      syntax = getColorSyntax(color);
+    if (formatType === 'color' && value) {
+      syntax = getColorSyntax(value);
+    } else if (formatType === 'codeblock') {
+      syntax = getCodeBlockSyntax(value || '');
     } else {
       syntax = FORMAT_SYNTAX[formatType];
     }
