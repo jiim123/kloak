@@ -34,39 +34,40 @@ const footerLinks: FooterSection[] = [
 
 export function Footer() {
   return (
-    <footer className="relative w-full max-w-4xl mx-auto flex flex-col items-center justify-center px-6 py-8 mt-auto">
+    <footer className="relative w-full bg-card/80 backdrop-blur-sm border-t border-border/30">
       <div className="bg-foreground/10 absolute top-0 right-1/2 left-1/2 h-px w-1/3 -translate-x-1/2 -translate-y-1/2 rounded-full blur" />
+      <div className="max-w-4xl mx-auto flex flex-col items-center justify-center px-6 py-8">
+        <div className="flex w-full flex-col md:flex-row items-center md:items-start justify-between gap-8">
+          <AnimatedContainer className="flex flex-col items-center md:items-start gap-3">
+            <img src={KloakLogo} alt="Kloak" className="h-6 opacity-60" />
+            <p className="text-muted-foreground text-xs">
+              © {new Date().getFullYear()} Kloak. All rights reserved.
+            </p>
+          </AnimatedContainer>
 
-      <div className="flex w-full flex-col md:flex-row items-center md:items-start justify-between gap-8">
-        <AnimatedContainer className="flex flex-col items-center md:items-start gap-3">
-          <img src={KloakLogo} alt="Kloak" className="h-6 opacity-60" />
-          <p className="text-muted-foreground text-xs">
-            © {new Date().getFullYear()} Kloak. All rights reserved.
-          </p>
-        </AnimatedContainer>
-
-        <div className="flex gap-12">
-          {footerLinks.map((section, index) => (
-            <AnimatedContainer key={section.label} delay={0.1 + index * 0.1}>
-              <div>
-                <h3 className="text-xs font-medium text-muted-foreground/80 uppercase tracking-wider mb-3">
-                  {section.label}
-                </h3>
-                <ul className="space-y-2">
-                  {section.links.map((link) => (
-                    <li key={link.title}>
-                      <Link
-                        to={link.href}
-                        className="text-muted-foreground hover:text-foreground text-sm transition-colors duration-200"
-                      >
-                        {link.title}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </AnimatedContainer>
-          ))}
+          <div className="flex gap-12">
+            {footerLinks.map((section, index) => (
+              <AnimatedContainer key={section.label} delay={0.1 + index * 0.1}>
+                <div>
+                  <h3 className="text-xs font-medium text-muted-foreground/80 uppercase tracking-wider mb-3">
+                    {section.label}
+                  </h3>
+                  <ul className="space-y-2">
+                    {section.links.map((link) => (
+                      <li key={link.title}>
+                        <Link
+                          to={link.href}
+                          className="text-muted-foreground hover:text-foreground text-sm transition-colors duration-200"
+                        >
+                          {link.title}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </AnimatedContainer>
+            ))}
+          </div>
         </div>
       </div>
     </footer>
