@@ -231,10 +231,77 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     }
   };
 
+  // Apply formatting to selected text or insert format syntax
+  const applyFormatShortcut = (formatType: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = content.slice(start, end);
+
+    const syntax = FORMAT_SYNTAX[formatType];
+    if (!syntax) return;
+
+    const { prefix, suffix } = syntax;
+    
+    if (selectedText) {
+      // Wrap selected text
+      const newContent = 
+        content.slice(0, start) + 
+        prefix + selectedText + suffix + 
+        content.slice(end);
+
+      if (newContent.length <= MAX_LENGTH) {
+        setContent(newContent);
+        requestAnimationFrame(() => {
+          const newPos = start + prefix.length + selectedText.length + suffix.length;
+          textarea.setSelectionRange(newPos, newPos);
+        });
+      }
+    } else {
+      // Insert format syntax with cursor between
+      const newContent = content.slice(0, start) + prefix + suffix + content.slice(end);
+      if (newContent.length <= MAX_LENGTH) {
+        setContent(newContent);
+        requestAnimationFrame(() => {
+          const cursorPos = start + prefix.length;
+          textarea.setSelectionRange(cursorPos, cursorPos);
+        });
+      }
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     // Let mention autocomplete handle these keys
     if (showMentions && ['ArrowDown', 'ArrowUp', 'Enter', 'Tab', 'Escape'].includes(e.key)) {
       return;
+    }
+
+    // Format shortcuts (Ctrl/Cmd + key)
+    if (e.ctrlKey || e.metaKey) {
+      switch (e.key.toLowerCase()) {
+        case 'b':
+          e.preventDefault();
+          applyFormatShortcut('bold');
+          return;
+        case 'i':
+          e.preventDefault();
+          applyFormatShortcut('italic');
+          return;
+        case 'u':
+          e.preventDefault();
+          applyFormatShortcut('underline');
+          return;
+        case 'e':
+          e.preventDefault();
+          applyFormatShortcut('code');
+          return;
+        case 'p':
+          e.preventDefault();
+          applyFormatShortcut('spoiler');
+          return;
+      }
     }
     
     if (e.key === 'Enter' && !e.shiftKey) {
