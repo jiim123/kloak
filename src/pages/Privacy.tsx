@@ -195,6 +195,7 @@ const Privacy = () => {
         </div>
 
         <div className="mt-12 flex gap-4 text-sm">
+          <Link to="/philosophy" className="text-primary hover:underline">Our Philosophy</Link>
           <Link to="/terms" className="text-primary hover:underline">Terms of Service</Link>
           <Link to="/cookies" className="text-primary hover:underline">Cookie Policy</Link>
         </div>
