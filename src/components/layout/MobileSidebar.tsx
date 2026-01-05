@@ -35,7 +35,7 @@ export const MobileSidebar = ({ isDMView, showFriends, onShowFriendsChange }: Mo
 
   return (
     <Sheet open={isMobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
-      <SheetContent side="left" className="p-0 w-[calc(72px+240px)] max-w-[85vw] flex">
+      <SheetContent side="left" className="p-0 w-[calc(72px+240px)] max-w-[85vw] flex" hideCloseButton>
         <SheetHeader className="sr-only">
           <SheetTitle>Navigation</SheetTitle>
         </SheetHeader>
