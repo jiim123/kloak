@@ -4,7 +4,10 @@ import { useAuthStore } from '@/stores/authStore';
 import { useDMStore } from '@/stores/dmStore';
 import { saveDraft, getDraft, clearDraft } from '@/lib/storage';
 import { EmojiGifPicker } from '@/components/modals/EmojiGifPicker';
+import { ImageUploadDialog } from '@/components/modals/ImageUploadDialog';
 import { FormatToolbar, FORMAT_SYNTAX, getColorSyntax, getCodeBlockSyntax } from '@/components/chat/FormatToolbar';
+import { supabase } from '@/integrations/supabase/client';
+import { showSuccess } from '@/lib/errorHandler';
 import { cn } from '@/lib/utils';
 
 interface DMMessageInputProps {
@@ -30,6 +33,7 @@ export const DMMessageInput = ({
   const [isSending, setIsSending] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showFormatToolbar, setShowFormatToolbar] = useState(false);
+  const [showImageUpload, setShowImageUpload] = useState(false);
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -251,6 +255,39 @@ export const DMMessageInput = ({
     }
   };
 
+  // Handle image upload
+  const handleImageUpload = async (file: File) => {
+    if (!user) throw new Error('Not authenticated');
+
+    // Generate unique filename with timestamp for 14-day cleanup tracking
+    const timestamp = Date.now();
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${user.id}/${timestamp}-${crypto.randomUUID()}.${fileExt}`;
+
+    // Upload to Supabase Storage
+    const { data, error } = await supabase.storage
+      .from('attachments')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (error) throw error;
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('attachments')
+      .getPublicUrl(data.path);
+
+    // Send the image URL as a DM
+    await sendMessage(conversationId, user.id, urlData.publicUrl, replyingTo?.id);
+
+    // Clear reply if any
+    onCancelReply?.();
+
+    showSuccess('Image uploaded successfully');
+  };
+
   const showCharacterWarning = content.length > MAX_LENGTH - 200;
 
   return (
@@ -283,7 +320,11 @@ export const DMMessageInput = ({
       >
         <div className="flex items-end gap-2 p-3">
           {/* Attachment button */}
-          <button className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150 mb-0.5">
+          <button 
+            onClick={() => setShowImageUpload(true)}
+            className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150 mb-0.5"
+            title="Upload image"
+          >
             <Paperclip className="w-5 h-5" />
           </button>
 
@@ -367,6 +408,13 @@ export const DMMessageInput = ({
           </div>
         </div>
       </div>
+
+      {/* Image upload dialog */}
+      <ImageUploadDialog
+        open={showImageUpload}
+        onOpenChange={setShowImageUpload}
+        onUpload={handleImageUpload}
+      />
     </div>
   );
 };
