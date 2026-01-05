@@ -24,6 +24,26 @@ interface ParsedSegment {
   language?: string;
 }
 
+// Check if URL is an image (including GIFs)
+const isImageUrl = (url: string): boolean => {
+  // Check for common image extensions
+  const imageExtensions = /\.(gif|jpe?g|png|webp|bmp|svg)(\?.*)?$/i;
+  if (imageExtensions.test(url)) return true;
+  
+  // Check for known image hosting services
+  const imageHosts = [
+    /media\d*\.giphy\.com/i,
+    /i\.giphy\.com/i,
+    /tenor\.com.*\.gif/i,
+    /i\.imgur\.com/i,
+    /pbs\.twimg\.com/i,
+    /media\.discordapp\.net/i,
+    /cdn\.discordapp\.com/i,
+  ];
+  
+  return imageHosts.some(pattern => pattern.test(url));
+};
+
 // Extract URLs from content
 const extractUrls = (content: string): string[] => {
   const urlPattern = /https?:\/\/[^\s<>`\]]+/g;
@@ -152,11 +172,17 @@ const parseTextContent = (content: string, currentUserId?: string, usersMap?: Ma
     (_, color, text) => `<span class="text-color-${color.toLowerCase()}">${text}</span>`
   );
   
-  // URLs
+  // URLs - render image URLs as placeholders, others as links
   const urlPattern = /https?:\/\/[^\s<]+/g;
   parsed = parsed.replace(
     urlPattern,
-    (url) => `<a href="${url}" target="_blank" rel="noopener noreferrer" class="message-link">${url}</a>`
+    (url) => {
+      if (isImageUrl(url)) {
+        // Return a placeholder that we'll replace with actual image rendering
+        return `<span class="inline-image-placeholder" data-image-url="${url}"></span>`;
+      }
+      return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="message-link">${url}</a>`;
+    }
   );
   
   // @everyone and @here
@@ -213,12 +239,18 @@ export const MessageContent = ({ content, currentUserId, messageId, users }: Mes
   }, [users, members]);
   
   // Extract URLs for link previews (only from text segments, not code blocks)
-  const urls = useMemo(() => {
+  // Separate image URLs from regular URLs
+  const { imageUrls, linkUrls } = useMemo(() => {
     const textContent = segments
       .filter(s => s.type === 'text')
       .map(s => s.content)
       .join(' ');
-    return extractUrls(textContent);
+    const allUrls = extractUrls(textContent);
+    
+    return {
+      imageUrls: allUrls.filter(url => isImageUrl(url)),
+      linkUrls: allUrls.filter(url => !isImageUrl(url)),
+    };
   }, [segments]);
   // Handle click on mentions using event delegation
   const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -269,10 +301,36 @@ export const MessageContent = ({ content, currentUserId, messageId, users }: Mes
         }
       })}
       
-      {/* Link previews */}
-      {linkPreviewsEnabled && urls.length > 0 && (
+      {/* Inline images (GIFs, etc.) */}
+      {imageUrls.length > 0 && (
+        <div className="flex flex-col gap-2 mt-1">
+          {imageUrls.map((url, index) => (
+            <a
+              key={`img-${index}`}
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block max-w-md rounded-lg overflow-hidden"
+            >
+              <img
+                src={url}
+                alt="Shared image"
+                className="max-w-full max-h-80 object-contain rounded-lg"
+                loading="lazy"
+                onError={(e) => {
+                  // Hide broken images
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+            </a>
+          ))}
+        </div>
+      )}
+
+      {/* Link previews (excluding image URLs) */}
+      {linkPreviewsEnabled && linkUrls.length > 0 && (
         <div className="flex flex-col gap-2">
-          {urls.slice(0, 3).map((url, index) => (
+          {linkUrls.slice(0, 3).map((url, index) => (
             <LinkPreview 
               key={`${url}-${index}`} 
               url={url} 
