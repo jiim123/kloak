@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { ChannelHeader } from "@/components/chat/ChannelHeader";
 import { MessageList } from "@/components/chat/MessageList";
 import { MessageInput } from "@/components/chat/MessageInput";
@@ -24,37 +24,13 @@ export const ChatArea = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.dataTransfer.types.includes('Files')) {
-      setIsDragging(true);
-    }
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    // Only set to false if we're leaving the container entirely
-    if (e.currentTarget === e.target) {
-      setIsDragging(false);
-    }
-  }, []);
-
-  const handleDrop = useCallback(async (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-
+  const uploadImage = useCallback(async (file: File) => {
     if (!user || !currentChannel) return;
-
-    const files = Array.from(e.dataTransfer.files);
-    const imageFiles = files.filter(file => ALLOWED_IMAGE_TYPES.includes(file.type));
-
-    if (imageFiles.length === 0) return;
-
-    // Process only the first valid image
-    const file = imageFiles[0];
+    
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      handleError(new Error('Only JPEG, PNG, GIF, and WebP images are allowed'));
+      return;
+    }
     
     if (file.size > MAX_FILE_SIZE) {
       handleError(new Error('File size must be less than 10MB'));
@@ -64,7 +40,7 @@ export const ChatArea = () => {
     setIsUploading(true);
     try {
       const timestamp = Date.now();
-      const fileExt = file.name.split('.').pop();
+      const fileExt = file.name.split('.').pop() || 'png';
       const fileName = `${user.id}/${timestamp}-${crypto.randomUUID()}.${fileExt}`;
 
       const { data, error } = await supabase.storage
@@ -92,6 +68,59 @@ export const ChatArea = () => {
       setIsUploading(false);
     }
   }, [user, currentChannel, sendOptimistic]);
+
+  // Paste handler for clipboard images
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      if (!currentChannel || !user) return;
+      
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          if (file) {
+            uploadImage(file);
+          }
+          break;
+        }
+      }
+    };
+
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, [currentChannel, user, uploadImage]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.types.includes('Files')) {
+      setIsDragging(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.currentTarget === e.target) {
+      setIsDragging(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    const imageFile = files.find(file => ALLOWED_IMAGE_TYPES.includes(file.type));
+
+    if (imageFile) {
+      uploadImage(imageFile);
+    }
+  }, [uploadImage]);
 
   if (!currentChannel) {
     return (
