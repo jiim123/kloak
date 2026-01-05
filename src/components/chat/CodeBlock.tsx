@@ -116,7 +116,7 @@ const detectLanguage = (code: string): string => {
   if (/^\s*[\w-]+:\s*(\n|$)/m.test(trimmed) && !/{/.test(firstLine)) return 'yaml';
   
   // Bash/Shell
-  if (/^(#!/.test(trimmed) || /^\s*\$\s/.test(trimmed)) return 'bash';
+  if (/^#!/.test(trimmed) || /^\s*\$\s/.test(trimmed)) return 'bash';
   if (/^(if|for|while|case|function)\s.*;\s*(then|do)/m.test(trimmed)) return 'bash';
   
   // Go
