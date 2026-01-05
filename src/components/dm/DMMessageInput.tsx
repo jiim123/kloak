@@ -3,7 +3,7 @@ import { Paperclip, Smile, Send, X, Type } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useDMStore } from '@/stores/dmStore';
 import { saveDraft, getDraft, clearDraft } from '@/lib/storage';
-import { EmojiPicker } from '@/components/modals/EmojiPicker';
+import { EmojiGifPicker } from '@/components/modals/EmojiGifPicker';
 import { FormatToolbar, FORMAT_SYNTAX, getColorSyntax, getCodeBlockSyntax } from '@/components/chat/FormatToolbar';
 import { cn } from '@/lib/utils';
 
@@ -184,6 +184,27 @@ export const DMMessageInput = ({
     setShowEmojiPicker(false);
   };
 
+  // Handle GIF selection - insert GIF URL as message content
+  const handleGifSelect = (gifUrl: string) => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const newContent = content.slice(0, start) + gifUrl + content.slice(end);
+      
+      if (newContent.length <= MAX_LENGTH) {
+        setContent(newContent);
+      }
+    } else {
+      const newContent = content + gifUrl;
+      if (newContent.length <= MAX_LENGTH) {
+        setContent(newContent);
+      }
+    }
+    
+    setShowEmojiPicker(false);
+  };
+
   // Handle format selection from toolbar
   const handleFormat = (formatType: string, value?: string) => {
     const textarea = textareaRef.current;
@@ -315,11 +336,12 @@ export const DMMessageInput = ({
               <Type className="w-5 h-5" />
             </button>
 
-            {/* Emoji button with picker */}
-            <EmojiPicker
+            {/* Emoji/GIF button with picker */}
+            <EmojiGifPicker
               open={showEmojiPicker}
               onOpenChange={setShowEmojiPicker}
               onEmojiSelect={handleEmojiSelect}
+              onGifSelect={handleGifSelect}
             >
               <button 
                 type="button"
@@ -328,7 +350,7 @@ export const DMMessageInput = ({
               >
                 <Smile className="w-5 h-5" />
               </button>
-            </EmojiPicker>
+            </EmojiGifPicker>
 
             {/* Send button */}
             <button

@@ -10,7 +10,7 @@ import { useOptimisticMessage } from '@/hooks/useOptimisticMessage';
 import { saveDraft, getDraft, clearDraft } from '@/lib/storage';
 import { getMessagePreview, extractMentions } from '@/lib/message';
 import { MentionAutocomplete } from './MentionAutocomplete';
-import { EmojiPicker } from '@/components/modals/EmojiPicker';
+import { EmojiGifPicker } from '@/components/modals/EmojiGifPicker';
 import { FormatToolbar, FORMAT_SYNTAX, getColorSyntax, getCodeBlockSyntax } from './FormatToolbar';
 import { supabase } from '@/integrations/supabase/client';
 import { showSuccess, showWarning, handleError } from '@/lib/errorHandler';
@@ -356,6 +356,27 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     setShowEmojiPicker(false);
   };
 
+  // Handle GIF selection - insert GIF URL as message content
+  const handleGifSelect = (gifUrl: string) => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const newContent = content.slice(0, start) + gifUrl + content.slice(end);
+      
+      if (newContent.length <= MAX_LENGTH) {
+        setContent(newContent);
+      }
+    } else {
+      const newContent = content + gifUrl;
+      if (newContent.length <= MAX_LENGTH) {
+        setContent(newContent);
+      }
+    }
+    
+    setShowEmojiPicker(false);
+  };
+
   // Handle format selection from toolbar
   const handleFormat = (formatType: string, value?: string) => {
     const textarea = textareaRef.current;
@@ -519,11 +540,12 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
               <Type className="w-5 h-5" />
             </button>
 
-            {/* Emoji button with picker */}
-            <EmojiPicker
+            {/* Emoji/GIF button with picker */}
+            <EmojiGifPicker
               open={showEmojiPicker}
               onOpenChange={setShowEmojiPicker}
               onEmojiSelect={handleEmojiSelect}
+              onGifSelect={handleGifSelect}
             >
               <button 
                 type="button"
@@ -535,7 +557,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
               >
                 <Smile className="w-5 h-5" />
               </button>
-            </EmojiPicker>
+            </EmojiGifPicker>
 
             {/* Send button */}
             <button
