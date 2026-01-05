@@ -4,7 +4,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useDMStore } from '@/stores/dmStore';
 import { saveDraft, getDraft, clearDraft } from '@/lib/storage';
 import { EmojiPicker } from '@/components/modals/EmojiPicker';
-import { FormatToolbar, FORMAT_SYNTAX, getColorSyntax } from '@/components/chat/FormatToolbar';
+import { FormatToolbar, FORMAT_SYNTAX, getColorSyntax, getCodeBlockSyntax } from '@/components/chat/FormatToolbar';
 import { cn } from '@/lib/utils';
 
 interface DMMessageInputProps {
@@ -185,7 +185,7 @@ export const DMMessageInput = ({
   };
 
   // Handle format selection from toolbar
-  const handleFormat = (formatType: string, color?: string) => {
+  const handleFormat = (formatType: string, value?: string) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
@@ -195,8 +195,10 @@ export const DMMessageInput = ({
 
     let syntax: { prefix: string; suffix: string };
     
-    if (formatType === 'color' && color) {
-      syntax = getColorSyntax(color);
+    if (formatType === 'color' && value) {
+      syntax = getColorSyntax(value);
+    } else if (formatType === 'codeblock') {
+      syntax = getCodeBlockSyntax(value || '');
     } else {
       syntax = FORMAT_SYNTAX[formatType];
     }

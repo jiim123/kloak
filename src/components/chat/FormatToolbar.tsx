@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bold, Italic, Underline, Code, Eye, Palette, X } from 'lucide-react';
+import { Bold, Italic, Underline, Code, Eye, Palette, X, FileCode } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 
@@ -18,16 +18,35 @@ const TEXT_COLORS = [
   { name: 'Pink', value: 'pink', class: 'bg-pink-500' },
 ];
 
+const CODE_LANGUAGES = [
+  { name: 'Plain', value: '' },
+  { name: 'JavaScript', value: 'javascript' },
+  { name: 'TypeScript', value: 'typescript' },
+  { name: 'Python', value: 'python' },
+  { name: 'HTML', value: 'html' },
+  { name: 'CSS', value: 'css' },
+  { name: 'JSON', value: 'json' },
+  { name: 'SQL', value: 'sql' },
+  { name: 'Bash', value: 'bash' },
+  { name: 'Java', value: 'java' },
+  { name: 'C++', value: 'cpp' },
+  { name: 'Go', value: 'go' },
+  { name: 'Rust', value: 'rust' },
+  { name: 'Ruby', value: 'ruby' },
+  { name: 'PHP', value: 'php' },
+];
+
 const FORMAT_OPTIONS = [
-  { id: 'bold', icon: Bold, label: 'Bold', syntax: '**' },
-  { id: 'italic', icon: Italic, label: 'Italic', syntax: '*' },
-  { id: 'underline', icon: Underline, label: 'Underline', syntax: '__' },
-  { id: 'code', icon: Code, label: 'Code', syntax: '`' },
-  { id: 'spoiler', icon: Eye, label: 'Spoiler', syntax: '||' },
+  { id: 'bold', icon: Bold, label: 'Bold' },
+  { id: 'italic', icon: Italic, label: 'Italic' },
+  { id: 'underline', icon: Underline, label: 'Underline' },
+  { id: 'code', icon: Code, label: 'Inline Code' },
+  { id: 'spoiler', icon: Eye, label: 'Spoiler' },
 ];
 
 export const FormatToolbar = ({ onFormat, onClose }: FormatToolbarProps) => {
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showCodeBlockPicker, setShowCodeBlockPicker] = useState(false);
 
   return (
     <div className="flex items-center gap-1 px-2 py-1.5 bg-popover border border-border rounded-xl shadow-lg animate-in fade-in-0 zoom-in-95 duration-150">
@@ -41,6 +60,42 @@ export const FormatToolbar = ({ onFormat, onClose }: FormatToolbarProps) => {
           <option.icon className="w-4 h-4" />
         </button>
       ))}
+
+      {/* Code block picker */}
+      <Popover open={showCodeBlockPicker} onOpenChange={setShowCodeBlockPicker}>
+        <PopoverTrigger asChild>
+          <button
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
+            title="Code Block"
+          >
+            <FileCode className="w-4 h-4" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent 
+          className="w-36 p-1 bg-popover border border-border" 
+          align="center"
+          side="top"
+          sideOffset={8}
+        >
+          <div className="flex flex-col">
+            <span className="text-xs text-muted-foreground px-2 py-1">Language</span>
+            <div className="max-h-48 overflow-y-auto">
+              {CODE_LANGUAGES.map((lang) => (
+                <button
+                  key={lang.value}
+                  onClick={() => {
+                    onFormat('codeblock', lang.value);
+                    setShowCodeBlockPicker(false);
+                  }}
+                  className="w-full text-left px-2 py-1.5 text-sm rounded-[3px] text-foreground hover:bg-muted transition-colors"
+                >
+                  {lang.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
 
       {/* Color picker */}
       <Popover open={showColorPicker} onOpenChange={setShowColorPicker}>
@@ -103,6 +158,12 @@ export const FORMAT_SYNTAX: Record<string, { prefix: string; suffix: string }> =
   code: { prefix: '`', suffix: '`' },
   spoiler: { prefix: '||', suffix: '||' },
 };
+
+// Code block syntax with optional language
+export const getCodeBlockSyntax = (language: string) => ({
+  prefix: `\`\`\`${language}\n`,
+  suffix: '\n```',
+});
 
 // Color syntax using custom markdown-like format
 export const getColorSyntax = (color: string) => ({
