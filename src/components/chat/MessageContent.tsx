@@ -1,6 +1,7 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState } from 'react';
 import { CodeBlock, InlineCode } from './CodeBlock';
 import { LinkPreview } from './LinkPreview';
+import { ImageLightbox } from '@/components/modals/ImageLightbox';
 import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
 
@@ -212,6 +213,7 @@ const parseTextContent = (content: string, currentUserId?: string, usersMap?: Ma
 export const MessageContent = ({ content, currentUserId, messageId, users }: MessageContentProps) => {
   const { linkPreviewsEnabled, openModal } = useUIStore();
   const { members } = useServerStore();
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const segments = useMemo(() => parseMessageSegments(content), [content]);
   
   // Build a map of userId -> user info for quick lookup
@@ -305,12 +307,10 @@ export const MessageContent = ({ content, currentUserId, messageId, users }: Mes
       {imageUrls.length > 0 && (
         <div className="flex flex-col gap-2 mt-1">
           {imageUrls.map((url, index) => (
-            <a
+            <button
               key={`img-${index}`}
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block max-w-md rounded-lg overflow-hidden"
+              onClick={() => setLightboxImage(url)}
+              className="inline-block max-w-md rounded-lg overflow-hidden cursor-zoom-in text-left"
             >
               <img
                 src={url}
@@ -322,7 +322,7 @@ export const MessageContent = ({ content, currentUserId, messageId, users }: Mes
                   (e.target as HTMLImageElement).style.display = 'none';
                 }}
               />
-            </a>
+            </button>
           ))}
         </div>
       )}
@@ -340,6 +340,12 @@ export const MessageContent = ({ content, currentUserId, messageId, users }: Mes
           ))}
         </div>
       )}
+
+      {/* Image lightbox */}
+      <ImageLightbox
+        imageUrl={lightboxImage}
+        onClose={() => setLightboxImage(null)}
+      />
     </div>
   );
 };
