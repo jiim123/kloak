@@ -3,7 +3,10 @@ import { Check, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Prism from 'prismjs';
 
-// Import common languages
+// Import common languages - order matters for dependencies!
+// markup and markup-templating must come before php
+import 'prismjs/components/prism-markup';
+import 'prismjs/components/prism-markup-templating';
 import 'prismjs/components/prism-javascript';
 import 'prismjs/components/prism-typescript';
 import 'prismjs/components/prism-jsx';
@@ -23,7 +26,6 @@ import 'prismjs/components/prism-bash';
 import 'prismjs/components/prism-json';
 import 'prismjs/components/prism-yaml';
 import 'prismjs/components/prism-markdown';
-import 'prismjs/components/prism-markup';
 
 interface CodeBlockProps {
   code: string;
