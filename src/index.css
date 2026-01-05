@@ -526,6 +526,11 @@
     @apply text-primary hover:underline;
   }
 
+  /* Hide inline image placeholders (images are rendered separately) */
+  .inline-image-placeholder {
+    @apply hidden;
+  }
+
   /* Inline code styling */
   .inline-code {
     @apply bg-secondary px-1.5 py-0.5 rounded font-mono text-sm;
