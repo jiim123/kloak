@@ -357,67 +357,69 @@
   }
 
   html {
-    font-family: "Schibsted Grotesk", "Noto Color Emoji", system-ui, sans-serif;
+    font-family: "Stack Sans Headline", "Noto Color Emoji", system-ui, sans-serif;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-    letter-spacing: -0.011em;
+    font-feature-settings: "ss01", "ss02";
+    letter-spacing: 0.01em;
   }
 
-  /* Heading styles */
+  /* Heading styles - Stack Sans Headline works well with tighter tracking */
   h1,
   h2,
   h3,
   h4,
   h5,
   h6 {
-    letter-spacing: -0.02em;
+    letter-spacing: -0.015em;
+    @apply font-semibold;
   }
 
   h1 {
-    @apply font-medium;
-    font-size: 30px;
-    line-height: 36px;
+    font-size: 32px;
+    line-height: 40px;
   }
 
   h2 {
-    @apply font-medium;
-    font-size: 20px;
-    line-height: 24px;
+    font-size: 22px;
+    line-height: 28px;
   }
 
   h3 {
-    @apply font-medium;
-    font-size: 16px;
-    line-height: 20px;
+    font-size: 17px;
+    line-height: 24px;
   }
 
-  /* Body text */
+  /* Body text - slightly increased for readability */
   .text-body {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 400;
-    line-height: 20px;
+    line-height: 22px;
+    letter-spacing: 0.005em;
   }
 
   .text-body-bold {
-    font-size: 14px;
-    font-weight: 500;
-    line-height: 20px;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 22px;
+    letter-spacing: 0.005em;
   }
 
   /* Caption text */
   .text-caption {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 400;
-    line-height: 16px;
+    line-height: 18px;
+    letter-spacing: 0.01em;
   }
 
   .text-caption-bold {
-    font-size: 12px;
-    font-weight: 500;
-    line-height: 16px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 18px;
+    letter-spacing: 0.01em;
   }
 
   /* Emoji-only message styling - 2.5x size */
