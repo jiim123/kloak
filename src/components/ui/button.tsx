@@ -1,44 +1,84 @@
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
+import { Loader2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[3px] text-[15px] font-semibold tracking-[0.005em] ring-offset-background transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap text-[15px] font-semibold tracking-[0.005em] ring-offset-background transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 hover:border hover:border-primary-foreground/20",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 hover:border hover:border-destructive-foreground/20",
-        outline: "border border-input bg-background hover:bg-accent/50 hover:border-foreground/20",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:border hover:border-secondary-foreground/20",
-        ghost: "hover:bg-accent/50 hover:border hover:border-foreground/20",
-        link: "text-primary underline-offset-4 hover:underline",
+        // Primary - Main action button
+        primary: "rounded-[3px] bg-primary text-primary-foreground hover:bg-primary/85 active:bg-primary/75",
+        // Secondary - Supporting action
+        secondary: "rounded-[3px] bg-secondary text-secondary-foreground hover:bg-secondary/70 active:bg-secondary/60",
+        // Tertiary - Subtle/ghost action
+        tertiary: "rounded-[3px] bg-transparent text-foreground hover:bg-muted active:bg-muted/80",
+        // Outline - Bordered button
+        outline: "rounded-[3px] border border-border bg-transparent text-foreground hover:bg-muted hover:border-foreground/20 active:bg-muted/80",
+        // Error/Destructive - Dangerous actions
+        error: "rounded-[3px] bg-destructive text-destructive-foreground hover:bg-destructive/85 active:bg-destructive/75",
+        // Warning - Caution actions
+        warning: "rounded-[3px] bg-amber-500 text-white hover:bg-amber-500/85 active:bg-amber-500/75 dark:bg-amber-600 dark:hover:bg-amber-600/85",
+        // Ghost - Minimal presence
+        ghost: "rounded-[3px] bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50 active:bg-muted/70",
+        // Link - Text-only button
+        link: "rounded-[3px] text-primary underline-offset-4 hover:underline p-0 h-auto",
+        // Legacy default (maps to primary)
+        default: "rounded-[3px] bg-primary text-primary-foreground hover:bg-primary/85 active:bg-primary/75",
+        // Legacy destructive (maps to error)
+        destructive: "rounded-[3px] bg-destructive text-destructive-foreground hover:bg-destructive/85 active:bg-destructive/75",
       },
       size: {
         default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
-        icon: "h-10 w-10",
+        sm: "h-8 px-3 text-[13px]",
+        lg: "h-12 px-6 text-[16px]",
+        icon: "h-10 w-10 p-0",
+      },
+      rounded: {
+        default: "",
+        full: "!rounded-full",
+        md: "!rounded-md",
+        lg: "!rounded-lg",
       },
     },
     defaultVariants: {
-      variant: "default",
+      variant: "primary",
       size: "default",
+      rounded: "default",
     },
   },
 );
 
 export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {
   asChild?: boolean;
+  loading?: boolean;
+  iconLeft?: React.ReactNode;
+  iconRight?: React.ReactNode;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  ({ className, variant, size, rounded, asChild = false, loading = false, iconLeft, iconRight, children, disabled, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
-    return <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />;
+    const isDisabled = disabled || loading;
+
+    return (
+      <Comp
+        className={cn(buttonVariants({ variant, size, rounded, className }))}
+        ref={ref}
+        disabled={isDisabled}
+        {...props}
+      >
+        {loading && <Loader2 className="animate-spin" />}
+        {!loading && iconLeft}
+        {children}
+        {!loading && iconRight}
+      </Comp>
+    );
   },
 );
 Button.displayName = "Button";
