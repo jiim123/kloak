@@ -303,16 +303,30 @@ serve(async (req) => {
 
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; LinkPreviewBot/1.0)',
-        'Accept': 'text/html,application/xhtml+xml',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
       },
     });
 
+    // If fetch fails (403, 401, etc.), return basic preview with domain info
     if (!response.ok) {
-      return new Response(
-        JSON.stringify({ error: `Failed to fetch: ${response.status}` }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      try {
+        const urlObj = new URL(url);
+        return new Response(
+          JSON.stringify({
+            url,
+            siteName: urlObj.hostname.replace('www.', ''),
+            favicon: `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=32`,
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } catch {
+        return new Response(
+          JSON.stringify({ url }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     const contentType = response.headers.get('content-type') || '';
