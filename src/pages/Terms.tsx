@@ -1,30 +1,19 @@
-import { Link } from "react-router-dom";
-import { ArrowLeft, Shield, FileText, AlertTriangle, Scale } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Shield, FileText, AlertTriangle, Scale } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Footer } from "@/components/ui/footer-section";
-import kloakLogo from "@/assets/kloak-logo.svg";
+import { NavigationMenu } from "@/components/layout/NavigationMenu";
 
 const Terms = () => {
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto px-6 py-12">
-        <Link to="/auth">
-          <Button variant="ghost" size="sm" className="mb-8 -ml-2">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-        </Link>
-
-        <div className="flex items-center gap-4 mb-2">
-          <img src={kloakLogo} alt="Kloak" className="h-8" />
-          <div className="h-8 w-px bg-border" />
-          <div className="flex items-center gap-2">
-            <FileText className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-semibold tracking-tight">Terms of Service</h1>
-          </div>
+    <div className="min-h-screen bg-background flex flex-col">
+      <NavigationMenu />
+      
+      <div className="max-w-4xl mx-auto px-6 py-12 w-full">
+        <div className="flex items-center gap-3 mb-2">
+          <FileText className="h-6 w-6 text-primary" />
+          <h1 className="text-2xl font-semibold tracking-tight">Terms of Service</h1>
         </div>
-        <p className="text-muted-foreground mb-8 ml-[52px]">Last updated: January 2025</p>
+        <p className="text-muted-foreground mb-8">Last updated: January 2025</p>
 
         <div className="space-y-8 text-foreground/90">
           <section>
