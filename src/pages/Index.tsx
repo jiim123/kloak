@@ -14,6 +14,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { Footer } from '@/components/ui/footer-section';
 import { NavigationMenu } from '@/components/layout/NavigationMenu';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -134,58 +142,57 @@ const Index = () => {
           </motion.div>
 
           <motion.div 
-            className="overflow-hidden"
+            className="rounded-lg border border-border/30 overflow-hidden bg-background"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            {/* Header */}
-            <div className="grid grid-cols-[1fr,120px,120px] sm:grid-cols-[1fr,160px,160px] gap-4 pb-4 border-b border-border/30">
-              <div />
-              <div className="text-center">
-                <span className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Others</span>
-              </div>
-              <div className="text-center">
-                <span className="text-sm font-medium text-primary uppercase tracking-wide">Kloak</span>
-              </div>
-            </div>
-
-            {/* Rows */}
-            {comparisonData.map((row, index) => (
-              <motion.div
-                key={row.label}
-                className="grid grid-cols-[1fr,120px,120px] sm:grid-cols-[1fr,160px,160px] gap-4 py-5 border-b border-border/20 items-center"
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: index * 0.05 }}
-              >
-                <span className="text-foreground font-medium">{row.label}</span>
-                <div className="flex justify-center">
-                  {row.others ? (
-                    <div className="w-8 h-8 rounded-full bg-destructive/10 flex items-center justify-center">
-                      <Check className="w-4 h-4 text-destructive" />
-                    </div>
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center">
-                      <X className="w-4 h-4 text-muted-foreground/50" />
-                    </div>
-                  )}
-                </div>
-                <div className="flex justify-center">
-                  {row.kloak ? (
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Check className="w-4 h-4 text-primary" />
-                    </div>
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                      <X className="w-4 h-4 text-primary" />
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            ))}
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border/30 hover:bg-transparent">
+                  <TableHead className="text-muted-foreground font-medium w-[50%]">Feature</TableHead>
+                  <TableHead className="text-center text-muted-foreground font-medium uppercase tracking-wide text-sm">Others</TableHead>
+                  <TableHead className="text-center text-primary font-medium uppercase tracking-wide text-sm">Kloak</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {comparisonData.map((row, index) => (
+                  <motion.tr
+                    key={row.label}
+                    className="border-border/20 transition-colors hover:bg-muted/30"
+                    initial={{ opacity: 0, x: -20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.4, delay: index * 0.05 }}
+                  >
+                    <TableCell className="font-medium text-foreground">{row.label}</TableCell>
+                    <TableCell className="text-center">
+                      {row.others ? (
+                        <div className="w-8 h-8 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
+                          <Check className="w-4 h-4 text-destructive" />
+                        </div>
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center mx-auto">
+                          <X className="w-4 h-4 text-muted-foreground/50" />
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {row.kloak ? (
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                          <Check className="w-4 h-4 text-primary" />
+                        </div>
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                          <X className="w-4 h-4 text-primary" />
+                        </div>
+                      )}
+                    </TableCell>
+                  </motion.tr>
+                ))}
+              </TableBody>
+            </Table>
           </motion.div>
 
           <motion.p 
