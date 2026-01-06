@@ -14,12 +14,6 @@ import kloakLogo from '@/assets/kloak-logo.svg';
 
 const menuCategories = [
   {
-    title: "Get Started",
-    links: [
-      { label: "Create Account", href: "/auth", icon: Key },
-    ]
-  },
-  {
     title: "Company",
     links: [
       { label: "Philosophy", href: "/philosophy", icon: Heart },
@@ -94,28 +88,37 @@ export const NavigationMenu = () => {
 
               {/* Sidebar Content */}
               <div className="flex-1 overflow-y-auto p-6">
-                <div className="space-y-8">
-                  {menuCategories.map((category) => (
-                    <div key={category.title}>
-                      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-                        {category.title}
-                      </h3>
-                      <div className="space-y-1">
-                        {category.links.map((link) => (
-                          <Link
-                            key={link.href}
-                            to={link.href}
-                            onClick={() => setMenuOpen(false)}
-                            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-foreground/80 hover:bg-muted/50 hover:text-foreground transition-colors"
-                          >
-                            <link.icon className="h-4 w-4" />
-                            <span className="text-sm">{link.label}</span>
-                          </Link>
-                        ))}
-                      </div>
+              <div className="space-y-6">
+                <Link to="/auth" onClick={() => setMenuOpen(false)}>
+                  <Button className="w-full">
+                    <Key className="h-4 w-4" />
+                    Create Account
+                  </Button>
+                </Link>
+
+                <div className="h-px bg-border/30" />
+
+                {menuCategories.map((category) => (
+                  <div key={category.title}>
+                    <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+                      {category.title}
+                    </h3>
+                    <div className="space-y-1">
+                      {category.links.map((link) => (
+                        <Link
+                          key={link.href}
+                          to={link.href}
+                          onClick={() => setMenuOpen(false)}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-foreground/80 hover:bg-muted/50 hover:text-foreground transition-colors"
+                        >
+                          <link.icon className="h-4 w-4" />
+                          <span className="text-sm">{link.label}</span>
+                        </Link>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
+              </div>
               </div>
 
               {/* Sidebar Footer */}
