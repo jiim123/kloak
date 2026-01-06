@@ -360,51 +360,196 @@ const Index = () => {
       {/* For Everyone Section */}
       <section className="py-32 px-6">
         <div className="max-w-6xl mx-auto">
+          {/* Section Header */}
           <motion.div 
-            className="grid lg:grid-cols-2 gap-16 items-center"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
+            className="text-center mb-20"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
+            transition={{ duration: 0.6 }}
           >
-            <div>
-              <p className="text-primary font-medium mb-4 tracking-wide text-sm uppercase">For Everyone</p>
-              <h2 className="text-4xl sm:text-5xl font-semibold text-foreground leading-tight tracking-tight mb-6">
-                Free speech starts with free infrastructure.
-              </h2>
-              <p className="text-lg text-muted-foreground leading-relaxed mb-8">
-                Kloak isn't built for a demographic. It's built for humans. Whether you're organizing 
-                a book club, running a business, or building a global community — you deserve the 
-                same level of privacy and respect.
-              </p>
-              <p className="text-lg text-muted-foreground leading-relaxed">
-                No premium tiers that unlock privacy features. No enterprise-only security. 
-                Everyone gets everything.
-              </p>
-            </div>
-            <div className="space-y-6">
-              {[
-                "Activists and organizers",
-                "Creative communities",
-                "Gaming groups",
-                "Small businesses",
-                "Friends and families",
-                "Anyone who values privacy"
-              ].map((group, index) => (
-                <motion.div
-                  key={group}
-                  className="flex items-center gap-4 text-lg"
-                  initial={{ opacity: 0, x: 20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: index * 0.08 }}
-                >
-                  <div className="w-2 h-2 rounded-full bg-primary" />
-                  <span className="text-foreground">{group}</span>
-                </motion.div>
-              ))}
-            </div>
+            <p className="text-primary font-medium mb-4 tracking-wide text-sm uppercase">For Everyone</p>
+            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-semibold text-foreground leading-tight tracking-tight mb-6 max-w-4xl mx-auto">
+              Free speech starts with free infrastructure.
+            </h2>
+            <p className="text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+              No premium tiers that unlock privacy features. No enterprise-only security. 
+              Everyone gets everything.
+            </p>
           </motion.div>
+
+          {/* Cards Grid */}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              { 
+                title: "Activists & Organizers", 
+                description: "Coordinate movements without surveillance. Your cause, your privacy.",
+                icon: "megaphone",
+                gradient: "from-rose-500/20 to-orange-500/20"
+              },
+              { 
+                title: "Creative Communities", 
+                description: "Share your art, music, and ideas in spaces you control.",
+                icon: "palette",
+                gradient: "from-violet-500/20 to-purple-500/20"
+              },
+              { 
+                title: "Gaming Groups", 
+                description: "Voice chat, strategy sessions, and guild coordination — lag-free.",
+                icon: "gamepad",
+                gradient: "from-emerald-500/20 to-teal-500/20"
+              },
+              { 
+                title: "Small Businesses", 
+                description: "Team communication without Big Tech reading your roadmap.",
+                icon: "briefcase",
+                gradient: "from-blue-500/20 to-cyan-500/20"
+              },
+              { 
+                title: "Friends & Family", 
+                description: "Private group chats that stay private. Period.",
+                icon: "heart",
+                gradient: "from-pink-500/20 to-rose-500/20"
+              },
+              { 
+                title: "Privacy Advocates", 
+                description: "Finally, a platform that practices what it preaches.",
+                icon: "shield",
+                gradient: "from-amber-500/20 to-yellow-500/20"
+              },
+            ].map((card, index) => (
+              <motion.div
+                key={card.title}
+                className="group relative bg-card/50 border border-border/30 rounded-2xl p-8 overflow-hidden hover:border-primary/30 transition-colors duration-300"
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                whileHover={{ y: -4 }}
+              >
+                {/* Gradient background */}
+                <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+                
+                {/* Animated icon */}
+                <motion.div 
+                  className="relative mb-6"
+                  whileHover={{ rotate: [0, -10, 10, -5, 0] }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors duration-300">
+                    {card.icon === "megaphone" && (
+                      <motion.svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="28"
+                        height="28"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="text-primary"
+                      >
+                        <path d="m3 11 18-5v12L3 13v-2z"/>
+                        <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>
+                      </motion.svg>
+                    )}
+                    {card.icon === "palette" && (
+                      <motion.svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="28"
+                        height="28"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="text-primary"
+                      >
+                        <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/>
+                        <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/>
+                        <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/>
+                        <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/>
+                        <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.555C21.965 6.012 17.461 2 12 2z"/>
+                      </motion.svg>
+                    )}
+                    {card.icon === "gamepad" && (
+                      <motion.svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="28"
+                        height="28"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="text-primary"
+                      >
+                        <line x1="6" x2="10" y1="12" y2="12"/>
+                        <line x1="8" x2="8" y1="10" y2="14"/>
+                        <line x1="15" x2="15.01" y1="13" y2="13"/>
+                        <line x1="18" x2="18.01" y1="11" y2="11"/>
+                        <rect width="20" height="12" x="2" y="6" rx="2"/>
+                      </motion.svg>
+                    )}
+                    {card.icon === "briefcase" && (
+                      <motion.svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="28"
+                        height="28"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="text-primary"
+                      >
+                        <path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                        <rect width="20" height="14" x="2" y="6" rx="2"/>
+                      </motion.svg>
+                    )}
+                    {card.icon === "heart" && (
+                      <motion.svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="28"
+                        height="28"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="text-primary"
+                        animate={{ scale: [1, 1.1, 1] }}
+                        transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
+                      >
+                        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+                      </motion.svg>
+                    )}
+                    {card.icon === "shield" && (
+                      <Shield className="w-7 h-7 text-primary" />
+                    )}
+                  </div>
+                </motion.div>
+
+                {/* Content */}
+                <div className="relative">
+                  <h3 className="text-xl font-semibold text-foreground mb-2 tracking-tight">
+                    {card.title}
+                  </h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    {card.description}
+                  </p>
+                </div>
+
+                {/* Decorative corner */}
+                <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-primary/5 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 
