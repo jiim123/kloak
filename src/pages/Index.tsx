@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Shield, 
   ArrowRight,
@@ -9,7 +10,12 @@ import {
   Zap,
   Lock,
   X,
-  Check
+  Check,
+  Menu,
+  FileText,
+  Heart,
+  Cookie,
+  ScrollText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Footer } from '@/components/ui/footer-section';
@@ -30,6 +36,8 @@ const stagger = {
 };
 
 const Index = () => {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   const comparisonData = [
     { label: "Email required", others: true, kloak: false },
     { label: "Phone number required", others: true, kloak: false },
@@ -41,27 +49,118 @@ const Index = () => {
     { label: "You control your identity", others: false, kloak: true },
   ];
 
+  const menuCategories = [
+    {
+      title: "Get Started",
+      links: [
+        { label: "Create Account", href: "/auth", icon: Key },
+      ]
+    },
+    {
+      title: "Company",
+      links: [
+        { label: "Philosophy", href: "/philosophy", icon: Heart },
+      ]
+    },
+    {
+      title: "Legal",
+      links: [
+        { label: "Terms of Service", href: "/terms", icon: ScrollText },
+        { label: "Privacy Policy", href: "/privacy", icon: FileText },
+        { label: "Cookie Policy", href: "/cookies", icon: Cookie },
+      ]
+    }
+  ];
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Navigation */}
       <nav className="w-full py-6 px-6 border-b border-border/20">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <img src={kloakLogo} alt="Kloak" className="h-7" />
-          <div className="flex items-center gap-4">
-            <Link to="/philosophy">
-              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-                Philosophy
-              </Button>
-            </Link>
-            <Link to="/auth">
-              <Button size="sm">
-                Get Started
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            </Link>
-          </div>
+          <button 
+            onClick={() => setMenuOpen(true)}
+            className="p-2 -mr-2 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Open menu"
+          >
+            <div className="flex flex-col gap-1.5">
+              <div className="w-5 h-0.5 bg-current" />
+              <div className="w-5 h-0.5 bg-current" />
+            </div>
+          </button>
         </div>
       </nav>
+
+      {/* Menu Sidebar */}
+      <AnimatePresence>
+        {menuOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMenuOpen(false)}
+            />
+            
+            {/* Sidebar */}
+            <motion.div
+              className="fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-card border-l border-border/30 z-50 flex flex-col"
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+            >
+              {/* Sidebar Header */}
+              <div className="flex items-center justify-between p-6 border-b border-border/20">
+                <span className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Menu</span>
+                <button 
+                  onClick={() => setMenuOpen(false)}
+                  className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label="Close menu"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Sidebar Content */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-8">
+                {menuCategories.map((category) => (
+                  <div key={category.title}>
+                    <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-4">
+                      {category.title}
+                    </h3>
+                    <div className="space-y-1">
+                      {category.links.map((link) => (
+                        <Link
+                          key={link.href}
+                          to={link.href}
+                          onClick={() => setMenuOpen(false)}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-md text-foreground hover:bg-muted/50 transition-colors group"
+                        >
+                          <link.icon className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                          <span className="text-sm">{link.label}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Sidebar Footer */}
+              <div className="p-6 border-t border-border/20">
+                <Link to="/auth" onClick={() => setMenuOpen(false)}>
+                  <Button className="w-full">
+                    Get Started
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </Link>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Hero Section */}
       <section className="flex-1 flex items-center px-6 py-32">
