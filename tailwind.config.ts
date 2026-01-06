@@ -14,7 +14,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Schibsted Grotesk', 'Noto Color Emoji', 'system-ui', 'sans-serif'],
+        sans: ['Stack Sans Headline', 'Noto Color Emoji', 'system-ui', 'sans-serif'],
         emoji: ['Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', 'sans-serif'],
       },
       colors: {
