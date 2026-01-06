@@ -7,7 +7,9 @@ import {
   MessageCircle,
   Users,
   Zap,
-  Lock
+  Lock,
+  X,
+  Check
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Footer } from '@/components/ui/footer-section';
@@ -28,6 +30,17 @@ const stagger = {
 };
 
 const Index = () => {
+  const comparisonData = [
+    { label: "Email required", others: true, kloak: false },
+    { label: "Phone number required", others: true, kloak: false },
+    { label: "Password stored on servers", others: true, kloak: false },
+    { label: "Behavioral tracking", others: true, kloak: false },
+    { label: "Data sold to advertisers", others: true, kloak: false },
+    { label: "AI trained on your messages", others: true, kloak: false },
+    { label: "Account recovery by platform", others: true, kloak: false },
+    { label: "You control your identity", others: false, kloak: true },
+  ];
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Navigation */}
@@ -122,8 +135,91 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Principles Section */}
+      {/* Comparison Section */}
       <section className="py-32 px-6 bg-card/50 border-y border-border/20">
+        <div className="max-w-6xl mx-auto">
+          <motion.div 
+            className="mb-16"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <p className="text-primary font-medium mb-4 tracking-wide text-sm uppercase">The Difference</p>
+            <h2 className="text-4xl sm:text-5xl font-semibold text-foreground leading-tight tracking-tight max-w-3xl">
+              What they collect. What we don't.
+            </h2>
+          </motion.div>
+
+          <motion.div 
+            className="overflow-hidden"
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            {/* Header */}
+            <div className="grid grid-cols-[1fr,120px,120px] sm:grid-cols-[1fr,160px,160px] gap-4 pb-4 border-b border-border/30">
+              <div />
+              <div className="text-center">
+                <span className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Others</span>
+              </div>
+              <div className="text-center">
+                <span className="text-sm font-medium text-primary uppercase tracking-wide">Kloak</span>
+              </div>
+            </div>
+
+            {/* Rows */}
+            {comparisonData.map((row, index) => (
+              <motion.div
+                key={row.label}
+                className="grid grid-cols-[1fr,120px,120px] sm:grid-cols-[1fr,160px,160px] gap-4 py-5 border-b border-border/20 items-center"
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: index * 0.05 }}
+              >
+                <span className="text-foreground font-medium">{row.label}</span>
+                <div className="flex justify-center">
+                  {row.others ? (
+                    <div className="w-8 h-8 rounded-full bg-destructive/10 flex items-center justify-center">
+                      <Check className="w-4 h-4 text-destructive" />
+                    </div>
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center">
+                      <X className="w-4 h-4 text-muted-foreground/50" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex justify-center">
+                  {row.kloak ? (
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Check className="w-4 h-4 text-primary" />
+                    </div>
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <X className="w-4 h-4 text-primary" />
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+
+          <motion.p 
+            className="text-center text-muted-foreground mt-12 text-lg"
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+          >
+            The less we know about you, the less anyone can take.
+          </motion.p>
+        </div>
+      </section>
+
+      {/* Principles Section */}
+      <section className="py-32 px-6">
         <div className="max-w-6xl mx-auto">
           <motion.div 
             className="mb-20"
@@ -184,11 +280,11 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-32 px-6">
+      {/* Capabilities Section - Bold Creative Layout */}
+      <section className="py-32 px-6 bg-card/50 border-y border-border/20 overflow-hidden">
         <div className="max-w-6xl mx-auto">
           <motion.div 
-            className="mb-20"
+            className="mb-24"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -200,50 +296,87 @@ const Index = () => {
             </h2>
           </motion.div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {[
-              {
-                icon: MessageCircle,
-                title: "Real-time messaging",
-                description: "Instant delivery across servers, channels, and direct messages."
-              },
-              {
-                icon: Users,
-                title: "Communities",
-                description: "Create spaces for your people. Organize with channels and categories."
-              },
-              {
-                icon: Lock,
-                title: "Key-based auth",
-                description: "One key. Full control. No password managers needed."
-              },
-              {
-                icon: Zap,
-                title: "Modern stack",
-                description: "Built for performance. Fast, responsive, reliable."
-              }
-            ].map((feature, index) => (
-              <motion.div
-                key={feature.title}
-                className="group"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-              >
-                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-5 group-hover:bg-primary/20 transition-colors">
-                  <feature.icon className="w-6 h-6 text-primary" />
-                </div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">{feature.title}</h3>
-                <p className="text-muted-foreground text-sm leading-relaxed">{feature.description}</p>
-              </motion.div>
-            ))}
+          {/* Large Feature Grid */}
+          <div className="grid lg:grid-cols-12 gap-6">
+            {/* Main Feature - Large */}
+            <motion.div
+              className="lg:col-span-7 bg-background border border-border/30 rounded-lg p-10 relative group overflow-hidden"
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+            >
+              <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-primary/10 transition-colors duration-500" />
+              <MessageCircle className="w-10 h-10 text-primary mb-8" />
+              <h3 className="text-3xl sm:text-4xl font-semibold text-foreground mb-4 tracking-tight">
+                Real-time messaging
+              </h3>
+              <p className="text-lg text-muted-foreground leading-relaxed max-w-md">
+                Instant message delivery across servers, channels, and direct conversations. 
+                Built for speed without sacrificing privacy.
+              </p>
+            </motion.div>
+
+            {/* Secondary Feature */}
+            <motion.div
+              className="lg:col-span-5 bg-background border border-border/30 rounded-lg p-10 relative group overflow-hidden"
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+            >
+              <div className="absolute bottom-0 left-0 w-48 h-48 bg-primary/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 group-hover:bg-primary/10 transition-colors duration-500" />
+              <Lock className="w-10 h-10 text-primary mb-8" />
+              <h3 className="text-2xl sm:text-3xl font-semibold text-foreground mb-4 tracking-tight">
+                Key-based auth
+              </h3>
+              <p className="text-muted-foreground leading-relaxed">
+                One cryptographic key. Full control. No password managers, no recovery emails, no vulnerabilities.
+              </p>
+            </motion.div>
+
+            {/* Third Feature */}
+            <motion.div
+              className="lg:col-span-5 bg-background border border-border/30 rounded-lg p-10 relative group overflow-hidden"
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+            >
+              <div className="absolute top-0 left-0 w-48 h-48 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 -translate-x-1/2 group-hover:bg-primary/10 transition-colors duration-500" />
+              <Users className="w-10 h-10 text-primary mb-8" />
+              <h3 className="text-2xl sm:text-3xl font-semibold text-foreground mb-4 tracking-tight">
+                Communities
+              </h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Create spaces for your people. Organize with servers, channels, and categories — your way.
+              </p>
+            </motion.div>
+
+            {/* Fourth Feature - Large */}
+            <motion.div
+              className="lg:col-span-7 bg-background border border-border/30 rounded-lg p-10 relative group overflow-hidden"
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+            >
+              <div className="absolute bottom-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl translate-y-1/2 translate-x-1/2 group-hover:bg-primary/10 transition-colors duration-500" />
+              <Zap className="w-10 h-10 text-primary mb-8" />
+              <h3 className="text-3xl sm:text-4xl font-semibold text-foreground mb-4 tracking-tight">
+                Modern infrastructure
+              </h3>
+              <p className="text-lg text-muted-foreground leading-relaxed max-w-md">
+                Built on a modern tech stack for performance and reliability. 
+                Fast, responsive, and built to scale with you.
+              </p>
+            </motion.div>
           </div>
         </div>
       </section>
 
       {/* For Everyone Section */}
-      <section className="py-32 px-6 border-t border-border/20">
+      <section className="py-32 px-6">
         <div className="max-w-6xl mx-auto">
           <motion.div 
             className="grid lg:grid-cols-2 gap-16 items-center"
