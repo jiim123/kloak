@@ -296,10 +296,12 @@ const Index = () => {
               transition={{ duration: 0.6 }}
             >
               <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-primary/10 transition-colors duration-500" />
-              <MessageCircle className="w-10 h-10 text-primary mb-8" />
-              <h3 className="text-3xl sm:text-4xl font-semibold text-foreground mb-4 tracking-tight">
-                Real-time messaging
-              </h3>
+              <div className="flex items-center gap-4 mb-4">
+                <MessageCircle className="w-8 h-8 text-primary shrink-0" />
+                <h3 className="text-3xl sm:text-4xl font-semibold text-foreground tracking-tight">
+                  Real-time messaging
+                </h3>
+              </div>
               <p className="text-lg text-muted-foreground leading-relaxed max-w-md">
                 Instant message delivery across servers, channels, and direct conversations. 
                 Built for speed without sacrificing privacy.
@@ -315,10 +317,12 @@ const Index = () => {
               transition={{ duration: 0.6, delay: 0.1 }}
             >
               <div className="absolute bottom-0 left-0 w-48 h-48 bg-primary/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 group-hover:bg-primary/10 transition-colors duration-500" />
-              <Lock className="w-10 h-10 text-primary mb-8" />
-              <h3 className="text-2xl sm:text-3xl font-semibold text-foreground mb-4 tracking-tight">
-                Key-based auth
-              </h3>
+              <div className="flex items-center gap-3 mb-4">
+                <Lock className="w-7 h-7 text-primary shrink-0" />
+                <h3 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight">
+                  Key-based auth
+                </h3>
+              </div>
               <p className="text-muted-foreground leading-relaxed">
                 One cryptographic key. Full control. No password managers, no recovery emails, no vulnerabilities.
               </p>
@@ -333,10 +337,12 @@ const Index = () => {
               transition={{ duration: 0.6, delay: 0.2 }}
             >
               <div className="absolute top-0 left-0 w-48 h-48 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 -translate-x-1/2 group-hover:bg-primary/10 transition-colors duration-500" />
-              <Users className="w-10 h-10 text-primary mb-8" />
-              <h3 className="text-2xl sm:text-3xl font-semibold text-foreground mb-4 tracking-tight">
-                Communities
-              </h3>
+              <div className="flex items-center gap-3 mb-4">
+                <Users className="w-7 h-7 text-primary shrink-0" />
+                <h3 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight">
+                  Communities
+                </h3>
+              </div>
               <p className="text-muted-foreground leading-relaxed">
                 Create spaces for your people. Organize with servers, channels, and categories — your way.
               </p>
@@ -351,10 +357,12 @@ const Index = () => {
               transition={{ duration: 0.6, delay: 0.3 }}
             >
               <div className="absolute bottom-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl translate-y-1/2 translate-x-1/2 group-hover:bg-primary/10 transition-colors duration-500" />
-              <Zap className="w-10 h-10 text-primary mb-8" />
-              <h3 className="text-3xl sm:text-4xl font-semibold text-foreground mb-4 tracking-tight">
-                Modern infrastructure
-              </h3>
+              <div className="flex items-center gap-4 mb-4">
+                <Zap className="w-8 h-8 text-primary shrink-0" />
+                <h3 className="text-3xl sm:text-4xl font-semibold text-foreground tracking-tight">
+                  Modern infrastructure
+                </h3>
+              </div>
               <p className="text-lg text-muted-foreground leading-relaxed max-w-md">
                 Built on a modern tech stack for performance and reliability. 
                 Fast, responsive, and built to scale with you.
