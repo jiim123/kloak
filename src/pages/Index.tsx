@@ -65,24 +65,24 @@ const Index = () => {
             variants={fadeInUp}
             className="text-primary font-medium mb-6 tracking-wide text-sm uppercase"
           >
-            Privacy-first messaging
+            Fast. Private. Built for gamers.
           </motion.p>
           
           <motion.h1 
             variants={fadeInUp}
             className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-semibold text-foreground mb-8 leading-[0.95] tracking-tight max-w-4xl"
           >
-            You are not
+            Chat without
             <br />
-            the product.
+            compromise.
           </motion.h1>
           
           <motion.p 
             variants={fadeInUp}
             className="text-xl text-muted-foreground max-w-xl mb-12 leading-relaxed"
           >
-            Kloak is built for people who refuse to trade their privacy for connection. 
-            No email. No password. No tracking. Just a key that only you hold.
+            Lightning-fast messaging built for gaming communities, creators, and teams who demand 
+            performance without sacrificing privacy. No lag. No tracking. No nonsense.
           </motion.p>
           
           <motion.div variants={fadeInUp}>
