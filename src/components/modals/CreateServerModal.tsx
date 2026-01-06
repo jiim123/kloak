@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Upload, Plus, Users, ArrowLeft } from 'lucide-react';
+import { Loader2, Upload, Plus, Users, ArrowLeft, X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -17,7 +17,11 @@ import { Label } from '@/components/ui/label';
 import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
 import { useAuthStore } from '@/stores/authStore';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+
+const MAX_ICON_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_ICON_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 const createServerSchema = z.object({
   name: z.string()
@@ -41,11 +45,16 @@ type ModalView = 'choose' | 'create' | 'join';
 
 export const CreateServerModal = () => {
   const { activeModal, closeModal } = useUIStore();
-  const { createServer, joinServer, servers, setCurrentServer, fetchChannels } = useServerStore();
+  const { createServer, updateServer, joinServer, servers, setCurrentServer, fetchChannels } = useServerStore();
   const { user } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
   const [view, setView] = useState<ModalView>('choose');
   const [joinError, setJoinError] = useState<string | null>(null);
+  
+  // Icon upload state
+  const [iconFile, setIconFile] = useState<File | null>(null);
+  const [iconPreview, setIconPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const createForm = useForm<CreateServerForm>({
     resolver: zodResolver(createServerSchema),
@@ -59,6 +68,55 @@ export const CreateServerModal = () => {
 
   const isOpen = activeModal === 'create-server';
 
+  const handleIconSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!ALLOWED_ICON_TYPES.includes(file.type)) {
+      toast.error('Please select a JPEG, PNG, or WebP image');
+      return;
+    }
+
+    if (file.size > MAX_ICON_SIZE) {
+      toast.error('Image must be less than 5MB');
+      return;
+    }
+
+    setIconFile(file);
+    setIconPreview(URL.createObjectURL(file));
+  };
+
+  const clearIcon = () => {
+    setIconFile(null);
+    if (iconPreview) {
+      URL.revokeObjectURL(iconPreview);
+      setIconPreview(null);
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const uploadIcon = async (serverId: string, file: File): Promise<string | null> => {
+    const ext = file.name.split('.').pop() || 'png';
+    const filePath = `${serverId}/icon.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('server-icons')
+      .upload(filePath, file, { upsert: true });
+
+    if (uploadError) {
+      console.error('Failed to upload icon:', uploadError);
+      return null;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('server-icons')
+      .getPublicUrl(filePath);
+
+    return publicUrl;
+  };
+
   const onCreateSubmit = async (data: CreateServerForm) => {
     if (!user) return;
     
@@ -66,6 +124,14 @@ export const CreateServerModal = () => {
     try {
       const server = await createServer(data.name, user.id);
       if (server) {
+        // Upload icon if selected
+        if (iconFile) {
+          const iconUrl = await uploadIcon(server.id, iconFile);
+          if (iconUrl) {
+            await updateServer(server.id, { icon_url: iconUrl });
+          }
+        }
+        
         toast.success(`Server "${server.name}" created!`);
         setCurrentServer(server);
         await fetchChannels(server.id);
@@ -109,6 +175,7 @@ export const CreateServerModal = () => {
     joinForm.reset();
     setView('choose');
     setJoinError(null);
+    clearIcon();
     closeModal();
   };
 
@@ -120,11 +187,21 @@ export const CreateServerModal = () => {
   const handleBack = () => {
     setView('choose');
     setJoinError(null);
+    clearIcon();
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="sm:max-w-md">
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          onChange={handleIconSelect}
+          className="hidden"
+        />
+
         {/* Choose View */}
         {view === 'choose' && (
           <>
@@ -188,10 +265,34 @@ export const CreateServerModal = () => {
 
             <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-4">
               <div className="flex justify-center">
-                <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center border-2 border-dashed border-muted-foreground/50 cursor-pointer hover:border-primary transition-colors">
-                  <Upload className="w-6 h-6 text-muted-foreground" />
+                <div className="relative">
+                  <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center border-2 border-dashed border-muted-foreground/50 cursor-pointer hover:border-primary transition-colors overflow-hidden"
+                  >
+                    {iconPreview ? (
+                      <img src={iconPreview} alt="Server icon preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <Upload className="w-6 h-6 text-muted-foreground" />
+                    )}
+                  </div>
+                  {iconPreview && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        clearIcon();
+                      }}
+                      className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/90"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
                 </div>
               </div>
+              <p className="text-xs text-muted-foreground text-center">
+                Click to upload an icon (optional)
+              </p>
 
               <div className="space-y-2">
                 <Label htmlFor="name" className="text-xs font-bold uppercase text-muted-foreground">

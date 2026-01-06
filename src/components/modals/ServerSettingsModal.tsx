@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -12,7 +12,8 @@ import {
   Crown,
   Shield,
   ShieldCheck,
-  User
+  User,
+  X
 } from 'lucide-react';
 import {
   Dialog,
@@ -42,9 +43,13 @@ import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useRealtimeMembers } from '@/hooks';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { ServerRole, ServerMember } from '@/types';
+
+const MAX_ICON_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_ICON_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 const serverSettingsSchema = z.object({
   name: z.string()
@@ -75,6 +80,7 @@ export const ServerSettingsModal = () => {
     servers, 
     members, 
     fetchMembers,
+    updateServer,
     deleteServer,
     kickMember,
     banMember,
@@ -85,6 +91,12 @@ export const ServerSettingsModal = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  
+  // Icon upload state
+  const [iconFile, setIconFile] = useState<File | null>(null);
+  const [iconPreview, setIconPreview] = useState<string | null>(null);
+  const [isUploadingIcon, setIsUploadingIcon] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isOpen = activeModal === 'server-settings';
   
@@ -122,16 +134,100 @@ export const ServerSettingsModal = () => {
     if (isOpen && server) {
       fetchMembers(server.id);
       reset({ name: server.name });
+      // Reset icon state
+      setIconFile(null);
+      setIconPreview(null);
     }
   }, [isOpen, server, fetchMembers, reset]);
+
+  const handleIconSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!ALLOWED_ICON_TYPES.includes(file.type)) {
+      toast.error('Please select a JPEG, PNG, or WebP image');
+      return;
+    }
+
+    if (file.size > MAX_ICON_SIZE) {
+      toast.error('Image must be less than 5MB');
+      return;
+    }
+
+    setIconFile(file);
+    setIconPreview(URL.createObjectURL(file));
+  };
+
+  const clearIcon = () => {
+    setIconFile(null);
+    if (iconPreview) {
+      URL.revokeObjectURL(iconPreview);
+      setIconPreview(null);
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const uploadIcon = async (serverId: string, file: File): Promise<string | null> => {
+    const ext = file.name.split('.').pop() || 'png';
+    const filePath = `${serverId}/icon.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('server-icons')
+      .upload(filePath, file, { upsert: true });
+
+    if (uploadError) {
+      console.error('Failed to upload icon:', uploadError);
+      return null;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('server-icons')
+      .getPublicUrl(filePath);
+
+    // Add cache buster to force refresh
+    return `${publicUrl}?t=${Date.now()}`;
+  };
+
+  const handleRemoveIcon = async () => {
+    if (!server) return;
+    
+    setIsUploadingIcon(true);
+    try {
+      await updateServer(server.id, { icon_url: null });
+      toast.success('Server icon removed');
+    } catch (error) {
+      toast.error('Failed to remove icon');
+    } finally {
+      setIsUploadingIcon(false);
+    }
+  };
 
   const onSubmit = async (data: ServerSettingsForm) => {
     if (!server) return;
     
     setIsLoading(true);
     try {
-      // TODO: Implement server update
+      let iconUrl = server.icon_url;
+      
+      // Upload new icon if selected
+      if (iconFile) {
+        setIsUploadingIcon(true);
+        const uploadedUrl = await uploadIcon(server.id, iconFile);
+        if (uploadedUrl) {
+          iconUrl = uploadedUrl;
+        }
+        setIsUploadingIcon(false);
+      }
+      
+      await updateServer(server.id, { 
+        name: data.name,
+        icon_url: iconUrl 
+      });
+      
       toast.success('Server settings updated!');
+      clearIcon();
       closeModal();
     } catch (error) {
       toast.error('Failed to update server');
@@ -181,6 +277,7 @@ export const ServerSettingsModal = () => {
   const handleClose = () => {
     reset();
     setActiveTab('overview');
+    clearIcon();
     closeModal();
   };
 
@@ -196,8 +293,20 @@ export const ServerSettingsModal = () => {
     );
   }
 
+  // Determine which icon to show
+  const displayIconUrl = iconPreview || server.icon_url;
+
   return (
     <>
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        onChange={handleIconSelect}
+        className="hidden"
+      />
+
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
         <DialogContent className="sm:max-w-2xl max-w-[calc(100vw-2rem)] max-h-[90vh] sm:max-h-[80vh] p-4 sm:p-6">
           <DialogHeader className="pb-2">
@@ -229,16 +338,44 @@ export const ServerSettingsModal = () => {
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 sm:space-y-4">
                 {/* Server Icon */}
                 <div className="flex items-center gap-3 sm:gap-4">
-                  <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-secondary flex items-center justify-center border-2 border-dashed border-muted-foreground/50 cursor-pointer hover:border-primary transition-colors flex-shrink-0">
-                    {server.icon_url ? (
-                      <img src={server.icon_url} alt={server.name} className="w-full h-full rounded-xl sm:rounded-2xl object-cover" />
-                    ) : (
-                      <Upload className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground" />
+                  <div className="relative">
+                    <div 
+                      onClick={() => isAdmin && fileInputRef.current?.click()}
+                      className={cn(
+                        "w-14 h-14 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-secondary flex items-center justify-center border-2 border-dashed border-muted-foreground/50 transition-colors flex-shrink-0 overflow-hidden",
+                        isAdmin && "cursor-pointer hover:border-primary"
+                      )}
+                    >
+                      {displayIconUrl ? (
+                        <img src={displayIconUrl} alt={server.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <Upload className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground" />
+                      )}
+                    </div>
+                    {/* Remove icon button - show for new preview OR existing server icon */}
+                    {isAdmin && displayIconUrl && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (iconPreview) {
+                            clearIcon();
+                          } else {
+                            handleRemoveIcon();
+                          }
+                        }}
+                        disabled={isUploadingIcon}
+                        className="absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/90 disabled:opacity-50"
+                      >
+                        <X className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                      </button>
                     )}
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs sm:text-sm font-medium">Server Icon</p>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground">Recommended 512x512</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">
+                      {isAdmin ? 'Click to upload • Recommended 512x512' : 'Recommended 512x512'}
+                    </p>
                   </div>
                 </div>
 
@@ -249,18 +386,21 @@ export const ServerSettingsModal = () => {
                     id="serverName"
                     {...register('name')}
                     className={cn("h-9 sm:h-10 text-sm", errors.name ? 'border-destructive' : '')}
+                    disabled={!isAdmin}
                   />
                   {errors.name && (
                     <p className="text-[10px] sm:text-xs text-destructive">{errors.name.message}</p>
                   )}
                 </div>
 
-                <DialogFooter className="pt-2 sm:pt-4">
-                  <Button type="submit" disabled={isLoading} size="sm" className="w-full sm:w-auto">
-                    {isLoading && <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2 animate-spin" />}
-                    Save Changes
-                  </Button>
-                </DialogFooter>
+                {isAdmin && (
+                  <DialogFooter className="pt-2 sm:pt-4">
+                    <Button type="submit" disabled={isLoading || isUploadingIcon} size="sm" className="w-full sm:w-auto">
+                      {(isLoading || isUploadingIcon) && <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2 animate-spin" />}
+                      Save Changes
+                    </Button>
+                  </DialogFooter>
+                )}
               </form>
 
               {/* Danger Zone */}

@@ -23,6 +23,7 @@ interface ServerState {
   // Server actions
   fetchServers: (userId: string) => Promise<void>;
   createServer: (name: string, ownerId: string) => Promise<Server | null>;
+  updateServer: (serverId: string, updates: { name?: string; icon_url?: string | null }) => Promise<void>;
   joinServer: (inviteCode: string, userId: string) => Promise<boolean>;
   leaveServer: (serverId: string, userId: string) => Promise<void>;
   deleteServer: (serverId: string) => Promise<void>;
@@ -178,6 +179,30 @@ export const useServerStore = create<ServerState>((set, get) => ({
       console.error('Failed to create server:', error);
       set({ error: 'Failed to create server' });
       return null;
+    }
+  },
+
+  updateServer: async (serverId: string, updates: { name?: string; icon_url?: string | null }) => {
+    try {
+      const { error } = await supabase
+        .from('servers')
+        .update(updates)
+        .eq('id', serverId);
+
+      if (error) throw error;
+
+      set((state) => ({
+        servers: state.servers.map((s) =>
+          s.id === serverId ? { ...s, ...updates } : s
+        ),
+        currentServer:
+          state.currentServer?.id === serverId
+            ? { ...state.currentServer, ...updates }
+            : state.currentServer,
+      }));
+    } catch (error) {
+      console.error('Failed to update server:', error);
+      throw error;
     }
   },
 
