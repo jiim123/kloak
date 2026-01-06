@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, Heart, Shield, Eye, EyeOff, Lock, Coins, MessageCircle, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Footer } from "@/components/ui/footer-section";
 import kloakLogo from "@/assets/kloak-logo.svg";
 
 const Philosophy = () => {
@@ -176,12 +177,8 @@ const Philosophy = () => {
           </section>
         </div>
 
-        <div className="mt-12 flex gap-4 text-sm">
-          <Link to="/terms" className="text-primary hover:underline">Terms of Service</Link>
-          <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
-          <Link to="/cookies" className="text-primary hover:underline">Cookie Policy</Link>
-        </div>
       </div>
+      <Footer />
     </div>
   );
 };

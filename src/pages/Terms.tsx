@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, Shield, FileText, AlertTriangle, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Footer } from "@/components/ui/footer-section";
 import kloakLogo from "@/assets/kloak-logo.svg";
 
 const Terms = () => {
@@ -147,12 +148,8 @@ const Terms = () => {
           </section>
         </div>
 
-        <div className="mt-12 flex gap-4 text-sm">
-          <Link to="/philosophy" className="text-primary hover:underline">Our Philosophy</Link>
-          <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
-          <Link to="/cookies" className="text-primary hover:underline">Cookie Policy</Link>
-        </div>
       </div>
+      <Footer />
     </div>
   );
 };
