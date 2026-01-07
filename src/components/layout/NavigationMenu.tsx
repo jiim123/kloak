@@ -40,16 +40,21 @@ export const NavigationMenu = () => {
           <Link to="/">
             <img src={kloakLogo} alt="Kloak" className="h-7" />
           </Link>
-          <button 
-            onClick={() => setMenuOpen(true)}
-            className="p-2 -mr-2 text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Open menu"
-          >
-            <div className="flex flex-col gap-1.5">
-              <div className="w-5 h-0.5 bg-current" />
-              <div className="w-5 h-0.5 bg-current" />
-            </div>
-          </button>
+          <div className="flex items-center gap-4">
+            <Link to="/auth" className="hidden sm:block">
+              <Button size="sm">Use Kloak</Button>
+            </Link>
+            <button 
+              onClick={() => setMenuOpen(true)}
+              className="p-2 -mr-2 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Open menu"
+            >
+              <div className="flex flex-col gap-1.5">
+                <div className="w-5 h-0.5 bg-current" />
+                <div className="w-5 h-0.5 bg-current" />
+              </div>
+            </button>
+          </div>
         </div>
       </nav>
 
