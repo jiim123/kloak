@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Footer } from '@/components/ui/footer-section';
 import { NavigationMenu } from '@/components/layout/NavigationMenu';
+import HeroAscii from '@/components/landing/HeroAscii';
 import {
   Table,
   TableBody,
@@ -54,47 +55,7 @@ const Index = () => {
       <NavigationMenu />
 
       {/* Hero Section */}
-      <section className="flex-1 flex items-center px-6 py-32">
-        <motion.div 
-          className="max-w-6xl mx-auto w-full"
-          initial="initial"
-          animate="animate"
-          variants={stagger}
-        >
-          <motion.p 
-            variants={fadeInUp}
-            className="text-primary font-medium mb-6 tracking-wide text-sm uppercase"
-          >
-            Fast. Private. Built for gamers.
-          </motion.p>
-          
-          <motion.h1 
-            variants={fadeInUp}
-            className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-semibold text-foreground mb-8 leading-[0.95] tracking-tight max-w-4xl"
-          >
-            Chat without
-            <br />
-            compromise.
-          </motion.h1>
-          
-          <motion.p 
-            variants={fadeInUp}
-            className="text-xl text-muted-foreground max-w-xl mb-12 leading-relaxed"
-          >
-            Lightning-fast messaging built for gaming communities, creators, and teams who demand 
-            performance without sacrificing privacy. No lag. No tracking. No nonsense.
-          </motion.p>
-          
-          <motion.div variants={fadeInUp}>
-            <Link to="/auth">
-              <Button size="lg" className="text-base px-8 h-12">
-                Create Your Key
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
-            </Link>
-          </motion.div>
-        </motion.div>
-      </section>
+      <HeroAscii />
 
       {/* The Problem Section */}
       <section className="py-32 px-6 border-t border-border/20">
