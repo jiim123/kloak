@@ -72,7 +72,21 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
       if (error) throw error;
 
-      const servers: ServerWithMembership[] = (data || []).map((item: any) => ({
+      // Cast the JSON result to array
+      const serverData = (data || []) as unknown as Array<{
+        id: string;
+        name: string;
+        owner_id: string;
+        invite_code: string;
+        icon_url: string | null;
+        banner_url: string | null;
+        created_at: string;
+        role: ServerRole;
+        nickname: string | null;
+        joined_at: string;
+      }>;
+
+      const servers: ServerWithMembership[] = serverData.map((item) => ({
         id: item.id,
         name: item.name,
         owner_id: item.owner_id,
@@ -101,15 +115,9 @@ export const useServerStore = create<ServerState>((set, get) => ({
           set({ servers, currentServer: restoredServer, isLoading: false });
           // Restore channel after fetching channels
           if (persistedChannelId) {
-            // Fetch channels using RPC
-            const { data: channels } = await supabase.rpc('get_server_channels', { _server_id: restoredServer.id });
-            
-            if (channels) {
-              const restoredChannel = channels.find((c: any) => c.id === persistedChannelId);
-              if (restoredChannel) {
-                set({ currentChannel: restoredChannel as Channel });
-              }
-            }
+            // Fetch channels using direct query (we're now a member so RLS should work)
+            // For now, just set the server - channel will be fetched by fetchChannels
+            // The channel restoration will happen when fetchChannels is called
           }
         } else {
           // Fall back to first server
@@ -126,49 +134,43 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   createServer: async (name: string, ownerId: string) => {
     try {
-      // Generate invite code
-      const { data: inviteCode } = await supabase.rpc('generate_invite_code');
+      // Use RPC function to create server with all related records (bypasses RLS)
+      const { data, error } = await supabase.rpc('create_server_with_owner', {
+        _name: name,
+        _owner_id: ownerId,
+      });
 
-      // Create server
-      const { data: server, error: serverError } = await supabase
-        .from('servers')
-        .insert({
-          name,
-          owner_id: ownerId,
-          invite_code: inviteCode,
-        })
-        .select()
-        .single();
+      if (error) throw error;
 
-      if (serverError) throw serverError;
+      if (!data) {
+        throw new Error('No server data returned');
+      }
 
-      // Add owner as member with owner role
-      const { error: memberError } = await supabase
-        .from('server_members')
-        .insert({
-          server_id: server.id,
-          user_id: ownerId,
-          role: 'owner',
-        });
+      // Cast the JSON result
+      const serverData = data as unknown as {
+        id: string;
+        name: string;
+        owner_id: string;
+        invite_code: string;
+        icon_url: string | null;
+        banner_url: string | null;
+        created_at: string;
+      };
 
-      if (memberError) throw memberError;
-
-      // Create default #general channel
-      const { error: channelError } = await supabase
-        .from('channels')
-        .insert({
-          server_id: server.id,
-          name: 'general',
-          type: 'text',
-          position: 0,
-        });
-
-      if (channelError) throw channelError;
+      const server: Server = {
+        id: serverData.id,
+        name: serverData.name,
+        owner_id: serverData.owner_id,
+        invite_code: serverData.invite_code,
+        icon_url: serverData.icon_url,
+        banner_url: serverData.banner_url,
+        created_at: serverData.created_at,
+      };
 
       // Refresh servers list
       await get().fetchServers(ownerId);
 
-      return server as Server;
+      return server;
     } catch (error) {
       console.error('Failed to create server:', error);
       set({ error: 'Failed to create server' });
@@ -209,44 +211,28 @@ export const useServerStore = create<ServerState>((set, get) => ({
         return false;
       }
 
-      // Find server by invite code using security definer function
-      const { data: serverData, error: serverError } = await supabase
-        .rpc('get_server_by_invite_code', { _invite_code: inviteCode.toUpperCase() });
+      // Use RPC function to join server (bypasses RLS)
+      const { data, error } = await supabase.rpc('join_server_by_invite', {
+        _invite_code: inviteCode.toUpperCase(),
+        _user_id: userId,
+      });
 
-      if (serverError || !serverData || serverData.length === 0) {
-        set({ error: 'Invalid invite code' });
-        return false;
-      }
-
-      const server = serverData[0];
-
-      // Check if already a member
-      const { data: existingMember } = await supabase
-        .from('server_members')
-        .select('*')
-        .eq('server_id', server.id)
-        .eq('user_id', userId)
-        .single();
-
-      if (existingMember) {
-        if (existingMember.is_banned) {
+      if (error) {
+        // Handle specific error messages
+        if (error.message.includes('Invalid invite code')) {
+          set({ error: 'Invalid invite code' });
+          return false;
+        }
+        if (error.message.includes('banned')) {
           set({ error: 'You are banned from this server' });
           return false;
         }
-        set({ error: 'You are already a member of this server' });
-        return false;
+        if (error.message.includes('already a member')) {
+          set({ error: 'You are already a member of this server' });
+          return false;
+        }
+        throw error;
       }
-
-      // Join server
-      const { error: joinError } = await supabase
-        .from('server_members')
-        .insert({
-          server_id: server.id,
-          user_id: userId,
-          role: 'member',
-        });
-
-      if (joinError) throw joinError;
 
       // Refresh servers list
       await get().fetchServers(userId);
@@ -336,28 +322,32 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   fetchChannels: async (serverId: string) => {
     try {
-      // Fetch categories
-      const { data: categories, error: catError } = await supabase
-        .from('channel_categories')
-        .select('*')
-        .eq('server_id', serverId)
-        .order('position');
+      // Use RPC functions to bypass RLS
+      const [categoriesResult, channelsResult] = await Promise.all([
+        supabase.rpc('get_server_categories', { _server_id: serverId }),
+        supabase.rpc('get_server_channels', { _server_id: serverId }),
+      ]);
 
-      if (catError) throw catError;
+      if (categoriesResult.error) throw categoriesResult.error;
+      if (channelsResult.error) throw channelsResult.error;
 
-      // Fetch channels
-      const { data: channels, error: chanError } = await supabase
-        .from('channels')
-        .select('*')
-        .eq('server_id', serverId)
-        .order('position');
-
-      if (chanError) throw chanError;
+      const categories = (categoriesResult.data || []) as unknown as ChannelCategory[];
+      const channels = (channelsResult.data || []) as unknown as Channel[];
 
       set({
-        categories: categories as ChannelCategory[],
-        channels: channels as Channel[],
+        categories,
+        channels,
       });
+
+      // Auto-select first channel if none selected
+      const { currentChannel } = get();
+      if (!currentChannel && channels.length > 0) {
+        const persistedChannelId = localStorage.getItem('kloak-current-channel-id');
+        const restoredChannel = persistedChannelId 
+          ? channels.find(c => c.id === persistedChannelId)
+          : null;
+        set({ currentChannel: restoredChannel || channels[0] });
+      }
     } catch (error) {
       console.error('Failed to fetch channels:', error);
     }
@@ -609,21 +599,46 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   fetchMembers: async (serverId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('server_members')
-        .select(`
-          *,
-          user:users (*)
-        `)
-        .eq('server_id', serverId)
-        .eq('is_banned', false);
+      // Use RPC function to bypass RLS
+      const { data, error } = await supabase.rpc('get_server_members', { _server_id: serverId });
 
       if (error) throw error;
 
-      const members: ServerMember[] = (data || []).map((item: any) => ({
-        ...item,
-        user: item.user,
-      }));
+      // Cast and filter out banned members
+      const membersData = (data || []) as unknown as Array<{
+        id: string;
+        server_id: string;
+        user_id: string;
+        role: ServerRole;
+        nickname: string | null;
+        is_banned: boolean;
+        is_muted: boolean;
+        joined_at: string;
+        user: {
+          id: string;
+          username: string;
+          display_name: string | null;
+          avatar_url: string | null;
+          banner_color: string;
+          status: string;
+          custom_status: string | null;
+          last_seen: string | null;
+        };
+      }>;
+
+      const members: ServerMember[] = membersData
+        .filter(item => !item.is_banned)
+        .map((item) => ({
+          id: item.id,
+          server_id: item.server_id,
+          user_id: item.user_id,
+          role: item.role,
+          nickname: item.nickname,
+          is_banned: item.is_banned,
+          is_muted: item.is_muted,
+          joined_at: item.joined_at,
+          user: item.user,
+        }));
 
       set({ members });
     } catch (error) {
