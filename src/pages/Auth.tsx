@@ -86,14 +86,12 @@ const Auth = () => {
 
     const timeoutId = setTimeout(async () => {
       try {
+        // Use the secure RPC function to check availability (bypasses RLS)
         const { data, error } = await supabase
-          .from('users')
-          .select('id')
-          .eq('username', username.toLowerCase())
-          .maybeSingle();
+          .rpc('check_username_available', { _username: username.toLowerCase() });
 
         if (error) throw error;
-        setIsUsernameAvailable(data === null);
+        setIsUsernameAvailable(data === true);
       } catch (err) {
         console.error('Username check failed:', err);
         setIsUsernameAvailable(null);

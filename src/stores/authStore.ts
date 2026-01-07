@@ -78,36 +78,44 @@ export const useAuthStore = create<AuthState>()(
           const secretKey = generateSecretKey();
           const keyHash = await hashSecretKey(secretKey);
 
+          // Use the secure RPC function to register (bypasses RLS)
           const { data, error } = await supabase
-            .from('users')
-            .insert({
-              username: username.toLowerCase().trim(),
-              key_hash: keyHash,
-              status: 'online',
-              banner_color: '#5865F2',
-            })
-            .select()
-            .single();
+            .rpc('register_user', {
+              _username: username.toLowerCase().trim(),
+              _key_hash: keyHash,
+              _banner_color: '#5865F2',
+            });
 
           if (error) {
-            if (error.code === '23505') {
+            // Handle specific error messages from the function
+            if (error.message.includes('Username already taken')) {
               set({ error: 'Username already taken', isLoading: false });
+              return null;
+            }
+            if (error.message.includes('reserved')) {
+              set({ error: 'This username is reserved', isLoading: false });
               return null;
             }
             throw error;
           }
+          
+          if (!data) {
+            throw new Error('No user data returned');
+          }
 
+          // Data is returned as JSON from the RPC function
+          const userData = data as Record<string, unknown>;
           const user: User = {
-            id: data.id,
-            username: data.username,
-            display_name: data.display_name,
-            avatar_url: data.avatar_url,
-            banner_color: data.banner_color || '#5865F2',
-            bio: data.bio,
-            status: data.status as UserStatus,
-            custom_status: data.custom_status,
-            created_at: data.created_at,
-            last_seen: data.last_seen,
+            id: userData.id as string,
+            username: userData.username as string,
+            display_name: userData.display_name as string | null,
+            avatar_url: userData.avatar_url as string | null,
+            banner_color: (userData.banner_color as string) || '#5865F2',
+            bio: userData.bio as string | null,
+            status: (userData.status as UserStatus) || 'online',
+            custom_status: userData.custom_status as string | null,
+            created_at: userData.created_at as string,
+            last_seen: userData.last_seen as string | null,
           };
 
           set({ user, secretKey, isAuthenticated: true, isLoading: false });
