@@ -769,6 +769,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_username_available: {
+        Args: { _username: string }
+        Returns: boolean
+      }
       create_notification: {
         Args: {
           _body?: string
@@ -802,6 +806,10 @@ export type Database = {
       is_server_member: {
         Args: { _server_id: string; _user_id: string }
         Returns: boolean
+      }
+      register_user: {
+        Args: { _banner_color?: string; _key_hash: string; _username: string }
+        Returns: Json
       }
       search_messages: {
         Args: {
