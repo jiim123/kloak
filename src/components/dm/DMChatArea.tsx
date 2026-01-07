@@ -26,11 +26,11 @@ export const DMChatArea = () => {
 
   // Fetch messages and mark as read when conversation changes
   useEffect(() => {
-    if (currentConversation?.id) {
-      fetchMessages(currentConversation.id);
+    if (currentConversation?.id && user?.id) {
+      fetchMessages(currentConversation.id, user.id);
       markAsRead(currentConversation.id);
     }
-  }, [currentConversation?.id, fetchMessages, markAsRead]);
+  }, [currentConversation?.id, user?.id, fetchMessages, markAsRead]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
