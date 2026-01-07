@@ -136,51 +136,49 @@ export const useMessageStore = create<MessageState>((set, get) => ({
 
   sendMessage: async (channelId: string, userId: string, content: string, replyToId?: string) => {
     try {
-      // Insert message without complex self-join to avoid PostgREST issues
-      const { data, error } = await supabase
-        .from('messages')
-        .insert({
-          channel_id: channelId,
-          user_id: userId,
-          content,
-          reply_to_id: replyToId || null,
-        })
-        .select(`
-          *,
-          user:users (*)
-        `)
-        .single();
+      // Use RPC function to bypass RLS
+      const { data, error } = await supabase.rpc('send_message', {
+        _channel_id: channelId,
+        _user_id: userId,
+        _content: content,
+        _reply_to_id: replyToId || null,
+      });
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes('muted')) {
+          throw new Error('You are muted in this server');
+        }
+        throw error;
+      }
+
+      // Fetch user data for the message
+      const { data: userData } = await supabase.rpc('get_user_by_id', { _user_id: userId });
 
       // If there's a reply_to_id, fetch the reply data separately
       let replyData: MessageReply | undefined;
       if (replyToId) {
-        const { data: replyMsg } = await supabase
-          .from('messages')
-          .select('id, content, user:users (*)')
-          .eq('id', replyToId)
-          .single();
-        
+        const { messages } = get();
+        const replyMsg = messages.find(m => m.id === replyToId);
         if (replyMsg) {
           replyData = {
             id: replyMsg.id,
             content: replyMsg.content,
-            user: replyMsg.user as User,
+            user: replyMsg.user,
           };
         }
       }
 
+      const msgData = data as any;
       const message: Message = {
-        id: data.id,
-        channel_id: data.channel_id,
-        user_id: data.user_id,
-        reply_to_id: data.reply_to_id,
-        content: data.content,
-        is_pinned: data.is_pinned,
-        edited_at: data.edited_at,
-        created_at: data.created_at,
-        user: data.user as User,
+        id: msgData.id,
+        channel_id: msgData.channel_id,
+        user_id: msgData.user_id,
+        reply_to_id: msgData.reply_to_id,
+        content: msgData.content,
+        is_pinned: msgData.is_pinned || false,
+        edited_at: msgData.edited_at,
+        created_at: msgData.created_at,
+        user: userData as User,
         reply_to: replyData,
         attachments: [],
         reactions: [],
@@ -205,15 +203,14 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     }
   },
 
-  editMessage: async (messageId: string, content: string) => {
+  editMessage: async (messageId: string, content: string, userId: string) => {
     try {
-      const { error } = await supabase
-        .from('messages')
-        .update({
-          content,
-          edited_at: new Date().toISOString(),
-        })
-        .eq('id', messageId);
+      // Use RPC function to bypass RLS
+      const { error } = await supabase.rpc('edit_message', {
+        _message_id: messageId,
+        _user_id: userId,
+        _content: content,
+      });
 
       if (error) throw error;
 
@@ -229,12 +226,13 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     }
   },
 
-  deleteMessage: async (messageId: string) => {
+  deleteMessage: async (messageId: string, userId: string) => {
     try {
-      const { error } = await supabase
-        .from('messages')
-        .delete()
-        .eq('id', messageId);
+      // Use RPC function to bypass RLS
+      const { error } = await supabase.rpc('delete_message', {
+        _message_id: messageId,
+        _user_id: userId,
+      });
 
       if (error) throw error;
 
@@ -246,12 +244,13 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     }
   },
 
-  pinMessage: async (messageId: string, isPinned: boolean) => {
+  pinMessage: async (messageId: string, isPinned: boolean, userId: string) => {
     try {
-      const { error } = await supabase
-        .from('messages')
-        .update({ is_pinned: isPinned })
-        .eq('id', messageId);
+      // Use RPC function to bypass RLS
+      const { error } = await supabase.rpc('toggle_pin_message', {
+        _message_id: messageId,
+        _user_id: userId,
+      });
 
       if (error) throw error;
 
@@ -267,13 +266,12 @@ export const useMessageStore = create<MessageState>((set, get) => ({
 
   addReaction: async (messageId: string, userId: string, emoji: string) => {
     try {
-      const { error } = await supabase
-        .from('reactions')
-        .insert({
-          message_id: messageId,
-          user_id: userId,
-          emoji,
-        });
+      // Use RPC function to bypass RLS
+      const { error } = await supabase.rpc('add_reaction', {
+        _message_id: messageId,
+        _user_id: userId,
+        _emoji: emoji,
+      });
 
       if (error) throw error;
 
@@ -307,12 +305,12 @@ export const useMessageStore = create<MessageState>((set, get) => ({
 
   removeReaction: async (messageId: string, userId: string, emoji: string) => {
     try {
-      const { error } = await supabase
-        .from('reactions')
-        .delete()
-        .eq('message_id', messageId)
-        .eq('user_id', userId)
-        .eq('emoji', emoji);
+      // Use RPC function to bypass RLS
+      const { error } = await supabase.rpc('remove_reaction', {
+        _message_id: messageId,
+        _user_id: userId,
+        _emoji: emoji,
+      });
 
       if (error) throw error;
 
