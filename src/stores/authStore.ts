@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '@/integrations/supabase/client';
 import { generateSecretKey, hashSecretKey, isValidSecretKey } from '@/lib/crypto';
-import { authRateLimiter, validateUsername } from '@/lib/security';
+import { authRateLimiter, accountCreationRateLimiter, validateUsername } from '@/lib/security';
 import type { User, UserStatus } from '@/types';
 
 interface AuthState {
@@ -57,6 +57,15 @@ export const useAuthStore = create<AuthState>()(
 
       createAccount: async (username: string) => {
         set({ isLoading: true, error: null });
+        
+        // Rate limit account creation to prevent abuse
+        // Use a global key since we don't have a user ID yet
+        const rateLimitKey = `create_${username.toLowerCase().trim()}`;
+        if (!accountCreationRateLimiter.isAllowed(rateLimitKey)) {
+          const remainingTime = accountCreationRateLimiter.getRemainingTime(rateLimitKey);
+          set({ error: `Too many attempts. Try again in ${Math.ceil(remainingTime / 60)} minutes`, isLoading: false });
+          return null;
+        }
         
         // Validate username
         const usernameValidation = validateUsername(username);
