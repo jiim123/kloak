@@ -19,7 +19,7 @@ export interface User {
   status: UserStatus;
   custom_status: string | null;
   created_at: string;
-  last_seen: string;
+  last_seen: string | null;
 }
 
 export interface UserProfile extends User {
