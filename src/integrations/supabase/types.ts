@@ -769,6 +769,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_reaction: {
+        Args: { _emoji: string; _message_id: string; _user_id: string }
+        Returns: Json
+      }
       check_username_available: {
         Args: { _username: string }
         Returns: boolean
@@ -816,7 +820,24 @@ export type Database = {
         Args: { _channel_id: string; _user_id: string }
         Returns: boolean
       }
+      delete_message: {
+        Args: { _message_id: string; _user_id: string }
+        Returns: boolean
+      }
+      edit_message: {
+        Args: { _content: string; _message_id: string; _user_id: string }
+        Returns: Json
+      }
       generate_invite_code: { Args: never; Returns: string }
+      get_channel_messages: {
+        Args: {
+          _before_id?: string
+          _channel_id: string
+          _limit?: number
+          _user_id: string
+        }
+        Returns: Json
+      }
       get_channel_server_id: { Args: { _channel_id: string }; Returns: string }
       get_dm_conversation_id: { Args: { _message_id: string }; Returns: string }
       get_server_by_invite_code: {
@@ -852,6 +873,10 @@ export type Database = {
         Args: { _banner_color?: string; _key_hash: string; _username: string }
         Returns: Json
       }
+      remove_reaction: {
+        Args: { _emoji: string; _message_id: string; _user_id: string }
+        Returns: boolean
+      }
       search_messages: {
         Args: {
           channel_filter?: string
@@ -869,6 +894,15 @@ export type Database = {
           user_id: string
         }[]
       }
+      send_message: {
+        Args: {
+          _channel_id: string
+          _content: string
+          _reply_to_id?: string
+          _user_id: string
+        }
+        Returns: Json
+      }
       shares_dm_with: {
         Args: { _other_user_id: string; _user_id: string }
         Returns: boolean
@@ -876,6 +910,10 @@ export type Database = {
       shares_server_with: {
         Args: { _other_user_id: string; _user_id: string }
         Returns: boolean
+      }
+      toggle_pin_message: {
+        Args: { _message_id: string; _user_id: string }
+        Returns: Json
       }
       update_category: {
         Args: { _category_id: string; _updates: Json; _user_id: string }
