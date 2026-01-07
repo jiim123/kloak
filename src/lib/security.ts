@@ -312,3 +312,4 @@ export class RateLimiter {
 // Global rate limiters
 export const authRateLimiter = new RateLimiter(5, 60000); // 5 attempts per minute
 export const messageRateLimiter = new RateLimiter(10, 10000); // 10 messages per 10 seconds
+export const inviteCodeRateLimiter = new RateLimiter(5, 60000); // 5 attempts per minute

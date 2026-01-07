@@ -17,6 +17,7 @@ import { Label } from '@/components/ui/label';
 import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
 import { useAuthStore } from '@/stores/authStore';
+import { inviteCodeRateLimiter } from '@/lib/security';
 import { toast } from 'sonner';
 
 const joinServerSchema = z.object({
@@ -51,6 +52,13 @@ export const JoinServerModal = () => {
 
   const onSubmit = async (data: JoinServerForm) => {
     if (!user) return;
+    
+    // Check rate limit before attempting
+    if (!inviteCodeRateLimiter.isAllowed(user.id)) {
+      const remainingTime = inviteCodeRateLimiter.getRemainingTime(user.id);
+      setError(`Too many attempts. Try again in ${remainingTime} seconds`);
+      return;
+    }
     
     setIsLoading(true);
     setError(null);
