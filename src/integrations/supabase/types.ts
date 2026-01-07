@@ -786,6 +786,10 @@ export type Database = {
         Args: { _conversation_id: string; _user_id: string }
         Returns: boolean
       }
+      is_friend_with: {
+        Args: { _other_user_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_server_member: {
         Args: { _server_id: string; _user_id: string }
         Returns: boolean
@@ -806,6 +810,14 @@ export type Database = {
           rank: number
           user_id: string
         }[]
+      }
+      shares_dm_with: {
+        Args: { _other_user_id: string; _user_id: string }
+        Returns: boolean
+      }
+      shares_server_with: {
+        Args: { _other_user_id: string; _user_id: string }
+        Returns: boolean
       }
     }
     Enums: {
