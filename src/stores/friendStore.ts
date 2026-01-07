@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
+import { friendRequestRateLimiter } from '@/lib/security';
 import type { User, Friendship, FriendWithUser, FriendshipStatus } from '@/types';
 
 interface FriendState {
@@ -98,6 +99,13 @@ export const useFriendStore = create<FriendState>((set, get) => ({
 
   sendRequest: async (userId: string, username: string) => {
     set({ error: null });
+
+    // Rate limit friend requests to prevent spam
+    if (!friendRequestRateLimiter.isAllowed(userId)) {
+      const remainingTime = friendRequestRateLimiter.getRemainingTime(userId);
+      set({ error: `Too many requests. Try again in ${remainingTime} seconds` });
+      return false;
+    }
 
     try {
       // Find user by username

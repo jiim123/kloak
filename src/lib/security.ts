@@ -313,3 +313,5 @@ export class RateLimiter {
 export const authRateLimiter = new RateLimiter(5, 60000); // 5 attempts per minute
 export const messageRateLimiter = new RateLimiter(10, 10000); // 10 messages per 10 seconds
 export const inviteCodeRateLimiter = new RateLimiter(5, 60000); // 5 attempts per minute
+export const friendRequestRateLimiter = new RateLimiter(10, 60000); // 10 requests per minute
+export const accountCreationRateLimiter = new RateLimiter(3, 300000); // 3 attempts per 5 minutes
