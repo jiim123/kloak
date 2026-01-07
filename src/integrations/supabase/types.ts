@@ -783,6 +783,10 @@ export type Database = {
         }
         Returns: string
       }
+      create_server_with_owner: {
+        Args: { _name: string; _owner_id: string }
+        Returns: Json
+      }
       generate_invite_code: { Args: never; Returns: string }
       get_channel_server_id: { Args: { _channel_id: string }; Returns: string }
       get_dm_conversation_id: { Args: { _message_id: string }; Returns: string }
@@ -795,6 +799,7 @@ export type Database = {
           name: string
         }[]
       }
+      get_user_servers: { Args: { _user_id: string }; Returns: Json }
       is_dm_participant: {
         Args: { _conversation_id: string; _user_id: string }
         Returns: boolean
@@ -806,6 +811,10 @@ export type Database = {
       is_server_member: {
         Args: { _server_id: string; _user_id: string }
         Returns: boolean
+      }
+      join_server_by_invite: {
+        Args: { _invite_code: string; _user_id: string }
+        Returns: Json
       }
       register_user: {
         Args: { _banner_color?: string; _key_hash: string; _username: string }

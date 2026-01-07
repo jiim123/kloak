@@ -67,22 +67,19 @@ export const useServerStore = create<ServerState>((set, get) => ({
   fetchServers: async (userId: string) => {
     set({ isLoading: true });
     try {
-      const { data, error } = await supabase
-        .from('server_members')
-        .select(`
-          server_id,
-          role,
-          nickname,
-          joined_at,
-          servers (*)
-        `)
-        .eq('user_id', userId)
-        .eq('is_banned', false);
+      // Use RPC function to bypass RLS (app uses custom auth, not Supabase Auth)
+      const { data, error } = await supabase.rpc('get_user_servers', { _user_id: userId });
 
       if (error) throw error;
 
       const servers: ServerWithMembership[] = (data || []).map((item: any) => ({
-        ...item.servers,
+        id: item.id,
+        name: item.name,
+        owner_id: item.owner_id,
+        invite_code: item.invite_code,
+        icon_url: item.icon_url,
+        banner_url: item.banner_url,
+        created_at: item.created_at,
         role: item.role,
         nickname: item.nickname,
         joined_at: item.joined_at,
@@ -104,15 +101,11 @@ export const useServerStore = create<ServerState>((set, get) => ({
           set({ servers, currentServer: restoredServer, isLoading: false });
           // Restore channel after fetching channels
           if (persistedChannelId) {
-            // Fetch channels and then restore the channel
-            const { data: channels } = await supabase
-              .from('channels')
-              .select('*')
-              .eq('server_id', restoredServer.id)
-              .order('position');
+            // Fetch channels using RPC
+            const { data: channels } = await supabase.rpc('get_server_channels', { _server_id: restoredServer.id });
             
             if (channels) {
-              const restoredChannel = channels.find(c => c.id === persistedChannelId);
+              const restoredChannel = channels.find((c: any) => c.id === persistedChannelId);
               if (restoredChannel) {
                 set({ currentChannel: restoredChannel as Channel });
               }
