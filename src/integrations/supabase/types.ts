@@ -769,6 +769,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_notification: {
+        Args: {
+          _body?: string
+          _link?: string
+          _title: string
+          _type: Database["public"]["Enums"]["notification_type"]
+          _user_id: string
+        }
+        Returns: string
+      }
       generate_invite_code: { Args: never; Returns: string }
       get_channel_server_id: { Args: { _channel_id: string }; Returns: string }
       get_dm_conversation_id: { Args: { _message_id: string }; Returns: string }

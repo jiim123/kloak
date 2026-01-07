@@ -45,12 +45,22 @@ const isImageUrl = (url: string): boolean => {
   return imageHosts.some(pattern => pattern.test(url));
 };
 
+// Validate URL is safe (only http/https protocols)
+const isSafeUrl = (url: string): boolean => {
+  try {
+    const parsed = new URL(url);
+    return ['http:', 'https:'].includes(parsed.protocol);
+  } catch {
+    return false;
+  }
+};
+
 // Extract URLs from content
 const extractUrls = (content: string): string[] => {
   const urlPattern = /https?:\/\/[^\s<>`\]]+/g;
   const matches = content.match(urlPattern) || [];
-  // Return unique URLs
-  return [...new Set(matches)];
+  // Return unique URLs, filtered to only safe URLs
+  return [...new Set(matches)].filter(isSafeUrl);
 };
 
 // Parse message into segments (text, code blocks, inline code)
@@ -173,16 +183,20 @@ const parseTextContent = (content: string, currentUserId?: string, usersMap?: Ma
     (_, color, text) => `<span class="text-color-${color.toLowerCase()}">${text}</span>`
   );
   
-  // URLs - render image URLs as placeholders, others as links
+  // URLs - render image URLs as placeholders, others as links (only safe URLs)
   const urlPattern = /https?:\/\/[^\s<]+/g;
   parsed = parsed.replace(
     urlPattern,
     (url) => {
+      // Validate URL is safe before linkifying
+      if (!isSafeUrl(url)) {
+        return escapeHtml(url); // Don't linkify unsafe URLs
+      }
       if (isImageUrl(url)) {
         // Return a placeholder that we'll replace with actual image rendering
-        return `<span class="inline-image-placeholder" data-image-url="${url}"></span>`;
+        return `<span class="inline-image-placeholder" data-image-url="${escapeHtml(url)}"></span>`;
       }
-      return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="message-link">${url}</a>`;
+      return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="message-link">${escapeHtml(url)}</a>`;
     }
   );
   
