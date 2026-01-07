@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
+import { useAuthStore } from '@/stores/authStore';
 import { 
   Dialog, 
   DialogContent, 
@@ -43,6 +44,7 @@ const SLOWMODE_OPTIONS = [
 export const EditChannelModal = () => {
   const { activeModal, modalData, closeModal } = useUIStore();
   const { channels, categories, updateChannel, deleteChannel, updateCategory, deleteCategory } = useServerStore();
+  const { user } = useAuthStore();
   
   const [name, setName] = useState('');
   const [topic, setTopic] = useState('');
@@ -106,10 +108,12 @@ export const EditChannelModal = () => {
     setError('');
 
     try {
+      if (!user) throw new Error('Not authenticated');
+      
       if (isCategory && categoryId) {
         await updateCategory(categoryId, {
           name: name.trim(),
-        });
+        }, user.id);
         toast.success('Category updated');
       } else if (channelId) {
         await updateChannel(channelId, {
@@ -117,7 +121,7 @@ export const EditChannelModal = () => {
           topic: topic.trim() || null,
           is_nsfw: isNsfw,
           slowmode_seconds: parseInt(slowmodeSeconds, 10),
-        });
+        }, user.id);
         toast.success('Channel updated');
       }
       handleClose();
@@ -130,11 +134,13 @@ export const EditChannelModal = () => {
 
   const handleDelete = async () => {
     try {
+      if (!user) throw new Error('Not authenticated');
+      
       if (isCategory && categoryId) {
-        await deleteCategory(categoryId);
+        await deleteCategory(categoryId, user.id);
         toast.success('Category deleted');
       } else if (channelId) {
-        await deleteChannel(channelId);
+        await deleteChannel(channelId, user.id);
         toast.success('Channel deleted');
       }
       setShowDeleteConfirm(false);

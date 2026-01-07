@@ -13,9 +13,9 @@ interface MessageState {
 
   // Message actions
   sendMessage: (channelId: string, userId: string, content: string, replyToId?: string) => Promise<Message | null>;
-  editMessage: (messageId: string, content: string) => Promise<void>;
-  deleteMessage: (messageId: string) => Promise<void>;
-  pinMessage: (messageId: string, isPinned: boolean) => Promise<void>;
+  editMessage: (messageId: string, content: string, userId: string) => Promise<void>;
+  deleteMessage: (messageId: string, userId: string) => Promise<void>;
+  pinMessage: (messageId: string, isPinned: boolean, userId: string) => Promise<void>;
 
   // Reaction actions
   addReaction: (messageId: string, userId: string, emoji: string) => Promise<void>;
@@ -151,8 +151,8 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         throw error;
       }
 
-      // Fetch user data for the message
-      const { data: userData } = await supabase.rpc('get_user_by_id', { _user_id: userId });
+      // Get the current user from authStore for the message
+      const { data: userData } = await supabase.rpc('get_user_by_id' as any, { _user_id: userId });
 
       // If there's a reply_to_id, fetch the reply data separately
       let replyData: MessageReply | undefined;
@@ -169,6 +169,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       }
 
       const msgData = data as any;
+      const userDataParsed = userData as unknown as User;
       const message: Message = {
         id: msgData.id,
         channel_id: msgData.channel_id,
@@ -178,7 +179,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         is_pinned: msgData.is_pinned || false,
         edited_at: msgData.edited_at,
         created_at: msgData.created_at,
-        user: userData as User,
+        user: userDataParsed,
         reply_to: replyData,
         attachments: [],
         reactions: [],
