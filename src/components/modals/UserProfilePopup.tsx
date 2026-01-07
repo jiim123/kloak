@@ -110,7 +110,7 @@ export const UserProfilePopup = () => {
     if (isFriend) {
       const friendship = friends.find(f => f.id === profileUser.id);
       if (friendship) {
-        await removeFriend(friendship.friendship_id);
+        await removeFriend(friendship.friendship_id, currentUser.id);
         toast.success('Friend removed');
       }
     } else if (!hasPendingRequest && !hasSentRequest) {
@@ -120,17 +120,19 @@ export const UserProfilePopup = () => {
   };
 
   const handleAcceptRequest = async () => {
+    if (!currentUser) return;
     const pendingFriend = pendingRequests.find(f => f.id === userId);
     if (pendingFriend) {
-      await acceptRequest(pendingFriend.friendship_id);
+      await acceptRequest(pendingFriend.friendship_id, currentUser.id);
       toast.success('Friend request accepted!');
     }
   };
 
   const handleDeclineRequest = async () => {
+    if (!currentUser) return;
     const pendingFriend = pendingRequests.find(f => f.id === userId);
     if (pendingFriend) {
-      await declineRequest(pendingFriend.friendship_id);
+      await declineRequest(pendingFriend.friendship_id, currentUser.id);
       toast.success('Friend request declined');
     }
   };

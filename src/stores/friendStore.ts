@@ -14,11 +14,11 @@ interface FriendState {
   // Actions
   fetchFriends: (userId: string) => Promise<void>;
   sendRequest: (userId: string, username: string) => Promise<boolean>;
-  acceptRequest: (friendshipId: string) => Promise<void>;
-  declineRequest: (friendshipId: string) => Promise<void>;
-  removeFriend: (friendshipId: string) => Promise<void>;
+  acceptRequest: (friendshipId: string, userId: string) => Promise<void>;
+  declineRequest: (friendshipId: string, userId: string) => Promise<void>;
+  removeFriend: (friendshipId: string, userId: string) => Promise<void>;
   blockUser: (userId: string, targetUserId: string) => Promise<void>;
-  unblockUser: (friendshipId: string) => Promise<void>;
+  unblockUser: (userId: string, blockedUserId: string) => Promise<void>;
 
   // Realtime
   updateFriendship: (friendship: Friendship) => void;
@@ -37,52 +37,48 @@ export const useFriendStore = create<FriendState>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      // Fetch all friendships involving this user
-      const { data, error } = await supabase
-        .from('friendships')
-        .select(`
-          *,
-          requester:users!friendships_requester_id_fkey (*),
-          addressee:users!friendships_addressee_id_fkey (*)
-        `)
-        .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
+      // Use RPC functions to fetch all friend data
+      const [friendsRes, pendingRes, outgoingRes, blockedRes] = await Promise.all([
+        supabase.rpc('get_user_friends', { _user_id: userId }),
+        supabase.rpc('get_pending_friend_requests', { _user_id: userId }),
+        supabase.rpc('get_outgoing_friend_requests', { _user_id: userId }),
+        supabase.rpc('get_blocked_users', { _user_id: userId }),
+      ]);
 
-      if (error) throw error;
+      if (friendsRes.error) throw friendsRes.error;
 
-      const friends: FriendWithUser[] = [];
-      const pendingRequests: FriendWithUser[] = [];
-      const outgoingRequests: FriendWithUser[] = [];
-      const blockedUsers: FriendWithUser[] = [];
+      const friendsData = Array.isArray(friendsRes.data) ? friendsRes.data : [];
+      const pendingData = Array.isArray(pendingRes.data) ? pendingRes.data : [];
+      const outgoingData = Array.isArray(outgoingRes.data) ? outgoingRes.data : [];
+      const blockedData = Array.isArray(blockedRes.data) ? blockedRes.data : [];
 
-      (data || []).forEach((friendship: any) => {
-        const isRequester = friendship.requester_id === userId;
-        const otherUser = isRequester ? friendship.addressee : friendship.requester;
+      const friends: FriendWithUser[] = friendsData.map((f: any) => ({
+        ...f.user,
+        friendship_id: f.id,
+        friendship_status: f.status as FriendshipStatus,
+        is_requester: false,
+      }));
 
-        const friendWithUser: FriendWithUser = {
-          ...otherUser,
-          friendship_id: friendship.id,
-          friendship_status: friendship.status,
-          is_requester: isRequester,
-        };
+      const pendingRequests: FriendWithUser[] = pendingData.map((r: any) => ({
+        ...r.user,
+        friendship_id: r.id,
+        friendship_status: 'pending' as FriendshipStatus,
+        is_requester: false,
+      }));
 
-        switch (friendship.status) {
-          case 'accepted':
-            friends.push(friendWithUser);
-            break;
-          case 'pending':
-            if (isRequester) {
-              outgoingRequests.push(friendWithUser);
-            } else {
-              pendingRequests.push(friendWithUser);
-            }
-            break;
-          case 'blocked':
-            if (isRequester) {
-              blockedUsers.push(friendWithUser);
-            }
-            break;
-        }
-      });
+      const outgoingRequests: FriendWithUser[] = outgoingData.map((r: any) => ({
+        ...r.user,
+        friendship_id: r.id,
+        friendship_status: 'pending' as FriendshipStatus,
+        is_requester: true,
+      }));
+
+      const blockedUsers: FriendWithUser[] = blockedData.map((b: any) => ({
+        ...b.user,
+        friendship_id: b.id,
+        friendship_status: 'blocked' as FriendshipStatus,
+        is_requester: true,
+      }));
 
       set({
         friends,
@@ -108,70 +104,36 @@ export const useFriendStore = create<FriendState>((set, get) => ({
     }
 
     try {
-      // Find user by username
-      const { data: targetUser, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('username', username.toLowerCase().trim())
-        .single();
+      // Use RPC function to send friend request
+      const { data, error } = await supabase.rpc('send_friend_request', {
+        _requester_id: userId,
+        _addressee_username: username.toLowerCase().trim(),
+      });
 
-      if (userError || !targetUser) {
-        set({ error: 'User not found' });
+      if (error) {
+        // Parse the error message
+        const errorMsg = error.message || 'Failed to send friend request';
+        set({ error: errorMsg });
         return false;
       }
-
-      if (targetUser.id === userId) {
-        set({ error: "You can't send a friend request to yourself" });
-        return false;
-      }
-
-      // Check if friendship already exists
-      const { data: existing } = await supabase
-        .from('friendships')
-        .select('*')
-        .or(
-          `and(requester_id.eq.${userId},addressee_id.eq.${targetUser.id}),and(requester_id.eq.${targetUser.id},addressee_id.eq.${userId})`
-        )
-        .single();
-
-      if (existing) {
-        if (existing.status === 'blocked') {
-          set({ error: 'Unable to send friend request' });
-        } else if (existing.status === 'pending') {
-          set({ error: 'Friend request already pending' });
-        } else {
-          set({ error: 'You are already friends with this user' });
-        }
-        return false;
-      }
-
-      // Create friendship request
-      const { error: insertError } = await supabase
-        .from('friendships')
-        .insert({
-          requester_id: userId,
-          addressee_id: targetUser.id,
-          status: 'pending',
-        });
-
-      if (insertError) throw insertError;
 
       // Refresh friends list
       await get().fetchFriends(userId);
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to send friend request:', error);
-      set({ error: 'Failed to send friend request' });
+      set({ error: error.message || 'Failed to send friend request' });
       return false;
     }
   },
 
-  acceptRequest: async (friendshipId: string) => {
+  acceptRequest: async (friendshipId: string, userId: string) => {
     try {
-      const { error } = await supabase
-        .from('friendships')
-        .update({ status: 'accepted' })
-        .eq('id', friendshipId);
+      // Use RPC function to accept friend request
+      const { error } = await supabase.rpc('accept_friend_request', {
+        _friendship_id: friendshipId,
+        _user_id: userId,
+      });
 
       if (error) throw error;
 
@@ -189,12 +151,13 @@ export const useFriendStore = create<FriendState>((set, get) => ({
     }
   },
 
-  declineRequest: async (friendshipId: string) => {
+  declineRequest: async (friendshipId: string, userId: string) => {
     try {
-      const { error } = await supabase
-        .from('friendships')
-        .delete()
-        .eq('id', friendshipId);
+      // Use RPC function to decline friend request
+      const { error } = await supabase.rpc('decline_friend_request', {
+        _friendship_id: friendshipId,
+        _user_id: userId,
+      });
 
       if (error) throw error;
 
@@ -207,12 +170,13 @@ export const useFriendStore = create<FriendState>((set, get) => ({
     }
   },
 
-  removeFriend: async (friendshipId: string) => {
+  removeFriend: async (friendshipId: string, userId: string) => {
     try {
-      const { error } = await supabase
-        .from('friendships')
-        .delete()
-        .eq('id', friendshipId);
+      // Use RPC function to remove friend
+      const { error } = await supabase.rpc('remove_friend', {
+        _friendship_id: friendshipId,
+        _user_id: userId,
+      });
 
       if (error) throw error;
 
@@ -226,35 +190,13 @@ export const useFriendStore = create<FriendState>((set, get) => ({
 
   blockUser: async (userId: string, targetUserId: string) => {
     try {
-      // Check if friendship exists
-      const { data: existing } = await supabase
-        .from('friendships')
-        .select('*')
-        .or(
-          `and(requester_id.eq.${userId},addressee_id.eq.${targetUserId}),and(requester_id.eq.${targetUserId},addressee_id.eq.${userId})`
-        )
-        .single();
+      // Use RPC function to block user
+      const { error } = await supabase.rpc('block_user', {
+        _user_id: userId,
+        _blocked_user_id: targetUserId,
+      });
 
-      if (existing) {
-        // Update existing to blocked
-        const { error } = await supabase
-          .from('friendships')
-          .update({ status: 'blocked', requester_id: userId, addressee_id: targetUserId })
-          .eq('id', existing.id);
-
-        if (error) throw error;
-      } else {
-        // Create blocked friendship
-        const { error } = await supabase
-          .from('friendships')
-          .insert({
-            requester_id: userId,
-            addressee_id: targetUserId,
-            status: 'blocked',
-          });
-
-        if (error) throw error;
-      }
+      if (error) throw error;
 
       await get().fetchFriends(userId);
     } catch (error) {
@@ -262,17 +204,18 @@ export const useFriendStore = create<FriendState>((set, get) => ({
     }
   },
 
-  unblockUser: async (friendshipId: string) => {
+  unblockUser: async (userId: string, blockedUserId: string) => {
     try {
-      const { error } = await supabase
-        .from('friendships')
-        .delete()
-        .eq('id', friendshipId);
+      // Use RPC function to unblock user
+      const { error } = await supabase.rpc('unblock_user', {
+        _user_id: userId,
+        _blocked_user_id: blockedUserId,
+      });
 
       if (error) throw error;
 
       set((state) => ({
-        blockedUsers: state.blockedUsers.filter((u) => u.friendship_id !== friendshipId),
+        blockedUsers: state.blockedUsers.filter((u) => u.id !== blockedUserId),
       }));
     } catch (error) {
       console.error('Failed to unblock user:', error);
