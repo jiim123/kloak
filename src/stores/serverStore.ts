@@ -208,17 +208,16 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   joinServer: async (inviteCode: string, userId: string) => {
     try {
-      // Find server by invite code
-      const { data: server, error: serverError } = await supabase
-        .from('servers')
-        .select('*')
-        .eq('invite_code', inviteCode.toUpperCase())
-        .single();
+      // Find server by invite code using security definer function
+      const { data: serverData, error: serverError } = await supabase
+        .rpc('get_server_by_invite_code', { _invite_code: inviteCode.toUpperCase() });
 
-      if (serverError || !server) {
+      if (serverError || !serverData || serverData.length === 0) {
         set({ error: 'Invalid invite code' });
         return false;
       }
+
+      const server = serverData[0];
 
       // Check if already a member
       const { data: existingMember } = await supabase

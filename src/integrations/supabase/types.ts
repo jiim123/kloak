@@ -782,6 +782,15 @@ export type Database = {
       generate_invite_code: { Args: never; Returns: string }
       get_channel_server_id: { Args: { _channel_id: string }; Returns: string }
       get_dm_conversation_id: { Args: { _message_id: string }; Returns: string }
+      get_server_by_invite_code: {
+        Args: { _invite_code: string }
+        Returns: {
+          icon_url: string
+          id: string
+          invite_code: string
+          name: string
+        }[]
+      }
       is_dm_participant: {
         Args: { _conversation_id: string; _user_id: string }
         Returns: boolean
