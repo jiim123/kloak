@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
+import { inviteCodeRateLimiter } from '@/lib/security';
 import type { 
   Server, 
   ServerWithMembership, 
@@ -208,6 +209,13 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   joinServer: async (inviteCode: string, userId: string) => {
     try {
+      // Rate limit invite code lookups to prevent abuse
+      if (!inviteCodeRateLimiter.isAllowed(userId)) {
+        const remainingTime = inviteCodeRateLimiter.getRemainingTime(userId);
+        set({ error: `Too many attempts. Try again in ${remainingTime} seconds` });
+        return false;
+      }
+
       // Find server by invite code using security definer function
       const { data: serverData, error: serverError } = await supabase
         .rpc('get_server_by_invite_code', { _invite_code: inviteCode.toUpperCase() });
