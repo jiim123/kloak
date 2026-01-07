@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
+import { useAuthStore } from '@/stores/authStore';
 import { 
   Dialog, 
   DialogContent, 
@@ -20,6 +21,7 @@ import type { ChannelType } from '@/types';
 export const CreateChannelModal = () => {
   const { activeModal, modalData, closeModal } = useUIStore();
   const { currentServer, categories, createChannel, createCategory } = useServerStore();
+  const { user } = useAuthStore();
   
   const [mode, setMode] = useState<'channel' | 'category'>('channel');
   const [name, setName] = useState('');
@@ -27,6 +29,7 @@ export const CreateChannelModal = () => {
   const [categoryId, setCategoryId] = useState<string>('none');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+
 
   const isOpen = activeModal === 'create-channel';
   const presetCategoryId = modalData?.categoryId as string | undefined;
@@ -48,17 +51,17 @@ export const CreateChannelModal = () => {
       return;
     }
 
-    if (!currentServer) return;
+    if (!currentServer || !user) return;
 
     setIsSubmitting(true);
     setError('');
 
     try {
       if (mode === 'category') {
-        await createCategory(currentServer.id, name.trim());
+        await createCategory(currentServer.id, name.trim(), user.id);
       } else {
         const selectedCategoryId = presetCategoryId || (categoryId === 'none' ? undefined : categoryId);
-        await createChannel(currentServer.id, name.trim(), channelType, selectedCategoryId);
+        await createChannel(currentServer.id, name.trim(), channelType, user.id, selectedCategoryId);
       }
       handleClose();
     } catch (err) {

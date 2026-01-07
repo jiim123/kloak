@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useUIStore } from '@/stores/uiStore';
 import { useMessageStore } from '@/stores/messageStore';
+import { useAuthStore } from '@/stores/authStore';
 import { getMessagePreview } from '@/lib/message';
 import type { Message } from '@/types';
 
@@ -20,10 +21,11 @@ interface DeleteMessageModalProps {
 
 export const DeleteMessageModal = ({ message, onClose }: DeleteMessageModalProps) => {
   const { deleteMessage } = useMessageStore();
+  const { user } = useAuthStore();
 
   const handleDelete = async () => {
-    if (message) {
-      await deleteMessage(message.id);
+    if (message && user) {
+      await deleteMessage(message.id, user.id);
       onClose();
     }
   };

@@ -117,8 +117,8 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }:
   }, [message.id, isOwnMessage, message.content]);
 
   const handleEdit = async () => {
-    if (editContent.trim() && editContent !== message.content) {
-      await editMessage(message.id, editContent.trim());
+    if (editContent.trim() && editContent !== message.content && user) {
+      await editMessage(message.id, editContent.trim(), user.id);
     }
     setIsEditing(false);
   };
@@ -129,7 +129,8 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }:
   };
 
   const handlePin = async () => {
-    await pinMessage(message.id, !message.is_pinned);
+    if (!user) return;
+    await pinMessage(message.id, !message.is_pinned, user.id);
   };
 
   const handleReactionClick = async (emoji: string, hasReacted: boolean) => {

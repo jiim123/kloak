@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
 import { useMessageStore } from '@/stores/messageStore';
+import { useAuthStore } from '@/stores/authStore';
 import { useRealtimePinnedMessages } from '@/hooks/useRealtimePinnedMessages';
 import { toast } from 'sonner';
 
@@ -20,6 +21,7 @@ export const PinnedMessagesPanel = () => {
   const { activeModal, closeModal } = useUIStore();
   const { currentChannel, members } = useServerStore();
   const { pinMessage } = useMessageStore();
+  const { user } = useAuthStore();
   
   const isOpen = activeModal === 'pinned-messages';
   const { pinnedMessages, isLoading, refetch } = useRealtimePinnedMessages(
@@ -32,8 +34,9 @@ export const PinnedMessagesPanel = () => {
   );
 
   const handleUnpin = async (messageId: string) => {
+    if (!user) return;
     try {
-      await pinMessage(messageId, false);
+      await pinMessage(messageId, false, user.id);
       refetch();
       toast.success('Message unpinned');
     } catch (error) {

@@ -33,12 +33,12 @@ interface ServerState {
 
   // Channel actions
   fetchChannels: (serverId: string) => Promise<void>;
-  createCategory: (serverId: string, name: string) => Promise<ChannelCategory | null>;
-  createChannel: (serverId: string, name: string, type: ChannelType, categoryId?: string, icon?: string) => Promise<Channel | null>;
-  updateChannel: (channelId: string, updates: Partial<Channel>) => Promise<void>;
-  deleteChannel: (channelId: string) => Promise<void>;
-  updateCategory: (categoryId: string, updates: Partial<ChannelCategory>) => Promise<void>;
-  deleteCategory: (categoryId: string) => Promise<void>;
+  createCategory: (serverId: string, name: string, userId: string) => Promise<ChannelCategory | null>;
+  createChannel: (serverId: string, name: string, type: ChannelType, userId: string, categoryId?: string, icon?: string) => Promise<Channel | null>;
+  updateChannel: (channelId: string, updates: Partial<Channel>, userId: string) => Promise<void>;
+  deleteChannel: (channelId: string, userId: string) => Promise<void>;
+  updateCategory: (categoryId: string, updates: Partial<ChannelCategory>, userId: string) => Promise<void>;
+  deleteCategory: (categoryId: string, userId: string) => Promise<void>;
   reorderCategories: (categoryIds: string[]) => Promise<void>;
   reorderChannels: (channelId: string, newCategoryId: string | null, newPosition: number) => Promise<void>;
   moveChannelToCategory: (channelId: string, categoryId: string | null) => Promise<void>;
@@ -353,24 +353,22 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }
   },
 
-  createCategory: async (serverId: string, name: string) => {
+  createCategory: async (serverId: string, name: string, userId: string) => {
     try {
       const { categories } = get();
       const position = categories.length;
 
-      const { data, error } = await supabase
-        .from('channel_categories')
-        .insert({
-          server_id: serverId,
-          name,
-          position,
-        })
-        .select()
-        .single();
+      // Use RPC function to bypass RLS
+      const { data, error } = await supabase.rpc('create_category', {
+        _server_id: serverId,
+        _user_id: userId,
+        _name: name,
+        _position: position,
+      });
 
       if (error) throw error;
 
-      const category = data as ChannelCategory;
+      const category = data as unknown as ChannelCategory;
       set((state) => ({
         categories: [...state.categories, category],
       }));
@@ -382,28 +380,26 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }
   },
 
-  createChannel: async (serverId: string, name: string, type: ChannelType, categoryId?: string, icon?: string) => {
+  createChannel: async (serverId: string, name: string, type: ChannelType, userId: string, categoryId?: string, icon?: string) => {
     try {
       const { channels } = get();
       const categoryChannels = channels.filter((c) => c.category_id === categoryId);
       const position = categoryChannels.length;
 
-      const { data, error } = await supabase
-        .from('channels')
-        .insert({
-          server_id: serverId,
-          name: name.toLowerCase().replace(/\s+/g, '-'),
-          type,
-          category_id: categoryId || null,
-          position,
-          icon: icon || null,
-        })
-        .select()
-        .single();
+      // Use RPC function to bypass RLS
+      const { data, error } = await supabase.rpc('create_channel', {
+        _server_id: serverId,
+        _user_id: userId,
+        _name: name,
+        _type: type,
+        _category_id: categoryId || null,
+        _position: position,
+        _icon: icon || null,
+      });
 
       if (error) throw error;
 
-      const channel = data as Channel;
+      const channel = data as unknown as Channel;
       set((state) => ({
         channels: [...state.channels, channel],
       }));
@@ -415,12 +411,14 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }
   },
 
-  updateChannel: async (channelId: string, updates: Partial<Channel>) => {
+  updateChannel: async (channelId: string, updates: Partial<Channel>, userId: string) => {
     try {
-      const { error } = await supabase
-        .from('channels')
-        .update(updates)
-        .eq('id', channelId);
+      // Use RPC function to bypass RLS
+      const { error } = await supabase.rpc('update_channel', {
+        _channel_id: channelId,
+        _user_id: userId,
+        _updates: JSON.stringify(updates),
+      });
 
       if (error) throw error;
 
@@ -438,11 +436,12 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }
   },
 
-  deleteChannel: async (channelId: string) => {
-    const { error } = await supabase
-      .from('channels')
-      .delete()
-      .eq('id', channelId);
+  deleteChannel: async (channelId: string, userId: string) => {
+    // Use RPC function to bypass RLS
+    const { error } = await supabase.rpc('delete_channel', {
+      _channel_id: channelId,
+      _user_id: userId,
+    });
 
     if (error) {
       console.error('Failed to delete channel:', error);
@@ -456,12 +455,14 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }));
   },
 
-  updateCategory: async (categoryId: string, updates: Partial<ChannelCategory>) => {
+  updateCategory: async (categoryId: string, updates: Partial<ChannelCategory>, userId: string) => {
     try {
-      const { error } = await supabase
-        .from('channel_categories')
-        .update(updates)
-        .eq('id', categoryId);
+      // Use RPC function to bypass RLS
+      const { error } = await supabase.rpc('update_category', {
+        _category_id: categoryId,
+        _user_id: userId,
+        _updates: JSON.stringify(updates),
+      });
 
       if (error) throw error;
 
@@ -475,23 +476,12 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }
   },
 
-  deleteCategory: async (categoryId: string) => {
-    // First, move all channels in this category to uncategorized
-    const { channels } = get();
-    const categoryChannels = channels.filter(c => c.category_id === categoryId);
-    
-    for (const channel of categoryChannels) {
-      await supabase
-        .from('channels')
-        .update({ category_id: null })
-        .eq('id', channel.id);
-    }
-
-    // Then delete the category
-    const { error } = await supabase
-      .from('channel_categories')
-      .delete()
-      .eq('id', categoryId);
+  deleteCategory: async (categoryId: string, userId: string) => {
+    // Use RPC function to bypass RLS (handles channel migration internally)
+    const { error } = await supabase.rpc('delete_category', {
+      _category_id: categoryId,
+      _user_id: userId,
+    });
 
     if (error) {
       console.error('Failed to delete category:', error);

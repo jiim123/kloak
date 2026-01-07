@@ -852,6 +852,7 @@ export type Database = {
       get_server_categories: { Args: { _server_id: string }; Returns: Json }
       get_server_channels: { Args: { _server_id: string }; Returns: Json }
       get_server_members: { Args: { _server_id: string }; Returns: Json }
+      get_user_by_id: { Args: { _user_id: string }; Returns: Json }
       get_user_servers: { Args: { _user_id: string }; Returns: Json }
       is_dm_participant: {
         Args: { _conversation_id: string; _user_id: string }
