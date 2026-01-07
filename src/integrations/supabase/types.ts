@@ -769,12 +769,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_friend_request: {
+        Args: { _friendship_id: string; _user_id: string }
+        Returns: Json
+      }
       add_dm_reaction: {
         Args: { _emoji: string; _message_id: string; _user_id: string }
         Returns: Json
       }
       add_reaction: {
         Args: { _emoji: string; _message_id: string; _user_id: string }
+        Returns: Json
+      }
+      block_user: {
+        Args: { _blocked_user_id: string; _user_id: string }
         Returns: Json
       }
       check_username_available: {
@@ -816,6 +824,10 @@ export type Database = {
         Args: { _name: string; _owner_id: string }
         Returns: Json
       }
+      decline_friend_request: {
+        Args: { _friendship_id: string; _user_id: string }
+        Returns: boolean
+      }
       delete_category: {
         Args: { _category_id: string; _user_id: string }
         Returns: boolean
@@ -841,6 +853,7 @@ export type Database = {
         Returns: Json
       }
       generate_invite_code: { Args: never; Returns: string }
+      get_blocked_users: { Args: { _user_id: string }; Returns: Json }
       get_channel_messages: {
         Args: {
           _before_id?: string
@@ -861,6 +874,11 @@ export type Database = {
         }
         Returns: Json
       }
+      get_outgoing_friend_requests: {
+        Args: { _user_id: string }
+        Returns: Json
+      }
+      get_pending_friend_requests: { Args: { _user_id: string }; Returns: Json }
       get_server_by_invite_code: {
         Args: { _invite_code: string }
         Returns: {
@@ -875,6 +893,7 @@ export type Database = {
       get_server_members: { Args: { _server_id: string }; Returns: Json }
       get_user_by_id: { Args: { _user_id: string }; Returns: Json }
       get_user_dm_conversations: { Args: { _user_id: string }; Returns: Json }
+      get_user_friends: { Args: { _user_id: string }; Returns: Json }
       get_user_servers: { Args: { _user_id: string }; Returns: Json }
       is_dm_participant: {
         Args: { _conversation_id: string; _user_id: string }
@@ -908,6 +927,10 @@ export type Database = {
         Args: { _emoji: string; _message_id: string; _user_id: string }
         Returns: boolean
       }
+      remove_friend: {
+        Args: { _friendship_id: string; _user_id: string }
+        Returns: boolean
+      }
       remove_reaction: {
         Args: { _emoji: string; _message_id: string; _user_id: string }
         Returns: boolean
@@ -938,6 +961,10 @@ export type Database = {
         }
         Returns: Json
       }
+      send_friend_request: {
+        Args: { _addressee_username: string; _requester_id: string }
+        Returns: Json
+      }
       send_message: {
         Args: {
           _channel_id: string
@@ -958,6 +985,10 @@ export type Database = {
       toggle_pin_message: {
         Args: { _message_id: string; _user_id: string }
         Returns: Json
+      }
+      unblock_user: {
+        Args: { _blocked_user_id: string; _user_id: string }
+        Returns: boolean
       }
       update_category: {
         Args: { _category_id: string; _updates: Json; _user_id: string }

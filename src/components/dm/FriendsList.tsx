@@ -155,7 +155,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem 
-                onClick={() => removeFriend(friend.friendship_id)}
+                onClick={() => user?.id && removeFriend(friend.friendship_id, user.id)}
                 className="text-destructive focus:text-destructive"
               >
                 <UserX className="w-4 h-4 mr-2" />
@@ -205,7 +205,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
             size="icon"
             variant="secondary"
             className="w-9 h-9 rounded-full bg-green-500/20 hover:bg-green-500/30 text-green-500"
-            onClick={() => acceptRequest(request.friendship_id)}
+            onClick={() => user?.id && acceptRequest(request.friendship_id, user.id)}
           >
             <Check className="w-4 h-4" />
           </Button>
@@ -214,7 +214,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
           size="icon"
           variant="secondary"
           className="w-9 h-9 rounded-full bg-destructive/20 hover:bg-destructive/30 text-destructive"
-          onClick={() => declineRequest(request.friendship_id)}
+          onClick={() => user?.id && declineRequest(request.friendship_id, user.id)}
         >
           <X className="w-4 h-4" />
         </Button>
@@ -254,7 +254,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
       <Button
         size="sm"
         variant="outline"
-        onClick={() => unblockUser(blocked.friendship_id)}
+        onClick={() => user?.id && unblockUser(user.id, blocked.id)}
       >
         Unblock
       </Button>
