@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/integrations/supabase/client';
 import { markWelcomeSeen } from '@/lib/storage';
@@ -219,7 +219,9 @@ const Auth = () => {
         <div className="w-full max-w-md relative z-10">
           {/* Logo and branding */}
           <div className="text-center mb-8">
-            <img src={kloakLogo} alt="Kloak" className="h-12 mx-auto mb-4" />
+            <Link to="/">
+              <img src={kloakLogo} alt="Kloak" className="h-12 mx-auto mb-4" />
+            </Link>
             <p className="text-white mt-1 font-medium">Privacy-first messaging</p>
           </div>
 
