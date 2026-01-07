@@ -769,6 +769,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_dm_reaction: {
+        Args: { _emoji: string; _message_id: string; _user_id: string }
+        Returns: Json
+      }
       add_reaction: {
         Args: { _emoji: string; _message_id: string; _user_id: string }
         Returns: Json
@@ -820,9 +824,17 @@ export type Database = {
         Args: { _channel_id: string; _user_id: string }
         Returns: boolean
       }
+      delete_dm: {
+        Args: { _message_id: string; _sender_id: string }
+        Returns: boolean
+      }
       delete_message: {
         Args: { _message_id: string; _user_id: string }
         Returns: boolean
+      }
+      edit_dm: {
+        Args: { _content: string; _message_id: string; _sender_id: string }
+        Returns: Json
       }
       edit_message: {
         Args: { _content: string; _message_id: string; _user_id: string }
@@ -840,6 +852,15 @@ export type Database = {
       }
       get_channel_server_id: { Args: { _channel_id: string }; Returns: string }
       get_dm_conversation_id: { Args: { _message_id: string }; Returns: string }
+      get_dm_messages: {
+        Args: {
+          _before_id?: string
+          _conversation_id: string
+          _limit?: number
+          _user_id: string
+        }
+        Returns: Json
+      }
       get_server_by_invite_code: {
         Args: { _invite_code: string }
         Returns: {
@@ -853,6 +874,7 @@ export type Database = {
       get_server_channels: { Args: { _server_id: string }; Returns: Json }
       get_server_members: { Args: { _server_id: string }; Returns: Json }
       get_user_by_id: { Args: { _user_id: string }; Returns: Json }
+      get_user_dm_conversations: { Args: { _user_id: string }; Returns: Json }
       get_user_servers: { Args: { _user_id: string }; Returns: Json }
       is_dm_participant: {
         Args: { _conversation_id: string; _user_id: string }
@@ -870,9 +892,21 @@ export type Database = {
         Args: { _invite_code: string; _user_id: string }
         Returns: Json
       }
+      mark_dm_read: {
+        Args: { _conversation_id: string; _user_id: string }
+        Returns: boolean
+      }
+      open_dm_conversation: {
+        Args: { _other_user_id: string; _user_id: string }
+        Returns: Json
+      }
       register_user: {
         Args: { _banner_color?: string; _key_hash: string; _username: string }
         Returns: Json
+      }
+      remove_dm_reaction: {
+        Args: { _emoji: string; _message_id: string; _user_id: string }
+        Returns: boolean
       }
       remove_reaction: {
         Args: { _emoji: string; _message_id: string; _user_id: string }
@@ -894,6 +928,15 @@ export type Database = {
           rank: number
           user_id: string
         }[]
+      }
+      send_dm: {
+        Args: {
+          _content: string
+          _conversation_id: string
+          _reply_to_id?: string
+          _sender_id: string
+        }
+        Returns: Json
       }
       send_message: {
         Args: {

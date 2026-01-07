@@ -60,8 +60,9 @@ export const DMMessageItem = ({ message, isFirst, onReply }: DMMessageItemProps)
   }, []);
 
   const handleEdit = async () => {
+    if (!user) return;
     if (editContent.trim() && editContent !== message.content) {
-      await editMessage(message.id, editContent.trim());
+      await editMessage(message.id, user.id, editContent.trim());
     }
     setIsEditing(false);
   };
@@ -72,7 +73,8 @@ export const DMMessageItem = ({ message, isFirst, onReply }: DMMessageItemProps)
   };
 
   const handleDelete = async () => {
-    await deleteMessage(message.id);
+    if (!user) return;
+    await deleteMessage(message.id, user.id);
     setShowMobileActions(false);
   };
 
