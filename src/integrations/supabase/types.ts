@@ -781,9 +781,22 @@ export type Database = {
         Args: { _emoji: string; _message_id: string; _user_id: string }
         Returns: Json
       }
+      ban_member: {
+        Args: { _server_id: string; _target_user_id: string; _user_id: string }
+        Returns: boolean
+      }
       block_user: {
         Args: { _blocked_user_id: string; _user_id: string }
         Returns: Json
+      }
+      change_member_role: {
+        Args: {
+          _new_role: Database["public"]["Enums"]["server_role"]
+          _server_id: string
+          _target_user_id: string
+          _user_id: string
+        }
+        Returns: boolean
       }
       check_username_available: {
         Args: { _username: string }
@@ -844,6 +857,10 @@ export type Database = {
         Args: { _message_id: string; _user_id: string }
         Returns: boolean
       }
+      delete_server: {
+        Args: { _server_id: string; _user_id: string }
+        Returns: boolean
+      }
       edit_dm: {
         Args: { _content: string; _message_id: string; _sender_id: string }
         Returns: Json
@@ -853,6 +870,10 @@ export type Database = {
         Returns: Json
       }
       generate_invite_code: { Args: never; Returns: string }
+      get_banned_members: {
+        Args: { _server_id: string; _user_id: string }
+        Returns: Json
+      }
       get_blocked_users: { Args: { _user_id: string }; Returns: Json }
       get_channel_messages: {
         Args: {
@@ -910,6 +931,14 @@ export type Database = {
       join_server_by_invite: {
         Args: { _invite_code: string; _user_id: string }
         Returns: Json
+      }
+      kick_member: {
+        Args: { _server_id: string; _target_user_id: string; _user_id: string }
+        Returns: boolean
+      }
+      leave_server: {
+        Args: { _server_id: string; _user_id: string }
+        Returns: boolean
       }
       login_user: { Args: { _key_hash: string }; Returns: Json }
       mark_dm_read: {
@@ -983,9 +1012,26 @@ export type Database = {
         Args: { _other_user_id: string; _user_id: string }
         Returns: boolean
       }
+      toggle_mute_member: {
+        Args: {
+          _muted: boolean
+          _server_id: string
+          _target_user_id: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
       toggle_pin_message: {
         Args: { _message_id: string; _user_id: string }
         Returns: Json
+      }
+      transfer_ownership: {
+        Args: { _new_owner_id: string; _server_id: string; _user_id: string }
+        Returns: boolean
+      }
+      unban_member: {
+        Args: { _server_id: string; _target_user_id: string; _user_id: string }
+        Returns: boolean
       }
       unblock_user: {
         Args: { _blocked_user_id: string; _user_id: string }
@@ -998,6 +1044,15 @@ export type Database = {
       update_channel: {
         Args: { _channel_id: string; _updates: Json; _user_id: string }
         Returns: Json
+      }
+      update_member_nickname: {
+        Args: {
+          _nickname: string
+          _server_id: string
+          _target_user_id: string
+          _user_id: string
+        }
+        Returns: boolean
       }
       update_user_last_seen: { Args: { _user_id: string }; Returns: boolean }
       update_user_profile: {
