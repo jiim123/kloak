@@ -773,6 +773,27 @@ export type Database = {
         Args: { _username: string }
         Returns: boolean
       }
+      create_category: {
+        Args: {
+          _name: string
+          _position?: number
+          _server_id: string
+          _user_id: string
+        }
+        Returns: Json
+      }
+      create_channel: {
+        Args: {
+          _category_id?: string
+          _icon?: string
+          _name: string
+          _position?: number
+          _server_id: string
+          _type?: string
+          _user_id: string
+        }
+        Returns: Json
+      }
       create_notification: {
         Args: {
           _body?: string
@@ -786,6 +807,14 @@ export type Database = {
       create_server_with_owner: {
         Args: { _name: string; _owner_id: string }
         Returns: Json
+      }
+      delete_category: {
+        Args: { _category_id: string; _user_id: string }
+        Returns: boolean
+      }
+      delete_channel: {
+        Args: { _channel_id: string; _user_id: string }
+        Returns: boolean
       }
       generate_invite_code: { Args: never; Returns: string }
       get_channel_server_id: { Args: { _channel_id: string }; Returns: string }
@@ -847,6 +876,14 @@ export type Database = {
       shares_server_with: {
         Args: { _other_user_id: string; _user_id: string }
         Returns: boolean
+      }
+      update_category: {
+        Args: { _category_id: string; _updates: Json; _user_id: string }
+        Returns: Json
+      }
+      update_channel: {
+        Args: { _channel_id: string; _updates: Json; _user_id: string }
+        Returns: Json
       }
     }
     Enums: {
