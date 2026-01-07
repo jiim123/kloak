@@ -911,6 +911,7 @@ export type Database = {
         Args: { _invite_code: string; _user_id: string }
         Returns: Json
       }
+      login_user: { Args: { _key_hash: string }; Returns: Json }
       mark_dm_read: {
         Args: { _conversation_id: string; _user_id: string }
         Returns: boolean
@@ -997,6 +998,18 @@ export type Database = {
       update_channel: {
         Args: { _channel_id: string; _updates: Json; _user_id: string }
         Returns: Json
+      }
+      update_user_last_seen: { Args: { _user_id: string }; Returns: boolean }
+      update_user_profile: {
+        Args: { _updates: Json; _user_id: string }
+        Returns: Json
+      }
+      update_user_status: {
+        Args: {
+          _status: Database["public"]["Enums"]["user_status"]
+          _user_id: string
+        }
+        Returns: boolean
       }
     }
     Enums: {
