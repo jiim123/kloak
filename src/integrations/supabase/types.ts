@@ -770,6 +770,16 @@ export type Database = {
     }
     Functions: {
       generate_invite_code: { Args: never; Returns: string }
+      get_channel_server_id: { Args: { _channel_id: string }; Returns: string }
+      get_dm_conversation_id: { Args: { _message_id: string }; Returns: string }
+      is_dm_participant: {
+        Args: { _conversation_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_server_member: {
+        Args: { _server_id: string; _user_id: string }
+        Returns: boolean
+      }
       search_messages: {
         Args: {
           channel_filter?: string
