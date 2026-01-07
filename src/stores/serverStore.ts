@@ -620,8 +620,10 @@ export const useServerStore = create<ServerState>((set, get) => ({
           display_name: string | null;
           avatar_url: string | null;
           banner_color: string;
+          bio: string | null;
           status: string;
           custom_status: string | null;
+          created_at: string;
           last_seen: string | null;
         };
       }>;
@@ -637,7 +639,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
           is_banned: item.is_banned,
           is_muted: item.is_muted,
           joined_at: item.joined_at,
-          user: item.user,
+          user: item.user as any,
         }));
 
       set({ members });
