@@ -24,7 +24,7 @@ interface ServerState {
   // Server actions
   fetchServers: (userId: string) => Promise<void>;
   createServer: (name: string, ownerId: string) => Promise<Server | null>;
-  updateServer: (serverId: string, updates: { name?: string; icon_url?: string | null }) => Promise<void>;
+  updateServer: (serverId: string, userId: string, updates: { name?: string; icon_url?: string | null }) => Promise<void>;
   joinServer: (inviteCode: string, userId: string) => Promise<boolean>;
   leaveServer: (serverId: string, userId: string) => Promise<void>;
   deleteServer: (serverId: string) => Promise<void>;
@@ -178,14 +178,21 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }
   },
 
-  updateServer: async (serverId: string, updates: { name?: string; icon_url?: string | null }) => {
+  updateServer: async (serverId: string, userId: string, updates: { name?: string; icon_url?: string | null }) => {
     try {
-      const { error } = await supabase
-        .from('servers')
-        .update(updates)
-        .eq('id', serverId);
+      // Use RPC function to bypass RLS
+      const { data, error } = await supabase.rpc('update_server', {
+        _server_id: serverId,
+        _user_id: userId,
+        _updates: updates,
+      });
 
       if (error) throw error;
+
+      const result = data as { success: boolean; error?: string; server?: any };
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update server');
+      }
 
       set((state) => ({
         servers: state.servers.map((s) =>

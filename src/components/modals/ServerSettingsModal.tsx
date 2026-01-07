@@ -191,11 +191,11 @@ export const ServerSettingsModal = () => {
   };
 
   const handleRemoveIcon = async () => {
-    if (!server) return;
+    if (!server || !user) return;
     
     setIsUploadingIcon(true);
     try {
-      await updateServer(server.id, { icon_url: null });
+      await updateServer(server.id, user.id, { icon_url: null });
       toast.success('Server icon removed');
     } catch (error) {
       toast.error('Failed to remove icon');
@@ -205,7 +205,7 @@ export const ServerSettingsModal = () => {
   };
 
   const onSubmit = async (data: ServerSettingsForm) => {
-    if (!server) return;
+    if (!server || !user) return;
     
     setIsLoading(true);
     try {
@@ -221,7 +221,7 @@ export const ServerSettingsModal = () => {
         setIsUploadingIcon(false);
       }
       
-      await updateServer(server.id, { 
+      await updateServer(server.id, user.id, { 
         name: data.name,
         icon_url: iconUrl 
       });

@@ -128,7 +128,7 @@ export const CreateServerModal = () => {
         if (iconFile) {
           const iconUrl = await uploadIcon(server.id, iconFile);
           if (iconUrl) {
-            await updateServer(server.id, { icon_url: iconUrl });
+            await updateServer(server.id, user.id, { icon_url: iconUrl });
           }
         }
         

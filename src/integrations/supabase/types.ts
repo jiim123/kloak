@@ -1054,6 +1054,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      update_server: {
+        Args: { _server_id: string; _updates: Json; _user_id: string }
+        Returns: Json
+      }
       update_user_last_seen: { Args: { _user_id: string }; Returns: boolean }
       update_user_profile: {
         Args: { _updates: Json; _user_id: string }
