@@ -146,33 +146,27 @@ export const useAuthStore = create<AuthState>()(
         try {
           const keyHash = await hashSecretKey(secretKey);
 
-          const { data, error } = await supabase
-            .from('users')
-            .select('*')
-            .eq('key_hash', keyHash)
-            .single();
+          // Use RPC function to login (bypasses RLS)
+          const { data, error } = await supabase.rpc('login_user', {
+            _key_hash: keyHash,
+          });
 
           if (error || !data) {
             set({ error: 'Invalid secret key', isLoading: false, isAuthenticated: false });
             return false;
           }
 
-          // Update last_seen and status
-          await supabase
-            .from('users')
-            .update({ last_seen: new Date().toISOString(), status: 'online' })
-            .eq('id', data.id);
-
+          const userData = data as Record<string, unknown>;
           const user: User = {
-            id: data.id,
-            username: data.username,
-            display_name: data.display_name,
-            avatar_url: data.avatar_url,
-            banner_color: data.banner_color || '#5865F2',
-            bio: data.bio,
+            id: userData.id as string,
+            username: userData.username as string,
+            display_name: userData.display_name as string | null,
+            avatar_url: userData.avatar_url as string | null,
+            banner_color: (userData.banner_color as string) || '#5865F2',
+            bio: userData.bio as string | null,
             status: 'online',
-            custom_status: data.custom_status,
-            created_at: data.created_at,
+            custom_status: userData.custom_status as string | null,
+            created_at: userData.created_at as string,
             last_seen: new Date().toISOString(),
           };
 
@@ -188,11 +182,10 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         const { user } = get();
         if (user) {
-          supabase
-            .from('users')
-            .update({ status: 'offline', last_seen: new Date().toISOString() })
-            .eq('id', user.id)
-            .then(() => {});
+          supabase.rpc('update_user_status', {
+            _user_id: user.id,
+            _status: 'offline',
+          }).then(() => {});
         }
         set({ user: null, secretKey: null, isAuthenticated: false, error: null });
       },
@@ -202,13 +195,28 @@ export const useAuthStore = create<AuthState>()(
         if (!user) return;
 
         try {
-          const { error } = await supabase
-            .from('users')
-            .update(updates)
-            .eq('id', user.id);
+          const { data, error } = await supabase.rpc('update_user_profile', {
+            _user_id: user.id,
+            _updates: updates,
+          });
 
           if (error) throw error;
-          set({ user: { ...user, ...updates } });
+          
+          if (data) {
+            const userData = data as Record<string, unknown>;
+            set({ 
+              user: { 
+                ...user, 
+                display_name: userData.display_name as string | null,
+                bio: userData.bio as string | null,
+                avatar_url: userData.avatar_url as string | null,
+                banner_color: (userData.banner_color as string) || user.banner_color,
+                custom_status: userData.custom_status as string | null,
+              } 
+            });
+          } else {
+            set({ user: { ...user, ...updates } });
+          }
         } catch (error) {
           console.error('Failed to update user:', error);
         }
@@ -219,10 +227,10 @@ export const useAuthStore = create<AuthState>()(
         if (!user) return;
 
         try {
-          await supabase
-            .from('users')
-            .update({ status })
-            .eq('id', user.id);
+          await supabase.rpc('update_user_status', {
+            _user_id: user.id,
+            _status: status,
+          });
 
           set({ user: { ...user, status } });
         } catch (error) {
@@ -236,10 +244,9 @@ export const useAuthStore = create<AuthState>()(
 
         const now = new Date().toISOString();
         try {
-          await supabase
-            .from('users')
-            .update({ last_seen: now })
-            .eq('id', user.id);
+          await supabase.rpc('update_user_last_seen', {
+            _user_id: user.id,
+          });
 
           set({ user: { ...user, last_seen: now } });
         } catch (error) {
