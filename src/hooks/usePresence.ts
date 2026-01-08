@@ -86,12 +86,15 @@ export const usePresence = () => {
   useEffect(() => {
     if (!isAuthenticated) return;
 
+    // Get the function directly to avoid dependency issues
+    const { updateLastSeen } = useAuthStore.getState();
+
     // Update immediately
     updateLastSeen();
 
     // Then update every 30 seconds
     lastSeenIntervalRef.current = setInterval(() => {
-      updateLastSeen();
+      useAuthStore.getState().updateLastSeen();
     }, LAST_SEEN_INTERVAL_MS);
 
     return () => {
@@ -99,7 +102,7 @@ export const usePresence = () => {
         clearInterval(lastSeenIntervalRef.current);
       }
     };
-  }, [isAuthenticated, updateLastSeen]);
+  }, [isAuthenticated]);
 
   // Set offline on page unload
   useEffect(() => {
