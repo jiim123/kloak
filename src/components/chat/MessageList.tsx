@@ -9,6 +9,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useRealtimeMessages } from "@/hooks/useRealtimeMessages";
 import { useRealtimeReactions } from "@/hooks/useRealtimeReactions";
 import { useUnread } from "@/hooks/useUnread";
+import { useScrollToMessage } from "@/hooks/useScrollToMessage";
 import type { Message } from "@/types";
 
 interface MessageListProps {
@@ -53,6 +54,9 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   // Enable realtime updates for messages and reactions
   useRealtimeMessages(channelId);
   useRealtimeReactions(channelId);
+
+  // Scroll to message from notification
+  const { highlightedMessageId } = useScrollToMessage({ messages, isLoading });
 
   // Listen for Up arrow edit event
   useEffect(() => {
@@ -205,7 +209,11 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
                     <div className="flex-1 h-px bg-destructive" />
                   </div>
                 )}
-                <MessageItem message={message} isGrouped={isGrouped} />
+                <MessageItem
+                  message={message}
+                  isGrouped={isGrouped}
+                  isHighlighted={message.id === highlightedMessageId}
+                />
               </div>
             );
           })}
