@@ -242,13 +242,12 @@ export const useAuthStore = create<AuthState>()(
         const { user } = get();
         if (!user) return;
 
-        const now = new Date().toISOString();
         try {
           await supabase.rpc('update_user_last_seen', {
             _user_id: user.id,
           });
-
-          set({ user: { ...user, last_seen: now } });
+          // Don't update local state - this avoids triggering re-renders
+          // The last_seen is only used for other users' presence display
         } catch (error) {
           console.error('Failed to update last seen:', error);
         }
