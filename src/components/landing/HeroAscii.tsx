@@ -114,9 +114,11 @@ export default function HeroAscii() {
           </div>
           
           <div className="flex items-center gap-2 text-[10px] font-mono text-muted-foreground/60">
-            <span>PRIVACY.FIRST</span>
+            <span>NO.EMAIL</span>
             <div className="w-1 h-1 rounded-full bg-primary/50" />
-            <span>ZERO.TRACKING</span>
+            <span>NO.PASSWORD</span>
+            <div className="w-1 h-1 rounded-full bg-primary/50" />
+            <span>NO.TRACKING</span>
           </div>
         </div>
       </div>
@@ -141,10 +143,10 @@ export default function HeroAscii() {
             <div className="hidden md:block w-px h-24 bg-gradient-to-b from-primary/50 to-transparent" />
             <div>
               <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-semibold text-foreground leading-[0.95] tracking-tight">
-                PRIVATE
+                YOUR CHAT.
               </h1>
               <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-semibold leading-[0.95] tracking-tight">
-                <span className="text-primary">MESSAGING</span>
+                <span className="text-primary">YOUR KEY.</span>
               </h1>
             </div>
           </div>
@@ -162,7 +164,7 @@ export default function HeroAscii() {
           {/* Description */}
           <div className="relative max-w-lg mb-10">
             <p className="text-lg text-muted-foreground leading-relaxed">
-              Lightning-fast communication for gamers, creators, and teams — built on cryptographic keys, not passwords.
+              One cryptographic key. That's it. No accounts, no data harvesting, no corporate surveillance. Just you and your conversations.
             </p>
             
             {/* Technical corner accent - desktop only */}
