@@ -7,6 +7,7 @@ import { MessageListSkeleton } from "@/components/ui/skeletons";
 import { useMessageStore } from "@/stores/messageStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useRealtimeMessages } from "@/hooks/useRealtimeMessages";
+import { useRealtimeReactions } from "@/hooks/useRealtimeReactions";
 import { useUnread } from "@/hooks/useUnread";
 import type { Message } from "@/types";
 
@@ -49,8 +50,9 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   const { getChannelUnread, markAsRead } = useUnread(channelIds);
   const { lastReadAt, firstUnreadMessageId } = getChannelUnread(channelId);
 
-  // Enable realtime updates
+  // Enable realtime updates for messages and reactions
   useRealtimeMessages(channelId);
+  useRealtimeReactions(channelId);
 
   // Listen for Up arrow edit event
   useEffect(() => {
