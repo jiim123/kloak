@@ -25,8 +25,11 @@ export const useRealtimeServer = (serverId: string | null) => {
   useEffect(() => {
     if (!serverId) return;
 
+    console.log('[Realtime] Setting up server subscription for:', serverId);
+
     const channel = supabase
       .channel(`server:${serverId}`)
+      // Server updates
       .on(
         'postgres_changes',
         {
@@ -36,6 +39,7 @@ export const useRealtimeServer = (serverId: string | null) => {
           filter: `id=eq.${serverId}`,
         },
         async (payload) => {
+          console.log('[Realtime] Server updated:', payload.new);
           const updatedServer = payload.new as any;
           const { currentServer } = serverStoreRef.current;
           const { user } = authStoreRef.current;
@@ -64,6 +68,7 @@ export const useRealtimeServer = (serverId: string | null) => {
           filter: `id=eq.${serverId}`,
         },
         async () => {
+          console.log('[Realtime] Server deleted:', serverId);
           const { currentServer, setCurrentServer } = serverStoreRef.current;
           const { user } = authStoreRef.current;
           
@@ -77,9 +82,67 @@ export const useRealtimeServer = (serverId: string | null) => {
           }
         }
       )
-      .subscribe();
+      // Channel changes
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'channels',
+          filter: `server_id=eq.${serverId}`,
+        },
+        async (payload) => {
+          console.log('[Realtime] New channel created:', payload.new);
+          // Refetch channels to get full data
+          await serverStoreRef.current.fetchChannels(serverId);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'channels',
+          filter: `server_id=eq.${serverId}`,
+        },
+        async (payload) => {
+          console.log('[Realtime] Channel updated:', payload.new);
+          await serverStoreRef.current.fetchChannels(serverId);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'channels',
+          filter: `server_id=eq.${serverId}`,
+        },
+        async (payload) => {
+          console.log('[Realtime] Channel deleted:', payload.old);
+          await serverStoreRef.current.fetchChannels(serverId);
+        }
+      )
+      // Category changes
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'channel_categories',
+          filter: `server_id=eq.${serverId}`,
+        },
+        async (payload) => {
+          console.log('[Realtime] Category change:', payload);
+          await serverStoreRef.current.fetchChannels(serverId);
+        }
+      )
+      .subscribe((status) => {
+        console.log('[Realtime] Server subscription status:', status);
+      });
 
     return () => {
+      console.log('[Realtime] Cleaning up server subscription for:', serverId);
       supabase.removeChannel(channel);
     };
   }, [serverId]);
