@@ -143,10 +143,10 @@ export default function HeroAscii() {
             <div className="hidden md:block w-px h-24 bg-gradient-to-b from-primary/50 to-transparent" />
             <div>
               <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-semibold text-foreground leading-[0.95] tracking-tight">
-                YOUR CHAT.
+                Your Chat.
               </h1>
               <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-semibold leading-[0.95] tracking-tight">
-                <span className="text-primary">YOUR KEY.</span>
+                <span className="text-primary">Your Key.</span>
               </h1>
             </div>
           </div>
@@ -181,12 +181,12 @@ export default function HeroAscii() {
               <button className="group relative px-8 py-3 bg-primary text-primary-foreground font-medium transition-all duration-300 hover:bg-primary/90">
                 <span className="absolute -top-px -left-px w-2 h-2 border-l border-t border-primary-foreground/30" />
                 <span className="absolute -top-px -right-px w-2 h-2 border-r border-t border-primary-foreground/30" />
-                GET STARTED
+                Get Started
               </button>
             </Link>
             <Link to="/philosophy">
               <button className="px-8 py-3 border border-border text-foreground font-medium transition-all duration-300 hover:bg-muted hover:border-primary/50">
-                LEARN MORE
+                Learn More
               </button>
             </Link>
           </div>
