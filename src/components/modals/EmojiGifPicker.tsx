@@ -18,6 +18,7 @@ interface EmojiGifPickerProps {
   onGifSelect?: (gifUrl: string) => void;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  disableGif?: boolean;
 }
 
 interface GifData {
@@ -90,7 +91,8 @@ export const EmojiGifPicker = ({
   onEmojiSelect, 
   onGifSelect,
   open, 
-  onOpenChange 
+  onOpenChange,
+  disableGif = false
 }: EmojiGifPickerProps) => {
   const [activeTab, setActiveTab] = useState<'emoji' | 'gif'>('emoji');
   const [emojiSearch, setEmojiSearch] = useState('');
@@ -180,23 +182,25 @@ export const EmojiGifPicker = ({
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         {/* Main Tabs: Emoji vs GIF */}
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="w-full rounded-none border-b border-border bg-transparent h-10">
-            <TabsTrigger 
-              value="emoji" 
-              className="flex-1 gap-1.5 data-[state=active]:bg-accent rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
-            >
-              <Smile className="w-4 h-4" />
-              Emoji
-            </TabsTrigger>
-            <TabsTrigger 
-              value="gif" 
-              className="flex-1 gap-1.5 data-[state=active]:bg-accent rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
-            >
-              <ImageIcon className="w-4 h-4" />
-              GIF
-            </TabsTrigger>
-          </TabsList>
+        <Tabs value={disableGif ? 'emoji' : activeTab} onValueChange={handleTabChange} className="w-full">
+          {!disableGif && (
+            <TabsList className="w-full rounded-none border-b border-border bg-transparent h-10">
+              <TabsTrigger 
+                value="emoji" 
+                className="flex-1 gap-1.5 data-[state=active]:bg-accent rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
+              >
+                <Smile className="w-4 h-4" />
+                Emoji
+              </TabsTrigger>
+              <TabsTrigger 
+                value="gif" 
+                className="flex-1 gap-1.5 data-[state=active]:bg-accent rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
+              >
+                <ImageIcon className="w-4 h-4" />
+                GIF
+              </TabsTrigger>
+            </TabsList>
+          )}
 
           {/* Emoji Tab Content */}
           <TabsContent value="emoji" className="m-0">
