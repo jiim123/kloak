@@ -82,7 +82,7 @@ export const useRealtimeServer = (serverId: string | null) => {
           }
         }
       )
-      // Channel changes
+      // Channel changes - use payload directly for speed
       .on(
         'postgres_changes',
         {
@@ -91,10 +91,24 @@ export const useRealtimeServer = (serverId: string | null) => {
           table: 'channels',
           filter: `server_id=eq.${serverId}`,
         },
-        async (payload) => {
+        (payload) => {
           console.log('[Realtime] New channel created:', payload.new);
-          // Refetch channels to get full data
-          await serverStoreRef.current.fetchChannels(serverId);
+          const newChannel = payload.new as any;
+          useServerStore.setState((state) => ({
+            channels: [...state.channels, {
+              id: newChannel.id,
+              server_id: newChannel.server_id,
+              category_id: newChannel.category_id,
+              name: newChannel.name,
+              topic: newChannel.topic,
+              type: newChannel.type || 'text',
+              position: newChannel.position || 0,
+              is_nsfw: newChannel.is_nsfw || false,
+              slowmode_seconds: newChannel.slowmode_seconds || 0,
+              icon: newChannel.icon,
+              created_at: newChannel.created_at,
+            }],
+          }));
         }
       )
       .on(
@@ -105,9 +119,17 @@ export const useRealtimeServer = (serverId: string | null) => {
           table: 'channels',
           filter: `server_id=eq.${serverId}`,
         },
-        async (payload) => {
+        (payload) => {
           console.log('[Realtime] Channel updated:', payload.new);
-          await serverStoreRef.current.fetchChannels(serverId);
+          const updated = payload.new as any;
+          useServerStore.setState((state) => ({
+            channels: state.channels.map((ch) =>
+              ch.id === updated.id ? { ...ch, ...updated } : ch
+            ),
+            currentChannel: state.currentChannel?.id === updated.id
+              ? { ...state.currentChannel, ...updated }
+              : state.currentChannel,
+          }));
         }
       )
       .on(
@@ -118,23 +140,77 @@ export const useRealtimeServer = (serverId: string | null) => {
           table: 'channels',
           filter: `server_id=eq.${serverId}`,
         },
-        async (payload) => {
+        (payload) => {
           console.log('[Realtime] Channel deleted:', payload.old);
-          await serverStoreRef.current.fetchChannels(serverId);
+          const oldChannel = payload.old as { id?: string };
+          if (oldChannel.id) {
+            useServerStore.setState((state) => ({
+              channels: state.channels.filter((ch) => ch.id !== oldChannel.id),
+              currentChannel: state.currentChannel?.id === oldChannel.id
+                ? null
+                : state.currentChannel,
+            }));
+          }
         }
       )
-      // Category changes
+      // Category changes - use payload directly
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
           table: 'channel_categories',
           filter: `server_id=eq.${serverId}`,
         },
-        async (payload) => {
-          console.log('[Realtime] Category change:', payload);
-          await serverStoreRef.current.fetchChannels(serverId);
+        (payload) => {
+          console.log('[Realtime] Category created:', payload.new);
+          const newCat = payload.new as any;
+          useServerStore.setState((state) => ({
+            categories: [...state.categories, {
+              id: newCat.id,
+              server_id: newCat.server_id,
+              name: newCat.name,
+              position: newCat.position || 0,
+              is_collapsed: newCat.is_collapsed || false,
+              created_at: newCat.created_at,
+            }],
+          }));
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'channel_categories',
+          filter: `server_id=eq.${serverId}`,
+        },
+        (payload) => {
+          console.log('[Realtime] Category updated:', payload.new);
+          const updated = payload.new as any;
+          useServerStore.setState((state) => ({
+            categories: state.categories.map((cat) =>
+              cat.id === updated.id ? { ...cat, ...updated } : cat
+            ),
+          }));
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'channel_categories',
+          filter: `server_id=eq.${serverId}`,
+        },
+        (payload) => {
+          console.log('[Realtime] Category deleted:', payload.old);
+          const oldCat = payload.old as { id?: string };
+          if (oldCat.id) {
+            useServerStore.setState((state) => ({
+              categories: state.categories.filter((cat) => cat.id !== oldCat.id),
+            }));
+          }
         }
       )
       .subscribe((status) => {

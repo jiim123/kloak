@@ -1,62 +1,40 @@
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useMessageStore } from '@/stores/messageStore';
-import type { Message, ReactionGroup, User } from '@/types';
+import { useAuthStore } from '@/stores/authStore';
+import type { Message, User } from '@/types';
 
-// Group reactions like in messageStore
-const groupReactions = (reactions: any[], currentUserId?: string): ReactionGroup[] => {
-  const groups: Record<string, ReactionGroup> = {};
+// User cache to avoid refetching
+const userCache = new Map<string, { user: User; timestamp: number }>();
+const USER_CACHE_TTL = 60000; // 1 minute
 
-  reactions.forEach((reaction) => {
-    if (!groups[reaction.emoji]) {
-      groups[reaction.emoji] = {
-        emoji: reaction.emoji,
-        count: 0,
-        users: [],
-        hasReacted: false,
-      };
-    }
-    groups[reaction.emoji].count++;
-    groups[reaction.emoji].users.push(reaction.user_id);
-    if (reaction.user_id === currentUserId) {
-      groups[reaction.emoji].hasReacted = true;
-    }
-  });
-
-  return Object.values(groups);
-};
-
-// Transform raw message data to Message type
-const transformMessage = (data: any): Message => {
-  return {
-    id: data.id,
-    channel_id: data.channel_id,
-    user_id: data.user_id,
-    reply_to_id: data.reply_to_id,
-    content: data.content,
-    is_pinned: data.is_pinned || false,
-    edited_at: data.edited_at,
-    created_at: data.created_at,
-    user: data.user as User,
-    reply_to: data.reply_to ? {
-      id: data.reply_to.id,
-      content: data.reply_to.content,
-      user: data.reply_to.user as User,
-    } : undefined,
-    attachments: data.attachments || [],
-    reactions: groupReactions(data.reactions || []),
-  };
+const getCachedUser = async (userId: string): Promise<User | null> => {
+  const cached = userCache.get(userId);
+  if (cached && Date.now() - cached.timestamp < USER_CACHE_TTL) {
+    return cached.user;
+  }
+  
+  const { data } = await supabase.rpc('get_user_by_id', { _user_id: userId });
+  if (data) {
+    const user = data as unknown as User;
+    userCache.set(userId, { user, timestamp: Date.now() });
+    return user;
+  }
+  return null;
 };
 
 export const useRealtimeMessages = (channelId: string | null) => {
-  // Use refs to avoid recreating the subscription when store functions change
   const storeRef = useRef(useMessageStore.getState());
+  const authRef = useRef(useAuthStore.getState());
   
-  // Keep the ref updated
   useEffect(() => {
-    return useMessageStore.subscribe((state) => {
+    const unsub1 = useMessageStore.subscribe((state) => {
       storeRef.current = state;
     });
+    const unsub2 = useAuthStore.subscribe((state) => {
+      authRef.current = state;
+    });
+    return () => { unsub1(); unsub2(); };
   }, []);
 
   useEffect(() => {
@@ -75,35 +53,50 @@ export const useRealtimeMessages = (channelId: string | null) => {
           filter: `channel_id=eq.${channelId}`,
         },
         async (payload) => {
-          console.log('[Realtime] New message received:', payload.new.id);
+          const newMsg = payload.new as any;
+          console.log('[Realtime] New message received:', newMsg.id);
           
-          // Fetch complete message with relations
-          const { data, error } = await supabase
-            .from('messages')
-            .select(`
-              *,
-              user:users(*),
-              reply_to:messages!messages_reply_to_id_fkey(
-                id,
-                content,
-                user:users(id, username, display_name, avatar_url)
-              ),
-              attachments:message_attachments(*),
-              reactions(*)
-            `)
-            .eq('id', payload.new.id)
-            .single();
-
-          if (error) {
-            console.error('[Realtime] Error fetching message details:', error);
+          // Skip if this is our own message (already added optimistically)
+          const currentUser = authRef.current.user;
+          const existingMessages = storeRef.current.messagesByChannel[channelId]?.messages || [];
+          if (existingMessages.some(m => m.id === newMsg.id)) {
+            console.log('[Realtime] Message already exists, skipping:', newMsg.id);
             return;
           }
-
-          if (data) {
-            const message = transformMessage(data);
-            console.log('[Realtime] Adding message to store:', message.id);
-            storeRef.current.addMessage(message);
+          
+          // Get user from cache or fetch
+          const user = await getCachedUser(newMsg.user_id);
+          if (!user) return;
+          
+          // Build message with minimal data - no extra fetch needed
+          const message: Message = {
+            id: newMsg.id,
+            channel_id: newMsg.channel_id,
+            user_id: newMsg.user_id,
+            reply_to_id: newMsg.reply_to_id,
+            content: newMsg.content,
+            is_pinned: newMsg.is_pinned || false,
+            edited_at: newMsg.edited_at,
+            created_at: newMsg.created_at,
+            user,
+            reply_to: undefined, // Will be populated if needed
+            attachments: [],
+            reactions: [],
+          };
+          
+          // If there's a reply, try to get it from existing messages
+          if (newMsg.reply_to_id) {
+            const replyMsg = existingMessages.find(m => m.id === newMsg.reply_to_id);
+            if (replyMsg) {
+              message.reply_to = {
+                id: replyMsg.id,
+                content: replyMsg.content,
+                user: replyMsg.user,
+              };
+            }
           }
+          
+          storeRef.current.addMessage(message);
         }
       )
       .on(
@@ -114,35 +107,16 @@ export const useRealtimeMessages = (channelId: string | null) => {
           table: 'messages',
           filter: `channel_id=eq.${channelId}`,
         },
-        async (payload) => {
-          console.log('[Realtime] Message updated:', payload.new.id);
+        (payload) => {
+          const updated = payload.new as any;
+          console.log('[Realtime] Message updated:', updated.id);
           
-          // Fetch updated message with relations
-          const { data, error } = await supabase
-            .from('messages')
-            .select(`
-              *,
-              user:users(*),
-              reply_to:messages!messages_reply_to_id_fkey(
-                id,
-                content,
-                user:users(id, username, display_name, avatar_url)
-              ),
-              attachments:message_attachments(*),
-              reactions(*)
-            `)
-            .eq('id', payload.new.id)
-            .single();
-
-          if (error) {
-            console.error('[Realtime] Error fetching updated message:', error);
-            return;
-          }
-
-          if (data) {
-            const message = transformMessage(data);
-            storeRef.current.updateMessage(payload.new.id, message);
-          }
+          // Use payload data directly for updates
+          storeRef.current.updateMessage(updated.id, {
+            content: updated.content,
+            edited_at: updated.edited_at,
+            is_pinned: updated.is_pinned,
+          });
         }
       )
       .on(
@@ -154,8 +128,8 @@ export const useRealtimeMessages = (channelId: string | null) => {
           filter: `channel_id=eq.${channelId}`,
         },
         (payload) => {
-          console.log('[Realtime] Message deleted:', payload.old);
           const oldData = payload.old as { id?: string };
+          console.log('[Realtime] Message deleted:', oldData.id);
           if (oldData.id) {
             storeRef.current.removeMessage(oldData.id);
           }
