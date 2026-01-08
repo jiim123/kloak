@@ -30,7 +30,18 @@ const shouldGroupMessages = (current: Message, previous: Message | null): boolea
 
 export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   const { user } = useAuthStore();
-  const { messages, isLoading, hasMore, fetchMessages, clearMessages } = useMessageStore();
+  const { 
+    getMessages, 
+    getHasMore, 
+    isLoading, 
+    fetchMessages, 
+    setCurrentChannel 
+  } = useMessageStore();
+  
+  // Get messages for current channel
+  const messages = getMessages();
+  const hasMore = getHasMore();
+  
   const containerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const [showJumpToPresent, setShowJumpToPresent] = useState(false);
@@ -68,9 +79,9 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
     return () => window.removeEventListener("editLastMessage" as any, handleEditLastMessage);
   }, [channelId, messages]);
 
-  // Fetch messages on channel change and scroll to bottom
+  // Set current channel and fetch messages (with caching)
   useEffect(() => {
-    clearMessages();
+    setCurrentChannel(channelId);
     fetchMessages(channelId).then(() => {
       // Scroll to bottom after messages load
       setTimeout(() => {

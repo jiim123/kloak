@@ -18,7 +18,7 @@ interface SendMessageOptions {
  */
 export function useOptimisticMessage() {
   const { user } = useAuthStore();
-  const { messages, sendMessage, addMessage, removeMessage, updateMessage } = useMessageStore();
+  const { getMessages, sendMessage, addMessage, removeMessage, updateMessage } = useMessageStore();
   const { addOptimisticItem, confirmOptimisticItem, failOptimisticItem, getOptimisticStatus } = useSyncStore();
   const { addToQueue } = useOfflineQueueStore();
   const { isOnline } = useOnlineStatus();
