@@ -25,7 +25,7 @@ interface ServerState {
   fetchServers: (userId: string) => Promise<void>;
   createServer: (name: string, ownerId: string) => Promise<Server | null>;
   updateServer: (serverId: string, userId: string, updates: { name?: string; icon_url?: string | null }) => Promise<void>;
-  joinServer: (inviteCode: string, userId: string) => Promise<boolean>;
+  joinServer: (inviteCode: string, userId: string) => Promise<Server | null>;
   leaveServer: (serverId: string, userId: string) => Promise<void>;
   deleteServer: (serverId: string) => Promise<void>;
   setCurrentServer: (server: Server | null) => void;
@@ -215,7 +215,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
       if (!inviteCodeRateLimiter.isAllowed(userId)) {
         const remainingTime = inviteCodeRateLimiter.getRemainingTime(userId);
         set({ error: `Too many attempts. Try again in ${remainingTime} seconds` });
-        return false;
+        return null;
       }
 
       // Use RPC function to join server (bypasses RLS)
@@ -228,26 +228,48 @@ export const useServerStore = create<ServerState>((set, get) => ({
         // Handle specific error messages
         if (error.message.includes('Invalid invite code')) {
           set({ error: 'Invalid invite code' });
-          return false;
+          return null;
         }
         if (error.message.includes('banned')) {
           set({ error: 'You are banned from this server' });
-          return false;
+          return null;
         }
         if (error.message.includes('already a member')) {
           set({ error: 'You are already a member of this server' });
-          return false;
+          return null;
         }
         throw error;
       }
 
+      // Parse the server data from the RPC response
+      const serverData = data as unknown as {
+        id: string;
+        name: string;
+        owner_id: string;
+        invite_code: string;
+        icon_url: string | null;
+        banner_url: string | null;
+        created_at: string;
+      };
+
+      const server: Server = {
+        id: serverData.id,
+        name: serverData.name,
+        owner_id: serverData.owner_id,
+        invite_code: serverData.invite_code,
+        icon_url: serverData.icon_url,
+        banner_url: serverData.banner_url,
+        created_at: serverData.created_at,
+      };
+
       // Refresh servers list
       await get().fetchServers(userId);
-      return true;
+      
+      return server;
     } catch (error) {
       console.error('Failed to join server:', error);
       set({ error: 'Failed to join server' });
-      return false;
+      return null;
     }
   },
 
