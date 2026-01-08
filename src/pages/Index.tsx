@@ -311,7 +311,7 @@ const Index = () => {
                     </span>
                     <div className="w-px h-12 bg-gradient-to-b from-primary/30 to-transparent" />
                     <div className="flex-1">
-                      <h3 className="text-xl font-semibold text-foreground mb-3 tracking-tight uppercase">
+                      <h3 className="text-xl font-semibold text-foreground mb-3 tracking-tight">
                         {principle.title}
                       </h3>
                       <p className="text-muted-foreground leading-relaxed text-sm">
@@ -383,8 +383,8 @@ const Index = () => {
               
               <div className="flex items-center gap-4 mb-4">
                 <MessageCircle className="w-8 h-8 text-primary shrink-0" />
-                <h3 className="text-3xl sm:text-4xl font-semibold text-foreground tracking-tight uppercase">
-                  Real-time messaging
+                <h3 className="text-3xl sm:text-4xl font-semibold text-foreground tracking-tight">
+                  Real-Time Messaging
                 </h3>
               </div>
               <p className="text-lg text-muted-foreground leading-relaxed max-w-md">
@@ -409,8 +409,8 @@ const Index = () => {
               
               <div className="flex items-center gap-3 mb-4">
                 <Lock className="w-7 h-7 text-primary shrink-0" />
-                <h3 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight uppercase">
-                  Key-based auth
+                <h3 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight">
+                  Key-Based Auth
                 </h3>
               </div>
               <p className="text-muted-foreground leading-relaxed">
@@ -434,7 +434,7 @@ const Index = () => {
               
               <div className="flex items-center gap-3 mb-4">
                 <Users className="w-7 h-7 text-primary shrink-0" />
-                <h3 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight uppercase">
+                <h3 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight">
                   Communities
                 </h3>
               </div>
@@ -459,8 +459,8 @@ const Index = () => {
               
               <div className="flex items-center gap-4 mb-4">
                 <Zap className="w-8 h-8 text-primary shrink-0" />
-                <h3 className="text-3xl sm:text-4xl font-semibold text-foreground tracking-tight uppercase">
-                  Modern infrastructure
+                <h3 className="text-3xl sm:text-4xl font-semibold text-foreground tracking-tight">
+                  Modern Infrastructure
                 </h3>
               </div>
               <p className="text-lg text-muted-foreground leading-relaxed max-w-md">
@@ -622,7 +622,7 @@ const Index = () => {
 
                 {/* Content */}
                 <div className="relative">
-                  <h3 className="text-lg font-semibold text-foreground mb-2 tracking-tight uppercase">
+                  <h3 className="text-lg font-semibold text-foreground mb-2 tracking-tight">
                     {card.title}
                   </h3>
                   <p className="text-muted-foreground text-sm leading-relaxed">
@@ -681,8 +681,8 @@ const Index = () => {
             <Shield className="w-8 h-8 text-primary" />
           </div>
           
-          <h2 className="text-4xl sm:text-5xl font-semibold text-foreground mb-6 tracking-tight uppercase">
-            Take back your <span className="text-primary">privacy.</span>
+          <h2 className="text-4xl sm:text-5xl font-semibold text-foreground mb-6 tracking-tight">
+            Take Back Your <span className="text-primary">Privacy.</span>
           </h2>
           <p className="text-xl text-muted-foreground mb-10 max-w-lg mx-auto">
             No signup forms. No verification emails. Generate your key and start communicating freely.
