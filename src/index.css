@@ -714,3 +714,23 @@
 .animate-pulse-border {
   animation: pulse-border 2s ease-in-out infinite;
 }
+
+/* Message highlight animation for notification scroll-to */
+@keyframes highlight-message {
+  0% {
+    background-color: hsl(var(--primary) / 0.3);
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.5);
+  }
+  50% {
+    background-color: hsl(var(--primary) / 0.2);
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.3);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: none;
+  }
+}
+
+.animate-highlight-message {
+  animation: highlight-message 2s ease-out forwards;
+}

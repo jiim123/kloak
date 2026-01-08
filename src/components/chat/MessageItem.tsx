@@ -33,10 +33,11 @@ interface MessageItemProps {
   message: Message;
   isGrouped: boolean;
   showNewDivider?: boolean;
+  isHighlighted?: boolean;
   onStartEdit?: () => void;
 }
 
-export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }: MessageItemProps) => {
+export const MessageItem = ({ message, isGrouped, showNewDivider, isHighlighted, onStartEdit }: MessageItemProps) => {
   const { user } = useAuthStore();
   const { setReplyingTo, editMessage, pinMessage, addReaction, removeReaction, removeMessage } = useMessageStore();
   const { members } = useServerStore();
@@ -176,10 +177,13 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, onStartEdit }:
       )}
 
       {/* Outer wrapper with padding from edges */}
-      <div className={`px-2 ${compactMode ? "py-0" : isGrouped ? "py-0.5" : "py-1"}`}>
+      <div
+        id={`message-${message.id}`}
+        className={`px-2 ${compactMode ? "py-0" : isGrouped ? "py-0.5" : "py-1"}`}
+      >
         {/* Inner wrapper with hover effect and rounded borders */}
         <div
-          className={`group relative flex px-3 rounded-lg transition-colors hover:bg-muted/40 ${compactMode ? "gap-2 py-0.5" : "gap-3 py-1.5"} ${isPending ? "opacity-70" : ""} ${isFailed ? "bg-destructive/5 border border-destructive/20" : ""} ${isMentioned ? "bg-primary/10 border-l-2 border-l-primary" : ""}`}
+          className={`group relative flex px-3 rounded-lg transition-all duration-300 hover:bg-muted/40 ${compactMode ? "gap-2 py-0.5" : "gap-3 py-1.5"} ${isPending ? "opacity-70" : ""} ${isFailed ? "bg-destructive/5 border border-destructive/20" : ""} ${isMentioned ? "bg-primary/10 border-l-2 border-l-primary" : ""} ${isHighlighted ? "animate-highlight-message bg-primary/20 ring-2 ring-primary/50" : ""}`}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
           onTouchStart={handleTouchStart}
