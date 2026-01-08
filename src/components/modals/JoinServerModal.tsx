@@ -32,7 +32,7 @@ type JoinServerForm = z.infer<typeof joinServerSchema>;
 
 export const JoinServerModal = () => {
   const { activeModal, closeModal } = useUIStore();
-  const { joinServer, servers, setCurrentServer, fetchChannels } = useServerStore();
+  const { joinServer, setCurrentServer, fetchChannels } = useServerStore();
   const { user } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,15 +64,12 @@ export const JoinServerModal = () => {
     setError(null);
     
     try {
-      const success = await joinServer(data.inviteCode.toUpperCase(), user.id);
-      if (success) {
+      const joinedServer = await joinServer(data.inviteCode.toUpperCase(), user.id);
+      if (joinedServer) {
         toast.success('Successfully joined server!');
-        // Find the newly joined server and set it as current
-        const newServer = servers.find(s => s.invite_code === data.inviteCode.toUpperCase());
-        if (newServer) {
-          setCurrentServer(newServer);
-          await fetchChannels(newServer.id);
-        }
+        // Set the joined server as current and fetch channels
+        setCurrentServer(joinedServer);
+        await fetchChannels(joinedServer.id);
         reset();
         closeModal();
       } else {
