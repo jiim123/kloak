@@ -3,7 +3,6 @@ import { Paperclip, Smile, Send, X, Loader2, WifiOff, Type } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore';
 import { useMessageStore } from '@/stores/messageStore';
 import { useServerStore } from '@/stores/serverStore';
-import { useNotificationStore } from '@/stores/notificationStore';
 import { useOfflineQueueStore } from '@/stores/offlineQueueStore';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { useOptimisticMessage } from '@/hooks/useOptimisticMessage';
@@ -30,7 +29,6 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const { user } = useAuthStore();
   const { replyingTo, setReplyingTo } = useMessageStore();
   const { members, currentServer } = useServerStore();
-  const { createMentionNotification } = useNotificationStore();
   const { getQueuedForChannel } = useOfflineQueueStore();
   const { isOnline } = useOnlineStatus();
   const { sendOptimistic } = useOptimisticMessage();
@@ -187,6 +185,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     });
     
     // Handle mentions in background (non-blocking)
+    // Note: Notifications are created by database trigger on mentions insert
     if (message && currentServer && !message.id.startsWith('temp-')) {
       const mentions = extractMentions(messageContent);
       
@@ -199,14 +198,6 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
               user_id: mention.id,
               mention_type: 'user',
             });
-            
-            await createMentionNotification(
-              mention.id,
-              user.id,
-              channelId,
-              channelName,
-              currentServer.id
-            );
           } else if (mention.type === 'everyone' || mention.type === 'here') {
             const targetMembers = mention.type === 'here'
               ? members.filter(m => m.user?.status === 'online' && m.user_id !== user.id)
@@ -218,14 +209,6 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
                 user_id: member.user_id,
                 mention_type: mention.type,
               });
-              
-              await createMentionNotification(
-                member.user_id,
-                user.id,
-                channelId,
-                channelName,
-                currentServer.id
-              );
             }
           }
         }
