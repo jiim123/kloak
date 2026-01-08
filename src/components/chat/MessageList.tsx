@@ -80,7 +80,8 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
       }, 50);
     });
     hasMarkedAsReadRef.current = false;
-  }, [channelId, fetchMessages, clearMessages]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channelId]);
 
   // Auto-scroll when new messages arrive (if near bottom)
   useEffect(() => {

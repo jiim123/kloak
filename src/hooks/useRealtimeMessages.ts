@@ -1,9 +1,17 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useMessageStore } from '@/stores/messageStore';
 
 export const useRealtimeMessages = (channelId: string | null) => {
-  const { addMessage, updateMessage, removeMessage } = useMessageStore();
+  // Use refs to avoid recreating the subscription when store functions change
+  const storeRef = useRef(useMessageStore.getState());
+  
+  // Keep the ref updated
+  useEffect(() => {
+    return useMessageStore.subscribe((state) => {
+      storeRef.current = state;
+    });
+  }, []);
 
   useEffect(() => {
     if (!channelId) return;
@@ -37,7 +45,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
             .single();
 
           if (data) {
-            addMessage(data as any);
+            storeRef.current.addMessage(data as any);
           }
         }
       )
@@ -68,7 +76,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
             .single();
 
           if (data) {
-            updateMessage(payload.new.id, data as any);
+            storeRef.current.updateMessage(payload.new.id, data as any);
           }
         }
       )
@@ -83,7 +91,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
         (payload) => {
           const oldData = payload.old as { id?: string };
           if (oldData.id) {
-            removeMessage(oldData.id);
+            storeRef.current.removeMessage(oldData.id);
           }
         }
       )
@@ -92,5 +100,5 @@ export const useRealtimeMessages = (channelId: string | null) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [channelId, addMessage, updateMessage, removeMessage]);
+  }, [channelId]);
 };
