@@ -30,24 +30,24 @@ export const HeroClassic = () => {
           variants={fadeInUp}
           className="text-primary font-medium mb-6 tracking-wide text-sm uppercase"
         >
-          Fast. Private. Built for gamers.
+          No email. No password. No tracking.
         </motion.p>
         
         <motion.h1 
           variants={fadeInUp}
           className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-semibold text-foreground mb-8 leading-[0.95] tracking-tight max-w-4xl"
         >
-          Chat without
+          Your chat.
           <br />
-          compromise.
+          Your key.
         </motion.h1>
         
         <motion.p 
           variants={fadeInUp}
           className="text-xl text-muted-foreground max-w-xl mb-12 leading-relaxed"
         >
-          Lightning-fast messaging built for gaming communities, creators, and teams who demand 
-          performance without sacrificing privacy. No lag. No tracking. No nonsense.
+          One cryptographic key. That's it. No accounts, no data harvesting, no corporate surveillance. 
+          Just you and your conversations.
         </motion.p>
         
         <motion.div variants={fadeInUp}>
