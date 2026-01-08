@@ -517,44 +517,59 @@ export const useMessageStore = create<MessageState>((set, get) => ({
   },
 
   updateMessage: (messageId, updates) => {
-    const { currentChannelId } = get();
-    if (!currentChannelId) return;
-
+    // Get channel_id from the updates if provided, otherwise search all channels
+    const channelId = (updates as any).channel_id;
+    
     set((state) => {
-      const existingCache = state.messagesByChannel[currentChannelId];
-      if (!existingCache) return state;
-
-      return {
-        messagesByChannel: {
-          ...state.messagesByChannel,
-          [currentChannelId]: {
-            ...existingCache,
-            messages: existingCache.messages.map((m) =>
+      // If we have a channel_id, update that specific channel
+      if (channelId && state.messagesByChannel[channelId]) {
+        const existingCache = state.messagesByChannel[channelId];
+        return {
+          messagesByChannel: {
+            ...state.messagesByChannel,
+            [channelId]: {
+              ...existingCache,
+              messages: existingCache.messages.map((m) =>
+                m.id === messageId ? { ...m, ...updates } : m
+              ),
+            },
+          },
+        };
+      }
+      
+      // Otherwise, search all channels for this message
+      const newMessagesByChannel = { ...state.messagesByChannel };
+      for (const [chId, cache] of Object.entries(newMessagesByChannel)) {
+        const msgIndex = cache.messages.findIndex((m) => m.id === messageId);
+        if (msgIndex !== -1) {
+          newMessagesByChannel[chId] = {
+            ...cache,
+            messages: cache.messages.map((m) =>
               m.id === messageId ? { ...m, ...updates } : m
             ),
-          },
-        },
-      };
+          };
+          break;
+        }
+      }
+      return { messagesByChannel: newMessagesByChannel };
     });
   },
 
   removeMessage: (messageId) => {
-    const { currentChannelId } = get();
-    if (!currentChannelId) return;
-
     set((state) => {
-      const existingCache = state.messagesByChannel[currentChannelId];
-      if (!existingCache) return state;
-
-      return {
-        messagesByChannel: {
-          ...state.messagesByChannel,
-          [currentChannelId]: {
-            ...existingCache,
-            messages: existingCache.messages.filter((m) => m.id !== messageId),
-          },
-        },
-      };
+      // Search all channels for this message
+      const newMessagesByChannel = { ...state.messagesByChannel };
+      for (const [chId, cache] of Object.entries(newMessagesByChannel)) {
+        const msgIndex = cache.messages.findIndex((m) => m.id === messageId);
+        if (msgIndex !== -1) {
+          newMessagesByChannel[chId] = {
+            ...cache,
+            messages: cache.messages.filter((m) => m.id !== messageId),
+          };
+          break;
+        }
+      }
+      return { messagesByChannel: newMessagesByChannel };
     });
   },
 
