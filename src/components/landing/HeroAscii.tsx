@@ -175,7 +175,7 @@ export default function HeroAscii() {
 
           {/* Buttons */}
           <div className="flex flex-col sm:flex-row gap-4">
-            <Link to="/auth">
+            <Link to="/app">
               <button className="group relative px-8 py-3 bg-primary text-primary-foreground font-medium transition-all duration-300 hover:bg-primary/90">
                 <span className="absolute -top-px -left-px w-2 h-2 border-l border-t border-primary-foreground/30" />
                 <span className="absolute -top-px -right-px w-2 h-2 border-r border-t border-primary-foreground/30" />
