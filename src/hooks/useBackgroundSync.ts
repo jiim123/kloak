@@ -26,9 +26,9 @@ export function useBackgroundSync() {
     updateLastSync,
   } = useSyncStore();
   
-  const { queuedMessages, removeFromQueue, clearQueue } = useOfflineQueueStore();
-  const { sendMessage, fetchMessages, clearMessages } = useMessageStore();
-  const { currentChannel, fetchServers } = useServerStore();
+  const { queuedMessages, removeFromQueue } = useOfflineQueueStore();
+  const { sendMessage } = useMessageStore();
+  const { currentChannel } = useServerStore();
   
   const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
