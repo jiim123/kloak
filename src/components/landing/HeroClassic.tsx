@@ -51,7 +51,7 @@ export const HeroClassic = () => {
         </motion.p>
         
         <motion.div variants={fadeInUp}>
-          <Link to="/auth">
+          <Link to="/app">
             <Button size="lg" className="text-base px-8 h-12">
               Create Your Key
               <ArrowRight className="w-5 h-5 ml-2" />

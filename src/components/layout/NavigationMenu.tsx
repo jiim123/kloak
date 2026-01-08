@@ -41,7 +41,7 @@ export const NavigationMenu = () => {
             <img src={kloakLogo} alt="Kloak" className="h-7" />
           </Link>
           <div className="flex items-center gap-4">
-            <Link to="/auth" className="hidden sm:block">
+            <Link to="/app" className="hidden sm:block">
               <Button size="sm">Use Kloak</Button>
             </Link>
             <button 
@@ -94,7 +94,7 @@ export const NavigationMenu = () => {
               {/* Sidebar Content */}
               <div className="flex-1 overflow-y-auto p-6">
               <div className="space-y-6">
-                <Link to="/auth" onClick={() => setMenuOpen(false)}>
+                <Link to="/app" onClick={() => setMenuOpen(false)}>
                   <Button className="w-full">
                     <Key className="h-4 w-4" />
                     Create Account
@@ -128,7 +128,7 @@ export const NavigationMenu = () => {
 
               {/* Sidebar Footer */}
               <div className="p-6 border-t border-border/20">
-                <Link to="/auth" onClick={() => setMenuOpen(false)}>
+                <Link to="/app" onClick={() => setMenuOpen(false)}>
                   <Button className="w-full">
                     Get Started
                   </Button>
