@@ -314,18 +314,17 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, isHighlighted,
               </Tooltip>
             )}
 
-            {/* Optimistic status indicator */}
-            {(isPending || isFailed) && (
+            {/* Optimistic status indicator - only show for failed messages */}
+            {isFailed && (
               <OptimisticMessageIndicator
-                status={optimisticStatus as 'pending' | 'failed'}
-                onRetry={isFailed ? () => {
-                  // Re-queue the message
+                status="failed"
+                onRetry={() => {
                   removeOptimisticItem(message.id);
-                } : undefined}
-                onCancel={isFailed ? () => {
+                }}
+                onCancel={() => {
                   removeMessage(message.id);
                   removeOptimisticItem(message.id);
-                } : undefined}
+                }}
                 className="ml-2 inline-flex"
               />
             )}
