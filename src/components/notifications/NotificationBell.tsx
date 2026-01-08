@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { format, formatDistanceToNow } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
+import { formatDistanceToNow } from 'date-fns';
 import { Bell, Check, Trash2, MessageCircle, AtSign, UserPlus, Mail, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -39,6 +40,7 @@ const extractUsernameFromBody = (body: string | null): string | null => {
 };
 
 export const NotificationBell = () => {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotificationStore();
   const { pendingRequests, acceptRequest, declineRequest } = useFriendStore();
@@ -61,7 +63,8 @@ export const NotificationBell = () => {
   const handleNotificationClick = (notificationId: string, link: string | null) => {
     markAsRead(notificationId);
     if (link) {
-      window.location.href = link;
+      // Use React Router for client-side navigation instead of full page reload
+      navigate(link);
     }
     setIsOpen(false);
   };
