@@ -30,17 +30,12 @@ const shouldGroupMessages = (current: Message, previous: Message | null): boolea
 
 export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   const { user } = useAuthStore();
-  const { 
-    getMessages, 
-    getHasMore, 
-    isLoading, 
-    fetchMessages, 
-    setCurrentChannel 
-  } = useMessageStore();
+  const { isLoading, fetchMessages, setCurrentChannel, messagesByChannel } = useMessageStore();
   
-  // Get messages for current channel
-  const messages = getMessages();
-  const hasMore = getHasMore();
+  // Subscribe to messages for this specific channel
+  const channelData = messagesByChannel[channelId];
+  const messages = channelData?.messages || [];
+  const hasMore = channelData?.hasMore ?? true;
   
   const containerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
