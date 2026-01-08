@@ -58,6 +58,20 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, isHighlighted,
   const optimisticStatus = message.id.startsWith('temp-') ? getOptimisticStatus(message.id) || 'pending' : null;
   const isPending = optimisticStatus === 'pending';
   const isFailed = optimisticStatus === 'failed';
+  
+  // Only show pending animation after a delay (for slow connections)
+  const [showPendingAnimation, setShowPendingAnimation] = useState(false);
+  
+  useEffect(() => {
+    if (isPending) {
+      const timer = setTimeout(() => {
+        setShowPendingAnimation(true);
+      }, 1000); // Show animation after 1 second
+      return () => clearTimeout(timer);
+    } else {
+      setShowPendingAnimation(false);
+    }
+  }, [isPending]);
 
   const isOwnMessage = user?.id === message.user_id;
   const messageUser = message.user;
@@ -183,7 +197,7 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, isHighlighted,
       >
         {/* Inner wrapper with hover effect and rounded borders */}
         <div
-          className={`group relative flex px-3 rounded-lg transition-all duration-300 hover:bg-muted/40 ${compactMode ? "gap-2 py-0.5" : "gap-3 py-1.5"} ${isPending ? "opacity-70" : ""} ${isFailed ? "bg-destructive/5 border border-destructive/20" : ""} ${isMentioned ? "bg-primary/10 border-l-2 border-l-primary" : ""} ${isHighlighted ? "animate-highlight-message bg-primary/20 ring-2 ring-primary/50" : ""}`}
+          className={`group relative flex px-3 rounded-lg transition-all duration-300 hover:bg-muted/40 ${compactMode ? "gap-2 py-0.5" : "gap-3 py-1.5"} ${showPendingAnimation ? "animate-pulse opacity-60" : ""} ${isFailed ? "bg-destructive/5 border border-destructive/20" : ""} ${isMentioned ? "bg-primary/10 border-l-2 border-l-primary" : ""} ${isHighlighted ? "animate-highlight-message bg-primary/20 ring-2 ring-primary/50" : ""}`}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
           onTouchStart={handleTouchStart}
