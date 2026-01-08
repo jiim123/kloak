@@ -85,22 +85,13 @@ export function useBackgroundSync() {
     updateLastSync();
   }, [queuedMessages, sendMessage, removeFromQueue, setSyncStatus, updateLastSync]);
 
-  // Refresh current data (non-blocking)
+  // Refresh current data (non-blocking) - DISABLED to prevent message clearing
+  // Real-time subscriptions handle new messages, so periodic refresh is not needed
   const refreshData = useCallback(async () => {
-    if (!currentChannel || isSyncingRef.current) return;
-    
-    try {
-      setSyncStatus('syncing');
-      // Don't clear messages, just refresh in background
-      // This fetches latest and merges with existing
-      await fetchMessages(currentChannel.id);
-      updateLastSync();
-    } catch (error) {
-      console.error('Background refresh failed:', error);
-    } finally {
-      setSyncStatus('idle');
-    }
-  }, [currentChannel, fetchMessages, setSyncStatus, updateLastSync]);
+    // Don't do periodic fetches - it causes the chat to flash/clear
+    // Real-time updates via useRealtimeMessages handle new messages
+    return;
+  }, []);
 
   // Handle reconnection with exponential backoff
   const attemptReconnect = useCallback(async () => {
