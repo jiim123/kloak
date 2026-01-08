@@ -568,12 +568,12 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
               <Type className="w-5 h-5" />
             </button>
 
-            {/* Emoji/GIF button with picker */}
+            {/* Emoji button with picker (GIF temporarily disabled) */}
             <EmojiGifPicker
               open={showEmojiPicker}
               onOpenChange={setShowEmojiPicker}
               onEmojiSelect={handleEmojiSelect}
-              onGifSelect={handleGifSelect}
+              disableGif
             >
               <button 
                 type="button"
