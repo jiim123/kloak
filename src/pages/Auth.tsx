@@ -341,9 +341,6 @@ const Auth = () => {
                           {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </Button>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        Forgot your key? Unfortunately, keys cannot be recovered.
-                      </p>
                     </div>
 
                     <Button type="submit" className="w-full" disabled={isLoading || !secretKey}>
@@ -351,8 +348,8 @@ const Auth = () => {
                       Login
                     </Button>
 
-                    <p className="text-center text-xs text-muted-foreground mt-4">
-                      No email. No password. No tracking.
+                    <p className="text-xs text-muted-foreground">
+                      Forgot your key? Unfortunately, keys cannot be recovered.
                     </p>
                   </form>
                 </TabsContent>
