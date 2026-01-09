@@ -1,27 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useMessageStore } from '@/stores/messageStore';
 import { useAuthStore } from '@/stores/authStore';
-import type { ReactionGroup } from '@/types';
 
 export const useRealtimeReactions = (channelId: string | null) => {
-  // Use refs to avoid recreating subscription when store changes
-  const messageStoreRef = useRef(useMessageStore.getState());
-  const authStoreRef = useRef(useAuthStore.getState());
-  
-  useEffect(() => {
-    const unsubMessage = useMessageStore.subscribe((state) => {
-      messageStoreRef.current = state;
-    });
-    const unsubAuth = useAuthStore.subscribe((state) => {
-      authStoreRef.current = state;
-    });
-    return () => {
-      unsubMessage();
-      unsubAuth();
-    };
-  }, []);
-
   useEffect(() => {
     if (!channelId) return;
 
@@ -38,12 +20,12 @@ export const useRealtimeReactions = (channelId: string | null) => {
         },
         (payload) => {
           const newReaction = payload.new as { message_id: string; user_id: string; emoji: string };
-          const currentUserId = authStoreRef.current.user?.id;
+          const currentUserId = useAuthStore.getState().user?.id;
           
           console.log('[Realtime] Reaction added:', newReaction);
           
-          // Update the message in the store optimistically
-          const { messagesByChannel } = messageStoreRef.current;
+          // Get current state directly from store
+          const { messagesByChannel } = useMessageStore.getState();
           const channelData = messagesByChannel[channelId];
           if (!channelData) return;
           
@@ -72,7 +54,7 @@ export const useRealtimeReactions = (channelId: string | null) => {
             });
           }
           
-          messageStoreRef.current.updateMessage(newReaction.message_id, { reactions, channel_id: channelId } as any);
+          useMessageStore.getState().updateMessage(newReaction.message_id, { reactions, channel_id: channelId } as any);
         }
       )
       .on(
@@ -86,12 +68,12 @@ export const useRealtimeReactions = (channelId: string | null) => {
           const oldReaction = payload.old as { message_id?: string; user_id?: string; emoji?: string };
           if (!oldReaction.message_id || !oldReaction.emoji) return;
           
-          const currentUserId = authStoreRef.current.user?.id;
+          const currentUserId = useAuthStore.getState().user?.id;
           
           console.log('[Realtime] Reaction removed:', oldReaction);
           
-          // Update the message in the store
-          const { messagesByChannel } = messageStoreRef.current;
+          // Get current state directly from store
+          const { messagesByChannel } = useMessageStore.getState();
           const channelData = messagesByChannel[channelId];
           if (!channelData) return;
           
@@ -111,7 +93,7 @@ export const useRealtimeReactions = (channelId: string | null) => {
             })
             .filter(r => r.count > 0);
           
-          messageStoreRef.current.updateMessage(oldReaction.message_id, { reactions, channel_id: channelId } as any);
+          useMessageStore.getState().updateMessage(oldReaction.message_id, { reactions, channel_id: channelId } as any);
         }
       )
       .subscribe((status) => {
