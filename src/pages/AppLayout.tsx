@@ -26,7 +26,8 @@ import {
   QuickSwitcherModal,
   KeyboardShortcutsModal,
   ConfirmActionModal,
-  ChangeNicknameModal
+  ChangeNicknameModal,
+  WelcomeModal
 } from '@/components/modals';
 import { PersistentEmbedContainer } from '@/components/chat/PersistentEmbedContainer';
 import { cn } from '@/lib/utils';
@@ -38,7 +39,7 @@ import { usePreferencesSync } from '@/hooks/usePreferencesSync';
 
 const AppLayout = () => {
   const navigate = useNavigate();
-  const { user, isLoading } = useAuthStore();
+  const { user, isLoading, isNewUser, setIsNewUser } = useAuthStore();
   const { isMemberSidebarOpen, closeMobileSidebars } = useUIStore();
   const { currentServer, currentChannel, setCurrentChannel, fetchChannels, fetchMembers } = useServerStore();
   const { currentConversation, setCurrentConversation } = useDMStore();
@@ -224,6 +225,7 @@ const AppLayout = () => {
       <KeyboardShortcutsModal />
       <ConfirmActionModal />
       <ChangeNicknameModal />
+      <WelcomeModal open={isNewUser} onClose={() => setIsNewUser(false)} />
       
       {/* Persistent embed container for Twitch/Kick streams */}
       <PersistentEmbedContainer />

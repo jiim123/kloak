@@ -11,12 +11,14 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  isNewUser: boolean;
   
   // Actions
   setUser: (user: User | null) => void;
   setSecretKey: (key: string | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  setIsNewUser: (isNew: boolean) => void;
   
   // Auth methods
   checkAuth: () => Promise<boolean>;
@@ -36,11 +38,13 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isLoading: false,
       error: null,
+      isNewUser: false,
 
       setUser: (user) => set({ user, isAuthenticated: !!user }),
       setSecretKey: (key) => set({ secretKey: key }),
       setLoading: (loading) => set({ isLoading: loading }),
       setError: (error) => set({ error }),
+      setIsNewUser: (isNew) => set({ isNewUser: isNew }),
 
       checkAuth: async () => {
         const { secretKey, login } = get();
@@ -118,7 +122,7 @@ export const useAuthStore = create<AuthState>()(
             last_seen: userData.last_seen as string | null,
           };
 
-          set({ user, secretKey, isAuthenticated: true, isLoading: false });
+          set({ user, secretKey, isAuthenticated: true, isLoading: false, isNewUser: true });
           return { secretKey, user };
         } catch (error) {
           console.error('Registration error:', error);
