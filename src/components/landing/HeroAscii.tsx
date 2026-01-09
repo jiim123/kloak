@@ -221,7 +221,7 @@ export default function HeroAscii() {
             angle={0}
             noise={0}
             innerGlow={0.5}
-            outerGlow={0.5}
+            outerGlow={0.35}
             speed={1}
             scale={0.55}
           />
