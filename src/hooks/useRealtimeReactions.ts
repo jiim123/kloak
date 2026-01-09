@@ -5,7 +5,10 @@ import { useAuthStore } from '@/stores/authStore';
 
 export const useRealtimeReactions = (channelId: string | null) => {
   useEffect(() => {
-    if (!channelId) return;
+    if (!channelId) {
+      console.log('[Realtime] No channelId provided, skipping reactions subscription');
+      return;
+    }
 
     console.log('[Realtime] Setting up reactions subscription for channel:', channelId);
 
@@ -96,8 +99,13 @@ export const useRealtimeReactions = (channelId: string | null) => {
           useMessageStore.getState().updateMessage(oldReaction.message_id, { reactions, channel_id: channelId } as any);
         }
       )
-      .subscribe((status) => {
-        console.log('[Realtime] Reactions subscription status:', status);
+      .subscribe((status, err) => {
+        console.log('[Realtime] Reactions subscription status:', status, err ? `Error: ${err.message}` : '');
+        if (status === 'SUBSCRIBED') {
+          console.log('[Realtime] Successfully subscribed to reactions for channel:', channelId);
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('[Realtime] Channel error for reactions:', err);
+        }
       });
 
     return () => {

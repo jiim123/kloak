@@ -32,7 +32,7 @@ import {
 import { PersistentEmbedContainer } from '@/components/chat/PersistentEmbedContainer';
 import { cn } from '@/lib/utils';
 import { useDMStore } from '@/stores/dmStore';
-import { useRealtimeFriendships, useRealtimeUsers, useRealtimeServer, useRealtimeNotifications, useRealtimeDMs, useUnreadDMs } from '@/hooks';
+import { useRealtimeFriendships, useRealtimeUsers, useRealtimeServer, useRealtimeNotifications, useRealtimeDMs, useUnreadDMs, useRealtimeMessages, useRealtimeReactions } from '@/hooks';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useBackgroundSync } from '@/hooks/useBackgroundSync';
 import { usePreferencesSync } from '@/hooks/usePreferencesSync';
@@ -53,6 +53,10 @@ const AppLayout = () => {
   useRealtimeUsers();
   useRealtimeServer(currentServer?.id || null);
   useRealtimeNotifications(user?.id || null);
+  
+  // Real-time channel messages and reactions - at app level for stability
+  useRealtimeMessages(currentChannel?.id || null);
+  useRealtimeReactions(currentChannel?.id || null);
   
   // Real-time DMs at app level so messages are received even when not viewing DMs
   const { incrementUnread } = useUnreadDMs(user?.id || null);
