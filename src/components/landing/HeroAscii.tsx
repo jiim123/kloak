@@ -217,7 +217,7 @@ export default function HeroAscii() {
         <div className="absolute inset-0">
           <Heatmap
             style={{ width: '100%', height: '100%' }}
-            image="/kloak-logo.svg"
+            image="/logo-k-b.svg"
             colors={[
               "#0f0f0f",
               "#1a1a19",
