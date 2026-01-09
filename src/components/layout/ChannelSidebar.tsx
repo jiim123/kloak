@@ -41,6 +41,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { useUnread } from "@/hooks/useUnread";
 import { StatusSelector } from "@/components/StatusSelector";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { MotionButton } from "@/components/ui/motion-elements";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -506,14 +507,14 @@ export const ChannelSidebar = () => {
       {/* Server header */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <motion.button
+          <MotionButton
             className="h-12 px-4 flex items-center justify-between border-b border-border/50 hover:bg-secondary/50 cursor-pointer w-full text-left transition-colors"
             whileHover={{ backgroundColor: "hsl(var(--secondary) / 0.5)" }}
             whileTap={{ scale: 0.99 }}
           >
             <h2 className="font-semibold text-foreground truncate">{currentServer.name}</h2>
             <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-          </motion.button>
+          </MotionButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56" align="start" sideOffset={0}>
           <DropdownMenuItem onClick={() => openModal("invite", { serverId: currentServer.id })}>
