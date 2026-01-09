@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { Smile, Reply, Pencil, Trash2, Pin, MoreHorizontal, CornerUpLeft, Copy, X } from "lucide-react";
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
+import { Smile, Reply, Pencil, Trash2, Pin, MoreHorizontal, CornerUpLeft, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -9,12 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuthStore } from "@/stores/authStore";
 import { useMessageStore } from "@/stores/messageStore";
@@ -29,6 +24,20 @@ import { DeleteMessageModal } from "@/components/modals/DeleteMessageModal";
 import type { Message, ServerRole } from "@/types";
 import { format } from "date-fns";
 
+// Static data moved outside component
+const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🎉"] as const;
+
+// Role color mapping as a static object for O(1) lookup
+const ROLE_COLORS: Record<string, string> = {
+  owner: "text-yellow-400",
+  admin: "text-red-400",
+  moderator: "text-blue-400",
+};
+
+const getRoleColor = (role?: ServerRole): string => {
+  return role ? ROLE_COLORS[role] || "text-foreground" : "text-foreground";
+};
+
 interface MessageItemProps {
   message: Message;
   isGrouped: boolean;
@@ -37,143 +46,166 @@ interface MessageItemProps {
   onStartEdit?: () => void;
 }
 
-// Track messages that have already been animated to prevent double-animation
+// Use WeakSet-like approach with message creation time to track animations
+// This prevents memory leaks and handles ID changes gracefully
+const getAnimationKey = (id: string, createdAt: string) => `${id}-${createdAt}`;
 const animatedMessages = new Set<string>();
 
-export const MessageItem = ({ message, isGrouped, showNewDivider, isHighlighted, onStartEdit }: MessageItemProps) => {
-  const { user } = useAuthStore();
+export const MessageItem = memo(function MessageItem({
+  message,
+  isGrouped,
+  showNewDivider,
+  isHighlighted,
+  onStartEdit,
+}: MessageItemProps) {
+  // Selectors - only subscribe to what we need
+  const user = useAuthStore((state) => state.user);
   const { setReplyingTo, editMessage, pinMessage, addReaction, removeReaction, removeMessage } = useMessageStore();
-  const { members } = useServerStore();
-  const { compactMode, showTimestamps } = useUIStore();
+  const members = useServerStore((state) => state.members);
+  const compactMode = useUIStore((state) => state.compactMode);
+  const showTimestamps = useUIStore((state) => state.showTimestamps);
   const { getOptimisticStatus, removeOptimisticItem } = useSyncStore();
 
+  // State - consolidated where possible
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
-  const [isHovered, setIsHovered] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showMobileActions, setShowMobileActions] = useState(false);
-  const [isEmojiDropdownOpen, setIsEmojiDropdownOpen] = useState(false);
-  const [isMoreDropdownOpen, setIsMoreDropdownOpen] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Check if this is an optimistic/pending message
-  const optimisticStatus = message.id.startsWith('temp-') ? getOptimisticStatus(message.id) || 'pending' : null;
-  const isPending = optimisticStatus === 'pending';
-  const isFailed = optimisticStatus === 'failed';
-  
-  // Determine if this message should animate (only new messages, not replacements)
-  const shouldAnimate = useRef(!animatedMessages.has(message.id));
-  
-  // Mark message as animated on mount
-  useEffect(() => {
-    animatedMessages.add(message.id);
-    return () => {
-      // Clean up old message IDs periodically (keep set from growing too large)
-      if (animatedMessages.size > 500) {
-        const entries = Array.from(animatedMessages);
-        entries.slice(0, 250).forEach(id => animatedMessages.delete(id));
-      }
-    };
-  }, [message.id]);
-  
-  // Only show pending animation after a delay (for slow connections)
+  const [dropdownState, setDropdownState] = useState({ emoji: false, more: false });
   const [showPendingAnimation, setShowPendingAnimation] = useState(false);
-  
-  useEffect(() => {
-    if (isPending) {
-      const timer = setTimeout(() => {
-        setShowPendingAnimation(true);
-      }, 1000); // Show animation after 1 second
-      return () => clearTimeout(timer);
-    } else {
-      setShowPendingAnimation(false);
-    }
-  }, [isPending]);
 
-  const isOwnMessage = user?.id === message.user_id;
+  // Refs
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const messageRef = useRef<HTMLDivElement>(null);
+
+  // Memoized computations
+  const animationKey = useMemo(() => getAnimationKey(message.id, message.created_at), [message.id, message.created_at]);
+
+  const shouldAnimate = useMemo(() => {
+    if (animatedMessages.has(animationKey)) return false;
+    animatedMessages.add(animationKey);
+    // Cleanup old entries periodically
+    if (animatedMessages.size > 500) {
+      const entries = Array.from(animatedMessages);
+      entries.slice(0, 250).forEach((id) => animatedMessages.delete(id));
+    }
+    return true;
+  }, [animationKey]);
+
+  const optimisticStatus = useMemo(() => {
+    return message.id.startsWith("temp-") ? getOptimisticStatus(message.id) || "pending" : null;
+  }, [message.id, getOptimisticStatus]);
+
+  const isPending = optimisticStatus === "pending";
+  const isFailed = optimisticStatus === "failed";
+
+  const isOwnMessage = useMemo(() => user?.id === message.user_id, [user?.id, message.user_id]);
+
   const messageUser = message.user;
 
-  // Check if current user is mentioned in this message
-  const isMentioned = user?.id && (
-    message.content.includes(`<@${user.id}>`) ||
-    message.content.includes('@everyone') ||
-    message.content.includes('@here')
-  );
+  // Memoize member lookups
+  const { currentMember, messageMember } = useMemo(() => {
+    return {
+      currentMember: members.find((m) => m.user_id === user?.id),
+      messageMember: members.find((m) => m.user_id === message.user_id),
+    };
+  }, [members, user?.id, message.user_id]);
 
-  // Check if current user is admin
-  const currentMember = members.find((m) => m.user_id === user?.id);
-  const isAdmin =
-    currentMember?.role === "owner" || currentMember?.role === "admin" || currentMember?.role === "moderator";
+  const isAdmin = useMemo(() => {
+    const role = currentMember?.role;
+    return role === "owner" || role === "admin" || role === "moderator";
+  }, [currentMember?.role]);
 
-  // Get role color for username
-  const messageMember = members.find((m) => m.user_id === message.user_id);
-  const getRoleColor = (role?: ServerRole): string => {
-    switch (role) {
-      case "owner":
-        return "text-yellow-400";
-      case "admin":
-        return "text-red-400";
-      case "moderator":
-        return "text-blue-400";
-      default:
-        return "text-foreground";
+  const isMentioned = useMemo(() => {
+    if (!user?.id) return false;
+    const content = message.content;
+    return content.includes(`<@${user.id}>`) || content.includes("@everyone") || content.includes("@here");
+  }, [user?.id, message.content]);
+
+  // Memoize formatted timestamp
+  const formattedTime = useMemo(() => format(new Date(message.created_at), "h:mm a"), [message.created_at]);
+
+  const formattedTimestamp = useMemo(() => formatMessageTimestamp(message.created_at), [message.created_at]);
+
+  // Effects
+  useEffect(() => {
+    if (!isPending) {
+      setShowPendingAnimation(false);
+      return;
     }
-  };
+    const timer = setTimeout(() => setShowPendingAnimation(true), 1000);
+    return () => clearTimeout(timer);
+  }, [isPending]);
 
-  // Focus textarea when editing starts
   useEffect(() => {
     if (isEditing && textareaRef.current) {
       textareaRef.current.focus();
       textareaRef.current.setSelectionRange(editContent.length, editContent.length);
     }
-  }, [isEditing]);
+  }, [isEditing, editContent.length]);
 
-  // Start editing externally (for Up arrow)
-  const startEditing = () => {
-    if (isOwnMessage) {
-      setEditContent(message.content);
-      setIsEditing(true);
-      onStartEdit?.();
-    }
-  };
-
-  // Expose startEditing via a custom event
+  // Custom event handler for external edit trigger
   useEffect(() => {
-    const handler = (e: CustomEvent) => {
-      if (e.detail.messageId === message.id) {
-        startEditing();
+    const handler = (e: CustomEvent<{ messageId: string }>) => {
+      if (e.detail.messageId === message.id && isOwnMessage) {
+        setEditContent(message.content);
+        setIsEditing(true);
+        onStartEdit?.();
       }
     };
-    window.addEventListener("startEditMessage" as any, handler);
-    return () => window.removeEventListener("startEditMessage" as any, handler);
-  }, [message.id, isOwnMessage, message.content]);
+    window.addEventListener("startEditMessage" as keyof WindowEventMap, handler as EventListener);
+    return () => window.removeEventListener("startEditMessage" as keyof WindowEventMap, handler as EventListener);
+  }, [message.id, message.content, isOwnMessage, onStartEdit]);
 
-  const handleEdit = async () => {
-    if (editContent.trim() && editContent !== message.content && user) {
-      await editMessage(message.id, editContent.trim(), user.id);
+  // Memoized callbacks
+  const handleEdit = useCallback(async () => {
+    const trimmed = editContent.trim();
+    if (trimmed && trimmed !== message.content && user) {
+      await editMessage(message.id, trimmed, user.id);
     }
     setIsEditing(false);
-  };
+  }, [editContent, message.content, message.id, user, editMessage]);
 
-  const handleCancelEdit = () => {
+  const handleCancelEdit = useCallback(() => {
     setIsEditing(false);
     setEditContent(message.content);
-  };
+  }, [message.content]);
 
-  const handlePin = async () => {
+  const handlePin = useCallback(async () => {
     if (!user) return;
     await pinMessage(message.id, !message.is_pinned, user.id);
-  };
+  }, [user, message.id, message.is_pinned, pinMessage]);
 
-  const handleReactionClick = async (emoji: string, hasReacted: boolean) => {
-    if (!user) return;
-    if (hasReacted) {
-      await removeReaction(message.id, user.id, emoji);
-    } else {
-      await addReaction(message.id, user.id, emoji);
-    }
-  };
+  const handleReactionClick = useCallback(
+    async (emoji: string, hasReacted: boolean) => {
+      if (!user) return;
+      if (hasReacted) {
+        await removeReaction(message.id, user.id, emoji);
+      } else {
+        await addReaction(message.id, user.id, emoji);
+      }
+    },
+    [user, message.id, addReaction, removeReaction],
+  );
+
+  const handleAddReaction = useCallback(
+    (emoji: string) => {
+      if (user) {
+        addReaction(message.id, user.id, emoji);
+      }
+      setDropdownState((prev) => ({ ...prev, emoji: false }));
+    },
+    [user, message.id, addReaction],
+  );
+
+  const handleCopyText = useCallback(() => {
+    navigator.clipboard.writeText(message.content);
+  }, [message.content]);
+
+  const handleCopyMessageId = useCallback(() => {
+    navigator.clipboard.writeText(message.id);
+  }, [message.id]);
 
   // Long press handlers for mobile
   const handleTouchStart = useCallback(() => {
@@ -182,21 +214,54 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, isHighlighted,
     }, 500);
   }, []);
 
-  const handleTouchEnd = useCallback(() => {
+  const clearLongPress = useCallback(() => {
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
   }, []);
 
-  const handleTouchMove = useCallback(() => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-  }, []);
+  const handleStartEditing = useCallback(() => {
+    setEditContent(message.content);
+    setIsEditing(true);
+  }, [message.content]);
 
-  const quickReactions = ["👍", "❤️", "😂", "😮", "😢", "🎉"];
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleEdit();
+      }
+      if (e.key === "Escape") {
+        handleCancelEdit();
+      }
+    },
+    [handleEdit, handleCancelEdit],
+  );
+
+  // Computed class names
+  const outerClassName = useMemo(() => {
+    const base = "px-2";
+    const padding = compactMode ? "py-0" : isGrouped ? "py-0.5" : "py-1";
+    const animation = shouldAnimate ? "animate-message-slide-in" : "";
+    return `${base} ${padding} ${animation}`.trim();
+  }, [compactMode, isGrouped, shouldAnimate]);
+
+  const innerClassName = useMemo(() => {
+    const classes = [
+      "group relative flex px-3 rounded-lg transition-colors duration-200 hover:bg-muted/40",
+      compactMode ? "gap-2 py-0.5" : "gap-3 py-1.5",
+    ];
+    if (showPendingAnimation) classes.push("animate-pulse opacity-60");
+    if (isFailed) classes.push("bg-destructive/5 border border-destructive/20");
+    if (isMentioned) classes.push("bg-primary/10 border-l-2 border-l-primary");
+    if (isHighlighted) classes.push("animate-highlight-message bg-primary/20 ring-2 ring-primary/50");
+    return classes.join(" ");
+  }, [compactMode, showPendingAnimation, isFailed, isMentioned, isHighlighted]);
+
+  const roleColor = useMemo(() => getRoleColor(messageMember?.role), [messageMember?.role]);
+
+  const displayName = messageMember?.nickname || messageUser?.display_name || messageUser?.username;
 
   return (
     <>
@@ -208,52 +273,41 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, isHighlighted,
         </div>
       )}
 
-      {/* Outer wrapper with padding from edges */}
       <div
+        ref={messageRef}
         id={`message-${message.id}`}
-        className={`px-2 ${compactMode ? "py-0" : isGrouped ? "py-0.5" : "py-1"} ${shouldAnimate.current ? "animate-message-slide-in" : ""}`}
-        style={shouldAnimate.current ? { animationFillMode: 'both' } : undefined}
+        className={outerClassName}
+        style={shouldAnimate ? { animationFillMode: "both" } : undefined}
       >
-        {/* Inner wrapper with hover effect and rounded borders */}
         <div
-          className={`group relative flex px-3 rounded-lg transition-all duration-200 hover:bg-muted/40 ${compactMode ? "gap-2 py-0.5" : "gap-3 py-1.5"} ${showPendingAnimation ? "animate-pulse opacity-60" : ""} ${isFailed ? "bg-destructive/5 border border-destructive/20" : ""} ${isMentioned ? "bg-primary/10 border-l-2 border-l-primary" : ""} ${isHighlighted ? "animate-highlight-message bg-primary/20 ring-2 ring-primary/50" : ""}`}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
+          className={innerClassName}
           onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
-          onTouchMove={handleTouchMove}
+          onTouchEnd={clearLongPress}
+          onTouchMove={clearLongPress}
         >
-          {/* Avatar or spacer - hidden in compact mode for grouped messages */}
+          {/* Avatar / Timestamp column */}
           {compactMode ? (
-            // Compact mode: show inline timestamp instead of avatar
             <div className="w-12 flex-shrink-0 flex items-start pt-0.5">
-              {showTimestamps ? (
-                <span className={`text-[10px] text-muted-foreground ${isGrouped && !isHovered ? "opacity-0" : "opacity-100"} transition-opacity duration-150`}>
-                  {format(new Date(message.created_at), "h:mm a")}
-                </span>
-              ) : (
-                <span className={`text-[10px] text-muted-foreground ${isHovered ? "opacity-100" : "opacity-0"} transition-opacity duration-150`}>
-                  {format(new Date(message.created_at), "h:mm a")}
-                </span>
-              )}
+              <span
+                className={`text-[10px] text-muted-foreground transition-opacity duration-150 ${
+                  showTimestamps || !isGrouped ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                }`}
+              >
+                {formattedTime}
+              </span>
             </div>
           ) : (
-            // Normal mode: show avatar
             <div className="w-10 flex-shrink-0">
-              {!isGrouped && messageUser && (
+              {!isGrouped && messageUser ? (
                 <Avatar className="w-10 h-10 cursor-pointer">
                   <AvatarImage src={messageUser.avatar_url || undefined} />
                   <AvatarFallback style={{ backgroundColor: messageUser.banner_color || "#5865F2" }}>
                     {messageUser.username[0].toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-              )}
-              {/* Show timestamp on hover for grouped messages */}
-              {isGrouped && (
-                <span
-                  className={`text-[10px] text-muted-foreground transition-opacity duration-150 ${isHovered ? "opacity-100" : "opacity-0"}`}
-                >
-                  {format(new Date(message.created_at), "h:mm a")}
+              ) : (
+                <span className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                  {formattedTime}
                 </span>
               )}
             </div>
@@ -261,29 +315,24 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, isHighlighted,
 
           {/* Content */}
           <div className="flex-1 min-w-0">
-            {/* Header (username + timestamp) - only on first message of group in normal mode, or inline in compact */}
+            {/* Header */}
             {compactMode ? (
-              // Compact mode: inline username before content
               <span className="inline">
                 <span
-                  className={`text-sm font-semibold tracking-tight hover:underline cursor-pointer mr-1.5 ${getRoleColor(messageMember?.role)}`}
+                  className={`text-sm font-semibold tracking-tight hover:underline cursor-pointer mr-1.5 ${roleColor}`}
                 >
-                  {messageMember?.nickname || messageUser?.display_name || messageUser?.username}
+                  {displayName}
                 </span>
                 {message.is_pinned && <Pin className="w-3 h-3 text-muted-foreground inline mr-1" />}
               </span>
             ) : (
-              // Normal mode: header row
-              !isGrouped && messageUser && (
+              !isGrouped &&
+              messageUser && (
                 <div className="flex items-baseline gap-2 mb-0.5">
-                  <span
-                    className={`text-sm font-semibold tracking-tight hover:underline cursor-pointer ${getRoleColor(messageMember?.role)}`}
-                  >
-                    {messageMember?.nickname || messageUser.display_name || messageUser.username}
+                  <span className={`text-sm font-semibold tracking-tight hover:underline cursor-pointer ${roleColor}`}>
+                    {displayName}
                   </span>
-                  {showTimestamps && (
-                    <span className="text-[11px] text-muted-foreground">{formatMessageTimestamp(message.created_at)}</span>
-                  )}
+                  {showTimestamps && <span className="text-[11px] text-muted-foreground">{formattedTimestamp}</span>}
                   {message.is_pinned && <Pin className="w-3 h-3 text-muted-foreground" />}
                 </div>
               )
@@ -307,15 +356,7 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, isHighlighted,
                   value={editContent}
                   onChange={(e) => setEditContent(e.target.value)}
                   className="min-h-[60px] resize-none text-sm"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleEdit();
-                    }
-                    if (e.key === "Escape") {
-                      handleCancelEdit();
-                    }
-                  }}
+                  onKeyDown={handleKeyDown}
                 />
                 <div className="flex gap-2 text-[11px]">
                   <span className="text-muted-foreground">
@@ -323,8 +364,7 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, isHighlighted,
                     <button className="text-primary hover:underline" onClick={handleCancelEdit}>
                       cancel
                     </button>
-                    {" • "}
-                    enter to{" "}
+                    {" • "}enter to{" "}
                     <button className="text-primary hover:underline" onClick={handleEdit}>
                       save
                     </button>
@@ -347,13 +387,11 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, isHighlighted,
               </Tooltip>
             )}
 
-            {/* Optimistic status indicator - only show for failed messages */}
+            {/* Failed message indicator */}
             {isFailed && (
               <OptimisticMessageIndicator
                 status="failed"
-                onRetry={() => {
-                  removeOptimisticItem(message.id);
-                }}
+                onRetry={() => removeOptimisticItem(message.id)}
                 onCancel={() => {
                   removeMessage(message.id);
                   removeOptimisticItem(message.id);
@@ -372,6 +410,7 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, isHighlighted,
                         src={attachment.file_url}
                         alt={attachment.file_name}
                         className="max-w-[400px] max-h-[300px] rounded-lg cursor-pointer hover:opacity-90"
+                        loading="lazy"
                       />
                     ) : (
                       <a
@@ -400,7 +439,7 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, isHighlighted,
                   <button
                     key={reaction.emoji}
                     onClick={() => handleReactionClick(reaction.emoji, reaction.hasReacted)}
-                    className={`flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border transition-all duration-200 animate-reaction-pop ${
+                    className={`flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border transition-all duration-200 ${
                       reaction.hasReacted
                         ? "bg-primary/20 border-primary text-primary"
                         : "bg-secondary border-transparent hover:border-border"
@@ -414,11 +453,13 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, isHighlighted,
             )}
           </div>
 
-          {/* Hover actions - Desktop */}
-          {(isHovered || isEmojiDropdownOpen || isMoreDropdownOpen) && !isEditing && (
-            <div className="absolute right-2 -top-3 hidden md:flex items-center gap-0.5 bg-background border border-border rounded-lg shadow-lg p-0.5">
-              {/* Quick reactions */}
-              <DropdownMenu open={isEmojiDropdownOpen} onOpenChange={setIsEmojiDropdownOpen}>
+          {/* Hover actions - Desktop (CSS-driven visibility) */}
+          {!isEditing && (
+            <div className="absolute right-2 -top-3 hidden md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 md:flex items-center gap-0.5 bg-background border border-border rounded-lg shadow-lg p-0.5 transition-opacity duration-150">
+              <DropdownMenu
+                open={dropdownState.emoji}
+                onOpenChange={(open) => setDropdownState((s) => ({ ...s, emoji: open }))}
+              >
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="w-7 h-7 hover:bg-muted">
                     <Smile className="w-4 h-4" />
@@ -426,13 +467,10 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, isHighlighted,
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">
                   <div className="flex gap-1 p-1">
-                    {quickReactions.map((emoji) => (
+                    {QUICK_REACTIONS.map((emoji) => (
                       <button
                         key={emoji}
-                        onClick={() => {
-                          user && addReaction(message.id, user.id, emoji);
-                          setIsEmojiDropdownOpen(false);
-                        }}
+                        onClick={() => handleAddReaction(emoji)}
                         className="text-xl hover:scale-125 transition-transform p-1"
                       >
                         {emoji}
@@ -459,15 +497,7 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, isHighlighted,
               {isOwnMessage && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="w-7 h-7 hover:bg-muted"
-                      onClick={() => {
-                        setEditContent(message.content);
-                        setIsEditing(true);
-                      }}
-                    >
+                    <Button variant="ghost" size="icon" className="w-7 h-7 hover:bg-muted" onClick={handleStartEditing}>
                       <Pencil className="w-4 h-4" />
                     </Button>
                   </TooltipTrigger>
@@ -502,29 +532,18 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, isHighlighted,
                 </Tooltip>
               )}
 
-              <DropdownMenu open={isMoreDropdownOpen} onOpenChange={setIsMoreDropdownOpen}>
+              <DropdownMenu
+                open={dropdownState.more}
+                onOpenChange={(open) => setDropdownState((s) => ({ ...s, more: open }))}
+              >
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="w-7 h-7 hover:bg-muted">
                     <MoreHorizontal className="w-4 h-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onClick={() => {
-                      navigator.clipboard.writeText(message.content);
-                      setIsMoreDropdownOpen(false);
-                    }}
-                  >
-                    Copy Text
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      navigator.clipboard.writeText(message.id);
-                      setIsMoreDropdownOpen(false);
-                    }}
-                  >
-                    Copy Message ID
-                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleCopyText}>Copy Text</DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleCopyMessageId}>Copy Message ID</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -538,15 +557,14 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, isHighlighted,
           <DrawerHeader className="pb-2">
             <DrawerTitle className="text-sm font-medium text-muted-foreground">Message Actions</DrawerTitle>
           </DrawerHeader>
-          
+
           <div className="px-4 pb-8">
-            {/* Quick reactions */}
             <div className="flex justify-center gap-3 mb-4 pb-4 border-b border-border">
-              {quickReactions.map((emoji) => (
+              {QUICK_REACTIONS.map((emoji) => (
                 <button
                   key={emoji}
                   onClick={() => {
-                    user && addReaction(message.id, user.id, emoji);
+                    handleAddReaction(emoji);
                     setShowMobileActions(false);
                   }}
                   className="text-2xl p-2 hover:bg-accent rounded-full active:scale-90 transition-transform"
@@ -556,7 +574,6 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, isHighlighted,
               ))}
             </div>
 
-            {/* Action buttons */}
             <div className="space-y-1">
               <button
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-accent active:bg-accent text-left"
@@ -573,8 +590,7 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, isHighlighted,
                 <button
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-accent active:bg-accent text-left"
                   onClick={() => {
-                    setEditContent(message.content);
-                    setIsEditing(true);
+                    handleStartEditing();
                     setShowMobileActions(false);
                   }}
                 >
@@ -586,7 +602,7 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, isHighlighted,
               <button
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-accent active:bg-accent text-left"
                 onClick={() => {
-                  navigator.clipboard.writeText(message.content);
+                  handleCopyText();
                   setShowMobileActions(false);
                 }}
               >
@@ -628,4 +644,4 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, isHighlighted,
       <DeleteMessageModal message={showDeleteModal ? message : null} onClose={() => setShowDeleteModal(false)} />
     </>
   );
-};
+});
