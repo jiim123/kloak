@@ -126,10 +126,10 @@ export default function HeroAscii() {
             <div className="hidden md:block w-px h-24 bg-gradient-to-b from-primary/50 to-transparent" />
             <div>
               <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-semibold text-foreground leading-[0.95] tracking-tight">
-                Your Chat.
+                Finally
               </h1>
               <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-normal leading-[0.95] tracking-tight">
-                <span className="text-primary">Your Key.</span>
+                <span className="text-primary">a Home for Your Community.</span>
               </h1>
             </div>
           </div>
@@ -144,8 +144,7 @@ export default function HeroAscii() {
           {/* Description */}
           <div className="relative max-w-lg mb-10">
             <p className="text-lg text-muted-foreground leading-relaxed">
-              One cryptographic key. That's it. No accounts, no data harvesting, no corporate surveillance. Just you and
-              your conversations.
+              Your servers, your chats, your rules. No tracking, no ads, no fine print. Just your people.
             </p>
             <div className="hidden md:block absolute -right-8 top-0 text-[8px] font-mono text-primary/40">
               <div className="border-l border-primary/20 pl-2">◇</div>
