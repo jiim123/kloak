@@ -134,13 +134,6 @@ export default function HeroAscii() {
             </div>
           </div>
 
-          {/* Decorative dots pattern */}
-          <div className="hidden md:grid grid-cols-10 gap-1 mb-8">
-            {Array.from({ length: 40 }).map((_, i) => (
-              <div key={i} className="w-1 h-1 rounded-full bg-primary/20" />
-            ))}
-          </div>
-
           {/* Description */}
           <div className="relative max-w-lg mb-10">
             <p className="text-lg text-muted-foreground leading-relaxed">
