@@ -234,7 +234,7 @@ const Auth = () => {
                   </TabsTrigger>
                   <TabsTrigger value="login">
                     <Key className="w-4 h-4 mr-2" />
-                    I Have a Key
+                    Login with Key
                   </TabsTrigger>
                 </TabsList>
 
