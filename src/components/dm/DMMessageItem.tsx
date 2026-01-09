@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Reply, Pencil, Trash2, Copy, CornerUpLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -19,6 +19,9 @@ interface DMMessageItemProps {
   onReply: (message: DirectMessage) => void;
 }
 
+// Track messages that have already been animated to prevent double-animation
+const animatedDMMessages = new Set<string>();
+
 export const DMMessageItem = ({ message, isFirst, onReply }: DMMessageItemProps) => {
   const { user } = useAuthStore();
   const { editMessage, deleteMessage, addReaction, removeReaction } = useDMStore();
@@ -28,6 +31,20 @@ export const DMMessageItem = ({ message, isFirst, onReply }: DMMessageItemProps)
   const [showMobileActions, setShowMobileActions] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Determine if this message should animate (only new messages, not replacements)
+  const shouldAnimate = useRef(!animatedDMMessages.has(message.id));
+  
+  // Mark message as animated on mount
+  useEffect(() => {
+    animatedDMMessages.add(message.id);
+    return () => {
+      if (animatedDMMessages.size > 500) {
+        const entries = Array.from(animatedDMMessages);
+        entries.slice(0, 250).forEach(id => animatedDMMessages.delete(id));
+      }
+    };
+  }, [message.id]);
 
   const isOwnMessage = user?.id === message.sender_id;
 
@@ -95,11 +112,12 @@ export const DMMessageItem = ({ message, isFirst, onReply }: DMMessageItemProps)
     <>
       <div
         className={cn(
-          'group flex gap-4 py-0.5 px-2 -mx-2 rounded hover:bg-secondary/30 transition-all duration-200 animate-message-slide-in',
+          'group flex gap-4 py-0.5 px-2 -mx-2 rounded hover:bg-secondary/30 transition-all duration-200',
+          shouldAnimate.current && 'animate-message-slide-in',
           isFirst && 'mt-4 pt-1',
           isMentioned && 'bg-primary/10 border-l-2 border-l-primary'
         )}
-        style={{ animationFillMode: 'both' }}
+        style={shouldAnimate.current ? { animationFillMode: 'both' } : undefined}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         onTouchMove={handleTouchMove}

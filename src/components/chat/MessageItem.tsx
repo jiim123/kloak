@@ -37,6 +37,9 @@ interface MessageItemProps {
   onStartEdit?: () => void;
 }
 
+// Track messages that have already been animated to prevent double-animation
+const animatedMessages = new Set<string>();
+
 export const MessageItem = ({ message, isGrouped, showNewDivider, isHighlighted, onStartEdit }: MessageItemProps) => {
   const { user } = useAuthStore();
   const { setReplyingTo, editMessage, pinMessage, addReaction, removeReaction, removeMessage } = useMessageStore();
@@ -58,6 +61,21 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, isHighlighted,
   const optimisticStatus = message.id.startsWith('temp-') ? getOptimisticStatus(message.id) || 'pending' : null;
   const isPending = optimisticStatus === 'pending';
   const isFailed = optimisticStatus === 'failed';
+  
+  // Determine if this message should animate (only new messages, not replacements)
+  const shouldAnimate = useRef(!animatedMessages.has(message.id));
+  
+  // Mark message as animated on mount
+  useEffect(() => {
+    animatedMessages.add(message.id);
+    return () => {
+      // Clean up old message IDs periodically (keep set from growing too large)
+      if (animatedMessages.size > 500) {
+        const entries = Array.from(animatedMessages);
+        entries.slice(0, 250).forEach(id => animatedMessages.delete(id));
+      }
+    };
+  }, [message.id]);
   
   // Only show pending animation after a delay (for slow connections)
   const [showPendingAnimation, setShowPendingAnimation] = useState(false);
@@ -193,8 +211,8 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, isHighlighted,
       {/* Outer wrapper with padding from edges */}
       <div
         id={`message-${message.id}`}
-        className={`px-2 ${compactMode ? "py-0" : isGrouped ? "py-0.5" : "py-1"} animate-message-slide-in`}
-        style={{ animationFillMode: 'both' }}
+        className={`px-2 ${compactMode ? "py-0" : isGrouped ? "py-0.5" : "py-1"} ${shouldAnimate.current ? "animate-message-slide-in" : ""}`}
+        style={shouldAnimate.current ? { animationFillMode: 'both' } : undefined}
       >
         {/* Inner wrapper with hover effect and rounded borders */}
         <div
