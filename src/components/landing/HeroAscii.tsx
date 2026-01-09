@@ -128,7 +128,7 @@ export default function HeroAscii() {
               <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-semibold text-foreground leading-[0.95] tracking-tight">
                 Finally a Home for
               </h1>
-              <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-italic leading-[0.95] tracking-tight">
+              <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-normal italic leading-[0.95] tracking-tight">
                 <span className="text-primary">Your Community.</span>
               </h1>
             </div>
