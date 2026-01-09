@@ -95,10 +95,11 @@ export const DMMessageItem = ({ message, isFirst, onReply }: DMMessageItemProps)
     <>
       <div
         className={cn(
-          'group flex gap-4 py-0.5 px-2 -mx-2 rounded hover:bg-secondary/30 transition-smooth',
+          'group flex gap-4 py-0.5 px-2 -mx-2 rounded hover:bg-secondary/30 transition-all duration-200 animate-message-slide-in',
           isFirst && 'mt-4 pt-1',
           isMentioned && 'bg-primary/10 border-l-2 border-l-primary'
         )}
+        style={{ animationFillMode: 'both' }}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         onTouchMove={handleTouchMove}
@@ -197,7 +198,7 @@ export const DMMessageItem = ({ message, isFirst, onReply }: DMMessageItemProps)
                   key={reaction.emoji}
                   onClick={() => handleReactionClick(reaction.emoji)}
                   className={cn(
-                    'flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border transition-colors',
+                    'flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border transition-all duration-200 animate-reaction-pop',
                     reaction.hasReacted
                       ? 'bg-primary/20 border-primary text-primary'
                       : 'bg-secondary border-transparent hover:border-border'

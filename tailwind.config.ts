@@ -106,6 +106,27 @@ export default {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.7" },
         },
+        "message-slide-in": {
+          from: { opacity: "0", transform: "translateY(8px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+        "reaction-pop": {
+          "0%": { transform: "scale(0.8)", opacity: "0" },
+          "50%": { transform: "scale(1.1)" },
+          "100%": { transform: "scale(1)", opacity: "1" },
+        },
+        "toast-slide-in": {
+          from: { opacity: "0", transform: "translateX(100%)" },
+          to: { opacity: "1", transform: "translateX(0)" },
+        },
+        "toast-slide-out": {
+          from: { opacity: "1", transform: "translateX(0)" },
+          to: { opacity: "0", transform: "translateX(100%)" },
+        },
+        "notification-enter": {
+          from: { opacity: "0", transform: "translateY(-4px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -114,6 +135,11 @@ export default {
         "slide-in-right": "slide-in-right 0.2s ease-out",
         "slide-in-left": "slide-in-left 0.2s ease-out",
         "pulse-subtle": "pulse-subtle 2s ease-in-out infinite",
+        "message-slide-in": "message-slide-in 0.25s ease-out",
+        "reaction-pop": "reaction-pop 0.2s ease-out",
+        "toast-slide-in": "toast-slide-in 0.3s ease-out",
+        "toast-slide-out": "toast-slide-out 0.25s ease-in forwards",
+        "notification-enter": "notification-enter 0.2s ease-out",
       },
     },
   },

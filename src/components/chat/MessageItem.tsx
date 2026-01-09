@@ -193,11 +193,12 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, isHighlighted,
       {/* Outer wrapper with padding from edges */}
       <div
         id={`message-${message.id}`}
-        className={`px-2 ${compactMode ? "py-0" : isGrouped ? "py-0.5" : "py-1"}`}
+        className={`px-2 ${compactMode ? "py-0" : isGrouped ? "py-0.5" : "py-1"} animate-message-slide-in`}
+        style={{ animationFillMode: 'both' }}
       >
         {/* Inner wrapper with hover effect and rounded borders */}
         <div
-          className={`group relative flex px-3 rounded-lg transition-all duration-300 hover:bg-muted/40 ${compactMode ? "gap-2 py-0.5" : "gap-3 py-1.5"} ${showPendingAnimation ? "animate-pulse opacity-60" : ""} ${isFailed ? "bg-destructive/5 border border-destructive/20" : ""} ${isMentioned ? "bg-primary/10 border-l-2 border-l-primary" : ""} ${isHighlighted ? "animate-highlight-message bg-primary/20 ring-2 ring-primary/50" : ""}`}
+          className={`group relative flex px-3 rounded-lg transition-all duration-200 hover:bg-muted/40 ${compactMode ? "gap-2 py-0.5" : "gap-3 py-1.5"} ${showPendingAnimation ? "animate-pulse opacity-60" : ""} ${isFailed ? "bg-destructive/5 border border-destructive/20" : ""} ${isMentioned ? "bg-primary/10 border-l-2 border-l-primary" : ""} ${isHighlighted ? "animate-highlight-message bg-primary/20 ring-2 ring-primary/50" : ""}`}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
           onTouchStart={handleTouchStart}
@@ -381,7 +382,7 @@ export const MessageItem = ({ message, isGrouped, showNewDivider, isHighlighted,
                   <button
                     key={reaction.emoji}
                     onClick={() => handleReactionClick(reaction.emoji, reaction.hasReacted)}
-                    className={`flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border transition-colors ${
+                    className={`flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border transition-all duration-200 animate-reaction-pop ${
                       reaction.hasReacted
                         ? "bg-primary/20 border-primary text-primary"
                         : "bg-secondary border-transparent hover:border-border"
