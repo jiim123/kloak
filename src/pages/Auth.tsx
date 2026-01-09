@@ -342,7 +342,7 @@ const Auth = () => {
                         </Button>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Your 64-character hexadecimal key
+                        Forgot your key? Unfortunately, keys cannot be recovered — this is by design for your privacy.
                       </p>
                     </div>
 
