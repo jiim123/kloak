@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useMessageStore } from '@/stores/messageStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -24,19 +24,6 @@ const getCachedUser = async (userId: string): Promise<User | null> => {
 };
 
 export const useRealtimeMessages = (channelId: string | null) => {
-  const storeRef = useRef(useMessageStore.getState());
-  const authRef = useRef(useAuthStore.getState());
-  
-  useEffect(() => {
-    const unsub1 = useMessageStore.subscribe((state) => {
-      storeRef.current = state;
-    });
-    const unsub2 = useAuthStore.subscribe((state) => {
-      authRef.current = state;
-    });
-    return () => { unsub1(); unsub2(); };
-  }, []);
-
   useEffect(() => {
     if (!channelId) return;
 
@@ -56,9 +43,11 @@ export const useRealtimeMessages = (channelId: string | null) => {
           const newMsg = payload.new as any;
           console.log('[Realtime] New message received:', newMsg.id);
           
-          // Skip if this is our own message (already added optimistically)
-          const currentUser = authRef.current.user;
-          const existingMessages = storeRef.current.messagesByChannel[channelId]?.messages || [];
+          // Get current state directly from store (not from stale ref)
+          const store = useMessageStore.getState();
+          const existingMessages = store.messagesByChannel[channelId]?.messages || [];
+          
+          // Skip if this message already exists
           if (existingMessages.some(m => m.id === newMsg.id)) {
             console.log('[Realtime] Message already exists, skipping:', newMsg.id);
             return;
@@ -79,14 +68,17 @@ export const useRealtimeMessages = (channelId: string | null) => {
             edited_at: newMsg.edited_at,
             created_at: newMsg.created_at,
             user,
-            reply_to: undefined, // Will be populated if needed
+            reply_to: undefined,
             attachments: [],
             reactions: [],
           };
           
           // If there's a reply, try to get it from existing messages
           if (newMsg.reply_to_id) {
-            const replyMsg = existingMessages.find(m => m.id === newMsg.reply_to_id);
+            // Get fresh state again since time may have passed
+            const freshStore = useMessageStore.getState();
+            const freshMessages = freshStore.messagesByChannel[channelId]?.messages || [];
+            const replyMsg = freshMessages.find(m => m.id === newMsg.reply_to_id);
             if (replyMsg) {
               message.reply_to = {
                 id: replyMsg.id,
@@ -96,7 +88,8 @@ export const useRealtimeMessages = (channelId: string | null) => {
             }
           }
           
-          storeRef.current.addMessage(message);
+          // Add message using the store action
+          useMessageStore.getState().addMessage(message);
         }
       )
       .on(
@@ -112,7 +105,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
           console.log('[Realtime] Message updated:', updated.id);
           
           // Use payload data directly for updates
-          storeRef.current.updateMessage(updated.id, {
+          useMessageStore.getState().updateMessage(updated.id, {
             content: updated.content,
             edited_at: updated.edited_at,
             is_pinned: updated.is_pinned,
@@ -131,7 +124,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
           const oldData = payload.old as { id?: string };
           console.log('[Realtime] Message deleted:', oldData.id);
           if (oldData.id) {
-            storeRef.current.removeMessage(oldData.id);
+            useMessageStore.getState().removeMessage(oldData.id);
           }
         }
       )
