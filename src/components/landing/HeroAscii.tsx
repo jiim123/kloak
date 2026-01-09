@@ -157,12 +157,12 @@ export default function HeroAscii() {
               <button className="group relative px-8 py-3 bg-primary text-primary-foreground font-medium transition-all duration-300 hover:bg-primary/90">
                 <span className="absolute -top-px -left-px w-2 h-2 border-l border-t border-primary-foreground/30" />
                 <span className="absolute -top-px -right-px w-2 h-2 border-r border-t border-primary-foreground/30" />
-                Get Started
+                Start using Kloak
               </button>
             </Link>
             <Link to="/philosophy">
               <button className="px-8 py-3 border border-border text-foreground font-medium transition-all duration-300 hover:bg-muted hover:border-primary/50">
-                Learn More
+                Our Philosophy
               </button>
             </Link>
           </div>
