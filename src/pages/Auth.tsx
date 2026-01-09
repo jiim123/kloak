@@ -25,7 +25,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { WelcomeModal } from "@/components/modals/WelcomeModal";
-import { GrainGradient } from "@paper-design/shaders-react";
+import { NavigationMenu } from "@/components/layout/NavigationMenu";
 import { Footer } from "@/components/ui/footer-section";
 
 type AuthStep = "form" | "key-display";
@@ -206,32 +206,18 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      {/* Background shader */}
-      <div className="absolute inset-0 z-0">
-        <GrainGradient
-          style={{ width: "100%", height: "100%" }}
-          colors={["#6b6557", "#8a8274", "#a39e8c"]}
-          colorBack="#0d0d0c"
-          softness={0.76}
-          intensity={0.08}
-          noise={0.5}
-          shape="wave"
-          speed={1}
-          scale={1.68}
-          rotation={304}
-          offsetX={-0.06}
-        />
-      </div>
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Navigation */}
+      <NavigationMenu />
 
-      <div className="flex-1 flex items-center justify-center w-full">
-        <div className="w-full max-w-md relative z-10">
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
           {/* Logo and branding */}
           <div className="text-center mb-8">
             <Link to="/">
               <img src={kloakLogo} alt="Kloak" className="h-12 mx-auto mb-4" />
             </Link>
-            <p className="text-white mt-1 font-medium">Your community. Your conversations. Your business.</p>
+            <p className="text-foreground mt-1 font-medium">Your community. Your conversations. Your business.</p>
           </div>
 
           {/* Auth card */}
@@ -429,9 +415,7 @@ const Auth = () => {
       </div>
 
       {/* Footer */}
-      <div className="relative z-10 w-full">
-        <Footer />
-      </div>
+      <Footer />
 
       {/* Welcome Modal for new users */}
       <WelcomeModal open={showWelcomeModal} onClose={handleWelcomeClose} />
