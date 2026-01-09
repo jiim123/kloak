@@ -90,15 +90,21 @@ export default function HeroAscii() {
   return (
     <section className="relative min-h-[100dvh] flex items-center justify-center overflow-hidden bg-background">
       {/* Mesh Gradient Background */}
-      <div className="absolute inset-0 z-0 opacity-40">
+      <div className="absolute inset-0 z-0 opacity-60">
         <MeshGradient
           style={{ width: '100%', height: '100%' }}
-          colors={["#0a0a0a", "#1a1a2e", "#16213e", "#0f3460", "#1a1a1a"]}
-          distortion={0.6}
-          swirl={0.15}
+          colors={[
+            "#0f0f0f", // --neutral-0 dark background
+            "#1a1a19", // --neutral-50 very dark grey
+            "#57564F", // --brand-500 olive-grey accent
+            "#2b2b28", // --neutral-100 dark panel  
+            "#3d3d38"  // --brand-300 darker olive
+          ]}
+          distortion={0.8}
+          swirl={0.1}
           grainMixer={0}
           grainOverlay={0}
-          speed={0.3}
+          speed={0.48}
         />
       </div>
 
