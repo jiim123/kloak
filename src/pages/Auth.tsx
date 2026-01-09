@@ -423,7 +423,7 @@ const Auth = () => {
 
                 {/* Continue button */}
                 <Button className="w-full" disabled={!keyConfirmed} onClick={continueToApp}>
-                  Continue to App
+                  Continue to Kloak
                 </Button>
               </div>
             )}
