@@ -302,6 +302,10 @@ const Auth = () => {
                       By creating an account, you agree to our{' '}
                       <Link to="/terms" className="text-foreground hover:underline">
                         Terms of Service
+                      </Link>{' '}
+                      and{' '}
+                      <Link to="/privacy" className="text-foreground hover:underline">
+                        Privacy Policy
                       </Link>
                     </p>
                   </form>
