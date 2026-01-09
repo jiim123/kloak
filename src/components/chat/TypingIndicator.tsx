@@ -1,3 +1,4 @@
+import { motion, AnimatePresence } from 'framer-motion';
 import type { TypingUser } from '@/types';
 
 interface TypingIndicatorProps {
@@ -20,13 +21,33 @@ export const TypingIndicator = ({ typingUsers }: TypingIndicatorProps) => {
   };
 
   return (
-    <div className="h-6 px-4 flex items-center gap-2 text-sm text-muted-foreground">
-      <div className="flex gap-0.5">
-        <span className="w-2 h-2 bg-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-        <span className="w-2 h-2 bg-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-        <span className="w-2 h-2 bg-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-      </div>
-      <span>{formatTypingText()}...</span>
-    </div>
+    <AnimatePresence>
+      <motion.div 
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 8 }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
+        className="h-6 px-4 flex items-center gap-2 text-sm text-muted-foreground"
+      >
+        <div className="flex gap-0.5">
+          <motion.span 
+            className="w-2 h-2 bg-foreground/60 rounded-full"
+            animate={{ opacity: [0.4, 1, 0.4] }}
+            transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut', delay: 0 }}
+          />
+          <motion.span 
+            className="w-2 h-2 bg-foreground/60 rounded-full"
+            animate={{ opacity: [0.4, 1, 0.4] }}
+            transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut', delay: 0.2 }}
+          />
+          <motion.span 
+            className="w-2 h-2 bg-foreground/60 rounded-full"
+            animate={{ opacity: [0.4, 1, 0.4] }}
+            transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut', delay: 0.4 }}
+          />
+        </div>
+        <span>{formatTypingText()}...</span>
+      </motion.div>
+    </AnimatePresence>
   );
 };

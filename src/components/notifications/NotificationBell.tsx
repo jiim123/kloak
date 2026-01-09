@@ -175,10 +175,11 @@ export const NotificationBell = () => {
                   <div
                     key={notification.id}
                     className={cn(
-                      "group flex flex-col gap-2 px-4 py-3 transition-colors",
+                      "group flex flex-col gap-2 px-4 py-3 transition-colors animate-notification-enter",
                       !notification.is_read && "bg-accent/30",
                       !showFriendActions && "cursor-pointer hover:bg-accent/50"
                     )}
+                    style={{ animationDelay: `${notifications.indexOf(notification) * 50}ms`, animationFillMode: 'both' }}
                     onClick={() => !showFriendActions && handleNotificationClick(notification.id, notification.link)}
                   >
                     <div className="flex items-start gap-3">
