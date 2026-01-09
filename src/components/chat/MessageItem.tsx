@@ -27,7 +27,6 @@ import { format } from "date-fns";
 // Static data moved outside component
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🎉"] as const;
 
-// Role color mapping as a static object for O(1) lookup
 const ROLE_COLORS: Record<string, string> = {
   owner: "text-yellow-400",
   admin: "text-red-400",
@@ -46,10 +45,16 @@ interface MessageItemProps {
   onStartEdit?: () => void;
 }
 
-// Use WeakSet-like approach with message creation time to track animations
-// This prevents memory leaks and handles ID changes gracefully
-const getAnimationKey = (id: string, createdAt: string) => `${id}-${createdAt}`;
+// Track animations by a STABLE key that survives optimistic→real message replacement
+// Using: timestamp (rounded to second) + user_id + first 50 chars of content
 const animatedMessages = new Set<string>();
+
+const getStableAnimationKey = (message: Message): string => {
+  // Round timestamp to nearest second to handle minor discrepancies
+  const timestamp = Math.floor(new Date(message.created_at).getTime() / 1000);
+  const contentPrefix = message.content.substring(0, 50);
+  return `${timestamp}-${message.user_id}-${contentPrefix}`;
+};
 
 export const MessageItem = memo(function MessageItem({
   message,
@@ -58,7 +63,7 @@ export const MessageItem = memo(function MessageItem({
   isHighlighted,
   onStartEdit,
 }: MessageItemProps) {
-  // Selectors - only subscribe to what we need
+  // Selectors
   const user = useAuthStore((state) => state.user);
   const { setReplyingTo, editMessage, pinMessage, addReaction, removeReaction, removeMessage } = useMessageStore();
   const members = useServerStore((state) => state.members);
@@ -66,42 +71,45 @@ export const MessageItem = memo(function MessageItem({
   const showTimestamps = useUIStore((state) => state.showTimestamps);
   const { getOptimisticStatus, removeOptimisticItem } = useSyncStore();
 
-  // State - consolidated where possible
+  // State
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showMobileActions, setShowMobileActions] = useState(false);
   const [dropdownState, setDropdownState] = useState({ emoji: false, more: false });
-  const [showPendingAnimation, setShowPendingAnimation] = useState(false);
 
   // Refs
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const messageRef = useRef<HTMLDivElement>(null);
 
-  // Memoized computations
-  const animationKey = useMemo(() => getAnimationKey(message.id, message.created_at), [message.id, message.created_at]);
+  // Stable animation key that persists across temp→real ID change
+  const animationKey = useMemo(
+    () => getStableAnimationKey(message),
+    [message.created_at, message.user_id, message.content],
+  );
 
+  // Check animation status ONCE on mount using stable key
   const shouldAnimate = useMemo(() => {
-    if (animatedMessages.has(animationKey)) return false;
+    if (animatedMessages.has(animationKey)) {
+      return false;
+    }
     animatedMessages.add(animationKey);
     // Cleanup old entries periodically
     if (animatedMessages.size > 500) {
       const entries = Array.from(animatedMessages);
-      entries.slice(0, 250).forEach((id) => animatedMessages.delete(id));
+      entries.slice(0, 250).forEach((key) => animatedMessages.delete(key));
     }
     return true;
   }, [animationKey]);
 
+  // Optimistic status
   const optimisticStatus = useMemo(() => {
     return message.id.startsWith("temp-") ? getOptimisticStatus(message.id) || "pending" : null;
   }, [message.id, getOptimisticStatus]);
 
-  const isPending = optimisticStatus === "pending";
   const isFailed = optimisticStatus === "failed";
 
   const isOwnMessage = useMemo(() => user?.id === message.user_id, [user?.id, message.user_id]);
-
   const messageUser = message.user;
 
   // Memoize member lookups
@@ -123,21 +131,12 @@ export const MessageItem = memo(function MessageItem({
     return content.includes(`<@${user.id}>`) || content.includes("@everyone") || content.includes("@here");
   }, [user?.id, message.content]);
 
-  // Memoize formatted timestamp
+  // Memoize formatted timestamps
   const formattedTime = useMemo(() => format(new Date(message.created_at), "h:mm a"), [message.created_at]);
 
   const formattedTimestamp = useMemo(() => formatMessageTimestamp(message.created_at), [message.created_at]);
 
-  // Effects
-  useEffect(() => {
-    if (!isPending) {
-      setShowPendingAnimation(false);
-      return;
-    }
-    const timer = setTimeout(() => setShowPendingAnimation(true), 1000);
-    return () => clearTimeout(timer);
-  }, [isPending]);
-
+  // Focus textarea when editing starts
   useEffect(() => {
     if (isEditing && textareaRef.current) {
       textareaRef.current.focus();
@@ -158,7 +157,7 @@ export const MessageItem = memo(function MessageItem({
     return () => window.removeEventListener("startEditMessage" as keyof WindowEventMap, handler as EventListener);
   }, [message.id, message.content, isOwnMessage, onStartEdit]);
 
-  // Memoized callbacks
+  // Callbacks
   const handleEdit = useCallback(async () => {
     const trimmed = editContent.trim();
     if (trimmed && trimmed !== message.content && user) {
@@ -207,7 +206,6 @@ export const MessageItem = memo(function MessageItem({
     navigator.clipboard.writeText(message.id);
   }, [message.id]);
 
-  // Long press handlers for mobile
   const handleTouchStart = useCallback(() => {
     longPressTimerRef.current = setTimeout(() => {
       setShowMobileActions(true);
@@ -252,15 +250,13 @@ export const MessageItem = memo(function MessageItem({
       "group relative flex px-3 rounded-lg transition-colors duration-200 hover:bg-muted/40",
       compactMode ? "gap-2 py-0.5" : "gap-3 py-1.5",
     ];
-    if (showPendingAnimation) classes.push("animate-pulse opacity-60");
     if (isFailed) classes.push("bg-destructive/5 border border-destructive/20");
     if (isMentioned) classes.push("bg-primary/10 border-l-2 border-l-primary");
     if (isHighlighted) classes.push("animate-highlight-message bg-primary/20 ring-2 ring-primary/50");
     return classes.join(" ");
-  }, [compactMode, showPendingAnimation, isFailed, isMentioned, isHighlighted]);
+  }, [compactMode, isFailed, isMentioned, isHighlighted]);
 
   const roleColor = useMemo(() => getRoleColor(messageMember?.role), [messageMember?.role]);
-
   const displayName = messageMember?.nickname || messageUser?.display_name || messageUser?.username;
 
   return (
@@ -274,7 +270,6 @@ export const MessageItem = memo(function MessageItem({
       )}
 
       <div
-        ref={messageRef}
         id={`message-${message.id}`}
         className={outerClassName}
         style={shouldAnimate ? { animationFillMode: "both" } : undefined}
@@ -439,7 +434,7 @@ export const MessageItem = memo(function MessageItem({
                   <button
                     key={reaction.emoji}
                     onClick={() => handleReactionClick(reaction.emoji, reaction.hasReacted)}
-                    className={`flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border transition-all duration-200 ${
+                    className={`flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border transition-colors duration-200 ${
                       reaction.hasReacted
                         ? "bg-primary/20 border-primary text-primary"
                         : "bg-secondary border-transparent hover:border-border"
