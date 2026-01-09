@@ -231,7 +231,7 @@ const Auth = () => {
             <Link to="/">
               <img src={kloakLogo} alt="Kloak" className="h-12 mx-auto mb-4" />
             </Link>
-            <p className="text-white mt-1 font-medium">Privacy-first messaging</p>
+            <p className="text-white mt-1 font-medium">Your community. Your conversations. Your business.</p>
           </div>
 
           {/* Auth card */}
