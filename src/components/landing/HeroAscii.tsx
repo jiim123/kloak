@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { MeshGradient } from '@paper-design/shaders-react';
 
 export default function HeroAscii() {
   useEffect(() => {
@@ -88,18 +89,26 @@ export default function HeroAscii() {
 
   return (
     <section className="relative min-h-[100dvh] flex items-center justify-center overflow-hidden bg-background">
+      {/* Mesh Gradient Background */}
+      <div className="absolute inset-0 z-0 opacity-40">
+        <MeshGradient
+          style={{ width: '100%', height: '100%' }}
+          colors={["#0a0a0a", "#1a1a2e", "#16213e", "#0f3460", "#1a1a1a"]}
+          distortion={0.6}
+          swirl={0.15}
+          grainMixer={0}
+          grainOverlay={0}
+          speed={0.3}
+        />
+      </div>
+
       {/* Animated background - hidden on mobile */}
-      <div className="hidden md:block absolute inset-0 z-0">
+      <div className="hidden md:block absolute inset-0 z-[1]">
         <div
           data-us-project="kloak-ascii"
           data-us-scale="1"
           style={{ width: '100%', height: '100%' }}
         />
-      </div>
-
-      {/* Mobile background pattern */}
-      <div className="md:hidden absolute inset-0 z-0 opacity-20">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,hsl(var(--primary)/0.15)_0%,transparent_70%)]" />
       </div>
 
       {/* Top Header */}
