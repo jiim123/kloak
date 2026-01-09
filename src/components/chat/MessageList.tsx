@@ -20,12 +20,26 @@ const shouldGroupMessages = (current: Message, previous: Message | null): boolea
   if (!previous) return false;
   if (current.user_id !== previous.user_id) return false;
   if (current.reply_to_id) return false; // Don't group replies
-
   const currentTime = new Date(current.created_at).getTime();
   const previousTime = new Date(previous.created_at).getTime();
   const fiveMinutes = 5 * 60 * 1000;
-
   return currentTime - previousTime < fiveMinutes;
+};
+
+/**
+ * Generate a stable key for a message that survives optimistic→real ID changes.
+ * Uses timestamp (rounded to second) + user_id + content prefix.
+ * This ensures React doesn't unmount/remount when temp-xxx becomes a real UUID.
+ */
+const getStableMessageKey = (message: Message): string => {
+  // For non-temp messages, just use the ID (it's stable)
+  if (!message.id.startsWith("temp-")) {
+    return message.id;
+  }
+  // For temp messages, use content-based key that will match the real message
+  const timestamp = Math.floor(new Date(message.created_at).getTime() / 1000);
+  const contentPrefix = message.content.substring(0, 30).replace(/\s+/g, "_");
+  return `pending-${timestamp}-${message.user_id}-${contentPrefix}`;
 };
 
 export const MessageList = ({ channelId, channelName }: MessageListProps) => {
@@ -43,13 +57,12 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   const [newMessageCount, setNewMessageCount] = useState(0);
   const isNearBottomRef = useRef(true);
   const hasMarkedAsReadRef = useRef(false);
+  const prevMessagesLengthRef = useRef(0);
 
   // Unread tracking
   const channelIds = useMemo(() => [channelId], [channelId]);
   const { getChannelUnread, markAsRead } = useUnread(channelIds);
   const { lastReadAt, firstUnreadMessageId } = getChannelUnread(channelId);
-
-  // Realtime updates are now handled at AppLayout level for stability
 
   // Scroll to message from notification
   const { highlightedMessageId } = useScrollToMessage({ messages, isLoading });
@@ -58,7 +71,6 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   useEffect(() => {
     const handleEditLastMessage = (e: CustomEvent<{ userId: string; channelId: string }>) => {
       if (e.detail.channelId !== channelId || !e.detail.userId) return;
-
       // Find the last message by this user in this channel
       const userMessages = messages.filter((m) => m.user_id === e.detail.userId);
       if (userMessages.length > 0) {
@@ -71,7 +83,6 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
         );
       }
     };
-
     window.addEventListener("editLastMessage" as any, handleEditLastMessage);
     return () => window.removeEventListener("editLastMessage" as any, handleEditLastMessage);
   }, [channelId, messages]);
@@ -88,24 +99,33 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
       }, 50);
     });
     hasMarkedAsReadRef.current = false;
+    prevMessagesLengthRef.current = 0;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelId]);
 
   // Auto-scroll when new messages arrive (if near bottom)
   useEffect(() => {
-    if (isNearBottomRef.current && bottomRef.current) {
-      bottomRef.current.scrollIntoView({ behavior: "smooth" });
-      setNewMessageCount(0);
-    } else if (messages.length > 0) {
-      setNewMessageCount((prev) => prev + 1);
+    const currentLength = messages.length;
+    const prevLength = prevMessagesLengthRef.current;
+
+    // Only react to actual new messages (not initial load or temp→real replacement)
+    if (currentLength > prevLength && prevLength > 0) {
+      if (isNearBottomRef.current && bottomRef.current) {
+        bottomRef.current.scrollIntoView({ behavior: "smooth" });
+        setNewMessageCount(0);
+      } else {
+        setNewMessageCount((prev) => prev + (currentLength - prevLength));
+      }
     }
+
+    prevMessagesLengthRef.current = currentLength;
   }, [messages.length]);
 
   // Mark as read when viewing channel (automatic)
   useEffect(() => {
     if (messages.length > 0 && !hasMarkedAsReadRef.current && isNearBottomRef.current) {
       const latestMessage = messages[messages.length - 1];
-      if (latestMessage) {
+      if (latestMessage && !latestMessage.id.startsWith("temp-")) {
         markAsRead(channelId, latestMessage.id);
         hasMarkedAsReadRef.current = true;
       }
@@ -140,14 +160,15 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
     // Mark as read when jumping to present
     if (messages.length > 0) {
       const latestMessage = messages[messages.length - 1];
-      markAsRead(channelId, latestMessage.id);
+      if (!latestMessage.id.startsWith("temp-")) {
+        markAsRead(channelId, latestMessage.id);
+      }
     }
   };
 
   // Find the index where the NEW divider should appear
   const newMessagesDividerIndex = useMemo(() => {
     if (!lastReadAt || !firstUnreadMessageId) return -1;
-
     const lastReadTime = new Date(lastReadAt).getTime();
     for (let i = 0; i < messages.length; i++) {
       const msgTime = new Date(messages[i].created_at).getTime();
@@ -157,6 +178,35 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
     }
     return -1;
   }, [messages, lastReadAt, firstUnreadMessageId]);
+
+  // Deduplicate messages - prefer real messages over temp ones
+  const deduplicatedMessages = useMemo(() => {
+    const seen = new Map<string, Message>();
+
+    // First pass: collect all messages by their stable key
+    for (const msg of messages) {
+      const stableKey = getStableMessageKey(msg);
+      const existing = seen.get(stableKey);
+
+      if (!existing) {
+        seen.set(stableKey, msg);
+      } else {
+        // Prefer real message over temp message
+        if (msg.id.startsWith("temp-") && !existing.id.startsWith("temp-")) {
+          // Keep existing (real message)
+        } else if (!msg.id.startsWith("temp-") && existing.id.startsWith("temp-")) {
+          // Replace with real message
+          seen.set(stableKey, msg);
+        }
+        // If both are same type, keep first one
+      }
+    }
+
+    // Convert back to array and sort by created_at
+    return Array.from(seen.values()).sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    );
+  }, [messages]);
 
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
@@ -190,33 +240,19 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
 
         {/* Messages */}
         <div className="py-4">
-          {messages.map((message, index) => {
-            const previousMessage = index > 0 ? messages[index - 1] : null;
+          {deduplicatedMessages.map((message, index) => {
+            const previousMessage = index > 0 ? deduplicatedMessages[index - 1] : null;
             const isGrouped = shouldGroupMessages(message, previousMessage);
             const showNewDivider = index === newMessagesDividerIndex && !hasMarkedAsReadRef.current;
 
             return (
-              <div
-                key={
-                  message.id.startsWith("temp-")
-                    ? `${message.created_at}-${message.user_id}-${message.content.substring(0, 20)}`
-                    : message.id
-                }
-              >
-                {/* New messages divider */}
-                {showNewDivider && (
-                  <div className="flex items-center gap-2 px-4 my-2">
-                    <div className="flex-1 h-px bg-destructive" />
-                    <span className="text-xs font-semibold text-destructive uppercase px-2">New</span>
-                    <div className="flex-1 h-px bg-destructive" />
-                  </div>
-                )}
-                <MessageItem
-                  message={message}
-                  isGrouped={isGrouped}
-                  isHighlighted={message.id === highlightedMessageId}
-                />
-              </div>
+              <MessageItem
+                key={getStableMessageKey(message)}
+                message={message}
+                isGrouped={isGrouped}
+                showNewDivider={showNewDivider}
+                isHighlighted={message.id === highlightedMessageId}
+              />
             );
           })}
         </div>
@@ -241,7 +277,6 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
             >
               {/* Animated border pulse */}
               <span className="absolute inset-0 rounded-full border-1 border-primary/50 animate-pulse-border pointer-events-none" />
-
               {/* Content */}
               <div className="relative flex items-center gap-2">
                 <ChevronDown className="w-4 h-4" />
