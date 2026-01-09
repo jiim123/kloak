@@ -31,12 +31,12 @@ const shouldGroupMessages = (current: Message, previous: Message | null): boolea
 export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   const { user } = useAuthStore();
   const { isLoading, fetchMessages, setCurrentChannel, messagesByChannel } = useMessageStore();
-  
+
   // Subscribe to messages for this specific channel
   const channelData = messagesByChannel[channelId];
   const messages = channelData?.messages || [];
   const hasMore = channelData?.hasMore ?? true;
-  
+
   const containerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const [showJumpToPresent, setShowJumpToPresent] = useState(false);
@@ -196,7 +196,13 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
             const showNewDivider = index === newMessagesDividerIndex && !hasMarkedAsReadRef.current;
 
             return (
-              <div key={message.id}>
+              <div
+                key={
+                  message.id.startsWith("temp-")
+                    ? `${message.created_at}-${message.user_id}-${message.content.substring(0, 20)}`
+                    : message.id
+                }
+              >
                 {/* New messages divider */}
                 {showNewDivider && (
                   <div className="flex items-center gap-2 px-4 my-2">
