@@ -51,7 +51,8 @@ const Index = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col items-center">
+      <div className="w-full max-w-[1920px]">
       <NavigationMenu />
 
       {/* Hero Section */}
@@ -716,6 +717,7 @@ const Index = () => {
 
       {/* Footer */}
       <Footer />
+      </div>
     </div>
   );
 };
