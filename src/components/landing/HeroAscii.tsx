@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Heatmap } from '@paper-design/shaders-react';
+import { useEffect } from "react";
+import { Link } from "react-router-dom";
+import { Heatmap } from "@paper-design/shaders-react";
 
 export default function HeroAscii() {
   useEffect(() => {
-    const embedScript = document.createElement('script');
-    embedScript.type = 'text/javascript';
+    const embedScript = document.createElement("script");
+    embedScript.type = "text/javascript";
     embedScript.textContent = `
       !function(){
         if(!window.UnicornStudio){
@@ -23,7 +23,7 @@ export default function HeroAscii() {
     `;
     document.head.appendChild(embedScript);
 
-    const style = document.createElement('style');
+    const style = document.createElement("style");
     style.textContent = `
       [data-us-project] {
         position: relative !important;
@@ -53,12 +53,12 @@ export default function HeroAscii() {
     document.head.appendChild(style);
 
     const hideBranding = () => {
-      const projectDiv = document.querySelector('[data-us-project]');
+      const projectDiv = document.querySelector("[data-us-project]");
       if (projectDiv) {
-        const allElements = projectDiv.querySelectorAll('*');
-        allElements.forEach(el => {
-          const text = (el.textContent || '').toLowerCase();
-          if (text.includes('made with') || text.includes('unicorn')) {
+        const allElements = projectDiv.querySelectorAll("*");
+        allElements.forEach((el) => {
+          const text = (el.textContent || "").toLowerCase();
+          if (text.includes("made with") || text.includes("unicorn")) {
             el.remove();
           }
         });
@@ -88,11 +88,7 @@ export default function HeroAscii() {
       <div className="relative z-10 w-full lg:w-1/2 flex flex-col justify-center px-6 lg:px-12 py-12">
         {/* Animated background - tablet only */}
         <div className="hidden md:block lg:hidden absolute inset-0 z-[1]">
-          <div
-            data-us-project="kloak-ascii"
-            data-us-scale="1"
-            style={{ width: '100%', height: '100%' }}
-          />
+          <div data-us-project="kloak-ascii" data-us-scale="1" style={{ width: "100%", height: "100%" }} />
         </div>
 
         {/* Top Header */}
@@ -148,7 +144,8 @@ export default function HeroAscii() {
           {/* Description */}
           <div className="relative max-w-lg mb-10">
             <p className="text-lg text-muted-foreground leading-relaxed">
-              One cryptographic key. That's it. No accounts, no data harvesting, no corporate surveillance. Just you and your conversations.
+              One cryptographic key. That's it. No accounts, no data harvesting, no corporate surveillance. Just you and
+              your conversations.
             </p>
             <div className="hidden md:block absolute -right-8 top-0 text-[8px] font-mono text-primary/40">
               <div className="border-l border-primary/20 pl-2">◇</div>
@@ -187,7 +184,7 @@ export default function HeroAscii() {
               <span className="text-[10px] font-mono text-primary/70 sm:hidden">SYS.ACT</span>
               <div className="flex gap-0.5">
                 {Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="w-1 h-3 bg-primary/30" style={{ opacity: 0.3 + (i * 0.1) }} />
+                  <div key={i} className="w-1 h-3 bg-primary/30" style={{ opacity: 0.3 + i * 0.1 }} />
                 ))}
               </div>
               <span className="text-[10px] font-mono text-muted-foreground/50">V1.0.0</span>
@@ -213,20 +210,12 @@ export default function HeroAscii() {
       <div className="hidden lg:block relative w-1/2">
         <div className="absolute top-4 right-4 w-8 h-8 border-r border-t border-primary/30 z-20" />
         <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/30 z-20" />
-        
+
         <div className="absolute inset-0">
           <Heatmap
-            style={{ width: '100%', height: '100%' }}
+            style={{ width: "100%", height: "100%" }}
             image="/logo-k-b.svg"
-            colors={[
-              "#0f0f0f",
-              "#1a1a19",
-              "#2b2b28",
-              "#3d3d38",
-              "#57564F",
-              "#6a6961",
-              "#85847a"
-            ]}
+            colors={["#5a5958", "#bababa", "#585750"]}
             colorBack="#0f0f0f"
             contour={0.5}
             angle={0}
@@ -234,7 +223,7 @@ export default function HeroAscii() {
             innerGlow={0.5}
             outerGlow={0.5}
             speed={1}
-            scale={0.75}
+            scale={0.55}
           />
         </div>
 
