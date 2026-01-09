@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, Plus, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { MotionButton, MotionDiv } from "@/components/ui/motion-elements";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
@@ -173,7 +174,7 @@ export const ServerSidebar = () => {
               >
                 <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
                   <TooltipTrigger asChild>
-                    <motion.button
+                    <MotionButton
                       className="relative group"
                       onMouseEnter={() => setHoveredServer(server.id)}
                       onMouseLeave={() => setHoveredServer(null)}
@@ -242,7 +243,7 @@ export const ServerSidebar = () => {
                           </motion.span>
                         )}
                       </AnimatePresence>
-                    </motion.button>
+                    </MotionButton>
                   </TooltipTrigger>
                   <TooltipContent side="right" className="font-medium">
                     {server.name}
@@ -256,7 +257,7 @@ export const ServerSidebar = () => {
         {/* Add Server button */}
         <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
           <TooltipTrigger asChild>
-            <motion.button
+            <MotionButton
               whileTap={{ scale: 0.95 }}
               whileHover="hover"
               initial="default"
@@ -313,7 +314,7 @@ export const ServerSidebar = () => {
               />
 
               <Plus className="w-5 h-5 relative z-10" />
-            </motion.button>
+            </MotionButton>
           </TooltipTrigger>
           <TooltipContent side="right" className="font-medium">
             Add or Join a Server
@@ -326,15 +327,15 @@ export const ServerSidebar = () => {
 
       {/* Direct Messages button */}
       <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
-        <TooltipTrigger asChild>
-          <motion.button
-            className="relative group"
-            onMouseEnter={() => setHoveredServer(null)}
-            onMouseLeave={() => setHoveredServer(null)}
-            onClick={() => setCurrentServer(null)}
-            whileHover="hover"
-            whileTap="tap"
-          >
+          <TooltipTrigger asChild>
+            <MotionButton
+              className="relative group"
+              onMouseEnter={() => setHoveredServer(null)}
+              onMouseLeave={() => setHoveredServer(null)}
+              onClick={() => setCurrentServer(null)}
+              whileHover="hover"
+              whileTap="tap"
+            >
             {/* Indicator pill */}
             <motion.span
               className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 bg-foreground rounded-r-full"
@@ -374,7 +375,7 @@ export const ServerSidebar = () => {
                 </motion.span>
               )}
             </AnimatePresence>
-          </motion.button>
+          </MotionButton>
         </TooltipTrigger>
         <TooltipContent side="right" className="font-medium">
           Direct Messages{totalDMUnread > 0 ? ` (${totalDMUnread} unread)` : ''}
@@ -383,15 +384,15 @@ export const ServerSidebar = () => {
 
       {/* User settings button */}
       <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
-        <TooltipTrigger asChild>
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={() => openModal("user-settings")}
-            className="w-12 h-12 rounded-[6px] bg-secondary hover:bg-secondary/80 transition-colors flex items-center justify-center"
-          >
-            <Settings className="w-5 h-5" />
-          </motion.button>
-        </TooltipTrigger>
+          <TooltipTrigger asChild>
+            <MotionButton
+              whileTap={{ scale: 0.95 }}
+              onClick={() => openModal("user-settings")}
+              className="w-12 h-12 rounded-[6px] bg-secondary hover:bg-secondary/80 transition-colors flex items-center justify-center"
+            >
+              <Settings className="w-5 h-5" />
+            </MotionButton>
+          </TooltipTrigger>
         <TooltipContent side="right" className="font-medium">
           User Settings
         </TooltipContent>

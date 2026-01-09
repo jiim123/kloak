@@ -3,6 +3,7 @@ import { Loader2, AlertCircle, RefreshCw, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { MotionDiv } from '@/components/ui/motion-elements';
 
 interface OptimisticMessageIndicatorProps {
   status: 'pending' | 'failed' | null;
@@ -24,14 +25,14 @@ export function OptimisticMessageIndicator({
       {status === 'pending' && (
         <Tooltip>
           <TooltipTrigger asChild>
-            <motion.div
+            <MotionDiv
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               className="flex items-center gap-1 text-muted-foreground"
             >
               <Loader2 className="w-3 h-3 animate-spin" />
               <span className="text-xs">Sending...</span>
-            </motion.div>
+            </MotionDiv>
           </TooltipTrigger>
           <TooltipContent>
             <p>Message is being sent</p>
