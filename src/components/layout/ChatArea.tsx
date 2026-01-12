@@ -5,8 +5,8 @@ import { MessageInput } from "@/components/chat/MessageInput";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
+import { useMessageStore } from "@/stores/messageStore";
 import { useTyping } from "@/hooks/useTyping";
-import { useOptimisticMessage } from "@/hooks/useOptimisticMessage";
 import { MessageSquare, Hash, ImageIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,8 +18,8 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 export const ChatArea = () => {
   const { currentChannel } = useServerStore();
   const { user } = useAuthStore();
+  const { sendMessage } = useMessageStore();
   const { typingUsers, startTyping, stopTyping } = useTyping(currentChannel?.id || null);
-  const { sendOptimistic } = useOptimisticMessage();
   
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -56,10 +56,7 @@ export const ChatArea = () => {
         .from('attachments')
         .getPublicUrl(data.path);
 
-      await sendOptimistic({
-        channelId: currentChannel.id,
-        content: urlData.publicUrl,
-      });
+      await sendMessage(currentChannel.id, user.id, urlData.publicUrl);
 
       showSuccess('Image uploaded successfully');
     } catch (error) {
@@ -67,7 +64,7 @@ export const ChatArea = () => {
     } finally {
       setIsUploading(false);
     }
-  }, [user, currentChannel, sendOptimistic]);
+  }, [user, currentChannel, sendMessage]);
 
   // Paste handler for clipboard images
   useEffect(() => {
