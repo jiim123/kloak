@@ -17,7 +17,6 @@ import { useServerStore } from "@/stores/serverStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useSyncStore } from "@/stores/syncStore";
 import { MessageContent } from "./MessageContent";
-import { OptimisticMessageIndicator } from "./OptimisticMessageIndicator";
 import { getMessagePreview } from "@/lib/message";
 import { formatMessageTimestamp } from "@/lib/format";
 import { DeleteMessageModal } from "@/components/modals/DeleteMessageModal";
@@ -69,7 +68,7 @@ export const MessageItem = memo(function MessageItem({
   const members = useServerStore((state) => state.members);
   const compactMode = useUIStore((state) => state.compactMode);
   const showTimestamps = useUIStore((state) => state.showTimestamps);
-  const { getOptimisticStatus, removeOptimisticItem } = useSyncStore();
+  const { getOptimisticStatus } = useSyncStore();
 
   // State
   const [isEditing, setIsEditing] = useState(false);
@@ -102,12 +101,10 @@ export const MessageItem = memo(function MessageItem({
     return true;
   }, [animationKey]);
 
-  // Optimistic status
-  const optimisticStatus = useMemo(() => {
-    return message.id.startsWith("temp-") ? getOptimisticStatus(message.id) || "pending" : null;
+  // Check if this is a pending optimistic message (for styling)
+  const isPending = useMemo(() => {
+    return message.id.startsWith("temp-") || getOptimisticStatus(message.id) === "pending";
   }, [message.id, getOptimisticStatus]);
-
-  const isFailed = optimisticStatus === "failed";
 
   const isOwnMessage = useMemo(() => user?.id === message.user_id, [user?.id, message.user_id]);
   const messageUser = message.user;
@@ -250,11 +247,11 @@ export const MessageItem = memo(function MessageItem({
       "group relative flex px-3 rounded-lg transition-colors duration-200 hover:bg-muted/40",
       compactMode ? "gap-2 py-0.5" : "gap-3 py-1.5",
     ];
-    if (isFailed) classes.push("bg-destructive/5 border border-destructive/20");
     if (isMentioned) classes.push("bg-primary/10 border-l-2 border-l-primary");
     if (isHighlighted) classes.push("animate-highlight-message bg-primary/20 ring-2 ring-primary/50");
+    if (isPending) classes.push("opacity-70");
     return classes.join(" ");
-  }, [compactMode, isFailed, isMentioned, isHighlighted]);
+  }, [compactMode, isMentioned, isHighlighted, isPending]);
 
   const roleColor = useMemo(() => getRoleColor(messageMember?.role), [messageMember?.role]);
   const displayName = messageMember?.nickname || messageUser?.display_name || messageUser?.username;
@@ -382,18 +379,6 @@ export const MessageItem = memo(function MessageItem({
               </Tooltip>
             )}
 
-            {/* Failed message indicator */}
-            {isFailed && (
-              <OptimisticMessageIndicator
-                status="failed"
-                onRetry={() => removeOptimisticItem(message.id)}
-                onCancel={() => {
-                  removeMessage(message.id);
-                  removeOptimisticItem(message.id);
-                }}
-                className="ml-2 inline-flex"
-              />
-            )}
 
             {/* Attachments */}
             {message.attachments && message.attachments.length > 0 && (

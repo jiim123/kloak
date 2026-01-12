@@ -5,7 +5,6 @@ import { useMessageStore } from '@/stores/messageStore';
 import { useServerStore } from '@/stores/serverStore';
 import { useOfflineQueueStore } from '@/stores/offlineQueueStore';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
-import { useOptimisticMessage } from '@/hooks/useOptimisticMessage';
 import { saveDraft, getDraft, clearDraft } from '@/lib/storage';
 import { getMessagePreview, extractMentions } from '@/lib/message';
 import { MentionAutocomplete } from './MentionAutocomplete';
@@ -27,11 +26,10 @@ const MAX_LENGTH = 2000;
 
 export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }: MessageInputProps) => {
   const { user } = useAuthStore();
-  const { replyingTo, setReplyingTo } = useMessageStore();
+  const { replyingTo, setReplyingTo, sendMessage } = useMessageStore();
   const { members, currentServer } = useServerStore();
   const { getQueuedForChannel } = useOfflineQueueStore();
   const { isOnline } = useOnlineStatus();
-  const { sendOptimistic } = useOptimisticMessage();
   
   const [content, setContent] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -176,43 +174,46 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     setShowMentions(false);
     const currentReplyTo = replyingTo;
     setReplyingTo(null);
-
-    // Use optimistic send - message appears instantly, syncs in background
-    const message = await sendOptimistic({
-      channelId,
-      content: messageContent,
-      replyToId: currentReplyTo?.id,
-    });
     
-    // Handle mentions in background (non-blocking)
-    // Note: Notifications are created by database trigger on mentions insert
-    if (message && currentServer && !message.id.startsWith('temp-')) {
-      const mentions = extractMentions(messageContent);
-      
-      // Process mentions asynchronously without blocking
-      Promise.resolve().then(async () => {
-        for (const mention of mentions) {
-          if (mention.type === 'user' && mention.id && mention.id !== user.id) {
-            await supabase.from('mentions').insert({
-              message_id: message.id,
-              user_id: mention.id,
-              mention_type: 'user',
-            });
-          } else if (mention.type === 'everyone' || mention.type === 'here') {
-            const targetMembers = mention.type === 'here'
-              ? members.filter(m => m.user?.status === 'online' && m.user_id !== user.id)
-              : members.filter(m => m.user_id !== user.id);
-            
-            for (const member of targetMembers.slice(0, 50)) {
+    setIsSending(true);
+
+    try {
+      // Send message directly - realtime will handle updating the UI
+      const message = await sendMessage(channelId, user.id, messageContent, currentReplyTo?.id);
+    
+      // Handle mentions in background (non-blocking)
+      if (message && currentServer) {
+        const mentions = extractMentions(messageContent);
+        
+        // Process mentions asynchronously without blocking
+        Promise.resolve().then(async () => {
+          for (const mention of mentions) {
+            if (mention.type === 'user' && mention.id && mention.id !== user.id) {
               await supabase.from('mentions').insert({
                 message_id: message.id,
-                user_id: member.user_id,
-                mention_type: mention.type,
+                user_id: mention.id,
+                mention_type: 'user',
               });
+            } else if (mention.type === 'everyone' || mention.type === 'here') {
+              const targetMembers = mention.type === 'here'
+                ? members.filter(m => m.user?.status === 'online' && m.user_id !== user.id)
+                : members.filter(m => m.user_id !== user.id);
+              
+              for (const member of targetMembers.slice(0, 50)) {
+                await supabase.from('mentions').insert({
+                  message_id: message.id,
+                  user_id: member.user_id,
+                  mention_type: mention.type,
+                });
+              }
             }
           }
-        }
-      }).catch(err => console.error('Failed to process mentions:', err));
+        }).catch(err => console.error('Failed to process mentions:', err));
+      }
+    } catch (error) {
+      handleError(error, 'Failed to send message');
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -437,11 +438,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       .getPublicUrl(data.path);
 
     // Send the image URL as a message
-    await sendOptimistic({
-      channelId,
-      content: urlData.publicUrl,
-      replyToId: replyingTo?.id,
-    });
+    await sendMessage(channelId, user.id, urlData.publicUrl, replyingTo?.id);
 
     // Clear reply if any
     if (replyingTo) {
