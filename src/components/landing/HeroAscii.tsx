@@ -116,9 +116,9 @@ export default function HeroAscii() {
         <div className="relative z-10 mt-16">
           {/* Top decorative line */}
           <div className="flex items-center gap-4 mb-6">
-            <div className="w-12 h-px bg-gradient-to-r from-transparent via-primary to-transparent md:via-primary md:to-transparent" />
+            <div className="w-12 h-px bg-primary" />
             <span className="text-xs font-mono text-primary/70">001</span>
-            <div className="w-12 h-px bg-gradient-to-r from-primary via-transparent to-transparent" />
+            <div className="w-12 h-px bg-primary" />
           </div>
 
           {/* Title */}
