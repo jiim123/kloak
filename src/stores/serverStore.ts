@@ -327,17 +327,25 @@ export const useServerStore = create<ServerState>((set, get) => ({
     if (server) {
       localStorage.setItem('kloak-current-server-id', server.id);
     } else {
-      localStorage.removeItem('kloak-current-server-id');
-      localStorage.removeItem('kloak-current-channel-id');
+      // Going to DM view - don't clear channel-related localStorage
+      // so we can restore when coming back
     }
-    set({ 
-      currentServer: server,
-      // Clear channel state when switching servers to ensure proper isolation
-      currentChannel: null,
-      channels: [],
-      categories: [],
-      members: [],
-    });
+    
+    // Only clear channel state when switching TO a different server (not when going to null/DM)
+    // This prevents losing state and ensures proper isolation
+    if (server) {
+      set({ 
+        currentServer: server,
+        // Clear channel state when switching servers to ensure proper isolation
+        currentChannel: null,
+        channels: [],
+        categories: [],
+        members: [],
+      });
+    } else {
+      // Going to DM view - just set server to null, keep channel data for when we return
+      set({ currentServer: null });
+    }
   },
   setCurrentChannel: (channel) => {
     // Persist to localStorage
@@ -368,14 +376,27 @@ export const useServerStore = create<ServerState>((set, get) => ({
         channels,
       });
 
-      // Auto-select first channel if none selected
+      // Always try to restore the persisted channel when switching servers
       const { currentChannel } = get();
-      if (!currentChannel && channels.length > 0) {
-        const persistedChannelId = localStorage.getItem('kloak-current-channel-id');
+      const persistedChannelId = localStorage.getItem('kloak-current-channel-id');
+      
+      // Restore channel: try persisted first, then keep current if valid, else first channel
+      if (channels.length > 0) {
         const restoredChannel = persistedChannelId 
           ? channels.find(c => c.id === persistedChannelId)
           : null;
-        set({ currentChannel: restoredChannel || channels[0] });
+        
+        // If current channel is valid for this server, keep it
+        const currentIsValid = currentChannel && channels.find(c => c.id === currentChannel.id);
+        
+        if (restoredChannel) {
+          set({ currentChannel: restoredChannel });
+        } else if (!currentIsValid) {
+          set({ currentChannel: channels[0] });
+        }
+      } else {
+        // No channels in this server
+        set({ currentChannel: null });
       }
     } catch (error) {
       console.error('Failed to fetch channels:', error);

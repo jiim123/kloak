@@ -137,7 +137,15 @@ export const useDMStore = create<DMState>((set, get) => ({
     }
   },
 
-  setCurrentConversation: (conversation) => set({ currentConversation: conversation }),
+  setCurrentConversation: (conversation) => {
+    // Persist current conversation ID for restoration
+    if (conversation) {
+      localStorage.setItem('kloak-current-dm-id', conversation.id);
+    } else {
+      localStorage.removeItem('kloak-current-dm-id');
+    }
+    set({ currentConversation: conversation });
+  },
 
   fetchMessages: async (conversationId: string, userId: string, limit = 50, before?: string) => {
     set({ isLoading: true });

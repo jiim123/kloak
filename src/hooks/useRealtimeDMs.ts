@@ -36,7 +36,7 @@ export const useRealtimeDMs = ({
   currentConversationId,
   onNewMessage,
 }: UseRealtimeDMsOptions) => {
-  const { addMessage, updateMessage, removeMessage, updateConversation, fetchConversations, getMessages } = useDMStore();
+  const { addMessage, updateMessage, removeMessage, updateConversation, fetchConversations } = useDMStore();
 
   // Handle incoming message
   const handleNewMessage = useCallback(
@@ -72,11 +72,13 @@ export const useRealtimeDMs = ({
       });
 
       // Notify callback (for unread tracking)
+      // Get the current conversation from store to check if we're viewing it
+      const currentConvId = useDMStore.getState().currentConversation?.id;
       if (onNewMessage && newMessageData.sender_id !== userId) {
         onNewMessage(message, newMessageData.conversation_id);
       }
     },
-    [currentConversationId, addMessage, updateConversation, onNewMessage, userId]
+    [addMessage, updateConversation, onNewMessage, userId]
   );
 
   // Handle message updates (edits)
@@ -183,7 +185,7 @@ export const useRealtimeDMs = ({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, currentConversationId, handleNewMessage, handleMessageUpdate, handleMessageDelete]);
+  }, [userId, handleNewMessage, handleMessageUpdate, handleMessageDelete]);
 
   // Subscribe to DM reactions
   useEffect(() => {
