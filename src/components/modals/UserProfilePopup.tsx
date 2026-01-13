@@ -28,7 +28,7 @@ const statusColors: Record<UserStatus, string> = {
 export const UserProfilePopup = () => {
   const { activeModal, modalData, closeModal } = useUIStore();
   const { user: currentUser } = useAuthStore();
-  const { servers } = useServerStore();
+  const { servers, setCurrentServer } = useServerStore();
   const { friends, pendingRequests, outgoingRequests, sendRequest, removeFriend, acceptRequest, declineRequest } = useFriendStore();
   const { openConversation, setCurrentConversation } = useDMStore();
   
@@ -96,6 +96,8 @@ export const UserProfilePopup = () => {
     try {
       const conversation = await openConversation(currentUser.id, profileUser.id);
       if (conversation) {
+        // Clear current server to switch to DM view
+        setCurrentServer(null);
         setCurrentConversation(conversation);
         closeModal();
       }
