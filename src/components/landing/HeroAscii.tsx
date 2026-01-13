@@ -123,7 +123,7 @@ export default function HeroAscii() {
 
           {/* Title */}
           <div className="flex items-start gap-6 mb-8">
-            <div className="hidden md:block w-px h-24 bg-gradient-to-b from-primary/50 to-transparent" />
+            <div className="hidden md:block w-px h-24 bg-primary" />
             <div>
               <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-normal text-foreground leading-[0.95] tracking-tight">
                 Finally a Home for
