@@ -85,6 +85,13 @@ const AppLayout = () => {
     }
   }, [currentServer?.id, fetchChannels, fetchMembers]);
 
+  // Clear DM conversation when switching to a server
+  useEffect(() => {
+    if (currentServer && currentConversation) {
+      setCurrentConversation(null);
+    }
+  }, [currentServer]);  // eslint-disable-line react-hooks-exhaustive-deps
+
   useEffect(() => {
     initializeAuth();
   }, []);
