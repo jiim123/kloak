@@ -125,10 +125,10 @@ export default function HeroAscii() {
           <div className="flex items-start gap-6 mb-8">
             <div className="hidden md:block w-px h-24 bg-gradient-to-b from-primary/50 to-transparent" />
             <div>
-              <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold text-foreground leading-[0.95] tracking-tight">
+              <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-normal text-foreground leading-[0.95] tracking-tight">
                 Finally a Home for
               </h1>
-              <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-normal leading-[0.95] tracking-tight">
+              <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-normal leading-[0.95] tracking-tight">
                 <span className="text-primary">Your Community.</span>
               </h1>
             </div>
