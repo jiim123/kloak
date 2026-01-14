@@ -2,8 +2,11 @@ import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useServerStore } from '@/stores/serverStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useConnectionStatus } from './useConnectionStatus';
 
 export const useRealtimeServer = (serverId: string | null) => {
+  const { isConnected, isReconnecting } = useConnectionStatus();
+  
   // Use refs to avoid recreating subscription when store functions or user object changes
   const serverStoreRef = useRef(useServerStore.getState());
   const authStoreRef = useRef(useAuthStore.getState());
@@ -25,7 +28,10 @@ export const useRealtimeServer = (serverId: string | null) => {
   useEffect(() => {
     if (!serverId) return;
 
-    console.log('[Realtime] Setting up server subscription for:', serverId);
+    // Don't set up subscription if connection is down
+    if (!isConnected && !isReconnecting) {
+      return;
+    }
 
     const channel = supabase
       .channel(`server:${serverId}`)
@@ -39,23 +45,26 @@ export const useRealtimeServer = (serverId: string | null) => {
           filter: `id=eq.${serverId}`,
         },
         async (payload) => {
-          console.log('[Realtime] Server updated:', payload.new);
-          const updatedServer = payload.new as any;
-          const { currentServer } = serverStoreRef.current;
-          const { user } = authStoreRef.current;
-          
-          // Update current server inline without calling setCurrentServer
-          // to avoid triggering state clears
-          if (currentServer?.id === serverId) {
-            useServerStore.setState((state) => ({
-              currentServer: { ...state.currentServer!, ...updatedServer },
-              servers: state.servers.map((s) =>
-                s.id === serverId ? { ...s, ...updatedServer } : s
-              ),
-            }));
-          } else if (user) {
-            // Only refetch if not viewing this server
-            await serverStoreRef.current.fetchServers(user.id);
+          try {
+            const updatedServer = payload.new as any;
+            const { currentServer } = serverStoreRef.current;
+            const { user } = authStoreRef.current;
+            
+            // Update current server inline without calling setCurrentServer
+            // to avoid triggering state clears
+            if (currentServer?.id === serverId) {
+              useServerStore.setState((state) => ({
+                currentServer: { ...state.currentServer!, ...updatedServer },
+                servers: state.servers.map((s) =>
+                  s.id === serverId ? { ...s, ...updatedServer } : s
+                ),
+              }));
+            } else if (user) {
+              // Only refetch if not viewing this server
+              await serverStoreRef.current.fetchServers(user.id);
+            }
+          } catch (error) {
+            console.error('[Realtime] Error processing server update:', error);
           }
         }
       )
@@ -68,17 +77,20 @@ export const useRealtimeServer = (serverId: string | null) => {
           filter: `id=eq.${serverId}`,
         },
         async () => {
-          console.log('[Realtime] Server deleted:', serverId);
-          const { currentServer, setCurrentServer } = serverStoreRef.current;
-          const { user } = authStoreRef.current;
-          
-          // Server was deleted, clear current server
-          if (currentServer?.id === serverId) {
-            setCurrentServer(null);
-          }
-          // Refetch servers list
-          if (user) {
-            await serverStoreRef.current.fetchServers(user.id);
+          try {
+            const { currentServer, setCurrentServer } = serverStoreRef.current;
+            const { user } = authStoreRef.current;
+            
+            // Server was deleted, clear current server
+            if (currentServer?.id === serverId) {
+              setCurrentServer(null);
+            }
+            // Refetch servers list
+            if (user) {
+              await serverStoreRef.current.fetchServers(user.id);
+            }
+          } catch (error) {
+            console.error('[Realtime] Error processing server delete:', error);
           }
         }
       )
@@ -92,24 +104,27 @@ export const useRealtimeServer = (serverId: string | null) => {
           filter: `server_id=eq.${serverId}`,
         },
         (payload) => {
-          console.log('[Realtime] New channel created:', payload.new);
-          const newChannel = payload.new as any;
-          useServerStore.setState((state) => ({
-            channels: [...state.channels, {
-              id: newChannel.id,
-              server_id: newChannel.server_id,
-              category_id: newChannel.category_id,
-              name: newChannel.name,
-              topic: newChannel.topic,
-              type: newChannel.type || 'text',
-              position: newChannel.position || 0,
-              is_nsfw: newChannel.is_nsfw || false,
-              slowmode_seconds: newChannel.slowmode_seconds || 0,
-              is_read_only: newChannel.is_read_only || false,
-              icon: newChannel.icon,
-              created_at: newChannel.created_at,
-            }],
-          }));
+          try {
+            const newChannel = payload.new as any;
+            useServerStore.setState((state) => ({
+              channels: [...state.channels, {
+                id: newChannel.id,
+                server_id: newChannel.server_id,
+                category_id: newChannel.category_id,
+                name: newChannel.name,
+                topic: newChannel.topic,
+                type: newChannel.type || 'text',
+                position: newChannel.position || 0,
+                is_nsfw: newChannel.is_nsfw || false,
+                slowmode_seconds: newChannel.slowmode_seconds || 0,
+                is_read_only: newChannel.is_read_only || false,
+                icon: newChannel.icon,
+                created_at: newChannel.created_at,
+              }],
+            }));
+          } catch (error) {
+            console.error('[Realtime] Error processing channel insert:', error);
+          }
         }
       )
       .on(
@@ -121,16 +136,19 @@ export const useRealtimeServer = (serverId: string | null) => {
           filter: `server_id=eq.${serverId}`,
         },
         (payload) => {
-          console.log('[Realtime] Channel updated:', payload.new);
-          const updated = payload.new as any;
-          useServerStore.setState((state) => ({
-            channels: state.channels.map((ch) =>
-              ch.id === updated.id ? { ...ch, ...updated } : ch
-            ),
-            currentChannel: state.currentChannel?.id === updated.id
-              ? { ...state.currentChannel, ...updated }
-              : state.currentChannel,
-          }));
+          try {
+            const updated = payload.new as any;
+            useServerStore.setState((state) => ({
+              channels: state.channels.map((ch) =>
+                ch.id === updated.id ? { ...ch, ...updated } : ch
+              ),
+              currentChannel: state.currentChannel?.id === updated.id
+                ? { ...state.currentChannel, ...updated }
+                : state.currentChannel,
+            }));
+          } catch (error) {
+            console.error('[Realtime] Error processing channel update:', error);
+          }
         }
       )
       .on(
@@ -142,15 +160,18 @@ export const useRealtimeServer = (serverId: string | null) => {
           filter: `server_id=eq.${serverId}`,
         },
         (payload) => {
-          console.log('[Realtime] Channel deleted:', payload.old);
-          const oldChannel = payload.old as { id?: string };
-          if (oldChannel.id) {
-            useServerStore.setState((state) => ({
-              channels: state.channels.filter((ch) => ch.id !== oldChannel.id),
-              currentChannel: state.currentChannel?.id === oldChannel.id
-                ? null
-                : state.currentChannel,
-            }));
+          try {
+            const oldChannel = payload.old as { id?: string };
+            if (oldChannel.id) {
+              useServerStore.setState((state) => ({
+                channels: state.channels.filter((ch) => ch.id !== oldChannel.id),
+                currentChannel: state.currentChannel?.id === oldChannel.id
+                  ? null
+                  : state.currentChannel,
+              }));
+            }
+          } catch (error) {
+            console.error('[Realtime] Error processing channel delete:', error);
           }
         }
       )
@@ -164,18 +185,21 @@ export const useRealtimeServer = (serverId: string | null) => {
           filter: `server_id=eq.${serverId}`,
         },
         (payload) => {
-          console.log('[Realtime] Category created:', payload.new);
-          const newCat = payload.new as any;
-          useServerStore.setState((state) => ({
-            categories: [...state.categories, {
-              id: newCat.id,
-              server_id: newCat.server_id,
-              name: newCat.name,
-              position: newCat.position || 0,
-              is_collapsed: newCat.is_collapsed || false,
-              created_at: newCat.created_at,
-            }],
-          }));
+          try {
+            const newCat = payload.new as any;
+            useServerStore.setState((state) => ({
+              categories: [...state.categories, {
+                id: newCat.id,
+                server_id: newCat.server_id,
+                name: newCat.name,
+                position: newCat.position || 0,
+                is_collapsed: newCat.is_collapsed || false,
+                created_at: newCat.created_at,
+              }],
+            }));
+          } catch (error) {
+            console.error('[Realtime] Error processing category insert:', error);
+          }
         }
       )
       .on(
@@ -187,13 +211,16 @@ export const useRealtimeServer = (serverId: string | null) => {
           filter: `server_id=eq.${serverId}`,
         },
         (payload) => {
-          console.log('[Realtime] Category updated:', payload.new);
-          const updated = payload.new as any;
-          useServerStore.setState((state) => ({
-            categories: state.categories.map((cat) =>
-              cat.id === updated.id ? { ...cat, ...updated } : cat
-            ),
-          }));
+          try {
+            const updated = payload.new as any;
+            useServerStore.setState((state) => ({
+              categories: state.categories.map((cat) =>
+                cat.id === updated.id ? { ...cat, ...updated } : cat
+              ),
+            }));
+          } catch (error) {
+            console.error('[Realtime] Error processing category update:', error);
+          }
         }
       )
       .on(
@@ -205,22 +232,37 @@ export const useRealtimeServer = (serverId: string | null) => {
           filter: `server_id=eq.${serverId}`,
         },
         (payload) => {
-          console.log('[Realtime] Category deleted:', payload.old);
-          const oldCat = payload.old as { id?: string };
-          if (oldCat.id) {
-            useServerStore.setState((state) => ({
-              categories: state.categories.filter((cat) => cat.id !== oldCat.id),
-            }));
+          try {
+            const oldCat = payload.old as { id?: string };
+            if (oldCat.id) {
+              useServerStore.setState((state) => ({
+                categories: state.categories.filter((cat) => cat.id !== oldCat.id),
+              }));
+            }
+          } catch (error) {
+            console.error('[Realtime] Error processing category delete:', error);
           }
         }
       )
-      .subscribe((status) => {
-        console.log('[Realtime] Server subscription status:', status);
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('[Realtime] Successfully subscribed to server:', serverId);
+        } else if (status === 'CHANNEL_ERROR') {
+          // Only log if connection is available (otherwise it's expected)
+          if (isConnected || isReconnecting) {
+            console.warn('[Realtime] Channel error for server:', err?.message || 'Unknown error');
+          }
+        } else if (status === 'TIMED_OUT') {
+          console.warn('[Realtime] Server subscription timed out');
+        }
       });
 
     return () => {
-      console.log('[Realtime] Cleaning up server subscription for:', serverId);
-      supabase.removeChannel(channel);
+      try {
+        supabase.removeChannel(channel);
+      } catch (e) {
+        // Ignore cleanup errors
+      }
     };
-  }, [serverId]);
+  }, [serverId, isConnected, isReconnecting]);
 };

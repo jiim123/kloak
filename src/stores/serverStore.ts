@@ -8,7 +8,8 @@ import type {
   Channel, 
   ChannelCategory,
   ChannelType,
-  ServerRole 
+  ServerRole,
+  CustomServerRole
 } from '@/types';
 
 interface ServerState {
@@ -50,6 +51,15 @@ interface ServerState {
   banMember: (serverId: string, userId: string) => Promise<void>;
   transferOwnership: (serverId: string, currentOwnerId: string, newOwnerId: string) => Promise<void>;
 
+  // Role actions
+  roles: CustomServerRole[];
+  fetchRoles: (serverId: string) => Promise<void>;
+  createRole: (serverId: string, userId: string, name: string, color: string) => Promise<CustomServerRole | null>;
+  updateRole: (roleId: string, userId: string, updates: { name?: string; color?: string }) => Promise<void>;
+  deleteRole: (roleId: string, userId: string) => Promise<void>;
+  assignRoleToMember: (memberId: string, roleId: string, userId: string) => Promise<void>;
+  removeRoleFromMember: (memberId: string, roleId: string, userId: string) => Promise<void>;
+
   // Utility
   clearServerState: () => void;
 }
@@ -61,6 +71,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
   categories: [],
   channels: [],
   members: [],
+  roles: [],
   isLoading: false,
   error: null,
 
@@ -376,6 +387,9 @@ export const useServerStore = create<ServerState>((set, get) => ({
         channels,
       });
 
+      // Also fetch roles when fetching channels
+      await get().fetchRoles(serverId);
+
       // Always try to restore the persisted channel when switching servers
       const { currentChannel } = get();
       const persistedChannelId = localStorage.getItem('kloak-current-channel-id');
@@ -639,13 +653,43 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   fetchMembers: async (serverId: string) => {
     try {
+      // Fetch roles first if not already loaded
+      const { roles: currentRoles } = get();
+      if (currentRoles.length === 0 || currentRoles[0]?.server_id !== serverId) {
+        await get().fetchRoles(serverId);
+      }
+      
       // Use RPC function to bypass RLS
       const { data, error } = await supabase.rpc('get_server_members', { _server_id: serverId });
 
-      if (error) throw error;
+      if (error) {
+        console.error('get_server_members RPC error:', error);
+        throw error;
+      }
+
+      console.log('get_server_members response:', { data, type: typeof data, isArray: Array.isArray(data) });
+
+      // Handle JSON response - Supabase RPC may return JSON string or parsed array
+      let membersData: Array<any>;
+      if (!data) {
+        membersData = [];
+      } else if (typeof data === 'string') {
+        try {
+          membersData = JSON.parse(data);
+        } catch (e) {
+          console.error('Failed to parse members JSON:', e);
+          membersData = [];
+        }
+      } else if (Array.isArray(data)) {
+        membersData = data;
+      } else {
+        // If it's an object, try to extract array or wrap it
+        console.warn('Unexpected data format:', data);
+        membersData = [];
+      }
 
       // Cast and filter out banned members
-      const membersData = (data || []) as unknown as Array<{
+      const typedMembersData = membersData as Array<{
         id: string;
         server_id: string;
         user_id: string;
@@ -654,6 +698,12 @@ export const useServerStore = create<ServerState>((set, get) => ({
         is_banned: boolean;
         is_muted: boolean;
         joined_at: string;
+        roles?: Array<{
+          id: string;
+          name: string;
+          color: string;
+          position: number;
+        }>;
         user: {
           id: string;
           username: string;
@@ -668,7 +718,9 @@ export const useServerStore = create<ServerState>((set, get) => ({
         };
       }>;
 
-      const members: ServerMember[] = membersData
+      console.log('membersData before processing:', typedMembersData, 'length:', typedMembersData?.length);
+
+      const members: ServerMember[] = typedMembersData
         .filter(item => !item.is_banned)
         .map((item) => ({
           id: item.id,
@@ -680,11 +732,15 @@ export const useServerStore = create<ServerState>((set, get) => ({
           is_muted: item.is_muted,
           joined_at: item.joined_at,
           user: item.user as any,
+          roles: item.roles as any,
         }));
 
+      console.log('Processed members:', members, 'length:', members.length);
       set({ members });
     } catch (error) {
       console.error('Failed to fetch members:', error);
+      // Set empty array on error to prevent stale data
+      set({ members: [] });
     }
   },
 
@@ -794,6 +850,142 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }
   },
 
+  fetchRoles: async (serverId: string) => {
+    try {
+      const { data, error } = await supabase.rpc('get_server_roles', { _server_id: serverId });
+
+      if (error) throw error;
+
+      const roles = (data || []) as unknown as CustomServerRole[];
+      set({ roles });
+    } catch (error) {
+      console.error('Failed to fetch roles:', error);
+    }
+  },
+
+  createRole: async (serverId: string, userId: string, name: string, color: string) => {
+    try {
+      const { data, error } = await supabase.rpc('create_server_role', {
+        _server_id: serverId,
+        _user_id: userId,
+        _name: name,
+        _color: color,
+      });
+
+      if (error) {
+        console.error('Failed to create role - RPC error:', error);
+        throw error;
+      }
+
+      const role = data as unknown as CustomServerRole;
+      set((state) => ({
+        roles: [...state.roles, role].sort((a, b) => a.position - b.position),
+      }));
+
+      return role;
+    } catch (error: any) {
+      console.error('Failed to create role:', error);
+      // Re-throw with a more user-friendly message
+      if (error?.message?.includes('function') || error?.message?.includes('does not exist')) {
+        throw new Error('Database migration not applied. Please apply the migration file: 20260114122043_add_server_roles.sql');
+      }
+      throw error;
+    }
+  },
+
+  updateRole: async (roleId: string, userId: string, updates: { name?: string; color?: string }) => {
+    try {
+      const { data, error } = await supabase.rpc('update_server_role', {
+        _role_id: roleId,
+        _user_id: userId,
+        _name: updates.name || null,
+        _color: updates.color || null,
+      });
+
+      if (error) throw error;
+
+      const role = data as unknown as CustomServerRole;
+      set((state) => ({
+        roles: state.roles.map((r) => (r.id === roleId ? role : r)),
+      }));
+    } catch (error) {
+      console.error('Failed to update role:', error);
+      throw error;
+    }
+  },
+
+  deleteRole: async (roleId: string, userId: string) => {
+    try {
+      const { error } = await supabase.rpc('delete_server_role', {
+        _role_id: roleId,
+        _user_id: userId,
+      });
+
+      if (error) throw error;
+
+      set((state) => ({
+        roles: state.roles.filter((r) => r.id !== roleId),
+        members: state.members.map((m) => ({
+          ...m,
+          roles: m.roles?.filter((r) => r.id !== roleId),
+        })),
+      }));
+    } catch (error) {
+      console.error('Failed to delete role:', error);
+      throw error;
+    }
+  },
+
+  assignRoleToMember: async (memberId: string, roleId: string, userId: string) => {
+    try {
+      const { error } = await supabase.rpc('assign_role_to_member', {
+        _member_id: memberId,
+        _role_id: roleId,
+        _user_id: userId,
+      });
+
+      if (error) throw error;
+
+      // Refresh members to get updated roles
+      const { members } = get();
+      const member = members.find((m) => m.id === memberId);
+      if (member) {
+        const { currentServer } = get();
+        if (currentServer) {
+          await get().fetchMembers(currentServer.id);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to assign role:', error);
+      throw error;
+    }
+  },
+
+  removeRoleFromMember: async (memberId: string, roleId: string, userId: string) => {
+    try {
+      const { error } = await supabase.rpc('remove_role_from_member', {
+        _member_id: memberId,
+        _role_id: roleId,
+        _user_id: userId,
+      });
+
+      if (error) throw error;
+
+      // Refresh members to get updated roles
+      const { members } = get();
+      const member = members.find((m) => m.id === memberId);
+      if (member) {
+        const { currentServer } = get();
+        if (currentServer) {
+          await get().fetchMembers(currentServer.id);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to remove role:', error);
+      throw error;
+    }
+  },
+
   clearServerState: () =>
     set({
       currentServer: null,
@@ -801,5 +993,6 @@ export const useServerStore = create<ServerState>((set, get) => ({
       categories: [],
       channels: [],
       members: [],
+      roles: [],
     }),
 }));

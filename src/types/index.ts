@@ -35,6 +35,15 @@ export interface UserProfile extends User {
 
 export type ServerRole = 'owner' | 'admin' | 'moderator' | 'member';
 
+export interface CustomServerRole {
+  id: string;
+  server_id: string;
+  name: string;
+  color: string;
+  position: number;
+  created_at: string;
+}
+
 export interface Server {
   id: string;
   name: string;
@@ -63,6 +72,7 @@ export interface ServerMember {
   is_muted: boolean;
   joined_at: string;
   user?: User;
+  roles?: CustomServerRole[];
 }
 
 // ============================================

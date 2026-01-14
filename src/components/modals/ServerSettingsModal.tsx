@@ -13,7 +13,10 @@ import {
   Shield,
   ShieldCheck,
   User,
-  X
+  X,
+  Palette,
+  Plus,
+  Edit2
 } from 'lucide-react';
 import {
   Dialog,
@@ -46,7 +49,14 @@ import { useRealtimeMembers } from '@/hooks';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import type { ServerRole, ServerMember } from '@/types';
+import type { ServerRole, ServerMember, CustomServerRole } from '@/types';
+import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const MAX_ICON_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_ICON_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -79,7 +89,14 @@ export const ServerSettingsModal = () => {
     currentServer, 
     servers, 
     members, 
+    roles,
     fetchMembers,
+    fetchRoles,
+    createRole,
+    updateRole,
+    deleteRole,
+    assignRoleToMember,
+    removeRoleFromMember,
     updateServer,
     deleteServer,
     kickMember,
@@ -91,6 +108,9 @@ export const ServerSettingsModal = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  const [editingRole, setEditingRole] = useState<CustomServerRole | null>(null);
+  const [roleName, setRoleName] = useState('');
+  const [roleColor, setRoleColor] = useState('#5865F2');
   
   // Icon upload state
   const [iconFile, setIconFile] = useState<File | null>(null);
@@ -129,16 +149,21 @@ export const ServerSettingsModal = () => {
   // Real-time members updates
   useRealtimeMembers(isOpen && server ? server.id : null);
 
-  // Fetch members when modal opens
+  // Fetch members and roles when modal opens
   useEffect(() => {
     if (isOpen && server) {
       fetchMembers(server.id);
+      fetchRoles(server.id);
       reset({ name: server.name });
       // Reset icon state
       setIconFile(null);
       setIconPreview(null);
+      // Reset role form
+      setEditingRole(null);
+      setRoleName('');
+      setRoleColor('#5865F2');
     }
-  }, [isOpen, server, fetchMembers, reset]);
+  }, [isOpen, server, fetchMembers, fetchRoles, reset]);
 
   const handleIconSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -278,7 +303,94 @@ export const ServerSettingsModal = () => {
     reset();
     setActiveTab('overview');
     clearIcon();
+    setEditingRole(null);
+    setRoleName('');
+    setRoleColor('#5865F2');
     closeModal();
+  };
+
+  const handleCreateRole = async () => {
+    if (!server || !user || !roleName.trim()) return;
+    
+    try {
+      await createRole(server.id, user.id, roleName.trim(), roleColor);
+      // Refetch roles to ensure UI is up to date
+      await fetchRoles(server.id);
+      toast.success('Role created');
+      setRoleName('');
+      setRoleColor('#5865F2');
+    } catch (error: any) {
+      console.error('Failed to create role:', error);
+      const errorMessage = error?.message || 'Failed to create role';
+      if (errorMessage.includes('migration')) {
+        toast.error('Database migration required. Please apply the migration file first.', {
+          duration: 10000,
+        });
+      } else {
+        toast.error(errorMessage);
+      }
+    }
+  };
+
+  const handleUpdateRole = async () => {
+    if (!server || !user || !editingRole || !roleName.trim()) return;
+    
+    try {
+      await updateRole(editingRole.id, user.id, { name: roleName.trim(), color: roleColor });
+      // Refetch roles to ensure UI is up to date
+      await fetchRoles(server.id);
+      toast.success('Role updated');
+      setEditingRole(null);
+      setRoleName('');
+      setRoleColor('#5865F2');
+    } catch (error) {
+      console.error('Failed to update role:', error);
+      toast.error('Failed to update role');
+    }
+  };
+
+  const handleDeleteRole = async (role: CustomServerRole) => {
+    if (!server || !user) return;
+    
+    if (!confirm(`Are you sure you want to delete the role "${role.name}"?`)) return;
+    
+    try {
+      await deleteRole(role.id, user.id);
+      // Refetch roles to ensure UI is up to date
+      await fetchRoles(server.id);
+      toast.success('Role deleted');
+    } catch (error) {
+      console.error('Failed to delete role:', error);
+      toast.error('Failed to delete role');
+    }
+  };
+
+  const handleEditRole = (role: CustomServerRole) => {
+    setEditingRole(role);
+    setRoleName(role.name);
+    setRoleColor(role.color);
+  };
+
+  const handleAssignRole = async (member: ServerMember, role: CustomServerRole) => {
+    if (!server || !user) return;
+    
+    try {
+      await assignRoleToMember(member.id, role.id, user.id);
+      toast.success(`Role "${role.name}" assigned`);
+    } catch (error) {
+      toast.error('Failed to assign role');
+    }
+  };
+
+  const handleRemoveRole = async (member: ServerMember, role: CustomServerRole) => {
+    if (!server || !user) return;
+    
+    try {
+      await removeRoleFromMember(member.id, role.id, user.id);
+      toast.success(`Role "${role.name}" removed`);
+    } catch (error) {
+      toast.error('Failed to remove role');
+    }
   };
 
   if (!server) {
@@ -317,7 +429,7 @@ export const ServerSettingsModal = () => {
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 h-9 sm:h-10">
+            <TabsList className="grid w-full grid-cols-4 h-9 sm:h-10">
               <TabsTrigger value="overview" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
                 <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 <span className="hidden xs:inline">Overview</span>
@@ -326,6 +438,10 @@ export const ServerSettingsModal = () => {
               <TabsTrigger value="members" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
                 <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 <span>Members</span>
+              </TabsTrigger>
+              <TabsTrigger value="roles" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
+                <Palette className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span>Roles</span>
               </TabsTrigger>
               <TabsTrigger value="bans" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
                 <Ban className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -432,54 +548,242 @@ export const ServerSettingsModal = () => {
               </div>
               <ScrollArea className="h-[200px] sm:h-[300px] pr-2 sm:pr-4">
                 <div className="space-y-1.5 sm:space-y-2">
-                  {members.map((member) => (
-                    <div 
-                      key={member.id}
-                      className="flex items-center gap-2 sm:gap-3 p-1.5 sm:p-2 rounded-lg hover:bg-secondary/50"
-                    >
-                      <Avatar className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
-                        <AvatarImage src={member.user?.avatar_url || undefined} />
-                        <AvatarFallback style={{ backgroundColor: member.user?.banner_color || '#5865F2' }}>
-                          {member.user?.username?.[0]?.toUpperCase() || '?'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 sm:gap-2">
-                          <span className="text-xs sm:text-sm font-medium truncate">
-                            {member.nickname || member.user?.display_name || member.user?.username}
-                          </span>
-                          {getRoleIcon(member.role)}
+                  {members.map((member) => {
+                    const memberRoles = member.roles || [];
+                    const hasRoles = memberRoles.length > 0;
+                    
+                    return (
+                      <div 
+                        key={member.id}
+                        className="flex items-center gap-2 sm:gap-3 p-1.5 sm:p-2 rounded-lg hover:bg-secondary/50"
+                      >
+                        <Avatar className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
+                          <AvatarImage src={member.user?.avatar_url || undefined} />
+                          <AvatarFallback style={{ backgroundColor: member.user?.banner_color || '#5865F2' }}>
+                            {member.user?.username?.[0]?.toUpperCase() || '?'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                            <span className="text-xs sm:text-sm font-medium truncate">
+                              {member.nickname || member.user?.display_name || member.user?.username}
+                            </span>
+                            {getRoleIcon(member.role)}
+                            {hasRoles && (
+                              <div className="flex items-center gap-1 flex-wrap">
+                                {memberRoles.map((role) => (
+                                  <Badge
+                                    key={role.id}
+                                    variant="outline"
+                                    className="text-[10px] px-1.5 py-0 h-4 font-medium border-0"
+                                    style={{ backgroundColor: role.color + '20', color: role.color }}
+                                  >
+                                    {role.name}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+                            {member.user?.username} • {getRoleLabel(member.role)}
+                          </p>
                         </div>
-                        <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
-                          {member.user?.username} • {getRoleLabel(member.role)}
-                        </p>
+                        
+                        {/* Actions (not for self or higher roles) */}
+                        {isAdmin && member.user_id !== user?.id && member.role !== 'owner' && (
+                          <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
+                            {roles.length > 0 && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    className="text-muted-foreground hover:text-foreground text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3"
+                                  >
+                                    Roles
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-48">
+                                  {roles.map((role) => {
+                                    const hasRole = memberRoles.some(r => r.id === role.id);
+                                    return (
+                                      <DropdownMenuItem
+                                        key={role.id}
+                                        onClick={() => hasRole 
+                                          ? handleRemoveRole(member, role)
+                                          : handleAssignRole(member, role)
+                                        }
+                                      >
+                                        <div className="flex items-center gap-2 w-full">
+                                          <div 
+                                            className="w-3 h-3 rounded-full flex-shrink-0"
+                                            style={{ backgroundColor: role.color }}
+                                          />
+                                          <span className="flex-1">{role.name}</span>
+                                          {hasRole && <span className="text-xs text-muted-foreground">✓</span>}
+                                        </div>
+                                      </DropdownMenuItem>
+                                    );
+                                  })}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleKickMember(member)}
+                              className="text-muted-foreground hover:text-destructive text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3"
+                            >
+                              Kick
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleBanMember(member)}
+                              className="text-muted-foreground hover:text-destructive text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3"
+                            >
+                              Ban
+                            </Button>
+                          </div>
+                        )}
                       </div>
-                      
-                      {/* Actions (not for self or higher roles) */}
-                      {isAdmin && member.user_id !== user?.id && member.role !== 'owner' && (
-                        <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleKickMember(member)}
-                            className="text-muted-foreground hover:text-destructive text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3"
-                          >
-                            Kick
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleBanMember(member)}
-                            className="text-muted-foreground hover:text-destructive text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3"
-                          >
-                            Ban
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </ScrollArea>
+            </TabsContent>
+
+            {/* Roles Tab */}
+            <TabsContent value="roles" className="mt-3 sm:mt-4">
+              {isAdmin ? (
+                <div className="space-y-4">
+                  {/* Create/Edit Role Form */}
+                  <div className="space-y-3 sm:space-y-4 p-3 sm:p-4 border rounded-lg bg-secondary/50">
+                    <h4 className="text-xs sm:text-sm font-semibold">
+                      {editingRole ? 'Edit Role' : 'Create Role'}
+                    </h4>
+                    <div className="space-y-2">
+                      <Label htmlFor="roleName" className="text-xs sm:text-sm">Role Name</Label>
+                      <Input
+                        id="roleName"
+                        value={roleName}
+                        onChange={(e) => setRoleName(e.target.value)}
+                        placeholder="Enter role name"
+                        className="h-9 sm:h-10 text-sm"
+                        maxLength={100}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="roleColor" className="text-xs sm:text-sm">Role Color</Label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          id="roleColor"
+                          value={roleColor}
+                          onChange={(e) => setRoleColor(e.target.value)}
+                          className="w-12 h-9 sm:h-10 rounded border cursor-pointer"
+                        />
+                        <Input
+                          value={roleColor}
+                          onChange={(e) => setRoleColor(e.target.value)}
+                          placeholder="#5865F2"
+                          className="h-9 sm:h-10 text-sm flex-1"
+                          maxLength={7}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        onClick={editingRole ? handleUpdateRole : handleCreateRole}
+                        disabled={!roleName.trim()}
+                        size="sm"
+                        className="flex-1"
+                      >
+                        {editingRole ? (
+                          <>
+                            <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2" />
+                            Update Role
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2" />
+                            Create Role
+                          </>
+                        )}
+                      </Button>
+                      {editingRole && (
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setEditingRole(null);
+                            setRoleName('');
+                            setRoleColor('#5865F2');
+                          }}
+                          size="sm"
+                        >
+                          Cancel
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Roles List */}
+                  <div className="space-y-2">
+                    <h4 className="text-xs sm:text-sm font-semibold">Server Roles</h4>
+                    {roles.length > 0 ? (
+                      <ScrollArea className="h-[200px] sm:h-[300px] pr-2 sm:pr-4">
+                        <div className="space-y-1.5 sm:space-y-2">
+                          {roles.map((role) => (
+                            <div
+                              key={role.id}
+                              className="flex items-center gap-2 sm:gap-3 p-1.5 sm:p-2 rounded-lg hover:bg-secondary/50"
+                            >
+                              <div
+                                className="w-4 h-4 rounded-full flex-shrink-0"
+                                style={{ backgroundColor: role.color }}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <span className="text-xs sm:text-sm font-medium">{role.name}</span>
+                              </div>
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEditRole(role)}
+                                  className="text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3"
+                                >
+                                  <Edit2 className="w-3 h-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteRole(role)}
+                                  className="text-muted-foreground hover:text-destructive text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-6 sm:py-8 text-center">
+                        <Palette className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground/50 mb-2 sm:mb-3" />
+                        <p className="text-xs sm:text-sm text-muted-foreground">No roles created</p>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
+                          Create roles to organize your server members
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-6 sm:py-8 text-center">
+                  <Shield className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground/50 mb-2 sm:mb-3" />
+                  <p className="text-xs sm:text-sm text-muted-foreground">Only admins can manage roles</p>
+                </div>
+              )}
             </TabsContent>
 
             {/* Bans Tab */}

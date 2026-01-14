@@ -26,7 +26,7 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
 import { MembersSidebarSkeleton } from '@/components/ui/skeletons';
-import type { ServerMember, ServerRole } from '@/types';
+import type { ServerMember, ServerRole, CustomServerRole } from '@/types';
 
 const OFFLINE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -88,7 +88,7 @@ const RoleBadge = ({ role }: { role: ServerRole }) => {
 };
 
 export const MembersSidebar = () => {
-  const { members, currentServer, isLoading } = useServerStore();
+  const { members, currentServer, roles, isLoading } = useServerStore();
   const { user } = useAuthStore();
   const { openModal } = useUIStore();
   const [offlineExpanded, setOfflineExpanded] = useState(false);
@@ -100,19 +100,8 @@ export const MembersSidebar = () => {
   const currentUserMember = members.find(m => m.user_id === user?.id);
   const currentUserRole = currentUserMember?.role;
 
-  // Categorize members based on presence - MUST be called before any early returns
-  const { onlineMembers, offlineMembers } = useMemo(() => {
-    const online: ServerMember[] = [];
-    const offline: ServerMember[] = [];
-    
-    members.forEach(member => {
-      if (isUserOffline(member)) {
-        offline.push(member);
-      } else {
-        online.push(member);
-      }
-    });
-    
+  // Group members: roles first (only online members with roles), then online/offline (only no-role members)
+  const { roleGroups, onlineNoRoleMembers, offlineNoRoleMembers } = useMemo(() => {
     // Sort by role hierarchy then alphabetically
     const sortMembers = (a: ServerMember, b: ServerMember) => {
       const roleOrder = { owner: 0, admin: 1, moderator: 2, member: 3 };
@@ -120,16 +109,71 @@ export const MembersSidebar = () => {
       const roleB = roleOrder[b.role as keyof typeof roleOrder] ?? 3;
       if (roleA !== roleB) return roleA - roleB;
       
+      // Sort by highest custom role position (lower position = higher in list)
+      const aHighestRole = a.roles && a.roles.length > 0 
+        ? Math.min(...a.roles.map(r => r.position))
+        : Infinity;
+      const bHighestRole = b.roles && b.roles.length > 0
+        ? Math.min(...b.roles.map(r => r.position))
+        : Infinity;
+      if (aHighestRole !== bHighestRole) return aHighestRole - bHighestRole;
+      
       const nameA = a.nickname || a.user?.display_name || a.user?.username || '';
       const nameB = b.nickname || b.user?.display_name || b.user?.username || '';
       return nameA.localeCompare(nameB);
     };
     
-    return { 
-      onlineMembers: online.sort(sortMembers), 
-      offlineMembers: offline.sort(sortMembers) 
+    // Group ONLINE members by roles only
+    const roleGroupsMap: Map<string, ServerMember[]> = new Map();
+    const noRoleMembers: ServerMember[] = [];
+    
+    // Create groups for each role
+    roles.forEach(role => {
+      roleGroupsMap.set(role.id, []);
+    });
+    
+    // Distribute members to their roles (only online members)
+    members.forEach(member => {
+      const memberRoles = member.roles || [];
+      if (memberRoles.length > 0) {
+        // Only add online members to role groups
+        if (!isUserOffline(member)) {
+          // Add to highest role (lowest position)
+          const highestRole = memberRoles.reduce((prev, curr) => 
+            curr.position < prev.position ? curr : prev
+          );
+          const roleMembers = roleGroupsMap.get(highestRole.id) || [];
+          roleMembers.push(member);
+          roleGroupsMap.set(highestRole.id, roleMembers);
+        }
+      } else {
+        noRoleMembers.push(member);
+      }
+    });
+    
+    // Sort members within each role group
+    roleGroupsMap.forEach((membersList, roleId) => {
+      roleGroupsMap.set(roleId, membersList.sort(sortMembers));
+    });
+    
+    // Separate no-role members by online/offline
+    const online: ServerMember[] = [];
+    const offline: ServerMember[] = [];
+    
+    noRoleMembers.forEach(member => {
+      if (isUserOffline(member)) {
+        offline.push(member);
+      } else {
+        online.push(member);
+      }
+    });
+    
+    return {
+      roleGroups: roleGroupsMap,
+      onlineNoRoleMembers: online.sort(sortMembers),
+      offlineNoRoleMembers: offline.sort(sortMembers),
     };
-  }, [members]);
+  }, [members, roles]);
 
   // Show skeleton while loading - AFTER all hooks
   if (isLoading) {
@@ -404,20 +448,48 @@ export const MembersSidebar = () => {
       </div>
 
       <div className="flex-1 overflow-y-auto p-2">
-        {/* Online section */}
-        {onlineMembers.length > 0 && (
+        {/* Roles section - shows all members with roles (both online and offline) */}
+        {roles
+          .sort((a, b) => a.position - b.position)
+          .map((role) => {
+            const roleMembers = roleGroups.get(role.id) || [];
+            if (roleMembers.length === 0) return null;
+            
+            return (
+              <div key={role.id} className="mb-4">
+                <div className="px-2 py-1 flex items-center gap-2">
+                  <div
+                    className="w-3 h-3 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: role.color }}
+                  />
+                  <span 
+                    className="text-xs font-semibold uppercase tracking-wide"
+                    style={{ color: role.color }}
+                  >
+                    {role.name} — {roleMembers.length}
+                  </span>
+                </div>
+                {roleMembers.map((member) => (
+                  <MemberItem key={member.id} member={member} />
+                ))}
+              </div>
+            );
+          })}
+
+        {/* Online section - only members with no roles */}
+        {onlineNoRoleMembers.length > 0 && (
           <div className="mb-4">
             <h3 className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-              Online — {onlineMembers.length}
+              Online — {onlineNoRoleMembers.length}
             </h3>
-            {onlineMembers.map((member) => (
+            {onlineNoRoleMembers.map((member) => (
               <MemberItem key={member.id} member={member} />
             ))}
           </div>
         )}
 
-        {/* Offline section - collapsible */}
-        {offlineMembers.length > 0 && (
+        {/* Offline section - only members with no roles */}
+        {offlineNoRoleMembers.length > 0 && (
           <Collapsible open={offlineExpanded} onOpenChange={setOfflineExpanded}>
             <CollapsibleTrigger className="flex items-center gap-1 px-2 py-1 w-full hover:bg-secondary/30 rounded transition-smooth">
               {offlineExpanded ? (
@@ -426,11 +498,11 @@ export const MembersSidebar = () => {
                 <ChevronRight className="w-3 h-3 text-muted-foreground" />
               )}
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                Offline — {offlineMembers.length}
+                Offline — {offlineNoRoleMembers.length}
               </span>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              {offlineMembers.map((member) => (
+              {offlineNoRoleMembers.map((member) => (
                 <MemberItem key={member.id} member={member} />
               ))}
             </CollapsibleContent>

@@ -4,13 +4,15 @@ import { useServerStore } from '@/stores/serverStore';
 import { toast } from '@/hooks/use-toast';
 
 export const useRealtimeMembers = (serverId: string | null) => {
-  // Use ref to avoid recreating subscription when store function changes
+  // Use refs to avoid recreating subscription when store functions change
   const fetchMembersRef = useRef(useServerStore.getState().fetchMembers);
+  const fetchRolesRef = useRef(useServerStore.getState().fetchRoles);
 
-  // Keep ref updated
+  // Keep refs updated
   useEffect(() => {
     return useServerStore.subscribe((state) => {
       fetchMembersRef.current = state.fetchMembers;
+      fetchRolesRef.current = state.fetchRoles;
     });
   }, []);
 
@@ -68,6 +70,86 @@ export const useRealtimeMembers = (serverId: string | null) => {
         },
         () => {
           fetchMembersRef.current(serverId);
+        }
+      )
+      // Listen for role changes (server_roles table)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'server_roles',
+          filter: `server_id=eq.${serverId}`,
+        },
+        () => {
+          // Refresh both roles and members when a role is created
+          fetchRolesRef.current(serverId);
+          fetchMembersRef.current(serverId);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'server_roles',
+          filter: `server_id=eq.${serverId}`,
+        },
+        () => {
+          // Refresh both roles and members when a role is updated
+          fetchRolesRef.current(serverId);
+          fetchMembersRef.current(serverId);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'server_roles',
+          filter: `server_id=eq.${serverId}`,
+        },
+        () => {
+          // Refresh both roles and members when a role is deleted
+          fetchRolesRef.current(serverId);
+          fetchMembersRef.current(serverId);
+        }
+      )
+      // Listen for member role assignments (server_member_roles table)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'server_member_roles',
+        },
+        (payload) => {
+          // Check if this member belongs to this server using current members list
+          const { members } = useServerStore.getState();
+          const memberExists = members.some(m => m.id === payload.new.member_id);
+          
+          if (memberExists) {
+            // Refresh members when a role is assigned
+            fetchMembersRef.current(serverId);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'server_member_roles',
+        },
+        (payload) => {
+          // Check if this member belongs to this server using current members list
+          const { members } = useServerStore.getState();
+          const memberExists = members.some(m => m.id === payload.old.member_id);
+          
+          if (memberExists) {
+            // Refresh members when a role is removed
+            fetchMembersRef.current(serverId);
+          }
         }
       )
       .subscribe();

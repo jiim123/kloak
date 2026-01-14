@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useMessageStore } from '@/stores/messageStore';
+import { useConnectionStatus } from './useConnectionStatus';
 import type { Message, User } from '@/types';
 
 // User cache to avoid refetching
@@ -23,128 +24,182 @@ const getCachedUser = async (userId: string): Promise<User | null> => {
 };
 
 export const useRealtimeMessages = (channelId: string | null) => {
+  const { isConnected, isReconnecting } = useConnectionStatus();
+  const isSettingUpRef = useRef(false);
+
   useEffect(() => {
     if (!channelId) {
-      console.log('[Realtime] No channelId provided, skipping messages subscription');
       return;
     }
 
-    console.log('[Realtime] Setting up messages subscription for channel:', channelId);
+    // Don't set up subscription if connection is down
+    if (!isConnected && !isReconnecting) {
+      return;
+    }
 
-    const channel = supabase
-      .channel(`messages:${channelId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'messages',
-        },
-        async (payload) => {
-          const eventType = payload.eventType;
-          
-          console.log('[Realtime] Messages event received:', eventType, payload);
-          
-          if (eventType === 'INSERT') {
-            const newMsg = payload.new as any;
-            
-            // Filter client-side for this channel
-            if (newMsg.channel_id !== channelId) {
-              console.log('[Realtime] Message for different channel, skipping');
-              return;
-            }
-            
-            console.log('[Realtime] New message received:', newMsg.id, newMsg.content?.substring(0, 50));
-            
-            // Get current state directly from store
-            const store = useMessageStore.getState();
-            const existingMessages = store.messagesByChannel[channelId]?.messages || [];
-            
-            // Skip if this message already exists
-            if (existingMessages.some(m => m.id === newMsg.id)) {
-              console.log('[Realtime] Message already exists, skipping:', newMsg.id);
-              return;
-            }
-            
-            // Get user from cache or fetch
-            const user = await getCachedUser(newMsg.user_id);
-            if (!user) {
-              console.log('[Realtime] Could not fetch user for message:', newMsg.user_id);
-              return;
-            }
-            
-            // Build message with minimal data
-            const message: Message = {
-              id: newMsg.id,
-              channel_id: newMsg.channel_id,
-              user_id: newMsg.user_id,
-              reply_to_id: newMsg.reply_to_id,
-              content: newMsg.content,
-              is_pinned: newMsg.is_pinned || false,
-              edited_at: newMsg.edited_at,
-              created_at: newMsg.created_at,
-              user,
-              reply_to: undefined,
-              attachments: [],
-              reactions: [],
-            };
-            
-            // If there's a reply, try to get it from existing messages
-            if (newMsg.reply_to_id) {
-              const freshStore = useMessageStore.getState();
-              const freshMessages = freshStore.messagesByChannel[channelId]?.messages || [];
-              const replyMsg = freshMessages.find(m => m.id === newMsg.reply_to_id);
-              if (replyMsg) {
-                message.reply_to = {
-                  id: replyMsg.id,
-                  content: replyMsg.content,
-                  user: replyMsg.user,
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let retryTimeout: NodeJS.Timeout | null = null;
+    let retryCount = 0;
+    const MAX_RETRIES = 2; // Reduced retries
+    const RETRY_DELAY = 5000; // Longer delay
+
+    const setupSubscription = () => {
+      // Prevent duplicate setup
+      if (isSettingUpRef.current) {
+        return;
+      }
+      isSettingUpRef.current = true;
+
+      // Clean up existing subscription if any
+      if (channel) {
+        try {
+          supabase.removeChannel(channel);
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+      }
+
+      console.log('[Realtime] Setting up messages subscription for channel:', channelId);
+
+      channel = supabase
+        .channel(`messages:${channelId}`, {
+          config: {
+            broadcast: { self: false },
+          },
+        })
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'messages',
+          },
+          async (payload) => {
+            try {
+              const eventType = payload.eventType;
+              
+              if (eventType === 'INSERT') {
+                const newMsg = payload.new as any;
+                
+                // Filter client-side for this channel
+                if (newMsg.channel_id !== channelId) {
+                  return;
+                }
+                
+                // Get current state directly from store
+                const store = useMessageStore.getState();
+                const existingMessages = store.messagesByChannel[channelId]?.messages || [];
+                
+                // Skip if this message already exists
+                if (existingMessages.some(m => m.id === newMsg.id)) {
+                  return;
+                }
+                
+                // Get user from cache or fetch
+                const user = await getCachedUser(newMsg.user_id);
+                if (!user) {
+                  return;
+                }
+                
+                // Build message with minimal data
+                const message: Message = {
+                  id: newMsg.id,
+                  channel_id: newMsg.channel_id,
+                  user_id: newMsg.user_id,
+                  reply_to_id: newMsg.reply_to_id,
+                  content: newMsg.content,
+                  is_pinned: newMsg.is_pinned || false,
+                  edited_at: newMsg.edited_at,
+                  created_at: newMsg.created_at,
+                  user,
+                  reply_to: undefined,
+                  attachments: [],
+                  reactions: [],
                 };
+                
+                // If there's a reply, try to get it from existing messages
+                if (newMsg.reply_to_id) {
+                  const freshStore = useMessageStore.getState();
+                  const freshMessages = freshStore.messagesByChannel[channelId]?.messages || [];
+                  const replyMsg = freshMessages.find(m => m.id === newMsg.reply_to_id);
+                  if (replyMsg) {
+                    message.reply_to = {
+                      id: replyMsg.id,
+                      content: replyMsg.content,
+                      user: replyMsg.user,
+                    };
+                  }
+                }
+                
+                useMessageStore.getState().addMessage(message);
+              } else if (eventType === 'UPDATE') {
+                const updated = payload.new as any;
+                
+                // Filter client-side for this channel
+                if (updated.channel_id !== channelId) return;
+                
+                useMessageStore.getState().updateMessage(updated.id, {
+                  content: updated.content,
+                  edited_at: updated.edited_at,
+                  is_pinned: updated.is_pinned,
+                });
+              } else if (eventType === 'DELETE') {
+                const oldData = payload.old as { id?: string; channel_id?: string };
+                
+                if (oldData.id) {
+                  useMessageStore.getState().removeMessage(oldData.id);
+                }
               }
-            }
-            
-            console.log('[Realtime] Adding message to store:', message.id);
-            useMessageStore.getState().addMessage(message);
-          } else if (eventType === 'UPDATE') {
-            const updated = payload.new as any;
-            
-            // Filter client-side for this channel
-            if (updated.channel_id !== channelId) return;
-            
-            console.log('[Realtime] Message updated:', updated.id);
-            
-            useMessageStore.getState().updateMessage(updated.id, {
-              content: updated.content,
-              edited_at: updated.edited_at,
-              is_pinned: updated.is_pinned,
-            });
-          } else if (eventType === 'DELETE') {
-            const oldData = payload.old as { id?: string; channel_id?: string };
-            
-            // For DELETE, we may not have channel_id in old data if REPLICA IDENTITY is not FULL
-            // But we already have REPLICA IDENTITY FULL, so it should be there
-            console.log('[Realtime] Message deleted:', oldData.id);
-            
-            if (oldData.id) {
-              useMessageStore.getState().removeMessage(oldData.id);
+            } catch (error) {
+              console.error('[Realtime] Error processing message event:', error);
             }
           }
-        }
-      )
-      .subscribe((status, err) => {
-        console.log('[Realtime] Messages subscription status:', status, err ? `Error: ${err.message}` : '');
-        if (status === 'SUBSCRIBED') {
-          console.log('[Realtime] Successfully subscribed to messages for channel:', channelId);
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('[Realtime] Channel error for messages:', err);
-        } else if (status === 'TIMED_OUT') {
-          console.error('[Realtime] Subscription timed out for messages');
-        }
-      });
+        )
+        .subscribe((status, err) => {
+          isSettingUpRef.current = false;
+          
+          if (status === 'SUBSCRIBED') {
+            console.log('[Realtime] Successfully subscribed to messages for channel:', channelId);
+            retryCount = 0;
+          } else if (status === 'CHANNEL_ERROR') {
+            // Only retry if connection is available
+            if (!isConnected && !isReconnecting) {
+              console.warn('[Realtime] Connection down, not retrying messages subscription');
+              return;
+            }
+            
+            if (retryCount < MAX_RETRIES) {
+              retryCount++;
+              console.log(`[Realtime] Retrying messages subscription (attempt ${retryCount}/${MAX_RETRIES})...`);
+              retryTimeout = setTimeout(() => {
+                // Check connection again before retrying
+                if (isConnected || isReconnecting) {
+                  setupSubscription();
+                }
+              }, RETRY_DELAY * retryCount);
+            } else {
+              console.warn('[Realtime] Max retries reached for messages subscription. Continuing without realtime messages.');
+            }
+          } else if (status === 'TIMED_OUT') {
+            console.warn('[Realtime] Messages subscription timed out');
+          }
+        });
+    };
+
+    setupSubscription();
 
     return () => {
-      console.log('[Realtime] Cleaning up messages subscription for channel:', channelId);
-      supabase.removeChannel(channel);
+      isSettingUpRef.current = false;
+      if (retryTimeout) {
+        clearTimeout(retryTimeout);
+      }
+      if (channel) {
+        try {
+          supabase.removeChannel(channel);
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+      }
     };
-  }, [channelId]);
+  }, [channelId, isConnected, isReconnecting]);
 };
