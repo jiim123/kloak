@@ -68,6 +68,7 @@ export const MessageItem = memo(function MessageItem({
   const members = useServerStore((state) => state.members);
   const compactMode = useUIStore((state) => state.compactMode);
   const showTimestamps = useUIStore((state) => state.showTimestamps);
+  const { openModal } = useUIStore();
   const { getOptimisticStatus } = useSyncStore();
 
   // State
@@ -256,6 +257,14 @@ export const MessageItem = memo(function MessageItem({
   const roleColor = useMemo(() => getRoleColor(messageMember?.role), [messageMember?.role]);
   const displayName = messageMember?.nickname || messageUser?.display_name || messageUser?.username;
 
+  const handleUsernameClick = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (message.user_id) {
+      openModal('userProfile', { userId: message.user_id });
+    }
+  }, [message.user_id, openModal]);
+
   return (
     <>
       {showNewDivider && (
@@ -311,6 +320,7 @@ export const MessageItem = memo(function MessageItem({
             {compactMode ? (
               <span className="inline">
                 <span
+                  onClick={handleUsernameClick}
                   className={`text-sm font-semibold tracking-tight hover:underline cursor-pointer mr-1.5 ${roleColor}`}
                 >
                   {displayName}
@@ -321,7 +331,10 @@ export const MessageItem = memo(function MessageItem({
               !isGrouped &&
               messageUser && (
                 <div className="flex items-baseline gap-2 mb-0.5">
-                  <span className={`text-sm font-semibold tracking-tight hover:underline cursor-pointer ${roleColor}`}>
+                  <span 
+                    onClick={handleUsernameClick}
+                    className={`text-sm font-semibold tracking-tight hover:underline cursor-pointer ${roleColor}`}
+                  >
                     {displayName}
                   </span>
                   {showTimestamps && <span className="text-[11px] text-muted-foreground">{formattedTimestamp}</span>}

@@ -200,12 +200,13 @@ export const ServerSidebar = () => {
                         transition={{ type: "spring", stiffness: 400, damping: 25 }}
                         className={cn(
                           "w-12 h-12 overflow-hidden",
-                          isActive && "ring-2 ring-primary/50",
+                          isActive && !server.icon_url && "ring-2 ring-primary/50",
                           !server.icon_url && getServerColor(server.name),
+                          server.icon_url && "border-0",
                         )}
                       >
                         {server.icon_url ? (
-                          <Avatar className="w-12 h-12">
+                          <Avatar className="w-12 h-12 border-0">
                             <AvatarImage src={server.icon_url} alt={server.name} className="object-cover" />
                             <AvatarFallback className={getServerColor(server.name)}>
                               {getServerInitials(server.name)}

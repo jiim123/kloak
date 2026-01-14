@@ -28,7 +28,7 @@ const statusColors: Record<UserStatus, string> = {
 export const UserProfilePopup = () => {
   const { activeModal, modalData, closeModal } = useUIStore();
   const { user: currentUser } = useAuthStore();
-  const { servers, setCurrentServer } = useServerStore();
+  const { servers, setCurrentServer, currentServer, members } = useServerStore();
   const { friends, pendingRequests, outgoingRequests, sendRequest, removeFriend, acceptRequest, declineRequest } = useFriendStore();
   const { openConversation, setCurrentConversation } = useDMStore();
   
@@ -89,6 +89,11 @@ export const UserProfilePopup = () => {
   const isFriend = friends.some(f => f.id === userId);
   const hasPendingRequest = pendingRequests.some(f => f.id === userId);
   const hasSentRequest = outgoingRequests.some(f => f.id === userId);
+
+  // Get user's roles in current server
+  const userRoles = currentServer && userId
+    ? members.find(m => m.user_id === userId && m.server_id === currentServer.id)?.roles || []
+    : [];
 
   const handleMessage = async () => {
     if (!currentUser || !profileUser) return;
@@ -210,6 +215,30 @@ export const UserProfilePopup = () => {
                   }
                 </p>
               </div>
+
+              {/* Server Roles */}
+              {currentServer && userId && userRoles.length > 0 && (
+                <div className="bg-secondary rounded-lg p-3 mb-3">
+                  <h3 className="text-xs font-bold uppercase text-muted-foreground mb-2">
+                    Roles in {currentServer.name}
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {userRoles.map((role) => (
+                      <span
+                        key={role.id}
+                        className="text-xs font-medium px-2 py-1 rounded"
+                        style={{ 
+                          backgroundColor: `${role.color}20`,
+                          color: role.color,
+                          border: `1px solid ${role.color}40`
+                        }}
+                      >
+                        {role.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Shared Servers */}
               {sharedServers.length > 0 && (
