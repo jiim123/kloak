@@ -151,130 +151,142 @@ export const UserProfilePopup = () => {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="sm:max-w-sm p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-md p-0 overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
           </div>
         ) : profileUser ? (
-          <>
-            {/* Banner */}
+          <div className="flex flex-col">
+            {/* Subtle gradient header */}
             <div 
-              className="h-24 w-full"
-              style={{ backgroundColor: profileUser.banner_color }}
-            />
+              className="h-32 w-full relative overflow-hidden"
+              style={{ 
+                background: `linear-gradient(135deg, ${profileUser.banner_color}15 0%, ${profileUser.banner_color}05 100%)`
+              }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background/50" />
+            </div>
 
             {/* Profile Content */}
-            <div className="px-4 pb-4">
-              {/* Avatar */}
-              <div className="-mt-12 mb-3">
+            <div className="px-6 pb-6 -mt-16">
+              {/* Avatar with subtle status */}
+              <div className="mb-4">
                 <div className="relative inline-block">
-                  <Avatar className="w-20 h-20 border-4 border-background">
+                  <Avatar className="w-24 h-24 border-2 border-background shadow-lg">
                     <AvatarImage src={profileUser.avatar_url || undefined} />
-                    <AvatarFallback style={{ backgroundColor: profileUser.banner_color }}>
+                    <AvatarFallback 
+                      className="text-2xl font-semibold"
+                      style={{ backgroundColor: profileUser.banner_color }}
+                    >
                       {profileUser.username[0].toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className={cn(
-                    "absolute bottom-1 right-1 w-5 h-5 rounded-full border-4 border-background",
+                    "absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-background shadow-sm",
                     statusColors[profileUser.status]
                   )} />
                 </div>
               </div>
 
-              {/* Names */}
-              <div className="mb-3">
-                <h2 className="text-xl font-bold">
-                  {profileUser.display_name || profileUser.username}
-                </h2>
-                <p className="text-sm text-muted-foreground">@{profileUser.username}</p>
+              {/* Names and Status */}
+              <div className="mb-6 space-y-1">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-2xl font-semibold tracking-tight">
+                    {profileUser.display_name || profileUser.username}
+                  </h2>
+                </div>
+                <p className="text-sm text-muted-foreground font-medium">@{profileUser.username}</p>
+                
+                {/* Custom Status */}
+                {profileUser.custom_status && (
+                  <p className="text-sm text-muted-foreground mt-2 italic">
+                    {profileUser.custom_status}
+                  </p>
+                )}
               </div>
 
-              {/* Custom Status */}
-              {profileUser.custom_status && (
-                <p className="text-sm text-muted-foreground mb-3">
-                  {profileUser.custom_status}
-                </p>
-              )}
+              {/* Divider */}
+              <div className="h-px bg-border mb-6" />
 
               {/* Bio */}
               {profileUser.bio && (
-                <div className="bg-secondary rounded-lg p-3 mb-3">
-                  <h3 className="text-xs font-bold uppercase text-muted-foreground mb-1">About Me</h3>
-                  <p className="text-sm">{profileUser.bio}</p>
+                <div className="mb-6">
+                  <p className="text-sm leading-relaxed text-foreground/90">{profileUser.bio}</p>
                 </div>
               )}
 
-              {/* Member Since */}
-              <div className="bg-secondary rounded-lg p-3 mb-3">
-                <h3 className="text-xs font-bold uppercase text-muted-foreground mb-1">Member Since</h3>
-                <p className="text-sm">
-                  {profileUser.created_at 
-                    ? format(new Date(profileUser.created_at), 'MMM d, yyyy')
-                    : 'Unknown'
-                  }
-                </p>
-              </div>
-
-              {/* Server Roles */}
-              {currentServer && userId && userRoles.length > 0 && (
-                <div className="bg-secondary rounded-lg p-3 mb-3">
-                  <h3 className="text-xs font-bold uppercase text-muted-foreground mb-2">
-                    Roles in {currentServer.name}
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {userRoles.map((role) => (
-                      <span
-                        key={role.id}
-                        className="text-xs font-medium px-2 py-1 rounded"
-                        style={{ 
-                          backgroundColor: `${role.color}20`,
-                          color: role.color,
-                          border: `1px solid ${role.color}40`
-                        }}
-                      >
-                        {role.name}
-                      </span>
-                    ))}
+              {/* Info Grid */}
+              <div className="space-y-4 mb-6">
+                {/* Member Since */}
+                <div className="flex items-start gap-3">
+                  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider min-w-[100px] pt-0.5">
+                    Member Since
+                  </div>
+                  <div className="text-sm text-foreground">
+                    {profileUser.created_at 
+                      ? format(new Date(profileUser.created_at), 'MMMM d, yyyy')
+                      : 'Unknown'
+                    }
                   </div>
                 </div>
-              )}
 
-              {/* Shared Servers */}
-              {sharedServers.length > 0 && (
-                <div className="mb-4">
-                  <h3 className="text-xs font-bold uppercase text-muted-foreground mb-2">
-                    Shared Servers
-                  </h3>
-                  <ScrollArea className="max-h-20">
-                    <div className="flex gap-2">
+                {/* Server Roles */}
+                {currentServer && userId && userRoles.length > 0 && (
+                  <div className="flex items-start gap-3">
+                    <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider min-w-[100px] pt-0.5">
+                      Roles
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 flex-1">
+                      {userRoles.map((role) => (
+                        <span
+                          key={role.id}
+                          className="text-xs font-medium px-2 py-0.5 rounded-md"
+                          style={{ 
+                            backgroundColor: `${role.color}15`,
+                            color: role.color,
+                          }}
+                        >
+                          {role.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Shared Servers */}
+                {sharedServers.length > 0 && (
+                  <div className="flex items-start gap-3">
+                    <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider min-w-[100px] pt-0.5">
+                      Servers
+                    </div>
+                    <div className="flex gap-2 flex-1">
                       {sharedServers.map(server => (
                         <div 
                           key={server.id}
-                          className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-sm font-medium"
+                          className="w-8 h-8 rounded-lg bg-secondary/50 flex items-center justify-center text-xs font-medium overflow-hidden"
                           title={server.name}
                         >
                           {server.icon_url ? (
-                            <img src={server.icon_url} alt={server.name} className="w-full h-full rounded-full object-cover" />
+                            <img src={server.icon_url} alt={server.name} className="w-full h-full object-cover" />
                           ) : (
                             server.name.slice(0, 2).toUpperCase()
                           )}
                         </div>
                       ))}
                     </div>
-                  </ScrollArea>
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
 
               {/* Action Buttons */}
               {!isSelf && (
-                <div className="flex gap-2">
-                  <Button onClick={handleMessage} className="flex-1">
+                <div className="flex gap-2 pt-4 border-t border-border">
+                  <Button onClick={handleMessage} className="flex-1" variant="default">
                     <MessageCircle className="w-4 h-4 mr-2" />
                     Message
                   </Button>
                   {hasPendingRequest ? (
-                    // Show accept/decline buttons for pending requests
                     <>
                       <Button 
                         variant="default"
@@ -293,7 +305,7 @@ export const UserProfilePopup = () => {
                     </>
                   ) : (
                     <Button 
-                      variant={isFriend ? 'destructive' : 'secondary'}
+                      variant={isFriend ? 'destructive' : 'outline'}
                       onClick={handleFriendAction}
                       disabled={hasSentRequest}
                       className="flex-1"
@@ -316,7 +328,7 @@ export const UserProfilePopup = () => {
                 </div>
               )}
             </div>
-          </>
+          </div>
         ) : null}
       </DialogContent>
     </Dialog>

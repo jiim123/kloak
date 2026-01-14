@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronDown,
@@ -24,6 +24,8 @@ import {
   DragOverlay,
   DragStartEvent,
   DragEndEvent,
+  DragOverEvent,
+  useDroppable,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -72,6 +74,40 @@ const categoryVariants = {
 
 const isAdminRole = (role: ServerRole | undefined): boolean => {
   return role === "owner" || role === "admin" || role === "moderator";
+};
+
+// Uncategorized Drop Zone
+const UncategorizedDropZone = ({
+  children,
+  isDragOver,
+  hasChannels,
+}: {
+  children: ReactNode;
+  isDragOver: boolean;
+  hasChannels: boolean;
+}) => {
+  const { setNodeRef, isOver } = useDroppable({
+    id: "uncategorized-drop",
+    data: { type: "category-drop", categoryId: null },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "transition-all duration-200",
+        (isOver || isDragOver) && "ring-2 ring-primary/50 ring-offset-2 ring-offset-layout-sidebar-secondary rounded-md p-1 mb-2",
+        !hasChannels && (isOver || isDragOver) && "min-h-[60px] flex items-center justify-center"
+      )}
+    >
+      {children}
+      {!hasChannels && (isOver || isDragOver) && (
+        <div className="text-xs text-muted-foreground text-center py-2">
+          Drop channel here to uncategorize
+        </div>
+      )}
+    </div>
+  );
 };
 
 // Modern Sortable Channel Item
@@ -230,6 +266,7 @@ const SortableCategory = ({
   onSelectChannel,
   onAddChannel,
   onEditChannel,
+  isDragOver,
 }: {
   category: ChannelCategory;
   channels: Channel[];
@@ -241,10 +278,16 @@ const SortableCategory = ({
   onSelectChannel: (channel: Channel) => void;
   onAddChannel: () => void;
   onEditChannel: (channelId: string) => void;
+  isDragOver?: boolean;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: category.id,
     data: { type: "category", category },
+  });
+
+  const { setNodeRef: setDroppableRef, isOver } = useDroppable({
+    id: `category-drop-${category.id}`,
+    data: { type: "category-drop", categoryId: category.id },
   });
 
   const style = {
@@ -254,7 +297,18 @@ const SortableCategory = ({
   };
 
   return (
-    <motion.div ref={setNodeRef} style={style} className="mb-4" layout>
+    <motion.div 
+      ref={(node) => {
+        setNodeRef(node);
+        setDroppableRef(node);
+      }} 
+      style={style} 
+      className={cn(
+        "mb-4 transition-all duration-200",
+        (isOver || isDragOver) && "ring-2 ring-primary/50 ring-offset-2 ring-offset-layout-sidebar-secondary rounded-md"
+      )} 
+      layout
+    >
       {/* Category header */}
       <div className="group flex items-center gap-1 px-0.5 mb-1">
         <button
@@ -356,6 +410,7 @@ export const ChannelSidebar = () => {
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeType, setActiveType] = useState<"channel" | "category" | null>(null);
+  const [overCategoryId, setOverCategoryId] = useState<string | null>(null);
 
   const channelIds = useMemo(() => channels.map((c) => c.id), [channels]);
   const { getChannelUnread, markAsRead } = useUnread(channelIds);
@@ -428,12 +483,47 @@ export const ChannelSidebar = () => {
     setActiveType(data?.type || null);
   };
 
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    
+    if (!over) {
+      setOverCategoryId(null);
+      return;
+    }
+
+    const activeData = active.data.current;
+    const overData = over.data.current;
+
+    // If dragging a channel over a category drop zone
+    if (activeData?.type === "channel" && overData?.type === "category-drop") {
+      const categoryId = overData.categoryId as string | null;
+      setOverCategoryId(categoryId);
+      return;
+    }
+
+    // If dragging a channel over another channel, find its category
+    if (activeData?.type === "channel" && overData?.type === "channel") {
+      const overChannel = overData.channel as Channel;
+      setOverCategoryId(overChannel.category_id || null);
+      return;
+    }
+
+    // If dragging over a category header
+    if (activeData?.type === "channel" && overData?.type === "category") {
+      setOverCategoryId(over.id as string);
+      return;
+    }
+
+    setOverCategoryId(null);
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
     setActiveType(null);
+    setOverCategoryId(null);
 
-    if (!over || active.id === over.id) return;
+    if (!over) return;
 
     const activeData = active.data.current;
     const overData = over.data.current;
@@ -446,19 +536,62 @@ export const ChannelSidebar = () => {
         const newOrder = arrayMove(sortedCategories, oldIndex, newIndex);
         await reorderCategories(newOrder.map((c) => c.id));
       }
+      return;
     }
 
     if (activeData?.type === "channel") {
       const activeChannel = activeData.channel as Channel;
+      
+      // Check if dropped on a category drop zone
+      if (overData?.type === "category-drop") {
+        const targetCategoryId = overData.categoryId as string | null;
+        const targetChannels = targetCategoryId 
+          ? getChannelsForCategory(targetCategoryId)
+          : uncategorizedChannels;
+        const newPosition = targetChannels.length;
+        
+        // Only move if it's a different category
+        if (activeChannel.category_id !== targetCategoryId) {
+          await reorderChannels(activeChannel.id, targetCategoryId, newPosition);
+        }
+        return;
+      }
+
+      // Check if dropped on a category header
+      if (overData?.type === "category") {
+        const targetCategoryId = over.id as string;
+        const targetChannels = getChannelsForCategory(targetCategoryId);
+        const newPosition = targetChannels.length;
+        
+        // Only move if it's a different category
+        if (activeChannel.category_id !== targetCategoryId) {
+          await reorderChannels(activeChannel.id, targetCategoryId, newPosition);
+        }
+        return;
+      }
+
+      // Check if dropped on another channel
       const overChannel = overData?.channel as Channel | undefined;
+      if (overChannel) {
+        const targetCategoryId = overChannel.category_id;
+        
+        // If same category, reorder within category
+        if (activeChannel.category_id === targetCategoryId) {
+          const categoryChannels = getChannelsForCategory(activeChannel.category_id || "");
+          const oldIndex = categoryChannels.findIndex((c) => c.id === active.id);
+          const newIndex = categoryChannels.findIndex((c) => c.id === over.id);
 
-      if (overChannel && activeChannel.category_id === overChannel.category_id) {
-        const categoryChannels = getChannelsForCategory(activeChannel.category_id || "");
-        const oldIndex = categoryChannels.findIndex((c) => c.id === active.id);
-        const newIndex = categoryChannels.findIndex((c) => c.id === over.id);
-
-        if (oldIndex !== -1 && newIndex !== -1) {
-          await reorderChannels(activeChannel.id, activeChannel.category_id, newIndex);
+          if (oldIndex !== -1 && newIndex !== -1) {
+            await reorderChannels(activeChannel.id, activeChannel.category_id, newIndex);
+          }
+        } else {
+          // Different category - move to that category at the position of the over channel
+          const targetChannels = getChannelsForCategory(targetCategoryId || "");
+          const newIndex = targetChannels.findIndex((c) => c.id === over.id);
+          
+          if (newIndex !== -1) {
+            await reorderChannels(activeChannel.id, targetCategoryId, newIndex);
+          }
         }
       }
     }
@@ -589,33 +722,39 @@ export const ChannelSidebar = () => {
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
         <ContextMenu>
           <ContextMenuTrigger asChild>
             <div className="flex-1 overflow-y-auto p-2 scrollbar-hide">
           {/* Uncategorized channels */}
-          {uncategorizedChannels.length > 0 && (
-            <div className="mb-4 space-y-0.5">
-              <SortableContext items={uncategorizedChannels.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-                {uncategorizedChannels.map((channel) => {
-                  const { unreadCount, mentionCount } = getChannelUnread(channel.id);
-                  return (
-                    <SortableChannel
-                      key={channel.id}
-                      channel={channel}
-                      isActive={currentChannel?.id === channel.id}
-                      isUnread={unreadCount > 0}
-                      mentionCount={mentionCount}
-                      isAdmin={isAdmin}
-                      onSelect={() => handleSelectChannel(channel)}
-                      onEdit={() => openModal("edit-channel", { channelId: channel.id })}
-                    />
-                  );
-                })}
-              </SortableContext>
-            </div>
-          )}
+          <UncategorizedDropZone
+            isDragOver={overCategoryId === null && activeType === "channel"}
+            hasChannels={uncategorizedChannels.length > 0}
+          >
+            {uncategorizedChannels.length > 0 && (
+              <div className="mb-4 space-y-0.5">
+                <SortableContext items={uncategorizedChannels.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+                  {uncategorizedChannels.map((channel) => {
+                    const { unreadCount, mentionCount } = getChannelUnread(channel.id);
+                    return (
+                      <SortableChannel
+                        key={channel.id}
+                        channel={channel}
+                        isActive={currentChannel?.id === channel.id}
+                        isUnread={unreadCount > 0}
+                        mentionCount={mentionCount}
+                        isAdmin={isAdmin}
+                        onSelect={() => handleSelectChannel(channel)}
+                        onEdit={() => openModal("edit-channel", { channelId: channel.id })}
+                      />
+                    );
+                  })}
+                </SortableContext>
+              </div>
+            )}
+          </UncategorizedDropZone>
 
           {/* Categories */}
           <SortableContext items={sortedCategories.map((c) => c.id)} strategy={verticalListSortingStrategy}>
@@ -632,6 +771,7 @@ export const ChannelSidebar = () => {
                 onSelectChannel={handleSelectChannel}
                 onAddChannel={() => openModal("create-channel", { categoryId: category.id })}
                 onEditChannel={(channelId) => openModal("edit-channel", { channelId })}
+                isDragOver={overCategoryId === category.id && activeType === "channel"}
               />
             ))}
           </SortableContext>
