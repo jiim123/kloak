@@ -91,6 +91,7 @@ export interface Channel {
   position: number;
   is_nsfw: boolean;
   slowmode_seconds: number;
+  is_read_only: boolean;
   icon: string | null;
   created_at: string;
 }

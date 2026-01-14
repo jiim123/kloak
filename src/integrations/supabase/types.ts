@@ -105,6 +105,7 @@ export type Database = {
           icon: string | null
           id: string
           is_nsfw: boolean | null
+          is_read_only: boolean | null
           name: string
           position: number | null
           server_id: string
@@ -118,6 +119,7 @@ export type Database = {
           icon?: string | null
           id?: string
           is_nsfw?: boolean | null
+          is_read_only?: boolean | null
           name: string
           position?: number | null
           server_id: string
@@ -131,6 +133,7 @@ export type Database = {
           icon?: string | null
           id?: string
           is_nsfw?: boolean | null
+          is_read_only?: boolean | null
           name?: string
           position?: number | null
           server_id?: string
@@ -1041,10 +1044,15 @@ export type Database = {
         Args: { _category_id: string; _updates: Json; _user_id: string }
         Returns: Json
       }
-      update_channel: {
-        Args: { _channel_id: string; _updates: Json; _user_id: string }
-        Returns: Json
-      }
+      update_channel:
+        | {
+            Args: { _channel_id: string; _updates: Json; _user_id: string }
+            Returns: Json
+          }
+        | {
+            Args: { _channel_id: string; _updates: string; _user_id: string }
+            Returns: Json
+          }
       update_member_nickname: {
         Args: {
           _nickname: string

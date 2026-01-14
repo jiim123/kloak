@@ -1,7 +1,8 @@
-import { Hash, Volume2, Pin, Search, Users } from 'lucide-react';
+import { Hash, Volume2, Pin, Search, Users, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import { useServerStore } from '@/stores/serverStore';
 import { useUIStore } from '@/stores/uiStore';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
@@ -21,6 +22,18 @@ export const ChannelHeader = ({ channel }: ChannelHeaderProps) => {
       <div className="flex items-center gap-2 min-w-0 flex-1">
         <ChannelIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
         <span className="font-semibold text-foreground truncate">{channel.name}</span>
+        
+        {channel.is_read_only && (
+          <Tooltip>
+            <TooltipTrigger>
+              <Badge variant="secondary" className="flex items-center gap-1 text-xs">
+                <Lock className="w-3 h-3" />
+                Read-only
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent>Only admins can send messages</TooltipContent>
+          </Tooltip>
+        )}
         
         {channel.topic && (
           <>

@@ -27,7 +27,7 @@ const MAX_LENGTH = 2000;
 export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }: MessageInputProps) => {
   const { user } = useAuthStore();
   const { replyingTo, setReplyingTo, sendMessage } = useMessageStore();
-  const { members, currentServer } = useServerStore();
+  const { members, currentServer, currentChannel } = useServerStore();
   const { getQueuedForChannel } = useOfflineQueueStore();
   const { isOnline } = useOnlineStatus();
   
@@ -45,10 +45,12 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Check if user is muted or admin
+  // Check if user is muted, admin, or channel is read-only
   const currentMember = members.find(m => m.user_id === user?.id);
   const isMuted = currentMember?.is_muted || false;
   const isAdmin = currentMember?.role === 'owner' || currentMember?.role === 'admin' || currentMember?.role === 'moderator';
+  const isReadOnlyChannel = currentChannel?.is_read_only || false;
+  const canSendMessage = !isMuted && (!isReadOnlyChannel || isAdmin);
 
   // Load draft on mount and channel change
   useEffect(() => {
@@ -455,6 +457,16 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       <div className="px-4 pb-6">
         <div className="flex items-center justify-center py-4 px-4 bg-secondary rounded-2xl">
           <span className="text-muted-foreground">You are muted in this server</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (isReadOnlyChannel && !isAdmin) {
+    return (
+      <div className="px-4 pb-6">
+        <div className="flex items-center justify-center py-4 px-4 bg-secondary rounded-2xl">
+          <span className="text-muted-foreground">This channel is read-only</span>
         </div>
       </div>
     );

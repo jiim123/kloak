@@ -50,6 +50,7 @@ export const EditChannelModal = () => {
   const [topic, setTopic] = useState('');
   const [isNsfw, setIsNsfw] = useState(false);
   const [slowmodeSeconds, setSlowmodeSeconds] = useState('0');
+  const [isReadOnly, setIsReadOnly] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState('');
@@ -73,11 +74,13 @@ export const EditChannelModal = () => {
       setTopic('');
       setIsNsfw(false);
       setSlowmodeSeconds('0');
+      setIsReadOnly(false);
     } else if (channel) {
       setName(channel.name);
       setTopic(channel.topic || '');
       setIsNsfw(channel.is_nsfw);
       setSlowmodeSeconds(String(channel.slowmode_seconds));
+      setIsReadOnly(channel.is_read_only || false);
     }
     
     // If showDelete flag is set, immediately show delete confirmation
@@ -121,6 +124,7 @@ export const EditChannelModal = () => {
           topic: topic.trim() || null,
           is_nsfw: isNsfw,
           slowmode_seconds: parseInt(slowmodeSeconds, 10),
+          is_read_only: isReadOnly,
         }, user.id);
         toast.success('Channel updated');
       }
@@ -299,6 +303,19 @@ export const EditChannelModal = () => {
                     <p className="text-xs text-muted-foreground">
                       Members will only be able to send one message per this time period
                     </p>
+                  </div>
+
+                  <div className="flex items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <Label>Read-Only Channel</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Only admins and moderators can send messages
+                      </p>
+                    </div>
+                    <Switch
+                      checked={isReadOnly}
+                      onCheckedChange={setIsReadOnly}
+                    />
                   </div>
 
                   <div className="flex items-center justify-between rounded-lg border p-4">
