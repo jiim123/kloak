@@ -49,6 +49,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import type { Channel, ChannelCategory, ServerRole } from "@/types";
 
 // Animation variants
@@ -504,18 +511,40 @@ export const ChannelSidebar = () => {
 
   return (
     <div className="h-full flex flex-col bg-layout-sidebar-secondary">
-      {/* Server header */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <MotionButton
-            className="h-12 px-4 flex items-center justify-between border-b border-border/50 hover:bg-secondary/50 cursor-pointer w-full text-left transition-colors"
-            whileHover={{ backgroundColor: "hsl(var(--secondary) / 0.5)" }}
-            whileTap={{ scale: 0.99 }}
-          >
-            <h2 className="font-semibold text-foreground truncate">{currentServer.name}</h2>
-            <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-          </MotionButton>
-        </DropdownMenuTrigger>
+      {/* Server header with banner */}
+      <div className="relative">
+        {/* Server banner with smooth fade out effect */}
+        {currentServer.banner_url && (
+          <div className="relative h-20 sm:h-24 overflow-hidden">
+            <img 
+              src={currentServer.banner_url} 
+              alt={`${currentServer.name} banner`}
+              className="w-full h-full object-cover"
+            />
+            {/* Smooth fade out gradient overlay */}
+            <div 
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: 'linear-gradient(to bottom, transparent 0%, transparent 40%, hsl(var(--sidebar-secondary)) 100%)'
+              }}
+            />
+          </div>
+        )}
+        
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <MotionButton
+              className={cn(
+                "h-12 px-4 flex items-center justify-between border-b border-border/50 hover:bg-secondary/50 cursor-pointer w-full text-left transition-colors",
+                currentServer.banner_url && "border-t-0"
+              )}
+              whileHover={{ backgroundColor: "hsl(var(--secondary) / 0.5)" }}
+              whileTap={{ scale: 0.99 }}
+            >
+              <h2 className="font-semibold text-foreground truncate">{currentServer.name}</h2>
+              <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+            </MotionButton>
+          </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56" align="start" sideOffset={0}>
           <DropdownMenuItem onClick={() => openModal("invite", { serverId: currentServer.id })}>
             <UserPlus className="w-4 h-4 mr-2" />
@@ -553,6 +582,7 @@ export const ChannelSidebar = () => {
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+      </div>
 
       {/* Channel list */}
       <DndContext
@@ -561,7 +591,9 @@ export const ChannelSidebar = () => {
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex-1 overflow-y-auto p-2 scrollbar-hide">
+        <ContextMenu>
+          <ContextMenuTrigger asChild>
+            <div className="flex-1 overflow-y-auto p-2 scrollbar-hide">
           {/* Uncategorized channels */}
           {uncategorizedChannels.length > 0 && (
             <div className="mb-4 space-y-0.5">
@@ -626,7 +658,26 @@ export const ChannelSidebar = () => {
               )}
             </motion.div>
           )}
-        </div>
+            </div>
+          </ContextMenuTrigger>
+          {isAdmin && (
+            <ContextMenuContent>
+              <ContextMenuItem
+                onClick={() => openModal("create-channel", { serverId: currentServer.id, isCategory: true })}
+              >
+                <FolderPlus className="w-4 h-4 mr-2" />
+                Create Category
+              </ContextMenuItem>
+              <ContextMenuSeparator />
+              <ContextMenuItem
+                onClick={() => openModal("create-channel", { serverId: currentServer.id })}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Create Channel
+              </ContextMenuItem>
+            </ContextMenuContent>
+          )}
+        </ContextMenu>
 
         <DragOverlay>{getActiveItem()}</DragOverlay>
       </DndContext>

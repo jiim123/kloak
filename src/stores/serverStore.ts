@@ -25,7 +25,7 @@ interface ServerState {
   // Server actions
   fetchServers: (userId: string) => Promise<void>;
   createServer: (name: string, ownerId: string) => Promise<Server | null>;
-  updateServer: (serverId: string, userId: string, updates: { name?: string; icon_url?: string | null }) => Promise<void>;
+  updateServer: (serverId: string, userId: string, updates: { name?: string; icon_url?: string | null; banner_url?: string | null }) => Promise<void>;
   joinServer: (inviteCode: string, userId: string) => Promise<Server | null>;
   leaveServer: (serverId: string, userId: string) => Promise<void>;
   deleteServer: (serverId: string) => Promise<void>;
@@ -189,7 +189,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }
   },
 
-  updateServer: async (serverId: string, userId: string, updates: { name?: string; icon_url?: string | null }) => {
+  updateServer: async (serverId: string, userId: string, updates: { name?: string; icon_url?: string | null; banner_url?: string | null }) => {
     try {
       // Use RPC function to bypass RLS
       const { data, error } = await supabase.rpc('update_server', {

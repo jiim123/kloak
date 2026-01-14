@@ -117,6 +117,12 @@ export const ServerSettingsModal = () => {
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [isUploadingIcon, setIsUploadingIcon] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Banner upload state
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
 
   const isOpen = activeModal === 'server-settings';
   
@@ -158,6 +164,9 @@ export const ServerSettingsModal = () => {
       // Reset icon state
       setIconFile(null);
       setIconPreview(null);
+      // Reset banner state
+      setBannerFile(null);
+      setBannerPreview(null);
       // Reset role form
       setEditingRole(null);
       setRoleName('');
@@ -215,6 +224,70 @@ export const ServerSettingsModal = () => {
     return `${publicUrl}?t=${Date.now()}`;
   };
 
+  const handleBannerSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!ALLOWED_ICON_TYPES.includes(file.type)) {
+      toast.error('Please select a JPEG, PNG, or WebP image');
+      return;
+    }
+
+    if (file.size > MAX_ICON_SIZE) {
+      toast.error('Image must be less than 5MB');
+      return;
+    }
+
+    setBannerFile(file);
+    setBannerPreview(URL.createObjectURL(file));
+  };
+
+  const clearBanner = () => {
+    setBannerFile(null);
+    if (bannerPreview) {
+      URL.revokeObjectURL(bannerPreview);
+      setBannerPreview(null);
+    }
+    if (bannerInputRef.current) {
+      bannerInputRef.current.value = '';
+    }
+  };
+
+  const uploadBanner = async (serverId: string, file: File): Promise<string | null> => {
+    const ext = file.name.split('.').pop() || 'png';
+    const filePath = `${serverId}/banner.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('server-icons')
+      .upload(filePath, file, { upsert: true });
+
+    if (uploadError) {
+      console.error('Failed to upload banner:', uploadError);
+      return null;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('server-icons')
+      .getPublicUrl(filePath);
+
+    // Add cache buster to force refresh
+    return `${publicUrl}?t=${Date.now()}`;
+  };
+
+  const handleRemoveBanner = async () => {
+    if (!server || !user) return;
+    
+    setIsUploadingBanner(true);
+    try {
+      await updateServer(server.id, user.id, { banner_url: null });
+      toast.success('Server banner removed');
+    } catch (error) {
+      toast.error('Failed to remove banner');
+    } finally {
+      setIsUploadingBanner(false);
+    }
+  };
+
   const handleRemoveIcon = async () => {
     if (!server || !user) return;
     
@@ -235,6 +308,7 @@ export const ServerSettingsModal = () => {
     setIsLoading(true);
     try {
       let iconUrl = server.icon_url;
+      let bannerUrl = server.banner_url;
       
       // Upload new icon if selected
       if (iconFile) {
@@ -246,13 +320,25 @@ export const ServerSettingsModal = () => {
         setIsUploadingIcon(false);
       }
       
+      // Upload new banner if selected
+      if (bannerFile) {
+        setIsUploadingBanner(true);
+        const uploadedUrl = await uploadBanner(server.id, bannerFile);
+        if (uploadedUrl) {
+          bannerUrl = uploadedUrl;
+        }
+        setIsUploadingBanner(false);
+      }
+      
       await updateServer(server.id, user.id, { 
         name: data.name,
-        icon_url: iconUrl 
+        icon_url: iconUrl,
+        banner_url: bannerUrl
       });
       
       toast.success('Server settings updated!');
       clearIcon();
+      clearBanner();
       closeModal();
     } catch (error) {
       toast.error('Failed to update server');
@@ -303,6 +389,7 @@ export const ServerSettingsModal = () => {
     reset();
     setActiveTab('overview');
     clearIcon();
+    clearBanner();
     setEditingRole(null);
     setRoleName('');
     setRoleColor('#5865F2');
@@ -407,10 +494,12 @@ export const ServerSettingsModal = () => {
 
   // Determine which icon to show
   const displayIconUrl = iconPreview || server.icon_url;
+  // Determine which banner to show
+  const displayBannerUrl = bannerPreview || server.banner_url;
 
   return (
     <>
-      {/* Hidden file input */}
+      {/* Hidden file inputs */}
       <input
         ref={fileInputRef}
         type="file"
@@ -418,40 +507,60 @@ export const ServerSettingsModal = () => {
         onChange={handleIconSelect}
         className="hidden"
       />
+      <input
+        ref={bannerInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        onChange={handleBannerSelect}
+        className="hidden"
+      />
 
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-        <DialogContent className="sm:max-w-2xl max-w-[calc(100vw-2rem)] max-h-[90vh] sm:max-h-[80vh] p-4 sm:p-6">
-          <DialogHeader className="pb-2">
+        <DialogContent className="sm:max-w-5xl max-w-[calc(100vw-2rem)] max-h-[90vh] sm:max-h-[85vh] p-0 flex flex-col">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b border-border">
             <DialogTitle className="text-base sm:text-lg">Server Settings</DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
               Manage your server settings and members
             </DialogDescription>
           </DialogHeader>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 h-9 sm:h-10">
-              <TabsTrigger value="overview" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
-                <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span className="hidden xs:inline">Overview</span>
-                <span className="xs:hidden">Info</span>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex overflow-hidden">
+            <TabsList className="flex flex-col items-start justify-start h-full w-48 sm:w-56 border-r border-border bg-secondary/30 p-2 gap-1 rounded-none inline-flex">
+              <TabsTrigger 
+                value="overview" 
+                className="w-full justify-start gap-2 text-xs sm:text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+              >
+                <Settings className="w-4 h-4" />
+                <span>Overview</span>
               </TabsTrigger>
-              <TabsTrigger value="members" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
-                <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <TabsTrigger 
+                value="members" 
+                className="w-full justify-start gap-2 text-xs sm:text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+              >
+                <Users className="w-4 h-4" />
                 <span>Members</span>
               </TabsTrigger>
-              <TabsTrigger value="roles" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
-                <Palette className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <TabsTrigger 
+                value="roles" 
+                className="w-full justify-start gap-2 text-xs sm:text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+              >
+                <Palette className="w-4 h-4" />
                 <span>Roles</span>
               </TabsTrigger>
-              <TabsTrigger value="bans" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
-                <Ban className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <TabsTrigger 
+                value="bans" 
+                className="w-full justify-start gap-2 text-xs sm:text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+              >
+                <Ban className="w-4 h-4" />
                 <span>Bans</span>
               </TabsTrigger>
             </TabsList>
+            
+            <div className="flex-1 overflow-y-auto">
 
-            {/* Overview Tab */}
-            <TabsContent value="overview" className="space-y-3 sm:space-y-4 mt-3 sm:mt-4">
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 sm:space-y-4">
+              {/* Overview Tab */}
+              <TabsContent value="overview" className="m-0 p-6">
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-5">
                 {/* Server Icon */}
                 <div className="flex items-center gap-3 sm:gap-4">
                   <div className="relative">
@@ -495,6 +604,50 @@ export const ServerSettingsModal = () => {
                   </div>
                 </div>
 
+                {/* Server Banner */}
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label className="text-xs sm:text-sm">Server Banner</Label>
+                  <div className="relative">
+                    <div 
+                      onClick={() => isAdmin && bannerInputRef.current?.click()}
+                      className={cn(
+                        "w-full h-24 sm:h-32 rounded-lg sm:rounded-xl bg-secondary flex items-center justify-center border-2 border-dashed border-muted-foreground/50 transition-colors overflow-hidden",
+                        isAdmin && "cursor-pointer hover:border-primary"
+                      )}
+                    >
+                      {displayBannerUrl ? (
+                        <img src={displayBannerUrl} alt="Server banner" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                          <Upload className="w-5 h-5 sm:w-6 sm:h-6" />
+                          <span className="text-[10px] sm:text-xs">Click to upload banner</span>
+                        </div>
+                      )}
+                    </div>
+                    {/* Remove banner button */}
+                    {isAdmin && displayBannerUrl && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (bannerPreview) {
+                            clearBanner();
+                          } else {
+                            handleRemoveBanner();
+                          }
+                        }}
+                        disabled={isUploadingBanner}
+                        className="absolute top-2 right-2 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/90 disabled:opacity-50"
+                      >
+                        <X className="w-3 h-3 sm:w-4 sm:h-4" />
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">
+                    {isAdmin ? 'Recommended 960x540 • Shown in server list' : 'Shown in server list'}
+                  </p>
+                </div>
+
                 {/* Server Name */}
                 <div className="space-y-1.5 sm:space-y-2">
                   <Label htmlFor="serverName" className="text-xs sm:text-sm">Server Name</Label>
@@ -511,8 +664,8 @@ export const ServerSettingsModal = () => {
 
                 {isAdmin && (
                   <DialogFooter className="pt-2 sm:pt-4">
-                    <Button type="submit" disabled={isLoading || isUploadingIcon} size="sm" className="w-full sm:w-auto">
-                      {(isLoading || isUploadingIcon) && <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2 animate-spin" />}
+                    <Button type="submit" disabled={isLoading || isUploadingIcon || isUploadingBanner} size="sm" className="w-full sm:w-auto">
+                      {(isLoading || isUploadingIcon || isUploadingBanner) && <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2 animate-spin" />}
                       Save Changes
                     </Button>
                   </DialogFooter>
@@ -539,14 +692,14 @@ export const ServerSettingsModal = () => {
               )}
             </TabsContent>
 
-            {/* Members Tab */}
-            <TabsContent value="members" className="mt-3 sm:mt-4">
-              <div className="flex items-center justify-between mb-2 sm:mb-3">
+              {/* Members Tab */}
+              <TabsContent value="members" className="m-0 p-6">
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
                 <p className="text-xs sm:text-sm text-muted-foreground">
                   {members.length} member{members.length !== 1 ? 's' : ''}
                 </p>
               </div>
-              <ScrollArea className="h-[200px] sm:h-[300px] pr-2 sm:pr-4">
+              <ScrollArea className="h-[400px] sm:h-[500px] pr-2 sm:pr-4">
                 <div className="space-y-1.5 sm:space-y-2">
                   {members.map((member) => {
                     const memberRoles = member.roles || [];
@@ -653,43 +806,49 @@ export const ServerSettingsModal = () => {
               </ScrollArea>
             </TabsContent>
 
-            {/* Roles Tab */}
-            <TabsContent value="roles" className="mt-3 sm:mt-4">
-              {isAdmin ? (
-                <div className="space-y-4">
-                  {/* Create/Edit Role Form */}
-                  <div className="space-y-3 sm:space-y-4 p-3 sm:p-4 border rounded-lg bg-secondary/50">
+              {/* Roles Tab */}
+              <TabsContent value="roles" className="m-0 p-6">
+                {isAdmin ? (
+                  <div className="space-y-5">
+                    {/* Create/Edit Role Form */}
+                    <div className="space-y-4 p-4 border rounded-lg bg-secondary/50">
                     <h4 className="text-xs sm:text-sm font-semibold">
                       {editingRole ? 'Edit Role' : 'Create Role'}
                     </h4>
                     <div className="space-y-2">
-                      <Label htmlFor="roleName" className="text-xs sm:text-sm">Role Name</Label>
-                      <Input
-                        id="roleName"
-                        value={roleName}
-                        onChange={(e) => setRoleName(e.target.value)}
-                        placeholder="Enter role name"
-                        className="h-9 sm:h-10 text-sm"
-                        maxLength={100}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="roleColor" className="text-xs sm:text-sm">Role Color</Label>
+                      <Label className="text-xs sm:text-sm">Role Name & Color</Label>
                       <div className="flex items-center gap-2">
-                        <input
-                          type="color"
-                          id="roleColor"
-                          value={roleColor}
-                          onChange={(e) => setRoleColor(e.target.value)}
-                          className="w-12 h-9 sm:h-10 rounded border cursor-pointer"
-                        />
                         <Input
-                          value={roleColor}
-                          onChange={(e) => setRoleColor(e.target.value)}
-                          placeholder="#5865F2"
+                          id="roleName"
+                          value={roleName}
+                          onChange={(e) => setRoleName(e.target.value)}
+                          placeholder="Enter role name"
                           className="h-9 sm:h-10 text-sm flex-1"
-                          maxLength={7}
+                          maxLength={100}
                         />
+                        <div className="relative flex items-center gap-2">
+                          {/* Circular color picker button */}
+                          <label
+                            htmlFor="roleColor"
+                            className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-border cursor-pointer overflow-hidden flex-shrink-0 hover:border-primary transition-colors"
+                            style={{ backgroundColor: roleColor }}
+                          >
+                            <input
+                              type="color"
+                              id="roleColor"
+                              value={roleColor}
+                              onChange={(e) => setRoleColor(e.target.value)}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            />
+                          </label>
+                          <Input
+                            value={roleColor}
+                            onChange={(e) => setRoleColor(e.target.value)}
+                            placeholder="#5865F2"
+                            className="h-9 sm:h-10 text-sm w-20 sm:w-24"
+                            maxLength={7}
+                          />
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -731,7 +890,7 @@ export const ServerSettingsModal = () => {
                   <div className="space-y-2">
                     <h4 className="text-xs sm:text-sm font-semibold">Server Roles</h4>
                     {roles.length > 0 ? (
-                      <ScrollArea className="h-[200px] sm:h-[300px] pr-2 sm:pr-4">
+                      <ScrollArea className="h-[400px] sm:h-[500px] pr-2 sm:pr-4">
                         <div className="space-y-1.5 sm:space-y-2">
                           {roles.map((role) => (
                             <div
@@ -778,18 +937,18 @@ export const ServerSettingsModal = () => {
                     )}
                   </div>
                 </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-6 sm:py-8 text-center">
-                  <Shield className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground/50 mb-2 sm:mb-3" />
-                  <p className="text-xs sm:text-sm text-muted-foreground">Only admins can manage roles</p>
-                </div>
-              )}
-            </TabsContent>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-6 sm:py-8 text-center">
+                    <Shield className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground/50 mb-2 sm:mb-3" />
+                    <p className="text-xs sm:text-sm text-muted-foreground">Only admins can manage roles</p>
+                  </div>
+                )}
+              </TabsContent>
 
-            {/* Bans Tab */}
-            <TabsContent value="bans" className="mt-3 sm:mt-4">
-              {members.filter(m => m.is_banned).length > 0 ? (
-                <ScrollArea className="h-[200px] sm:h-[300px] pr-2 sm:pr-4">
+              {/* Bans Tab */}
+              <TabsContent value="bans" className="m-0 p-6">
+                {members.filter(m => m.is_banned).length > 0 ? (
+                  <ScrollArea className="h-[400px] sm:h-[500px] pr-2 sm:pr-4">
                   <div className="space-y-1.5 sm:space-y-2">
                     {members.filter(m => m.is_banned).map((member) => (
                       <div 
@@ -827,17 +986,18 @@ export const ServerSettingsModal = () => {
                       </div>
                     ))}
                   </div>
-                </ScrollArea>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-6 sm:py-8 text-center">
-                  <Ban className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground/50 mb-2 sm:mb-3" />
-                  <p className="text-xs sm:text-sm text-muted-foreground">No banned users</p>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
-                    Users you ban will appear here
-                  </p>
-                </div>
-              )}
-            </TabsContent>
+                  </ScrollArea>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-6 sm:py-8 text-center">
+                    <Ban className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground/50 mb-2 sm:mb-3" />
+                    <p className="text-xs sm:text-sm text-muted-foreground">No banned users</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
+                      Users you ban will appear here
+                    </p>
+                  </div>
+                )}
+              </TabsContent>
+            </div>
           </Tabs>
         </DialogContent>
       </Dialog>
