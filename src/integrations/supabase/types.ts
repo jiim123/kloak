@@ -586,6 +586,42 @@ export type Database = {
           },
         ]
       }
+      server_member_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          member_id: string
+          role_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          member_id: string
+          role_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          member_id?: string
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "server_member_roles_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "server_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "server_member_roles_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "server_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       server_members: {
         Row: {
           id: string
@@ -630,6 +666,41 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      server_roles: {
+        Row: {
+          color: string
+          created_at: string | null
+          id: string
+          name: string
+          position: number | null
+          server_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string | null
+          id?: string
+          name: string
+          position?: number | null
+          server_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+          position?: number | null
+          server_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "server_roles_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
             referencedColumns: ["id"]
           },
         ]
@@ -784,6 +855,10 @@ export type Database = {
         Args: { _emoji: string; _message_id: string; _user_id: string }
         Returns: Json
       }
+      assign_role_to_member: {
+        Args: { _member_id: string; _role_id: string; _user_id: string }
+        Returns: boolean
+      }
       ban_member: {
         Args: { _server_id: string; _target_user_id: string; _user_id: string }
         Returns: boolean
@@ -836,6 +911,15 @@ export type Database = {
         }
         Returns: string
       }
+      create_server_role: {
+        Args: {
+          _color: string
+          _name: string
+          _server_id: string
+          _user_id: string
+        }
+        Returns: Json
+      }
       create_server_with_owner: {
         Args: { _name: string; _owner_id: string }
         Returns: Json
@@ -862,6 +946,10 @@ export type Database = {
       }
       delete_server: {
         Args: { _server_id: string; _user_id: string }
+        Returns: boolean
+      }
+      delete_server_role: {
+        Args: { _role_id: string; _user_id: string }
         Returns: boolean
       }
       edit_dm: {
@@ -915,6 +1003,7 @@ export type Database = {
       get_server_categories: { Args: { _server_id: string }; Returns: Json }
       get_server_channels: { Args: { _server_id: string }; Returns: Json }
       get_server_members: { Args: { _server_id: string }; Returns: Json }
+      get_server_roles: { Args: { _server_id: string }; Returns: Json }
       get_user_by_id: { Args: { _user_id: string }; Returns: Json }
       get_user_dm_conversations: { Args: { _user_id: string }; Returns: Json }
       get_user_friends: { Args: { _user_id: string }; Returns: Json }
@@ -966,6 +1055,10 @@ export type Database = {
       }
       remove_reaction: {
         Args: { _emoji: string; _message_id: string; _user_id: string }
+        Returns: boolean
+      }
+      remove_role_from_member: {
+        Args: { _member_id: string; _role_id: string; _user_id: string }
         Returns: boolean
       }
       search_messages: {
@@ -1064,6 +1157,15 @@ export type Database = {
       }
       update_server: {
         Args: { _server_id: string; _updates: Json; _user_id: string }
+        Returns: Json
+      }
+      update_server_role: {
+        Args: {
+          _color?: string
+          _name?: string
+          _role_id: string
+          _user_id: string
+        }
         Returns: Json
       }
       update_user_last_seen: { Args: { _user_id: string }; Returns: boolean }
