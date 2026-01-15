@@ -852,7 +852,11 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   fetchRoles: async (serverId: string) => {
     try {
-      const { data, error } = await supabase.rpc('get_server_roles', { _server_id: serverId });
+      const { data, error } = await supabase
+        .from('server_roles')
+        .select('*')
+        .eq('server_id', serverId)
+        .order('position', { ascending: true });
 
       if (error) throw error;
 
@@ -865,15 +869,29 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   createRole: async (serverId: string, userId: string, name: string, color: string) => {
     try {
-      const { data, error } = await supabase.rpc('create_server_role', {
-        _server_id: serverId,
-        _user_id: userId,
-        _name: name,
-        _color: color,
-      });
+      // Get the max position for this server
+      const { data: existingRoles } = await supabase
+        .from('server_roles')
+        .select('position')
+        .eq('server_id', serverId)
+        .order('position', { ascending: false })
+        .limit(1);
+
+      const nextPosition = existingRoles && existingRoles.length > 0 ? existingRoles[0].position + 1 : 0;
+
+      const { data, error } = await supabase
+        .from('server_roles')
+        .insert({
+          server_id: serverId,
+          name,
+          color,
+          position: nextPosition,
+        })
+        .select()
+        .single();
 
       if (error) {
-        console.error('Failed to create role - RPC error:', error);
+        console.error('Failed to create role - error:', error);
         throw error;
       }
 
@@ -885,22 +903,22 @@ export const useServerStore = create<ServerState>((set, get) => ({
       return role;
     } catch (error: any) {
       console.error('Failed to create role:', error);
-      // Re-throw with a more user-friendly message
-      if (error?.message?.includes('function') || error?.message?.includes('does not exist')) {
-        throw new Error('Database migration not applied. Please apply the migration file: 20260114122043_add_server_roles.sql');
-      }
       throw error;
     }
   },
 
   updateRole: async (roleId: string, userId: string, updates: { name?: string; color?: string }) => {
     try {
-      const { data, error } = await supabase.rpc('update_server_role', {
-        _role_id: roleId,
-        _user_id: userId,
-        _name: updates.name || null,
-        _color: updates.color || null,
-      });
+      const updateData: Record<string, string> = {};
+      if (updates.name) updateData.name = updates.name;
+      if (updates.color) updateData.color = updates.color;
+
+      const { data, error } = await supabase
+        .from('server_roles')
+        .update(updateData)
+        .eq('id', roleId)
+        .select()
+        .single();
 
       if (error) throw error;
 
@@ -916,10 +934,10 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   deleteRole: async (roleId: string, userId: string) => {
     try {
-      const { error } = await supabase.rpc('delete_server_role', {
-        _role_id: roleId,
-        _user_id: userId,
-      });
+      const { error } = await supabase
+        .from('server_roles')
+        .delete()
+        .eq('id', roleId);
 
       if (error) throw error;
 
@@ -938,11 +956,12 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   assignRoleToMember: async (memberId: string, roleId: string, userId: string) => {
     try {
-      const { error } = await supabase.rpc('assign_role_to_member', {
-        _member_id: memberId,
-        _role_id: roleId,
-        _user_id: userId,
-      });
+      const { error } = await supabase
+        .from('server_member_roles')
+        .insert({
+          member_id: memberId,
+          role_id: roleId,
+        });
 
       if (error) throw error;
 
@@ -963,11 +982,11 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   removeRoleFromMember: async (memberId: string, roleId: string, userId: string) => {
     try {
-      const { error } = await supabase.rpc('remove_role_from_member', {
-        _member_id: memberId,
-        _role_id: roleId,
-        _user_id: userId,
-      });
+      const { error } = await supabase
+        .from('server_member_roles')
+        .delete()
+        .eq('member_id', memberId)
+        .eq('role_id', roleId);
 
       if (error) throw error;
 
