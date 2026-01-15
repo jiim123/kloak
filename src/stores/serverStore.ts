@@ -476,27 +476,36 @@ export const useServerStore = create<ServerState>((set, get) => ({
   },
 
   updateChannel: async (channelId: string, updates: Partial<Channel>, userId: string) => {
-    try {
-      // Use RPC function to bypass RLS
-      const { error } = await supabase.rpc('update_channel', {
-        _channel_id: channelId,
-        _user_id: userId,
-        _updates: JSON.stringify(updates),
+    // Use RPC function to bypass RLS
+    const { data, error } = await supabase.rpc('update_channel', {
+      _channel_id: channelId,
+      _user_id: userId,
+      _updates: JSON.stringify(updates),
+    });
+
+    if (error) {
+      console.error('Failed to update channel:', error);
+      console.error('Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+        updates: updates
       });
+      throw new Error(error.message || 'Failed to update channel');
+    }
 
-      if (error) throw error;
-
+    // Use the returned data from the RPC call to ensure we have the actual database values
+    if (data) {
       set((state) => ({
         channels: state.channels.map((c) =>
-          c.id === channelId ? { ...c, ...updates } : c
+          c.id === channelId ? { ...c, ...data } : c
         ),
         currentChannel:
           state.currentChannel?.id === channelId
-            ? { ...state.currentChannel, ...updates }
+            ? { ...state.currentChannel, ...data }
             : state.currentChannel,
       }));
-    } catch (error) {
-      console.error('Failed to update channel:', error);
     }
   },
 

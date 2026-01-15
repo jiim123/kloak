@@ -119,13 +119,18 @@ export const EditChannelModal = () => {
         }, user.id);
         toast.success('Category updated');
       } else if (channelId) {
-        await updateChannel(channelId, {
+        const updates: Partial<Channel> = {
           name: formatChannelName(name.trim()),
-          topic: topic.trim() || null,
           is_nsfw: isNsfw,
-          slowmode_seconds: parseInt(slowmodeSeconds, 10),
+          slowmode_seconds: parseInt(slowmodeSeconds, 10) || 0,
           is_read_only: isReadOnly,
-        }, user.id);
+        };
+        
+        // Only include topic if it's provided (even if empty/null)
+        const trimmedTopic = topic.trim();
+        updates.topic = trimmedTopic || null;
+        
+        await updateChannel(channelId, updates, user.id);
         toast.success('Channel updated');
       }
       handleClose();
