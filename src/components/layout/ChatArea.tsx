@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { ChannelHeader } from "@/components/chat/ChannelHeader";
 import { MessageList } from "@/components/chat/MessageList";
 import { MessageInput } from "@/components/chat/MessageInput";
@@ -23,6 +23,7 @@ export const ChatArea = () => {
   
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const isProcessingPasteRef = useRef(false);
 
   const uploadImage = useCallback(async (file: File) => {
     if (!user || !currentChannel) return;
@@ -66,10 +67,22 @@ export const ChatArea = () => {
     }
   }, [user, currentChannel, sendMessage]);
 
+  // Reset paste processing ref when upload completes
+  useEffect(() => {
+    if (!isUploading) {
+      // Reset after a short delay to prevent race conditions
+      const timeoutId = setTimeout(() => {
+        isProcessingPasteRef.current = false;
+      }, 100);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isUploading]);
+
   // Paste handler for clipboard images
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
-      if (!currentChannel || !user) return;
+      // Prevent duplicate processing
+      if (!currentChannel || !user || isUploading || isProcessingPasteRef.current) return;
       
       const items = e.clipboardData?.items;
       if (!items) return;
@@ -77,8 +90,11 @@ export const ChatArea = () => {
       for (const item of items) {
         if (item.type.startsWith('image/')) {
           e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
           const file = item.getAsFile();
           if (file) {
+            isProcessingPasteRef.current = true;
             uploadImage(file);
           }
           break;
@@ -86,9 +102,9 @@ export const ChatArea = () => {
       }
     };
 
-    document.addEventListener('paste', handlePaste);
-    return () => document.removeEventListener('paste', handlePaste);
-  }, [currentChannel, user, uploadImage]);
+    document.addEventListener('paste', handlePaste, true); // Use capture phase
+    return () => document.removeEventListener('paste', handlePaste, true);
+  }, [currentChannel, user, uploadImage, isUploading]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
