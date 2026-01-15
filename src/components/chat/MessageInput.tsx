@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Paperclip, Smile, Send, X, Loader2, WifiOff, Type } from 'lucide-react';
+import { Paperclip, Smile, Send, X, Loader2, WifiOff, Type, Lock } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useMessageStore } from '@/stores/messageStore';
 import { useServerStore } from '@/stores/serverStore';
@@ -465,8 +465,9 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   if (isReadOnlyChannel && !isAdmin) {
     return (
       <div className="px-4 pb-6">
-        <div className="flex items-center justify-center py-4 px-4 bg-secondary rounded-2xl">
-          <span className="text-muted-foreground">This channel is read-only</span>
+        <div className="flex items-center justify-center gap-2 py-4 px-4 bg-secondary rounded-2xl border border-border">
+          <Lock className="w-4 h-4 text-muted-foreground" />
+          <span className="text-muted-foreground">Read-only channel</span>
         </div>
       </div>
     );
