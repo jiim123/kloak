@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, type ReactNode } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect, useLayoutEffect, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronDown,
@@ -67,10 +67,7 @@ const channelVariants = {
   exit: { opacity: 0, x: -10 },
 };
 
-const categoryVariants = {
-  collapsed: { height: 0, opacity: 0 },
-  expanded: { height: "auto", opacity: 1 },
-};
+// Category variants will be created dynamically based on measured height
 
 const isAdminRole = (role: ServerRole | undefined): boolean => {
   return role === "owner" || role === "admin" || role === "moderator";
@@ -254,6 +251,94 @@ const SortableChannel = ({
   );
 };
 
+// Category Content with measured height animation
+const CategoryContent = ({
+  channels,
+  currentChannelId,
+  getChannelUnread,
+  isAdmin,
+  onSelectChannel,
+  onEditChannel,
+}: {
+  channels: Channel[];
+  currentChannelId: string | undefined;
+  getChannelUnread: (channelId: string) => { unreadCount: number; mentionCount: number };
+  isAdmin: boolean;
+  onSelectChannel: (channel: Channel) => void;
+  onEditChannel: (channelId: string) => void;
+}) => {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState<number>(0);
+
+  // Measure height synchronously before paint to avoid layout thrashing
+  useLayoutEffect(() => {
+    if (contentRef.current) {
+      const measuredHeight = contentRef.current.scrollHeight;
+      if (measuredHeight > 0) {
+        setHeight((prevHeight) => {
+          // Only update if height changed significantly (avoid unnecessary updates)
+          return Math.abs(measuredHeight - prevHeight) > 1 ? measuredHeight : prevHeight;
+        });
+      }
+    }
+  }, [channels.length, channels.map(c => c.id).join(",")]);
+
+  // Fallback measurement after render if height is still 0
+  useEffect(() => {
+    if (height === 0 && contentRef.current) {
+      const measuredHeight = contentRef.current.scrollHeight;
+      if (measuredHeight > 0) {
+        setHeight(measuredHeight);
+      }
+    }
+  }, [height]);
+
+  return (
+    <motion.div
+      initial={{ height: 0, opacity: 0 }}
+      animate={{ 
+        height: height > 0 ? height : "auto", 
+        opacity: 1 
+      }}
+      exit={{ height: 0, opacity: 0 }}
+      transition={{ 
+        height: {
+          type: "spring", 
+          stiffness: 300, 
+          damping: 30,
+          mass: 0.8
+        },
+        opacity: { duration: 0.15 }
+      }}
+      className="space-y-0.5 ml-1 overflow-hidden"
+      style={{ 
+        contain: "layout style",
+        willChange: height > 0 ? "height" : undefined
+      }}
+    >
+      <div ref={contentRef}>
+        <SortableContext items={channels.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+          {channels.map((channel) => {
+            const { unreadCount, mentionCount } = getChannelUnread(channel.id);
+            return (
+              <SortableChannel
+                key={channel.id}
+                channel={channel}
+                isActive={currentChannelId === channel.id}
+                isUnread={unreadCount > 0}
+                mentionCount={mentionCount}
+                isAdmin={isAdmin}
+                onSelect={() => onSelectChannel(channel)}
+                onEdit={() => onEditChannel(channel.id)}
+              />
+            );
+          })}
+        </SortableContext>
+      </div>
+    </motion.div>
+  );
+};
+
 // Modern Sortable Category
 const SortableCategory = ({
   category,
@@ -360,32 +445,14 @@ const SortableCategory = ({
       {/* Channels */}
       <AnimatePresence>
         {!isCollapsed && (
-          <motion.div
-            initial="collapsed"
-            animate="expanded"
-            exit="collapsed"
-            variants={categoryVariants}
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className="space-y-0.5 ml-1 overflow-hidden"
-          >
-            <SortableContext items={channels.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-              {channels.map((channel) => {
-                const { unreadCount, mentionCount } = getChannelUnread(channel.id);
-                return (
-                  <SortableChannel
-                    key={channel.id}
-                    channel={channel}
-                    isActive={currentChannelId === channel.id}
-                    isUnread={unreadCount > 0}
-                    mentionCount={mentionCount}
-                    isAdmin={isAdmin}
-                    onSelect={() => onSelectChannel(channel)}
-                    onEdit={() => onEditChannel(channel.id)}
-                  />
-                );
-              })}
-            </SortableContext>
-          </motion.div>
+          <CategoryContent
+            channels={channels}
+            currentChannelId={currentChannelId}
+            getChannelUnread={getChannelUnread}
+            isAdmin={isAdmin}
+            onSelectChannel={onSelectChannel}
+            onEditChannel={onEditChannel}
+          />
         )}
       </AnimatePresence>
     </motion.div>
