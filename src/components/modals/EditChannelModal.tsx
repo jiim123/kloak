@@ -99,8 +99,8 @@ export const EditChannelModal = () => {
     return value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
+    e?.preventDefault();
     
     if (!name.trim()) {
       setError(isCategory ? 'Category name is required' : 'Channel name is required');
