@@ -1,26 +1,31 @@
-import { useState, useEffect, useRef } from 'react';
-import { Paperclip, Smile, Send, X, Loader2, WifiOff, Type, Lock } from 'lucide-react';
-import { useAuthStore } from '@/stores/authStore';
-import { useMessageStore } from '@/stores/messageStore';
-import { useServerStore } from '@/stores/serverStore';
-import { useOfflineQueueStore } from '@/stores/offlineQueueStore';
-import { useOnlineStatus } from '@/hooks/useOnlineStatus';
-import { useMemberPermissions } from '@/hooks/useMemberPermissions';
-import { saveDraft, getDraft, clearDraft } from '@/lib/storage';
-import { getMessagePreview, extractMentions } from '@/lib/message';
-import { MentionAutocomplete } from './MentionAutocomplete';
-import { EmojiGifPicker } from '@/components/modals/EmojiGifPicker';
-import { ImageUploadDialog } from '@/components/modals/ImageUploadDialog';
-import { FormatToolbar, FORMAT_SYNTAX, getColorSyntax, getCodeBlockSyntax } from './FormatToolbar';
-import { supabase } from '@/integrations/supabase/client';
-import { showSuccess, showWarning, handleError } from '@/lib/errorHandler';
-import { messageRateLimiter, validateMessageContent } from '@/lib/security';
+import { useState, useEffect, useRef } from "react";
+import { Paperclip, Smile, Send, X, Loader2, WifiOff, Type, Lock } from "lucide-react";
+import { useAuthStore } from "@/stores/authStore";
+import { useMessageStore } from "@/stores/messageStore";
+import { useServerStore } from "@/stores/serverStore";
+import { useOfflineQueueStore } from "@/stores/offlineQueueStore";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { useMemberPermissions } from "@/hooks/useMemberPermissions";
+import { saveDraft, getDraft, clearDraft } from "@/lib/storage";
+import { getMessagePreview, extractMentions } from "@/lib/message";
+import { MentionAutocomplete } from "./MentionAutocomplete";
+import { EmojiGifPicker } from "@/components/modals/EmojiGifPicker";
+import { ImageUploadDialog } from "@/components/modals/ImageUploadDialog";
+import { FormatToolbar, FORMAT_SYNTAX, getColorSyntax, getCodeBlockSyntax } from "./FormatToolbar";
+import { supabase } from "@/integrations/supabase/client";
+import { showSuccess, showWarning, handleError } from "@/lib/errorHandler";
+import { messageRateLimiter, validateMessageContent } from "@/lib/security";
 
 interface MessageInputProps {
   channelId: string;
   channelName: string;
   onTyping: () => void;
   onStopTyping: () => void;
+}
+
+interface MentionMapping {
+  username: string;
+  userId: string;
 }
 
 const MAX_LENGTH = 2000;
@@ -31,18 +36,21 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const { members, currentServer, currentChannel, fetchRolePermissions, fetchChannelPermissions } = useServerStore();
   const { getQueuedForChannel } = useOfflineQueueStore();
   const { isOnline } = useOnlineStatus();
-  
-  const [content, setContent] = useState('');
+
+  const [content, setContent] = useState("");
   const [isFocused, setIsFocused] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [showMentions, setShowMentions] = useState(false);
-  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionQuery, setMentionQuery] = useState("");
   const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 });
   const [mentionStartIndex, setMentionStartIndex] = useState(-1);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showFormatToolbar, setShowFormatToolbar] = useState(false);
   const [showImageUpload, setShowImageUpload] = useState(false);
-  
+
+  // Track mention mappings (username -> userId) for converting on send
+  const mentionMappingsRef = useRef<MentionMapping[]>([]);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -57,23 +65,25 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   }, [currentServer?.id, channelId, fetchRolePermissions, fetchChannelPermissions]);
 
   // Check if user is muted, admin, or channel is read-only
-  const currentMember = members.find(m => m.user_id === user?.id);
+  const currentMember = members.find((m) => m.user_id === user?.id);
   const isMuted = currentMember?.is_muted || false;
   const isReadOnlyChannel = currentChannel?.is_read_only || false;
-  
+
   // Check send_messages permission using database-backed permissions
   const { hasPermission } = useMemberPermissions(channelId);
-  const canSendMessagesPermission = hasPermission('send_messages');
-  
+  const canSendMessagesPermission = hasPermission("send_messages");
+
   // For read-only channels, also need manage_messages permission
-  const canSendInReadOnly = isReadOnlyChannel ? hasPermission('manage_messages') : true;
-  
+  const canSendInReadOnly = isReadOnlyChannel ? hasPermission("manage_messages") : true;
+
   const canSendMessage = !isMuted && canSendMessagesPermission && canSendInReadOnly;
 
   // Load draft on mount and channel change
   useEffect(() => {
     const draft = getDraft(channelId);
     setContent(draft);
+    // Clear mention mappings when changing channels
+    mentionMappingsRef.current = [];
   }, [channelId]);
 
   // Save draft on content change
@@ -92,8 +102,8 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   useEffect(() => {
     const textarea = textareaRef.current;
     if (textarea) {
-      textarea.style.height = 'auto';
-      textarea.style.height = Math.min(textarea.scrollHeight, 160) + 'px';
+      textarea.style.height = "auto";
+      textarea.style.height = Math.min(textarea.scrollHeight, 160) + "px";
     }
   }, [content]);
 
@@ -102,15 +112,15 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     const value = e.target.value;
     if (value.length <= MAX_LENGTH) {
       setContent(value);
-      
+
       // Typing indicator
       onTyping();
-      
+
       // Clear existing timeout
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
-      
+
       // Stop typing after 2 seconds of inactivity
       typingTimeoutRef.current = setTimeout(() => {
         onStopTyping();
@@ -119,16 +129,16 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       // Check for @ mentions
       const cursorPosition = e.target.selectionStart;
       const textBeforeCursor = value.slice(0, cursorPosition);
-      const atIndex = textBeforeCursor.lastIndexOf('@');
-      
+      const atIndex = textBeforeCursor.lastIndexOf("@");
+
       if (atIndex !== -1) {
         const textAfterAt = textBeforeCursor.slice(atIndex + 1);
         // Only show if there's no space after @ (still typing the mention)
-        if (!textAfterAt.includes(' ') && !textAfterAt.includes('\n')) {
+        if (!textAfterAt.includes(" ") && !textAfterAt.includes("\n")) {
           setMentionQuery(textAfterAt);
           setMentionStartIndex(atIndex);
           setShowMentions(true);
-          
+
           // Calculate position
           if (textareaRef.current) {
             setMentionPosition({
@@ -147,91 +157,134 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
 
   const handleMentionSelect = (option: { type: string; id?: string; label: string }) => {
     if (mentionStartIndex === -1) return;
-    
+
     // Replace the @query with the selected mention
     const beforeMention = content.slice(0, mentionStartIndex);
     const afterMention = content.slice(mentionStartIndex + mentionQuery.length + 1);
-    
+
     let mentionText: string;
-    if (option.type === 'user' && option.id) {
-      mentionText = `<@${option.id}> `;
+    if (option.type === "user" && option.id) {
+      // Display the username in the input (human-readable)
+      mentionText = `@${option.label} `;
+
+      // Store the mapping so we can convert to UUID when sending
+      // Check if this mapping already exists to avoid duplicates
+      const existingMapping = mentionMappingsRef.current.find(
+        (m) => m.username === option.label && m.userId === option.id,
+      );
+      if (!existingMapping) {
+        mentionMappingsRef.current.push({
+          username: option.label,
+          userId: option.id,
+        });
+      }
     } else {
       mentionText = `@${option.type} `;
     }
-    
+
     const newContent = beforeMention + mentionText + afterMention;
     setContent(newContent);
     setShowMentions(false);
     setMentionStartIndex(-1);
-    
+
     // Focus back on textarea after a brief delay to prevent mobile keyboard
     setTimeout(() => textareaRef.current?.focus(), 50);
+  };
+
+  // Convert display mentions (@username) to storage format (<@uuid>) before sending
+  const convertMentionsForSend = (text: string): string => {
+    let result = text;
+
+    // Convert user mentions using our stored mappings
+    for (const mapping of mentionMappingsRef.current) {
+      // Use word boundary to avoid partial matches
+      // Match @username followed by space, punctuation, or end of string
+      const regex = new RegExp(`@${escapeRegex(mapping.username)}(?=\\s|$|[.,!?;:])`, "g");
+      result = result.replace(regex, `<@${mapping.userId}>`);
+    }
+
+    // Convert @everyone and @here (these don't need UUID conversion)
+    result = result.replace(/@everyone(?=\s|$)/g, "@everyone");
+    result = result.replace(/@here(?=\s|$)/g, "@here");
+
+    return result;
+  };
+
+  // Helper to escape special regex characters
+  const escapeRegex = (string: string): string => {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   };
 
   const handleSubmit = async () => {
     if (!content.trim() || !user || isMuted || isSending) return;
 
     const messageContent = content.trim();
-    
+
     // Validate message content
     const validation = validateMessageContent(messageContent);
     if (!validation.valid) {
-      showWarning('Invalid message', validation.error || 'Please check your message');
+      showWarning("Invalid message", validation.error || "Please check your message");
       return;
     }
-    
+
     // Rate limiting check
     if (!messageRateLimiter.isAllowed(user.id)) {
       const remaining = messageRateLimiter.getRemainingTime(user.id);
-      showWarning('Slow down cowboy!', `Try again in ${remaining} seconds`);
+      showWarning("Slow down cowboy!", `Try again in ${remaining} seconds`);
       return;
     }
-    
+
+    // Convert mentions from display format to storage format
+    const contentToSend = convertMentionsForSend(messageContent);
+
     // Clear input immediately for instant feedback
-    setContent('');
+    setContent("");
     clearDraft(channelId);
+    mentionMappingsRef.current = []; // Clear mention mappings
     onStopTyping();
     setShowMentions(false);
     const currentReplyTo = replyingTo;
     setReplyingTo(null);
-    
-    setIsSending(true);
 
+    setIsSending(true);
     try {
       // Send message directly - realtime will handle updating the UI
-      const message = await sendMessage(channelId, user.id, messageContent, currentReplyTo?.id);
-    
+      const message = await sendMessage(channelId, user.id, contentToSend, currentReplyTo?.id);
+
       // Handle mentions in background (non-blocking)
       if (message && currentServer) {
-        const mentions = extractMentions(messageContent);
-        
+        const mentions = extractMentions(contentToSend);
+
         // Process mentions asynchronously without blocking
-        Promise.resolve().then(async () => {
-          for (const mention of mentions) {
-            if (mention.type === 'user' && mention.id && mention.id !== user.id) {
-              await supabase.from('mentions').insert({
-                message_id: message.id,
-                user_id: mention.id,
-                mention_type: 'user',
-              });
-            } else if (mention.type === 'everyone' || mention.type === 'here') {
-              const targetMembers = mention.type === 'here'
-                ? members.filter(m => m.user?.status === 'online' && m.user_id !== user.id)
-                : members.filter(m => m.user_id !== user.id);
-              
-              for (const member of targetMembers.slice(0, 50)) {
-                await supabase.from('mentions').insert({
+        Promise.resolve()
+          .then(async () => {
+            for (const mention of mentions) {
+              if (mention.type === "user" && mention.id && mention.id !== user.id) {
+                await supabase.from("mentions").insert({
                   message_id: message.id,
-                  user_id: member.user_id,
-                  mention_type: mention.type,
+                  user_id: mention.id,
+                  mention_type: "user",
                 });
+              } else if (mention.type === "everyone" || mention.type === "here") {
+                const targetMembers =
+                  mention.type === "here"
+                    ? members.filter((m) => m.user?.status === "online" && m.user_id !== user.id)
+                    : members.filter((m) => m.user_id !== user.id);
+
+                for (const member of targetMembers.slice(0, 50)) {
+                  await supabase.from("mentions").insert({
+                    message_id: message.id,
+                    user_id: member.user_id,
+                    mention_type: mention.type,
+                  });
+                }
               }
             }
-          }
-        }).catch(err => console.error('Failed to process mentions:', err));
+          })
+          .catch((err) => console.error("Failed to process mentions:", err));
       }
     } catch (error) {
-      handleError(error, 'Failed to send message');
+      handleError(error, "Failed to send message");
     } finally {
       setIsSending(false);
     }
@@ -245,19 +298,15 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const selectedText = content.slice(start, end);
-
     const syntax = FORMAT_SYNTAX[formatType];
+
     if (!syntax) return;
 
     const { prefix, suffix } = syntax;
-    
+
     if (selectedText) {
       // Wrap selected text
-      const newContent = 
-        content.slice(0, start) + 
-        prefix + selectedText + suffix + 
-        content.slice(end);
-
+      const newContent = content.slice(0, start) + prefix + selectedText + suffix + content.slice(end);
       if (newContent.length <= MAX_LENGTH) {
         setContent(newContent);
         requestAnimationFrame(() => {
@@ -280,48 +329,50 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     // Let mention autocomplete handle these keys
-    if (showMentions && ['ArrowDown', 'ArrowUp', 'Enter', 'Tab', 'Escape'].includes(e.key)) {
+    if (showMentions && ["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"].includes(e.key)) {
       return;
     }
 
     // Format shortcuts (Ctrl/Cmd + key)
     if (e.ctrlKey || e.metaKey) {
       switch (e.key.toLowerCase()) {
-        case 'b':
+        case "b":
           e.preventDefault();
-          applyFormatShortcut('bold');
+          applyFormatShortcut("bold");
           return;
-        case 'i':
+        case "i":
           e.preventDefault();
-          applyFormatShortcut('italic');
+          applyFormatShortcut("italic");
           return;
-        case 'u':
+        case "u":
           e.preventDefault();
-          applyFormatShortcut('underline');
+          applyFormatShortcut("underline");
           return;
-        case 'e':
+        case "e":
           e.preventDefault();
-          applyFormatShortcut('code');
+          applyFormatShortcut("code");
           return;
-        case 'p':
+        case "p":
           e.preventDefault();
-          applyFormatShortcut('spoiler');
+          applyFormatShortcut("spoiler");
           return;
       }
     }
-    
-    if (e.key === 'Enter' && !e.shiftKey) {
+
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
     }
 
     // Up arrow to edit last message when input is empty
-    if (e.key === 'ArrowUp' && !content.trim()) {
+    if (e.key === "ArrowUp" && !content.trim()) {
       e.preventDefault();
       // Dispatch custom event to trigger edit on the last own message
-      window.dispatchEvent(new CustomEvent('editLastMessage', { 
-        detail: { userId: user?.id, channelId } 
-      }));
+      window.dispatchEvent(
+        new CustomEvent("editLastMessage", {
+          detail: { userId: user?.id, channelId },
+        }),
+      );
     }
   };
 
@@ -339,10 +390,10 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
       const newContent = content.slice(0, start) + emoji + content.slice(end);
-      
+
       if (newContent.length <= MAX_LENGTH) {
         setContent(newContent);
-        
+
         // Don't focus immediately on mobile to prevent keyboard popup
         // Use requestAnimationFrame to ensure content is updated first
         requestAnimationFrame(() => {
@@ -357,7 +408,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
         setContent(newContent);
       }
     }
-    
+
     // Close picker
     setShowEmojiPicker(false);
   };
@@ -369,7 +420,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
       const newContent = content.slice(0, start) + gifUrl + content.slice(end);
-      
+
       if (newContent.length <= MAX_LENGTH) {
         setContent(newContent);
       }
@@ -379,7 +430,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
         setContent(newContent);
       }
     }
-    
+
     setShowEmojiPicker(false);
   };
 
@@ -393,11 +444,11 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     const selectedText = content.slice(start, end);
 
     let syntax: { prefix: string; suffix: string };
-    
-    if (formatType === 'color' && value) {
+
+    if (formatType === "color" && value) {
       syntax = getColorSyntax(value);
-    } else if (formatType === 'codeblock') {
-      syntax = getCodeBlockSyntax(value || '');
+    } else if (formatType === "codeblock") {
+      syntax = getCodeBlockSyntax(value || "");
     } else {
       syntax = FORMAT_SYNTAX[formatType];
     }
@@ -405,18 +456,15 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     if (!syntax) return;
 
     const { prefix, suffix } = syntax;
-    
+
     // If text is selected, wrap it with format syntax
     // If no selection, insert format syntax and place cursor between
-    const textToWrap = selectedText || 'text';
-    const newContent = 
-      content.slice(0, start) + 
-      prefix + textToWrap + suffix + 
-      content.slice(end);
+    const textToWrap = selectedText || "text";
+    const newContent = content.slice(0, start) + prefix + textToWrap + suffix + content.slice(end);
 
     if (newContent.length <= MAX_LENGTH) {
       setContent(newContent);
-      
+
       requestAnimationFrame(() => {
         if (selectedText) {
           // Move cursor after the formatted text
@@ -435,27 +483,23 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
 
   // Handle image upload
   const handleImageUpload = async (file: File) => {
-    if (!user) throw new Error('Not authenticated');
+    if (!user) throw new Error("Not authenticated");
 
     // Generate unique filename with timestamp for 14-day cleanup tracking
     const timestamp = Date.now();
-    const fileExt = file.name.split('.').pop();
+    const fileExt = file.name.split(".").pop();
     const fileName = `${user.id}/${timestamp}-${crypto.randomUUID()}.${fileExt}`;
 
     // Upload to Supabase Storage
-    const { data, error } = await supabase.storage
-      .from('attachments')
-      .upload(fileName, file, {
-        cacheControl: '3600',
-        upsert: false,
-      });
+    const { data, error } = await supabase.storage.from("attachments").upload(fileName, file, {
+      cacheControl: "3600",
+      upsert: false,
+    });
 
     if (error) throw error;
 
     // Get public URL
-    const { data: urlData } = supabase.storage
-      .from('attachments')
-      .getPublicUrl(data.path);
+    const { data: urlData } = supabase.storage.from("attachments").getPublicUrl(data.path);
 
     // Send the image URL as a message
     await sendMessage(channelId, user.id, urlData.publicUrl, replyingTo?.id);
@@ -465,7 +509,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       setReplyingTo(null);
     }
 
-    showSuccess('Image uploaded successfully');
+    showSuccess("Image uploaded successfully");
   };
 
   const showCharacterWarning = content.length > MAX_LENGTH - 200;
@@ -480,7 +524,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     );
   }
 
-  if (isReadOnlyChannel && !hasPermission('manage_messages')) {
+  if (isReadOnlyChannel && !hasPermission("manage_messages")) {
     return (
       <div className="px-4 pb-6">
         <div className="flex items-center justify-center gap-2 py-4 px-4 bg-secondary rounded-2xl border border-border">
@@ -497,7 +541,9 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       {queuedMessages.length > 0 && (
         <div className="flex items-center gap-2 px-4 py-2 mb-2 bg-[hsl(var(--nomo-warning))]/10 border border-[hsl(var(--nomo-warning))]/20 rounded-xl text-sm text-[hsl(var(--nomo-warning))]">
           <WifiOff className="w-4 h-4" />
-          <span>{queuedMessages.length} message{queuedMessages.length > 1 ? 's' : ''} waiting to send</span>
+          <span>
+            {queuedMessages.length} message{queuedMessages.length > 1 ? "s" : ""} waiting to send
+          </span>
         </div>
       )}
 
@@ -508,7 +554,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
           position={mentionPosition}
           onSelect={handleMentionSelect}
           onClose={() => setShowMentions(false)}
-          isAdmin={hasPermission('manage_messages')}
+          isAdmin={hasPermission("manage_messages")}
         />
       )}
 
@@ -521,7 +567,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
           <span className="text-sm text-muted-foreground truncate flex-1">
             {getMessagePreview(replyingTo.content, 50)}
           </span>
-          <button 
+          <button
             onClick={cancelReply}
             className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
           >
@@ -531,16 +577,16 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       )}
 
       {/* Floating input container */}
-      <div 
+      <div
         className={`
           rounded-2xl bg-secondary border transition-all duration-200 ease-out
-          ${isFocused ? 'border-border -translate-y-[3px] shadow-lg' : 'border-transparent translate-y-0'}
-          ${replyingTo ? 'rounded-t-none' : ''}
+          ${isFocused ? "border-border -translate-y-[3px] shadow-lg" : "border-transparent translate-y-0"}
+          ${replyingTo ? "rounded-t-none" : ""}
         `}
       >
         <div className="flex items-end gap-2 p-3">
           {/* Attachment button */}
-          <button 
+          <button
             onClick={() => setShowImageUpload(true)}
             className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150 mb-0.5"
             title="Upload image"
@@ -567,16 +613,15 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
             {/* Format toolbar */}
             {showFormatToolbar && (
               <div className="absolute bottom-full right-0 mb-2 z-50">
-                <FormatToolbar 
-                  onFormat={handleFormat} 
-                  onClose={() => setShowFormatToolbar(false)} 
-                />
+                <FormatToolbar onFormat={handleFormat} onClose={() => setShowFormatToolbar(false)} />
               </div>
             )}
 
             {/* Character count warning */}
             {showCharacterWarning && (
-              <span className={`text-xs mr-1 ${content.length > MAX_LENGTH - 50 ? 'text-destructive' : 'text-muted-foreground'}`}>
+              <span
+                className={`text-xs mr-1 ${content.length > MAX_LENGTH - 50 ? "text-destructive" : "text-muted-foreground"}`}
+              >
                 {MAX_LENGTH - content.length}
               </span>
             )}
@@ -586,9 +631,9 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
               type="button"
               onClick={() => setShowFormatToolbar(!showFormatToolbar)}
               className={`p-2 rounded-xl transition-colors duration-150 ${
-                showFormatToolbar 
-                  ? 'text-primary bg-primary/10' 
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                showFormatToolbar
+                  ? "text-primary bg-primary/10"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
               }`}
               onMouseDown={(e) => e.preventDefault()}
               title="Format text"
@@ -603,7 +648,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
               onEmojiSelect={handleEmojiSelect}
               disableGif
             >
-              <button 
+              <button
                 type="button"
                 className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
                 onMouseDown={(e) => {
@@ -621,26 +666,18 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
               disabled={!content.trim() || isSending}
               className={`p-2 rounded-xl transition-all duration-150 ${
                 content.trim() && !isSending
-                  ? 'bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95'
-                  : 'bg-muted text-muted-foreground cursor-not-allowed'
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95"
+                  : "bg-muted text-muted-foreground cursor-not-allowed"
               }`}
             >
-              {isSending ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Send className="w-5 h-5" />
-              )}
+              {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
             </button>
           </div>
         </div>
       </div>
 
       {/* Image upload dialog */}
-      <ImageUploadDialog
-        open={showImageUpload}
-        onOpenChange={setShowImageUpload}
-        onUpload={handleImageUpload}
-      />
+      <ImageUploadDialog open={showImageUpload} onOpenChange={setShowImageUpload} onUpload={handleImageUpload} />
     </div>
   );
 };
