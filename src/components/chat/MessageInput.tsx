@@ -580,7 +580,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       <div
         className={`
           rounded-2xl bg-secondary border transition-all duration-200 ease-out
-          ${isFocused ? "border-border -translate-y-[3px] shadow-lg" : "border-transparent translate-y-0"}
+          ${isFocused ? "border-border shadow-lg" : "border-transparent"}
           ${replyingTo ? "rounded-t-none" : ""}
         `}
       >
