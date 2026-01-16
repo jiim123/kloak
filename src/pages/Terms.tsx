@@ -15,19 +15,6 @@ const Terms = () => {
         </div>
         <p className="text-muted-foreground mb-8">Last updated: January 2025</p>
 
-        <div className="space-y-8 text-foreground/90">
-          <section>
-            <h2 className="text-xl font-medium mb-3 flex items-center gap-2">
-              <Shield className="h-5 w-5 text-primary" />
-              Our Philosophy
-            </h2>
-            <p className="leading-relaxed">
-              Kloak is founded on a single idea: privacy is not a feature, it's architecture. We at Kloak have
-              structured our services to collect the bare minimum of information necessary to complete the task at hand.
-              We don't need your email, your phone number, or any other form of identifying information.
-            </p>
-          </section>
-
           <Separator />
 
           <section>
