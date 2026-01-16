@@ -49,6 +49,51 @@ export type Database = {
           },
         ]
       }
+      channel_permissions: {
+        Row: {
+          allowed: boolean
+          channel_id: string
+          created_at: string | null
+          id: string
+          permission: Database["public"]["Enums"]["permission_type"]
+          role_id: string | null
+          role_name: Database["public"]["Enums"]["server_role"] | null
+        }
+        Insert: {
+          allowed: boolean
+          channel_id: string
+          created_at?: string | null
+          id?: string
+          permission: Database["public"]["Enums"]["permission_type"]
+          role_id?: string | null
+          role_name?: Database["public"]["Enums"]["server_role"] | null
+        }
+        Update: {
+          allowed?: boolean
+          channel_id?: string
+          created_at?: string | null
+          id?: string
+          permission?: Database["public"]["Enums"]["permission_type"]
+          role_id?: string | null
+          role_name?: Database["public"]["Enums"]["server_role"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "channel_permissions_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "channel_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "server_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       channel_reads: {
         Row: {
           channel_id: string
@@ -586,6 +631,51 @@ export type Database = {
           },
         ]
       }
+      role_permissions: {
+        Row: {
+          allowed: boolean
+          created_at: string | null
+          id: string
+          permission: Database["public"]["Enums"]["permission_type"]
+          role_id: string | null
+          role_name: Database["public"]["Enums"]["server_role"] | null
+          server_id: string
+        }
+        Insert: {
+          allowed?: boolean
+          created_at?: string | null
+          id?: string
+          permission: Database["public"]["Enums"]["permission_type"]
+          role_id?: string | null
+          role_name?: Database["public"]["Enums"]["server_role"] | null
+          server_id: string
+        }
+        Update: {
+          allowed?: boolean
+          created_at?: string | null
+          id?: string
+          permission?: Database["public"]["Enums"]["permission_type"]
+          role_id?: string | null
+          role_name?: Database["public"]["Enums"]["server_role"] | null
+          server_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "server_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_permissions_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       server_member_roles: {
         Row: {
           created_at: string | null
@@ -876,6 +966,22 @@ export type Database = {
         }
         Returns: boolean
       }
+      check_user_permission: {
+        Args: {
+          _channel_id: string
+          _permission: Database["public"]["Enums"]["permission_type"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      check_user_server_permission: {
+        Args: {
+          _permission: Database["public"]["Enums"]["permission_type"]
+          _server_id: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
       check_username_available: {
         Args: { _username: string }
         Returns: boolean
@@ -913,7 +1019,7 @@ export type Database = {
       }
       create_server_role: {
         Args: {
-          _color: string
+          _color?: string
           _name: string
           _server_id: string
           _user_id: string
@@ -922,6 +1028,10 @@ export type Database = {
       }
       create_server_with_owner: {
         Args: { _name: string; _owner_id: string }
+        Returns: Json
+      }
+      debug_channel_permissions: {
+        Args: { _channel_id: string; _user_id: string }
         Returns: Json
       }
       decline_friend_request: {
@@ -936,12 +1046,20 @@ export type Database = {
         Args: { _channel_id: string; _user_id: string }
         Returns: boolean
       }
+      delete_channel_permission: {
+        Args: { _permission_id: string; _user_id: string }
+        Returns: boolean
+      }
       delete_dm: {
         Args: { _message_id: string; _sender_id: string }
         Returns: boolean
       }
       delete_message: {
         Args: { _message_id: string; _user_id: string }
+        Returns: boolean
+      }
+      delete_role_permission: {
+        Args: { _permission_id: string; _user_id: string }
         Returns: boolean
       }
       delete_server: {
@@ -975,6 +1093,7 @@ export type Database = {
         }
         Returns: Json
       }
+      get_channel_permissions: { Args: { _channel_id: string }; Returns: Json }
       get_channel_server_id: { Args: { _channel_id: string }; Returns: string }
       get_dm_conversation_id: { Args: { _message_id: string }; Returns: string }
       get_dm_messages: {
@@ -991,6 +1110,7 @@ export type Database = {
         Returns: Json
       }
       get_pending_friend_requests: { Args: { _user_id: string }; Returns: Json }
+      get_role_permissions: { Args: { _server_id: string }; Returns: Json }
       get_server_by_invite_code: {
         Args: { _invite_code: string }
         Returns: {
@@ -1040,6 +1160,10 @@ export type Database = {
       open_dm_conversation: {
         Args: { _other_user_id: string; _user_id: string }
         Returns: Json
+      }
+      regenerate_invite_code: {
+        Args: { _server_id: string; _user_id: string }
+        Returns: string
       }
       register_user: {
         Args: { _banner_color?: string; _key_hash: string; _username: string }
@@ -1100,6 +1224,28 @@ export type Database = {
         }
         Returns: Json
       }
+      set_channel_permission: {
+        Args: {
+          _allowed: boolean
+          _channel_id: string
+          _permission: Database["public"]["Enums"]["permission_type"]
+          _role_id?: string
+          _role_name?: Database["public"]["Enums"]["server_role"]
+          _user_id: string
+        }
+        Returns: Json
+      }
+      set_role_permission: {
+        Args: {
+          _allowed?: boolean
+          _permission: Database["public"]["Enums"]["permission_type"]
+          _role_id?: string
+          _role_name?: Database["public"]["Enums"]["server_role"]
+          _server_id: string
+          _user_id: string
+        }
+        Returns: Json
+      }
       shares_dm_with: {
         Args: { _other_user_id: string; _user_id: string }
         Returns: boolean
@@ -1107,6 +1253,14 @@ export type Database = {
       shares_server_with: {
         Args: { _other_user_id: string; _user_id: string }
         Returns: boolean
+      }
+      test_channel_permission: {
+        Args: {
+          _channel_id: string
+          _permission: Database["public"]["Enums"]["permission_type"]
+          _user_id: string
+        }
+        Returns: Json
       }
       toggle_mute_member: {
         Args: {
@@ -1137,15 +1291,10 @@ export type Database = {
         Args: { _category_id: string; _updates: Json; _user_id: string }
         Returns: Json
       }
-      update_channel:
-        | {
-            Args: { _channel_id: string; _updates: Json; _user_id: string }
-            Returns: Json
-          }
-        | {
-            Args: { _channel_id: string; _updates: string; _user_id: string }
-            Returns: Json
-          }
+      update_channel: {
+        Args: { _channel_id: string; _updates: string; _user_id: string }
+        Returns: Json
+      }
       update_member_nickname: {
         Args: {
           _nickname: string
@@ -1186,6 +1335,21 @@ export type Database = {
       friendship_status: "pending" | "accepted" | "blocked"
       mention_type: "user" | "everyone" | "here" | "role"
       notification_type: "mention" | "dm" | "friend_request" | "server_invite"
+      permission_type:
+        | "manage_server"
+        | "manage_roles"
+        | "manage_channels"
+        | "kick_members"
+        | "ban_members"
+        | "mute_members"
+        | "manage_nicknames"
+        | "manage_messages"
+        | "pin_messages"
+        | "send_messages"
+        | "add_reactions"
+        | "view_channels"
+        | "transfer_ownership"
+        | "manage_invites"
       server_role: "owner" | "admin" | "moderator" | "member"
       user_status: "online" | "idle" | "dnd" | "offline"
     }
@@ -1319,6 +1483,22 @@ export const Constants = {
       friendship_status: ["pending", "accepted", "blocked"],
       mention_type: ["user", "everyone", "here", "role"],
       notification_type: ["mention", "dm", "friend_request", "server_invite"],
+      permission_type: [
+        "manage_server",
+        "manage_roles",
+        "manage_channels",
+        "kick_members",
+        "ban_members",
+        "mute_members",
+        "manage_nicknames",
+        "manage_messages",
+        "pin_messages",
+        "send_messages",
+        "add_reactions",
+        "view_channels",
+        "transfer_ownership",
+        "manage_invites",
+      ],
       server_role: ["owner", "admin", "moderator", "member"],
       user_status: ["online", "idle", "dnd", "offline"],
     },

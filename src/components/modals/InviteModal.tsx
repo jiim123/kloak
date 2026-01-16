@@ -23,7 +23,7 @@ import { toast } from "sonner";
 
 export const InviteModal = () => {
   const { activeModal, modalData, closeModal } = useUIStore();
-  const { currentServer, servers, members } = useServerStore();
+  const { currentServer, servers } = useServerStore();
   const { user } = useAuthStore();
   const [copied, setCopied] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
@@ -58,15 +58,21 @@ export const InviteModal = () => {
 
     setIsRegenerating(true);
     try {
-      // Use RPC function with permission check
-      const { data, error } = await supabase.rpc('regenerate_invite_code', {
-        _server_id: server.id,
-        _user_id: user.id
-      });
+      // Generate new invite code and update directly
+      const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+      let newCode = '';
+      for (let i = 0; i < 8; i++) {
+        newCode += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+
+      const { error } = await supabase
+        .from('servers')
+        .update({ invite_code: newCode })
+        .eq('id', server.id);
 
       if (error) throw error;
 
-      setInviteCode(data);
+      setInviteCode(newCode);
       toast.success("New invite code generated!");
       setShowRegenerateConfirm(false);
     } catch (error) {

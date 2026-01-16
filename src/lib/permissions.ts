@@ -1,17 +1,22 @@
 /**
  * Role hierarchy and permission system for Kloak
  * 
+ * Permission Evaluation Order (Discord-accurate):
+ * 1. User-specific channel overrides (highest priority)
+ * 2. Role-based channel overrides
+ * 3. Server-wide role permissions
+ * 4. Default base role permissions (lowest priority)
+ * 
+ * Conflict Resolution:
+ * - Explicit channel DENY always blocks the action
+ * - Explicit channel ALLOW overrides role denies
+ * - Among multiple roles, DENY takes precedence over ALLOW
+ * 
  * Role Hierarchy (highest to lowest):
  * 1. Owner - Full control, can delete server, transfer ownership
  * 2. Admin - All permissions except delete server and manage admins
  * 3. Moderator - Kick, mute, delete messages, manage channels
  * 4. Member - Read, send messages, add reactions
- * 
- * Permission System:
- * - Base role permissions (from server_role enum)
- * - Custom role permissions (from server_roles table)
- * - Channel-specific permission overrides (allow/deny)
- * - When checking permissions, all roles are combined and channel overrides are applied
  */
 
 import type { ServerRole, Permission, RolePermission, ChannelPermission, CustomServerRole } from '@/types';
@@ -27,7 +32,7 @@ export const ROLE_HIERARCHY: Record<ServerRole, number> = {
 // Re-export Permission type from types
 export type { Permission } from '@/types';
 
-// Role permissions
+// Default role permissions (base permissions for each role)
 const ROLE_PERMISSIONS: Record<ServerRole, Permission[]> = {
   owner: [
     'manage_server',
@@ -76,7 +81,7 @@ const ROLE_PERMISSIONS: Record<ServerRole, Permission[]> = {
 };
 
 /**
- * Check if a role has a specific permission
+ * Check if a role has a specific permission (base check only)
  */
 export const hasPermission = (role: ServerRole | undefined, permission: Permission): boolean => {
   if (!role) return false;
@@ -222,10 +227,112 @@ export const hasBasePermission = (role: ServerRole | undefined, permission: Perm
 };
 
 /**
- * Get all permissions for a member considering:
- * - Base role permissions
- * - Custom role permissions from database
- * - Channel-specific overrides (if channel_id provided)
+ * Evaluate permission with full hierarchy consideration
+ * 
+ * Evaluation Order:
+ * 1. Channel-specific overrides (role_name or role_id match)
+ *    - Explicit DENY always blocks
+ *    - Explicit ALLOW overrides server-level restrictions
+ * 2. Server-wide role permissions (from role_permissions table)
+ * 3. Default base role permissions
+ * 
+ * @param permission - The permission to check
+ * @param baseRole - The member's base role (owner/admin/moderator/member)
+ * @param customRoles - Custom roles assigned to the member
+ * @param rolePermissions - Server-wide role permission overrides
+ * @param channelPermissions - Channel-specific permission overrides
+ * @param channelId - Optional channel ID for channel-specific checks
+ * @returns boolean - Whether the permission is allowed
+ */
+export const evaluatePermission = (
+  permission: Permission,
+  baseRole: ServerRole | undefined,
+  customRoles?: CustomServerRole[],
+  rolePermissions?: RolePermission[],
+  channelPermissions?: ChannelPermission[],
+  channelId?: string
+): boolean => {
+  // Owner always has all permissions
+  if (baseRole === 'owner') return true;
+
+  if (!baseRole) return false;
+
+  const customRoleIds = new Set(customRoles?.map(r => r.id) ?? []);
+
+  // Step 1: Check channel-specific overrides (highest priority)
+  if (channelId && channelPermissions && channelPermissions.length > 0) {
+    const relevantChannelPerms = channelPermissions.filter(
+      cp => cp.channel_id === channelId && cp.permission === permission
+    );
+
+    if (relevantChannelPerms.length > 0) {
+      // Check for base role match
+      const baseRoleChannelPerm = relevantChannelPerms.find(
+        cp => cp.role_name === baseRole && !cp.role_id
+      );
+
+      // Check for custom role matches
+      const customRoleChannelPerms = relevantChannelPerms.filter(
+        cp => cp.role_id && customRoleIds.has(cp.role_id)
+      );
+
+      // Collect all applicable channel permissions
+      const applicablePerms: ChannelPermission[] = [];
+      if (baseRoleChannelPerm) applicablePerms.push(baseRoleChannelPerm);
+      applicablePerms.push(...customRoleChannelPerms);
+
+      if (applicablePerms.length > 0) {
+        // Explicit DENY at channel level always blocks
+        const hasDeny = applicablePerms.some(p => p.allowed === false);
+        if (hasDeny) return false;
+
+        // Explicit ALLOW at channel level grants permission
+        const hasAllow = applicablePerms.some(p => p.allowed === true);
+        if (hasAllow) return true;
+      }
+    }
+  }
+
+  // Step 2: Check server-wide role permissions
+  if (rolePermissions && rolePermissions.length > 0) {
+    const relevantRolePerms = rolePermissions.filter(
+      rp => rp.permission === permission
+    );
+
+    if (relevantRolePerms.length > 0) {
+      // Check for base role match
+      const baseRolePerm = relevantRolePerms.find(
+        rp => rp.role_name === baseRole && !rp.role_id
+      );
+
+      // Check for custom role matches
+      const customRolePerms = relevantRolePerms.filter(
+        rp => rp.role_id && customRoleIds.has(rp.role_id)
+      );
+
+      // Collect all applicable role permissions
+      const applicablePerms: RolePermission[] = [];
+      if (baseRolePerm) applicablePerms.push(baseRolePerm);
+      applicablePerms.push(...customRolePerms);
+
+      if (applicablePerms.length > 0) {
+        // DENY takes precedence among multiple roles
+        const hasDeny = applicablePerms.some(p => p.allowed === false);
+        if (hasDeny) return false;
+
+        // Any ALLOW grants permission
+        const hasAllow = applicablePerms.some(p => p.allowed === true);
+        if (hasAllow) return true;
+      }
+    }
+  }
+
+  // Step 3: Fall back to default base role permissions
+  return hasBasePermission(baseRole, permission);
+};
+
+/**
+ * Get all permissions for a member considering the full hierarchy
  */
 export const getMemberPermissions = (
   baseRole: ServerRole | undefined,
@@ -236,67 +343,29 @@ export const getMemberPermissions = (
 ): Map<Permission, boolean> => {
   const permissions = new Map<Permission, boolean>();
   
-  // If user has custom roles, they ONLY get permissions from those custom roles
-  // Base role permissions are NOT inherited when custom roles are present
-  const hasCustomRoles = customRoles && customRoles.length > 0;
-  
-  if (hasCustomRoles && rolePermissions) {
-    // User has custom roles - start with NO permissions (except view_channels which is always allowed)
-    permissions.set('view_channels', true);
-    
-    const customRoleIds = new Set(customRoles.map(cr => cr.id));
-    
-    // Collect all permissions from custom roles
-    // Deny takes precedence over allow when multiple roles conflict
-    const customPerms = new Map<Permission, boolean>();
-    for (const rolePerm of rolePermissions) {
-      // Check if this permission applies to the member's custom roles
-      if (rolePerm.role_id && customRoleIds.has(rolePerm.role_id)) {
-        const existing = customPerms.get(rolePerm.permission);
-        // Deny always wins
-        if (rolePerm.allowed === false) {
-          customPerms.set(rolePerm.permission, false);
-        } else if (rolePerm.allowed === true) {
-          // Only set to true if not already denied
-          if (existing !== false) {
-            customPerms.set(rolePerm.permission, true);
-          }
-        }
-      }
-    }
-    
-    // Apply custom role permissions
-    for (const [perm, allowed] of customPerms.entries()) {
-      permissions.set(perm, allowed);
-    }
-  } else {
-    // No custom roles - use base role permissions
-    if (baseRole) {
-      const basePerms = getBaseRolePermissions(baseRole);
-      for (const perm of basePerms) {
-        permissions.set(perm, true);
-      }
-    }
-  }
-  
-  // Apply channel-specific overrides (if channel_id provided)
-  // Channel overrides take highest precedence
-  if (channelId && channelPermissions) {
-    const customRoleIds = customRoles ? new Set(customRoles.map(cr => cr.id)) : new Set<string>();
-    
-    for (const channelPerm of channelPermissions) {
-      if (channelPerm.channel_id !== channelId) continue;
-      
-      // Check if this permission applies to the member's roles
-      const appliesToMember = 
-        (channelPerm.role_name === baseRole) ||
-        (channelPerm.role_id && customRoleIds.has(channelPerm.role_id));
-      
-      if (appliesToMember) {
-        // Channel overrides always take precedence
-        permissions.set(channelPerm.permission, channelPerm.allowed);
-      }
-    }
+  // All possible permissions
+  const allPermissions: Permission[] = [
+    'manage_server',
+    'manage_roles',
+    'manage_channels',
+    'kick_members',
+    'ban_members',
+    'mute_members',
+    'manage_nicknames',
+    'manage_messages',
+    'pin_messages',
+    'send_messages',
+    'add_reactions',
+    'view_channels',
+    'transfer_ownership',
+    'manage_invites',
+  ];
+
+  for (const permission of allPermissions) {
+    permissions.set(
+      permission,
+      evaluatePermission(permission, baseRole, customRoles, rolePermissions, channelPermissions, channelId)
+    );
   }
   
   return permissions;
@@ -314,15 +383,14 @@ export const hasMemberPermission = (
   channelPermissions?: ChannelPermission[],
   channelId?: string
 ): boolean => {
-  const permissions = getMemberPermissions(
+  return evaluatePermission(
+    permission,
     baseRole,
     customRoles,
     rolePermissions,
     channelPermissions,
     channelId
   );
-  
-  return permissions.get(permission) ?? false;
 };
 
 /**
@@ -337,9 +405,9 @@ export const canPerformInChannel = (
   rolePermissions?: RolePermission[],
   channelPermissions?: ChannelPermission[]
 ): boolean => {
-  return hasMemberPermission(
-    baseRole,
+  return evaluatePermission(
     permission,
+    baseRole,
     customRoles,
     rolePermissions,
     channelPermissions,
