@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, Plus, Settings } from "lucide-react";
+import { MessageCircle, Plus, Settings, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { MotionButton, MotionDiv } from "@/components/ui/motion-elements";
@@ -10,6 +10,7 @@ import { useServerStore } from "@/stores/serverStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useUnread } from "@/hooks/useUnread";
 import { useUnreadDMs } from "@/hooks/useUnreadDMs";
+import { useDMStore } from "@/stores/dmStore";
 import { supabase } from "@/integrations/supabase/client";
 
 interface ServerChannels {
@@ -49,6 +50,7 @@ const serverItemVariants = {
 export const ServerSidebar = () => {
   const { user } = useAuthStore();
   const { servers, currentServer, setCurrentServer, isLoading, fetchServers } = useServerStore();
+  const { setCurrentConversation } = useDMStore();
   const { openModal } = useUIStore();
   const [serverChannels, setServerChannels] = useState<ServerChannels>({});
   const [hoveredServer, setHoveredServer] = useState<string | null>(null);
@@ -153,6 +155,69 @@ export const ServerSidebar = () => {
             ))}
           </div>
         )}
+
+        {/* Home / Direct Messages button */}
+        <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
+          <TooltipTrigger asChild>
+            <MotionButton
+              className="relative group mb-2"
+              onMouseEnter={() => setHoveredServer(null)}
+              onMouseLeave={() => setHoveredServer(null)}
+              onClick={() => {
+                setCurrentServer(null);
+                setCurrentConversation(null);
+              }}
+              whileHover="hover"
+              whileTap="tap"
+            >
+              {/* Indicator pill */}
+              <motion.span
+                className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 bg-foreground rounded-r-full"
+                variants={pillVariants}
+                initial="hidden"
+                animate={getPillState(null, hasDMUnread)}
+                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              />
+
+              <motion.div
+                variants={iconVariants}
+                initial="animate"
+                animate={currentServer === null ? "active" : "animate"}
+                whileHover="hover"
+                whileTap="tap"
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                className={cn(
+                  "w-12 h-12 flex items-center justify-center",
+                  currentServer === null
+                    ? "bg-primary text-primary-foreground ring-2 ring-primary/50"
+                    : "bg-secondary hover:bg-primary hover:text-primary-foreground",
+                )}
+              >
+                <Home className="w-5 h-5" />
+              </motion.div>
+
+              {/* Unread DM badge */}
+              <AnimatePresence>
+                {totalDMUnread > 0 && currentServer !== null && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0 }}
+                    className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
+                  >
+                    {totalDMUnread > 99 ? "99+" : totalDMUnread}
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </MotionButton>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="font-medium">
+            Home{totalDMUnread > 0 ? ` (${totalDMUnread} unread)` : ''}
+          </TooltipContent>
+        </Tooltip>
+
+        {/* Separator */}
+        <div className="w-8 h-0.5 bg-border rounded-full mb-2 shrink-0" />
 
         {/* Server items */}
         <AnimatePresence mode="popLayout">
@@ -323,77 +388,19 @@ export const ServerSidebar = () => {
         </Tooltip>
       </div>
 
-      {/* Separator */}
-      <div className="w-8 h-0.5 bg-border rounded-full" />
 
-      {/* Direct Messages button */}
-      <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
-          <TooltipTrigger asChild>
-            <MotionButton
-              className="relative group"
-              onMouseEnter={() => setHoveredServer(null)}
-              onMouseLeave={() => setHoveredServer(null)}
-              onClick={() => setCurrentServer(null)}
-              whileHover="hover"
-              whileTap="tap"
-            >
-            {/* Indicator pill */}
-            <motion.span
-              className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 bg-foreground rounded-r-full"
-              variants={pillVariants}
-              initial="hidden"
-              animate={getPillState(null, hasDMUnread)}
-              transition={{ type: "spring", stiffness: 500, damping: 30 }}
-            />
-
-            <motion.div
-              variants={iconVariants}
-              initial="animate"
-              animate={currentServer === null ? "active" : "animate"}
-              whileHover="hover"
-              whileTap="tap"
-              transition={{ type: "spring", stiffness: 400, damping: 25 }}
-              className={cn(
-                "w-12 h-12 flex items-center justify-center",
-                currentServer === null
-                  ? "bg-primary text-primary-foreground ring-2 ring-primary/50"
-                  : "bg-secondary hover:bg-primary hover:text-primary-foreground",
-              )}
-            >
-              <MessageCircle className="w-5 h-5" />
-            </motion.div>
-
-            {/* Unread DM badge */}
-            <AnimatePresence>
-              {totalDMUnread > 0 && currentServer !== null && (
-                <motion.span
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  exit={{ scale: 0 }}
-                  className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
-                >
-                  {totalDMUnread > 99 ? "99+" : totalDMUnread}
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </MotionButton>
-        </TooltipTrigger>
-        <TooltipContent side="right" className="font-medium">
-          Direct Messages{totalDMUnread > 0 ? ` (${totalDMUnread} unread)` : ''}
-        </TooltipContent>
-      </Tooltip>
 
       {/* User settings button */}
       <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
-          <TooltipTrigger asChild>
-            <MotionButton
-              whileTap={{ scale: 0.95 }}
-              onClick={() => openModal("user-settings")}
-              className="w-12 h-12 rounded-[6px] bg-secondary hover:bg-secondary/80 transition-colors flex items-center justify-center"
-            >
-              <Settings className="w-5 h-5" />
-            </MotionButton>
-          </TooltipTrigger>
+        <TooltipTrigger asChild>
+          <MotionButton
+            whileTap={{ scale: 0.95 }}
+            onClick={() => openModal("user-settings")}
+            className="w-12 h-12 rounded-[6px] bg-secondary hover:bg-secondary/80 transition-colors flex items-center justify-center"
+          >
+            <Settings className="w-5 h-5" />
+          </MotionButton>
+        </TooltipTrigger>
         <TooltipContent side="right" className="font-medium">
           User Settings
         </TooltipContent>

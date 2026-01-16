@@ -4,6 +4,7 @@ import { useAuthStore, initializeAuth } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
 import { ServerSidebar } from '@/components/layout/ServerSidebar';
+import { HomeLanding } from '@/components/home/HomeLanding';
 import { ChannelSidebar } from '@/components/layout/ChannelSidebar';
 import { ChatArea } from '@/components/layout/ChatArea';
 import { MembersSidebar } from '@/components/layout/MembersSidebar';
@@ -47,7 +48,8 @@ const AppLayout = () => {
   const isMobile = useIsMobile();
 
   // Track if showing friends list in DM view
-  const [showFriends, setShowFriends] = useState(true);
+  // Default to false so we show the Landing page by default
+  const [showFriends, setShowFriends] = useState(false);
 
   // Real-time updates
   useRealtimeFriendships(user?.id || null);
@@ -104,13 +106,6 @@ const AppLayout = () => {
       navigate('/auth?mode=login');
     }
   }, [user, isLoading, navigate]);
-
-  // Reset to friends view when switching to DM
-  useEffect(() => {
-    if (!currentServer && !currentConversation) {
-      setShowFriends(true);
-    }
-  }, [currentServer, currentConversation]);
 
   // Close mobile sidebars when navigating
   useEffect(() => {
@@ -179,10 +174,12 @@ const AppLayout = () => {
           {/* Main area - flexible */}
           <div className="flex-1 min-w-0 bg-layout-chat relative">
             {isDMView ? (
-              showFriends ? (
+              currentConversation ? (
+                <DMChatArea />
+              ) : showFriends ? (
                 <FriendsList onOpenDM={() => setShowFriends(false)} />
               ) : (
-                <DMChatArea />
+                <HomeLanding />
               )
             ) : (
               <ChatArea />

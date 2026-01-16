@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useDMStore } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useUnreadDMs } from '@/hooks/useUnreadDMs';
-import { formatRelativeTime } from '@/lib/format';
+import { formatCompactTime } from '@/lib/format';
 import { ConversationItemSkeleton } from '@/components/ui/skeletons';
 import type { DMConversation } from '@/types';
 
@@ -87,7 +87,10 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange }: DMSidebarProps) 
             "w-full justify-start gap-3 h-11",
             showFriends && "bg-secondary"
           )}
-          onClick={() => onShowFriendsChange(true)}
+          onClick={() => {
+            setCurrentConversation(null);
+            onShowFriendsChange(true);
+          }}
         >
           <Users className="w-5 h-5" />
           <span>Friends</span>
@@ -133,7 +136,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange }: DMSidebarProps) 
         {filteredConversations.map((conversation) => {
           const unreadCount = getUnreadCount(conversation.id);
           const hasUnread = unreadCount > 0;
-          
+
           return (
             <div
               key={conversation.id}
@@ -181,7 +184,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange }: DMSidebarProps) 
                   <div className="flex items-center gap-2">
                     {conversation.last_message && (
                       <span className="text-xs text-muted-foreground">
-                        {formatRelativeTime(conversation.last_message.created_at || '')}
+                        {formatCompactTime(conversation.last_message.created_at || '')}
                       </span>
                     )}
                   </div>
