@@ -1,19 +1,21 @@
 import { useMemo } from 'react';
 import { useServerStore } from '@/stores/serverStore';
 import { useAuthStore } from '@/stores/authStore';
-import { hasMemberPermission, canPerformInChannel } from '@/lib/permissions';
-import type { Permission, ServerMember } from '@/types';
+import { evaluatePermission } from '@/lib/permissions';
+import type { Permission } from '@/types';
 
 /**
  * Hook to check if the current user has a specific permission
- * Automatically fetches and uses role permissions and channel permissions
+ * Uses the full permission hierarchy:
+ * 1. Channel-specific overrides (highest priority)
+ * 2. Server-wide role permissions
+ * 3. Default base role permissions (lowest priority)
  */
 export const useMemberPermissions = (channelId?: string) => {
   const { user } = useAuthStore();
   const {
     members,
     currentServer,
-    roles,
     rolePermissions,
     channelPermissions,
   } = useServerStore();
@@ -26,36 +28,33 @@ export const useMemberPermissions = (channelId?: string) => {
   const checkPermission = (permission: Permission): boolean => {
     if (!currentMember || !currentServer) return false;
 
-    // Owner always has all permissions
-    if (currentMember.role === 'owner') return true;
-
-    // Check permission with database-backed system
-    if (channelId) {
-      return canPerformInChannel(
-        currentMember.role,
-        permission,
-        channelId,
-        currentMember.roles,
-        rolePermissions,
-        channelPermissions
-      );
-    } else {
-      return hasMemberPermission(
-        currentMember.role,
-        permission,
-        currentMember.roles,
-        rolePermissions,
-        channelPermissions
-      );
-    }
+    // Use the centralized permission evaluation function
+    return evaluatePermission(
+      permission,
+      currentMember.role,
+      currentMember.roles,
+      rolePermissions,
+      channelPermissions,
+      channelId
+    );
   };
 
   return {
     currentMember,
     hasPermission: checkPermission,
-    canPerformInChannel: (permission: Permission) => {
-      if (!channelId) return false;
-      return checkPermission(permission);
+    canPerformInChannel: (permission: Permission, targetChannelId?: string) => {
+      if (!currentMember || !currentServer) return false;
+      const effectiveChannelId = targetChannelId || channelId;
+      if (!effectiveChannelId) return checkPermission(permission);
+      
+      return evaluatePermission(
+        permission,
+        currentMember.role,
+        currentMember.roles,
+        rolePermissions,
+        channelPermissions,
+        effectiveChannelId
+      );
     },
   };
 };

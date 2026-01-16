@@ -511,14 +511,15 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }
 
     // Use the returned data from the RPC call to ensure we have the actual database values
-    if (data) {
+    if (data && typeof data === 'object') {
+      const channelData = data as unknown as Partial<Channel>;
       set((state) => ({
         channels: state.channels.map((c) =>
-          c.id === channelId ? { ...c, ...data } : c
+          c.id === channelId ? { ...c, ...channelData } : c
         ),
         currentChannel:
           state.currentChannel?.id === channelId
-            ? { ...state.currentChannel, ...data }
+            ? { ...state.currentChannel, ...channelData }
             : state.currentChannel,
       }));
     }
@@ -1031,28 +1032,26 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   fetchRolePermissions: async (serverId: string) => {
     try {
-      const { data, error } = await supabase.rpc('get_role_permissions', {
-        _server_id: serverId,
-      });
+      // Query role_permissions table directly
+      const { data, error } = await supabase
+        .from('role_permissions')
+        .select('*')
+        .eq('server_id', serverId);
 
       if (error) {
-        console.error('RPC error:', error);
+        console.error('Query error:', error);
         throw error;
       }
 
-      // Handle both array and null/undefined responses
-      let permissions: RolePermission[] = [];
-      if (Array.isArray(data)) {
-        permissions = data as RolePermission[];
-      } else if (data) {
-        // If it's a JSON string, parse it
-        try {
-          const parsed = typeof data === 'string' ? JSON.parse(data) : data;
-          permissions = Array.isArray(parsed) ? parsed : [];
-        } catch {
-          permissions = [];
-        }
-      }
+      const permissions: RolePermission[] = (data ?? []).map((row) => ({
+        id: row.id,
+        server_id: row.server_id,
+        role_id: row.role_id,
+        role_name: row.role_name as ServerRole | null,
+        permission: row.permission as Permission,
+        allowed: row.allowed,
+        created_at: row.created_at ?? '',
+      }));
 
       set({ rolePermissions: permissions });
     } catch (error) {
@@ -1063,28 +1062,26 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   fetchChannelPermissions: async (channelId: string) => {
     try {
-      const { data, error } = await supabase.rpc('get_channel_permissions', {
-        _channel_id: channelId,
-      });
+      // Query channel_permissions table directly
+      const { data, error } = await supabase
+        .from('channel_permissions')
+        .select('*')
+        .eq('channel_id', channelId);
 
       if (error) {
-        console.error('RPC error:', error);
+        console.error('Query error:', error);
         throw error;
       }
 
-      // Handle both array and null/undefined responses
-      let permissions: ChannelPermission[] = [];
-      if (Array.isArray(data)) {
-        permissions = data as ChannelPermission[];
-      } else if (data) {
-        // If it's a JSON string, parse it
-        try {
-          const parsed = typeof data === 'string' ? JSON.parse(data) : data;
-          permissions = Array.isArray(parsed) ? parsed : [];
-        } catch {
-          permissions = [];
-        }
-      }
+      const permissions: ChannelPermission[] = (data ?? []).map((row) => ({
+        id: row.id,
+        channel_id: row.channel_id,
+        role_id: row.role_id,
+        role_name: row.role_name as ServerRole | null,
+        permission: row.permission as Permission,
+        allowed: row.allowed,
+        created_at: row.created_at ?? '',
+      }));
 
       set({ channelPermissions: permissions });
     } catch (error) {
@@ -1102,14 +1099,21 @@ export const useServerStore = create<ServerState>((set, get) => ({
     allowed: boolean = true
   ) => {
     try {
-      const { data, error } = await supabase.rpc('set_role_permission', {
-        _server_id: serverId,
-        _user_id: userId,
-        _permission: permission,
-        _role_id: roleId || null,
-        _role_name: roleName || null,
-        _allowed: allowed,
-      });
+      // Upsert role permission directly
+      const { error } = await supabase
+        .from('role_permissions')
+        .upsert(
+          {
+            server_id: serverId,
+            role_id: roleId || null,
+            role_name: roleName || null,
+            permission,
+            allowed,
+          },
+          {
+            onConflict: roleId ? 'server_id,role_id,permission' : 'server_id,role_name,permission',
+          }
+        );
 
       if (error) throw error;
 
@@ -1130,14 +1134,21 @@ export const useServerStore = create<ServerState>((set, get) => ({
     roleName?: ServerRole
   ) => {
     try {
-      const { data, error } = await supabase.rpc('set_channel_permission', {
-        _channel_id: channelId,
-        _user_id: userId,
-        _permission: permission,
-        _allowed: allowed,
-        _role_id: roleId ?? null,
-        _role_name: roleName ?? null,
-      });
+      // Upsert channel permission directly
+      const { error } = await supabase
+        .from('channel_permissions')
+        .upsert(
+          {
+            channel_id: channelId,
+            role_id: roleId ?? null,
+            role_name: roleName ?? null,
+            permission,
+            allowed,
+          },
+          {
+            onConflict: roleId ? 'channel_id,role_id,permission' : 'channel_id,role_name,permission',
+          }
+        );
 
       if (error) throw error;
 
@@ -1151,17 +1162,19 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   deleteRolePermission: async (permissionId: string, userId: string) => {
     try {
-      const { error } = await supabase.rpc('delete_role_permission', {
-        _permission_id: permissionId,
-        _user_id: userId,
-      });
+      // Get the permission first to know which server to refresh
+      const { rolePermissions } = get();
+      const toDelete = rolePermissions.find((p) => p.id === permissionId);
+
+      const { error } = await supabase
+        .from('role_permissions')
+        .delete()
+        .eq('id', permissionId);
 
       if (error) throw error;
 
       // Refresh role permissions
-      const { rolePermissions } = get();
-      const deleted = rolePermissions.find((p) => p.id === permissionId);
-      if (deleted) {
+      if (toDelete) {
         const { currentServer } = get();
         if (currentServer) {
           await get().fetchRolePermissions(currentServer.id);
@@ -1175,18 +1188,20 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   deleteChannelPermission: async (permissionId: string, userId: string) => {
     try {
-      const { error } = await supabase.rpc('delete_channel_permission', {
-        _permission_id: permissionId,
-        _user_id: userId,
-      });
+      // Get the permission first to know which channel to refresh
+      const { channelPermissions } = get();
+      const toDelete = channelPermissions.find((p) => p.id === permissionId);
+
+      const { error } = await supabase
+        .from('channel_permissions')
+        .delete()
+        .eq('id', permissionId);
 
       if (error) throw error;
 
       // Refresh channel permissions
-      const { channelPermissions } = get();
-      const deleted = channelPermissions.find((p) => p.id === permissionId);
-      if (deleted) {
-        await get().fetchChannelPermissions(deleted.channel_id);
+      if (toDelete) {
+        await get().fetchChannelPermissions(toDelete.channel_id);
       }
     } catch (error) {
       console.error('Failed to delete channel permission:', error);
