@@ -31,7 +31,7 @@ export const UserProfilePopup = () => {
   const { servers, setCurrentServer, currentServer, members } = useServerStore();
   const { friends, pendingRequests, outgoingRequests, sendRequest, removeFriend, acceptRequest, declineRequest } = useFriendStore();
   const { openConversation, setCurrentConversation } = useDMStore();
-  
+
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [sharedServers, setSharedServers] = useState<typeof servers>([]);
@@ -53,7 +53,7 @@ export const UserProfilePopup = () => {
           .single();
 
         if (error) throw error;
-        
+
         setProfileUser({
           id: data.id,
           username: data.username,
@@ -67,13 +67,22 @@ export const UserProfilePopup = () => {
           last_seen: data.last_seen,
         });
 
-        // Find shared servers
-        const shared = servers.filter(s => 
-          // In a real app, you'd check if both users are members
-          // For now, just show current user's servers
-          true
-        );
-        setSharedServers(shared.slice(0, 3));
+        // Find shared servers by checking which of the current user's servers the profile user is also in
+        if (servers.length > 0) {
+          const { data: membershipData, error: membershipError } = await supabase
+            .from('server_members')
+            .select('server_id')
+            .eq('user_id', userId)
+            .in('server_id', servers.map((s) => s.id));
+
+          if (membershipError) throw membershipError;
+
+          const sharedServerIds = new Set(membershipData.map((m) => m.server_id));
+          const shared = servers.filter((s) => sharedServerIds.has(s.id));
+          setSharedServers(shared.slice(0, 3));
+        } else {
+          setSharedServers([]);
+        }
       } catch (error) {
         console.error('Failed to fetch profile:', error);
         toast.error('Failed to load profile');
@@ -97,7 +106,7 @@ export const UserProfilePopup = () => {
 
   const handleMessage = async () => {
     if (!currentUser || !profileUser) return;
-    
+
     try {
       const conversation = await openConversation(currentUser.id, profileUser.id);
       if (conversation) {
@@ -113,7 +122,7 @@ export const UserProfilePopup = () => {
 
   const handleFriendAction = async () => {
     if (!currentUser || !profileUser) return;
-    
+
     if (isFriend) {
       const friendship = friends.find(f => f.id === profileUser.id);
       if (friendship) {
@@ -159,9 +168,9 @@ export const UserProfilePopup = () => {
         ) : profileUser ? (
           <div className="flex flex-col">
             {/* Subtle gradient header */}
-            <div 
+            <div
               className="h-32 w-full relative overflow-hidden"
-              style={{ 
+              style={{
                 background: `linear-gradient(135deg, ${profileUser.banner_color}15 0%, ${profileUser.banner_color}05 100%)`
               }}
             >
@@ -175,7 +184,7 @@ export const UserProfilePopup = () => {
                 <div className="relative inline-block">
                   <Avatar className="w-24 h-24 border-2 border-background shadow-lg">
                     <AvatarImage src={profileUser.avatar_url || undefined} />
-                    <AvatarFallback 
+                    <AvatarFallback
                       className="text-2xl font-semibold"
                       style={{ backgroundColor: profileUser.banner_color }}
                     >
@@ -197,7 +206,7 @@ export const UserProfilePopup = () => {
                   </h2>
                 </div>
                 <p className="text-sm text-muted-foreground font-medium">@{profileUser.username}</p>
-                
+
                 {/* Custom Status */}
                 {profileUser.custom_status && (
                   <p className="text-sm text-muted-foreground mt-2 italic">
@@ -224,7 +233,7 @@ export const UserProfilePopup = () => {
                     Member Since
                   </div>
                   <div className="text-sm text-foreground">
-                    {profileUser.created_at 
+                    {profileUser.created_at
                       ? format(new Date(profileUser.created_at), 'MMMM d, yyyy')
                       : 'Unknown'
                     }
@@ -242,7 +251,7 @@ export const UserProfilePopup = () => {
                         <span
                           key={role.id}
                           className="text-xs font-medium px-2 py-0.5 rounded-md"
-                          style={{ 
+                          style={{
                             backgroundColor: `${role.color}15`,
                             color: role.color,
                           }}
@@ -262,7 +271,7 @@ export const UserProfilePopup = () => {
                     </div>
                     <div className="flex gap-2 flex-1">
                       {sharedServers.map(server => (
-                        <div 
+                        <div
                           key={server.id}
                           className="w-8 h-8 rounded-lg bg-secondary/50 flex items-center justify-center text-xs font-medium overflow-hidden"
                           title={server.name}
@@ -288,14 +297,14 @@ export const UserProfilePopup = () => {
                   </Button>
                   {hasPendingRequest ? (
                     <>
-                      <Button 
+                      <Button
                         variant="default"
                         onClick={handleAcceptRequest}
                         size="icon"
                       >
                         <Check className="w-4 h-4" />
                       </Button>
-                      <Button 
+                      <Button
                         variant="outline"
                         onClick={handleDeclineRequest}
                         size="icon"
@@ -304,7 +313,7 @@ export const UserProfilePopup = () => {
                       </Button>
                     </>
                   ) : (
-                    <Button 
+                    <Button
                       variant={isFriend ? 'destructive' : 'outline'}
                       onClick={handleFriendAction}
                       disabled={hasSentRequest}
