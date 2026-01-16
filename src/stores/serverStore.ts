@@ -1,11 +1,11 @@
 import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
 import { inviteCodeRateLimiter } from '@/lib/security';
-import type { 
-  Server, 
-  ServerWithMembership, 
-  ServerMember, 
-  Channel, 
+import type {
+  Server,
+  ServerWithMembership,
+  ServerMember,
+  Channel,
   ChannelCategory,
   ChannelType,
   ServerRole,
@@ -126,17 +126,17 @@ export const useServerStore = create<ServerState>((set, get) => ({
       }));
 
       const { currentServer } = get();
-      
+
       // Try to restore persisted server/channel from localStorage
       const persistedServerId = localStorage.getItem('kloak-current-server-id');
       const persistedChannelId = localStorage.getItem('kloak-current-channel-id');
-      
+
       if (servers.length > 0 && !currentServer) {
         // Check if persisted server exists in user's servers
-        const restoredServer = persistedServerId 
-          ? servers.find(s => s.id === persistedServerId) 
+        const restoredServer = persistedServerId
+          ? servers.find(s => s.id === persistedServerId)
           : null;
-        
+
         if (restoredServer) {
           set({ servers, currentServer: restoredServer, isLoading: false });
           // Restore channel after fetching channels
@@ -290,7 +290,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
       // Refresh servers list
       await get().fetchServers(userId);
-      
+
       return server;
     } catch (error) {
       console.error('Failed to join server:', error);
@@ -356,11 +356,11 @@ export const useServerStore = create<ServerState>((set, get) => ({
       // Going to DM view - don't clear channel-related localStorage
       // so we can restore when coming back
     }
-    
+
     // Only clear channel state when switching TO a different server (not when going to null/DM)
     // This prevents losing state and ensures proper isolation
     if (server) {
-      set({ 
+      set({
         currentServer: server,
         // Clear channel state when switching servers to ensure proper isolation
         currentChannel: null,
@@ -408,16 +408,16 @@ export const useServerStore = create<ServerState>((set, get) => ({
       // Always try to restore the persisted channel when switching servers
       const { currentChannel } = get();
       const persistedChannelId = localStorage.getItem('kloak-current-channel-id');
-      
+
       // Restore channel: try persisted first, then keep current if valid, else first channel
       if (channels.length > 0) {
-        const restoredChannel = persistedChannelId 
+        const restoredChannel = persistedChannelId
           ? channels.find(c => c.id === persistedChannelId)
           : null;
-        
+
         // If current channel is valid for this server, keep it
         const currentIsValid = currentChannel && channels.find(c => c.id === currentChannel.id);
-        
+
         if (restoredChannel) {
           set({ currentChannel: restoredChannel });
         } else if (!currentIsValid) {
@@ -588,7 +588,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
   reorderCategories: async (categoryIds: string[]) => {
     try {
       // Update positions in database
-      const updates = categoryIds.map((id, index) => 
+      const updates = categoryIds.map((id, index) =>
         supabase
           .from('channel_categories')
           .update({ position: index })
@@ -683,7 +683,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
       if (currentRoles.length === 0 || currentRoles[0]?.server_id !== serverId) {
         await get().fetchRoles(serverId);
       }
-      
+
       // Use RPC function to bypass RLS
       const { data, error } = await supabase.rpc('get_server_members', { _server_id: serverId });
 
@@ -865,7 +865,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
           if (m.id === currentOwnerMember.id) return { ...m, role: 'admin' as const };
           return m;
         }),
-        currentServer: state.currentServer?.id === serverId 
+        currentServer: state.currentServer?.id === serverId
           ? { ...state.currentServer, owner_id: newOwnerId }
           : state.currentServer,
       }));
@@ -1099,21 +1099,15 @@ export const useServerStore = create<ServerState>((set, get) => ({
     allowed: boolean = true
   ) => {
     try {
-      // Upsert role permission directly
-      const { error } = await supabase
-        .from('role_permissions')
-        .upsert(
-          {
-            server_id: serverId,
-            role_id: roleId || null,
-            role_name: roleName || null,
-            permission,
-            allowed,
-          },
-          {
-            onConflict: roleId ? 'server_id,role_id,permission' : 'server_id,role_name,permission',
-          }
-        );
+      // Use RPC function instead of direct upsert to handle partial indexes correctly
+      const { error } = await supabase.rpc('set_role_permission', {
+        _server_id: serverId,
+        _user_id: userId,
+        _permission: permission,
+        _role_id: roleId || null,
+        _role_name: roleName || null,
+        _allowed: allowed,
+      });
 
       if (error) throw error;
 
@@ -1134,21 +1128,15 @@ export const useServerStore = create<ServerState>((set, get) => ({
     roleName?: ServerRole
   ) => {
     try {
-      // Upsert channel permission directly
-      const { error } = await supabase
-        .from('channel_permissions')
-        .upsert(
-          {
-            channel_id: channelId,
-            role_id: roleId ?? null,
-            role_name: roleName ?? null,
-            permission,
-            allowed,
-          },
-          {
-            onConflict: roleId ? 'channel_id,role_id,permission' : 'channel_id,role_name,permission',
-          }
-        );
+      // Use RPC function instead of direct upsert to handle partial indexes correctly
+      const { error } = await supabase.rpc('set_channel_permission', {
+        _channel_id: channelId,
+        _user_id: userId,
+        _permission: permission,
+        _allowed: allowed,
+        _role_id: roleId || null,
+        _role_name: roleName || null,
+      });
 
       if (error) throw error;
 
