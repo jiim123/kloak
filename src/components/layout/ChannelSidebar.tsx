@@ -297,22 +297,22 @@ const CategoryContent = ({
   return (
     <motion.div
       initial={{ height: 0, opacity: 0 }}
-      animate={{ 
-        height: height > 0 ? height : "auto", 
-        opacity: 1 
+      animate={{
+        height: height > 0 ? height : "auto",
+        opacity: 1
       }}
       exit={{ height: 0, opacity: 0 }}
-      transition={{ 
+      transition={{
         height: {
-          type: "spring", 
-          stiffness: 300, 
+          type: "spring",
+          stiffness: 300,
           damping: 30,
           mass: 0.8
         },
         opacity: { duration: 0.15 }
       }}
       className="space-y-0.5 ml-1 overflow-hidden"
-      style={{ 
+      style={{
         contain: "layout style",
         willChange: height > 0 ? "height" : undefined
       }}
@@ -383,16 +383,16 @@ const SortableCategory = ({
   };
 
   return (
-    <motion.div 
+    <motion.div
       ref={(node) => {
         setNodeRef(node);
         setDroppableRef(node);
-      }} 
-      style={style} 
+      }}
+      style={style}
       className={cn(
         "mb-4 transition-all duration-200",
         (isOver || isDragOver) && "ring-2 ring-primary/50 ring-offset-2 ring-offset-layout-sidebar-secondary rounded-md"
-      )} 
+      )}
       layout
     >
       {/* Category header */}
@@ -492,7 +492,10 @@ export const ChannelSidebar = () => {
   // Use permission system instead of hardcoded role checks
   const { hasPermission } = useMemberPermissions();
   const canManageChannels = hasPermission('manage_channels');
-  const isAdmin = canManageChannels; // For backward compatibility
+  const canManageServer = hasPermission('manage_server');
+  const canManageRoles = hasPermission('manage_roles');
+  const isAdmin = canManageChannels; // For channel/category management
+  const canSeeServerSettings = canManageChannels || canManageServer || canManageRoles;
   const isOwner = userRole === "owner";
 
   const { uncategorizedChannels, sortedCategories } = useMemo(() => {
@@ -556,7 +559,7 @@ export const ChannelSidebar = () => {
 
   const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
-    
+
     if (!over) {
       setOverCategoryId(null);
       return;
@@ -612,15 +615,15 @@ export const ChannelSidebar = () => {
 
     if (activeData?.type === "channel") {
       const activeChannel = activeData.channel as Channel;
-      
+
       // Check if dropped on a category drop zone
       if (overData?.type === "category-drop") {
         const targetCategoryId = overData.categoryId as string | null;
-        const targetChannels = targetCategoryId 
+        const targetChannels = targetCategoryId
           ? getChannelsForCategory(targetCategoryId)
           : uncategorizedChannels;
         const newPosition = targetChannels.length;
-        
+
         // Only move if it's a different category
         if (activeChannel.category_id !== targetCategoryId) {
           await reorderChannels(activeChannel.id, targetCategoryId, newPosition);
@@ -633,7 +636,7 @@ export const ChannelSidebar = () => {
         const targetCategoryId = over.id as string;
         const targetChannels = getChannelsForCategory(targetCategoryId);
         const newPosition = targetChannels.length;
-        
+
         // Only move if it's a different category
         if (activeChannel.category_id !== targetCategoryId) {
           await reorderChannels(activeChannel.id, targetCategoryId, newPosition);
@@ -645,7 +648,7 @@ export const ChannelSidebar = () => {
       const overChannel = overData?.channel as Channel | undefined;
       if (overChannel) {
         const targetCategoryId = overChannel.category_id;
-        
+
         // If same category, reorder within category
         if (activeChannel.category_id === targetCategoryId) {
           const categoryChannels = getChannelsForCategory(activeChannel.category_id || "");
@@ -659,7 +662,7 @@ export const ChannelSidebar = () => {
           // Different category - move to that category at the position of the over channel
           const targetChannels = getChannelsForCategory(targetCategoryId || "");
           const newIndex = targetChannels.findIndex((c) => c.id === over.id);
-          
+
           if (newIndex !== -1) {
             await reorderChannels(activeChannel.id, targetCategoryId, newIndex);
           }
@@ -720,13 +723,13 @@ export const ChannelSidebar = () => {
         {/* Server banner with smooth fade out effect */}
         {currentServer.banner_url && (
           <div className="relative h-20 sm:h-24 overflow-hidden">
-            <img 
-              src={currentServer.banner_url} 
+            <img
+              src={currentServer.banner_url}
               alt={`${currentServer.name} banner`}
               className="w-full h-full object-cover"
             />
             {/* Smooth fade out gradient overlay */}
-            <div 
+            <div
               className="absolute inset-0 pointer-events-none"
               style={{
                 background: 'linear-gradient(to bottom, transparent 0%, transparent 40%, hsl(var(--sidebar-secondary)) 100%)'
@@ -734,7 +737,7 @@ export const ChannelSidebar = () => {
             />
           </div>
         )}
-        
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <MotionButton
@@ -749,43 +752,47 @@ export const ChannelSidebar = () => {
               <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             </MotionButton>
           </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-56" align="start" sideOffset={0}>
-          <DropdownMenuItem onClick={() => openModal("invite", { serverId: currentServer.id })}>
-            <UserPlus className="w-4 h-4 mr-2" />
-            Invite People
-          </DropdownMenuItem>
+          <DropdownMenuContent className="w-56" align="start" sideOffset={0}>
+            <DropdownMenuItem onClick={() => openModal("invite", { serverId: currentServer.id })}>
+              <UserPlus className="w-4 h-4 mr-2" />
+              Invite People
+            </DropdownMenuItem>
 
-          {isAdmin && (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => openModal("server-settings", { serverId: currentServer.id })}>
-                <Settings className="w-4 h-4 mr-2" />
-                Server Settings
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => openModal("create-channel", { serverId: currentServer.id })}>
-                <Hash className="w-4 h-4 mr-2" />
-                Create Channel
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => openModal("create-channel", { serverId: currentServer.id, isCategory: true })}
-              >
-                <FolderPlus className="w-4 h-4 mr-2" />
-                Create Category
-              </DropdownMenuItem>
-            </>
-          )}
+            {canSeeServerSettings && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => openModal("server-settings", { serverId: currentServer.id })}>
+                  <Settings className="w-4 h-4 mr-2" />
+                  Server Settings
+                </DropdownMenuItem>
+                {canManageChannels && (
+                  <>
+                    <DropdownMenuItem onClick={() => openModal("create-channel", { serverId: currentServer.id })}>
+                      <Hash className="w-4 h-4 mr-2" />
+                      Create Channel
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => openModal("create-channel", { serverId: currentServer.id, isCategory: true })}
+                    >
+                      <FolderPlus className="w-4 h-4 mr-2" />
+                      Create Category
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </>
+            )}
 
-          {!isOwner && (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={handleLeaveServer}>
-                <LogOut className="w-4 h-4 mr-2" />
-                Leave Server
-              </DropdownMenuItem>
-            </>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
+            {!isOwner && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={handleLeaveServer}>
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Leave Server
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Channel list */}
@@ -799,76 +806,76 @@ export const ChannelSidebar = () => {
         <ContextMenu>
           <ContextMenuTrigger asChild>
             <div className="flex-1 overflow-y-auto p-2 scrollbar-hide">
-          {/* Uncategorized channels */}
-          <UncategorizedDropZone
-            isDragOver={overCategoryId === null && activeType === "channel"}
-            hasChannels={uncategorizedChannels.length > 0}
-          >
-            {uncategorizedChannels.length > 0 && (
-              <div className="mb-4 space-y-0.5">
-                <SortableContext items={uncategorizedChannels.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-                  {uncategorizedChannels.map((channel) => {
-                    const { unreadCount, mentionCount } = getChannelUnread(channel.id);
-                    return (
-                      <SortableChannel
-                        key={channel.id}
-                        channel={channel}
-                        isActive={currentChannel?.id === channel.id}
-                        isUnread={unreadCount > 0}
-                        mentionCount={mentionCount}
-                        isAdmin={isAdmin}
-                        onSelect={() => handleSelectChannel(channel)}
-                        onEdit={() => openModal("edit-channel", { channelId: channel.id })}
-                      />
-                    );
-                  })}
-                </SortableContext>
-              </div>
-            )}
-          </UncategorizedDropZone>
+              {/* Uncategorized channels */}
+              <UncategorizedDropZone
+                isDragOver={overCategoryId === null && activeType === "channel"}
+                hasChannels={uncategorizedChannels.length > 0}
+              >
+                {uncategorizedChannels.length > 0 && (
+                  <div className="mb-4 space-y-0.5">
+                    <SortableContext items={uncategorizedChannels.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+                      {uncategorizedChannels.map((channel) => {
+                        const { unreadCount, mentionCount } = getChannelUnread(channel.id);
+                        return (
+                          <SortableChannel
+                            key={channel.id}
+                            channel={channel}
+                            isActive={currentChannel?.id === channel.id}
+                            isUnread={unreadCount > 0}
+                            mentionCount={mentionCount}
+                            isAdmin={isAdmin}
+                            onSelect={() => handleSelectChannel(channel)}
+                            onEdit={() => openModal("edit-channel", { channelId: channel.id })}
+                          />
+                        );
+                      })}
+                    </SortableContext>
+                  </div>
+                )}
+              </UncategorizedDropZone>
 
-          {/* Categories */}
-          <SortableContext items={sortedCategories.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-            {sortedCategories.map((category) => (
-              <SortableCategory
-                key={category.id}
-                category={category}
-                channels={getChannelsForCategory(category.id)}
-                isCollapsed={collapsedCategories.has(category.id)}
-                isAdmin={isAdmin}
-                currentChannelId={currentChannel?.id}
-                getChannelUnread={getChannelUnread}
-                onToggle={() => toggleCategory(category.id)}
-                onSelectChannel={handleSelectChannel}
-                onAddChannel={() => openModal("create-channel", { categoryId: category.id })}
-                onEditChannel={(channelId) => openModal("edit-channel", { channelId })}
-                isDragOver={overCategoryId === category.id && activeType === "channel"}
-              />
-            ))}
-          </SortableContext>
+              {/* Categories */}
+              <SortableContext items={sortedCategories.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+                {sortedCategories.map((category) => (
+                  <SortableCategory
+                    key={category.id}
+                    category={category}
+                    channels={getChannelsForCategory(category.id)}
+                    isCollapsed={collapsedCategories.has(category.id)}
+                    isAdmin={isAdmin}
+                    currentChannelId={currentChannel?.id}
+                    getChannelUnread={getChannelUnread}
+                    onToggle={() => toggleCategory(category.id)}
+                    onSelectChannel={handleSelectChannel}
+                    onAddChannel={() => openModal("create-channel", { categoryId: category.id })}
+                    onEditChannel={(channelId) => openModal("edit-channel", { channelId })}
+                    isDragOver={overCategoryId === category.id && activeType === "channel"}
+                  />
+                ))}
+              </SortableContext>
 
-          {/* Empty state */}
-          {channels.length === 0 && categories.length === 0 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex flex-col items-center justify-center py-12 text-center"
-            >
-              <div className="w-12 h-12 rounded-xl bg-secondary/50 flex items-center justify-center mb-3">
-                <Hash className="w-6 h-6 text-muted-foreground/50" />
-              </div>
-              <p className="text-sm text-muted-foreground mb-2">No channels yet</p>
-              {isAdmin && (
-                <Button
-                  variant="link"
-                  size="sm"
-                  onClick={() => openModal("create-channel", { serverId: currentServer.id })}
+              {/* Empty state */}
+              {channels.length === 0 && categories.length === 0 && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex flex-col items-center justify-center py-12 text-center"
                 >
-                  Create a channel
-                </Button>
+                  <div className="w-12 h-12 rounded-xl bg-secondary/50 flex items-center justify-center mb-3">
+                    <Hash className="w-6 h-6 text-muted-foreground/50" />
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-2">No channels yet</p>
+                  {isAdmin && (
+                    <Button
+                      variant="link"
+                      size="sm"
+                      onClick={() => openModal("create-channel", { serverId: currentServer.id })}
+                    >
+                      Create a channel
+                    </Button>
+                  )}
+                </motion.div>
               )}
-            </motion.div>
-          )}
             </div>
           </ContextMenuTrigger>
           {isAdmin && (

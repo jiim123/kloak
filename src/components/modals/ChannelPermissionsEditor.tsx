@@ -34,10 +34,6 @@ const PERMISSION_GROUPS: Array<{
       label: 'Channel Permissions',
       permissions: ['manage_channels', 'manage_messages', 'pin_messages'],
     },
-    {
-      label: 'Administrative Permissions',
-      permissions: ['manage_server', 'manage_roles', 'manage_invites', 'transfer_ownership'],
-    },
   ];
 
 const PERMISSION_LABELS: Record<Permission, string> = {
@@ -135,8 +131,7 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
       'view_channels', 'send_messages', 'add_reactions',
       'manage_messages', 'pin_messages', 'manage_channels',
       'kick_members', 'ban_members', 'mute_members',
-      'manage_nicknames', 'manage_roles', 'manage_server',
-      'manage_invites', 'transfer_ownership'
+      'manage_nicknames'
     ];
 
     // Initialize all roles with null (inherit) permissions
@@ -212,6 +207,11 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
         if (!rolePerms) continue;
 
         for (const [permission, state] of rolePerms.entries()) {
+          // Only process permissions that are part of our defined groups
+          if (!PERMISSION_GROUPS.some(g => g.permissions.includes(permission))) {
+            continue;
+          }
+
           const dbKey = `${roleKey}:${permission}`;
           const currentDb = currentDbPermMap.get(dbKey);
 

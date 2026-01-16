@@ -1,4 +1,4 @@
-import { Hash, Volume2, Pin, Search, Users, Lock, Shield } from 'lucide-react';
+import { Hash, Volume2, Pin, Search, Users, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
@@ -61,21 +61,6 @@ export const ChannelHeader = ({ channel }: ChannelHeaderProps) => {
           </TooltipTrigger>
           <TooltipContent>Pinned Messages</TooltipContent>
         </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="w-8 h-8"
-              onClick={() => openModal('permission-debug', { channelId: channel.id })}
-            >
-              <Shield className="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Debug Permissions</TooltipContent>
-        </Tooltip>
-
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
