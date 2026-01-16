@@ -105,25 +105,25 @@ export const canManageRole = (actorRole: ServerRole | undefined, targetRole: Ser
  */
 export const canAssignRole = (actorRole: ServerRole | undefined, targetCurrentRole: ServerRole | undefined, newRole: ServerRole): boolean => {
   if (!actorRole || !targetCurrentRole) return false;
-  
+
   // Can't assign owner role directly (must transfer ownership)
   if (newRole === 'owner') return false;
-  
+
   // Can't change owner's role
   if (targetCurrentRole === 'owner') return false;
-  
+
   // Must be able to manage the target
   if (!canManageRole(actorRole, targetCurrentRole)) return false;
-  
+
   // Check if can assign the new role
   if (actorRole === 'owner') {
     return true; // Owner can assign any non-owner role
   }
-  
+
   if (actorRole === 'admin') {
     return newRole === 'moderator' || newRole === 'member';
   }
-  
+
   return false;
 };
 
@@ -168,15 +168,15 @@ export const getRoleInfo = (role: ServerRole) => {
  */
 export const getAssignableRoles = (actorRole: ServerRole | undefined): ServerRole[] => {
   if (!actorRole) return [];
-  
+
   if (actorRole === 'owner') {
     return ['admin', 'moderator', 'member'];
   }
-  
+
   if (actorRole === 'admin') {
     return ['moderator', 'member'];
   }
-  
+
   return [];
 };
 
@@ -185,7 +185,7 @@ export const getAssignableRoles = (actorRole: ServerRole | undefined): ServerRol
  */
 export const canModerate = (actorRole: ServerRole | undefined, targetRole: ServerRole | undefined): boolean => {
   if (!actorRole || !targetRole) return false;
-  
+
   // Can't moderate self
   // Can't moderate equal or higher roles
   return canManageRole(actorRole, targetRole);
@@ -266,29 +266,27 @@ export const evaluatePermission = (
     );
 
     if (relevantChannelPerms.length > 0) {
-      // Check for base role match
-      const baseRoleChannelPerm = relevantChannelPerms.find(
-        cp => cp.role_name === baseRole && !cp.role_id
-      );
-
-      // Check for custom role matches
+      // Check for custom role matches (Higher priority)
       const customRoleChannelPerms = relevantChannelPerms.filter(
         cp => cp.role_id && customRoleIds.has(cp.role_id)
       );
 
-      // Collect all applicable channel permissions
-      const applicablePerms: ChannelPermission[] = [];
-      if (baseRoleChannelPerm) applicablePerms.push(baseRoleChannelPerm);
-      applicablePerms.push(...customRoleChannelPerms);
-
-      if (applicablePerms.length > 0) {
-        // Explicit DENY at channel level always blocks
-        const hasDeny = applicablePerms.some(p => p.allowed === false);
+      if (customRoleChannelPerms.length > 0) {
+        // Among custom roles, DENY takes precedence
+        const hasDeny = customRoleChannelPerms.some(p => p.allowed === false);
         if (hasDeny) return false;
 
-        // Explicit ALLOW at channel level grants permission
-        const hasAllow = applicablePerms.some(p => p.allowed === true);
+        const hasAllow = customRoleChannelPerms.some(p => p.allowed === true);
         if (hasAllow) return true;
+      }
+
+      // Check for base role match (Lower priority)
+      const baseRoleChannelPerm = relevantChannelPerms.find(
+        cp => cp.role_name === baseRole && !cp.role_id
+      );
+
+      if (baseRoleChannelPerm) {
+        return baseRoleChannelPerm.allowed;
       }
     }
   }
@@ -300,29 +298,27 @@ export const evaluatePermission = (
     );
 
     if (relevantRolePerms.length > 0) {
-      // Check for base role match
-      const baseRolePerm = relevantRolePerms.find(
-        rp => rp.role_name === baseRole && !rp.role_id
-      );
-
-      // Check for custom role matches
+      // Check for custom role matches (Higher priority)
       const customRolePerms = relevantRolePerms.filter(
         rp => rp.role_id && customRoleIds.has(rp.role_id)
       );
 
-      // Collect all applicable role permissions
-      const applicablePerms: RolePermission[] = [];
-      if (baseRolePerm) applicablePerms.push(baseRolePerm);
-      applicablePerms.push(...customRolePerms);
-
-      if (applicablePerms.length > 0) {
-        // DENY takes precedence among multiple roles
-        const hasDeny = applicablePerms.some(p => p.allowed === false);
+      if (customRolePerms.length > 0) {
+        // Among custom roles, DENY takes precedence
+        const hasDeny = customRolePerms.some(p => p.allowed === false);
         if (hasDeny) return false;
 
-        // Any ALLOW grants permission
-        const hasAllow = applicablePerms.some(p => p.allowed === true);
+        const hasAllow = customRolePerms.some(p => p.allowed === true);
         if (hasAllow) return true;
+      }
+
+      // Check for base role match (Lower priority)
+      const baseRolePerm = relevantRolePerms.find(
+        rp => rp.role_name === baseRole && !rp.role_id
+      );
+
+      if (baseRolePerm) {
+        return baseRolePerm.allowed;
       }
     }
   }
@@ -342,7 +338,7 @@ export const getMemberPermissions = (
   channelId?: string
 ): Map<Permission, boolean> => {
   const permissions = new Map<Permission, boolean>();
-  
+
   // All possible permissions
   const allPermissions: Permission[] = [
     'manage_server',
@@ -367,7 +363,7 @@ export const getMemberPermissions = (
       evaluatePermission(permission, baseRole, customRoles, rolePermissions, channelPermissions, channelId)
     );
   }
-  
+
   return permissions;
 };
 
@@ -432,13 +428,13 @@ export const getAllowedPermissions = (
     channelPermissions,
     channelId
   );
-  
+
   const allowed: Permission[] = [];
   for (const [perm, allowedValue] of permissions.entries()) {
     if (allowedValue) {
       allowed.push(perm);
     }
   }
-  
+
   return allowed;
 };

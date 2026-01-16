@@ -22,23 +22,23 @@ const PERMISSION_GROUPS: Array<{
   label: string;
   permissions: Permission[];
 }> = [
-  {
-    label: 'General Permissions',
-    permissions: ['view_channels', 'send_messages', 'add_reactions'],
-  },
-  {
-    label: 'Member Permissions',
-    permissions: ['kick_members', 'ban_members', 'mute_members', 'manage_nicknames'],
-  },
-  {
-    label: 'Channel Permissions',
-    permissions: ['manage_channels', 'manage_messages', 'pin_messages'],
-  },
-  {
-    label: 'Administrative Permissions',
-    permissions: ['manage_server', 'manage_roles', 'manage_invites', 'transfer_ownership'],
-  },
-];
+    {
+      label: 'General Permissions',
+      permissions: ['view_channels', 'send_messages', 'add_reactions'],
+    },
+    {
+      label: 'Member Permissions',
+      permissions: ['kick_members', 'ban_members', 'mute_members', 'manage_nicknames'],
+    },
+    {
+      label: 'Channel Permissions',
+      permissions: ['manage_channels', 'manage_messages', 'pin_messages'],
+    },
+    {
+      label: 'Administrative Permissions',
+      permissions: ['manage_server', 'manage_roles', 'manage_invites', 'transfer_ownership'],
+    },
+  ];
 
 const PERMISSION_LABELS: Record<Permission, string> = {
   view_channels: 'View Channels',
@@ -75,7 +75,7 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
   } = useServerStore();
 
   const [selectedRoleKey, setSelectedRoleKey] = useState<string | null>(null);
-  const [permissionStates, setPermissionStates] = useState<Map<string, Map<Permission, boolean>>>(new Map());
+  const [permissionStates, setPermissionStates] = useState<Map<string, Map<Permission, boolean | null>>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -108,7 +108,7 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
   useEffect(() => {
     const loadData = async () => {
       if (!user) return;
-      
+
       setIsLoading(true);
       try {
         await Promise.all([
@@ -139,15 +139,15 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
       'manage_invites', 'transfer_ownership'
     ];
 
-    // Initialize all roles with false (off/inherit) permissions
+    // Initialize all roles with null (inherit) permissions
     for (const role of allRoles) {
       const roleKey = role.id || role.name!;
-      const rolePerms = new Map<Permission, boolean>();
-      
+      const rolePerms = new Map<Permission, boolean | null>();
+
       for (const perm of allPermissions) {
-        rolePerms.set(perm, false); // false = off/inherit from role permissions
+        rolePerms.set(perm, null); // null = inherit from role permissions
       }
-      
+
       states.set(roleKey, rolePerms);
     }
 
@@ -155,7 +155,7 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
     for (const cp of channelPermissions) {
       const roleKey = cp.role_id || cp.role_name!;
       const roleState = states.get(roleKey);
-      
+
       if (roleState) {
         roleState.set(cp.permission, cp.allowed);
       }
@@ -164,27 +164,27 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
     setPermissionStates(states);
   }, [channelPermissions, allRoles]);
 
-  const handlePermissionToggle = (roleKey: string, permission: Permission, checked: boolean) => {
+  const handlePermissionChange = (roleKey: string, permission: Permission, value: boolean | null) => {
     setPermissionStates((prev) => {
       const next = new Map(prev);
       const rolePerms = new Map(next.get(roleKey) || []);
-      rolePerms.set(permission, checked);
+      rolePerms.set(permission, value);
       next.set(roleKey, rolePerms);
       return next;
     });
   };
 
-  const getPermissionState = (roleKey: string, permission: Permission): boolean => {
-    return permissionStates.get(roleKey)?.get(permission) ?? false;
+  const getPermissionState = (roleKey: string, permission: Permission): boolean | null => {
+    return permissionStates.get(roleKey)?.get(permission) ?? null;
   };
 
   const getRoleOverrideCount = (roleKey: string): number => {
     const rolePerms = permissionStates.get(roleKey);
     if (!rolePerms) return 0;
-    
+
     let count = 0;
     for (const state of rolePerms.values()) {
-      if (state === true) count++; // Count only enabled overrides
+      if (state !== null) count++; // Count any non-inherited settings
     }
     return count;
   };
@@ -208,24 +208,24 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
       for (const role of allRoles) {
         const roleKey = role.id || role.name!;
         const rolePerms = permissionStates.get(roleKey);
-        
+
         if (!rolePerms) continue;
 
-        for (const [permission, enabled] of rolePerms.entries()) {
+        for (const [permission, state] of rolePerms.entries()) {
           const dbKey = `${roleKey}:${permission}`;
           const currentDb = currentDbPermMap.get(dbKey);
-          
-          if (enabled) {
-            // Enabled - set channel override to allow
+
+          if (state !== null) {
+            // Explicitly set (true or false)
             if (currentDb) {
               // Update if different
-              if (currentDb.allowed !== true) {
+              if (currentDb.allowed !== state) {
                 savePromises.push(
                   setChannelPermission(
                     channelId,
                     user.id,
                     permission,
-                    true,
+                    state,
                     role.id ? role.id : undefined,
                     role.name ? role.name : undefined
                   )
@@ -238,14 +238,14 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
                   channelId,
                   user.id,
                   permission,
-                  true,
+                  state,
                   role.id ? role.id : undefined,
                   role.name ? role.name : undefined
                 )
               );
             }
           } else {
-            // Disabled - delete channel override if it exists (inherit from role)
+            // Neutral/Null - delete channel override if it exists (inherit)
             if (currentDb) {
               savePromises.push(deleteChannelPermission(currentDb.id, user.id));
             }
@@ -254,10 +254,10 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
       }
 
       await Promise.all(savePromises);
-      
+
       // Refresh permissions to ensure they're up to date
       await fetchChannelPermissions(channelId);
-      
+
       toast.success('Channel permissions saved successfully');
       onClose();
     } catch (error) {
@@ -355,23 +355,51 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
                     </Label>
                     <div className="space-y-2">
                       {group.permissions.map((permission) => {
-                        const enabled = getPermissionState(selectedRoleKey!, permission);
+                        const state = getPermissionState(selectedRoleKey!, permission);
 
                         return (
-                          <div key={permission} className="flex items-center justify-between p-2 rounded-md hover:bg-secondary/50">
+                          <div key={permission} className="flex items-center justify-between p-2 rounded-md hover:bg-secondary/50 group/item">
                             <Label
                               htmlFor={`${selectedRoleKey}-${permission}`}
                               className="text-sm font-normal cursor-pointer flex-1"
                             >
                               {PERMISSION_LABELS[permission]}
                             </Label>
-                            <Switch
-                              id={`${selectedRoleKey}-${permission}`}
-                              checked={enabled}
-                              onCheckedChange={(checked) =>
-                                handlePermissionToggle(selectedRoleKey!, permission, checked)
-                              }
-                            />
+                            <div className="flex bg-secondary/80 rounded-lg p-0.5 border border-border/50">
+                              <button
+                                onClick={() => handlePermissionChange(selectedRoleKey!, permission, false)}
+                                className={cn(
+                                  "px-3 py-1 text-[10px] font-bold rounded-md transition-all",
+                                  state === false
+                                    ? "bg-destructive text-destructive-foreground shadow-sm"
+                                    : "text-muted-foreground hover:text-foreground"
+                                )}
+                              >
+                                DENY
+                              </button>
+                              <button
+                                onClick={() => handlePermissionChange(selectedRoleKey!, permission, null)}
+                                className={cn(
+                                  "px-3 py-1 text-[10px] font-bold rounded-md transition-all",
+                                  state === null
+                                    ? "bg-background text-foreground shadow-sm border border-border"
+                                    : "text-muted-foreground hover:text-foreground"
+                                )}
+                              >
+                                INHERIT
+                              </button>
+                              <button
+                                onClick={() => handlePermissionChange(selectedRoleKey!, permission, true)}
+                                className={cn(
+                                  "px-3 py-1 text-[10px] font-bold rounded-md transition-all",
+                                  state === true
+                                    ? "bg-emerald-500 text-white shadow-sm"
+                                    : "text-muted-foreground hover:text-foreground"
+                                )}
+                              >
+                                ALLOW
+                              </button>
+                            </div>
                           </div>
                         );
                       })}

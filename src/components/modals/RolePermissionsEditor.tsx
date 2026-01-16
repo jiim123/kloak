@@ -8,6 +8,7 @@ import { Loader2, Save } from 'lucide-react';
 import { useServerStore } from '@/stores/serverStore';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import type { Permission, ServerRole, CustomServerRole } from '@/types';
 
 interface RolePermissionsEditorProps {
@@ -20,23 +21,23 @@ const PERMISSION_GROUPS: Array<{
   label: string;
   permissions: Permission[];
 }> = [
-  {
-    label: 'General Permissions',
-    permissions: ['view_channels', 'send_messages', 'add_reactions'],
-  },
-  {
-    label: 'Member Permissions',
-    permissions: ['kick_members', 'ban_members', 'mute_members', 'manage_nicknames'],
-  },
-  {
-    label: 'Channel Permissions',
-    permissions: ['manage_channels', 'manage_messages', 'pin_messages'],
-  },
-  {
-    label: 'Administrative Permissions',
-    permissions: ['manage_server', 'manage_roles', 'manage_invites', 'transfer_ownership'],
-  },
-];
+    {
+      label: 'General Permissions',
+      permissions: ['view_channels', 'send_messages', 'add_reactions'],
+    },
+    {
+      label: 'Member Permissions',
+      permissions: ['kick_members', 'ban_members', 'mute_members', 'manage_nicknames'],
+    },
+    {
+      label: 'Channel Permissions',
+      permissions: ['manage_channels', 'manage_messages', 'pin_messages'],
+    },
+    {
+      label: 'Administrative Permissions',
+      permissions: ['manage_server', 'manage_roles', 'manage_invites', 'transfer_ownership'],
+    },
+  ];
 
 const PERMISSION_LABELS: Record<Permission, string> = {
   view_channels: 'View Channels',
@@ -73,7 +74,7 @@ export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissio
   useEffect(() => {
     const loadPermissions = async () => {
       if (!user) return;
-      
+
       setIsLoading(true);
       try {
         await fetchRolePermissions(serverId);
@@ -118,10 +119,10 @@ export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissio
     setPermissionStates(states);
   }, [rolePermissions, role]);
 
-  const handlePermissionToggle = (permission: Permission, checked: boolean) => {
+  const handlePermissionChange = (permission: Permission, value: boolean | null) => {
     setPermissionStates((prev) => {
       const next = new Map(prev);
-      next.set(permission, checked);
+      next.set(permission, value);
       return next;
     });
   };
@@ -140,43 +141,41 @@ export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissio
         currentDbPermissions.map((rp) => [rp.permission, rp])
       );
 
-      // Save all changed permissions
       const savePromises: Promise<void>[] = [];
 
       // Process all permissions
-      // If checked (true) -> save as allowed=true
-      // If unchecked (false) -> delete (revert to base/default)
-      // If null -> no change needed
+      // If true -> allowed=true
+      // If false -> allowed=false (Explicit Deny)
+      // If null -> delete (Inherit/Neutral)
       for (const [permission, state] of permissionStates.entries()) {
         const currentDb = currentDbPermMap.get(permission);
-        
-        if (state === true) {
-          // Permission is checked - save as allowed
+
+        if (state !== null) {
+          // Explicitly set (true or false)
           if (currentDb) {
             // Update if different
-            if (currentDb.allowed !== true) {
+            if (currentDb.allowed !== state) {
               savePromises.push(
-                setRolePermission(serverId, user.id, permission, role.id, undefined, true)
+                setRolePermission(serverId, user.id, permission, role.id, undefined, state)
               );
             }
           } else {
             // Create new permission
             savePromises.push(
-              setRolePermission(serverId, user.id, permission, role.id, undefined, true)
+              setRolePermission(serverId, user.id, permission, role.id, undefined, state)
             );
           }
-        } else if (state === false && currentDb) {
-          // Permission is unchecked and exists in DB - delete it
+        } else if (currentDb) {
+          // Permission is null but exists in DB - delete it (inherit)
           savePromises.push(deleteRolePermission(currentDb.id, user.id));
         }
-        // If state is null, no change needed (permission not set)
       }
 
       await Promise.all(savePromises);
-      
+
       // Refresh permissions to ensure they're up to date
       await fetchRolePermissions(serverId);
-      
+
       toast.success('Permissions saved successfully');
       onClose();
     } catch (error) {
@@ -214,24 +213,50 @@ export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissio
               <div className="space-y-2 pl-1">
                 {group.permissions.map((permission) => {
                   const state = permissionStates.get(permission);
-                  // null means not set (unchecked), true means checked, false means explicitly unchecked
-                  const isChecked = state === true;
 
                   return (
-                    <div key={permission} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={permission}
-                        checked={isChecked}
-                        onCheckedChange={(checked) =>
-                          handlePermissionToggle(permission, checked === true)
-                        }
-                      />
+                    <div key={permission} className="flex items-center justify-between p-2 rounded-md hover:bg-secondary/50 group/item">
                       <Label
                         htmlFor={permission}
                         className="text-sm font-normal cursor-pointer flex-1"
                       >
                         {PERMISSION_LABELS[permission]}
                       </Label>
+                      <div className="flex bg-secondary/80 rounded-lg p-0.5 border border-border/50">
+                        <button
+                          onClick={() => handlePermissionChange(permission, false)}
+                          className={cn(
+                            "px-3 py-1 text-[10px] font-bold rounded-md transition-all",
+                            state === false
+                              ? "bg-destructive text-destructive-foreground shadow-sm"
+                              : "text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          DENY
+                        </button>
+                        <button
+                          onClick={() => handlePermissionChange(permission, null)}
+                          className={cn(
+                            "px-3 py-1 text-[10px] font-bold rounded-md transition-all",
+                            state === null
+                              ? "bg-background text-foreground shadow-sm border border-border"
+                              : "text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          INHERIT
+                        </button>
+                        <button
+                          onClick={() => handlePermissionChange(permission, true)}
+                          className={cn(
+                            "px-3 py-1 text-[10px] font-bold rounded-md transition-all",
+                            state === true
+                              ? "bg-emerald-500 text-white shadow-sm"
+                              : "text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          ALLOW
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
