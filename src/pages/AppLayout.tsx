@@ -12,10 +12,10 @@ import { MobileSidebar } from '@/components/layout/MobileSidebar';
 import { MobileMembersSidebar } from '@/components/layout/MobileMembersSidebar';
 import { ConnectionStatus } from '@/components/ui/ConnectionStatus';
 import { DMSidebar, FriendsList, DMChatArea } from '@/components/dm';
-import { 
-  CreateServerModal, 
-  JoinServerModal, 
-  InviteModal, 
+import {
+  CreateServerModal,
+  JoinServerModal,
+  InviteModal,
   ServerSettingsModal,
   CreateChannelModal,
   EditChannelModal,
@@ -27,7 +27,8 @@ import {
   KeyboardShortcutsModal,
   ConfirmActionModal,
   ChangeNicknameModal,
-  WelcomeModal
+  WelcomeModal,
+  PermissionDebugPanel
 } from '@/components/modals';
 import { PersistentEmbedContainer } from '@/components/chat/PersistentEmbedContainer';
 import { cn } from '@/lib/utils';
@@ -44,7 +45,7 @@ const AppLayout = () => {
   const { currentServer, currentChannel, setCurrentChannel, fetchChannels, fetchMembers, fetchRolePermissions, fetchRoles } = useServerStore();
   const { currentConversation, setCurrentConversation } = useDMStore();
   const isMobile = useIsMobile();
-  
+
   // Track if showing friends list in DM view
   const [showFriends, setShowFriends] = useState(true);
 
@@ -53,11 +54,11 @@ const AppLayout = () => {
   useRealtimeUsers();
   useRealtimeServer(currentServer?.id || null);
   useRealtimeNotifications(user?.id || null);
-  
+
   // Real-time channel messages and reactions - at app level for stability
   useRealtimeMessages(currentChannel?.id || null);
   useRealtimeReactions(currentChannel?.id || null);
-  
+
   // Real-time DMs at app level so messages are received even when not viewing DMs
   const { incrementUnread } = useUnreadDMs(user?.id || null);
   useRealtimeDMs({
@@ -70,10 +71,10 @@ const AppLayout = () => {
       }
     },
   });
-  
+
   // Background sync (handles offline queue, reconnection, periodic refresh)
   useBackgroundSync();
-  
+
   // Sync preferences (theme, etc.) with database
   usePreferencesSync();
 
@@ -148,11 +149,11 @@ const AppLayout = () => {
     <>
       {/* Connection Status Banner */}
       <ConnectionStatus />
-      
+
       <div className="h-screen flex flex-col md:flex-row overflow-hidden">
         {/* Mobile header */}
-        <MobileHeader 
-          isDMView={isDMView} 
+        <MobileHeader
+          isDMView={isDMView}
           showFriends={showFriends}
         />
 
@@ -162,19 +163,19 @@ const AppLayout = () => {
           <div className="w-[72px] flex-shrink-0 bg-layout-sidebar">
             <ServerSidebar />
           </div>
-          
+
           {/* Secondary sidebar - 240px fixed */}
           <div className="w-60 flex-shrink-0 bg-layout-sidebar-secondary">
             {isDMView ? (
-              <DMSidebar 
-                showFriends={showFriends} 
-                onShowFriendsChange={setShowFriends} 
+              <DMSidebar
+                showFriends={showFriends}
+                onShowFriendsChange={setShowFriends}
               />
             ) : (
               <ChannelSidebar />
             )}
           </div>
-          
+
           {/* Main area - flexible */}
           <div className="flex-1 min-w-0 bg-layout-chat relative">
             {isDMView ? (
@@ -187,10 +188,10 @@ const AppLayout = () => {
               <ChatArea />
             )}
           </div>
-          
+
           {/* Members sidebar - 240px, collapsible, only in server view */}
           {!isDMView && (
-            <div 
+            <div
               className={cn(
                 "flex-shrink-0 bg-layout-members transition-all duration-200",
                 isMemberSidebarOpen ? "w-60" : "w-0 overflow-hidden"
@@ -216,7 +217,7 @@ const AppLayout = () => {
       </div>
 
       {/* Mobile Sidebars */}
-      <MobileSidebar 
+      <MobileSidebar
         isDMView={isDMView}
         showFriends={showFriends}
         onShowFriendsChange={setShowFriends}
@@ -239,7 +240,8 @@ const AppLayout = () => {
       <ConfirmActionModal />
       <ChangeNicknameModal />
       <WelcomeModal open={isNewUser} onClose={() => setIsNewUser(false)} />
-      
+      <PermissionDebugPanel />
+
       {/* Persistent embed container for Twitch/Kick streams */}
       <PersistentEmbedContainer />
     </>

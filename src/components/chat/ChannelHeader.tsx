@@ -1,4 +1,4 @@
-import { Hash, Volume2, Pin, Search, Users, Lock } from 'lucide-react';
+import { Hash, Volume2, Pin, Search, Users, Lock, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
@@ -22,7 +22,7 @@ export const ChannelHeader = ({ channel }: ChannelHeaderProps) => {
       <div className="flex items-center gap-2 min-w-0 flex-1">
         <ChannelIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
         <span className="font-semibold text-foreground truncate">{channel.name}</span>
-        
+
         {channel.is_read_only && (
           <Tooltip>
             <TooltipTrigger>
@@ -34,7 +34,7 @@ export const ChannelHeader = ({ channel }: ChannelHeaderProps) => {
             <TooltipContent>Only admins can send messages</TooltipContent>
           </Tooltip>
         )}
-        
+
         {channel.topic && (
           <>
             <Separator orientation="vertical" className="h-5 mx-2" />
@@ -50,9 +50,9 @@ export const ChannelHeader = ({ channel }: ChannelHeaderProps) => {
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               className="w-8 h-8"
               onClick={() => openModal('pinned-messages', { channelId: channel.id })}
             >
@@ -64,9 +64,23 @@ export const ChannelHeader = ({ channel }: ChannelHeaderProps) => {
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-8 h-8"
+              onClick={() => openModal('permission-debug', { channelId: channel.id })}
+            >
+              <Shield className="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Debug Permissions</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
               className="w-8 h-8"
               onClick={() => openModal('search', { channelId: channel.id })}
             >
@@ -78,9 +92,9 @@ export const ChannelHeader = ({ channel }: ChannelHeaderProps) => {
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               className="w-8 h-8"
               onClick={toggleMemberSidebar}
             >

@@ -12,7 +12,7 @@ export const THEMES = [
 
 export type Theme = typeof THEMES[number]['id'];
 
-export type ModalType = 
+export type ModalType =
   | 'create-server'
   | 'join-server'
   | 'server-settings'
@@ -31,6 +31,7 @@ export type ModalType =
   | 'search'
   | 'changeNickname'
   | 'confirmAction'
+  | 'permission-debug'
   | null;
 
 interface ModalData {
@@ -50,7 +51,7 @@ interface UIState {
   modalData: ModalData | null;
   linkPreviewsEnabled: boolean;
   linkPreviewNoticeDismissed: boolean;
-  
+
   // Mobile sidebar states
   isMobileSidebarOpen: boolean;
   isMobileChannelSidebarOpen: boolean;
@@ -73,7 +74,7 @@ interface UIState {
   // Sidebar actions
   toggleMemberSidebar: () => void;
   setMemberSidebarOpen: (open: boolean) => void;
-  
+
   // Mobile sidebar actions
   setMobileSidebarOpen: (open: boolean) => void;
   setMobileChannelSidebarOpen: (open: boolean) => void;
@@ -104,13 +105,13 @@ interface UIState {
 
 export const applyTheme = (theme: Theme) => {
   const root = document.documentElement;
-  
+
   // Remove all theme classes
   THEMES.forEach(t => root.classList.remove(t.id));
-  
+
   // Add the new theme class
   root.classList.add(theme);
-  
+
   // Also set data-theme attribute for potential CSS usage
   root.setAttribute('data-theme', theme);
 };
