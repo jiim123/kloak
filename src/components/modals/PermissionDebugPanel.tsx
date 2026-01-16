@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -68,7 +68,7 @@ const PERMISSION_LABELS: Record<Permission, string> = {
 
 export function PermissionDebugPanel() {
     const { serverId, channelId } = useParams();
-    const { user } = useAuth();
+    const { user } = useAuthStore();
     const { activeModal, closeModal } = useUIStore();
     const [loading, setLoading] = useState(false);
     const [debugInfo, setDebugInfo] = useState<Record<Permission, PermissionDebugInfo>>({} as any);
@@ -85,7 +85,7 @@ export function PermissionDebugPanel() {
 
             // Check each permission
             for (const permission of ALL_PERMISSIONS) {
-                const { data, error } = await supabase.rpc('debug_user_permission', {
+                const { data, error } = await supabase.rpc('debug_user_permission' as any, {
                     _user_id: user.id,
                     _channel_id: channelId,
                     _permission: permission,
@@ -101,7 +101,7 @@ export function PermissionDebugPanel() {
                         error: error.message,
                     };
                 } else {
-                    results[permission] = data;
+                    results[permission] = data as PermissionDebugInfo;
                 }
             }
 
