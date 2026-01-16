@@ -44,6 +44,42 @@ export interface CustomServerRole {
   created_at: string;
 }
 
+export type Permission = 
+  | 'manage_server'
+  | 'manage_roles'
+  | 'manage_channels'
+  | 'kick_members'
+  | 'ban_members'
+  | 'mute_members'
+  | 'manage_nicknames'
+  | 'manage_messages'
+  | 'pin_messages'
+  | 'send_messages'
+  | 'add_reactions'
+  | 'view_channels'
+  | 'transfer_ownership'
+  | 'manage_invites';
+
+export interface RolePermission {
+  id: string;
+  server_id: string;
+  role_id: string | null;
+  role_name: ServerRole | null;
+  permission: Permission;
+  allowed: boolean;
+  created_at: string;
+}
+
+export interface ChannelPermission {
+  id: string;
+  channel_id: string;
+  role_id: string | null;
+  role_name: ServerRole | null;
+  permission: Permission;
+  allowed: boolean;
+  created_at: string;
+}
+
 export interface Server {
   id: string;
   name: string;

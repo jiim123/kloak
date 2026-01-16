@@ -16,7 +16,8 @@ import {
   X,
   Palette,
   Plus,
-  Edit2
+  Edit2,
+  KeyRound
 } from 'lucide-react';
 import {
   Dialog,
@@ -46,11 +47,13 @@ import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useRealtimeMembers } from '@/hooks';
+import { useMemberPermissions } from '@/hooks/useMemberPermissions';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { ServerRole, ServerMember, CustomServerRole } from '@/types';
 import { Badge } from '@/components/ui/badge';
+import { RolePermissionsEditor } from './RolePermissionsEditor';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -109,6 +112,7 @@ export const ServerSettingsModal = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [editingRole, setEditingRole] = useState<CustomServerRole | null>(null);
+  const [editingRolePermissions, setEditingRolePermissions] = useState<CustomServerRole | null>(null);
   const [roleName, setRoleName] = useState('');
   const [roleColor, setRoleColor] = useState('#5865F2');
   
@@ -139,8 +143,15 @@ export const ServerSettingsModal = () => {
   }, [servers, server]);
 
   const userRole = currentMembership?.role;
+  // Use permission system instead of hardcoded role checks
+  const { hasPermission } = useMemberPermissions();
+  const canManageServer = hasPermission('manage_server');
+  const canManageRoles = hasPermission('manage_roles');
+  const canManageChannels = hasPermission('manage_channels');
+  
+  // For backward compatibility and specific checks
   const isOwner = userRole === 'owner';
-  const isAdmin = userRole === 'owner' || userRole === 'admin';
+  const isAdmin = canManageServer || canManageRoles || canManageChannels;
 
   const {
     register,
@@ -565,10 +576,10 @@ export const ServerSettingsModal = () => {
                 <div className="flex items-center gap-3 sm:gap-4">
                   <div className="relative">
                     <div 
-                      onClick={() => isAdmin && fileInputRef.current?.click()}
+                      onClick={() => canManageServer && fileInputRef.current?.click()}
                       className={cn(
                         "w-14 h-14 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-secondary flex items-center justify-center border-2 border-dashed border-muted-foreground/50 transition-colors flex-shrink-0 overflow-hidden",
-                        isAdmin && "cursor-pointer hover:border-primary"
+                        canManageServer && "cursor-pointer hover:border-primary"
                       )}
                     >
                       {displayIconUrl ? (
@@ -578,7 +589,7 @@ export const ServerSettingsModal = () => {
                       )}
                     </div>
                     {/* Remove icon button - show for new preview OR existing server icon */}
-                    {isAdmin && displayIconUrl && (
+                    {canManageServer && displayIconUrl && (
                       <button
                         type="button"
                         onClick={(e) => {
@@ -599,7 +610,7 @@ export const ServerSettingsModal = () => {
                   <div className="min-w-0">
                     <p className="text-xs sm:text-sm font-medium">Server Icon</p>
                     <p className="text-[10px] sm:text-xs text-muted-foreground">
-                      {isAdmin ? 'Click to upload • Recommended 512x512' : 'Recommended 512x512'}
+                      {canManageServer ? 'Click to upload • Recommended 512x512' : 'Recommended 512x512'}
                     </p>
                   </div>
                 </div>
@@ -609,10 +620,10 @@ export const ServerSettingsModal = () => {
                   <Label className="text-xs sm:text-sm">Server Banner</Label>
                   <div className="relative">
                     <div 
-                      onClick={() => isAdmin && bannerInputRef.current?.click()}
+                      onClick={() => canManageServer && bannerInputRef.current?.click()}
                       className={cn(
                         "w-full h-24 sm:h-32 rounded-lg sm:rounded-xl bg-secondary flex items-center justify-center border-2 border-dashed border-muted-foreground/50 transition-colors overflow-hidden",
-                        isAdmin && "cursor-pointer hover:border-primary"
+                        canManageServer && "cursor-pointer hover:border-primary"
                       )}
                     >
                       {displayBannerUrl ? (
@@ -625,7 +636,7 @@ export const ServerSettingsModal = () => {
                       )}
                     </div>
                     {/* Remove banner button */}
-                    {isAdmin && displayBannerUrl && (
+                    {canManageServer && displayBannerUrl && (
                       <button
                         type="button"
                         onClick={(e) => {
@@ -644,7 +655,7 @@ export const ServerSettingsModal = () => {
                     )}
                   </div>
                   <p className="text-[10px] sm:text-xs text-muted-foreground">
-                    {isAdmin ? 'Recommended 960x540 • Shown in server list' : 'Shown in server list'}
+                    {canManageServer ? 'Recommended 960x540 • Shown in server list' : 'Shown in server list'}
                   </p>
                 </div>
 
@@ -655,7 +666,7 @@ export const ServerSettingsModal = () => {
                     id="serverName"
                     {...register('name')}
                     className={cn("h-9 sm:h-10 text-sm", errors.name ? 'border-destructive' : '')}
-                    disabled={!isAdmin}
+                    disabled={!canManageServer}
                   />
                   {errors.name && (
                     <p className="text-[10px] sm:text-xs text-destructive">{errors.name.message}</p>
@@ -743,7 +754,7 @@ export const ServerSettingsModal = () => {
                         </div>
                         
                         {/* Actions (not for self or higher roles) */}
-                        {isAdmin && member.user_id !== user?.id && member.role !== 'owner' && (
+                        {canManageRoles && member.user_id !== user?.id && member.role !== 'owner' && (
                           <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
                             {roles.length > 0 && (
                               <DropdownMenu>
@@ -808,7 +819,7 @@ export const ServerSettingsModal = () => {
 
               {/* Roles Tab */}
               <TabsContent value="roles" className="m-0 p-6">
-                {isAdmin ? (
+                {canManageRoles ? (
                   <div className="space-y-5">
                     {/* Create/Edit Role Form */}
                     <div className="space-y-4 p-4 border rounded-lg bg-secondary/50">
@@ -908,8 +919,18 @@ export const ServerSettingsModal = () => {
                                 <Button
                                   variant="ghost"
                                   size="sm"
+                                  onClick={() => setEditingRolePermissions(role)}
+                                  className="text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3"
+                                  title="Edit Permissions"
+                                >
+                                  <KeyRound className="w-3 h-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   onClick={() => handleEditRole(role)}
                                   className="text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3"
+                                  title="Edit Role"
                                 >
                                   <Edit2 className="w-3 h-3" />
                                 </Button>
@@ -918,6 +939,7 @@ export const ServerSettingsModal = () => {
                                   size="sm"
                                   onClick={() => handleDeleteRole(role)}
                                   className="text-muted-foreground hover:text-destructive text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3"
+                                  title="Delete Role"
                                 >
                                   <Trash2 className="w-3 h-3" />
                                 </Button>
@@ -966,7 +988,7 @@ export const ServerSettingsModal = () => {
                             {member.user?.username}
                           </span>
                         </div>
-                        {isAdmin && (
+                        {canManageRoles && (
                           <Button 
                             variant="outline" 
                             size="sm"
@@ -1001,6 +1023,19 @@ export const ServerSettingsModal = () => {
           </Tabs>
         </DialogContent>
       </Dialog>
+
+      {/* Role Permissions Editor */}
+      {editingRolePermissions && server && (
+        <Dialog open={!!editingRolePermissions} onOpenChange={(open) => !open && setEditingRolePermissions(null)}>
+          <DialogContent className="max-w-2xl max-h-[90vh]">
+            <RolePermissionsEditor
+              role={editingRolePermissions}
+              serverId={server.id}
+              onClose={() => setEditingRolePermissions(null)}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Delete Confirmation */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>

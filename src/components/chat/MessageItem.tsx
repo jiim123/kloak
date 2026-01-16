@@ -16,6 +16,7 @@ import { useMessageStore } from "@/stores/messageStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useSyncStore } from "@/stores/syncStore";
+import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { MessageContent } from "./MessageContent";
 import { getMessagePreview } from "@/lib/message";
 import { formatMessageTimestamp } from "@/lib/format";
@@ -118,10 +119,15 @@ export const MessageItem = memo(function MessageItem({
     };
   }, [members, user?.id, message.user_id]);
 
-  const isAdmin = useMemo(() => {
-    const role = currentMember?.role;
-    return role === "owner" || role === "admin" || role === "moderator";
-  }, [currentMember?.role]);
+  // Check permissions using database-backed permission system
+  const { hasPermission } = useMemberPermissions(message.channel_id);
+  const canPinMessages = hasPermission('pin_messages');
+  const canManageMessages = hasPermission('manage_messages');
+  const canAddReactions = hasPermission('add_reactions');
+  
+  // For backward compatibility, keep isAdmin for delete permission checks
+  // Users can delete their own messages OR if they have manage_messages permission
+  const isAdmin = canManageMessages;
 
   const isMentioned = useMemo(() => {
     if (!user?.id) return false;
@@ -431,12 +437,13 @@ export const MessageItem = memo(function MessageItem({
                 {message.reactions.map((reaction) => (
                   <button
                     key={reaction.emoji}
-                    onClick={() => handleReactionClick(reaction.emoji, reaction.hasReacted)}
+                    onClick={() => canAddReactions && handleReactionClick(reaction.emoji, reaction.hasReacted)}
+                    disabled={!canAddReactions}
                     className={`flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border transition-colors duration-200 ${
                       reaction.hasReacted
                         ? "bg-primary/20 border-primary text-primary"
                         : "bg-secondary border-transparent hover:border-border"
-                    }`}
+                    } ${!canAddReactions ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
                     <span>{reaction.emoji}</span>
                     <span className="text-[11px]">{reaction.count}</span>
@@ -449,29 +456,31 @@ export const MessageItem = memo(function MessageItem({
           {/* Hover actions - Desktop (CSS-driven visibility) */}
           {!isEditing && (
             <div className="absolute right-2 -top-3 hidden md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 md:flex items-center gap-0.5 bg-background border border-border rounded-lg shadow-lg p-0.5 transition-opacity duration-150">
-              <DropdownMenu
-                open={dropdownState.emoji}
-                onOpenChange={(open) => setDropdownState((s) => ({ ...s, emoji: open }))}
-              >
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="w-7 h-7 hover:bg-muted">
-                    <Smile className="w-4 h-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  <div className="flex gap-1 p-1">
-                    {QUICK_REACTIONS.map((emoji) => (
-                      <button
-                        key={emoji}
-                        onClick={() => handleAddReaction(emoji)}
-                        className="text-xl hover:scale-125 transition-transform p-1"
-                      >
-                        {emoji}
-                      </button>
-                    ))}
-                  </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {canAddReactions && (
+                <DropdownMenu
+                  open={dropdownState.emoji}
+                  onOpenChange={(open) => setDropdownState((s) => ({ ...s, emoji: open }))}
+                >
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="w-7 h-7 hover:bg-muted">
+                      <Smile className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <div className="flex gap-1 p-1">
+                      {QUICK_REACTIONS.map((emoji) => (
+                        <button
+                          key={emoji}
+                          onClick={() => handleAddReaction(emoji)}
+                          className="text-xl hover:scale-125 transition-transform p-1"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
 
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -514,7 +523,7 @@ export const MessageItem = memo(function MessageItem({
                 </Tooltip>
               )}
 
-              {isAdmin && (
+              {canPinMessages && (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button variant="ghost" size="icon" className="w-7 h-7 hover:bg-muted" onClick={handlePin}>
@@ -552,20 +561,22 @@ export const MessageItem = memo(function MessageItem({
           </DrawerHeader>
 
           <div className="px-4 pb-8">
-            <div className="flex justify-center gap-3 mb-4 pb-4 border-b border-border">
-              {QUICK_REACTIONS.map((emoji) => (
-                <button
-                  key={emoji}
-                  onClick={() => {
-                    handleAddReaction(emoji);
-                    setShowMobileActions(false);
-                  }}
-                  className="text-2xl p-2 hover:bg-accent rounded-full active:scale-90 transition-transform"
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
+            {canAddReactions && (
+              <div className="flex justify-center gap-3 mb-4 pb-4 border-b border-border">
+                {QUICK_REACTIONS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    onClick={() => {
+                      handleAddReaction(emoji);
+                      setShowMobileActions(false);
+                    }}
+                    className="text-2xl p-2 hover:bg-accent rounded-full active:scale-90 transition-transform"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            )}
 
             <div className="space-y-1">
               <button
@@ -603,7 +614,7 @@ export const MessageItem = memo(function MessageItem({
                 <span>Copy Text</span>
               </button>
 
-              {isAdmin && (
+              {canPinMessages && (
                 <button
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-accent active:bg-accent text-left"
                   onClick={() => {

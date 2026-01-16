@@ -41,7 +41,7 @@ const AppLayout = () => {
   const navigate = useNavigate();
   const { user, isLoading, isNewUser, setIsNewUser } = useAuthStore();
   const { isMemberSidebarOpen, closeMobileSidebars } = useUIStore();
-  const { currentServer, currentChannel, setCurrentChannel, fetchChannels, fetchMembers } = useServerStore();
+  const { currentServer, currentChannel, setCurrentChannel, fetchChannels, fetchMembers, fetchRolePermissions, fetchRoles } = useServerStore();
   const { currentConversation, setCurrentConversation } = useDMStore();
   const isMobile = useIsMobile();
   
@@ -77,13 +77,15 @@ const AppLayout = () => {
   // Sync preferences (theme, etc.) with database
   usePreferencesSync();
 
-  // Fetch channels and members when server changes
+  // Fetch channels, members, roles, and permissions when server changes
   useEffect(() => {
     if (currentServer?.id) {
       fetchChannels(currentServer.id);
       fetchMembers(currentServer.id);
+      fetchRoles(currentServer.id);
+      fetchRolePermissions(currentServer.id);
     }
-  }, [currentServer?.id, fetchChannels, fetchMembers]);
+  }, [currentServer?.id, fetchChannels, fetchMembers, fetchRoles, fetchRolePermissions]);
 
   // Clear DM conversation when switching to a server
   useEffect(() => {

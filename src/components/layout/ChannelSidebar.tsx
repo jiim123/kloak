@@ -41,6 +41,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useUnread } from "@/hooks/useUnread";
+import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { StatusSelector } from "@/components/StatusSelector";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { MotionButton } from "@/components/ui/motion-elements";
@@ -488,7 +489,10 @@ export const ChannelSidebar = () => {
   }, [servers, currentServer]);
 
   const userRole = currentMembership?.role;
-  const isAdmin = isAdminRole(userRole);
+  // Use permission system instead of hardcoded role checks
+  const { hasPermission } = useMemberPermissions();
+  const canManageChannels = hasPermission('manage_channels');
+  const isAdmin = canManageChannels; // For backward compatibility
   const isOwner = userRole === "owner";
 
   const { uncategorizedChannels, sortedCategories } = useMemo(() => {

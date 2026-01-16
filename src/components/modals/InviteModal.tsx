@@ -16,22 +16,15 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useUIStore } from "@/stores/uiStore";
 import { useServerStore } from "@/stores/serverStore";
+import { useAuthStore } from "@/stores/authStore";
+import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
-// Generate new invite code
-const generateInviteCode = (): string => {
-  const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-  let code = "";
-  for (let i = 0; i < 8; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
-};
 
 export const InviteModal = () => {
   const { activeModal, modalData, closeModal } = useUIStore();
   const { currentServer, servers, members } = useServerStore();
+  const { user } = useAuthStore();
   const [copied, setCopied] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false);
@@ -43,9 +36,9 @@ export const InviteModal = () => {
   const serverId = modalData?.serverId as string | undefined;
   const server = serverId ? servers.find((s) => s.id === serverId) || currentServer : currentServer;
 
-  // Check if current user is admin/owner
-  const currentMember = members.find((m) => m.user_id === modalData?.userId);
-  const isAdmin = currentMember?.role === "owner" || currentMember?.role === "admin";
+  // Check if current user can manage invites
+  const { hasPermission } = useMemberPermissions();
+  const isAdmin = hasPermission('manage_invites');
 
   const displayCode = inviteCode || server?.invite_code || "";
 
@@ -61,20 +54,23 @@ export const InviteModal = () => {
   };
 
   const handleRegenerate = async () => {
-    if (!server) return;
+    if (!server || !user) return;
 
     setIsRegenerating(true);
     try {
-      const newCode = generateInviteCode();
-
-      const { error } = await supabase.from("servers").update({ invite_code: newCode }).eq("id", server.id);
+      // Use RPC function with permission check
+      const { data, error } = await supabase.rpc('regenerate_invite_code', {
+        _server_id: server.id,
+        _user_id: user.id
+      });
 
       if (error) throw error;
 
-      setInviteCode(newCode);
+      setInviteCode(data);
       toast.success("New invite code generated!");
       setShowRegenerateConfirm(false);
     } catch (error) {
+      console.error('Failed to regenerate invite code:', error);
       toast.error("Failed to regenerate code");
     } finally {
       setIsRegenerating(false);

@@ -9,7 +9,10 @@ import type {
   ChannelCategory,
   ChannelType,
   ServerRole,
-  CustomServerRole
+  CustomServerRole,
+  RolePermission,
+  ChannelPermission,
+  Permission
 } from '@/types';
 
 interface ServerState {
@@ -60,6 +63,16 @@ interface ServerState {
   assignRoleToMember: (memberId: string, roleId: string, userId: string) => Promise<void>;
   removeRoleFromMember: (memberId: string, roleId: string, userId: string) => Promise<void>;
 
+  // Permission actions
+  rolePermissions: RolePermission[];
+  channelPermissions: ChannelPermission[];
+  fetchRolePermissions: (serverId: string) => Promise<void>;
+  fetchChannelPermissions: (channelId: string) => Promise<void>;
+  setRolePermission: (serverId: string, userId: string, permission: Permission, roleId?: string, roleName?: ServerRole, allowed?: boolean) => Promise<void>;
+  setChannelPermission: (channelId: string, userId: string, permission: Permission, allowed: boolean, roleId?: string, roleName?: ServerRole) => Promise<void>;
+  deleteRolePermission: (permissionId: string, userId: string) => Promise<void>;
+  deleteChannelPermission: (permissionId: string, userId: string) => Promise<void>;
+
   // Utility
   clearServerState: () => void;
 }
@@ -72,6 +85,8 @@ export const useServerStore = create<ServerState>((set, get) => ({
   channels: [],
   members: [],
   roles: [],
+  rolePermissions: [],
+  channelPermissions: [],
   isLoading: false,
   error: null,
 
@@ -1010,6 +1025,171 @@ export const useServerStore = create<ServerState>((set, get) => ({
       }
     } catch (error) {
       console.error('Failed to remove role:', error);
+      throw error;
+    }
+  },
+
+  fetchRolePermissions: async (serverId: string) => {
+    try {
+      const { data, error } = await supabase.rpc('get_role_permissions', {
+        _server_id: serverId,
+      });
+
+      if (error) {
+        console.error('RPC error:', error);
+        throw error;
+      }
+
+      // Handle both array and null/undefined responses
+      let permissions: RolePermission[] = [];
+      if (Array.isArray(data)) {
+        permissions = data as RolePermission[];
+      } else if (data) {
+        // If it's a JSON string, parse it
+        try {
+          const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+          permissions = Array.isArray(parsed) ? parsed : [];
+        } catch {
+          permissions = [];
+        }
+      }
+
+      set({ rolePermissions: permissions });
+    } catch (error) {
+      console.error('Failed to fetch role permissions:', error);
+      throw error;
+    }
+  },
+
+  fetchChannelPermissions: async (channelId: string) => {
+    try {
+      const { data, error } = await supabase.rpc('get_channel_permissions', {
+        _channel_id: channelId,
+      });
+
+      if (error) {
+        console.error('RPC error:', error);
+        throw error;
+      }
+
+      // Handle both array and null/undefined responses
+      let permissions: ChannelPermission[] = [];
+      if (Array.isArray(data)) {
+        permissions = data as ChannelPermission[];
+      } else if (data) {
+        // If it's a JSON string, parse it
+        try {
+          const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+          permissions = Array.isArray(parsed) ? parsed : [];
+        } catch {
+          permissions = [];
+        }
+      }
+
+      set({ channelPermissions: permissions });
+    } catch (error) {
+      console.error('Failed to fetch channel permissions:', error);
+      throw error;
+    }
+  },
+
+  setRolePermission: async (
+    serverId: string,
+    userId: string,
+    permission: Permission,
+    roleId?: string,
+    roleName?: ServerRole,
+    allowed: boolean = true
+  ) => {
+    try {
+      const { data, error } = await supabase.rpc('set_role_permission', {
+        _server_id: serverId,
+        _user_id: userId,
+        _permission: permission,
+        _role_id: roleId || null,
+        _role_name: roleName || null,
+        _allowed: allowed,
+      });
+
+      if (error) throw error;
+
+      // Refresh role permissions
+      await get().fetchRolePermissions(serverId);
+    } catch (error) {
+      console.error('Failed to set role permission:', error);
+      throw error;
+    }
+  },
+
+  setChannelPermission: async (
+    channelId: string,
+    userId: string,
+    permission: Permission,
+    allowed: boolean,
+    roleId?: string,
+    roleName?: ServerRole
+  ) => {
+    try {
+      const { data, error } = await supabase.rpc('set_channel_permission', {
+        _channel_id: channelId,
+        _user_id: userId,
+        _permission: permission,
+        _allowed: allowed,
+        _role_id: roleId || null,
+        _role_name: roleName || null,
+      });
+
+      if (error) throw error;
+
+      // Refresh channel permissions
+      await get().fetchChannelPermissions(channelId);
+    } catch (error) {
+      console.error('Failed to set channel permission:', error);
+      throw error;
+    }
+  },
+
+  deleteRolePermission: async (permissionId: string, userId: string) => {
+    try {
+      const { error } = await supabase.rpc('delete_role_permission', {
+        _permission_id: permissionId,
+        _user_id: userId,
+      });
+
+      if (error) throw error;
+
+      // Refresh role permissions
+      const { rolePermissions } = get();
+      const deleted = rolePermissions.find((p) => p.id === permissionId);
+      if (deleted) {
+        const { currentServer } = get();
+        if (currentServer) {
+          await get().fetchRolePermissions(currentServer.id);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to delete role permission:', error);
+      throw error;
+    }
+  },
+
+  deleteChannelPermission: async (permissionId: string, userId: string) => {
+    try {
+      const { error } = await supabase.rpc('delete_channel_permission', {
+        _permission_id: permissionId,
+        _user_id: userId,
+      });
+
+      if (error) throw error;
+
+      // Refresh channel permissions
+      const { channelPermissions } = get();
+      const deleted = channelPermissions.find((p) => p.id === permissionId);
+      if (deleted) {
+        await get().fetchChannelPermissions(deleted.channel_id);
+      }
+    } catch (error) {
+      console.error('Failed to delete channel permission:', error);
       throw error;
     }
   },

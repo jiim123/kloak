@@ -15,6 +15,7 @@ import { useServerStore } from '@/stores/serverStore';
 import { useMessageStore } from '@/stores/messageStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useRealtimePinnedMessages } from '@/hooks/useRealtimePinnedMessages';
+import { useMemberPermissions } from '@/hooks/useMemberPermissions';
 import { toast } from 'sonner';
 
 export const PinnedMessagesPanel = () => {
@@ -28,10 +29,9 @@ export const PinnedMessagesPanel = () => {
     isOpen && currentChannel ? currentChannel.id : null
   );
 
-  // Check if current user is admin
-  const isAdmin = members.some(m => 
-    m.role === 'owner' || m.role === 'admin' || m.role === 'moderator'
-  );
+  // Check if current user can manage messages (pin/unpin)
+  const { hasPermission } = useMemberPermissions();
+  const isAdmin = hasPermission('manage_messages');
 
   const handleUnpin = async (messageId: string) => {
     if (!user) return;

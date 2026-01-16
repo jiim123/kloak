@@ -5,6 +5,7 @@ import { useMessageStore } from '@/stores/messageStore';
 import { useServerStore } from '@/stores/serverStore';
 import { useOfflineQueueStore } from '@/stores/offlineQueueStore';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { useMemberPermissions } from '@/hooks/useMemberPermissions';
 import { saveDraft, getDraft, clearDraft } from '@/lib/storage';
 import { getMessagePreview, extractMentions } from '@/lib/message';
 import { MentionAutocomplete } from './MentionAutocomplete';
@@ -27,7 +28,7 @@ const MAX_LENGTH = 2000;
 export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }: MessageInputProps) => {
   const { user } = useAuthStore();
   const { replyingTo, setReplyingTo, sendMessage } = useMessageStore();
-  const { members, currentServer, currentChannel } = useServerStore();
+  const { members, currentServer, currentChannel, fetchRolePermissions, fetchChannelPermissions } = useServerStore();
   const { getQueuedForChannel } = useOfflineQueueStore();
   const { isOnline } = useOnlineStatus();
   
@@ -45,12 +46,29 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Load permissions when server/channel changes
+  useEffect(() => {
+    if (currentServer?.id) {
+      fetchRolePermissions(currentServer.id);
+    }
+    if (channelId) {
+      fetchChannelPermissions(channelId);
+    }
+  }, [currentServer?.id, channelId, fetchRolePermissions, fetchChannelPermissions]);
+
   // Check if user is muted, admin, or channel is read-only
   const currentMember = members.find(m => m.user_id === user?.id);
   const isMuted = currentMember?.is_muted || false;
-  const isAdmin = currentMember?.role === 'owner' || currentMember?.role === 'admin' || currentMember?.role === 'moderator';
   const isReadOnlyChannel = currentChannel?.is_read_only || false;
-  const canSendMessage = !isMuted && (!isReadOnlyChannel || isAdmin);
+  
+  // Check send_messages permission using database-backed permissions
+  const { hasPermission } = useMemberPermissions(channelId);
+  const canSendMessagesPermission = hasPermission('send_messages');
+  
+  // For read-only channels, also need manage_messages permission
+  const canSendInReadOnly = isReadOnlyChannel ? hasPermission('manage_messages') : true;
+  
+  const canSendMessage = !isMuted && canSendMessagesPermission && canSendInReadOnly;
 
   // Load draft on mount and channel change
   useEffect(() => {
@@ -462,7 +480,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     );
   }
 
-  if (isReadOnlyChannel && !isAdmin) {
+  if (isReadOnlyChannel && !hasPermission('manage_messages')) {
     return (
       <div className="px-4 pb-6">
         <div className="flex items-center justify-center gap-2 py-4 px-4 bg-secondary rounded-2xl border border-border">
@@ -490,7 +508,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
           position={mentionPosition}
           onSelect={handleMentionSelect}
           onClose={() => setShowMentions(false)}
-          isAdmin={isAdmin}
+          isAdmin={hasPermission('manage_messages')}
         />
       )}
 

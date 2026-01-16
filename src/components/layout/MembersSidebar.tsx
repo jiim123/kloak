@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Crown, ChevronDown, ChevronRight, MessageSquare, Edit3, UserX, Ban, VolumeX, Volume2, Shield, ShieldAlert, ShieldOff, Users } from 'lucide-react';
 import { useServerStore } from '@/stores/serverStore';
@@ -11,8 +11,9 @@ import {
   canAssignRole, 
   getAssignableRoles, 
   getRoleInfo,
-  canTransferOwnership 
+  hasMemberPermission
 } from '@/lib/permissions';
+import { useMemberPermissions } from '@/hooks/useMemberPermissions';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -88,7 +89,7 @@ const RoleBadge = ({ role }: { role: ServerRole }) => {
 };
 
 export const MembersSidebar = () => {
-  const { members, currentServer, roles, isLoading } = useServerStore();
+  const { members, currentServer, roles, isLoading, fetchRolePermissions } = useServerStore();
   const { user } = useAuthStore();
   const { openModal } = useUIStore();
   const [offlineExpanded, setOfflineExpanded] = useState(false);
@@ -96,9 +97,19 @@ export const MembersSidebar = () => {
   // Subscribe to realtime member updates
   useRealtimeMembers(currentServer?.id || null);
 
+  // Load permissions when server changes
+  useEffect(() => {
+    if (currentServer?.id) {
+      fetchRolePermissions(currentServer.id);
+    }
+  }, [currentServer?.id, fetchRolePermissions]);
+
   // Get current user's role in this server
   const currentUserMember = members.find(m => m.user_id === user?.id);
   const currentUserRole = currentUserMember?.role;
+  
+  // Use database-backed permission checking
+  const { hasPermission: checkPermission } = useMemberPermissions();
 
   // Group members: roles first (only online members with roles), then online/offline (only no-role members)
   const { roleGroups, onlineNoRoleMembers, offlineNoRoleMembers } = useMemo(() => {
@@ -247,12 +258,12 @@ export const MembersSidebar = () => {
     const isSelf = member.user_id === user?.id;
     const isServerOwner = member.role === 'owner';
     
-    // Permission checks using the permission system
-    const canKick = hasPermission(currentUserRole, 'kick_members') && canModerate(currentUserRole, member.role) && !isSelf;
-    const canBan = hasPermission(currentUserRole, 'ban_members') && canModerate(currentUserRole, member.role) && !isSelf;
-    const canMute = hasPermission(currentUserRole, 'mute_members') && canModerate(currentUserRole, member.role) && !isSelf;
-    const canChangeNickname = hasPermission(currentUserRole, 'manage_nicknames') && (canModerate(currentUserRole, member.role) || isSelf);
-    const canTransfer = canTransferOwnership(currentUserRole) && !isSelf && member.role !== 'owner';
+    // Permission checks using database-backed permission system
+    const canKick = checkPermission('kick_members') && canModerate(currentUserRole, member.role) && !isSelf;
+    const canBan = checkPermission('ban_members') && canModerate(currentUserRole, member.role) && !isSelf;
+    const canMute = checkPermission('mute_members') && canModerate(currentUserRole, member.role) && !isSelf;
+    const canChangeNickname = checkPermission('manage_nicknames') && (canModerate(currentUserRole, member.role) || isSelf);
+    const canTransfer = checkPermission('transfer_ownership') && !isSelf && member.role !== 'owner';
     const assignableRoles = getAssignableRoles(currentUserRole).filter(role => 
       canAssignRole(currentUserRole, member.role, role) && role !== member.role
     );

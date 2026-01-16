@@ -6,9 +6,15 @@
  * 2. Admin - All permissions except delete server and manage admins
  * 3. Moderator - Kick, mute, delete messages, manage channels
  * 4. Member - Read, send messages, add reactions
+ * 
+ * Permission System:
+ * - Base role permissions (from server_role enum)
+ * - Custom role permissions (from server_roles table)
+ * - Channel-specific permission overrides (allow/deny)
+ * - When checking permissions, all roles are combined and channel overrides are applied
  */
 
-import type { ServerRole } from '@/types';
+import type { ServerRole, Permission, RolePermission, ChannelPermission, CustomServerRole } from '@/types';
 
 // Role hierarchy - higher number = more power
 export const ROLE_HIERARCHY: Record<ServerRole, number> = {
@@ -18,22 +24,8 @@ export const ROLE_HIERARCHY: Record<ServerRole, number> = {
   member: 1,
 };
 
-// Permission types
-export type Permission = 
-  | 'manage_server'      // Edit server settings, delete server
-  | 'manage_roles'       // Change member roles
-  | 'manage_channels'    // Create, edit, delete channels
-  | 'kick_members'       // Remove members from server
-  | 'ban_members'        // Ban members from server
-  | 'mute_members'       // Mute members
-  | 'manage_nicknames'   // Change member nicknames
-  | 'manage_messages'    // Delete any message
-  | 'pin_messages'       // Pin/unpin messages
-  | 'send_messages'      // Send messages
-  | 'add_reactions'      // Add reactions to messages
-  | 'view_channels'      // View channels and messages
-  | 'transfer_ownership' // Transfer server ownership
-  | 'manage_invites';    // Create/revoke invite codes
+// Re-export Permission type from types
+export type { Permission } from '@/types';
 
 // Role permissions
 const ROLE_PERMISSIONS: Record<ServerRole, Permission[]> = {
@@ -206,4 +198,179 @@ export const canDeleteServer = (role: ServerRole | undefined): boolean => {
  */
 export const canTransferOwnership = (role: ServerRole | undefined): boolean => {
   return role === 'owner';
+};
+
+// ============================================
+// Database-backed Permission System
+// ============================================
+
+/**
+ * Get base permissions for a role (from default role permissions)
+ */
+export const getBaseRolePermissions = (role: ServerRole | undefined): Permission[] => {
+  if (!role) return [];
+  return ROLE_PERMISSIONS[role] ?? [];
+};
+
+/**
+ * Check if a role has a permission based on base permissions
+ * (for backward compatibility)
+ */
+export const hasBasePermission = (role: ServerRole | undefined, permission: Permission): boolean => {
+  if (!role) return false;
+  return ROLE_PERMISSIONS[role]?.includes(permission) ?? false;
+};
+
+/**
+ * Get all permissions for a member considering:
+ * - Base role permissions
+ * - Custom role permissions from database
+ * - Channel-specific overrides (if channel_id provided)
+ */
+export const getMemberPermissions = (
+  baseRole: ServerRole | undefined,
+  customRoles: CustomServerRole[] | undefined,
+  rolePermissions: RolePermission[] | undefined,
+  channelPermissions: ChannelPermission[] | undefined,
+  channelId?: string
+): Map<Permission, boolean> => {
+  const permissions = new Map<Permission, boolean>();
+  
+  // If user has custom roles, they ONLY get permissions from those custom roles
+  // Base role permissions are NOT inherited when custom roles are present
+  const hasCustomRoles = customRoles && customRoles.length > 0;
+  
+  if (hasCustomRoles && rolePermissions) {
+    // User has custom roles - start with NO permissions (except view_channels which is always allowed)
+    permissions.set('view_channels', true);
+    
+    const customRoleIds = new Set(customRoles.map(cr => cr.id));
+    
+    // Collect all permissions from custom roles
+    // Deny takes precedence over allow when multiple roles conflict
+    const customPerms = new Map<Permission, boolean>();
+    for (const rolePerm of rolePermissions) {
+      // Check if this permission applies to the member's custom roles
+      if (rolePerm.role_id && customRoleIds.has(rolePerm.role_id)) {
+        const existing = customPerms.get(rolePerm.permission);
+        // Deny always wins
+        if (rolePerm.allowed === false) {
+          customPerms.set(rolePerm.permission, false);
+        } else if (rolePerm.allowed === true) {
+          // Only set to true if not already denied
+          if (existing !== false) {
+            customPerms.set(rolePerm.permission, true);
+          }
+        }
+      }
+    }
+    
+    // Apply custom role permissions
+    for (const [perm, allowed] of customPerms.entries()) {
+      permissions.set(perm, allowed);
+    }
+  } else {
+    // No custom roles - use base role permissions
+    if (baseRole) {
+      const basePerms = getBaseRolePermissions(baseRole);
+      for (const perm of basePerms) {
+        permissions.set(perm, true);
+      }
+    }
+  }
+  
+  // Apply channel-specific overrides (if channel_id provided)
+  // Channel overrides take highest precedence
+  if (channelId && channelPermissions) {
+    const customRoleIds = customRoles ? new Set(customRoles.map(cr => cr.id)) : new Set<string>();
+    
+    for (const channelPerm of channelPermissions) {
+      if (channelPerm.channel_id !== channelId) continue;
+      
+      // Check if this permission applies to the member's roles
+      const appliesToMember = 
+        (channelPerm.role_name === baseRole) ||
+        (channelPerm.role_id && customRoleIds.has(channelPerm.role_id));
+      
+      if (appliesToMember) {
+        // Channel overrides always take precedence
+        permissions.set(channelPerm.permission, channelPerm.allowed);
+      }
+    }
+  }
+  
+  return permissions;
+};
+
+/**
+ * Check if a member has a specific permission
+ * Supports database-backed permissions and channel overrides
+ */
+export const hasMemberPermission = (
+  baseRole: ServerRole | undefined,
+  permission: Permission,
+  customRoles?: CustomServerRole[],
+  rolePermissions?: RolePermission[],
+  channelPermissions?: ChannelPermission[],
+  channelId?: string
+): boolean => {
+  const permissions = getMemberPermissions(
+    baseRole,
+    customRoles,
+    rolePermissions,
+    channelPermissions,
+    channelId
+  );
+  
+  return permissions.get(permission) ?? false;
+};
+
+/**
+ * Check if a member can perform an action in a channel
+ * This is a convenience wrapper around hasMemberPermission
+ */
+export const canPerformInChannel = (
+  baseRole: ServerRole | undefined,
+  permission: Permission,
+  channelId: string,
+  customRoles?: CustomServerRole[],
+  rolePermissions?: RolePermission[],
+  channelPermissions?: ChannelPermission[]
+): boolean => {
+  return hasMemberPermission(
+    baseRole,
+    permission,
+    customRoles,
+    rolePermissions,
+    channelPermissions,
+    channelId
+  );
+};
+
+/**
+ * Get all allowed permissions for a member
+ */
+export const getAllowedPermissions = (
+  baseRole: ServerRole | undefined,
+  customRoles?: CustomServerRole[],
+  rolePermissions?: RolePermission[],
+  channelPermissions?: ChannelPermission[],
+  channelId?: string
+): Permission[] => {
+  const permissions = getMemberPermissions(
+    baseRole,
+    customRoles,
+    rolePermissions,
+    channelPermissions,
+    channelId
+  );
+  
+  const allowed: Permission[] = [];
+  for (const [perm, allowedValue] of permissions.entries()) {
+    if (allowedValue) {
+      allowed.push(perm);
+    }
+  }
+  
+  return allowed;
 };
