@@ -1135,8 +1135,8 @@ export const useServerStore = create<ServerState>((set, get) => ({
         _user_id: userId,
         _permission: permission,
         _allowed: allowed,
-        _role_id: roleId || null,
-        _role_name: roleName || null,
+        _role_id: roleId ?? null,
+        _role_name: roleName ?? null,
       });
 
       if (error) throw error;
