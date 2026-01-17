@@ -1104,6 +1104,7 @@ export type Database = {
       }
       get_channel_permissions: { Args: { _channel_id: string }; Returns: Json }
       get_channel_server_id: { Args: { _channel_id: string }; Returns: string }
+      get_deletion_preview: { Args: { _user_id: string }; Returns: Json }
       get_dm_conversation_id: { Args: { _message_id: string }; Returns: string }
       get_dm_messages: {
         Args: {
