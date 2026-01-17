@@ -1034,6 +1034,14 @@ export type Database = {
         Args: { _channel_id: string; _user_id: string }
         Returns: Json
       }
+      debug_user_permission: {
+        Args: {
+          _channel_id: string
+          _permission: Database["public"]["Enums"]["permission_type"]
+          _user_id: string
+        }
+        Returns: Json
+      }
       decline_friend_request: {
         Args: { _friendship_id: string; _user_id: string }
         Returns: boolean
