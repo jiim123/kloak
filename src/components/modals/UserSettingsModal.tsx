@@ -204,11 +204,10 @@ export const UserSettingsModal = () => {
     
     setIsLoading(true);
     try {
-      // Delete user from database
-      const { error } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', user.id);
+      // Call RPC function to delete user and all related data
+      const { data, error } = await supabase.rpc('delete_user_account', {
+        _user_id: user.id
+      });
 
       if (error) throw error;
       
@@ -217,6 +216,7 @@ export const UserSettingsModal = () => {
       navigate('/auth?mode=signup');
       toast.success('Account deleted');
     } catch (error) {
+      console.error('Failed to delete account:', error);
       toast.error('Failed to delete account');
     } finally {
       setIsLoading(false);
