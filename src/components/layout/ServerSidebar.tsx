@@ -28,7 +28,7 @@ const pillVariants = {
 const iconVariants = {
   initial: { scale: 0.8, opacity: 0 },
   animate: { scale: 1, opacity: 1, borderRadius: 6 },
-  hover: { scale: 1.05, borderRadius: 10 },
+  hover: { borderRadius: 10 },
   tap: { scale: 0.95 },
   active: { scale: 1, borderRadius: 12 },
 };
