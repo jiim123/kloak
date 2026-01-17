@@ -90,6 +90,16 @@ export const UserSettingsModal = () => {
   const [showSecretKey, setShowSecretKey] = useState(false);
   const [showKeyConfirm, setShowKeyConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDeletePreview, setShowDeletePreview] = useState(false);
+  const [deletionPreview, setDeletionPreview] = useState<{
+    message_count: number;
+    dm_count: number;
+    reaction_count: number;
+    friendship_count: number;
+    servers_to_transfer: Array<{ id: string; name: string; member_count: number; new_owner: { id: string; username: string } | null }>;
+    servers_to_delete: Array<{ id: string; name: string }>;
+  } | null>(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [keyRevealed, setKeyRevealed] = useState(false);
   const [copied, setCopied] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right'>('right');
@@ -396,7 +406,22 @@ export const UserSettingsModal = () => {
                       <Button 
                         variant="destructive" 
                         size="sm"
-                        onClick={() => setShowDeleteConfirm(true)}
+                        onClick={async () => {
+                          if (!user) return;
+                          setIsLoadingPreview(true);
+                          setShowDeletePreview(true);
+                          try {
+                            const { data, error } = await supabase.rpc('get_deletion_preview', { _user_id: user.id });
+                            if (error) throw error;
+                            setDeletionPreview(data as typeof deletionPreview);
+                          } catch (error) {
+                            console.error('Failed to fetch deletion preview:', error);
+                            toast.error('Failed to load deletion preview');
+                            setShowDeletePreview(false);
+                          } finally {
+                            setIsLoadingPreview(false);
+                          }
+                        }}
                         className="text-xs h-8 sm:h-9"
                       >
                         <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
@@ -735,13 +760,110 @@ export const UserSettingsModal = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Delete Account Confirmation */}
+      {/* Delete Account Preview */}
+      <AlertDialog open={showDeletePreview} onOpenChange={(open) => {
+        setShowDeletePreview(open);
+        if (!open) setDeletionPreview(null);
+      }}>
+        <AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-lg max-h-[80vh] overflow-y-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base sm:text-lg text-destructive">Delete Account?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm">
+              Review what will be deleted. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          {isLoadingPreview ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : deletionPreview && (
+            <div className="space-y-4 py-2">
+              {/* Data to be deleted */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-semibold uppercase text-muted-foreground">Data to be deleted</h4>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="flex items-center justify-between p-2 bg-secondary rounded-md">
+                    <span className="text-muted-foreground">Messages</span>
+                    <span className="font-medium">{deletionPreview.message_count}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 bg-secondary rounded-md">
+                    <span className="text-muted-foreground">Direct Messages</span>
+                    <span className="font-medium">{deletionPreview.dm_count}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 bg-secondary rounded-md">
+                    <span className="text-muted-foreground">Reactions</span>
+                    <span className="font-medium">{deletionPreview.reaction_count}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 bg-secondary rounded-md">
+                    <span className="text-muted-foreground">Friends</span>
+                    <span className="font-medium">{deletionPreview.friendship_count}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Servers to be transferred */}
+              {deletionPreview.servers_to_transfer.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-semibold uppercase text-muted-foreground">Servers to be transferred</h4>
+                  <div className="space-y-1.5">
+                    {deletionPreview.servers_to_transfer.map((server) => (
+                      <div key={server.id} className="p-2 bg-secondary rounded-md text-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">{server.name}</span>
+                          <span className="text-xs text-muted-foreground">{server.member_count} member{server.member_count !== 1 ? 's' : ''}</span>
+                        </div>
+                        {server.new_owner && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Will be transferred to <span className="text-foreground font-medium">@{server.new_owner.username}</span>
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Servers to be deleted */}
+              {deletionPreview.servers_to_delete.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-semibold uppercase text-destructive">Servers to be deleted</h4>
+                  <div className="space-y-1.5">
+                    {deletionPreview.servers_to_delete.map((server) => (
+                      <div key={server.id} className="p-2 bg-destructive/10 border border-destructive/20 rounded-md text-sm">
+                        <span className="font-medium">{server.name}</span>
+                        <p className="text-xs text-muted-foreground">No other members - will be permanently deleted</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel className="m-0">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowDeletePreview(false);
+                setShowDeleteConfirm(true);
+              }}
+              disabled={isLoadingPreview}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Continue to Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Final Delete Confirmation */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-lg">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-base sm:text-lg">Delete Account?</AlertDialogTitle>
+            <AlertDialogTitle className="text-base sm:text-lg text-destructive">Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription className="text-sm">
-              This action cannot be undone. All your data will be permanently deleted.
+              This is your final confirmation. Your account and all associated data will be permanently deleted. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col sm:flex-row gap-2">
@@ -755,7 +877,7 @@ export const UserSettingsModal = () => {
               ) : (
                 <Trash2 className="w-4 h-4 mr-2" />
               )}
-              Delete Account
+              Delete Forever
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
