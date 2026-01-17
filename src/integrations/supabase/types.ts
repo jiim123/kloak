@@ -1078,6 +1078,7 @@ export type Database = {
         Args: { _role_id: string; _user_id: string }
         Returns: boolean
       }
+      delete_user_account: { Args: { _user_id: string }; Returns: boolean }
       edit_dm: {
         Args: { _content: string; _message_id: string; _sender_id: string }
         Returns: Json
