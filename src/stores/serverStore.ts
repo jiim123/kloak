@@ -129,25 +129,22 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
       // Try to restore persisted server/channel from localStorage
       const persistedServerId = localStorage.getItem('kloak-current-server-id');
-      const persistedChannelId = localStorage.getItem('kloak-current-channel-id');
 
-      if (servers.length > 0 && !currentServer) {
+      // Only auto-select a server on initial load (when persistedServerId exists)
+      // Don't auto-select if user has explicitly navigated to DM view (currentServer is null but no persistence)
+      // Check if this is the initial load by seeing if we have a persisted server ID
+      if (servers.length > 0 && currentServer === null && persistedServerId) {
         // Check if persisted server exists in user's servers
-        const restoredServer = persistedServerId
-          ? servers.find(s => s.id === persistedServerId)
-          : null;
+        const restoredServer = servers.find(s => s.id === persistedServerId);
 
         if (restoredServer) {
           set({ servers, currentServer: restoredServer, isLoading: false });
-          // Restore channel after fetching channels
-          if (persistedChannelId) {
-            // Fetch channels using direct query (we're now a member so RLS should work)
-            // For now, just set the server - channel will be fetched by fetchChannels
-            // The channel restoration will happen when fetchChannels is called
-          }
         } else {
-          // Fall back to first server
-          set({ servers, currentServer: servers[0], isLoading: false });
+          // Persisted server no longer exists (user was kicked/left/deleted)
+          // Clear the persisted ID but don't auto-select - let user choose
+          localStorage.removeItem('kloak-current-server-id');
+          localStorage.removeItem('kloak-current-channel-id');
+          set({ servers, isLoading: false });
         }
       } else {
         set({ servers, isLoading: false });
