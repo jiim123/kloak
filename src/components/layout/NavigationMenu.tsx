@@ -50,19 +50,22 @@ export const NavigationMenu = () => {
     <>
       {/* Navigation Bar */}
       <div
-        className={`fixed top-0 left-0 right-0 z-40 transition-all duration-200 ${
+        className={`fixed top-0 left-0 right-0 z-40 transition-[padding] duration-500 ease-out ${
           scrolled ? "px-4 pt-3" : "px-0 pt-0"
         }`}
       >
         <nav
-          className={`mx-auto transition-all duration-200 ${
+          className={`mx-auto transition-all duration-500 ease-out ${
             scrolled
               ? "max-w-2xl bg-background/70 backdrop-blur-xl shadow-lg shadow-black/5 border border-border/50 rounded-2xl"
               : "max-w-full bg-transparent border-b border-border/20"
           }`}
+          style={{
+            transitionProperty: "max-width, background-color, border-radius, border-color, box-shadow",
+          }}
         >
           <div
-            className={`flex items-center justify-between transition-all duration-200 ${
+            className={`flex items-center justify-between transition-all duration-500 ease-out ${
               scrolled ? "h-14 px-4" : "h-20 px-6 max-w-6xl mx-auto"
             }`}
           >
@@ -71,7 +74,7 @@ export const NavigationMenu = () => {
               <img
                 src={kloakLogo}
                 alt="Kloak"
-                className={`transition-all duration-200 group-hover:opacity-80 ${scrolled ? "h-5" : "h-7"}`}
+                className={`transition-all duration-500 ease-out group-hover:opacity-80 ${scrolled ? "h-5" : "h-7"}`}
               />
             </Link>
 
@@ -81,9 +84,11 @@ export const NavigationMenu = () => {
               <Link to="/app" className="hidden sm:block">
                 <Button
                   size={scrolled ? "sm" : "default"}
-                  className={`transition-all duration-200 ${scrolled ? "h-9 px-4 text-sm" : ""}`}
+                  className={`transition-all duration-500 ease-out ${scrolled ? "h-9 px-4 text-sm" : ""}`}
                 >
-                  <Sparkles className={`transition-all duration-200 ${scrolled ? "h-3.5 w-3.5" : "h-4 w-4"}`} />
+                  <Sparkles
+                    className={`transition-all duration-500 ease-out ${scrolled ? "h-3.5 w-3.5" : "h-4 w-4"}`}
+                  />
                   Use Kloak
                 </Button>
               </Link>
@@ -91,14 +96,18 @@ export const NavigationMenu = () => {
               {/* Menu Button */}
               <button
                 onClick={() => setMenuOpen(true)}
-                className={`text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-xl transition-all duration-150 ${
+                className={`text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-xl transition-all duration-300 ease-out ${
                   scrolled ? "p-2" : "p-2.5"
                 }`}
                 aria-label="Open menu"
               >
                 <div className="flex flex-col gap-1.5">
-                  <div className={`bg-current transition-all duration-200 ${scrolled ? "w-4 h-0.5" : "w-5 h-0.5"}`} />
-                  <div className={`bg-current transition-all duration-200 ${scrolled ? "w-4 h-0.5" : "w-5 h-0.5"}`} />
+                  <div
+                    className={`bg-current transition-all duration-500 ease-out ${scrolled ? "w-4 h-0.5" : "w-5 h-0.5"}`}
+                  />
+                  <div
+                    className={`bg-current transition-all duration-500 ease-out ${scrolled ? "w-4 h-0.5" : "w-5 h-0.5"}`}
+                  />
                 </div>
               </button>
             </div>
