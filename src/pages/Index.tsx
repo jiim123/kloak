@@ -49,12 +49,11 @@ const Index = () => {
     { label: "Account recovery by platform", others: true, kloak: false },
     { label: "You control your identity", others: false, kloak: true },
   ];
-<main className="pt-20">
+
   return (
     <div className="min-h-screen bg-background flex flex-col items-center">
       <div className="w-full max-w-[1920px]">
       <NavigationMenu />
-</main>
 
       {/* Hero Section */}
       <HeroAscii />
