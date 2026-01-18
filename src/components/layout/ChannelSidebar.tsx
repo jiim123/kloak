@@ -924,10 +924,10 @@ export const ChannelSidebar = () => {
             <div
               className={cn(
                 "absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-layout-sidebar transition-colors",
-                user?.status === "online" && "bg-nomo-online",
-                user?.status === "idle" && "bg-nomo-idle",
-                user?.status === "dnd" && "bg-nomo-dnd",
-                user?.status === "offline" && "bg-nomo-offline",
+                user?.status === "online" && "bg-kloak-online",
+                user?.status === "idle" && "bg-kloak-idle",
+                user?.status === "dnd" && "bg-kloak-dnd",
+                user?.status === "offline" && "bg-kloak-offline",
               )}
             />
           </button>

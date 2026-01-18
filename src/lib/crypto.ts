@@ -1,5 +1,5 @@
 /**
- * Cryptographic utilities for Nomo
+ * Cryptographic utilities for Kloak
  * Handles secret key generation, hashing, and validation
  */
 

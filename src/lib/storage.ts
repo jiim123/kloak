@@ -1,13 +1,13 @@
 /**
- * LocalStorage utilities for Nomo
+ * LocalStorage utilities for Kloak
  * Handles persistent storage of user preferences and drafts
  */
 
 const STORAGE_KEYS = {
-  SECRET_KEY: 'nomo-secret-key',
-  THEME: 'nomo-theme',
-  DRAFTS: 'nomo-drafts',
-  WELCOME_SHOWN: 'nomo-welcome-shown',
+  SECRET_KEY: 'kloak-secret-key',
+  THEME: 'kloak-theme',
+  DRAFTS: 'kloak-drafts',
+  WELCOME_SHOWN: 'kloak-welcome-shown',
 } as const;
 
 // Secret Key Storage

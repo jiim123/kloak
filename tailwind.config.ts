@@ -61,13 +61,13 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
-        nomo: {
-          success: "hsl(var(--nomo-success))",
-          warning: "hsl(var(--nomo-warning))",
-          online: "hsl(var(--nomo-online))",
-          idle: "hsl(var(--nomo-idle))",
-          dnd: "hsl(var(--nomo-dnd))",
-          offline: "hsl(var(--nomo-offline))",
+        kloak: {
+          success: "hsl(var(--kloak-success))",
+          warning: "hsl(var(--kloak-warning))",
+          online: "hsl(var(--kloak-online))",
+          idle: "hsl(var(--kloak-idle))",
+          dnd: "hsl(var(--kloak-dnd))",
+          offline: "hsl(var(--kloak-offline))",
         },
         layout: {
           sidebar: "hsl(var(--sidebar))",

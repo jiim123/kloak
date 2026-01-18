@@ -328,7 +328,7 @@ export const ServerSidebar = () => {
               whileHover="hover"
               initial="default"
               onClick={() => openModal("create-server")}
-              className="relative w-12 h-12 rounded-[6px] text-nomo-success hover:bg-nomo-success hover:text-white transition-colors duration-200 flex items-center justify-center overflow-hidden"
+              className="relative w-12 h-12 rounded-[6px] text-kloak-success hover:bg-kloak-success hover:text-white transition-colors duration-200 flex items-center justify-center overflow-hidden"
             >
               {/* Animated dashed border */}
               <motion.svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 48 48">

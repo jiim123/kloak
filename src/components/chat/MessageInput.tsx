@@ -539,7 +539,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     <div className="px-4 pb-6 relative">
       {/* Queued messages indicator */}
       {queuedMessages.length > 0 && (
-        <div className="flex items-center gap-2 px-4 py-2 mb-2 bg-[hsl(var(--nomo-warning))]/10 border border-[hsl(var(--nomo-warning))]/20 rounded-xl text-sm text-[hsl(var(--nomo-warning))]">
+        <div className="flex items-center gap-2 px-4 py-2 mb-2 bg-[hsl(var(--kloak-warning))]/10 border border-[hsl(var(--kloak-warning))]/20 rounded-xl text-sm text-[hsl(var(--kloak-warning))]">
           <WifiOff className="w-4 h-4" />
           <span>
             {queuedMessages.length} message{queuedMessages.length > 1 ? "s" : ""} waiting to send

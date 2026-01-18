@@ -42,9 +42,9 @@ export const WelcomeModal = ({ open, onClose }: WelcomeModalProps) => {
         <ScrollArea className="max-h-[60vh] pr-4">
           <div className="space-y-6 py-4">
             {/* Secret Key Importance */}
-            <div className="p-4 rounded-lg bg-[hsl(var(--nomo-warning))/0.15] border border-[hsl(var(--nomo-warning))/0.3]">
+            <div className="p-4 rounded-lg bg-[hsl(var(--kloak-warning))/0.15] border border-[hsl(var(--kloak-warning))/0.3]">
               <div className="flex items-start gap-3">
-                <Key className="w-5 h-5 text-[hsl(var(--nomo-warning))] flex-shrink-0 mt-0.5" />
+                <Key className="w-5 h-5 text-[hsl(var(--kloak-warning))] flex-shrink-0 mt-0.5" />
                 <div className="space-y-2">
                   <h3 className="font-semibold tracking-tight text-foreground">Your Secret Key is Everything</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">

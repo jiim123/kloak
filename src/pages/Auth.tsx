@@ -200,7 +200,7 @@ const Auth = () => {
     if (!username) return null;
     if (usernameError) return <XCircle className="w-4 h-4 text-destructive" />;
     if (isCheckingUsername) return <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />;
-    if (isUsernameAvailable === true) return <CheckCircle2 className="w-4 h-4 text-[hsl(var(--nomo-success))]" />;
+    if (isUsernameAvailable === true) return <CheckCircle2 className="w-4 h-4 text-[hsl(var(--kloak-success))]" />;
     if (isUsernameAvailable === false) return <XCircle className="w-4 h-4 text-destructive" />;
     return null;
   };
@@ -260,7 +260,7 @@ const Auth = () => {
                             "pr-10",
                             usernameError && "border-destructive focus-visible:ring-destructive",
                             isUsernameAvailable === true &&
-                              "border-[hsl(var(--nomo-success))] focus-visible:ring-[hsl(var(--nomo-success))]",
+                              "border-[hsl(var(--kloak-success))] focus-visible:ring-[hsl(var(--kloak-success))]",
                           )}
                         />
                         <div className="absolute right-3 top-1/2 -translate-y-1/2">{renderUsernameStatus()}</div>
@@ -270,7 +270,7 @@ const Auth = () => {
                         <p className="text-xs text-destructive">Username is already taken</p>
                       )}
                       {!usernameError && isUsernameAvailable === true && (
-                        <p className="text-xs text-[hsl(var(--nomo-success))]">Username is available!</p>
+                        <p className="text-xs text-[hsl(var(--kloak-success))]">Username is available!</p>
                       )}
                       {!usernameError && isUsernameAvailable === null && username && !isCheckingUsername && (
                         <p className="text-xs text-muted-foreground">
@@ -344,9 +344,9 @@ const Auth = () => {
               /* Secret Key Display Screen */
               <div className="space-y-6">
                 {/* Warning banner */}
-                <div className="p-4 rounded-lg bg-[hsl(var(--nomo-warning))/0.15] border border-[hsl(var(--nomo-warning))/0.3]">
+                <div className="p-4 rounded-lg bg-[hsl(var(--kloak-warning))/0.15] border border-[hsl(var(--kloak-warning))/0.3]">
                   <div className="flex items-start gap-3">
-                    <Shield className="w-6 h-6 text-[hsl(var(--nomo-warning))] flex-shrink-0 mt-0.5" />
+                    <Shield className="w-6 h-6 text-[hsl(var(--kloak-warning))] flex-shrink-0 mt-0.5" />
                     <div>
                       <h3 className="font-semibold tracking-tight text-foreground">Save Your Secret Key</h3>
                       <p className="text-sm text-muted-foreground mt-1">
@@ -380,7 +380,7 @@ const Auth = () => {
                 <Button variant={keyCopied ? "secondary" : "outline"} className="w-full" onClick={copyKey}>
                   {keyCopied ? (
                     <>
-                      <Check className="w-4 h-4 mr-2 text-[hsl(var(--nomo-success))]" />
+                      <Check className="w-4 h-4 mr-2 text-[hsl(var(--kloak-success))]" />
                       Copied to Clipboard
                     </>
                   ) : (
