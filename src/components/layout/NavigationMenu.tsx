@@ -24,12 +24,29 @@ export const NavigationMenu = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  // Simple scroll detection - matches the working navbar
+  // Handle scroll detection with hysteresis
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
+    let lastScrollY = window.scrollY;
+
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+
+      // Scrolling down - activate scroll state after 20px
+      if (currentScrollY > 20 && !scrolled) {
+        setScrolled(true);
+      }
+      // Scrolling up - only deactivate when fully at top
+      else if (currentScrollY <= 5 && scrolled) {
+        setScrolled(false);
+      }
+
+      lastScrollY = currentScrollY;
+    };
+
+    handleScroll(); // Check initial state
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [scrolled]);
 
   // Lock body scroll when menu is open
   useEffect(() => {
@@ -98,6 +115,9 @@ export const NavigationMenu = () => {
           </div>
         </nav>
       </div>
+
+      {/* Spacer to prevent content from hiding behind fixed navbar */}
+      <div className={`transition-all duration-200 ${scrolled ? "h-[76px]" : "h-20"}`} />
 
       {/* Menu Sidebar */}
       <AnimatePresence>
