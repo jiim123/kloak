@@ -49,67 +49,77 @@ export const NavigationMenu = () => {
   return (
     <>
       {/* Navigation Bar */}
-      <div
-        className={`fixed top-0 left-0 right-0 z-40 transition-[padding] duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${
-          scrolled ? "px-4 pt-3" : "px-0 pt-0"
-        }`}
-      >
-        <nav
-          className={`mx-auto transition-all duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${
-            scrolled
-              ? "max-w-2xl bg-background/70 backdrop-blur-xl shadow-lg shadow-black/5 border border-border/50 rounded-2xl"
-              : "max-w-full bg-transparent border-b border-border/20"
+      <div className="fixed top-0 left-0 right-0 z-40">
+        {/* Full-width bottom border - fades out when scrolled */}
+        <div
+          className={`absolute inset-x-0 h-20 border-b border-border/20 transition-opacity duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1)] pointer-events-none ${
+            scrolled ? "opacity-0" : "opacity-100"
           }`}
-        >
+        />
+
+        {/* Centered nav container - always same max-width */}
+        <div className="max-w-6xl mx-auto px-6">
           <div
-            className={`flex items-center justify-between transition-all duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${
-              scrolled ? "h-14 px-4" : "h-20 px-6 max-w-6xl mx-auto"
-            }`}
+            className={`transition-all duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${scrolled ? "py-3" : "py-0"}`}
           >
-            {/* Logo */}
-            <Link to="/" className="group">
-              <img
-                src={kloakLogo}
-                alt="Kloak"
-                className={`transition-all duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1)] group-hover:opacity-80 ${scrolled ? "h-5" : "h-7"}`}
-              />
-            </Link>
-
-            {/* Right Section */}
-            <div className="flex items-center gap-3">
-              {/* CTA Button */}
-              <Link to="/app" className="hidden sm:block">
-                <Button
-                  size={scrolled ? "sm" : "default"}
-                  className={`transition-all duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${scrolled ? "h-9 px-4 text-sm" : ""}`}
-                >
-                  <Sparkles
-                    className={`transition-all duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${scrolled ? "h-3.5 w-3.5" : "h-4 w-4"}`}
-                  />
-                  Use Kloak
-                </Button>
-              </Link>
-
-              {/* Menu Button */}
-              <button
-                onClick={() => setMenuOpen(true)}
-                className={`text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-xl transition-colors duration-150 ${
-                  scrolled ? "p-2" : "p-2.5"
+            <nav
+              className={`transition-all duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${
+                scrolled
+                  ? "bg-background/70 backdrop-blur-xl shadow-lg shadow-black/5 border border-border/50 rounded-2xl"
+                  : "bg-transparent border border-transparent rounded-none"
+              }`}
+            >
+              <div
+                className={`flex items-center justify-between transition-all duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${
+                  scrolled ? "h-14 px-4" : "h-20 px-0"
                 }`}
-                aria-label="Open menu"
               >
-                <div className="flex flex-col gap-1.5">
-                  <div
-                    className={`bg-current transition-all duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${scrolled ? "w-4 h-0.5" : "w-5 h-0.5"}`}
+                {/* Logo */}
+                <Link to="/" className="group">
+                  <img
+                    src={kloakLogo}
+                    alt="Kloak"
+                    className={`transition-all duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1)] group-hover:opacity-80 ${scrolled ? "h-5" : "h-7"}`}
                   />
-                  <div
-                    className={`bg-current transition-all duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${scrolled ? "w-4 h-0.5" : "w-5 h-0.5"}`}
-                  />
+                </Link>
+
+                {/* Right Section */}
+                <div className="flex items-center gap-3">
+                  {/* CTA Button */}
+                  <Link to="/app" className="hidden sm:block">
+                    <Button
+                      size={scrolled ? "sm" : "default"}
+                      className={`transition-all duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${scrolled ? "h-9 px-4 text-sm" : ""}`}
+                    >
+                      <Sparkles
+                        className={`transition-all duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${scrolled ? "h-3.5 w-3.5" : "h-4 w-4"}`}
+                      />
+                      Use Kloak
+                    </Button>
+                  </Link>
+
+                  {/* Menu Button */}
+                  <button
+                    onClick={() => setMenuOpen(true)}
+                    className={`text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-xl transition-colors duration-150 ${
+                      scrolled ? "p-2" : "p-2.5"
+                    }`}
+                    aria-label="Open menu"
+                  >
+                    <div className="flex flex-col gap-1.5">
+                      <div
+                        className={`bg-current transition-all duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${scrolled ? "w-4 h-0.5" : "w-5 h-0.5"}`}
+                      />
+                      <div
+                        className={`bg-current transition-all duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${scrolled ? "w-4 h-0.5" : "w-5 h-0.5"}`}
+                      />
+                    </div>
+                  </button>
                 </div>
-              </button>
-            </div>
+              </div>
+            </nav>
           </div>
-        </nav>
+        </div>
       </div>
 
       {/* Menu Sidebar */}
