@@ -1,5 +1,5 @@
 /**
- * Type definitions for Nomo
+ * Type definitions for Kloak
  * All data models used throughout the application
  */
 

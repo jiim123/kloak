@@ -1,5 +1,5 @@
 /**
- * Formatting utilities for Nomo
+ * Formatting utilities for Kloak
  * Handles timestamps, slugs, and text processing
  */
 

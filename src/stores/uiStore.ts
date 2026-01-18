@@ -231,7 +231,7 @@ export const useUIStore = create<UIState>()(
       },
     }),
     {
-      name: 'nomo-ui',
+      name: 'kloak-ui',
       partialize: (state) => ({
         theme: state.theme,
         isMemberSidebarOpen: state.isMemberSidebarOpen,

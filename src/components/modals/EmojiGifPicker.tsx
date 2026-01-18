@@ -68,7 +68,7 @@ const EMOJI_CATEGORIES = {
 // Get recent emojis from localStorage
 const getRecentEmojis = (): string[] => {
   try {
-    const stored = localStorage.getItem('nomo-recent-emojis');
+    const stored = localStorage.getItem('kloak-recent-emojis');
     return stored ? JSON.parse(stored) : [];
   } catch {
     return [];
@@ -80,7 +80,7 @@ const saveRecentEmoji = (emoji: string) => {
   try {
     const recent = getRecentEmojis();
     const updated = [emoji, ...recent.filter(e => e !== emoji)].slice(0, 24);
-    localStorage.setItem('nomo-recent-emojis', JSON.stringify(updated));
+    localStorage.setItem('kloak-recent-emojis', JSON.stringify(updated));
   } catch {
     // Ignore storage errors
   }

@@ -258,7 +258,7 @@ export const useAuthStore = create<AuthState>()(
       },
     }),
     {
-      name: 'nomo-auth',
+      name: 'kloak-auth',
       partialize: (state) => ({ secretKey: state.secretKey }),
     }
   )

@@ -1,5 +1,5 @@
 /**
- * Message parsing and processing utilities for Nomo
+ * Message parsing and processing utilities for Kloak
  * Handles markdown, mentions, URLs, and content extraction
  */
 

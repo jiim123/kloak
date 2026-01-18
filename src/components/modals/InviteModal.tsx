@@ -122,7 +122,7 @@ export const InviteModal = () => {
           <motion.div initial="hidden" animate="visible" variants={cardVariants} className="relative p-6 sm:p-8">
             {/* Decorative image in top-right - hidden on mobile */}
             <div className="absolute right-4 top-4 opacity-20 pointer-events-none hidden sm:block">
-              <Users className="h-20 w-20 sm:h-24 sm:w-24 text-nomo-success" />
+              <Users className="h-20 w-20 sm:h-24 sm:w-24 text-kloak-success" />
             </div>
 
             <div className="relative z-10">
@@ -130,7 +130,7 @@ export const InviteModal = () => {
                 {/* Badge */}
                 <motion.div
                   variants={itemVariants}
-                  className="inline-block self-start rounded-full bg-nomo-success/10 px-2.5 py-1 text-xs sm:text-sm font-medium text-nomo-success"
+                  className="inline-block self-start rounded-full bg-kloak-success/10 px-2.5 py-1 text-xs sm:text-sm font-medium text-kloak-success"
                 >
                   Share with friends
                 </motion.div>
@@ -154,8 +154,8 @@ export const InviteModal = () => {
                 <motion.div variants={itemVariants} className="space-y-2">
                   <Label className="text-xs sm:text-sm font-semibold">Your invite code:</Label>
                   <div className="flex items-center gap-2">
-                    <div className="flex h-11 sm:h-12 flex-grow items-center justify-center gap-2 rounded-lg border-2 border-nomo-success/20 bg-nomo-success/5 px-3 sm:px-4">
-                      <span className="font-mono text-base sm:text-xl tracking-[0.2em] sm:tracking-[0.3em] font-bold text-nomo-success">
+                    <div className="flex h-11 sm:h-12 flex-grow items-center justify-center gap-2 rounded-lg border-2 border-kloak-success/20 bg-kloak-success/5 px-3 sm:px-4">
+                      <span className="font-mono text-base sm:text-xl tracking-[0.2em] sm:tracking-[0.3em] font-bold text-kloak-success">
                         {displayCode}
                       </span>
                     </div>
@@ -163,7 +163,7 @@ export const InviteModal = () => {
                       size="icon"
                       variant="default"
                       onClick={handleCopy}
-                      className="h-11 w-11 sm:h-12 sm:w-12 shrink-0 bg-nomo-success hover:bg-nomo-success/90"
+                      className="h-11 w-11 sm:h-12 sm:w-12 shrink-0 bg-kloak-success hover:bg-kloak-success/90"
                     >
                       <AnimatePresence mode="wait" initial={false}>
                         {copied ? (
@@ -209,7 +209,7 @@ export const InviteModal = () => {
                         variants={itemVariants}
                         className="flex items-start sm:items-center gap-2.5 sm:gap-3"
                       >
-                        <span className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-nomo-success/10 text-nomo-success shrink-0 mt-0.5 sm:mt-0">
+                        <span className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-kloak-success/10 text-kloak-success shrink-0 mt-0.5 sm:mt-0">
                           {step.icon}
                         </span>
                         <span className="text-xs sm:text-sm text-muted-foreground leading-relaxed">{step.text}</span>
