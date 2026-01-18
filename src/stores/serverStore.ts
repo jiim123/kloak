@@ -129,11 +129,11 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
       // Try to restore persisted server/channel from localStorage
       const persistedServerId = localStorage.getItem('kloak-current-server-id');
+      const isDMViewActive = localStorage.getItem('kloak-dm-view-active') === 'true';
 
       // Only auto-select a server on initial load (when persistedServerId exists)
-      // Don't auto-select if user has explicitly navigated to DM view (currentServer is null but no persistence)
-      // Check if this is the initial load by seeing if we have a persisted server ID
-      if (servers.length > 0 && currentServer === null && persistedServerId) {
+      // Don't auto-select if user has explicitly navigated to DM view
+      if (servers.length > 0 && currentServer === null && persistedServerId && !isDMViewActive) {
         // Check if persisted server exists in user's servers
         const restoredServer = servers.find(s => s.id === persistedServerId);
 
@@ -349,9 +349,11 @@ export const useServerStore = create<ServerState>((set, get) => ({
     // Persist to localStorage
     if (server) {
       localStorage.setItem('kloak-current-server-id', server.id);
+      // Clear DM view flag when selecting a server
+      localStorage.removeItem('kloak-dm-view-active');
     } else {
-      // Going to DM view - don't clear channel-related localStorage
-      // so we can restore when coming back
+      // Going to DM view - set a flag so fetchServers knows not to auto-select
+      localStorage.setItem('kloak-dm-view-active', 'true');
     }
 
     // Only clear channel state when switching TO a different server (not when going to null/DM)
