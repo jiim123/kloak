@@ -5,15 +5,12 @@ import { ChevronDown, Menu, X, Zap, Sparkles, Home, Layers, Users, Mail, FileTex
 
 import { cn } from "@/lib/utils";
 
-/* ============ SCROLL CONTEXT ============ */
-const ScrollContext = React.createContext<boolean>(false);
-
+/* ============ SCROLL HOOK ============ */
 function useScrolled(threshold = 20) {
   const [scrolled, setScrolled] = React.useState(false);
 
   React.useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > threshold);
-    handleScroll(); // Check initial state
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, [threshold]);
@@ -21,169 +18,114 @@ function useScrolled(threshold = 20) {
   return scrolled;
 }
 
-/* ============ NAVBAR ROOT - Handles scroll state automatically ============ */
-interface NavbarProps extends React.HTMLAttributes<HTMLDivElement> {
-  scrollThreshold?: number;
-}
-
-const Navbar = React.forwardRef<HTMLDivElement, NavbarProps>(
-  ({ className, children, scrollThreshold = 20, ...props }, ref) => {
-    const scrolled = useScrolled(scrollThreshold);
-
-    return (
-      <ScrollContext.Provider value={scrolled}>
-        <div
-          ref={ref}
-          className={cn(
-            "fixed top-0 left-0 right-0 z-40 transition-all duration-200",
-            scrolled ? "px-4 pt-3" : "px-0 pt-0",
-            className,
-          )}
-          {...props}
-        >
-          <div
-            className={cn(
-              "mx-auto transition-all duration-200",
-              scrolled
-                ? "max-w-2xl bg-white/70 backdrop-blur-xl shadow-lg shadow-slate-900/10 border border-white/50 rounded-2xl"
-                : "max-w-full bg-white/0",
-            )}
-          >
-            <div
-              className={cn(
-                "flex items-center justify-between transition-all duration-200",
-                scrolled ? "h-14 px-4" : "h-20 px-4 max-w-6xl mx-auto",
-              )}
-            >
-              {children}
-            </div>
-          </div>
-        </div>
-      </ScrollContext.Provider>
-    );
-  },
-);
-Navbar.displayName = "Navbar";
-
-/* ============ NAVBAR LOGO ============ */
-interface NavbarLogoProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
-  icon?: React.ReactNode;
-  text?: string;
-  accentText?: string;
-}
-
-const NavbarLogo = React.forwardRef<HTMLAnchorElement, NavbarLogoProps>(
-  ({ className, icon, text = "Acme", accentText = ".", ...props }, ref) => {
-    const scrolled = React.useContext(ScrollContext);
-
-    return (
-      <a ref={ref} className={cn("flex items-center gap-2.5 group", className)} {...props}>
+/* ============ NAVBAR WRAPPER ============ */
+const NavbarWrapper = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement> & { scrolled?: boolean }>(
+  ({ className, scrolled, children, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn(
+        "fixed top-0 left-0 right-0 z-40 transition-all duration-200",
+        scrolled ? "px-4 pt-3" : "px-0 pt-0",
+        className,
+      )}
+      {...props}
+    >
+      <div
+        className={cn(
+          "mx-auto transition-all duration-200",
+          scrolled
+            ? "max-w-2xl bg-white/70 backdrop-blur-xl shadow-lg shadow-slate-900/10 border border-white/50 rounded-2xl"
+            : "max-w-full bg-white/0",
+        )}
+      >
         <div
           className={cn(
-            "bg-gradient-to-br from-indigo-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/25 group-hover:shadow-indigo-500/40 group-hover:scale-105 transition-all duration-200",
-            scrolled ? "w-9 h-9" : "w-11 h-11",
+            "flex items-center justify-between transition-all duration-200",
+            scrolled ? "h-14 px-4" : "h-20 px-4 max-w-6xl mx-auto",
           )}
         >
-          {icon || (
-            <Zap
-              className={cn("text-white transition-all duration-200", scrolled ? "w-5 h-5" : "w-6 h-6")}
-              fill="white"
-            />
-          )}
+          {children}
         </div>
-        <span
-          className={cn(
-            "font-bold text-slate-900 tracking-tight transition-all duration-200",
-            scrolled ? "text-xl" : "text-2xl",
-          )}
-        >
-          {text}
-          <span className="text-indigo-500">{accentText}</span>
-        </span>
-      </a>
-    );
-  },
+      </div>
+    </div>
+  ),
 );
+NavbarWrapper.displayName = "NavbarWrapper";
+
+/* ============ LOGO ============ */
+const NavbarLogo = React.forwardRef<
+  HTMLAnchorElement,
+  React.AnchorHTMLAttributes<HTMLAnchorElement> & { scrolled?: boolean }
+>(({ className, scrolled, ...props }, ref) => (
+  <a ref={ref} className={cn("flex items-center gap-2.5 group", className)} {...props}>
+    <div
+      className={cn(
+        "bg-gradient-to-br from-indigo-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/25 group-hover:shadow-indigo-500/40 group-hover:scale-105 transition-all duration-200",
+        scrolled ? "w-9 h-9" : "w-11 h-11",
+      )}
+    >
+      <Zap className={cn("text-white transition-all duration-200", scrolled ? "w-5 h-5" : "w-6 h-6")} fill="white" />
+    </div>
+    <span
+      className={cn(
+        "font-bold text-slate-900 tracking-tight transition-all duration-200",
+        scrolled ? "text-xl" : "text-2xl",
+      )}
+    >
+      Acme<span className="text-indigo-500">.</span>
+    </span>
+  </a>
+));
 NavbarLogo.displayName = "NavbarLogo";
 
-/* ============ NAVBAR CONTENT - Center area ============ */
-const NavbarContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, children, ...props }, ref) => (
-    <div ref={ref} className={cn("hidden lg:flex absolute left-1/2 -translate-x-1/2", className)} {...props}>
-      {children}
-    </div>
-  ),
-);
-NavbarContent.displayName = "NavbarContent";
-
-/* ============ NAVBAR ACTIONS - Right area ============ */
-const NavbarActions = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, children, ...props }, ref) => (
-    <div ref={ref} className={cn("flex items-center gap-2", className)} {...props}>
-      {children}
-    </div>
-  ),
-);
-NavbarActions.displayName = "NavbarActions";
-
-/* ============ NAVBAR CTA BUTTON ============ */
-interface NavbarCTAProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  icon?: React.ReactNode;
-}
-
-const NavbarCTA = React.forwardRef<HTMLButtonElement, NavbarCTAProps>(
-  ({ className, children, icon, ...props }, ref) => {
-    const scrolled = React.useContext(ScrollContext);
-
-    return (
-      <button
-        ref={ref}
-        className={cn(
-          "hidden sm:flex items-center gap-2 bg-slate-900 text-white font-semibold hover:bg-slate-800 shadow-lg shadow-slate-900/25 hover:shadow-xl hover:shadow-slate-900/30 hover:-translate-y-0.5 transition-all duration-150",
-          scrolled ? "px-4 py-2 rounded-xl text-sm" : "px-6 py-3 rounded-xl",
-          className,
-        )}
-        {...props}
-      >
-        {icon || <Sparkles className={cn("transition-all duration-150", scrolled ? "w-3.5 h-3.5" : "w-4 h-4")} />}
-        <span>{children}</span>
-      </button>
-    );
-  },
-);
+/* ============ CTA BUTTON ============ */
+const NavbarCTA = React.forwardRef<
+  HTMLButtonElement,
+  React.ButtonHTMLAttributes<HTMLButtonElement> & { scrolled?: boolean }
+>(({ className, scrolled, children, ...props }, ref) => (
+  <button
+    ref={ref}
+    className={cn(
+      "hidden sm:flex items-center gap-2 bg-slate-900 text-white font-semibold hover:bg-slate-800 shadow-lg shadow-slate-900/25 hover:shadow-xl hover:shadow-slate-900/30 hover:-translate-y-0.5 transition-all duration-150",
+      scrolled ? "px-4 py-2 rounded-xl text-sm" : "px-6 py-3 rounded-xl",
+      className,
+    )}
+    {...props}
+  >
+    <Sparkles className={cn("transition-all duration-150", scrolled ? "w-3.5 h-3.5" : "w-4 h-4")} />
+    <span>{children}</span>
+  </button>
+));
 NavbarCTA.displayName = "NavbarCTA";
 
-/* ============ NAVBAR MENU BUTTON ============ */
-const NavbarMenuButton = React.forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement>>(
-  ({ className, ...props }, ref) => {
-    const scrolled = React.useContext(ScrollContext);
-
-    return (
-      <button
-        ref={ref}
-        className={cn(
-          "text-slate-600 hover:text-slate-900 hover:bg-slate-900/5 rounded-xl transition-all duration-150",
-          scrolled ? "p-2" : "p-3",
-          className,
-        )}
-        aria-label="Open menu"
-        {...props}
-      >
-        <Menu className={cn("transition-all duration-150", scrolled ? "w-5 h-5" : "w-6 h-6")} strokeWidth={2} />
-      </button>
-    );
-  },
-);
+/* ============ MENU BUTTON ============ */
+const NavbarMenuButton = React.forwardRef<
+  HTMLButtonElement,
+  React.ButtonHTMLAttributes<HTMLButtonElement> & { scrolled?: boolean }
+>(({ className, scrolled, ...props }, ref) => (
+  <button
+    ref={ref}
+    className={cn(
+      "text-slate-600 hover:text-slate-900 hover:bg-slate-900/5 rounded-xl transition-all duration-150",
+      scrolled ? "p-2" : "p-3",
+      className,
+    )}
+    aria-label="Open menu"
+    {...props}
+  >
+    <Menu className={cn("transition-all duration-150", scrolled ? "w-5 h-5" : "w-6 h-6")} strokeWidth={2} />
+  </button>
+));
 NavbarMenuButton.displayName = "NavbarMenuButton";
 
 /* ============ NAVIGATION MENU (RADIX) ============ */
 const NavigationMenu = React.forwardRef<
   React.ElementRef<typeof NavigationMenuPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof NavigationMenuPrimitive.Root>
->(({ className, children, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof NavigationMenuPrimitive.Root> & { scrolled?: boolean }
+>(({ className, children, scrolled, ...props }, ref) => (
   <NavigationMenuPrimitive.Root
     ref={ref}
-    className={cn("relative z-10 flex max-w-max flex-1 items-center justify-center", className)}
+    className={cn("hidden lg:flex relative z-10 max-w-max flex-1 items-center justify-center", className)}
     {...props}
   >
     {children}
@@ -252,7 +194,7 @@ const NavigationMenuViewport = React.forwardRef<
   <div className={cn("absolute left-0 top-full flex justify-center")}>
     <NavigationMenuPrimitive.Viewport
       className={cn(
-        "origin-top-center relative mt-3 h-[var(--radix-navigation-menu-viewport-height)] w-full overflow-hidden rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-xl text-slate-900 shadow-xl shadow-slate-900/10 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-90 md:w-[var(--radix-navigation-menu-viewport-width)]",
+        "origin-top-center relative mt-3 h-[var(--radix-navigation-menu-viewport-height)] w-full overflow-hidden rounded-2xl border border-slate-200 bg-white/90 backdrop-blur-xl text-slate-900 shadow-xl shadow-slate-900/10 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-90 md:w-[var(--radix-navigation-menu-viewport-width)]",
         className,
       )}
       ref={ref}
@@ -260,7 +202,7 @@ const NavigationMenuViewport = React.forwardRef<
     />
   </div>
 ));
-NavigationMenuViewport.displayName = NavigationMenuViewport.displayName;
+NavigationMenuViewport.displayName = NavigationMenuPrimitive.Viewport.displayName;
 
 const NavigationMenuIndicator = React.forwardRef<
   React.ElementRef<typeof NavigationMenuPrimitive.Indicator>,
@@ -381,15 +323,12 @@ Sidebar.displayName = "Sidebar";
 
 /* ============ EXPORTS ============ */
 export {
-  // Navbar components
-  Navbar,
+  useScrolled,
+  NavbarWrapper,
   NavbarLogo,
-  NavbarContent,
-  NavbarActions,
   NavbarCTA,
   NavbarMenuButton,
   Sidebar,
-  // Navigation Menu components
   navigationMenuTriggerStyle,
   NavigationMenu,
   NavigationMenuList,
@@ -399,6 +338,4 @@ export {
   NavigationMenuLink,
   NavigationMenuIndicator,
   NavigationMenuViewport,
-  // Utility
-  useScrolled,
 };
