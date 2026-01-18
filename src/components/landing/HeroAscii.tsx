@@ -4,52 +4,52 @@ import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const fadeIn = {
-  initial: { opacity: 0, y: 16 },
+  initial: { opacity: 0, y: 12 },
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] },
 };
 
-export const HeroSimple = () => {
+export const HeroImage = () => {
   return (
-    <section className="flex-1 flex items-center px-6 py-28 sm:py-32">
-      <motion.div className="max-w-5xl mx-auto w-full" initial="initial" animate="animate">
-        {/* Eyebrow */}
-        <motion.p {...fadeIn} className="text-sm font-medium text-primary tracking-wide uppercase mb-6">
-          No email · No password · No tracking
-        </motion.p>
+    <section className="px-6 py-24">
+      <motion.div initial="initial" animate="animate" className="max-w-6xl mx-auto">
+        <div className="relative overflow-hidden rounded-2xl">
+          {/* Image */}
+          <img src="/hero.jpg" alt="Kloak hero" className="w-full h-[70vh] object-cover" loading="lazy" />
 
-        {/* Headline */}
-        <motion.h1
-          {...fadeIn}
-          transition={{ ...fadeIn.transition, delay: 0.05 }}
-          className="text-5xl sm:text-6xl md:text-7xl font-semibold text-foreground leading-[0.95] tracking-tight max-w-4xl mb-8"
-        >
-          Your chat.
-          <br />
-          Your key.
-        </motion.h1>
+          {/* Subtle bottom gradient */}
+          <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
 
-        {/* Description */}
-        <motion.p
-          {...fadeIn}
-          transition={{ ...fadeIn.transition, delay: 0.1 }}
-          className="text-lg sm:text-xl text-muted-foreground max-w-xl leading-relaxed mb-12"
-        >
-          One cryptographic key. No accounts, no data harvesting, no surveillance. Just you and your conversations.
-        </motion.p>
+          {/* Bottom-left text */}
+          <motion.div
+            {...fadeIn}
+            className="absolute bottom-6 left-6 sm:bottom-8 sm:left-8 md:bottom-10 md:left-10 max-w-xl"
+          >
+            <p className="text-sm font-medium text-primary mb-3 uppercase tracking-wide">
+              No email · No password · No tracking
+            </p>
 
-        {/* Action */}
-        <motion.div {...fadeIn} transition={{ ...fadeIn.transition, delay: 0.15 }}>
-          <Link to="/app">
-            <Button size="lg" className="px-8 h-12 text-base">
-              Create your key
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
-          </Link>
-        </motion.div>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-semibold text-white leading-tight mb-4">
+              Your chat.
+              <br />
+              Your key.
+            </h1>
+
+            <p className="text-base sm:text-lg text-white/80 mb-6 leading-relaxed">
+              One cryptographic key. No accounts, no surveillance. Just you and your conversations.
+            </p>
+
+            <Link to="/app">
+              <Button size="lg" className="h-11 px-7 text-base">
+                Create your key
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+            </Link>
+          </motion.div>
+        </div>
       </motion.div>
     </section>
   );
 };
 
-export default HeroSimple;
+export default HeroImage;
