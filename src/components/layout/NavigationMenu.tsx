@@ -1,67 +1,42 @@
-import { useState, useEffect, useRef } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
-import { useOnClickOutside } from "usehooks-ts";
-import { cn } from "@/lib/utils";
-import { Heart, FileText, Cookie, ScrollText, Sparkles, Menu, X, Key, Home, LucideIcon } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { Key, X, Heart, FileText, Cookie, ScrollText, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import kloakLogo from "@/assets/kloak-logo.svg";
 
-interface NavItem {
-  title: string;
-  icon: LucideIcon;
-  href: string;
-  type?: never;
-}
-
-interface Separator {
-  type: "separator";
-  title?: never;
-  icon?: never;
-  href?: never;
-}
-
-type NavTabItem = NavItem | Separator;
-
-const navTabs: NavTabItem[] = [
-  { title: "Home", icon: Home, href: "/" },
-  { title: "Philosophy", icon: Heart, href: "/philosophy" },
-  { type: "separator" },
-  { title: "Terms", icon: ScrollText, href: "/terms" },
-  { title: "Privacy", icon: FileText, href: "/privacy" },
-  { title: "Cookies", icon: Cookie, href: "/cookies" },
+const menuCategories = [
+  {
+    title: "Company",
+    links: [{ label: "Philosophy", href: "/philosophy", icon: Heart }],
+  },
+  {
+    title: "Legal",
+    links: [
+      { label: "Terms of Service", href: "/terms", icon: ScrollText },
+      { label: "Privacy Policy", href: "/privacy", icon: FileText },
+      { label: "Cookie Policy", href: "/cookies", icon: Cookie },
+    ],
+  },
 ];
 
-const buttonVariants = {
-  initial: {
-    gap: 0,
-    paddingLeft: ".5rem",
-    paddingRight: ".5rem",
-  },
-  animate: (isSelected: boolean) => ({
-    gap: isSelected ? ".5rem" : 0,
-    paddingLeft: isSelected ? "1rem" : ".5rem",
-    paddingRight: isSelected ? "1rem" : ".5rem",
-  }),
-};
-
-const spanVariants = {
-  initial: { width: 0, opacity: 0 },
-  animate: { width: "auto", opacity: 1 },
-  exit: { width: 0, opacity: 0 },
-};
-
-const transition = { delay: 0.1, type: "spring", bounce: 0, duration: 0.6 };
-
 export const NavigationMenu = () => {
-  const [selected, setSelected] = useState<number | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const location = useLocation();
-  const navRef = useRef(null);
 
-  useOnClickOutside(navRef, () => {
-    setSelected(null);
+  // Initialize with correct state based on current scroll position
+  const [scrolled, setScrolled] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.scrollY > 20;
+    }
+    return false;
   });
+
+  // Scroll listener
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // Lock body scroll when menu is open
   useEffect(() => {
@@ -71,100 +46,83 @@ export const NavigationMenu = () => {
     };
   }, [menuOpen]);
 
-  const NavSeparator = () => <div className="mx-1 h-6 w-px bg-border" aria-hidden="true" />;
-
   return (
     <>
       {/* Navigation Bar */}
-      <div className="fixed top-0 left-0 right-0 z-40 flex justify-center px-4 pt-4">
-        <motion.nav
-          ref={navRef}
-          initial={{ y: -100, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ type: "spring", bounce: 0, duration: 0.8 }}
-          className="flex items-center gap-2 rounded-2xl border border-border/50 bg-background/70 backdrop-blur-xl p-1.5 shadow-lg shadow-black/5"
-        >
-          {/* Logo */}
-          <Link
-            to="/"
-            className="flex items-center justify-center rounded-xl px-3 py-2 hover:bg-muted/50 transition-colors"
+      <div className="fixed top-0 left-0 right-0 z-40">
+        {/* Full-width bottom border - fades out when scrolled */}
+        <div
+          className={`absolute inset-x-0 h-20 border-b border-border/20 transition-opacity duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1)] pointer-events-none ${
+            scrolled ? "opacity-0" : "opacity-100"
+          }`}
+        />
+
+        {/* Centered nav container - always same max-width */}
+        <div className="max-w-6xl mx-auto px-6">
+          <div
+            className={`transition-all duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${scrolled ? "py-3" : "py-0"}`}
           >
-            <img src={kloakLogo} alt="Kloak" className="h-5" />
-          </Link>
-
-          <NavSeparator />
-
-          {/* Nav Items */}
-          {navTabs.map((tab, index) => {
-            if (tab.type === "separator") {
-              return <NavSeparator key={`separator-${index}`} />;
-            }
-
-            const Icon = tab.icon;
-            const isActive = location.pathname === tab.href;
-            const isSelected = selected === index;
-
-            return (
-              <motion.div
-                key={tab.title}
-                variants={buttonVariants}
-                initial={false}
-                animate="animate"
-                custom={isSelected || isActive}
-                transition={transition}
+            <nav
+              className={`transition-all duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${
+                scrolled
+                  ? "bg-background/70 backdrop-blur-xl shadow-lg shadow-black/5 border border-border/50 rounded-2xl"
+                  : "bg-transparent border border-transparent rounded-none"
+              }`}
+            >
+              <div
+                className={`flex items-center justify-between transition-all duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${
+                  scrolled ? "h-14 px-4" : "h-20 px-0"
+                }`}
               >
-                <Link
-                  to={tab.href}
-                  onClick={() => setSelected(index)}
-                  className={cn(
-                    "relative flex items-center rounded-xl px-2 py-2 text-sm font-medium transition-colors duration-300",
-                    isSelected || isActive
-                      ? "bg-muted text-primary"
-                      : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-                  )}
-                >
-                  <Icon size={18} />
-                  <AnimatePresence initial={false}>
-                    {(isSelected || isActive) && (
-                      <motion.span
-                        variants={spanVariants}
-                        initial="initial"
-                        animate="animate"
-                        exit="exit"
-                        transition={transition}
-                        className="overflow-hidden whitespace-nowrap"
-                      >
-                        {tab.title}
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
+                {/* Logo */}
+                <Link to="/" className="group">
+                  <img
+                    src={kloakLogo}
+                    alt="Kloak"
+                    className={`transition-all duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1)] group-hover:opacity-80 ${scrolled ? "h-5" : "h-7"}`}
+                  />
                 </Link>
-              </motion.div>
-            );
-          })}
 
-          <NavSeparator />
+                {/* Right Section */}
+                <div className="flex items-center gap-3">
+                  {/* CTA Button */}
+                  <Link to="/app" className="hidden sm:block">
+                    <Button
+                      size={scrolled ? "sm" : "default"}
+                      className={`transition-all duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${scrolled ? "h-9 px-4 text-sm" : ""}`}
+                    >
+                      <Sparkles
+                        className={`transition-all duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${scrolled ? "h-3.5 w-3.5" : "h-4 w-4"}`}
+                      />
+                      Use Kloak
+                    </Button>
+                  </Link>
 
-          {/* CTA Button */}
-          <Link to="/app">
-            <Button size="sm" className="rounded-xl h-9 px-4">
-              <Sparkles className="h-4 w-4" />
-              <span className="hidden sm:inline">Use Kloak</span>
-            </Button>
-          </Link>
-
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setMenuOpen(true)}
-            className="flex md:hidden items-center justify-center rounded-xl p-2 text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
-            aria-label="Open menu"
-          >
-            <Menu size={18} />
-          </button>
-        </motion.nav>
+                  {/* Menu Button */}
+                  <button
+                    onClick={() => setMenuOpen(true)}
+                    className={`text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-xl transition-colors duration-150 ${
+                      scrolled ? "p-2" : "p-2.5"
+                    }`}
+                    aria-label="Open menu"
+                  >
+                    <div className="flex flex-col gap-1.5">
+                      <div
+                        className={`bg-current transition-all duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${scrolled ? "w-4 h-0.5" : "w-5 h-0.5"}`}
+                      />
+                      <div
+                        className={`bg-current transition-all duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${scrolled ? "w-4 h-0.5" : "w-5 h-0.5"}`}
+                      />
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </nav>
+          </div>
+        </div>
       </div>
 
-      {/* Mobile Menu Sidebar */}
+      {/* Menu Sidebar */}
       <AnimatePresence>
         {menuOpen && (
           <>
@@ -213,34 +171,29 @@ export const NavigationMenu = () => {
 
                   <div className="h-px bg-border/30" />
 
-                  {/* Nav Links */}
-                  <div className="space-y-1">
-                    {navTabs
-                      .filter((tab): tab is NavItem => tab.type !== "separator")
-                      .map((link) => (
-                        <Link
-                          key={link.href}
-                          to={link.href}
-                          onClick={() => setMenuOpen(false)}
-                          className={cn(
-                            "flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-150 group",
-                            location.pathname === link.href
-                              ? "bg-muted text-primary"
-                              : "text-foreground/80 hover:bg-muted/50 hover:text-foreground",
-                          )}
-                        >
-                          <div
-                            className={cn(
-                              "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
-                              location.pathname === link.href ? "bg-primary/10" : "bg-muted/50 group-hover:bg-muted",
-                            )}
+                  {/* Menu Categories */}
+                  {menuCategories.map((category) => (
+                    <div key={category.title}>
+                      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-3">
+                        {category.title}
+                      </h3>
+                      <div className="space-y-1">
+                        {category.links.map((link) => (
+                          <Link
+                            key={link.href}
+                            to={link.href}
+                            onClick={() => setMenuOpen(false)}
+                            className="flex items-center gap-4 px-4 py-3.5 rounded-xl text-foreground/80 hover:bg-muted/50 hover:text-foreground transition-all duration-150 group"
                           >
-                            <link.icon className="h-5 w-5" />
-                          </div>
-                          <span className="text-base font-medium">{link.title}</span>
-                        </Link>
-                      ))}
-                  </div>
+                            <div className="w-10 h-10 bg-muted/50 group-hover:bg-muted rounded-xl flex items-center justify-center transition-colors">
+                              <link.icon className="h-5 w-5" />
+                            </div>
+                            <span className="text-base font-medium">{link.label}</span>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
