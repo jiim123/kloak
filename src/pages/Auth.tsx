@@ -224,12 +224,18 @@ const Auth = () => {
           <div className="bg-card border border-border rounded-xl p-6 shadow-xl">
             {authStep === "form" ? (
               <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "create" | "login")}>
-                <TabsList className="w-full grid grid-cols-2 mb-6">
-                  <TabsTrigger value="create">
+                <TabsList className="w-full grid grid-cols-2 mb-6 h-auto p-1.5 bg-muted/50 rounded-2xl border border-border/50">
+                  <TabsTrigger 
+                    value="create"
+                    className="rounded-xl py-2.5 px-4 text-sm font-medium transition-all duration-200 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
+                  >
                     <UserPlus className="w-4 h-4 mr-2" />
                     Create Account
                   </TabsTrigger>
-                  <TabsTrigger value="login">
+                  <TabsTrigger 
+                    value="login"
+                    className="rounded-xl py-2.5 px-4 text-sm font-medium transition-all duration-200 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
+                  >
                     <Key className="w-4 h-4 mr-2" />
                     Login with Key
                   </TabsTrigger>
