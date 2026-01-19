@@ -127,6 +127,11 @@ const Terms = () => {
                     part of these terms, you shouldn't use the service—and we'd rather you know that upfront than
                     discover it later.
                   </p>
+                  <p>
+                    The privacy community sometimes pretends you can build a platform with zero ability to cooperate
+                    with law enforcement. You can't—and you shouldn't want to. The goal isn't to protect criminals; it's
+                    to protect ordinary people from mass surveillance.
+                  </p>
                 </div>
               }
             />
@@ -210,11 +215,8 @@ const Terms = () => {
                     <li className="flex items-start gap-2">
                       <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-red-400/50" />
                       <span>
-                        <strong className="text-foreground/90">Child or Animal exploitation content.</strong> Absolutely
-                        zero tolerance. While we collect minimal data, we will cooperate fully with law enforcement
-                        investigating child and animal exploitation, terrorism, or other serious crimes. This may
-                        include preserving and providing account information, content, IP addresses, and timestamps in
-                        response to valid legal requests.
+                        <strong className="text-foreground/90">Child exploitation content.</strong> Absolutely zero
+                        tolerance. This will result in immediate account termination and reporting to authorities.
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
