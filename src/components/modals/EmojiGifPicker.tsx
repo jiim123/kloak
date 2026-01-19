@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Search, X, Smile, Image as ImageIcon, Loader2 } from 'lucide-react';
 import {
   Popover,
@@ -11,6 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchServerEmojis, type ServerEmoji } from '@/lib/serverEmojis';
 
 interface EmojiGifPickerProps {
   children: React.ReactNode;
@@ -19,6 +20,8 @@ interface EmojiGifPickerProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   disableGif?: boolean;
+  serverId?: string;
+  serverName?: string;
 }
 
 interface GifData {
@@ -92,7 +95,9 @@ export const EmojiGifPicker = ({
   onGifSelect,
   open, 
   onOpenChange,
-  disableGif = false
+  disableGif = false,
+  serverId,
+  serverName
 }: EmojiGifPickerProps) => {
   const [activeTab, setActiveTab] = useState<'emoji' | 'gif'>('emoji');
   const [emojiSearch, setEmojiSearch] = useState('');
@@ -101,8 +106,35 @@ export const EmojiGifPicker = ({
   const [gifs, setGifs] = useState<GifData[]>([]);
   const [isLoadingGifs, setIsLoadingGifs] = useState(false);
   const [hasSearchedGifs, setHasSearchedGifs] = useState(false);
+  const [serverEmojis, setServerEmojis] = useState<ServerEmoji[]>([]);
 
   const recentEmojis = useMemo(() => getRecentEmojis(), [open]);
+
+  // Load server emojis when opening (server context only)
+  useEffect(() => {
+    if (!open || !serverId) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const items = await fetchServerEmojis(serverId);
+        if (!cancelled) setServerEmojis(items);
+      } catch (e) {
+        console.error('Failed to load server emojis:', e);
+        if (!cancelled) setServerEmojis([]);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, serverId]);
+
+  const filteredServerEmojis = useMemo(() => {
+    if (!emojiSearch.trim()) return [];
+    const q = emojiSearch.trim().toLowerCase();
+    return serverEmojis.filter((e) => e.name.toLowerCase().includes(q)).slice(0, 48);
+  }, [emojiSearch, serverEmojis]);
 
   const filteredEmojis = useMemo(() => {
     if (!emojiSearch.trim()) return null;
@@ -120,6 +152,13 @@ export const EmojiGifPicker = ({
   const handleEmojiSelect = (emoji: string) => {
     saveRecentEmoji(emoji);
     onEmojiSelect(emoji);
+    onOpenChange?.(false);
+  };
+
+  const handleServerEmojiSelect = (emoji: ServerEmoji) => {
+    const token = `:${emoji.name}:`;
+    saveRecentEmoji(token);
+    onEmojiSelect(token);
     onOpenChange?.(false);
   };
 
@@ -252,9 +291,26 @@ export const EmojiGifPicker = ({
             <ScrollArea className="h-64">
               <div className="p-2">
                 {emojiSearch ? (
-                  filteredEmojis && filteredEmojis.length > 0 ? (
+                  (filteredServerEmojis.length > 0 || (filteredEmojis && filteredEmojis.length > 0)) ? (
                     <div className="grid grid-cols-8 gap-1">
-                      {filteredEmojis.map((emoji, i) => (
+                      {filteredServerEmojis.map((emoji) => (
+                        <button
+                          key={`server-${emoji.id}`}
+                          type="button"
+                          className="w-8 h-8 p-0 hover:bg-accent rounded-md flex items-center justify-center transition-colors"
+                          onClick={() => handleServerEmojiSelect(emoji)}
+                          onMouseDown={(e) => e.preventDefault()}
+                          title={`:${emoji.name}:`}
+                        >
+                          <img
+                            src={emoji.url}
+                            alt={emoji.name}
+                            className="w-6 h-6 object-contain"
+                            loading="lazy"
+                          />
+                        </button>
+                      ))}
+                      {(filteredEmojis ?? []).map((emoji, i) => (
                         <button
                           key={`${emoji}-${i}`}
                           type="button"
@@ -275,6 +331,32 @@ export const EmojiGifPicker = ({
                   categories.map(cat => (
                     cat.key === activeCategory && (
                       <div key={cat.key}>
+                        {serverId && serverEmojis.length > 0 && (
+                          <div className="mb-4">
+                            <h3 className="text-xs font-semibold text-muted-foreground mb-2 uppercase">
+                              {serverName || 'Server Emojis'}
+                            </h3>
+                            <div className="grid grid-cols-8 gap-1">
+                              {serverEmojis.slice(0, 48).map((emoji) => (
+                                <button
+                                  key={`server-${emoji.id}`}
+                                  type="button"
+                                  className="w-8 h-8 p-0 hover:bg-accent rounded-md flex items-center justify-center transition-colors"
+                                  onClick={() => handleServerEmojiSelect(emoji)}
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  title={`:${emoji.name}:`}
+                                >
+                                  <img
+                                    src={emoji.url}
+                                    alt={emoji.name}
+                                    className="w-6 h-6 object-contain"
+                                    loading="lazy"
+                                  />
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                         <h3 className="text-xs font-semibold text-muted-foreground mb-2 uppercase">
                           {cat.name}
                         </h3>

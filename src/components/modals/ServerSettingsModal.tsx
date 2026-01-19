@@ -17,7 +17,8 @@ import {
   Palette,
   Plus,
   Edit2,
-  KeyRound
+  KeyRound,
+  Smile
 } from 'lucide-react';
 import {
   Dialog,
@@ -51,6 +52,7 @@ import { useMemberPermissions } from '@/hooks/useMemberPermissions';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { invalidateServerEmojis } from '@/lib/serverEmojis';
 import type { ServerRole, ServerMember, CustomServerRole } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { RolePermissionsEditor } from './RolePermissionsEditor';
@@ -63,6 +65,11 @@ import {
 
 const MAX_ICON_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_ICON_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+const MAX_EMOJI_SIZE = 1 * 1024 * 1024; // 1MB
+const ALLOWED_EMOJI_TYPES = ['image/png', 'image/gif', 'image/webp', 'image/jpeg'];
+const EMOJI_NAME_REGEX = /^[a-z0-9_]{2,32}$/;
+const MAX_SERVER_EMOJIS = 30;
 
 const serverSettingsSchema = z.object({
   name: z.string()
@@ -128,6 +135,14 @@ export const ServerSettingsModal = () => {
   const [isUploadingBanner, setIsUploadingBanner] = useState(false);
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
+  // Custom emoji state (owner-only)
+  const [emojiFile, setEmojiFile] = useState<File | null>(null);
+  const [emojiPreview, setEmojiPreview] = useState<string | null>(null);
+  const [emojiName, setEmojiName] = useState('');
+  const [isUploadingEmoji, setIsUploadingEmoji] = useState(false);
+  const [serverEmojis, setServerEmojis] = useState<Array<{ id: string; name: string; file_path: string }>>([]);
+  const emojiInputRef = useRef<HTMLInputElement>(null);
+
   const isOpen = activeModal === 'server-settings';
   
   // Get server from modal data or use current server
@@ -178,12 +193,171 @@ export const ServerSettingsModal = () => {
       // Reset banner state
       setBannerFile(null);
       setBannerPreview(null);
+      // Reset emoji state
+      setEmojiFile(null);
+      setEmojiName('');
+      if (emojiPreview) {
+        URL.revokeObjectURL(emojiPreview);
+      }
+      setEmojiPreview(null);
+      setServerEmojis([]);
       // Reset role form
       setEditingRole(null);
       setRoleName('');
       setRoleColor('#5865F2');
     }
   }, [isOpen, server, fetchMembers, fetchRoles, reset]);
+
+  // Load server emojis when modal opens (owner-only)
+  useEffect(() => {
+    if (!isOpen || !server || !isOwner) return;
+    let cancelled = false;
+
+    (async () => {
+      const { data, error } = await supabase
+        .from('server_emojis')
+        .select('id,name,file_path')
+        .eq('server_id', server.id)
+        .order('created_at', { ascending: true });
+
+      if (cancelled) return;
+      if (error) {
+        console.error('Failed to load server emojis:', error);
+        setServerEmojis([]);
+        return;
+      }
+      setServerEmojis((data ?? []) as Array<{ id: string; name: string; file_path: string }>);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, server?.id, isOwner]);
+
+  const clearEmoji = () => {
+    setEmojiFile(null);
+    setEmojiName('');
+    if (emojiPreview) {
+      URL.revokeObjectURL(emojiPreview);
+      setEmojiPreview(null);
+    }
+    if (emojiInputRef.current) {
+      emojiInputRef.current.value = '';
+    }
+  };
+
+  const handleEmojiSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!ALLOWED_EMOJI_TYPES.includes(file.type)) {
+      toast.error('Please select a PNG, GIF, WebP, or JPEG image');
+      return;
+    }
+
+    if (file.size > MAX_EMOJI_SIZE) {
+      toast.error('Emoji must be less than 1MB');
+      return;
+    }
+
+    setEmojiFile(file);
+    setEmojiPreview(URL.createObjectURL(file));
+  };
+
+  const uploadServerEmoji = async () => {
+    if (!server || !user) return;
+    if (!emojiFile) {
+      toast.error('Please select an emoji image');
+      return;
+    }
+
+    // Enforce 30 emoji cap (also enforced in DB via trigger)
+    try {
+      const { count, error } = await supabase
+        .from('server_emojis')
+        .select('*', { count: 'exact', head: true })
+        .eq('server_id', server.id);
+
+      if (error) throw error;
+      if ((count ?? 0) >= MAX_SERVER_EMOJIS) {
+        toast.error(`This server already has ${MAX_SERVER_EMOJIS} custom emojis`);
+        return;
+      }
+    } catch (e) {
+      console.error('Failed to check emoji limit:', e);
+      // If we can't verify, don't allow upload (safer for team-shared)
+      toast.error('Unable to verify emoji limit. Please try again.');
+      return;
+    }
+
+    const normalized = emojiName.trim().toLowerCase();
+    if (!EMOJI_NAME_REGEX.test(normalized)) {
+      toast.error('Emoji name must be 2-32 characters (a-z, 0-9, underscore)');
+      return;
+    }
+
+    setIsUploadingEmoji(true);
+    try {
+      const ext = (emojiFile.name.split('.').pop() || 'png').toLowerCase();
+      const filePath = `${server.id}/${normalized}-${crypto.randomUUID()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('server-emojis')
+        .upload(filePath, emojiFile, { upsert: false, cacheControl: '3600' });
+
+      if (uploadError) throw uploadError;
+
+      const { error: insertError } = await supabase.from('server_emojis').insert({
+        server_id: server.id,
+        name: normalized,
+        file_path: filePath,
+        created_by: user.id,
+      });
+
+      if (insertError) throw insertError;
+
+      // Refresh list
+      const { data, error } = await supabase
+        .from('server_emojis')
+        .select('id,name,file_path')
+        .eq('server_id', server.id)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      setServerEmojis((data ?? []) as Array<{ id: string; name: string; file_path: string }>);
+      toast.success('Emoji uploaded');
+      invalidateServerEmojis(server.id);
+      clearEmoji();
+    } catch (err: any) {
+      const msg = err?.message || 'Failed to upload emoji';
+      if (msg.includes('server_emojis_server_id_name_key')) {
+        toast.error('That emoji name is already taken');
+      } else if (msg.toLowerCase().includes('server emoji limit reached')) {
+        toast.error(`This server already has ${MAX_SERVER_EMOJIS} custom emojis`);
+      } else {
+        toast.error(msg);
+      }
+    } finally {
+      setIsUploadingEmoji(false);
+    }
+  };
+
+  const deleteServerEmoji = async (emoji: { id: string; name: string; file_path: string }) => {
+    if (!server) return;
+    if (!confirm(`Delete emoji "${emoji.name}"?`)) return;
+
+    try {
+      await supabase.from('server_emojis').delete().eq('id', emoji.id);
+      await supabase.storage.from('server-emojis').remove([emoji.file_path]);
+
+      setServerEmojis((prev) => prev.filter((e) => e.id !== emoji.id));
+      invalidateServerEmojis(server.id);
+      toast.success('Emoji deleted');
+    } catch (error) {
+      console.error('Failed to delete emoji:', error);
+      toast.error('Failed to delete emoji');
+    }
+  };
 
   const handleIconSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -525,6 +699,13 @@ export const ServerSettingsModal = () => {
         onChange={handleBannerSelect}
         className="hidden"
       />
+      <input
+        ref={emojiInputRef}
+        type="file"
+        accept="image/png,image/gif,image/webp,image/jpeg"
+        onChange={handleEmojiSelect}
+        className="hidden"
+      />
 
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
         <DialogContent className="sm:max-w-5xl max-w-[calc(100vw-2rem)] max-h-[90vh] sm:max-h-[85vh] p-0 flex flex-col">
@@ -565,6 +746,15 @@ export const ServerSettingsModal = () => {
                 <Ban className="w-4 h-4" />
                 <span>Bans</span>
               </TabsTrigger>
+              {isOwner && (
+                <TabsTrigger
+                  value="emojis"
+                  className="w-full justify-start gap-2 text-xs sm:text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                >
+                  <Smile className="w-4 h-4" />
+                  <span>Emojis</span>
+                </TabsTrigger>
+              )}
             </TabsList>
             
             <div className="flex-1 overflow-y-auto">
@@ -1016,6 +1206,134 @@ export const ServerSettingsModal = () => {
                     <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
                       Users you ban will appear here
                     </p>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Emojis Tab (Owner only) */}
+              <TabsContent value="emojis" className="m-0 p-6">
+                {isOwner ? (
+                  <div className="space-y-5">
+                    <div className="space-y-2">
+                      <h4 className="text-xs sm:text-sm font-semibold">Custom Emojis</h4>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">
+                        Upload an emoji and set a name (2-32 chars: a-z, 0-9, underscore). Use it in chat as <span className="font-mono">:name:</span>
+                      </p>
+                    </div>
+
+                    {/* Upload row */}
+                    <div className="flex flex-col sm:flex-row gap-3 sm:items-end p-4 border rounded-lg bg-secondary/50">
+                      <div className="flex items-center gap-3">
+                        <div
+                          onClick={() => emojiInputRef.current?.click()}
+                          className={cn(
+                            "w-14 h-14 rounded-xl bg-secondary flex items-center justify-center border-2 border-dashed border-muted-foreground/50 transition-colors flex-shrink-0 overflow-hidden cursor-pointer hover:border-primary"
+                          )}
+                        >
+                          {emojiPreview ? (
+                            <img src={emojiPreview} alt="Emoji preview" className="w-full h-full object-cover" />
+                          ) : (
+                            <Upload className="w-5 h-5 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs sm:text-sm font-medium">Emoji Image</p>
+                          <p className="text-[10px] sm:text-xs text-muted-foreground">PNG/GIF/WebP/JPEG • Max 1MB</p>
+                        </div>
+                      </div>
+
+                      <div className="flex-1 space-y-2">
+                        <Label className="text-xs sm:text-sm" htmlFor="emojiName">Emoji Name</Label>
+                        <Input
+                          id="emojiName"
+                          value={emojiName}
+                          onChange={(e) => setEmojiName(e.target.value)}
+                          placeholder="e.g. cat"
+                          className="h-9 sm:h-10 text-sm"
+                          maxLength={32}
+                        />
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={uploadServerEmoji}
+                          disabled={isUploadingEmoji || !emojiFile || !emojiName.trim()}
+                          className="flex-1 sm:flex-none"
+                        >
+                          {isUploadingEmoji && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                          Upload
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={clearEmoji}
+                          disabled={isUploadingEmoji && !!emojiFile}
+                        >
+                          Clear
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Emoji list */}
+                    <div className="space-y-2">
+                      <h4 className="text-xs sm:text-sm font-semibold">Server Emojis</h4>
+                      {serverEmojis.length > 0 ? (
+                        <ScrollArea className="h-[420px] sm:h-[520px] pr-2 sm:pr-4">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                            {serverEmojis.map((emoji) => {
+                              const { data: urlData } = supabase.storage
+                                .from('server-emojis')
+                                .getPublicUrl(emoji.file_path);
+                              const url = urlData.publicUrl;
+
+                              return (
+                                <div
+                                  key={emoji.id}
+                                  className="flex items-center gap-3 p-2 rounded-lg border bg-background/40"
+                                >
+                                  <img
+                                    src={url}
+                                    alt={emoji.name}
+                                    className="w-10 h-10 rounded-md object-cover bg-secondary"
+                                    loading="lazy"
+                                  />
+                                  <div className="min-w-0 flex-1">
+                                    <div className="text-xs sm:text-sm font-medium truncate">:{emoji.name}:</div>
+                                    <div className="text-[10px] sm:text-xs text-muted-foreground truncate">{emoji.name}</div>
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => deleteServerEmoji(emoji)}
+                                    className="text-muted-foreground hover:text-destructive h-8 px-2"
+                                    title="Delete emoji"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </ScrollArea>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-8 text-center">
+                          <Smile className="w-12 h-12 text-muted-foreground/50 mb-3" />
+                          <p className="text-xs sm:text-sm text-muted-foreground">No custom emojis yet</p>
+                          <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
+                            Upload your first emoji above
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-6 sm:py-8 text-center">
+                    <Shield className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground/50 mb-2 sm:mb-3" />
+                    <p className="text-xs sm:text-sm text-muted-foreground">Only the server owner can manage emojis</p>
                   </div>
                 )}
               </TabsContent>

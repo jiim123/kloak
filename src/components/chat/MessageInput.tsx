@@ -647,6 +647,8 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
               onOpenChange={setShowEmojiPicker}
               onEmojiSelect={handleEmojiSelect}
               disableGif
+              serverId={currentServer?.id}
+              serverName={currentServer?.name}
             >
               <button
                 type="button"

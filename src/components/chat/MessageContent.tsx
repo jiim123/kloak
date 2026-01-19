@@ -1,9 +1,10 @@
-import { useMemo, useCallback, useState } from 'react';
+import { useMemo, useCallback, useEffect, useState } from 'react';
 import { CodeBlock, InlineCode } from './CodeBlock';
 import { LinkPreview } from './LinkPreview';
 import { ImageLightbox } from '@/components/modals/ImageLightbox';
 import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
+import { fetchServerEmojis } from '@/lib/serverEmojis';
 
 interface UserInfo {
   id: string;
@@ -156,7 +157,12 @@ const escapeHtml = (text: string): string => {
 };
 
 // Parse text content (markdown, URLs, mentions, colors)
-const parseTextContent = (content: string, currentUserId?: string, usersMap?: Map<string, UserInfo>): string => {
+const parseTextContent = (
+  content: string,
+  currentUserId?: string,
+  usersMap?: Map<string, UserInfo>,
+  customEmojiMap?: Map<string, string>
+): string => {
   let parsed = escapeHtml(content);
   
   // Bold **text**
@@ -217,6 +223,17 @@ const parseTextContent = (content: string, currentUserId?: string, usersMap?: Ma
       return `<span class="mention mention-clickable${isSelf ? ' mention-self' : ''}" data-user-id="${userId}" role="button" tabindex="0">@${escapeHtml(displayName)}</span>`;
     }
   );
+
+  // Custom emojis :name: (server scope)
+  if (customEmojiMap && customEmojiMap.size > 0) {
+    parsed = parsed.replace(/:([a-z0-9_]{2,32}):/g, (full, name: string) => {
+      const url = customEmojiMap.get(name);
+      if (!url) return full;
+      const safeUrl = escapeHtml(url);
+      const safeName = escapeHtml(name);
+      return `<img src="${safeUrl}" alt=":${safeName}:" title=":${safeName}:" class="inline-block w-8 h-8 align-text-bottom object-contain" loading="lazy" />`;
+    });
+  }
   
   // Convert newlines to <br>
   parsed = parsed.replace(/\n/g, '<br>');
@@ -226,9 +243,37 @@ const parseTextContent = (content: string, currentUserId?: string, usersMap?: Ma
 
 export const MessageContent = ({ content, currentUserId, messageId, users }: MessageContentProps) => {
   const { linkPreviewsEnabled, openModal } = useUIStore();
-  const { members } = useServerStore();
+  const { members, currentServer } = useServerStore();
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
   const segments = useMemo(() => parseMessageSegments(content), [content]);
+
+  // Load server emoji map for :name: rendering (server context only)
+  useEffect(() => {
+    const serverId = currentServer?.id;
+    if (!serverId) {
+      setCustomEmojiMap(new Map());
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const emojis = await fetchServerEmojis(serverId);
+        if (cancelled) return;
+        const map = new Map<string, string>();
+        emojis.forEach((e) => map.set(e.name, e.url));
+        setCustomEmojiMap(map);
+      } catch (e) {
+        console.error('Failed to load server emojis for message rendering:', e);
+        if (!cancelled) setCustomEmojiMap(new Map());
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentServer?.id]);
   
   // Build a map of userId -> user info for quick lookup
   const usersMap = useMemo(() => {
@@ -308,7 +353,7 @@ export const MessageContent = ({ content, currentUserId, messageId, users }: Mes
               <span
                 key={index}
                 dangerouslySetInnerHTML={{
-                  __html: parseTextContent(segment.content, currentUserId, usersMap),
+                  __html: parseTextContent(segment.content, currentUserId, usersMap, customEmojiMap),
                 }}
               />
             );

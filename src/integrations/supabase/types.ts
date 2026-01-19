@@ -833,6 +833,48 @@ export type Database = {
           },
         ]
       }
+      server_emojis: {
+        Row: {
+          created_at: string
+          created_by: string
+          file_path: string
+          id: string
+          name: string
+          server_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          file_path: string
+          id?: string
+          name: string
+          server_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          file_path?: string
+          id?: string
+          name?: string
+          server_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "server_emojis_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "server_emojis_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_preferences: {
         Row: {
           animate_emojis: boolean
