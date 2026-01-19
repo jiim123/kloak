@@ -16,7 +16,7 @@ export const HeroImage = () => {
         <div className="relative overflow-hidden rounded-2xl">
           {/* Image */}
           <img
-            src="https://images.unsplash.com/photo-1534361960057-19889db9621e?q=80&w=1740&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+            src="https://images.pexels.com/photos/30626449/pexels-photo-30626449.jpeg"
             alt="Kloak hero"
             className="w-full h-[70vh] object-cover"
             loading="lazy"
