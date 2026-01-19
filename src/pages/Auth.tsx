@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import { useAuthStore } from "@/stores/authStore";
 import { supabase } from "@/integrations/supabase/client";
 import { markWelcomeSeen } from "@/lib/storage";
@@ -20,13 +21,28 @@ import kloakLogo from "@/assets/kloak-logo.svg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { WelcomeModal } from "@/components/modals/WelcomeModal";
 import { NavigationMenu } from "@/components/layout/NavigationMenu";
 import { Footer } from "@/components/ui/footer-section";
+
+const tabContentVariants = {
+  enter: (direction: number) => ({
+    x: direction > 0 ? 20 : -20,
+    opacity: 0,
+  }),
+  center: {
+    x: 0,
+    opacity: 1,
+  },
+  exit: (direction: number) => ({
+    x: direction < 0 ? 20 : -20,
+    opacity: 0,
+  }),
+};
 
 type AuthStep = "form" | "key-display";
 
@@ -249,102 +265,125 @@ const Auth = () => {
                   </div>
                 )}
 
-                {/* Create Account Tab */}
-                <TabsContent value="create" className="mt-0">
-                  <form onSubmit={handleCreateAccount} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="username">Username</Label>
-                      <div className="relative">
-                        <Input
-                          id="username"
-                          placeholder="your_username"
-                          value={username}
-                          onChange={(e) => setUsername(e.target.value)}
-                          maxLength={20}
-                          disabled={isLoading}
-                          className={cn(
-                            "pr-10",
-                            usernameError && "border-destructive focus-visible:ring-destructive",
-                            isUsernameAvailable === true &&
-                              "border-[hsl(var(--kloak-success))] focus-visible:ring-[hsl(var(--kloak-success))]",
-                          )}
-                        />
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2">{renderUsernameStatus()}</div>
-                      </div>
-                      {usernameError && <p className="text-xs text-destructive">{usernameError}</p>}
-                      {!usernameError && isUsernameAvailable === false && (
-                        <p className="text-xs text-destructive">Username is already taken</p>
-                      )}
-                      {!usernameError && isUsernameAvailable === true && (
-                        <p className="text-xs text-[hsl(var(--kloak-success))]">Username is available!</p>
-                      )}
-                      {!usernameError && isUsernameAvailable === null && username && !isCheckingUsername && (
-                        <p className="text-xs text-muted-foreground">
-                          3-20 characters. Letters, numbers, and underscores only.
-                        </p>
-                      )}
-                    </div>
+                {/* Animated Tab Content */}
+                <div className="relative overflow-hidden">
+                  <AnimatePresence mode="wait" initial={false} custom={activeTab === "login" ? 1 : -1}>
+                    {activeTab === "create" && (
+                      <motion.div
+                        key="create"
+                        custom={-1}
+                        variants={tabContentVariants}
+                        initial="enter"
+                        animate="center"
+                        exit="exit"
+                        transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
+                      >
+                        <form onSubmit={handleCreateAccount} className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="username">Username</Label>
+                            <div className="relative">
+                              <Input
+                                id="username"
+                                placeholder="your_username"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                maxLength={20}
+                                disabled={isLoading}
+                                className={cn(
+                                  "pr-10",
+                                  usernameError && "border-destructive focus-visible:ring-destructive",
+                                  isUsernameAvailable === true &&
+                                    "border-[hsl(var(--kloak-success))] focus-visible:ring-[hsl(var(--kloak-success))]",
+                                )}
+                              />
+                              <div className="absolute right-3 top-1/2 -translate-y-1/2">{renderUsernameStatus()}</div>
+                            </div>
+                            {usernameError && <p className="text-xs text-destructive">{usernameError}</p>}
+                            {!usernameError && isUsernameAvailable === false && (
+                              <p className="text-xs text-destructive">Username is already taken</p>
+                            )}
+                            {!usernameError && isUsernameAvailable === true && (
+                              <p className="text-xs text-[hsl(var(--kloak-success))]">Username is available!</p>
+                            )}
+                            {!usernameError && isUsernameAvailable === null && username && !isCheckingUsername && (
+                              <p className="text-xs text-muted-foreground">
+                                3-20 characters. Letters, numbers, and underscores only.
+                              </p>
+                            )}
+                          </div>
 
-                    <Button
-                      type="submit"
-                      className="w-full"
-                      disabled={isLoading || !!usernameError || isUsernameAvailable !== true}
-                    >
-                      {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Key className="w-4 h-4 mr-2" />}
-                      Create Account
-                    </Button>
+                          <Button
+                            type="submit"
+                            className="w-full"
+                            disabled={isLoading || !!usernameError || isUsernameAvailable !== true}
+                          >
+                            {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Key className="w-4 h-4 mr-2" />}
+                            Create Account
+                          </Button>
 
-                    <p className="text-center text-xs text-muted-foreground mt-3">
-                      By creating an account, you agree to our{" "}
-                      <Link to="/terms" className="text-foreground hover:underline">
-                        Terms of Service
-                      </Link>{" "}
-                      and{" "}
-                      <Link to="/privacy" className="text-foreground hover:underline">
-                        Privacy Policy
-                      </Link>
-                    </p>
-                  </form>
-                </TabsContent>
+                          <p className="text-center text-xs text-muted-foreground mt-3">
+                            By creating an account, you agree to our{" "}
+                            <Link to="/terms" className="text-foreground hover:underline">
+                              Terms of Service
+                            </Link>{" "}
+                            and{" "}
+                            <Link to="/privacy" className="text-foreground hover:underline">
+                              Privacy Policy
+                            </Link>
+                          </p>
+                        </form>
+                      </motion.div>
+                    )}
 
-                {/* Login Tab */}
-                <TabsContent value="login" className="mt-0">
-                  <form onSubmit={handleLogin} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="secretKey">Secret Key</Label>
-                      <div className="relative">
-                        <Input
-                          id="secretKey"
-                          type={showSecretKey ? "text" : "password"}
-                          placeholder="Paste your 64-character secret key"
-                          value={secretKey}
-                          onChange={(e) => setSecretKey(e.target.value)}
-                          onPaste={handleKeyPaste}
-                          className="font-mono text-sm pr-10"
-                          disabled={isLoading}
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                          onClick={() => setShowSecretKey(!showSecretKey)}
-                        >
-                          {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </Button>
-                      </div>
-                    </div>
+                    {activeTab === "login" && (
+                      <motion.div
+                        key="login"
+                        custom={1}
+                        variants={tabContentVariants}
+                        initial="enter"
+                        animate="center"
+                        exit="exit"
+                        transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
+                      >
+                        <form onSubmit={handleLogin} className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="secretKey">Secret Key</Label>
+                            <div className="relative">
+                              <Input
+                                id="secretKey"
+                                type={showSecretKey ? "text" : "password"}
+                                placeholder="Paste your 64-character secret key"
+                                value={secretKey}
+                                onChange={(e) => setSecretKey(e.target.value)}
+                                onPaste={handleKeyPaste}
+                                className="font-mono text-sm pr-10"
+                                disabled={isLoading}
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                                onClick={() => setShowSecretKey(!showSecretKey)}
+                              >
+                                {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                              </Button>
+                            </div>
+                          </div>
 
-                    <Button type="submit" className="w-full" disabled={isLoading || !secretKey}>
-                      {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                      Login
-                    </Button>
+                          <Button type="submit" className="w-full" disabled={isLoading || !secretKey}>
+                            {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                            Login
+                          </Button>
 
-                    <p className="text-xs text-muted-foreground">
-                      Forgot your key? Unfortunately, keys cannot be recovered.
-                    </p>
-                  </form>
-                </TabsContent>
+                          <p className="text-xs text-muted-foreground">
+                            Forgot your key? Unfortunately, keys cannot be recovered.
+                          </p>
+                        </form>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </Tabs>
             ) : (
               /* Secret Key Display Screen */
