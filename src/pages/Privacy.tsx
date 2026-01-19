@@ -316,29 +316,6 @@ const Privacy = () => {
             />
 
             <FAQItem
-              question="Where is my data stored?"
-              answer={
-                <div className="space-y-3">
-                  <p>
-                    Your data is stored on servers in Sweden, hosted by Glesys—a Swedish infrastructure provider. Why
-                    Sweden? Because Swedish privacy law is among the strongest in the world, and we wanted to be as far
-                    from U.S. jurisdiction as practically possible.
-                  </p>
-                  <p>
-                    We deliberately avoided AWS, Google Cloud, and Microsoft Azure. Not because they're technically
-                    inferior, but because we didn't want your data sitting on servers owned by companies whose entire
-                    business model is surveillance capitalism.
-                  </p>
-                  <p>
-                    All data is encrypted at rest and in transit using industry-standard encryption. We use secure,
-                    audited infrastructure. Your uploaded images are automatically deleted after 14 days to minimize
-                    data retention—we keep what's necessary and delete what's not.
-                  </p>
-                </div>
-              }
-            />
-
-            <FAQItem
               question="How can I delete my data?"
               accent="red"
               answer={
