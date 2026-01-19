@@ -16,6 +16,7 @@ import {
   XCircle,
   UserPlus,
   Shield,
+  CircleUserRound,
 } from "lucide-react";
 import kloakLogo from "@/assets/kloak-logo.svg";
 import { Button } from "@/components/ui/button";
@@ -244,7 +245,7 @@ const Auth = () => {
                     value="create"
                     className="rounded-xl py-2.5 px-4 text-sm font-medium transition-all duration-200 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
                   >
-                    <UserPlus className="w-4 h-4 mr-2" />
+                    <CircleUserRound className="w-4 h-4 mr-2" />
                     Create Account
                   </TabsTrigger>
                   <TabsTrigger

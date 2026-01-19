@@ -15,7 +15,12 @@ export const HeroImage = () => {
       <motion.div initial="initial" animate="animate" className="max-w-6xl mx-auto">
         <div className="relative overflow-hidden rounded-2xl">
           {/* Image */}
-          <img src="/hero.jpg" alt="Kloak hero" className="w-full h-[70vh] object-cover" loading="lazy" />
+          <img
+            src="https://images.pexels.com/photos/30626449/pexels-photo-30626449.jpeg"
+            alt="Kloak hero"
+            className="w-full h-[70vh] object-cover"
+            loading="lazy"
+          />
 
           {/* Subtle bottom gradient */}
           <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
