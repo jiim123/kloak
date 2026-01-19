@@ -210,8 +210,11 @@ const Terms = () => {
                     <li className="flex items-start gap-2">
                       <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-red-400/50" />
                       <span>
-                        <strong className="text-foreground/90">Child exploitation content.</strong> Absolutely zero
-                        tolerance. This will result in immediate account termination and reporting to authorities.
+                        <strong className="text-foreground/90">Child or Animal exploitation content.</strong> Absolutely
+                        zero tolerance. While we collect minimal data, we will cooperate fully with law enforcement
+                        investigating child and animal exploitation, terrorism, or other serious crimes. This may
+                        include preserving and providing account information, content, IP addresses, and timestamps in
+                        response to valid legal requests.
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
