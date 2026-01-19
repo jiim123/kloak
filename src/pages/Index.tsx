@@ -37,7 +37,7 @@ const Index = () => {
     <div className="min-h-screen bg-background flex flex-col items-center">
       <div className="w-full max-w-[1920px]">
         <NavigationMenu />
-        <main className="pt-20">
+        <main className="pt-10">
           {/* Hero Section */}
           <HeroAscii />
 
