@@ -300,27 +300,6 @@ const Philosophy = () => {
             />
 
             <FAQItem
-              question="Why Sweden?"
-              answer={
-                <div className="space-y-3">
-                  <p>Because jurisdiction matters.</p>
-                  <p>
-                    Our servers are hosted in Sweden, on Swedish infrastructure, under Swedish and EU law. This was a
-                    deliberate choice. Swedish privacy protections are among the strongest in the world. We're not
-                    subject to U.S. National Security Letters, secret FISA court orders, or the legal frameworks that
-                    have enabled mass surveillance programs.
-                  </p>
-                  <p>
-                    We also deliberately avoided hosting on AWS, Google Cloud, or Microsoft Azure—not because they're
-                    technically inferior, but because we didn't want your data sitting on infrastructure owned by
-                    surveillance capitalism's biggest practitioners.
-                  </p>
-                  <p>Where your data lives matters. Who has legal authority over it matters. We chose carefully.</p>
-                </div>
-              }
-            />
-
-            <FAQItem
               question="How do you handle illegal content?"
               answer={
                 <div className="space-y-3">
