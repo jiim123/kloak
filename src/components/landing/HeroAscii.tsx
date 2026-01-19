@@ -31,22 +31,19 @@ export const HeroImage = () => {
             className="absolute bottom-6 left-6 sm:bottom-8 sm:left-8 md:bottom-10 md:left-10 max-w-xl"
           >
             <p className="text-sm font-medium text-primary mb-3 uppercase tracking-wide">
-              No email · No password · No tracking
+              For gamers · Communities · Teams · Everyone
             </p>
-
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-semibold text-white leading-tight mb-4">
-              Your chat.
+              Where conversations
               <br />
-              Your key.
+              belong to you.
             </h1>
-
             <p className="text-base sm:text-lg text-white/80 mb-6 leading-relaxed">
-              One cryptographic key. No accounts, no surveillance. Just you and your conversations.
+              A space for your community to connect, create, and grow together—without ads, tracking, or compromise.
             </p>
-
             <Link to="/app">
               <Button size="lg" className="h-11 px-7 text-base">
-                Create your key
+                Get started
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </Link>
