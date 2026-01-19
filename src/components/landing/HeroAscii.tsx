@@ -18,7 +18,7 @@ export const HeroImage = () => {
           <img
             src="https://images.pexels.com/photos/30626449/pexels-photo-30626449.jpeg"
             alt="Kloak hero"
-            className="w-full h-[70vh] object-cover"
+            className="w-full h-[100vh] object-cover"
             loading="lazy"
           />
 
