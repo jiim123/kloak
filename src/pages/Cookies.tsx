@@ -6,8 +6,7 @@ import { NavigationMenu } from "@/components/layout/NavigationMenu";
 const Cookies = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
-        <NavigationMenu />
-        <main className="pt-20">
+      <NavigationMenu />
       
       <div className="max-w-4xl mx-auto px-6 py-12 w-full">
         <div className="flex items-center gap-3 mb-2">
