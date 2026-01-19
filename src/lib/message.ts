@@ -148,9 +148,13 @@ export const parseMessageContent = (
 
 /**
  * Strip markdown and HTML from message content for previews
+ * Optionally converts <@userId> mentions to @username using a usersMap
  */
-export const stripMarkdown = (content: string): string => {
-  return content
+export const stripMarkdown = (
+  content: string,
+  usersMap?: Map<string, { username: string; display_name?: string | null; nickname?: string | null }>
+): string => {
+  let result = content
     .replace(/```[\s\S]*?```/g, '[code]')
     .replace(/`[^`]+`/g, '[code]')
     .replace(/\*\*([^*]+)\*\*/g, '$1')
@@ -158,15 +162,36 @@ export const stripMarkdown = (content: string): string => {
     .replace(/~~([^~]+)~~/g, '$1')
     .replace(/__([^_]+)__/g, '$1')
     .replace(/\|\|([^|]+)\|\|/g, '[spoiler]')
-    .replace(/\n/g, ' ')
-    .trim();
+    .replace(/\n/g, ' ');
+  
+  // Convert <@userId> mentions to @username
+  if (usersMap) {
+    result = result.replace(
+      /<@(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})>/g,
+      (match, userId) => {
+        const userInfo = usersMap.get(userId);
+        const displayName = userInfo?.nickname || userInfo?.display_name || userInfo?.username || 'user';
+        return `@${displayName}`;
+      }
+    );
+  } else {
+    // Without usersMap, just remove the UUID format but keep a generic placeholder
+    result = result.replace(/<@\w{8}-\w{4}-\w{4}-\w{4}-\w{12}>/g, '@user');
+  }
+  
+  return result.trim();
 };
 
 /**
  * Get plain text preview of message content
+ * Optionally converts <@userId> mentions to @username using a usersMap
  */
-export const getMessagePreview = (content: string, maxLength = 100): string => {
-  const stripped = stripMarkdown(content);
+export const getMessagePreview = (
+  content: string,
+  maxLength = 100,
+  usersMap?: Map<string, { username: string; display_name?: string | null; nickname?: string | null }>
+): string => {
+  const stripped = stripMarkdown(content, usersMap);
   if (stripped.length <= maxLength) return stripped;
-  return stripped.slice(0, maxLength - 3) + '...';
+  return stripped.slice(0, maxLength - 3) + '...'
 };
