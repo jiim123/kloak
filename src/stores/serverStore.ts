@@ -60,6 +60,7 @@ interface ServerState {
   createRole: (serverId: string, userId: string, name: string, color: string, icon?: string | null) => Promise<CustomServerRole | null>;
   updateRole: (roleId: string, userId: string, updates: { name?: string; color?: string; icon?: string | null }) => Promise<void>;
   deleteRole: (roleId: string, userId: string) => Promise<void>;
+  reorderRoles: (serverId: string, userId: string, orderedRoleIds: string[]) => Promise<void>;
   assignRoleToMember: (memberId: string, roleId: string, userId: string) => Promise<void>;
   removeRoleFromMember: (memberId: string, roleId: string, userId: string) => Promise<void>;
 
@@ -976,6 +977,42 @@ export const useServerStore = create<ServerState>((set, get) => ({
       }));
     } catch (error) {
       console.error('Failed to delete role:', error);
+      throw error;
+    }
+  },
+
+  reorderRoles: async (serverId: string, userId: string, orderedRoleIds: string[]) => {
+    const { roles: currentRoles } = get();
+    const roleById = new Map(currentRoles.map((r) => [r.id, r]));
+    const sanitized = orderedRoleIds.filter((id) => roleById.has(id));
+
+    // Optimistically update local state first
+    set((state) => ({
+      roles: state.roles
+        .map((r) => {
+          const idx = sanitized.indexOf(r.id);
+          return idx >= 0 ? { ...r, position: idx } : r;
+        })
+        .sort((a, b) => a.position - b.position),
+    }));
+
+    try {
+      // Update each row (safer than upsert: avoids accidental inserts needing required columns)
+      const updates = sanitized.map((roleId, position) =>
+        supabase
+          .from('server_roles')
+          .update({ position })
+          .eq('id', roleId)
+          .eq('server_id', serverId),
+      );
+
+      const results = await Promise.all(updates);
+      const firstError = results.find((r) => r.error)?.error;
+      if (firstError) throw firstError;
+    } catch (error) {
+      console.error('Failed to reorder roles:', error);
+      // Re-sync from server if persistence fails
+      await get().fetchRoles(serverId);
       throw error;
     }
   },

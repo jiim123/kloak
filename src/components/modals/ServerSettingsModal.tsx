@@ -18,7 +18,8 @@ import {
   Plus,
   Edit2,
   KeyRound,
-  Smile
+  Smile,
+  GripVertical
 } from 'lucide-react';
 import {
   Dialog,
@@ -63,6 +64,25 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragStartEvent,
+  DragEndEvent,
+  DragCancelEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 const MAX_ICON_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_ICON_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -106,6 +126,7 @@ export const ServerSettingsModal = () => {
     createRole,
     updateRole,
     deleteRole,
+    reorderRoles,
     assignRoleToMember,
     removeRoleFromMember,
     updateServer,
@@ -124,6 +145,7 @@ export const ServerSettingsModal = () => {
   const [roleName, setRoleName] = useState('');
   const [roleColor, setRoleColor] = useState('#5865F2');
   const [roleIcon, setRoleIcon] = useState<string>('');
+  const [activeRoleId, setActiveRoleId] = useState<string | null>(null);
   
   // Icon upload state
   const [iconFile, setIconFile] = useState<File | null>(null);
@@ -152,6 +174,105 @@ export const ServerSettingsModal = () => {
   const server = serverId 
     ? servers.find(s => s.id === serverId) || currentServer
     : currentServer;
+
+  const roleSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const roleIds = useMemo(() => roles.map((r) => r.id), [roles]);
+
+  const handleRoleDragStart = (event: DragStartEvent) => {
+    setActiveRoleId(event.active.id as string);
+  };
+
+  const handleRoleDragCancel = (_event: DragCancelEvent) => {
+    setActiveRoleId(null);
+  };
+
+  const handleRoleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveRoleId(null);
+    if (!over) return;
+    if (!server?.id || !user?.id) return;
+    if (active.id === over.id) return;
+
+    const oldIndex = roles.findIndex((r) => r.id === active.id);
+    const newIndex = roles.findIndex((r) => r.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const newOrder = arrayMove(roles, oldIndex, newIndex);
+    try {
+      await reorderRoles(server.id, user.id, newOrder.map((r) => r.id));
+    } catch {
+      toast.error("Failed to reorder roles");
+    }
+  };
+
+  const SortableRoleRow = ({ role }: { role: CustomServerRole }) => {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+      id: role.id,
+      data: { type: "role", role },
+    });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+    } as React.CSSProperties;
+
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        className={cn(
+          "flex items-center gap-2 sm:gap-3 p-1.5 sm:p-2 rounded-lg hover:bg-secondary/50 transition-colors",
+          isDragging && "opacity-80 bg-secondary/60 ring-1 ring-primary/30 shadow-md relative z-50",
+        )}
+      >
+        <div
+          {...attributes}
+          {...listeners}
+          className="text-muted-foreground cursor-grab active:cursor-grabbing flex-shrink-0"
+          title="Drag to reorder"
+        >
+          <GripVertical className="w-4 h-4" />
+        </div>
+        <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: role.color }} />
+        <div className="flex-1 min-w-0">
+          <span className="text-xs sm:text-sm font-medium">{role.name}</span>
+        </div>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setEditingRolePermissions(role)}
+            className="text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3"
+            title="Edit Permissions"
+          >
+            <KeyRound className="w-3 h-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleEditRole(role)}
+            className="text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3"
+            title="Edit Role"
+          >
+            <Edit2 className="w-3 h-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleDeleteRole(role)}
+            className="text-muted-foreground hover:text-destructive text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3"
+            title="Delete Role"
+          >
+            <Trash2 className="w-3 h-3" />
+          </Button>
+        </div>
+      </div>
+    );
+  };
 
   // Get current user's role
   const currentMembership = useMemo(() => {
@@ -1146,51 +1267,21 @@ export const ServerSettingsModal = () => {
                     <h4 className="text-xs sm:text-sm font-semibold">Server Roles</h4>
                     {roles.length > 0 ? (
                       <ScrollArea className="h-[400px] sm:h-[500px] pr-2 sm:pr-4">
-                        <div className="space-y-1.5 sm:space-y-2">
-                          {roles.map((role) => (
-                            <div
-                              key={role.id}
-                              className="flex items-center gap-2 sm:gap-3 p-1.5 sm:p-2 rounded-lg hover:bg-secondary/50"
-                            >
-                              <div
-                                className="w-4 h-4 rounded-full flex-shrink-0"
-                                style={{ backgroundColor: role.color }}
-                              />
-                              <div className="flex-1 min-w-0">
-                                <span className="text-xs sm:text-sm font-medium">{role.name}</span>
-                              </div>
-                              <div className="flex items-center gap-1 flex-shrink-0">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setEditingRolePermissions(role)}
-                                  className="text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3"
-                                  title="Edit Permissions"
-                                >
-                                  <KeyRound className="w-3 h-3" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleEditRole(role)}
-                                  className="text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3"
-                                  title="Edit Role"
-                                >
-                                  <Edit2 className="w-3 h-3" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleDeleteRole(role)}
-                                  className="text-muted-foreground hover:text-destructive text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3"
-                                  title="Delete Role"
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </Button>
-                              </div>
+                        <DndContext
+                          sensors={roleSensors}
+                          collisionDetection={closestCenter}
+                          onDragStart={handleRoleDragStart}
+                          onDragEnd={handleRoleDragEnd}
+                          onDragCancel={handleRoleDragCancel}
+                        >
+                          <SortableContext items={roleIds} strategy={verticalListSortingStrategy}>
+                            <div className="space-y-1.5 sm:space-y-2">
+                              {roles.map((role) => (
+                                <SortableRoleRow key={role.id} role={role} />
+                              ))}
                             </div>
-                          ))}
-                        </div>
+                          </SortableContext>
+                        </DndContext>
                       </ScrollArea>
                     ) : (
                       <div className="flex flex-col items-center justify-center py-6 sm:py-8 text-center">

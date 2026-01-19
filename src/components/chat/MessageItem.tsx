@@ -161,7 +161,7 @@ export const MessageItem = memo(function MessageItem({
     };
   }, [currentServer?.id]);
 
-  const oldestRoleWithIcon = useMemo<Pick<CustomServerRole, "name" | "icon"> | null>(() => {
+  const priorityRoleWithIcon = useMemo<Pick<CustomServerRole, "name" | "icon"> | null>(() => {
     const memberRoles = messageMember?.roles ?? [];
     if (memberRoles.length === 0) return null;
 
@@ -170,21 +170,24 @@ export const MessageItem = memo(function MessageItem({
       .map((mr) => (roles.find((r) => r.id === mr.id) ?? mr) as CustomServerRole)
       .filter(Boolean);
 
+    // Priority: higher in the roles list (lower position) wins
     let best: CustomServerRole | null = null;
     for (const r of resolved) {
+      if (!r?.icon) continue;
       if (!best) {
         best = r;
         continue;
       }
-      const aCreated = r.created_at ? Date.parse(r.created_at) : Number.POSITIVE_INFINITY;
-      const bCreated = best.created_at ? Date.parse(best.created_at) : Number.POSITIVE_INFINITY;
-      if (aCreated !== bCreated) {
-        if (aCreated < bCreated) best = r;
-        continue;
-      }
       const aPos = typeof r.position === "number" ? r.position : Number.POSITIVE_INFINITY;
       const bPos = typeof best.position === "number" ? best.position : Number.POSITIVE_INFINITY;
-      if (aPos < bPos) best = r;
+      if (aPos !== bPos) {
+        if (aPos < bPos) best = r;
+        continue;
+      }
+      // Stable tie-breaker
+      const aCreated = r.created_at ? Date.parse(r.created_at) : Number.POSITIVE_INFINITY;
+      const bCreated = best.created_at ? Date.parse(best.created_at) : Number.POSITIVE_INFINITY;
+      if (aCreated < bCreated) best = r;
     }
 
     if (!best?.icon) return null;
@@ -192,8 +195,8 @@ export const MessageItem = memo(function MessageItem({
   }, [messageMember?.roles, roles]);
 
   const roleIconNode = useMemo(() => {
-    if (!oldestRoleWithIcon?.icon) return null;
-    const icon = oldestRoleWithIcon.icon;
+    if (!priorityRoleWithIcon?.icon) return null;
+    const icon = priorityRoleWithIcon.icon;
     const match = icon.match(/^:([a-z0-9_]{2,32}):$/);
     if (match) {
       const url = customEmojiMap.get(match[1]);
@@ -212,7 +215,7 @@ export const MessageItem = memo(function MessageItem({
         {icon}
       </span>
     );
-  }, [oldestRoleWithIcon?.icon, customEmojiMap]);
+  }, [priorityRoleWithIcon?.icon, customEmojiMap]);
 
   // Check permissions using database-backed permission system
   const { hasPermission } = useMemberPermissions(message.channel_id);
@@ -364,16 +367,16 @@ export const MessageItem = memo(function MessageItem({
       .map((mr) => roles.find((r) => r.id === mr.id) ?? mr)
       .filter(Boolean);
 
-    // Highest role = greatest position (Discord-like behavior)
+    // Highest priority role = lowest position (top of roles list)
     let best: CustomServerRole | null = null;
     for (const r of resolved as CustomServerRole[]) {
       if (!best) {
         best = r;
         continue;
       }
-      const aPos = typeof r.position === "number" ? r.position : Number.NEGATIVE_INFINITY;
-      const bPos = typeof best.position === "number" ? best.position : Number.NEGATIVE_INFINITY;
-      if (aPos > bPos) best = r;
+      const aPos = typeof r.position === "number" ? r.position : Number.POSITIVE_INFINITY;
+      const bPos = typeof best.position === "number" ? best.position : Number.POSITIVE_INFINITY;
+      if (aPos < bPos) best = r;
     }
 
     return best?.color ?? null;
@@ -459,14 +462,14 @@ export const MessageItem = memo(function MessageItem({
                 >
                   {displayName}
                 </span>
-                {roleIconNode && oldestRoleWithIcon && (
+                {roleIconNode && priorityRoleWithIcon && (
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <span className="inline-flex items-center mr-1.5 cursor-help">
                         {roleIconNode}
                       </span>
                     </TooltipTrigger>
-                    <TooltipContent>{oldestRoleWithIcon.name}</TooltipContent>
+                    <TooltipContent>{priorityRoleWithIcon.name}</TooltipContent>
                   </Tooltip>
                 )}
                 {message.is_pinned && <Pin className="w-3 h-3 text-muted-foreground inline mr-1" />}
@@ -482,14 +485,14 @@ export const MessageItem = memo(function MessageItem({
                   >
                     {displayName}
                   </span>
-                  {roleIconNode && oldestRoleWithIcon && (
+                  {roleIconNode && priorityRoleWithIcon && (
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <span className="inline-flex items-center cursor-help">
                           {roleIconNode}
                         </span>
                       </TooltipTrigger>
-                      <TooltipContent>{oldestRoleWithIcon.name}</TooltipContent>
+                      <TooltipContent>{priorityRoleWithIcon.name}</TooltipContent>
                     </Tooltip>
                   )}
                   {showTimestamps && <span className="text-[11px] text-muted-foreground">{formattedTimestamp}</span>}

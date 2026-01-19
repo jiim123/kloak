@@ -113,6 +113,14 @@ export const MembersSidebar = () => {
 
   // Group members: roles first (only online members with roles), then online/offline (only no-role members)
   const { roleGroups, onlineNoRoleMembers, offlineNoRoleMembers } = useMemo(() => {
+    const rolePositionById = new Map<string, number>();
+    roles.forEach((r) => rolePositionById.set(r.id, r.position));
+
+    const getResolvedRolePosition = (role: CustomServerRole): number => {
+      const fromStore = rolePositionById.get(role.id);
+      return typeof fromStore === 'number' ? fromStore : role.position;
+    };
+
     // Sort by role hierarchy then alphabetically
     const sortMembers = (a: ServerMember, b: ServerMember) => {
       const roleOrder = { owner: 0, admin: 1, moderator: 2, member: 3 };
@@ -120,14 +128,14 @@ export const MembersSidebar = () => {
       const roleB = roleOrder[b.role as keyof typeof roleOrder] ?? 3;
       if (roleA !== roleB) return roleA - roleB;
       
-      // Sort by highest custom role position (lower position = higher in list)
-      const aHighestRole = a.roles && a.roles.length > 0 
-        ? Math.min(...a.roles.map(r => r.position))
-        : Infinity;
-      const bHighestRole = b.roles && b.roles.length > 0
-        ? Math.min(...b.roles.map(r => r.position))
-        : Infinity;
-      if (aHighestRole !== bHighestRole) return aHighestRole - bHighestRole;
+      // Sort by custom role priority: higher in list (lower position) = higher priority
+      const aPriorityPos = a.roles && a.roles.length > 0
+        ? Math.min(...a.roles.map(getResolvedRolePosition))
+        : Number.POSITIVE_INFINITY;
+      const bPriorityPos = b.roles && b.roles.length > 0
+        ? Math.min(...b.roles.map(getResolvedRolePosition))
+        : Number.POSITIVE_INFINITY;
+      if (aPriorityPos !== bPriorityPos) return aPriorityPos - bPriorityPos;
       
       const nameA = a.nickname || a.user?.display_name || a.user?.username || '';
       const nameB = b.nickname || b.user?.display_name || b.user?.username || '';
@@ -149,13 +157,13 @@ export const MembersSidebar = () => {
       if (memberRoles.length > 0) {
         // Only add online members to role groups
         if (!isUserOffline(member)) {
-          // Add to highest role (lowest position)
-          const highestRole = memberRoles.reduce((prev, curr) => 
-            curr.position < prev.position ? curr : prev
+          // Add to priority role (lowest position = top of list)
+          const priorityRole = memberRoles.reduce((prev, curr) =>
+            getResolvedRolePosition(curr) < getResolvedRolePosition(prev) ? curr : prev
           );
-          const roleMembers = roleGroupsMap.get(highestRole.id) || [];
+          const roleMembers = roleGroupsMap.get(priorityRole.id) || [];
           roleMembers.push(member);
-          roleGroupsMap.set(highestRole.id, roleMembers);
+          roleGroupsMap.set(priorityRole.id, roleMembers);
         }
       } else {
         noRoleMembers.push(member);
@@ -257,6 +265,26 @@ export const MembersSidebar = () => {
     const memberIsOffline = isUserOffline(member);
     const isSelf = member.user_id === user?.id;
     const isServerOwner = member.role === 'owner';
+    const priorityCustomRoleColor = useMemo(() => {
+      const memberRoles = member.roles || [];
+      if (memberRoles.length === 0) return null;
+
+      const resolved = memberRoles
+        .map((mr) => roles.find((r) => r.id === mr.id) ?? mr)
+        .filter(Boolean) as CustomServerRole[];
+
+      let best: CustomServerRole | null = null;
+      for (const r of resolved) {
+        if (!best) {
+          best = r;
+          continue;
+        }
+        const aPos = typeof r.position === 'number' ? r.position : Number.POSITIVE_INFINITY;
+        const bPos = typeof best.position === 'number' ? best.position : Number.POSITIVE_INFINITY;
+        if (aPos < bPos) best = r;
+      }
+      return best?.color ?? null;
+    }, [member.roles, roles]);
     
     // Permission checks using database-backed permission system
     const canKick = checkPermission('kick_members') && canModerate(currentUserRole, member.role) && !isSelf;
@@ -311,8 +339,10 @@ export const MembersSidebar = () => {
             )}
             <span className={cn(
               'text-sm truncate font-medium',
-              memberIsOffline ? 'text-muted-foreground' : roleInfo.color
-            )}>
+              memberIsOffline ? 'text-muted-foreground' : (priorityCustomRoleColor ? 'text-foreground' : roleInfo.color)
+            )}
+            style={!memberIsOffline && priorityCustomRoleColor ? { color: priorityCustomRoleColor } : undefined}
+            >
               {displayName}
             </span>
             {member.is_muted && (
