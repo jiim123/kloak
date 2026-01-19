@@ -40,6 +40,7 @@ export interface CustomServerRole {
   server_id: string;
   name: string;
   color: string;
+  icon?: string | null;
   position: number;
   created_at: string;
 }

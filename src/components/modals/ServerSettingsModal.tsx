@@ -56,6 +56,7 @@ import { invalidateServerEmojis } from '@/lib/serverEmojis';
 import type { ServerRole, ServerMember, CustomServerRole } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { RolePermissionsEditor } from './RolePermissionsEditor';
+import { EmojiGifPicker } from './EmojiGifPicker';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -122,6 +123,7 @@ export const ServerSettingsModal = () => {
   const [editingRolePermissions, setEditingRolePermissions] = useState<CustomServerRole | null>(null);
   const [roleName, setRoleName] = useState('');
   const [roleColor, setRoleColor] = useState('#5865F2');
+  const [roleIcon, setRoleIcon] = useState<string>('');
   
   // Icon upload state
   const [iconFile, setIconFile] = useState<File | null>(null);
@@ -205,6 +207,7 @@ export const ServerSettingsModal = () => {
       setEditingRole(null);
       setRoleName('');
       setRoleColor('#5865F2');
+      setRoleIcon('');
     }
   }, [isOpen, server, fetchMembers, fetchRoles, reset]);
 
@@ -578,6 +581,7 @@ export const ServerSettingsModal = () => {
     setEditingRole(null);
     setRoleName('');
     setRoleColor('#5865F2');
+    setRoleIcon('');
     closeModal();
   };
 
@@ -585,12 +589,13 @@ export const ServerSettingsModal = () => {
     if (!server || !user || !roleName.trim()) return;
     
     try {
-      await createRole(server.id, user.id, roleName.trim(), roleColor);
+      await createRole(server.id, user.id, roleName.trim(), roleColor, roleIcon.trim() ? roleIcon.trim() : null);
       // Refetch roles to ensure UI is up to date
       await fetchRoles(server.id);
       toast.success('Role created');
       setRoleName('');
       setRoleColor('#5865F2');
+      setRoleIcon('');
     } catch (error: any) {
       console.error('Failed to create role:', error);
       const errorMessage = error?.message || 'Failed to create role';
@@ -608,13 +613,14 @@ export const ServerSettingsModal = () => {
     if (!server || !user || !editingRole || !roleName.trim()) return;
     
     try {
-      await updateRole(editingRole.id, user.id, { name: roleName.trim(), color: roleColor });
+      await updateRole(editingRole.id, user.id, { name: roleName.trim(), color: roleColor, icon: roleIcon.trim() ? roleIcon.trim() : null });
       // Refetch roles to ensure UI is up to date
       await fetchRoles(server.id);
       toast.success('Role updated');
       setEditingRole(null);
       setRoleName('');
       setRoleColor('#5865F2');
+      setRoleIcon('');
     } catch (error) {
       console.error('Failed to update role:', error);
       toast.error('Failed to update role');
@@ -641,6 +647,7 @@ export const ServerSettingsModal = () => {
     setEditingRole(role);
     setRoleName(role.name);
     setRoleColor(role.color);
+    setRoleIcon(role.icon || '');
   };
 
   const handleAssignRole = async (member: ServerMember, role: CustomServerRole) => {
@@ -1052,6 +1059,52 @@ export const ServerSettingsModal = () => {
                         </div>
                       </div>
                     </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs sm:text-sm">Role Icon (optional)</Label>
+                      <div className="flex items-center gap-2">
+                        <EmojiGifPicker
+                          disableGif
+                          serverId={server.id}
+                          serverName={server.name}
+                          open={undefined}
+                          onOpenChange={undefined}
+                          onEmojiSelect={(emoji) => setRoleIcon(emoji)}
+                        >
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-9 sm:h-10 px-3 flex items-center gap-2"
+                          >
+                            <Smile className="w-4 h-4" />
+                            <span className="text-xs sm:text-sm">
+                              {roleIcon ? 'Change' : 'Select'}
+                            </span>
+                          </Button>
+                        </EmojiGifPicker>
+                        <div className="flex-1 min-w-0">
+                          {roleIcon ? (
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-emoji leading-none">{roleIcon}</span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="w-7 h-7"
+                                onClick={() => setRoleIcon('')}
+                                title="Clear role icon"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+                              Emoji or existing server emoji (e.g. <span className="font-mono">:cat:</span>)
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                     <div className="flex items-center gap-2">
                       <Button
                         onClick={editingRole ? handleUpdateRole : handleCreateRole}
@@ -1078,6 +1131,7 @@ export const ServerSettingsModal = () => {
                             setEditingRole(null);
                             setRoleName('');
                             setRoleColor('#5865F2');
+                            setRoleIcon('');
                           }}
                           size="sm"
                         >

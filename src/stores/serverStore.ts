@@ -57,8 +57,8 @@ interface ServerState {
   // Role actions
   roles: CustomServerRole[];
   fetchRoles: (serverId: string) => Promise<void>;
-  createRole: (serverId: string, userId: string, name: string, color: string) => Promise<CustomServerRole | null>;
-  updateRole: (roleId: string, userId: string, updates: { name?: string; color?: string }) => Promise<void>;
+  createRole: (serverId: string, userId: string, name: string, color: string, icon?: string | null) => Promise<CustomServerRole | null>;
+  updateRole: (roleId: string, userId: string, updates: { name?: string; color?: string; icon?: string | null }) => Promise<void>;
   deleteRole: (roleId: string, userId: string) => Promise<void>;
   assignRoleToMember: (memberId: string, roleId: string, userId: string) => Promise<void>;
   removeRoleFromMember: (memberId: string, roleId: string, userId: string) => Promise<void>;
@@ -891,7 +891,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }
   },
 
-  createRole: async (serverId: string, userId: string, name: string, color: string) => {
+  createRole: async (serverId: string, userId: string, name: string, color: string, icon?: string | null) => {
     try {
       // Get the max position for this server
       const { data: existingRoles } = await supabase
@@ -909,6 +909,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
           server_id: serverId,
           name,
           color,
+          icon: icon ?? null,
           position: nextPosition,
         })
         .select()
@@ -931,11 +932,12 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }
   },
 
-  updateRole: async (roleId: string, userId: string, updates: { name?: string; color?: string }) => {
+  updateRole: async (roleId: string, userId: string, updates: { name?: string; color?: string; icon?: string | null }) => {
     try {
-      const updateData: Record<string, string> = {};
+      const updateData: Record<string, string | null> = {};
       if (updates.name) updateData.name = updates.name;
       if (updates.color) updateData.color = updates.color;
+      if (updates.icon !== undefined) updateData.icon = updates.icon;
 
       const { data, error } = await supabase
         .from('server_roles')

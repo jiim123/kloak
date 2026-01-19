@@ -21,8 +21,9 @@ import { MessageContent } from "./MessageContent";
 import { getMessagePreview } from "@/lib/message";
 import { formatMessageTimestamp } from "@/lib/format";
 import { DeleteMessageModal } from "@/components/modals/DeleteMessageModal";
-import type { Message, ServerRole } from "@/types";
+import type { CustomServerRole, Message, ServerRole } from "@/types";
 import { format } from "date-fns";
+import { fetchServerEmojis } from "@/lib/serverEmojis";
 
 // Static data moved outside component
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🎉"] as const;
@@ -67,6 +68,8 @@ export const MessageItem = memo(function MessageItem({
   const user = useAuthStore((state) => state.user);
   const { setReplyingTo, editMessage, pinMessage, addReaction, removeReaction, removeMessage } = useMessageStore();
   const members = useServerStore((state) => state.members);
+  const roles = useServerStore((state) => state.roles);
+  const currentServer = useServerStore((state) => state.currentServer);
   const compactMode = useUIStore((state) => state.compactMode);
   const showTimestamps = useUIStore((state) => state.showTimestamps);
   const { openModal } = useUIStore();
@@ -78,6 +81,7 @@ export const MessageItem = memo(function MessageItem({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showMobileActions, setShowMobileActions] = useState(false);
   const [dropdownState, setDropdownState] = useState({ emoji: false, more: false });
+  const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
 
   // Refs
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -129,6 +133,86 @@ export const MessageItem = memo(function MessageItem({
       usersMap: map,
     };
   }, [members, user?.id, message.user_id]);
+
+  // Load server emoji map for :name: rendering (server context only)
+  useEffect(() => {
+    const serverId = currentServer?.id;
+    if (!serverId) {
+      setCustomEmojiMap(new Map());
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const emojis = await fetchServerEmojis(serverId);
+        if (cancelled) return;
+        const map = new Map<string, string>();
+        emojis.forEach((e) => map.set(e.name, e.url));
+        setCustomEmojiMap(map);
+      } catch (e) {
+        console.error("Failed to load server emojis for role icon rendering:", e);
+        if (!cancelled) setCustomEmojiMap(new Map());
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentServer?.id]);
+
+  const oldestRoleWithIcon = useMemo<Pick<CustomServerRole, "name" | "icon"> | null>(() => {
+    const memberRoles = messageMember?.roles ?? [];
+    if (memberRoles.length === 0) return null;
+
+    // Prefer full roles from store (has created_at + icon) over member payload (often lacks created_at)
+    const resolved: CustomServerRole[] = memberRoles
+      .map((mr) => (roles.find((r) => r.id === mr.id) ?? mr) as CustomServerRole)
+      .filter(Boolean);
+
+    let best: CustomServerRole | null = null;
+    for (const r of resolved) {
+      if (!best) {
+        best = r;
+        continue;
+      }
+      const aCreated = r.created_at ? Date.parse(r.created_at) : Number.POSITIVE_INFINITY;
+      const bCreated = best.created_at ? Date.parse(best.created_at) : Number.POSITIVE_INFINITY;
+      if (aCreated !== bCreated) {
+        if (aCreated < bCreated) best = r;
+        continue;
+      }
+      const aPos = typeof r.position === "number" ? r.position : Number.POSITIVE_INFINITY;
+      const bPos = typeof best.position === "number" ? best.position : Number.POSITIVE_INFINITY;
+      if (aPos < bPos) best = r;
+    }
+
+    if (!best?.icon) return null;
+    return { name: best.name, icon: best.icon };
+  }, [messageMember?.roles, roles]);
+
+  const roleIconNode = useMemo(() => {
+    if (!oldestRoleWithIcon?.icon) return null;
+    const icon = oldestRoleWithIcon.icon;
+    const match = icon.match(/^:([a-z0-9_]{2,32}):$/);
+    if (match) {
+      const url = customEmojiMap.get(match[1]);
+      if (!url) return null;
+      return (
+        <img
+          src={url}
+          alt={icon}
+          className="inline-block w-4 h-4 align-text-bottom object-contain"
+          loading="lazy"
+        />
+      );
+    }
+    return (
+      <span className="text-sm leading-none font-emoji">
+        {icon}
+      </span>
+    );
+  }, [oldestRoleWithIcon?.icon, customEmojiMap]);
 
   // Check permissions using database-backed permission system
   const { hasPermission } = useMemberPermissions(message.channel_id);
@@ -271,7 +355,39 @@ export const MessageItem = memo(function MessageItem({
     return classes.join(" ");
   }, [compactMode, isMentioned, isHighlighted, isPending]);
 
-  const roleColor = useMemo(() => getRoleColor(messageMember?.role), [messageMember?.role]);
+  const topCustomRoleColor = useMemo(() => {
+    const memberRoles = messageMember?.roles ?? [];
+    if (memberRoles.length === 0) return null;
+
+    // Resolve against roles store (has latest color/position)
+    const resolved = memberRoles
+      .map((mr) => roles.find((r) => r.id === mr.id) ?? mr)
+      .filter(Boolean);
+
+    // Highest role = greatest position (Discord-like behavior)
+    let best: CustomServerRole | null = null;
+    for (const r of resolved as CustomServerRole[]) {
+      if (!best) {
+        best = r;
+        continue;
+      }
+      const aPos = typeof r.position === "number" ? r.position : Number.NEGATIVE_INFINITY;
+      const bPos = typeof best.position === "number" ? best.position : Number.NEGATIVE_INFINITY;
+      if (aPos > bPos) best = r;
+    }
+
+    return best?.color ?? null;
+  }, [messageMember?.roles, roles]);
+
+  const usernameColorClass = useMemo(
+    () => (topCustomRoleColor ? "text-foreground" : getRoleColor(messageMember?.role)),
+    [topCustomRoleColor, messageMember?.role],
+  );
+
+  const usernameColorStyle = useMemo(
+    () => (topCustomRoleColor ? ({ color: topCustomRoleColor } as React.CSSProperties) : undefined),
+    [topCustomRoleColor],
+  );
   const displayName = messageMember?.nickname || messageUser?.display_name || messageUser?.username;
 
   const handleUsernameClick = useCallback((e: React.MouseEvent) => {
@@ -338,10 +454,21 @@ export const MessageItem = memo(function MessageItem({
               <span className="inline">
                 <span
                   onClick={handleUsernameClick}
-                  className={`text-sm font-semibold tracking-tight hover:underline cursor-pointer mr-1.5 ${roleColor}`}
+                  className={`text-sm font-semibold tracking-tight hover:underline cursor-pointer mr-1.5 ${usernameColorClass}`}
+                  style={usernameColorStyle}
                 >
                   {displayName}
                 </span>
+                {roleIconNode && oldestRoleWithIcon && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex items-center mr-1.5 cursor-help">
+                        {roleIconNode}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>{oldestRoleWithIcon.name}</TooltipContent>
+                  </Tooltip>
+                )}
                 {message.is_pinned && <Pin className="w-3 h-3 text-muted-foreground inline mr-1" />}
               </span>
             ) : (
@@ -350,10 +477,21 @@ export const MessageItem = memo(function MessageItem({
                 <div className="flex items-baseline gap-2 mb-0.5">
                   <span 
                     onClick={handleUsernameClick}
-                    className={`text-sm font-semibold tracking-tight hover:underline cursor-pointer ${roleColor}`}
+                    className={`text-sm font-semibold tracking-tight hover:underline cursor-pointer ${usernameColorClass}`}
+                    style={usernameColorStyle}
                   >
                     {displayName}
                   </span>
+                  {roleIconNode && oldestRoleWithIcon && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex items-center cursor-help">
+                          {roleIconNode}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>{oldestRoleWithIcon.name}</TooltipContent>
+                    </Tooltip>
+                  )}
                   {showTimestamps && <span className="text-[11px] text-muted-foreground">{formattedTimestamp}</span>}
                   {message.is_pinned && <Pin className="w-3 h-3 text-muted-foreground" />}
                 </div>

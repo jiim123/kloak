@@ -763,6 +763,7 @@ export type Database = {
       server_roles: {
         Row: {
           color: string
+          icon: string | null
           created_at: string | null
           id: string
           name: string
@@ -771,6 +772,7 @@ export type Database = {
         }
         Insert: {
           color?: string
+          icon?: string | null
           created_at?: string | null
           id?: string
           name: string
@@ -779,6 +781,7 @@ export type Database = {
         }
         Update: {
           color?: string
+          icon?: string | null
           created_at?: string | null
           id?: string
           name?: string
