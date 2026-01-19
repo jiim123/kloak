@@ -1,9 +1,22 @@
 "use client";
+
 import * as React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { Heart, FileText, Cookie, ScrollText, Sparkles, Menu, X, Key, CircleUserRound, LucideIcon } from "lucide-react";
+import {
+  Heart,
+  FileText,
+  Cookie,
+  ScrollText,
+  Sparkles,
+  Menu,
+  X,
+  Key,
+  CircleUserRound,
+  HelpCircle,
+  LucideIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import kloakLogo from "@/assets/kloak-logo.svg";
 
@@ -45,6 +58,7 @@ type TabItem = Tab | Separator;
 
 const tabs: TabItem[] = [
   { title: "Philosophy", icon: Heart, href: "/philosophy" },
+  { title: "FAQ", icon: HelpCircle, href: "/faq" },
   { type: "separator" },
   { title: "Terms", icon: ScrollText, href: "/terms" },
   { title: "Privacy", icon: FileText, href: "/privacy" },
@@ -57,10 +71,10 @@ const buttonVariants = {
     paddingLeft: ".5rem",
     paddingRight: ".5rem",
   },
-  animate: (isSelected: boolean) => ({
-    gap: isSelected ? ".5rem" : 0,
-    paddingLeft: isSelected ? "1rem" : ".5rem",
-    paddingRight: isSelected ? "1rem" : ".5rem",
+  animate: (isExpanded: boolean) => ({
+    gap: isExpanded ? ".5rem" : 0,
+    paddingLeft: isExpanded ? "1rem" : ".5rem",
+    paddingRight: isExpanded ? "1rem" : ".5rem",
   }),
 };
 
@@ -73,13 +87,13 @@ const spanVariants = {
 const transition = { delay: 0.1, type: "spring" as const, bounce: 0, duration: 0.6 };
 
 export const NavigationMenu = () => {
-  const [selected, setSelected] = React.useState<number | null>(null);
+  const [hovered, setHovered] = React.useState<number | null>(null);
   const [menuOpen, setMenuOpen] = React.useState(false);
   const location = useLocation();
   const outsideClickRef = React.useRef(null);
 
   useOnClickOutside(outsideClickRef, () => {
-    setSelected(null);
+    setHovered(null);
   });
 
   // Lock body scroll when menu is open
@@ -89,10 +103,6 @@ export const NavigationMenu = () => {
       document.body.style.overflow = "";
     };
   }, [menuOpen]);
-
-  const handleSelect = (index: number) => {
-    setSelected(index);
-  };
 
   const Separator = () => <div className="mx-1 h-[24px] w-[1.2px] bg-border" aria-hidden="true" />;
 
@@ -127,26 +137,34 @@ export const NavigationMenu = () => {
               const tabItem = tab as Tab;
               const Icon = tabItem.icon;
               const isActive = location.pathname === tabItem.href;
-              const isSelected = selected === index || isActive;
+              const isHovered = hovered === index;
+              const isExpanded = isActive || isHovered;
 
               return (
-                <Link key={tabItem.title} to={tabItem.href} onClick={() => handleSelect(index)}>
+                <Link
+                  key={tabItem.title}
+                  to={tabItem.href}
+                  onMouseEnter={() => setHovered(index)}
+                  onMouseLeave={() => setHovered(null)}
+                >
                   <motion.div
                     variants={buttonVariants}
                     initial={false}
                     animate="animate"
-                    custom={isSelected}
+                    custom={isExpanded}
                     transition={transition}
                     className={cn(
                       "relative flex items-center rounded-xl px-4 py-2 text-sm font-medium transition-colors duration-300",
-                      isSelected
+                      isActive
                         ? "bg-muted text-primary"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                        : isHovered
+                          ? "bg-muted/70 text-foreground"
+                          : "text-muted-foreground hover:text-foreground",
                     )}
                   >
                     <Icon size={20} />
                     <AnimatePresence initial={false}>
-                      {isSelected && (
+                      {isExpanded && (
                         <motion.span
                           variants={spanVariants}
                           initial="initial"
