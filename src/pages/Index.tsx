@@ -4,7 +4,7 @@ import { Shield, ArrowRight, Key, MessageCircle, Users, Zap, Lock, X, Check } fr
 import { Button } from "@/components/ui/button";
 import { Footer } from "@/components/ui/footer-section";
 import { NavigationMenu } from "@/components/layout/NavigationMenu";
-import HeroImage from "@/components/landing/HeroImage";
+import HeroAscii from "@/components/landing/HeroAscii";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const fadeInUp = {
@@ -35,12 +35,11 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center">
-      <div className="w-full">
+      <div className="w-full max-w-[1920px]">
         <NavigationMenu />
-
         <main className="pt-20">
-          {/* Hero Section - Full Width */}
-          <HeroImage />
+          {/* Hero Section */}
+          <HeroAscii />
 
           {/* The Problem Section */}
           <section className="relative py-32 px-6 border-t border-border/20 overflow-hidden">
@@ -50,7 +49,7 @@ const Index = () => {
             <div className="absolute bottom-4 left-4 w-8 h-8 border-l border-b border-primary/20" />
             <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/20" />
 
-            <div className="max-w-7xl mx-auto">
+            <div className="max-w-6xl mx-auto">
               <motion.div
                 className="grid lg:grid-cols-2 gap-16 items-start"
                 initial={{ opacity: 0 }}
@@ -65,17 +64,15 @@ const Index = () => {
                     <div className="w-8 h-px bg-gradient-to-r from-primary/50 to-transparent" />
                     <span className="text-xs font-mono text-primary tracking-widest uppercase">The Problem</span>
                   </div>
-
                   <div className="flex items-start gap-4">
                     <div className="hidden md:block w-px h-20 bg-gradient-to-b from-primary/50 to-transparent" />
-                    <h2 className="text-4xl sm:text-5xl lg:text-6xl font-semibold text-foreground leading-tight tracking-tight">
+                    <h2 className="text-4xl sm:text-5xl font-semibold text-foreground leading-tight tracking-tight">
                       Every message you send is <span className="text-primary">monetized.</span>
                     </h2>
                   </div>
                 </div>
-
                 <div className="relative">
-                  <div className="space-y-6 text-lg lg:text-xl text-muted-foreground leading-relaxed">
+                  <div className="space-y-6 text-lg text-muted-foreground leading-relaxed">
                     <p>
                       Most platforms treat your conversations as inventory. Your words become data points. Your
                       relationships become ad targets. Your private moments become profit.
@@ -110,7 +107,7 @@ const Index = () => {
             <div className="absolute bottom-4 left-4 w-8 h-8 border-l border-b border-primary/20" />
             <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/20" />
 
-            <div className="max-w-7xl mx-auto">
+            <div className="max-w-6xl mx-auto">
               <motion.div
                 className="mb-16"
                 initial={{ opacity: 0, y: 20 }}
@@ -124,10 +121,9 @@ const Index = () => {
                   <div className="w-8 h-px bg-gradient-to-r from-primary/50 to-transparent" />
                   <span className="text-xs font-mono text-primary tracking-widest uppercase">The Difference</span>
                 </div>
-
                 <div className="flex items-start gap-4">
                   <div className="hidden md:block w-px h-20 bg-gradient-to-b from-primary/50 to-transparent" />
-                  <h2 className="text-4xl sm:text-5xl lg:text-6xl font-semibold text-foreground leading-tight tracking-tight max-w-4xl">
+                  <h2 className="text-4xl sm:text-5xl font-semibold text-foreground leading-tight tracking-tight max-w-3xl">
                     What they collect. <span className="text-primary">What we don't.</span>
                   </h2>
                 </div>
@@ -170,7 +166,7 @@ const Index = () => {
                         viewport={{ once: true }}
                         transition={{ duration: 0.4, delay: index * 0.05 }}
                       >
-                        <TableCell className="font-medium text-foreground text-base">{row.label}</TableCell>
+                        <TableCell className="font-medium text-foreground">{row.label}</TableCell>
                         <TableCell className="text-center">
                           {row.others ? (
                             <div className="w-8 h-8 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
@@ -211,7 +207,7 @@ const Index = () => {
                     <div key={i} className="w-1 h-2 bg-primary/30" />
                   ))}
                 </div>
-                <p className="text-center text-muted-foreground text-lg lg:text-xl font-mono">
+                <p className="text-center text-muted-foreground text-lg font-mono">
                   The less we know about you, the less anyone can take.
                 </p>
                 <div className="hidden md:flex gap-0.5">
@@ -241,7 +237,7 @@ const Index = () => {
               }}
             />
 
-            <div className="max-w-7xl mx-auto relative">
+            <div className="max-w-6xl mx-auto relative">
               <motion.div
                 className="mb-20"
                 initial={{ opacity: 0, y: 20 }}
@@ -255,10 +251,9 @@ const Index = () => {
                   <div className="w-8 h-px bg-gradient-to-r from-primary/50 to-transparent" />
                   <span className="text-xs font-mono text-primary tracking-widest uppercase">Our Principles</span>
                 </div>
-
                 <div className="flex items-start gap-4">
                   <div className="hidden md:block w-px h-20 bg-gradient-to-b from-primary/50 to-transparent" />
-                  <h2 className="text-4xl sm:text-5xl lg:text-6xl font-semibold text-foreground leading-tight tracking-tight max-w-3xl">
+                  <h2 className="text-4xl sm:text-5xl font-semibold text-foreground leading-tight tracking-tight max-w-2xl">
                     Privacy isn't a feature. <span className="text-primary">It's the architecture.</span>
                   </h2>
                 </div>
@@ -300,7 +295,7 @@ const Index = () => {
                     transition={{ duration: 0.6, delay: index * 0.1 }}
                   >
                     {/* Card with ASCII styling */}
-                    <div className="relative border border-border/20 p-8 lg:p-10 bg-card/30 hover:border-primary/30 transition-colors duration-300">
+                    <div className="relative border border-border/20 p-8 bg-card/30 hover:border-primary/30 transition-colors duration-300">
                       {/* Corner accents */}
                       <div className="absolute top-0 left-0 w-3 h-3 border-l border-t border-primary/40" />
                       <div className="absolute top-0 right-0 w-3 h-3 border-r border-t border-primary/40" />
@@ -308,17 +303,15 @@ const Index = () => {
                       <div className="absolute bottom-0 right-0 w-3 h-3 border-r border-b border-primary/40" />
 
                       <div className="flex items-start gap-4">
-                        <span className="text-4xl lg:text-5xl font-mono font-semibold text-primary/40 group-hover:text-primary/60 transition-colors duration-300">
+                        <span className="text-4xl font-mono font-semibold text-primary/40 group-hover:text-primary/60 transition-colors duration-300">
                           {principle.number}
                         </span>
                         <div className="w-px h-12 bg-gradient-to-b from-primary/30 to-transparent" />
                         <div className="flex-1">
-                          <h3 className="text-xl lg:text-2xl font-semibold text-foreground mb-3 tracking-tight">
+                          <h3 className="text-xl font-semibold text-foreground mb-3 tracking-tight">
                             {principle.title}
                           </h3>
-                          <p className="text-muted-foreground leading-relaxed text-sm lg:text-base">
-                            {principle.description}
-                          </p>
+                          <p className="text-muted-foreground leading-relaxed text-sm">{principle.description}</p>
                         </div>
                       </div>
                     </div>
@@ -345,7 +338,7 @@ const Index = () => {
             <div className="absolute bottom-4 left-4 w-8 h-8 border-l border-b border-primary/20" />
             <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/20" />
 
-            <div className="max-w-7xl mx-auto">
+            <div className="max-w-6xl mx-auto">
               <motion.div
                 className="mb-20"
                 initial={{ opacity: 0, y: 20 }}
@@ -359,10 +352,9 @@ const Index = () => {
                   <div className="w-8 h-px bg-gradient-to-r from-primary/50 to-transparent" />
                   <span className="text-xs font-mono text-primary tracking-widest uppercase">Capabilities</span>
                 </div>
-
                 <div className="flex items-start gap-4">
                   <div className="hidden md:block w-px h-20 bg-gradient-to-b from-primary/50 to-transparent" />
-                  <h2 className="text-4xl sm:text-5xl lg:text-6xl font-semibold text-foreground leading-tight tracking-tight max-w-3xl">
+                  <h2 className="text-4xl sm:text-5xl font-semibold text-foreground leading-tight tracking-tight max-w-2xl">
                     Full-featured. <span className="text-primary">Zero compromise.</span>
                   </h2>
                 </div>
@@ -372,7 +364,7 @@ const Index = () => {
               <div className="grid lg:grid-cols-12 gap-6">
                 {/* Main Feature - Large */}
                 <motion.div
-                  className="lg:col-span-7 relative border border-border/30 p-10 lg:p-12 group overflow-hidden bg-background"
+                  className="lg:col-span-7 relative border border-border/30 p-10 group overflow-hidden bg-background"
                   initial={{ opacity: 0, y: 40 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
@@ -385,12 +377,12 @@ const Index = () => {
                   <div className="absolute bottom-0 right-0 w-4 h-4 border-r-2 border-b-2 border-primary/40" />
 
                   <div className="flex items-center gap-4 mb-4">
-                    <MessageCircle className="w-8 h-8 lg:w-10 lg:h-10 text-primary shrink-0" />
-                    <h3 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-foreground tracking-tight">
+                    <MessageCircle className="w-8 h-8 text-primary shrink-0" />
+                    <h3 className="text-3xl sm:text-4xl font-semibold text-foreground tracking-tight">
                       Real-Time Messaging
                     </h3>
                   </div>
-                  <p className="text-lg lg:text-xl text-muted-foreground leading-relaxed max-w-lg">
+                  <p className="text-lg text-muted-foreground leading-relaxed max-w-md">
                     Instant message delivery across servers, channels, and direct conversations. Built for speed without
                     sacrificing privacy.
                   </p>
@@ -399,7 +391,7 @@ const Index = () => {
 
                 {/* Secondary Feature */}
                 <motion.div
-                  className="lg:col-span-5 relative border border-border/30 p-10 lg:p-12 group overflow-hidden bg-background"
+                  className="lg:col-span-5 relative border border-border/30 p-10 group overflow-hidden bg-background"
                   initial={{ opacity: 0, y: 40 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
@@ -411,12 +403,12 @@ const Index = () => {
                   <div className="absolute bottom-0 right-0 w-4 h-4 border-r-2 border-b-2 border-primary/40" />
 
                   <div className="flex items-center gap-3 mb-4">
-                    <Lock className="w-7 h-7 lg:w-8 lg:h-8 text-primary shrink-0" />
-                    <h3 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-foreground tracking-tight">
+                    <Lock className="w-7 h-7 text-primary shrink-0" />
+                    <h3 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight">
                       Key-Based Auth
                     </h3>
                   </div>
-                  <p className="text-muted-foreground leading-relaxed lg:text-lg">
+                  <p className="text-muted-foreground leading-relaxed">
                     One cryptographic key. Full control. No password managers, no recovery emails, no vulnerabilities.
                   </p>
                   <div className="absolute bottom-4 right-4 text-[8px] font-mono text-primary/40">AUTH.002</div>
@@ -424,7 +416,7 @@ const Index = () => {
 
                 {/* Third Feature */}
                 <motion.div
-                  className="lg:col-span-5 relative border border-border/30 p-10 lg:p-12 group overflow-hidden bg-background"
+                  className="lg:col-span-5 relative border border-border/30 p-10 group overflow-hidden bg-background"
                   initial={{ opacity: 0, y: 40 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
@@ -436,12 +428,10 @@ const Index = () => {
                   <div className="absolute bottom-0 right-0 w-4 h-4 border-r-2 border-b-2 border-primary/40" />
 
                   <div className="flex items-center gap-3 mb-4">
-                    <Users className="w-7 h-7 lg:w-8 lg:h-8 text-primary shrink-0" />
-                    <h3 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-foreground tracking-tight">
-                      Communities
-                    </h3>
+                    <Users className="w-7 h-7 text-primary shrink-0" />
+                    <h3 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight">Communities</h3>
                   </div>
-                  <p className="text-muted-foreground leading-relaxed lg:text-lg">
+                  <p className="text-muted-foreground leading-relaxed">
                     Create spaces for your people. Organize with servers, channels, and categories — your way.
                   </p>
                   <div className="absolute bottom-4 right-4 text-[8px] font-mono text-primary/40">COMM.003</div>
@@ -449,7 +439,7 @@ const Index = () => {
 
                 {/* Fourth Feature - Large */}
                 <motion.div
-                  className="lg:col-span-7 relative border border-border/30 p-10 lg:p-12 group overflow-hidden bg-background"
+                  className="lg:col-span-7 relative border border-border/30 p-10 group overflow-hidden bg-background"
                   initial={{ opacity: 0, y: 40 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
@@ -461,12 +451,12 @@ const Index = () => {
                   <div className="absolute bottom-0 right-0 w-4 h-4 border-r-2 border-b-2 border-primary/40" />
 
                   <div className="flex items-center gap-4 mb-4">
-                    <Zap className="w-8 h-8 lg:w-10 lg:h-10 text-primary shrink-0" />
-                    <h3 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-foreground tracking-tight">
+                    <Zap className="w-8 h-8 text-primary shrink-0" />
+                    <h3 className="text-3xl sm:text-4xl font-semibold text-foreground tracking-tight">
                       Modern Infrastructure
                     </h3>
                   </div>
-                  <p className="text-lg lg:text-xl text-muted-foreground leading-relaxed max-w-lg">
+                  <p className="text-lg text-muted-foreground leading-relaxed max-w-md">
                     Built on a modern tech stack for performance and reliability. Fast, responsive, and built to scale
                     with you.
                   </p>
@@ -496,7 +486,7 @@ const Index = () => {
             <div className="absolute bottom-4 left-4 w-8 h-8 border-l border-b border-primary/20" />
             <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/20" />
 
-            <div className="max-w-7xl mx-auto">
+            <div className="max-w-6xl mx-auto">
               {/* Section Header */}
               <motion.div
                 className="text-center mb-20"
@@ -516,10 +506,10 @@ const Index = () => {
                   <div className="w-12 h-px bg-gradient-to-l from-transparent via-primary/50 to-transparent" />
                 </div>
 
-                <h2 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-semibold text-foreground leading-tight tracking-tight mb-6 max-w-5xl mx-auto">
+                <h2 className="text-4xl sm:text-5xl lg:text-6xl font-semibold text-foreground leading-tight tracking-tight mb-6 max-w-4xl mx-auto">
                   Free speech starts with <span className="text-primary">free infrastructure.</span>
                 </h2>
-                <p className="text-lg lg:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+                <p className="text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto">
                   No premium tiers that unlock privacy features. No enterprise-only security. Everyone gets everything.
                 </p>
               </motion.div>
@@ -566,7 +556,7 @@ const Index = () => {
                 ].map((card, index) => (
                   <motion.div
                     key={card.title}
-                    className="group relative border border-border/30 p-8 lg:p-10 overflow-hidden hover:border-primary/40 transition-colors duration-300 bg-card/30"
+                    className="group relative border border-border/30 p-8 overflow-hidden hover:border-primary/40 transition-colors duration-300 bg-card/30"
                     initial={{ opacity: 0, y: 30 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true, margin: "-50px" }}
@@ -580,7 +570,7 @@ const Index = () => {
 
                     {/* Icon */}
                     <div className="relative mb-6">
-                      <div className="w-14 h-14 lg:w-16 lg:h-16 border border-primary/30 flex items-center justify-center group-hover:border-primary/50 transition-colors duration-300">
+                      <div className="w-14 h-14 border border-primary/30 flex items-center justify-center group-hover:border-primary/50 transition-colors duration-300">
                         {card.icon === "megaphone" && (
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -592,7 +582,7 @@ const Index = () => {
                             strokeWidth="2"
                             strokeLinecap="round"
                             strokeLinejoin="round"
-                            className="text-primary lg:w-8 lg:h-8"
+                            className="text-primary"
                           >
                             <path d="m3 11 18-5v12L3 13v-2z" />
                             <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
@@ -609,7 +599,7 @@ const Index = () => {
                             strokeWidth="2"
                             strokeLinecap="round"
                             strokeLinejoin="round"
-                            className="text-primary lg:w-8 lg:h-8"
+                            className="text-primary"
                           >
                             <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
                             <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
@@ -629,7 +619,7 @@ const Index = () => {
                             strokeWidth="2"
                             strokeLinecap="round"
                             strokeLinejoin="round"
-                            className="text-primary lg:w-8 lg:h-8"
+                            className="text-primary"
                           >
                             <line x1="6" x2="10" y1="12" y2="12" />
                             <line x1="8" x2="8" y1="10" y2="14" />
@@ -649,7 +639,7 @@ const Index = () => {
                             strokeWidth="2"
                             strokeLinecap="round"
                             strokeLinejoin="round"
-                            className="text-primary lg:w-8 lg:h-8"
+                            className="text-primary"
                           >
                             <path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
                             <rect width="20" height="14" x="2" y="6" rx="2" />
@@ -666,21 +656,19 @@ const Index = () => {
                             strokeWidth="2"
                             strokeLinecap="round"
                             strokeLinejoin="round"
-                            className="text-primary lg:w-8 lg:h-8"
+                            className="text-primary"
                           >
                             <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
                           </svg>
                         )}
-                        {card.icon === "shield" && <Shield className="w-7 h-7 lg:w-8 lg:h-8 text-primary" />}
+                        {card.icon === "shield" && <Shield className="w-7 h-7 text-primary" />}
                       </div>
                     </div>
 
                     {/* Content */}
                     <div className="relative">
-                      <h3 className="text-lg lg:text-xl font-semibold text-foreground mb-2 tracking-tight">
-                        {card.title}
-                      </h3>
-                      <p className="text-muted-foreground text-sm lg:text-base leading-relaxed">{card.description}</p>
+                      <h3 className="text-lg font-semibold text-foreground mb-2 tracking-tight">{card.title}</h3>
+                      <p className="text-muted-foreground text-sm leading-relaxed">{card.description}</p>
                     </div>
 
                     {/* Code notation */}
@@ -715,7 +703,7 @@ const Index = () => {
             <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/30" />
 
             <motion.div
-              className="max-w-4xl mx-auto text-center relative"
+              className="max-w-3xl mx-auto text-center relative"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -728,25 +716,25 @@ const Index = () => {
                 <div className="w-12 h-px bg-gradient-to-l from-transparent via-primary/50 to-transparent" />
               </div>
 
-              <div className="w-16 h-16 lg:w-20 lg:h-20 border border-primary/40 flex items-center justify-center mx-auto mb-8">
-                <Shield className="w-8 h-8 lg:w-10 lg:h-10 text-primary" />
+              <div className="w-16 h-16 border border-primary/40 flex items-center justify-center mx-auto mb-8">
+                <Shield className="w-8 h-8 text-primary" />
               </div>
 
-              <h2 className="text-4xl sm:text-5xl lg:text-6xl font-semibold text-foreground mb-6 tracking-tight">
+              <h2 className="text-4xl sm:text-5xl font-semibold text-foreground mb-6 tracking-tight">
                 Take Back Your <span className="text-primary">Privacy.</span>
               </h2>
-              <p className="text-xl lg:text-2xl text-muted-foreground mb-10 max-w-xl mx-auto">
+              <p className="text-xl text-muted-foreground mb-10 max-w-lg mx-auto">
                 No signup forms. No verification emails. Generate your key and start communicating freely.
               </p>
 
               <Link to="/auth">
-                <button className="group relative px-10 py-4 lg:px-12 lg:py-5 bg-primary text-primary-foreground font-medium transition-all duration-300 hover:bg-primary/90 uppercase tracking-wider text-base lg:text-lg">
+                <button className="group relative px-10 py-4 bg-primary text-primary-foreground font-medium transition-all duration-300 hover:bg-primary/90 uppercase tracking-wider">
                   <span className="absolute -top-px -left-px w-3 h-3 border-l border-t border-primary-foreground/30" />
                   <span className="absolute -top-px -right-px w-3 h-3 border-r border-t border-primary-foreground/30" />
                   <span className="absolute -bottom-px -left-px w-3 h-3 border-l border-b border-primary-foreground/30" />
                   <span className="absolute -bottom-px -right-px w-3 h-3 border-r border-b border-primary-foreground/30" />
                   <span className="flex items-center gap-2">
-                    <Key className="w-5 h-5 lg:w-6 lg:h-6" />
+                    <Key className="w-5 h-5" />
                     Get Started
                   </span>
                 </button>
