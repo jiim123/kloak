@@ -31,7 +31,7 @@ export const HeroImage = () => {
             className="absolute bottom-6 left-6 sm:bottom-8 sm:left-8 md:bottom-10 md:left-10 max-w-xl"
           >
             <p className="text-sm font-medium text-primary mb-3 uppercase tracking-wide">
-              For gamers · Communities · Teams · Everyone
+              For Gamers · Communities · Teams · Everyone
             </p>
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-semibold text-white leading-tight mb-4">
               Where conversations
@@ -43,7 +43,7 @@ export const HeroImage = () => {
             </p>
             <Link to="/app">
               <Button size="lg" className="h-11 px-7 text-base">
-                Get started
+                Join Kloak
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </Link>
