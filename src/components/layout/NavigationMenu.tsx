@@ -70,7 +70,7 @@ const spanVariants = {
   exit: { width: 0, opacity: 0 },
 };
 
-const transition = { delay: 0.1, type: "spring", bounce: 0, duration: 0.6 };
+const transition = { delay: 0.1, type: "spring" as const, bounce: 0, duration: 0.6 };
 
 export const NavigationMenu = () => {
   const [selected, setSelected] = React.useState<number | null>(null);
@@ -124,12 +124,13 @@ export const NavigationMenu = () => {
                 return <Separator key={`separator-${index}`} />;
               }
 
-              const Icon = tab.icon;
-              const isActive = location.pathname === tab.href;
+              const tabItem = tab as Tab;
+              const Icon = tabItem.icon;
+              const isActive = location.pathname === tabItem.href;
               const isSelected = selected === index || isActive;
 
               return (
-                <Link key={tab.title} to={tab.href} onClick={() => handleSelect(index)}>
+                <Link key={tabItem.title} to={tabItem.href} onClick={() => handleSelect(index)}>
                   <motion.div
                     variants={buttonVariants}
                     initial={false}
@@ -154,7 +155,7 @@ export const NavigationMenu = () => {
                           transition={transition}
                           className="overflow-hidden whitespace-nowrap"
                         >
-                          {tab.title}
+                          {tabItem.title}
                         </motion.span>
                       )}
                     </AnimatePresence>

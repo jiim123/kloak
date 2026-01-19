@@ -112,10 +112,21 @@ export const MessageItem = memo(function MessageItem({
   const messageUser = message.user;
 
   // Memoize member lookups
-  const { currentMember, messageMember } = useMemo(() => {
+  const { currentMember, messageMember, usersMap } = useMemo(() => {
+    const map = new Map<string, { username: string; display_name?: string | null; nickname?: string | null }>();
+    members.forEach((m) => {
+      if (m.user) {
+        map.set(m.user_id, {
+          username: m.user.username,
+          display_name: m.user.display_name,
+          nickname: m.nickname,
+        });
+      }
+    });
     return {
       currentMember: members.find((m) => m.user_id === user?.id),
       messageMember: members.find((m) => m.user_id === message.user_id),
+      usersMap: map,
     };
   }, [members, user?.id, message.user_id]);
 
@@ -355,7 +366,7 @@ export const MessageItem = memo(function MessageItem({
                 <CornerUpLeft className="w-3 h-3" />
                 <span>Replying to</span>
                 <span className="font-medium text-primary">@{message.reply_to.user?.username || "unknown"}</span>
-                <span className="truncate max-w-[200px]">{getMessagePreview(message.reply_to.content, 50)}</span>
+                <span className="truncate max-w-[200px]">{getMessagePreview(message.reply_to.content, 50, usersMap)}</span>
               </div>
             )}
 
