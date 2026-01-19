@@ -3,7 +3,7 @@ import * as React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { Heart, FileText, Cookie, ScrollText, Sparkles, Menu, X, Key, LucideIcon } from "lucide-react";
+import { Heart, FileText, Cookie, ScrollText, Sparkles, Menu, X, Key, CircleUserRound, LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import kloakLogo from "@/assets/kloak-logo.svg";
 
@@ -170,8 +170,8 @@ export const NavigationMenu = () => {
           {/* CTA Button */}
           <Link to="/app" className="hidden sm:block">
             <Button size="sm" className="rounded-xl">
-              <Sparkles className="h-4 w-4" />
-              Use Kloak
+              <CircleUserRound className="h-4 w-4" />
+              Login
             </Button>
           </Link>
 
