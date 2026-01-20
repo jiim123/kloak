@@ -46,6 +46,7 @@ const ALL_PERMISSIONS: Permission[] = [
     'manage_roles',
     'manage_server',
     'manage_invites',
+    'manage_emojis',
     'transfer_ownership',
 ];
 
@@ -63,6 +64,7 @@ const PERMISSION_LABELS: Record<Permission, string> = {
     manage_roles: 'Manage Roles',
     manage_server: 'Manage Server',
     manage_invites: 'Manage Invites',
+    manage_emojis: 'Manage Emojis',
     transfer_ownership: 'Transfer Ownership',
 };
 

@@ -50,6 +50,7 @@ const PERMISSION_LABELS: Record<Permission, string> = {
   manage_server: 'Manage Server',
   manage_roles: 'Manage Roles',
   manage_invites: 'Manage Invites',
+  manage_emojis: 'Manage Emojis',
   transfer_ownership: 'Transfer Ownership',
 };
 

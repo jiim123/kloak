@@ -58,7 +58,19 @@ export const useRealtimeDMs = ({
 
       const message: DirectMessage = {
         ...data,
-        sender: data.sender,
+        sender: data.sender ? {
+          id: data.sender.id,
+          username: data.sender.username,
+          display_name: data.sender.display_name,
+          avatar_url: data.sender.avatar_url,
+          avatar_decoration: data.sender.avatar_decoration,
+          banner_color: data.sender.banner_color || '#5865F2',
+          bio: data.sender.bio,
+          status: data.sender.status as any,
+          custom_status: data.sender.custom_status,
+          created_at: data.sender.created_at,
+          last_seen: data.sender.last_seen,
+        } : undefined,
         attachments: [],
         reactions: groupReactions(data.reactions || [], userId || undefined),
       };
