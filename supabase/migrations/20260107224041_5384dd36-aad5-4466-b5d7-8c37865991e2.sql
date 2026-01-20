@@ -152,7 +152,7 @@ BEGIN
   END IF;
   
   RETURN (
-    SELECT json_agg(msg ORDER BY msg.created_at DESC)
+    SELECT json_agg(msg ORDER BY created_at DESC)
     FROM (
       SELECT json_build_object(
         'id', dm.id,

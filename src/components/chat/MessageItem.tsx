@@ -25,6 +25,7 @@ import { DeleteMessageModal } from "@/components/modals/DeleteMessageModal";
 import type { CustomServerRole, Message, ServerRole } from "@/types";
 import { format } from "date-fns";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
+import { cn } from "@/lib/utils";
 
 // Static data moved outside component
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🎉"] as const;
