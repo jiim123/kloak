@@ -51,7 +51,7 @@ export const ServerSidebar = () => {
   const { user } = useAuthStore();
   const { servers, currentServer, setCurrentServer, isLoading, fetchServers } = useServerStore();
   const { setCurrentConversation } = useDMStore();
-  const { openModal, activeModal } = useUIStore();
+  const { openModal, activeModal, closeServerSettings } = useUIStore();
   const [serverChannels, setServerChannels] = useState<ServerChannels>({});
   const [hoveredServer, setHoveredServer] = useState<string | null>(null);
   const [tooltipsEnabled, setTooltipsEnabled] = useState(false);
@@ -166,6 +166,7 @@ export const ServerSidebar = () => {
               onClick={() => {
                 setCurrentServer(null);
                 setCurrentConversation(null);
+                closeServerSettings();
               }}
               whileHover="hover"
               whileTap="tap"

@@ -53,6 +53,7 @@ import { cn } from '@/lib/utils';
 import { invalidateServerEmojis } from '@/lib/serverEmojis';
 import type { ServerRole, ServerMember, CustomServerRole } from '@/types';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { RolePermissionsEditor } from '../modals/RolePermissionsEditor';
 import { EmojiGifPicker } from '../modals/EmojiGifPicker';
 import {
@@ -135,6 +136,7 @@ export const ServerSettingsPage = () => {
   const { user } = useAuthStore();
   
   const [isLoading, setIsLoading] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [editingRole, setEditingRole] = useState<CustomServerRole | null>(null);
@@ -659,6 +661,22 @@ export const ServerSettingsPage = () => {
     }
   };
 
+  const handlePublishChange = async (checked: boolean) => {
+    if (!server || !user) return;
+    if (!isOwner) return;
+
+    setIsPublishing(true);
+    try {
+      await updateServer(server.id, user.id, { is_published: checked });
+      toast.success(checked ? 'Server published' : 'Server unpublished');
+    } catch (error: any) {
+      const msg = error?.message || 'Failed to update publish setting';
+      toast.error(msg);
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
   const handleDeleteServer = async () => {
     if (!server) return;
     
@@ -981,6 +999,27 @@ export const ServerSettingsPage = () => {
                     <p className="text-xs text-destructive">{errors.name.message}</p>
                   )}
                 </div>
+
+                {/* Publish Server (owner-only) */}
+                {isOwner && (
+                  <div className="space-y-2">
+                    <Label className="text-sm">Publish Server</Label>
+                    <div className="flex items-start gap-3 p-3 rounded-lg border bg-secondary/30">
+                      <Checkbox
+                        checked={!!server.is_published}
+                        disabled={isPublishing}
+                        onCheckedChange={(v) => handlePublishChange(v === true)}
+                        className="mt-0.5"
+                      />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground">Make this server public</p>
+                        <p className="text-xs text-muted-foreground">
+                          Public servers appear on the Explore page so people can discover and join.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {isAdmin && (
                   <div className="pt-4">

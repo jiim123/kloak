@@ -28,7 +28,11 @@ interface ServerState {
   // Server actions
   fetchServers: (userId: string) => Promise<void>;
   createServer: (name: string, ownerId: string) => Promise<Server | null>;
-  updateServer: (serverId: string, userId: string, updates: { name?: string; icon_url?: string | null; banner_url?: string | null }) => Promise<void>;
+  updateServer: (
+    serverId: string,
+    userId: string,
+    updates: { name?: string; icon_url?: string | null; banner_url?: string | null; is_published?: boolean }
+  ) => Promise<void>;
   joinServer: (inviteCode: string, userId: string) => Promise<Server | null>;
   leaveServer: (serverId: string, userId: string) => Promise<void>;
   deleteServer: (serverId: string) => Promise<void>;
@@ -107,6 +111,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         invite_code: string;
         icon_url: string | null;
         banner_url: string | null;
+        is_published?: boolean;
         created_at: string;
         role: ServerRole;
         nickname: string | null;
@@ -120,6 +125,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         invite_code: item.invite_code,
         icon_url: item.icon_url,
         banner_url: item.banner_url,
+        is_published: item.is_published ?? false,
         created_at: item.created_at,
         role: item.role,
         nickname: item.nickname,
@@ -178,6 +184,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         invite_code: string;
         icon_url: string | null;
         banner_url: string | null;
+        is_published?: boolean;
         created_at: string;
       };
 
@@ -188,6 +195,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         invite_code: serverData.invite_code,
         icon_url: serverData.icon_url,
         banner_url: serverData.banner_url,
+        is_published: serverData.is_published ?? false,
         created_at: serverData.created_at,
       };
 
@@ -202,7 +210,12 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }
   },
 
-  updateServer: async (serverId: string, userId: string, updates: { name?: string; icon_url?: string | null; banner_url?: string | null }) => {
+  updateServer: async (
+    serverId: string,
+    userId: string,
+    updates: { name?: string; icon_url?: string | null; banner_url?: string | null; is_published?: boolean }
+  ) => {
+    // Note: publishing is owner-only in the update_server RPC
     try {
       // Use RPC function to bypass RLS
       const { data, error } = await supabase.rpc('update_server', {
@@ -273,6 +286,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         invite_code: string;
         icon_url: string | null;
         banner_url: string | null;
+        is_published?: boolean;
         created_at: string;
       };
 
@@ -283,6 +297,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         invite_code: serverData.invite_code,
         icon_url: serverData.icon_url,
         banner_url: serverData.banner_url,
+        is_published: serverData.is_published ?? false,
         created_at: serverData.created_at,
       };
 

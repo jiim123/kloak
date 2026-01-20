@@ -5,6 +5,7 @@ import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
 import { ServerSidebar } from '@/components/layout/ServerSidebar';
 import { HomeLanding } from '@/components/home/HomeLanding';
+import { ExploreServers } from '@/components/home/ExploreServers';
 import { ChannelSidebar } from '@/components/layout/ChannelSidebar';
 import { ChatArea } from '@/components/layout/ChatArea';
 import { MembersSidebar } from '@/components/layout/MembersSidebar';
@@ -54,6 +55,7 @@ const AppLayout = () => {
   // Track if showing friends list in DM view
   // Default to false so we show the Landing page by default
   const [showFriends, setShowFriends] = useState(false);
+  const [showExplore, setShowExplore] = useState(false);
 
   // Handle conversation query parameter for DM notification redirects
   useEffect(() => {
@@ -71,6 +73,7 @@ const AppLayout = () => {
       if (existingConversation) {
         setCurrentConversation(existingConversation);
         setShowFriends(false);
+        setShowExplore(false);
       } else {
         // Fetch conversations first, then find and set the target
         fetchConversations(user.id).then(() => {
@@ -79,6 +82,7 @@ const AppLayout = () => {
           if (conv) {
             setCurrentConversation(conv);
             setShowFriends(false);
+            setShowExplore(false);
           } else {
             // Conversation not found in list, try to fetch participants to build it
             supabase
@@ -102,6 +106,7 @@ const AppLayout = () => {
                     };
                     setCurrentConversation(conversation);
                     setShowFriends(false);
+                    setShowExplore(false);
                   }
                 }
               });
@@ -202,6 +207,7 @@ const AppLayout = () => {
     if (currentConversation) {
       setCurrentConversation(null);
       setShowFriends(true);
+      setShowExplore(false);
     }
   };
 
@@ -249,6 +255,7 @@ const AppLayout = () => {
           <MobileHeader
             isDMView={isDMView}
             showFriends={showFriends}
+            showExplore={showExplore}
           />
 
           {/* Desktop layout */}
@@ -271,6 +278,8 @@ const AppLayout = () => {
                     <DMSidebar
                       showFriends={showFriends}
                       onShowFriendsChange={setShowFriends}
+                      showExplore={showExplore}
+                      onShowExploreChange={setShowExplore}
                     />
                   ) : (
                     <ChannelSidebar />
@@ -284,6 +293,8 @@ const AppLayout = () => {
                       <DMChatArea />
                     ) : showFriends ? (
                       <FriendsList onOpenDM={() => setShowFriends(false)} />
+                    ) : showExplore ? (
+                      <ExploreServers />
                     ) : (
                       <HomeLanding />
                     )
@@ -312,6 +323,8 @@ const AppLayout = () => {
             {isDMView ? (
               showFriends ? (
                 <FriendsList onOpenDM={() => setShowFriends(false)} />
+              ) : showExplore ? (
+                <ExploreServers />
               ) : (
                 <DMChatArea />
               )
@@ -327,6 +340,8 @@ const AppLayout = () => {
         isDMView={isDMView}
         showFriends={showFriends}
         onShowFriendsChange={setShowFriends}
+        showExplore={showExplore}
+        onShowExploreChange={setShowExplore}
       />
       <MobileMembersSidebar />
 

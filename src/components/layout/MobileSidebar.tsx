@@ -12,9 +12,11 @@ interface MobileSidebarProps {
   isDMView: boolean;
   showFriends: boolean;
   onShowFriendsChange: (show: boolean) => void;
+  showExplore: boolean;
+  onShowExploreChange: (show: boolean) => void;
 }
 
-export const MobileSidebar = ({ isDMView, showFriends, onShowFriendsChange }: MobileSidebarProps) => {
+export const MobileSidebar = ({ isDMView, showFriends, onShowFriendsChange, showExplore, onShowExploreChange }: MobileSidebarProps) => {
   const { isMobileSidebarOpen, setMobileSidebarOpen, closeMobileSidebars } = useUIStore();
   const { currentChannel } = useServerStore();
 
@@ -28,6 +30,13 @@ export const MobileSidebar = ({ isDMView, showFriends, onShowFriendsChange }: Mo
   // Handle friends change with sidebar close
   const handleShowFriendsChange = (show: boolean) => {
     onShowFriendsChange(show);
+    if (show) {
+      closeMobileSidebars();
+    }
+  };
+
+  const handleShowExploreChange = (show: boolean) => {
+    onShowExploreChange(show);
     if (show) {
       closeMobileSidebars();
     }
@@ -55,6 +64,8 @@ export const MobileSidebar = ({ isDMView, showFriends, onShowFriendsChange }: Mo
             <DMSidebar 
               showFriends={showFriends} 
               onShowFriendsChange={handleShowFriendsChange} 
+              showExplore={showExplore}
+              onShowExploreChange={handleShowExploreChange}
             />
           ) : (
             <ChannelSidebar />

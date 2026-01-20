@@ -6,9 +6,10 @@ import { useDMStore } from '@/stores/dmStore';
 interface MobileHeaderProps {
   isDMView: boolean;
   showFriends: boolean;
+  showExplore: boolean;
 }
 
-export const MobileHeader = ({ isDMView, showFriends }: MobileHeaderProps) => {
+export const MobileHeader = ({ isDMView, showFriends, showExplore }: MobileHeaderProps) => {
   const { currentServer, currentChannel } = useServerStore();
   const { currentConversation } = useDMStore();
   const { setMobileSidebarOpen, toggleMemberSidebar } = useUIStore();
@@ -16,6 +17,7 @@ export const MobileHeader = ({ isDMView, showFriends }: MobileHeaderProps) => {
   const getTitle = () => {
     if (isDMView) {
       if (showFriends) return 'Friends';
+      if (showExplore) return 'Explore';
       if (currentConversation?.other_user) {
         return currentConversation.other_user.display_name || currentConversation.other_user.username;
       }

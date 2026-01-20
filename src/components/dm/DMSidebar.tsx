@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Search, Users, X, MessageSquare } from 'lucide-react';
+import { Search, Users, X, MessageSquare, Compass } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -15,9 +15,11 @@ import type { DMConversation } from '@/types';
 interface DMSidebarProps {
   showFriends: boolean;
   onShowFriendsChange: (show: boolean) => void;
+  showExplore: boolean;
+  onShowExploreChange: (show: boolean) => void;
 }
 
-export const DMSidebar = ({ showFriends, onShowFriendsChange }: DMSidebarProps) => {
+export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onShowExploreChange }: DMSidebarProps) => {
   const { user } = useAuthStore();
   const { conversations, currentConversation, fetchConversations, setCurrentConversation, isLoading } = useDMStore();
   const { getUnreadCount, markAsRead } = useUnreadDMs(user?.id || null);
@@ -39,6 +41,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange }: DMSidebarProps) 
   const handleSelectConversation = (conversation: DMConversation) => {
     setCurrentConversation(conversation);
     onShowFriendsChange(false);
+    onShowExploreChange(false);
     // Mark as read when selecting
     markAsRead(conversation.id);
   };
@@ -64,7 +67,9 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange }: DMSidebarProps) 
     <div className="h-full flex flex-col bg-layout-sidebar-secondary">
       {/* Header */}
       <div className="h-12 px-4 flex items-center border-b border-border shadow-sm">
-        <h2 className="font-semibold text-foreground">Direct Messages</h2>
+        <h2 className="font-semibold text-foreground">
+          {showFriends ? 'Friends' : showExplore ? 'Explore' : 'Direct Messages'}
+        </h2>
       </div>
 
       {/* Search */}
@@ -92,10 +97,30 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange }: DMSidebarProps) 
           onClick={() => {
             setCurrentConversation(null);
             onShowFriendsChange(true);
+            onShowExploreChange(false);
           }}
         >
           <Users className="w-5 h-5" />
           <span>Friends</span>
+        </Button>
+      </div>
+
+      {/* Explore Button */}
+      <div className="px-2 mb-2">
+        <Button
+          variant="ghost"
+          className={cn(
+            "w-full justify-start gap-3 h-11",
+            showExplore && "bg-secondary"
+          )}
+          onClick={() => {
+            setCurrentConversation(null);
+            onShowFriendsChange(false);
+            onShowExploreChange(true);
+          }}
+        >
+          <Compass className="w-5 h-5" />
+          <span>Explore</span>
         </Button>
       </div>
 

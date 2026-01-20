@@ -846,6 +846,7 @@ export type Database = {
           created_at: string | null
           icon_url: string | null
           id: string
+          is_published: boolean
           invite_code: string
           name: string
           owner_id: string
@@ -855,6 +856,7 @@ export type Database = {
           created_at?: string | null
           icon_url?: string | null
           id?: string
+          is_published?: boolean
           invite_code: string
           name: string
           owner_id: string
@@ -864,6 +866,7 @@ export type Database = {
           created_at?: string | null
           icon_url?: string | null
           id?: string
+          is_published?: boolean
           invite_code?: string
           name?: string
           owner_id?: string
