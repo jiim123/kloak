@@ -676,6 +676,48 @@ export type Database = {
           },
         ]
       }
+      server_emojis: {
+        Row: {
+          created_at: string
+          created_by: string
+          file_path: string
+          id: string
+          name: string
+          server_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          file_path: string
+          id?: string
+          name: string
+          server_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          file_path?: string
+          id?: string
+          name?: string
+          server_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "server_emojis_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "server_emojis_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       server_member_roles: {
         Row: {
           created_at: string | null
@@ -763,8 +805,8 @@ export type Database = {
       server_roles: {
         Row: {
           color: string
-          icon: string | null
           created_at: string | null
+          icon: string | null
           id: string
           name: string
           position: number | null
@@ -772,8 +814,8 @@ export type Database = {
         }
         Insert: {
           color?: string
-          icon?: string | null
           created_at?: string | null
+          icon?: string | null
           id?: string
           name: string
           position?: number | null
@@ -781,8 +823,8 @@ export type Database = {
         }
         Update: {
           color?: string
-          icon?: string | null
           created_at?: string | null
+          icon?: string | null
           id?: string
           name?: string
           position?: number | null
@@ -832,48 +874,6 @@ export type Database = {
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      server_emojis: {
-        Row: {
-          created_at: string
-          created_by: string
-          file_path: string
-          id: string
-          name: string
-          server_id: string
-        }
-        Insert: {
-          created_at?: string
-          created_by: string
-          file_path: string
-          id?: string
-          name: string
-          server_id: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string
-          file_path?: string
-          id?: string
-          name?: string
-          server_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "server_emojis_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "server_emojis_server_id_fkey"
-            columns: ["server_id"]
-            isOneToOne: false
-            referencedRelation: "servers"
             referencedColumns: ["id"]
           },
         ]
@@ -933,6 +933,7 @@ export type Database = {
       }
       users: {
         Row: {
+          avatar_decoration: string | null
           avatar_url: string | null
           banner_color: string | null
           bio: string | null
@@ -946,6 +947,7 @@ export type Database = {
           username: string
         }
         Insert: {
+          avatar_decoration?: string | null
           avatar_url?: string | null
           banner_color?: string | null
           bio?: string | null
@@ -959,6 +961,7 @@ export type Database = {
           username: string
         }
         Update: {
+          avatar_decoration?: string | null
           avatar_url?: string | null
           banner_color?: string | null
           bio?: string | null
@@ -1405,6 +1408,7 @@ export type Database = {
         | "view_channels"
         | "transfer_ownership"
         | "manage_invites"
+        | "manage_emojis"
       server_role: "owner" | "admin" | "moderator" | "member"
       user_status: "online" | "idle" | "dnd" | "offline"
     }
@@ -1553,6 +1557,7 @@ export const Constants = {
         "view_channels",
         "transfer_ownership",
         "manage_invites",
+        "manage_emojis",
       ],
       server_role: ["owner", "admin", "moderator", "member"],
       user_status: ["online", "idle", "dnd", "offline"],

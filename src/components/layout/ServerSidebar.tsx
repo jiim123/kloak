@@ -328,7 +328,7 @@ export const ServerSidebar = () => {
               whileHover="hover"
               initial="default"
               onClick={() => openModal("create-server")}
-              className="relative w-12 h-12 rounded-[6px] text-kloak-success hover:bg-kloak-success hover:text-white transition-colors duration-200 flex items-center justify-center overflow-hidden"
+              className="relative w-12 h-12 rounded-[6px] text-muted-foreground hover:text-foreground transition-colors duration-200 flex items-center justify-center overflow-hidden"
             >
               {/* Animated dashed border */}
               <motion.svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 48 48">
@@ -340,12 +340,12 @@ export const ServerSidebar = () => {
                   rx="5"
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth="2"
+                  strokeWidth="1.5"
                   strokeDasharray="6 4"
                   variants={{
                     default: {
                       strokeDashoffset: 0,
-                      opacity: 1,
+                      opacity: 0.5,
                     },
                     hover: {
                       strokeDashoffset: -10,
@@ -367,7 +367,7 @@ export const ServerSidebar = () => {
 
               {/* Solid border on hover */}
               <motion.div
-                className="absolute inset-0 rounded-[6px] border-2 border-white pointer-events-none"
+                className="absolute inset-0 rounded-[6px] border border-muted-foreground/50 pointer-events-none"
                 variants={{
                   default: {
                     opacity: 0,
