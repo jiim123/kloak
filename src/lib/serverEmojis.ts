@@ -56,10 +56,17 @@ export async function fetchServerEmojis(serverId: string, opts?: { force?: boole
     return items;
   })();
 
-  cache.set(serverId, { fetchedAt: now, items: existing?.items ?? [], inFlight });
+  // Important: do NOT treat "inFlight started" as "fresh data fetched".
+  // If the request fails (transient network/auth), caching an empty list here would
+  // cause the app to render :name: as plain text until TTL expires.
+  cache.set(serverId, { fetchedAt: existing?.fetchedAt ?? 0, items: existing?.items ?? [], inFlight });
 
   try {
     return await inFlight;
+  } catch (e) {
+    // Don't cache failures.
+    cache.delete(serverId);
+    throw e;
   } finally {
     const after = cache.get(serverId);
     if (after?.inFlight === inFlight) {

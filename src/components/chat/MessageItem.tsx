@@ -147,21 +147,32 @@ export const MessageItem = memo(function MessageItem({
     }
 
     let cancelled = false;
-    (async () => {
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const load = async (attempt: number) => {
       try {
-        const emojis = await fetchServerEmojis(serverId);
+        const emojis = await fetchServerEmojis(serverId, { force: attempt > 0 });
         if (cancelled) return;
         const map = new Map<string, string>();
         emojis.forEach((e) => map.set(e.name, e.url));
         setCustomEmojiMap(map);
       } catch (e) {
         console.error("Failed to load server emojis for role icon rendering:", e);
-        if (!cancelled) setCustomEmojiMap(new Map());
+        if (cancelled) return;
+        setCustomEmojiMap(new Map());
+
+        if (attempt < 3) {
+          const backoffMs = 750 * Math.pow(2, attempt);
+          retryTimer = setTimeout(() => load(attempt + 1), backoffMs);
+        }
       }
-    })();
+    };
+
+    load(0);
 
     return () => {
       cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
     };
   }, [currentServer?.id]);
 
