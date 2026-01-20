@@ -358,12 +358,19 @@
 
   html {
     font-family: "Stack Sans Headline", "Noto Color Emoji", system-ui, sans-serif;
+    /* Disable pull-to-refresh and overscroll */
+    overscroll-behavior: none;
+    overflow: hidden;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "ss01", "ss02";
     letter-spacing: 0.01em;
+    /* Disable pull-to-refresh and overscroll behavior */
+    overscroll-behavior: none;
+    touch-action: pan-x pan-y;
+    overflow: hidden;
   }
 
   /* Heading styles - Stack Sans Headline works well with tighter tracking */

@@ -475,7 +475,7 @@ export const ChannelSidebar = () => {
     reorderCategories,
     reorderChannels,
   } = useServerStore();
-  const { openModal, cycleTheme } = useUIStore();
+  const { openModal, openServerSettings, cycleTheme } = useUIStore();
 
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -760,13 +760,13 @@ export const ChannelSidebar = () => {
               Invite People
             </DropdownMenuItem>
 
-            {canSeeServerSettings && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => openModal("server-settings", { serverId: currentServer.id })}>
-                  <Settings className="w-4 h-4 mr-2" />
-                  Server Settings
-                </DropdownMenuItem>
+              {canSeeServerSettings && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => openServerSettings()}>
+                    <Settings className="w-4 h-4 mr-2" />
+                    Server Settings
+                  </DropdownMenuItem>
                 {canManageChannels && (
                   <>
                     <DropdownMenuItem onClick={() => openModal("create-channel", { serverId: currentServer.id })}>
@@ -902,9 +902,9 @@ export const ChannelSidebar = () => {
         <DragOverlay>{getActiveItem()}</DragOverlay>
       </DndContext>
 
-      {/* User panel */}
+      {/* User panel - extends into ServerSidebar area */}
       <motion.div
-        className="h-14 px-2 flex items-center gap-2 bg-layout-sidebar border-t border-border/50"
+        className="h-14 pr-3 pl-3 flex items-center gap-3 bg-layout-sidebar border-t border-border/50 relative -ml-[72px] w-[calc(100%+72px)]"
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
       >

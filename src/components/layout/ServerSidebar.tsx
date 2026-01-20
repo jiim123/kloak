@@ -387,24 +387,6 @@ export const ServerSidebar = () => {
           </TooltipContent>
         </Tooltip>
       </div>
-
-
-
-      {/* User settings button */}
-      <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
-        <TooltipTrigger asChild>
-          <MotionButton
-            whileTap={{ scale: 0.95 }}
-            onClick={() => openModal("user-settings")}
-            className="w-12 h-12 rounded-[6px] bg-secondary hover:bg-secondary/80 transition-colors flex items-center justify-center"
-          >
-            <Settings className="w-5 h-5" />
-          </MotionButton>
-        </TooltipTrigger>
-        <TooltipContent side="right" className="font-medium">
-          User Settings
-        </TooltipContent>
-      </Tooltip>
     </div>
   );
 };

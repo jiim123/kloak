@@ -13,11 +13,11 @@ import { MobileSidebar } from '@/components/layout/MobileSidebar';
 import { MobileMembersSidebar } from '@/components/layout/MobileMembersSidebar';
 import { ConnectionStatus } from '@/components/ui/ConnectionStatus';
 import { DMSidebar, FriendsList, DMChatArea } from '@/components/dm';
+import { ServerSettingsPage } from '@/components/settings/ServerSettingsPage';
 import {
   CreateServerModal,
   JoinServerModal,
   InviteModal,
-  ServerSettingsModal,
   CreateChannelModal,
   EditChannelModal,
   UserSettingsModal,
@@ -46,7 +46,7 @@ const AppLayout = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, isLoading, isNewUser, setIsNewUser } = useAuthStore();
-  const { isMemberSidebarOpen, closeMobileSidebars } = useUIStore();
+  const { isMemberSidebarOpen, isServerSettingsOpen, closeMobileSidebars } = useUIStore();
   const { currentServer, currentChannel, setCurrentChannel, setCurrentServer, fetchChannels, fetchMembers, fetchRolePermissions, fetchRoles } = useServerStore();
   const { conversations, currentConversation, setCurrentConversation, fetchConversations } = useDMStore();
   const isMobile = useIsMobile();
@@ -235,43 +235,52 @@ const AppLayout = () => {
               <ServerSidebar />
             </div>
 
-            {/* Secondary sidebar - 240px fixed */}
-            <div className="w-60 flex-shrink-0 bg-layout-sidebar-secondary">
-              {isDMView ? (
-                <DMSidebar
-                  showFriends={showFriends}
-                  onShowFriendsChange={setShowFriends}
-                />
-              ) : (
-                <ChannelSidebar />
-              )}
-            </div>
-
-            {/* Main area - flexible */}
-            <div className="flex-1 min-w-0 bg-layout-chat relative">
-              {isDMView ? (
-                currentConversation ? (
-                  <DMChatArea />
-                ) : showFriends ? (
-                  <FriendsList onOpenDM={() => setShowFriends(false)} />
-                ) : (
-                  <HomeLanding />
-                )
-              ) : (
-                <ChatArea />
-              )}
-            </div>
-
-            {/* Members sidebar - 240px, collapsible, only in server view */}
-            {!isDMView && (
-              <div
-                className={cn(
-                  "flex-shrink-0 bg-layout-members transition-all duration-200",
-                  isMemberSidebarOpen ? "w-60" : "w-0 overflow-hidden"
-                )}
-              >
-                <MembersSidebar />
+            {/* Server Settings Page - takes full space except server icons */}
+            {isServerSettingsOpen ? (
+              <div className="flex-1 min-w-0">
+                <ServerSettingsPage />
               </div>
+            ) : (
+              <>
+                {/* Secondary sidebar - 240px fixed */}
+                <div className="w-60 flex-shrink-0 bg-layout-sidebar-secondary">
+                  {isDMView ? (
+                    <DMSidebar
+                      showFriends={showFriends}
+                      onShowFriendsChange={setShowFriends}
+                    />
+                  ) : (
+                    <ChannelSidebar />
+                  )}
+                </div>
+
+                {/* Main area - flexible */}
+                <div className="flex-1 min-w-0 bg-layout-chat relative">
+                  {isDMView ? (
+                    currentConversation ? (
+                      <DMChatArea />
+                    ) : showFriends ? (
+                      <FriendsList onOpenDM={() => setShowFriends(false)} />
+                    ) : (
+                      <HomeLanding />
+                    )
+                  ) : (
+                    <ChatArea />
+                  )}
+                </div>
+
+                {/* Members sidebar - 240px, collapsible, only in server view */}
+                {!isDMView && (
+                  <div
+                    className={cn(
+                      "flex-shrink-0 bg-layout-members transition-all duration-200",
+                      isMemberSidebarOpen ? "w-60" : "w-0 overflow-hidden"
+                    )}
+                  >
+                    <MembersSidebar />
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -302,7 +311,6 @@ const AppLayout = () => {
       <CreateServerModal />
       <JoinServerModal />
       <InviteModal />
-      <ServerSettingsModal />
       <CreateChannelModal />
       <EditChannelModal />
       <UserSettingsModal />

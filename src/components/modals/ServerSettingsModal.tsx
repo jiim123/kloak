@@ -849,10 +849,10 @@ export const ServerSettingsModal = () => {
       />
 
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-        <DialogContent className="sm:max-w-5xl max-w-[calc(100vw-2rem)] max-h-[90vh] sm:max-h-[85vh] p-0 flex flex-col">
+        <DialogContent className="w-[calc(100vw-4rem)] h-[calc(100vh-4rem)] max-w-none p-0 flex flex-col">
           <DialogHeader className="px-6 pt-6 pb-4 border-b border-border">
-            <DialogTitle className="text-base sm:text-lg">Server Settings</DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">
+            <DialogTitle className="text-lg">Server Settings</DialogTitle>
+            <DialogDescription className="text-sm">
               Manage your server settings and members
             </DialogDescription>
           </DialogHeader>
