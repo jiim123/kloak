@@ -1,6 +1,6 @@
-import { ChevronLeft, ChevronRight, Minus, Square, X } from "lucide-react";
+import { Minus, Square, X } from "lucide-react";
 import { isTauri } from "@/lib/tauriRuntime";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 async function withCurrentWindow<T>(fn: (w: { minimize(): Promise<void>; toggleMaximize(): Promise<void>; close(): Promise<void> }) => Promise<T>) {
   if (!isTauri()) return undefined as T;
@@ -12,31 +12,10 @@ async function withCurrentWindow<T>(fn: (w: { minimize(): Promise<void>; toggleM
 export function DesktopTitleBar({ title }: { title?: string }) {
   if (!isTauri()) return null;
 
-  const navigate = useNavigate();
   const location = useLocation();
 
   return (
     <div className="hidden md:flex h-9 w-full select-none items-stretch border-b border-white/5 bg-layout-sidebar text-foreground">
-      {/* Left nav controls (Discord-like) */}
-      <div className="flex items-center gap-1 px-2">
-        <button
-          type="button"
-          aria-label="Back"
-          className="h-7 w-7 rounded hover:bg-white/10 active:bg-white/15"
-          onClick={() => navigate(-1)}
-        >
-          <ChevronLeft className="mx-auto h-4 w-4 opacity-90" />
-        </button>
-        <button
-          type="button"
-          aria-label="Forward"
-          className="h-7 w-7 rounded hover:bg-white/10 active:bg-white/15"
-          onClick={() => navigate(1)}
-        >
-          <ChevronRight className="mx-auto h-4 w-4 opacity-90" />
-        </button>
-      </div>
-
       {/* Drag region + title */}
       <div
         className="flex min-w-0 flex-1 items-center justify-center px-3 text-sm"
@@ -44,7 +23,7 @@ export function DesktopTitleBar({ title }: { title?: string }) {
         onDoubleClick={() => void withCurrentWindow((w) => w.toggleMaximize())}
         title={title ?? "Kloak"}
       >
-        <div className="min-w-0 max-w-[60%] truncate opacity-90">
+        <div className="min-w-0 max-w-[60%] truncate opacity-90" data-tauri-drag-region>
           {title ?? (location.pathname.startsWith("/app") ? "Kloak" : "Kloak")}
         </div>
       </div>
