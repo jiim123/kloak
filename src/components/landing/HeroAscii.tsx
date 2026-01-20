@@ -48,7 +48,7 @@ export const HeroImage = () => {
 
               {/* CTA Button */}
               <Link to="/app">
-                <Button size="lg" className="h-10 sm:h-11 md:h-12 px-5 sm:px-6 md:px-8 text-sm sm:text-base">
+                <Button size="lg" className="h-10 sm:h-11 md:h-12 px-5 sm:px-6 md:px-8 text-sm sm:text-base rounded-xl">
                   Join Kloak
                   <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2" />
                 </Button>
