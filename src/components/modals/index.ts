@@ -7,6 +7,7 @@ export { EditChannelModal } from './EditChannelModal';
 export { UserSettingsModal } from './UserSettingsModal';
 export { UserProfilePopup } from './UserProfilePopup';
 export { EmojiPicker } from './EmojiPicker';
+export { AvatarDecorationModal } from './AvatarDecorationModal';
 export { PinnedMessagesPanel } from './PinnedMessagesPanel';
 export { SearchModal } from './SearchModal';
 export { QuickSwitcherModal } from './QuickSwitcherModal';

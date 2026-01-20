@@ -114,6 +114,7 @@ export const useAuthStore = create<AuthState>()(
             username: userData.username as string,
             display_name: userData.display_name as string | null,
             avatar_url: userData.avatar_url as string | null,
+            avatar_decoration: userData.avatar_decoration as string | null,
             banner_color: (userData.banner_color as string) || '#5865F2',
             bio: userData.bio as string | null,
             status: (userData.status as UserStatus) || 'online',
@@ -166,6 +167,7 @@ export const useAuthStore = create<AuthState>()(
             username: userData.username as string,
             display_name: userData.display_name as string | null,
             avatar_url: userData.avatar_url as string | null,
+            avatar_decoration: userData.avatar_decoration as string | null,
             banner_color: (userData.banner_color as string) || '#5865F2',
             bio: userData.bio as string | null,
             status: 'online',
@@ -214,6 +216,7 @@ export const useAuthStore = create<AuthState>()(
                 display_name: userData.display_name as string | null,
                 bio: userData.bio as string | null,
                 avatar_url: userData.avatar_url as string | null,
+                avatar_decoration: userData.avatar_decoration as string | null,
                 banner_color: (userData.banner_color as string) || user.banner_color,
                 custom_status: userData.custom_status as string | null,
               } 

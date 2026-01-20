@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuthStore } from '@/stores/authStore';
 import type { DMConversation, DirectMessage, User, ReactionGroup } from '@/types';
 
 interface DMState {
@@ -229,9 +230,10 @@ export const useDMStore = create<DMState>((set, get) => ({
       const msgData = data as { id: string; conversation_id: string; sender_id: string; content: string; reply_to_id: string | null; edited_at: string | null; created_at: string };
 
       // Fetch sender details
-      const { data: userData } = await supabase.rpc('get_user_by_id', {
-        _user_id: senderId,
-      });
+      const localUser = useAuthStore.getState().user;
+      const { data: userData } = localUser?.id === senderId
+        ? { data: localUser }
+        : await supabase.rpc('get_user_by_id', { _user_id: senderId });
 
       const message: DirectMessage = {
         ...msgData,

@@ -17,6 +17,7 @@ import {
   Clock,
   Sparkles,
   Volume2,
+  Sparkles as DecorationIcon,
 } from 'lucide-react';
 import { motion, AnimatePresence, type PanInfo } from 'framer-motion';
 import {
@@ -43,6 +44,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { AvatarWithDecoration } from '@/components/ui/avatar-with-decoration';
+import { AvatarDecorationModal } from '@/components/modals/AvatarDecorationModal';
 import { useUIStore, THEMES, type Theme } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/integrations/supabase/client';
@@ -103,6 +106,7 @@ export const UserSettingsModal = () => {
   const [keyRevealed, setKeyRevealed] = useState(false);
   const [copied, setCopied] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right'>('right');
+  const [showAvatarDecorationModal, setShowAvatarDecorationModal] = useState(false);
   
   // Profile form state
   const [displayName, setDisplayName] = useState(user?.display_name || '');
@@ -436,12 +440,12 @@ export const UserSettingsModal = () => {
                   <div className="space-y-3 sm:space-y-4">
                     {/* Avatar Upload */}
                     <div className="flex items-center gap-3 sm:gap-4">
-                      <Avatar className="w-14 h-14 sm:w-20 sm:h-20 cursor-pointer flex-shrink-0" onClick={() => fileInputRef.current?.click()}>
-                        <AvatarImage src={user?.avatar_url || undefined} />
-                        <AvatarFallback style={{ backgroundColor: bannerColor }}>
-                          {user?.username?.[0]?.toUpperCase() || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
+                      <div className="cursor-pointer flex-shrink-0" onClick={() => fileInputRef.current?.click()}>
+                        <AvatarWithDecoration 
+                          user={user} 
+                          className="w-14 h-14 sm:w-20 sm:h-20"
+                        />
+                      </div>
                       <div className="min-w-0">
                         <Button 
                           variant="outline" 
@@ -488,6 +492,20 @@ export const UserSettingsModal = () => {
                         rows={2}
                         className="text-sm resize-none"
                       />
+                    </div>
+
+                    {/* Avatar Decoration */}
+                    <div className="space-y-1.5 sm:space-y-2">
+                      <Label className="text-xs sm:text-sm">Avatar Decoration</Label>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowAvatarDecorationModal(true)}
+                        className="w-full h-9 sm:h-10 text-xs sm:text-sm"
+                      >
+                        <DecorationIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+                        {user?.avatar_decoration ? 'Change Decoration' : 'Add Decoration'}
+                      </Button>
                     </div>
 
                     {/* Banner Color */}
@@ -882,6 +900,13 @@ export const UserSettingsModal = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Avatar Decoration Modal */}
+      <AvatarDecorationModal
+        open={showAvatarDecorationModal}
+        onOpenChange={setShowAvatarDecorationModal}
+        onSelect={() => {}}
+      />
     </>
   );
 };

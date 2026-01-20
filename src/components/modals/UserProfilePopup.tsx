@@ -7,6 +7,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { AvatarWithDecoration } from '@/components/ui/avatar-with-decoration';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useUIStore } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -59,6 +60,7 @@ export const UserProfilePopup = () => {
           username: data.username,
           display_name: data.display_name,
           avatar_url: data.avatar_url,
+          avatar_decoration: data.avatar_decoration,
           banner_color: data.banner_color || '#5865F2',
           bio: data.bio,
           status: data.status as UserStatus,
@@ -182,17 +184,13 @@ export const UserProfilePopup = () => {
               {/* Avatar with subtle status */}
               <div className="mb-4">
                 <div className="relative inline-block">
-                  <Avatar className="w-24 h-24 border-2 border-background shadow-lg">
-                    <AvatarImage src={profileUser.avatar_url || undefined} />
-                    <AvatarFallback
-                      className="text-2xl font-semibold"
-                      style={{ backgroundColor: profileUser.banner_color }}
-                    >
-                      {profileUser.username[0].toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                  <AvatarWithDecoration 
+                    user={profileUser} 
+                    className="w-24 h-24 shadow-lg"
+                    active={true}
+                  />
                   <div className={cn(
-                    "absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-background shadow-sm",
+                    "absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-background shadow-sm z-10",
                     statusColors[profileUser.status]
                   )} />
                 </div>

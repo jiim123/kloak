@@ -27,6 +27,7 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
 import { MembersSidebarSkeleton } from '@/components/ui/skeletons';
+import { AvatarWithDecoration } from '@/components/ui/avatar-with-decoration';
 import type { ServerMember, ServerRole, CustomServerRole } from '@/types';
 
 const OFFLINE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
@@ -300,34 +301,26 @@ export const MembersSidebar = () => {
 
     const roleInfo = getRoleInfo(member.role);
 
+    const [isHovered, setIsHovered] = useState(false);
+
     const content = (
       <div 
         className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-secondary/50 cursor-pointer transition-smooth group"
         onClick={() => handleMemberClick(member)}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
       >
         {/* Avatar with status */}
         <div className="relative flex-shrink-0">
-          <div 
-            className={cn(
-              'w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium',
-              memberIsOffline && 'opacity-50'
-            )}
-            style={{ backgroundColor: member.user?.banner_color || '#5865F2' }}
-          >
-            {member.user?.avatar_url ? (
-              <img 
-                src={member.user.avatar_url} 
-                alt={displayName} 
-                className="w-full h-full rounded-full object-cover"
-              />
-            ) : (
-              (member.user?.username?.[0] || '?').toUpperCase()
-            )}
-          </div>
+          <AvatarWithDecoration
+            user={member.user}
+            className={cn('w-8 h-8', memberIsOffline && 'opacity-50')}
+            active={isHovered}
+          />
           <StatusIndicator 
             status={member.user?.status}
             isStale={memberIsOffline && member.user?.status !== 'offline'}
-            className="absolute -bottom-0.5 -right-0.5 border-2 border-layout-members" 
+            className="absolute -bottom-0.5 -right-0.5 border-2 border-layout-members z-10" 
           />
         </div>
 

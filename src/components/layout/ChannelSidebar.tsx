@@ -43,6 +43,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { useUnread } from "@/hooks/useUnread";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { StatusSelector } from "@/components/StatusSelector";
+import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { MotionButton } from "@/components/ui/motion-elements";
 import {
@@ -462,6 +463,7 @@ const SortableCategory = ({
 
 export const ChannelSidebar = () => {
   const { user } = useAuthStore();
+  const [isUserAvatarHovered, setIsUserAvatarHovered] = useState(false);
   const {
     currentServer,
     currentChannel,
@@ -910,16 +912,13 @@ export const ChannelSidebar = () => {
         <StatusSelector side="top" align="start">
           <button className="relative flex-shrink-0 group">
             <motion.div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium text-white cursor-pointer overflow-hidden"
-              style={{ backgroundColor: user?.banner_color || "#5865F2" }}
+              className="w-8 h-8 cursor-pointer overflow-hidden rounded-full"
+              onHoverStart={() => setIsUserAvatarHovered(true)}
+              onHoverEnd={() => setIsUserAvatarHovered(false)}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              {user?.avatar_url ? (
-                <img src={user.avatar_url} alt={user.username} className="w-full h-full object-cover" />
-              ) : (
-                user?.username?.[0]?.toUpperCase() || "?"
-              )}
+              <AvatarWithDecoration user={user} className="w-8 h-8" active={isUserAvatarHovered} />
             </motion.div>
             <div
               className={cn(

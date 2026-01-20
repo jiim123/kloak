@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
+import { AvatarWithDecoration } from '@/components/ui/avatar-with-decoration';
 import type { UserStatus } from '@/types';
 import { useState, useEffect, useRef } from 'react';
 
@@ -183,16 +184,7 @@ export const StatusSelector = ({ children, side = 'right', align = 'start' }: St
         {/* Current user info */}
         <div className="px-3 py-2 border-b border-border">
           <div className="flex items-center gap-2">
-            <div 
-              className="w-10 h-10 rounded-full flex items-center justify-center text-white font-medium"
-              style={{ backgroundColor: user?.banner_color || '#5865F2' }}
-            >
-              {user?.avatar_url ? (
-                <img src={user.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
-              ) : (
-                user?.username?.[0]?.toUpperCase() || '?'
-              )}
-            </div>
+            <AvatarWithDecoration user={user} className="w-10 h-10" active={false} />
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-foreground truncate">
                 {user?.display_name || user?.username}

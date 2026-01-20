@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
 import { Smile, Reply, Pencil, Trash2, Pin, MoreHorizontal, CornerUpLeft, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
@@ -82,6 +83,8 @@ export const MessageItem = memo(function MessageItem({
   const [showMobileActions, setShowMobileActions] = useState(false);
   const [dropdownState, setDropdownState] = useState({ emoji: false, more: false });
   const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
+  const [hoveredRoleIcon, setHoveredRoleIcon] = useState(false);
+  const [isRowHovered, setIsRowHovered] = useState(false);
 
   // Refs
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -216,6 +219,19 @@ export const MessageItem = memo(function MessageItem({
       </span>
     );
   }, [priorityRoleWithIcon?.icon, customEmojiMap]);
+
+  const RoleIconWrapper = ({ children }: { children: React.ReactNode }) => (
+    <span
+      className={cn(
+        "inline-flex items-center",
+        hoveredRoleIcon && "animate-pulse"
+      )}
+      onMouseEnter={() => setHoveredRoleIcon(true)}
+      onMouseLeave={() => setHoveredRoleIcon(false)}
+    >
+      {children}
+    </span>
+  );
 
   // Check permissions using database-backed permission system
   const { hasPermission } = useMemberPermissions(message.channel_id);
@@ -423,6 +439,8 @@ export const MessageItem = memo(function MessageItem({
       >
         <div
           className={innerClassName}
+          onMouseEnter={() => setIsRowHovered(true)}
+          onMouseLeave={() => setIsRowHovered(false)}
           onTouchStart={handleTouchStart}
           onTouchEnd={clearLongPress}
           onTouchMove={clearLongPress}
@@ -441,12 +459,11 @@ export const MessageItem = memo(function MessageItem({
           ) : (
             <div className="w-10 flex-shrink-0">
               {!isGrouped && messageUser ? (
-                <Avatar className="w-10 h-10 cursor-pointer">
-                  <AvatarImage src={messageUser.avatar_url || undefined} />
-                  <AvatarFallback style={{ backgroundColor: messageUser.banner_color || "#5865F2" }}>
-                    {messageUser.username[0].toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+                <AvatarWithDecoration 
+                  user={messageUser} 
+                  className="w-10 h-10 cursor-pointer"
+                  active={isRowHovered}
+                />
               ) : (
                 <span className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                   {formattedTime}
@@ -470,9 +487,11 @@ export const MessageItem = memo(function MessageItem({
                 {roleIconNode && priorityRoleWithIcon && (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span className="inline-flex items-center mr-1.5 cursor-help">
-                        {roleIconNode}
-                      </span>
+                      <RoleIconWrapper>
+                        <span className="inline-flex items-center mr-1.5 cursor-help">
+                          {roleIconNode}
+                        </span>
+                      </RoleIconWrapper>
                     </TooltipTrigger>
                     <TooltipContent>{priorityRoleWithIcon.name}</TooltipContent>
                   </Tooltip>
@@ -493,9 +512,11 @@ export const MessageItem = memo(function MessageItem({
                   {roleIconNode && priorityRoleWithIcon && (
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <span className="inline-flex items-center cursor-help">
-                          {roleIconNode}
-                        </span>
+                        <RoleIconWrapper>
+                          <span className="inline-flex items-center cursor-help">
+                            {roleIconNode}
+                          </span>
+                        </RoleIconWrapper>
                       </TooltipTrigger>
                       <TooltipContent>{priorityRoleWithIcon.name}</TooltipContent>
                     </Tooltip>

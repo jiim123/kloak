@@ -734,6 +734,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
           username: string;
           display_name: string | null;
           avatar_url: string | null;
+          avatar_decoration: string | null;
           banner_color: string;
           bio: string | null;
           status: string;

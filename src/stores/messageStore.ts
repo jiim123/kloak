@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuthStore } from '@/stores/authStore';
 import type { Message, MessageReply, ReactionGroup, User } from '@/types';
 
 interface ChannelMessages {
@@ -215,7 +216,11 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         throw error;
       }
 
-      const { data: userData } = await supabase.rpc('get_user_by_id' as any, { _user_id: userId });
+      // Prefer local auth user for immediate UI (includes latest avatar_decoration without waiting for RPC)
+      const localUser = useAuthStore.getState().user;
+      const { data: userData } = localUser?.id === userId
+        ? { data: localUser }
+        : await supabase.rpc('get_user_by_id' as any, { _user_id: userId });
 
       // If there's a reply_to_id, fetch the reply data separately
       let replyData: MessageReply | undefined;

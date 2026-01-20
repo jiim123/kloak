@@ -12,6 +12,7 @@ import { useDMStore } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
 import { formatMessageTimestamp } from '@/lib/format';
 import type { DirectMessage } from '@/types';
+import { AvatarWithDecoration } from '@/components/ui/avatar-with-decoration';
 
 interface DMMessageItemProps {
   message: DirectMessage;
@@ -29,6 +30,7 @@ export const DMMessageItem = ({ message, isFirst, onReply }: DMMessageItemProps)
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [showMobileActions, setShowMobileActions] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -118,27 +120,20 @@ export const DMMessageItem = ({ message, isFirst, onReply }: DMMessageItemProps)
           isMentioned && 'bg-primary/10 border-l-2 border-l-primary'
         )}
         style={shouldAnimate.current ? { animationFillMode: 'both' } : undefined}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         onTouchMove={handleTouchMove}
       >
         {/* Avatar or spacer */}
         <div className="w-10 flex-shrink-0">
-          {isFirst && (
-            <div
-              className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-medium"
-              style={{ backgroundColor: message.sender?.banner_color || '#5865F2' }}
-            >
-              {message.sender?.avatar_url ? (
-                <img
-                  src={message.sender.avatar_url}
-                  alt={message.sender.username}
-                  className="w-full h-full rounded-full object-cover"
-                />
-              ) : (
-                (message.sender?.username?.[0] || '?').toUpperCase()
-              )}
-            </div>
+          {isFirst && message.sender && (
+            <AvatarWithDecoration 
+              user={message.sender} 
+              className="w-10 h-10"
+              active={isHovered}
+            />
           )}
         </div>
 
