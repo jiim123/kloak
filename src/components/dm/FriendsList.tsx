@@ -3,6 +3,7 @@ import { Check, X, MessageSquare, MoreHorizontal, UserPlus, Ban, UserX, Users, S
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { AvatarWithDecoration } from '@/components/ui/avatar-with-decoration';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   DropdownMenu,
@@ -92,20 +93,10 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
     <div className="flex items-center gap-3 px-4 py-3 hover:bg-secondary/30 rounded-lg transition-smooth">
       {/* Avatar */}
       <div className="relative flex-shrink-0">
-        <div
-          className="w-10 h-10 rounded-full flex items-center justify-center text-white font-medium"
-          style={{ backgroundColor: friend.banner_color || '#5865F2' }}
-        >
-          {friend.avatar_url ? (
-            <img
-              src={friend.avatar_url}
-              alt={friend.username}
-              className="w-full h-full rounded-full object-cover"
-            />
-          ) : (
-            (friend.username?.[0] || '?').toUpperCase()
-          )}
-        </div>
+        <AvatarWithDecoration
+          user={friend}
+          className="w-10 h-10"
+        />
         <div
           className={cn(
             'absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-layout-chat',
@@ -172,20 +163,10 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
     <div className="flex items-center gap-3 px-4 py-3 hover:bg-secondary/30 rounded-lg transition-smooth">
       {/* Avatar */}
       <div className="relative flex-shrink-0">
-        <div
-          className="w-10 h-10 rounded-full flex items-center justify-center text-white font-medium"
-          style={{ backgroundColor: request.banner_color || '#5865F2' }}
-        >
-          {request.avatar_url ? (
-            <img
-              src={request.avatar_url}
-              alt={request.username}
-              className="w-full h-full rounded-full object-cover"
-            />
-          ) : (
-            (request.username?.[0] || '?').toUpperCase()
-          )}
-        </div>
+        <AvatarWithDecoration
+          user={request}
+          className="w-10 h-10"
+        />
       </div>
 
       {/* Info */}
@@ -226,20 +207,10 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
     <div className="flex items-center gap-3 px-4 py-3 hover:bg-secondary/30 rounded-lg transition-smooth">
       {/* Avatar */}
       <div className="relative flex-shrink-0">
-        <div
-          className="w-10 h-10 rounded-full flex items-center justify-center text-white font-medium opacity-50"
-          style={{ backgroundColor: blocked.banner_color || '#5865F2' }}
-        >
-          {blocked.avatar_url ? (
-            <img
-              src={blocked.avatar_url}
-              alt={blocked.username}
-              className="w-full h-full rounded-full object-cover"
-            />
-          ) : (
-            (blocked.username?.[0] || '?').toUpperCase()
-          )}
-        </div>
+        <AvatarWithDecoration
+          user={blocked}
+          className="w-10 h-10 opacity-50"
+        />
       </div>
 
       {/* Info */}

@@ -3,6 +3,7 @@ import { Search, Users, X, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { AvatarWithDecoration } from '@/components/ui/avatar-with-decoration';
 import { useDMStore } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useUnreadDMs } from '@/hooks/useUnreadDMs';
@@ -150,20 +151,10 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange }: DMSidebarProps) 
             >
               {/* Avatar with status */}
               <div className="relative flex-shrink-0">
-                <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
-                  style={{ backgroundColor: conversation.other_user?.banner_color || '#5865F2' }}
-                >
-                  {conversation.other_user?.avatar_url ? (
-                    <img
-                      src={conversation.other_user.avatar_url}
-                      alt={conversation.other_user.username}
-                      className="w-full h-full rounded-full object-cover"
-                    />
-                  ) : (
-                    (conversation.other_user?.username?.[0] || '?').toUpperCase()
-                  )}
-                </div>
+                <AvatarWithDecoration
+                  user={conversation.other_user}
+                  className="w-8 h-8"
+                />
                 <div
                   className={cn(
                     'absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-layout-sidebar-secondary',
