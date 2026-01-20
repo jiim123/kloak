@@ -5,24 +5,28 @@
   "identifier": "com.kloak.desktop",
   "build": {
     "frontendDist": "../dist",
-    "devUrl": "https://kloak.lovable.app/auth?mode=login",
-    "beforeDevCommand": "",
-    "beforeBuildCommand": ""
+    "devUrl": "http://localhost:8080",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
   },
   "app": {
     "windows": [
       {
+        "label": "main",
+        "url": "auth?tauriWindow=main",
         "title": "Kloak",
-        "width": 800,
-        "height": 600,
+        "width": 420,
+        "height": 620,
         "decorations": false,
         "shadow": true,
-        "resizable": true,
-        "fullscreen": false
+        "resizable": false,
+        "fullscreen": false,
+        "visible": true,
+        "center": true
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http:; media-src 'self' blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.giphy.com https://media.giphy.com https://media0.giphy.com https://media1.giphy.com https://media2.giphy.com https://media3.giphy.com https://media4.giphy.com; frame-src https://www.youtube.com https://player.vimeo.com https://store.steampowered.com https://open.spotify.com https://w.soundcloud.com https://player.twitch.tv https://clips.twitch.tv https://player.kick.com; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;"
     }
   },
   "bundle": {

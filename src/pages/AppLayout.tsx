@@ -157,13 +157,36 @@ const AppLayout = () => {
     }
   }, [currentServer]);  // eslint-disable-line react-hooks-exhaustive-deps
 
+  // Initialize auth and wait for it to complete before checking user
   useEffect(() => {
-    initializeAuth();
-  }, []);
+    let cancelled = false;
+    
+    (async () => {
+      await initializeAuth();
+      if (cancelled) return;
+      // Force a re-render after auth init completes
+      const state = useAuthStore.getState();
+      if (!state.isLoading && !state.user) {
+        navigate('/auth?mode=login');
+      }
+    })();
 
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
+
+  // Only redirect if we've finished loading and still no user
   useEffect(() => {
     if (!isLoading && !user) {
-      navigate('/auth?mode=login');
+      // Small delay to ensure auth state is loaded from localStorage
+      const timer = setTimeout(() => {
+        const state = useAuthStore.getState();
+        if (!state.user && !state.isLoading) {
+          navigate('/auth?mode=login');
+        }
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [user, isLoading, navigate]);
 
