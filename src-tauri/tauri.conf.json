@@ -18,10 +18,7 @@
         "decorations": false,
         "shadow": true,
         "resizable": true,
-        "fullscreen": false,
-        "webviewAttributes": {
-          "disableBackForwardNavigationGestures": true
-        }
+        "fullscreen": false
       }
     ],
     "security": {
