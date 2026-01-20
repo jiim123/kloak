@@ -29,7 +29,7 @@ export const HeroImage = () => {
           <motion.div {...fadeIn} className="absolute inset-x-0 bottom-0 p-5 sm:p-8 md:p-10 lg:p-14 xl:p-16">
             <div className="max-w-3xl">
               {/* Tagline */}
-              <p className="text-xs sm:text-sm font-medium text-primary mb-2 sm:mb-3 md:mb-4 uppercase tracking-wide">
+              <p className="text-xs sm:text-sm font-medium text-white mb-2 sm:mb-3 md:mb-4 uppercase tracking-wide">
                 For Gamers · Communities · Teams · Everyone
               </p>
 
