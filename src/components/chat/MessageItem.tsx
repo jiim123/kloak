@@ -234,7 +234,12 @@ export const MessageItem = memo(function MessageItem({
   }, [user?.id, message.content]);
 
   // Memoize formatted timestamps
-  const formattedTime = useMemo(() => format(new Date(message.created_at), "h:mm a"), [message.created_at]);
+  // Use shorter format for compact mode to prevent wrapping
+  const formattedTime = useMemo(() => {
+    const timeStr = format(new Date(message.created_at), "h:mm a");
+    // Replace space between time and AM/PM to prevent wrapping
+    return timeStr.replace(/\s+/, '\u00A0'); // Non-breaking space
+  }, [message.created_at]);
 
   const formattedTimestamp = useMemo(() => formatMessageTimestamp(message.created_at), [message.created_at]);
 
@@ -424,9 +429,9 @@ export const MessageItem = memo(function MessageItem({
         >
           {/* Avatar / Timestamp column */}
           {compactMode ? (
-            <div className="w-12 flex-shrink-0 flex items-start pt-0.5">
+            <div className="w-16 flex-shrink-0 pt-0.5">
               <span
-                className={`text-[10px] text-muted-foreground transition-opacity duration-150 ${
+                className={`text-[10px] text-muted-foreground transition-opacity duration-150 whitespace-nowrap block ${
                   showTimestamps || !isGrouped ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                 }`}
               >
