@@ -76,7 +76,7 @@ const showBrowserNotification = (notification: Notification) => {
   
   if (Notification.permission !== 'granted') return;
 
-  const browserNotification = new Notification(notification.title, {
+  const browserNotification = new window.Notification(notification.title, {
     body: notification.body || undefined,
     icon: '/favicon.ico',
     tag: notification.id, // Prevents duplicate notifications
@@ -85,7 +85,10 @@ const showBrowserNotification = (notification: Notification) => {
   browserNotification.onclick = () => {
     window.focus();
     if (notification.link) {
-      window.location.href = notification.link;
+      // Use history.pushState for SPA navigation instead of full page reload
+      window.history.pushState({}, '', notification.link);
+      // Dispatch a popstate event to trigger React Router navigation
+      window.dispatchEvent(new PopStateEvent('popstate'));
     }
     browserNotification.close();
   };

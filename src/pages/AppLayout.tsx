@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore, initializeAuth } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
@@ -35,22 +35,81 @@ import { PersistentEmbedContainer } from '@/components/chat/PersistentEmbedConta
 import { DesktopTitleBar } from '@/components/layout/DesktopTitleBar';
 import { cn } from '@/lib/utils';
 import { useDMStore } from '@/stores/dmStore';
+import { supabase } from '@/integrations/supabase/client';
 import { useRealtimeFriendships, useRealtimeUsers, useRealtimeServer, useRealtimeNotifications, useRealtimeDMs, useUnreadDMs, useRealtimeMessages, useRealtimeReactions } from '@/hooks';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useBackgroundSync } from '@/hooks/useBackgroundSync';
 import { usePreferencesSync } from '@/hooks/usePreferencesSync';
+import type { User } from '@/types';
 
 const AppLayout = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, isLoading, isNewUser, setIsNewUser } = useAuthStore();
   const { isMemberSidebarOpen, closeMobileSidebars } = useUIStore();
-  const { currentServer, currentChannel, setCurrentChannel, fetchChannels, fetchMembers, fetchRolePermissions, fetchRoles } = useServerStore();
-  const { currentConversation, setCurrentConversation } = useDMStore();
+  const { currentServer, currentChannel, setCurrentChannel, setCurrentServer, fetchChannels, fetchMembers, fetchRolePermissions, fetchRoles } = useServerStore();
+  const { conversations, currentConversation, setCurrentConversation, fetchConversations } = useDMStore();
   const isMobile = useIsMobile();
 
   // Track if showing friends list in DM view
   // Default to false so we show the Landing page by default
   const [showFriends, setShowFriends] = useState(false);
+
+  // Handle conversation query parameter for DM notification redirects
+  useEffect(() => {
+    const conversationId = searchParams.get('conversation');
+    if (conversationId && user) {
+      // Clear the query param
+      setSearchParams({}, { replace: true });
+      
+      // Clear current server to switch to DM view
+      setCurrentServer(null);
+      
+      // Find the conversation in the list or fetch it
+      const existingConversation = conversations.find(c => c.id === conversationId);
+      
+      if (existingConversation) {
+        setCurrentConversation(existingConversation);
+        setShowFriends(false);
+      } else {
+        // Fetch conversations first, then find and set the target
+        fetchConversations(user.id).then(() => {
+          // After fetching, find the conversation
+          const conv = useDMStore.getState().conversations.find(c => c.id === conversationId);
+          if (conv) {
+            setCurrentConversation(conv);
+            setShowFriends(false);
+          } else {
+            // Conversation not found in list, try to fetch participants to build it
+            supabase
+              .from('dm_participants')
+              .select('user_id')
+              .eq('conversation_id', conversationId)
+              .neq('user_id', user.id)
+              .single()
+              .then(async ({ data: participant }) => {
+                if (participant) {
+                  // Fetch the other user's details
+                  const { data: otherUserData } = await supabase.rpc('get_user_by_id', {
+                    _user_id: participant.user_id
+                  });
+                  
+                  if (otherUserData) {
+                    const conversation = {
+                      id: conversationId,
+                      created_at: new Date().toISOString(),
+                      other_user: otherUserData as unknown as User
+                    };
+                    setCurrentConversation(conversation);
+                    setShowFriends(false);
+                  }
+                }
+              });
+          }
+        });
+      }
+    }
+  }, [searchParams, user, conversations, setSearchParams, setCurrentServer, setCurrentConversation, fetchConversations]);
 
   // Real-time updates
   useRealtimeFriendships(user?.id || null);
