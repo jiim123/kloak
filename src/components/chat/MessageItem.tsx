@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, memo, forwardRef } from "react";
 import { Smile, Reply, Pencil, Trash2, Pin, MoreHorizontal, CornerUpLeft, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -22,6 +22,7 @@ import { MessageContent } from "./MessageContent";
 import { getMessagePreview } from "@/lib/message";
 import { formatMessageTimestamp } from "@/lib/format";
 import { DeleteMessageModal } from "@/components/modals/DeleteMessageModal";
+import { EmojiGifPicker } from "@/components/modals/EmojiGifPicker";
 import type { CustomServerRole, Message, ServerRole } from "@/types";
 import { format } from "date-fns";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
@@ -232,18 +233,40 @@ export const MessageItem = memo(function MessageItem({
     );
   }, [priorityRoleWithIcon?.icon, customEmojiMap]);
 
-  const RoleIconWrapper = ({ children }: { children: React.ReactNode }) => (
-    <span
-      className={cn(
-        "inline-flex items-center",
-        hoveredRoleIcon && "animate-pulse"
-      )}
-      onMouseEnter={() => setHoveredRoleIcon(true)}
-      onMouseLeave={() => setHoveredRoleIcon(false)}
-    >
-      {children}
-    </span>
+  const reactionEmojiNode = useCallback(
+    (emoji: string) => {
+      const match = emoji.match(/^:([a-z0-9_]{2,32}):$/i);
+      if (match) {
+        const url = customEmojiMap.get(match[1]);
+        if (url) {
+          return <img src={url} alt={emoji} className="w-5 h-5 object-contain" loading="lazy" />;
+        }
+      }
+      return <span className="text-base leading-none font-emoji">{emoji}</span>;
+    },
+    [customEmojiMap],
   );
+
+  const RoleIconWrapper = forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLSpanElement> & { children: React.ReactNode }>(
+    ({ children, className, onMouseEnter, onMouseLeave, ...props }, ref) => (
+      <span
+        ref={ref}
+        className={cn("inline-flex items-center", hoveredRoleIcon && "animate-pulse", className)}
+        onMouseEnter={(e) => {
+          onMouseEnter?.(e);
+          setHoveredRoleIcon(true);
+        }}
+        onMouseLeave={(e) => {
+          onMouseLeave?.(e);
+          setHoveredRoleIcon(false);
+        }}
+        {...props}
+      >
+        {children}
+      </span>
+    ),
+  );
+  RoleIconWrapper.displayName = "RoleIconWrapper";
 
   // Check permissions using database-backed permission system
   const { hasPermission } = useMemberPermissions(message.channel_id);
@@ -629,14 +652,14 @@ export const MessageItem = memo(function MessageItem({
                     key={reaction.emoji}
                     onClick={() => canAddReactions && handleReactionClick(reaction.emoji, reaction.hasReacted)}
                     disabled={!canAddReactions}
-                    className={`flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border transition-colors duration-200 ${
+                    className={`flex items-center gap-1.5 px-2.5 py-1 text-sm rounded-md border transition-colors duration-200 ${
                       reaction.hasReacted
                         ? "bg-primary/20 border-primary text-primary"
                         : "bg-secondary border-transparent hover:border-border"
                     } ${!canAddReactions ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
-                    <span>{reaction.emoji}</span>
-                    <span className="text-[11px]">{reaction.count}</span>
+                    {reactionEmojiNode(reaction.emoji)}
+                    <span className="text-xs">{reaction.count}</span>
                   </button>
                 ))}
               </div>
@@ -647,29 +670,18 @@ export const MessageItem = memo(function MessageItem({
           {!isEditing && (
             <div className="absolute right-2 -top-3 hidden md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 md:flex items-center gap-0.5 bg-background border border-border rounded-lg shadow-lg p-0.5 transition-opacity duration-150">
               {canAddReactions && (
-                <DropdownMenu
+                <EmojiGifPicker
                   open={dropdownState.emoji}
                   onOpenChange={(open) => setDropdownState((s) => ({ ...s, emoji: open }))}
+                  onEmojiSelect={handleAddReaction}
+                  disableGif
+                  serverId={currentServer?.id}
+                  serverName={currentServer?.name}
                 >
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="w-7 h-7 hover:bg-muted">
-                      <Smile className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start">
-                    <div className="flex gap-1 p-1">
-                      {QUICK_REACTIONS.map((emoji) => (
-                        <button
-                          key={emoji}
-                          onClick={() => handleAddReaction(emoji)}
-                          className="text-xl hover:scale-125 transition-transform p-1"
-                        >
-                          {emoji}
-                        </button>
-                      ))}
-                    </div>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  <Button variant="ghost" size="icon" className="w-7 h-7 hover:bg-muted">
+                    <Smile className="w-4 h-4" />
+                  </Button>
+                </EmojiGifPicker>
               )}
 
               <Tooltip>

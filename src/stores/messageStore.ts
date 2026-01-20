@@ -411,7 +411,13 @@ export const useMessageStore = create<MessageState>((set, get) => ({
                 const existingGroup = reactions.find((r) => r.emoji === emoji);
 
                 if (existingGroup) {
-                  existingGroup.count++;
+                  // Idempotency: if we already have this user's reaction (e.g. realtime update raced),
+                  // don't double-increment.
+                  if (existingGroup.users.includes(userId)) {
+                    existingGroup.hasReacted = true;
+                    return { ...m, reactions };
+                  }
+                  existingGroup.count += 1;
                   existingGroup.users.push(userId);
                   existingGroup.hasReacted = true;
                 } else {
@@ -462,6 +468,8 @@ export const useMessageStore = create<MessageState>((set, get) => ({
                 const reactions = (m.reactions || [])
                   .map((r) => {
                     if (r.emoji !== emoji) return r;
+                    // Idempotency: if we don't have this user's reaction, don't decrement.
+                    if (!r.users.includes(userId)) return r;
                     return {
                       ...r,
                       count: r.count - 1,

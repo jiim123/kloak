@@ -322,7 +322,13 @@ export const useDMStore = create<DMState>((set, get) => ({
               const reactions = [...(m.reactions || [])];
               const existingReaction = reactions.find((r) => r.emoji === emoji);
               if (existingReaction) {
-                existingReaction.count++;
+                // Idempotency: avoid double-increment if we already have this user's reaction
+                // (can happen if a realtime refresh races this local update).
+                if (existingReaction.users.includes(userId)) {
+                  existingReaction.hasReacted = true;
+                  return { ...m, reactions };
+                }
+                existingReaction.count += 1;
                 existingReaction.users.push(userId);
                 existingReaction.hasReacted = true;
               } else {
@@ -360,6 +366,8 @@ export const useDMStore = create<DMState>((set, get) => ({
               const reactions = (m.reactions || [])
                 .map((r) => {
                   if (r.emoji === emoji) {
+                    // Idempotency: don't decrement if the user isn't present
+                    if (!r.users.includes(userId)) return r;
                     return {
                       ...r,
                       count: r.count - 1,
