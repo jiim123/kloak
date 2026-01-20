@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { AvatarWithDecoration } from '@/components/ui/avatar-with-decoration';
+import { LoggedInUserPanel } from '@/components/layout/LoggedInUserPanel';
 import { useDMStore } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useUnreadDMs } from '@/hooks/useUnreadDMs';
@@ -106,7 +107,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange }: DMSidebarProps) 
       </div>
 
       {/* Conversations list */}
-      <div className="flex-1 overflow-y-auto px-2 space-y-0.5">
+      <div className="flex-1 overflow-y-auto scrollbar-overlay px-2 space-y-0.5">
         {/* Loading state */}
         {isLoading && conversations.length === 0 && (
           <>
@@ -207,6 +208,8 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange }: DMSidebarProps) 
           );
         })}
       </div>
+
+      <LoggedInUserPanel />
     </div>
   );
 };

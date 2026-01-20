@@ -458,6 +458,12 @@
 }
 
 @layer utilities {
+  /* Use overlay scrollbars (when supported) to avoid layout "gutter" gaps on Windows */
+  .scrollbar-overlay {
+    overflow-y: overlay;
+    overflow-x: hidden;
+  }
+
   /* Status indicator colors */
   .status-online {
     @apply bg-[hsl(var(--kloak-online))];

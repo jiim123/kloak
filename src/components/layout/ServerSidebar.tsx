@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, Plus, Settings, Home } from "lucide-react";
+import { Plus, Settings, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { MotionButton, MotionDiv } from "@/components/ui/motion-elements";
@@ -51,7 +51,7 @@ export const ServerSidebar = () => {
   const { user } = useAuthStore();
   const { servers, currentServer, setCurrentServer, isLoading, fetchServers } = useServerStore();
   const { setCurrentConversation } = useDMStore();
-  const { openModal } = useUIStore();
+  const { openModal, activeModal } = useUIStore();
   const [serverChannels, setServerChannels] = useState<ServerChannels>({});
   const [hoveredServer, setHoveredServer] = useState<string | null>(null);
   const [tooltipsEnabled, setTooltipsEnabled] = useState(false);
@@ -141,7 +141,7 @@ export const ServerSidebar = () => {
   return (
     <div className="h-full flex flex-col items-center py-3 gap-2 bg-layout-sidebar">
       {/* Server list */}
-      <div className="flex-1 flex flex-col items-center gap-2 overflow-y-auto scrollbar-hide w-full px-3">
+      <div className="flex-1 flex flex-col items-center gap-2 overflow-y-auto scrollbar-overlay scrollbar-hide w-full px-3">
         {/* Loading skeleton */}
         {isLoading && servers.length === 0 && (
           <div className="space-y-2">
@@ -384,6 +384,44 @@ export const ServerSidebar = () => {
           </TooltipTrigger>
           <TooltipContent side="right" className="font-medium">
             Add or Join a Server
+          </TooltipContent>
+        </Tooltip>
+      </div>
+
+      {/* Bottom actions */}
+      <div className="flex flex-col items-center gap-2 w-full px-3">
+        <div className="w-8 h-0.5 bg-border rounded-full shrink-0" />
+
+        <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
+          <TooltipTrigger asChild>
+            <MotionButton
+              className="relative group"
+              onMouseEnter={() => setHoveredServer(null)}
+              onMouseLeave={() => setHoveredServer(null)}
+              onClick={() => openModal("user-settings")}
+              whileHover="hover"
+              whileTap="tap"
+            >
+              <motion.div
+                variants={iconVariants}
+                initial="animate"
+                animate={activeModal === "user-settings" ? "active" : "animate"}
+                whileHover="hover"
+                whileTap="tap"
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                className={cn(
+                  "w-12 h-12 flex items-center justify-center",
+                  activeModal === "user-settings"
+                    ? "bg-primary text-primary-foreground ring-2 ring-primary/50"
+                    : "bg-secondary hover:bg-primary hover:text-primary-foreground",
+                )}
+              >
+                <Settings className="w-5 h-5" />
+              </motion.div>
+            </MotionButton>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="font-medium">
+            Settings
           </TooltipContent>
         </Tooltip>
       </div>

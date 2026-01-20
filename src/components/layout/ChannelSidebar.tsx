@@ -10,9 +10,6 @@ import {
   LogOut,
   UserPlus,
   FolderPlus,
-  Mic,
-  Headphones,
-  Palette,
 } from "lucide-react";
 import {
   DndContext,
@@ -42,10 +39,9 @@ import { useServerStore } from "@/stores/serverStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useUnread } from "@/hooks/useUnread";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
-import { StatusSelector } from "@/components/StatusSelector";
-import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { MotionButton } from "@/components/ui/motion-elements";
+import { LoggedInUserPanel } from "@/components/layout/LoggedInUserPanel";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -463,7 +459,6 @@ const SortableCategory = ({
 
 export const ChannelSidebar = () => {
   const { user } = useAuthStore();
-  const [isUserAvatarHovered, setIsUserAvatarHovered] = useState(false);
   const {
     currentServer,
     currentChannel,
@@ -475,7 +470,7 @@ export const ChannelSidebar = () => {
     reorderCategories,
     reorderChannels,
   } = useServerStore();
-  const { openModal, openServerSettings, cycleTheme } = useUIStore();
+  const { openModal, openServerSettings } = useUIStore();
 
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -807,7 +802,7 @@ export const ChannelSidebar = () => {
       >
         <ContextMenu>
           <ContextMenuTrigger asChild>
-            <div className="flex-1 overflow-y-auto p-2 scrollbar-hide">
+            <div className="flex-1 overflow-y-auto scrollbar-overlay p-2 scrollbar-hide">
               {/* Uncategorized channels */}
               <UncategorizedDropZone
                 isDragOver={overCategoryId === null && activeType === "channel"}
@@ -902,100 +897,7 @@ export const ChannelSidebar = () => {
         <DragOverlay>{getActiveItem()}</DragOverlay>
       </DndContext>
 
-      {/* User panel - extends into ServerSidebar area */}
-      <motion.div
-        className="h-14 pr-3 pl-3 flex items-center gap-3 bg-layout-sidebar border-t border-border/50 relative -ml-[72px] w-[calc(100%+72px)]"
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-      >
-        {/* Avatar with status */}
-        <StatusSelector side="top" align="start">
-          <button className="relative flex-shrink-0 group">
-            <motion.div
-              className="w-8 h-8 cursor-pointer overflow-hidden rounded-full"
-              onHoverStart={() => setIsUserAvatarHovered(true)}
-              onHoverEnd={() => setIsUserAvatarHovered(false)}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <AvatarWithDecoration user={user} className="w-8 h-8" active={isUserAvatarHovered} />
-            </motion.div>
-            <div
-              className={cn(
-                "absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-layout-sidebar transition-colors",
-                user?.status === "online" && "bg-kloak-online",
-                user?.status === "idle" && "bg-kloak-idle",
-                user?.status === "dnd" && "bg-kloak-dnd",
-                user?.status === "offline" && "bg-kloak-offline",
-              )}
-            />
-          </button>
-        </StatusSelector>
-
-        {/* User info */}
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-foreground truncate">{user?.display_name || user?.username}</p>
-          <p className="text-xs text-muted-foreground truncate">
-            {user?.custom_status ||
-              (user?.status === "online"
-                ? "Online"
-                : user?.status === "idle"
-                  ? "Idle"
-                  : user?.status === "dnd"
-                    ? "Do Not Disturb"
-                    : "Offline")}
-          </p>
-        </div>
-
-        {/* Action buttons */}
-        <div className="flex items-center gap-0.5">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="w-8 h-8 text-muted-foreground hover:text-foreground">
-                <Mic className="w-4 h-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Mute</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="w-8 h-8 text-muted-foreground hover:text-foreground">
-                <Headphones className="w-4 h-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Deafen</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="w-8 h-8 text-muted-foreground hover:text-foreground"
-                onClick={cycleTheme}
-              >
-                <Palette className="w-4 h-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Theme</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="w-8 h-8 text-muted-foreground hover:text-foreground"
-                onClick={() => openModal("user-settings")}
-              >
-                <Settings className="w-4 h-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Settings</TooltipContent>
-          </Tooltip>
-        </div>
-      </motion.div>
+      <LoggedInUserPanel />
     </div>
   );
 };
