@@ -5,7 +5,7 @@
   "identifier": "com.kloak.desktop",
   "build": {
     "frontendDist": "../dist",
-    "devUrl": "http://localhost:8080",
+    "devUrl": "https://kloak.lovable.app/app",
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build"
   },
