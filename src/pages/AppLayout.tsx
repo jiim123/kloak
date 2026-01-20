@@ -32,6 +32,7 @@ import {
   PermissionDebugPanel
 } from '@/components/modals';
 import { PersistentEmbedContainer } from '@/components/chat/PersistentEmbedContainer';
+import { DesktopTitleBar } from '@/components/layout/DesktopTitleBar';
 import { cn } from '@/lib/utils';
 import { useDMStore } from '@/stores/dmStore';
 import { useRealtimeFriendships, useRealtimeUsers, useRealtimeServer, useRealtimeNotifications, useRealtimeDMs, useUnreadDMs, useRealtimeMessages, useRealtimeReactions } from '@/hooks';
@@ -140,76 +141,93 @@ const AppLayout = () => {
     return null;
   }
 
+  const desktopTitle =
+    isDMView
+      ? currentConversation
+        ? (currentConversation.other_user?.display_name ||
+            currentConversation.other_user?.username ||
+            "Direct Messages")
+        : "Direct Messages"
+      : currentChannel
+        ? `# ${currentChannel.name}`
+        : currentServer
+          ? currentServer.name
+          : "Kloak";
+
   return (
     <>
-      {/* Connection Status Banner */}
-      <ConnectionStatus />
+      <div className="h-screen flex flex-col overflow-hidden">
+        <DesktopTitleBar title={desktopTitle} />
 
-      <div className="h-screen flex flex-col md:flex-row overflow-hidden">
-        {/* Mobile header */}
-        <MobileHeader
-          isDMView={isDMView}
-          showFriends={showFriends}
-        />
+        {/* Connection Status Banner */}
+        <ConnectionStatus />
 
-        {/* Desktop layout */}
-        <div className="hidden md:flex flex-1 overflow-hidden">
-          {/* Server list sidebar - 72px fixed */}
-          <div className="w-[72px] flex-shrink-0 bg-layout-sidebar">
-            <ServerSidebar />
-          </div>
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+          {/* Mobile header */}
+          <MobileHeader
+            isDMView={isDMView}
+            showFriends={showFriends}
+          />
 
-          {/* Secondary sidebar - 240px fixed */}
-          <div className="w-60 flex-shrink-0 bg-layout-sidebar-secondary">
-            {isDMView ? (
-              <DMSidebar
-                showFriends={showFriends}
-                onShowFriendsChange={setShowFriends}
-              />
-            ) : (
-              <ChannelSidebar />
+          {/* Desktop layout */}
+          <div className="hidden md:flex flex-1 overflow-hidden">
+            {/* Server list sidebar - 72px fixed */}
+            <div className="w-[72px] flex-shrink-0 bg-layout-sidebar">
+              <ServerSidebar />
+            </div>
+
+            {/* Secondary sidebar - 240px fixed */}
+            <div className="w-60 flex-shrink-0 bg-layout-sidebar-secondary">
+              {isDMView ? (
+                <DMSidebar
+                  showFriends={showFriends}
+                  onShowFriendsChange={setShowFriends}
+                />
+              ) : (
+                <ChannelSidebar />
+              )}
+            </div>
+
+            {/* Main area - flexible */}
+            <div className="flex-1 min-w-0 bg-layout-chat relative">
+              {isDMView ? (
+                currentConversation ? (
+                  <DMChatArea />
+                ) : showFriends ? (
+                  <FriendsList onOpenDM={() => setShowFriends(false)} />
+                ) : (
+                  <HomeLanding />
+                )
+              ) : (
+                <ChatArea />
+              )}
+            </div>
+
+            {/* Members sidebar - 240px, collapsible, only in server view */}
+            {!isDMView && (
+              <div
+                className={cn(
+                  "flex-shrink-0 bg-layout-members transition-all duration-200",
+                  isMemberSidebarOpen ? "w-60" : "w-0 overflow-hidden"
+                )}
+              >
+                <MembersSidebar />
+              </div>
             )}
           </div>
 
-          {/* Main area - flexible */}
-          <div className="flex-1 min-w-0 bg-layout-chat relative">
+          {/* Mobile layout */}
+          <div className="flex-1 md:hidden overflow-hidden bg-layout-chat">
             {isDMView ? (
-              currentConversation ? (
-                <DMChatArea />
-              ) : showFriends ? (
+              showFriends ? (
                 <FriendsList onOpenDM={() => setShowFriends(false)} />
               ) : (
-                <HomeLanding />
+                <DMChatArea />
               )
             ) : (
               <ChatArea />
             )}
           </div>
-
-          {/* Members sidebar - 240px, collapsible, only in server view */}
-          {!isDMView && (
-            <div
-              className={cn(
-                "flex-shrink-0 bg-layout-members transition-all duration-200",
-                isMemberSidebarOpen ? "w-60" : "w-0 overflow-hidden"
-              )}
-            >
-              <MembersSidebar />
-            </div>
-          )}
-        </div>
-
-        {/* Mobile layout */}
-        <div className="flex-1 md:hidden overflow-hidden bg-layout-chat">
-          {isDMView ? (
-            showFriends ? (
-              <FriendsList onOpenDM={() => setShowFriends(false)} />
-            ) : (
-              <DMChatArea />
-            )
-          ) : (
-            <ChatArea />
-          )}
         </div>
       </div>
 
