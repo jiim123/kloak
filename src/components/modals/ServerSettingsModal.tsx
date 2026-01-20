@@ -286,6 +286,7 @@ export const ServerSettingsModal = () => {
   const canManageServer = hasPermission('manage_server');
   const canManageRoles = hasPermission('manage_roles');
   const canManageChannels = hasPermission('manage_channels');
+  const canManageEmojis = hasPermission('manage_emojis');
   
   // For backward compatibility and specific checks
   const isOwner = userRole === 'owner';
@@ -332,9 +333,9 @@ export const ServerSettingsModal = () => {
     }
   }, [isOpen, server, fetchMembers, fetchRoles, reset]);
 
-  // Load server emojis when modal opens (owner-only)
+  // Load server emojis when modal opens
   useEffect(() => {
-    if (!isOpen || !server || !isOwner) return;
+    if (!isOpen || !server || !canManageEmojis) return;
     let cancelled = false;
 
     (async () => {
@@ -356,7 +357,7 @@ export const ServerSettingsModal = () => {
     return () => {
       cancelled = true;
     };
-  }, [isOpen, server?.id, isOwner]);
+  }, [isOpen, server?.id, canManageEmojis]);
 
   const clearEmoji = () => {
     setEmojiFile(null);
@@ -371,6 +372,10 @@ export const ServerSettingsModal = () => {
   };
 
   const handleEmojiSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!canManageEmojis) {
+      toast.error('You do not have permission to manage emojis');
+      return;
+    }
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -390,6 +395,10 @@ export const ServerSettingsModal = () => {
 
   const uploadServerEmoji = async () => {
     if (!server || !user) return;
+    if (!canManageEmojis) {
+      toast.error('You do not have permission to manage emojis');
+      return;
+    }
     if (!emojiFile) {
       toast.error('Please select an emoji image');
       return;
@@ -468,6 +477,10 @@ export const ServerSettingsModal = () => {
 
   const deleteServerEmoji = async (emoji: { id: string; name: string; file_path: string }) => {
     if (!server) return;
+    if (!canManageEmojis) {
+      toast.error('You do not have permission to manage emojis');
+      return;
+    }
     if (!confirm(`Delete emoji "${emoji.name}"?`)) return;
 
     try {
@@ -874,7 +887,7 @@ export const ServerSettingsModal = () => {
                 <Ban className="w-4 h-4" />
                 <span>Bans</span>
               </TabsTrigger>
-              {isOwner && (
+              {canManageEmojis && (
                 <TabsTrigger
                   value="emojis"
                   className="w-full justify-start gap-2 text-xs sm:text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
@@ -1355,9 +1368,9 @@ export const ServerSettingsModal = () => {
                 )}
               </TabsContent>
 
-              {/* Emojis Tab (Owner only) */}
+              {/* Emojis Tab */}
               <TabsContent value="emojis" className="m-0 p-6">
-                {isOwner ? (
+                {canManageEmojis ? (
                   <div className="space-y-5">
                     <div className="space-y-2">
                       <h4 className="text-xs sm:text-sm font-semibold">Custom Emojis</h4>
@@ -1478,7 +1491,7 @@ export const ServerSettingsModal = () => {
                 ) : (
                   <div className="flex flex-col items-center justify-center py-6 sm:py-8 text-center">
                     <Shield className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground/50 mb-2 sm:mb-3" />
-                    <p className="text-xs sm:text-sm text-muted-foreground">Only the server owner can manage emojis</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">You do not have permission to manage emojis</p>
                   </div>
                 )}
               </TabsContent>

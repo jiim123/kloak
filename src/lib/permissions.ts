@@ -38,6 +38,7 @@ const ROLE_PERMISSIONS: Record<ServerRole, Permission[]> = {
     'manage_server',
     'manage_roles',
     'manage_channels',
+    'manage_emojis',
     'kick_members',
     'ban_members',
     'mute_members',
@@ -52,6 +53,7 @@ const ROLE_PERMISSIONS: Record<ServerRole, Permission[]> = {
   ],
   admin: [
     'manage_channels',
+    'manage_emojis',
     'kick_members',
     'ban_members',
     'mute_members',
@@ -344,6 +346,7 @@ export const getMemberPermissions = (
     'manage_server',
     'manage_roles',
     'manage_channels',
+    'manage_emojis',
     'kick_members',
     'ban_members',
     'mute_members',

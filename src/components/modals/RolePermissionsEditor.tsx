@@ -35,7 +35,7 @@ const PERMISSION_GROUPS: Array<{
     },
     {
       label: 'Administrative Permissions',
-      permissions: ['manage_server', 'manage_roles', 'manage_invites', 'transfer_ownership'],
+      permissions: ['manage_server', 'manage_roles', 'manage_emojis', 'manage_invites', 'transfer_ownership'],
     },
   ];
 
@@ -52,6 +52,7 @@ const PERMISSION_LABELS: Record<Permission, string> = {
   pin_messages: 'Pin Messages',
   manage_server: 'Manage Server',
   manage_roles: 'Manage Roles',
+  manage_emojis: 'Manage Emojis',
   manage_invites: 'Manage Invites',
   transfer_ownership: 'Transfer Ownership',
 };
@@ -98,7 +99,7 @@ export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissio
       'view_channels', 'send_messages', 'add_reactions',
       'manage_messages', 'pin_messages', 'manage_channels',
       'kick_members', 'ban_members', 'mute_members',
-      'manage_nicknames', 'manage_roles', 'manage_server',
+      'manage_nicknames', 'manage_roles', 'manage_server', 'manage_emojis',
       'manage_invites', 'transfer_ownership'
     ];
 

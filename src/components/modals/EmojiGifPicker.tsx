@@ -99,6 +99,11 @@ export const EmojiGifPicker = ({
   serverId,
   serverName
 }: EmojiGifPickerProps) => {
+  // Support both controlled and uncontrolled popover usage.
+  // When `open` is undefined (uncontrolled), we track open state internally so
+  // server emoji loading still works (e.g. Server Settings -> Role Icon).
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isOpen = open ?? internalOpen;
   const [activeTab, setActiveTab] = useState<'emoji' | 'gif'>('emoji');
   const [emojiSearch, setEmojiSearch] = useState('');
   const [gifSearch, setGifSearch] = useState('');
@@ -108,11 +113,11 @@ export const EmojiGifPicker = ({
   const [hasSearchedGifs, setHasSearchedGifs] = useState(false);
   const [serverEmojis, setServerEmojis] = useState<ServerEmoji[]>([]);
 
-  const recentEmojis = useMemo(() => getRecentEmojis(), [open]);
+  const recentEmojis = useMemo(() => getRecentEmojis(), [isOpen]);
 
   // Load server emojis when opening (server context only)
   useEffect(() => {
-    if (!open || !serverId) return;
+    if (!isOpen || !serverId) return;
     let cancelled = false;
 
     (async () => {
@@ -128,7 +133,7 @@ export const EmojiGifPicker = ({
     return () => {
       cancelled = true;
     };
-  }, [open, serverId]);
+  }, [isOpen, serverId]);
 
   const filteredServerEmojis = useMemo(() => {
     if (!emojiSearch.trim()) return [];
@@ -209,7 +214,13 @@ export const EmojiGifPicker = ({
   }));
 
   return (
-    <Popover open={open} onOpenChange={onOpenChange}>
+    <Popover
+      open={isOpen}
+      onOpenChange={(next) => {
+        setInternalOpen(next);
+        onOpenChange?.(next);
+      }}
+    >
       <PopoverTrigger asChild>
         {children}
       </PopoverTrigger>
