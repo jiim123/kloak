@@ -237,7 +237,14 @@ export const ServerSettingsModal = () => {
         >
           <GripVertical className="w-4 h-4" />
         </div>
-        <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: role.color }} />
+        <div 
+          className="w-4 h-4 rounded-full flex-shrink-0" 
+          style={
+            role.color.startsWith('linear-gradient')
+              ? { background: role.color }
+              : { backgroundColor: role.color }
+          } 
+        />
         <div className="flex-1 min-w-0">
           <span className="text-xs sm:text-sm font-medium">{role.name}</span>
         </div>
@@ -1066,16 +1073,23 @@ export const ServerSettingsModal = () => {
                             {getRoleIcon(member.role)}
                             {hasRoles && (
                               <div className="flex items-center gap-1 flex-wrap">
-                                {memberRoles.map((role) => (
-                                  <Badge
-                                    key={role.id}
-                                    variant="outline"
-                                    className="text-[10px] px-1.5 py-0 h-4 font-medium border-0"
-                                    style={{ backgroundColor: role.color + '20', color: role.color }}
-                                  >
-                                    {role.name}
-                                  </Badge>
-                                ))}
+                                {memberRoles.map((role) => {
+                                  const isGradient = role.color.startsWith('linear-gradient');
+                                  return (
+                                    <Badge
+                                      key={role.id}
+                                      variant="outline"
+                                      className="text-[10px] px-1.5 py-0 h-4 font-medium border-0"
+                                      style={
+                                        isGradient
+                                          ? { background: role.color, color: '#fff' }
+                                          : { backgroundColor: role.color + '20', color: role.color }
+                                      }
+                                    >
+                                      {role.name}
+                                    </Badge>
+                                  );
+                                })}
                               </div>
                             )}
                           </div>
@@ -1112,7 +1126,11 @@ export const ServerSettingsModal = () => {
                                         <div className="flex items-center gap-2 w-full">
                                           <div 
                                             className="w-3 h-3 rounded-full flex-shrink-0"
-                                            style={{ backgroundColor: role.color }}
+                                            style={
+                                              role.color.startsWith('linear-gradient')
+                                                ? { background: role.color }
+                                                : { backgroundColor: role.color }
+                                            }
                                           />
                                           <span className="flex-1">{role.name}</span>
                                           {hasRole && <span className="text-xs text-muted-foreground">✓</span>}

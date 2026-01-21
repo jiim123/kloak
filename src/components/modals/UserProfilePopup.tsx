@@ -245,18 +245,22 @@ export const UserProfilePopup = () => {
                       Roles
                     </div>
                     <div className="flex flex-wrap gap-1.5 flex-1">
-                      {userRoles.map((role) => (
-                        <span
-                          key={role.id}
-                          className="text-xs font-medium px-2 py-0.5 rounded-md"
-                          style={{
-                            backgroundColor: `${role.color}15`,
-                            color: role.color,
-                          }}
-                        >
-                          {role.name}
-                        </span>
-                      ))}
+                      {userRoles.map((role) => {
+                        const isGradient = role.color.startsWith('linear-gradient');
+                        return (
+                          <span
+                            key={role.id}
+                            className="text-xs font-medium px-2 py-0.5 rounded-md"
+                            style={
+                              isGradient
+                                ? { background: role.color, color: '#fff' }
+                                : { backgroundColor: `${role.color}15`, color: role.color }
+                            }
+                          >
+                            {role.name}
+                          </span>
+                        );
+                      })}
                     </div>
                   </div>
                 )}

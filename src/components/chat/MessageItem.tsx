@@ -41,6 +41,16 @@ const getRoleColor = (role?: ServerRole): string => {
   return role ? ROLE_COLORS[role] || "text-foreground" : "text-foreground";
 };
 
+const isGradientColor = (value?: string | null) => !!value && value.startsWith("linear-gradient");
+
+const getGradientTextStyle = (gradient: string): React.CSSProperties =>
+  ({
+    background: gradient,
+    WebkitBackgroundClip: "text",
+    backgroundClip: "text",
+    color: "transparent",
+  }) as React.CSSProperties;
+
 interface MessageItemProps {
   message: Message;
   isGrouped: boolean;
@@ -439,12 +449,20 @@ export const MessageItem = memo(function MessageItem({
   }, [messageMember?.roles, roles]);
 
   const usernameColorClass = useMemo(
-    () => (topCustomRoleColor ? "text-foreground" : getRoleColor(messageMember?.role)),
+    () => {
+      if (!topCustomRoleColor) return getRoleColor(messageMember?.role);
+      return isGradientColor(topCustomRoleColor) ? "text-transparent" : "text-foreground";
+    },
     [topCustomRoleColor, messageMember?.role],
   );
 
   const usernameColorStyle = useMemo(
-    () => (topCustomRoleColor ? ({ color: topCustomRoleColor } as React.CSSProperties) : undefined),
+    () => {
+      if (!topCustomRoleColor) return undefined;
+      return isGradientColor(topCustomRoleColor)
+        ? getGradientTextStyle(topCustomRoleColor)
+        : ({ color: topCustomRoleColor } as React.CSSProperties);
+    },
     [topCustomRoleColor],
   );
   const displayName = messageMember?.nickname || messageUser?.display_name || messageUser?.username;

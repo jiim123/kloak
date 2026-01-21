@@ -286,6 +286,8 @@ export const MembersSidebar = () => {
       }
       return best?.color ?? null;
     }, [member.roles, roles]);
+
+    const isGradientName = !!priorityCustomRoleColor && priorityCustomRoleColor.startsWith('linear-gradient');
     
     // Permission checks using database-backed permission system
     const canKick = checkPermission('kick_members') && canModerate(currentUserRole, member.role) && !isSelf;
@@ -332,9 +334,24 @@ export const MembersSidebar = () => {
             )}
             <span className={cn(
               'text-sm truncate font-medium',
-              memberIsOffline ? 'text-muted-foreground' : (priorityCustomRoleColor ? 'text-foreground' : roleInfo.color)
+              memberIsOffline
+                ? 'text-muted-foreground'
+                : priorityCustomRoleColor
+                  ? (isGradientName ? 'text-transparent' : 'text-foreground')
+                  : roleInfo.color
             )}
-            style={!memberIsOffline && priorityCustomRoleColor ? { color: priorityCustomRoleColor } : undefined}
+            style={
+              !memberIsOffline && priorityCustomRoleColor
+                ? isGradientName
+                  ? ({
+                      background: priorityCustomRoleColor,
+                      WebkitBackgroundClip: 'text',
+                      backgroundClip: 'text',
+                      color: 'transparent',
+                    } as React.CSSProperties)
+                  : ({ color: priorityCustomRoleColor } as React.CSSProperties)
+                : undefined
+            }
             >
               {displayName}
             </span>
@@ -489,16 +506,25 @@ export const MembersSidebar = () => {
             const roleMembers = roleGroups.get(role.id) || [];
             if (roleMembers.length === 0) return null;
             
+            const isGradient = role.color.startsWith('linear-gradient');
+            const textColor = isGradient 
+              ? (role.color.match(/#[0-9a-fA-F]{6}/) || ['#5865F2'])[0] 
+              : role.color;
+            
             return (
               <div key={role.id} className="mb-4">
                 <div className="px-2 py-1 flex items-center gap-2">
                   <div
                     className="w-3 h-3 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: role.color }}
+                    style={
+                      isGradient
+                        ? { background: role.color }
+                        : { backgroundColor: role.color }
+                    }
                   />
                   <span 
                     className="text-xs font-semibold uppercase tracking-wide"
-                    style={{ color: role.color }}
+                    style={{ color: textColor }}
                   >
                     {role.name} — {roleMembers.length}
                   </span>

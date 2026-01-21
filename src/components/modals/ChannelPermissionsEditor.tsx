@@ -312,7 +312,11 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       <div
                         className="w-3 h-3 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: role.color }}
+                        style={
+                          role.color.startsWith('linear-gradient')
+                            ? { background: role.color }
+                            : { backgroundColor: role.color }
+                        }
                       />
                       <span className="truncate font-medium">{role.label}</span>
                     </div>
