@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNotificationStore } from '@/stores/notificationStore';
 import type { Notification } from '@/types';
+import { isTauri } from '@/lib/tauriRuntime';
 
 export const useRealtimeNotifications = (userId: string | null) => {
   const { fetchNotifications, addNotification, removeNotification } = useNotificationStore();
@@ -26,8 +27,8 @@ export const useRealtimeNotifications = (userId: string | null) => {
           const notification = payload.new as Notification;
           addNotification(notification);
           
-          // Show browser notification if permitted
-          showBrowserNotification(notification);
+          // Show desktop notification if permitted
+          void showDesktopNotification(notification);
         }
       )
       .on(
@@ -53,6 +54,20 @@ export const useRealtimeNotifications = (userId: string | null) => {
 
 // Request browser notification permission
 export const requestNotificationPermission = async (): Promise<boolean> => {
+  if (isTauri()) {
+    try {
+      const { isPermissionGranted, requestPermission } = await import('@tauri-apps/plugin-notification');
+      let granted = await isPermissionGranted();
+      if (!granted) {
+        const permission = await requestPermission();
+        granted = permission === 'granted';
+      }
+      return granted;
+    } catch {
+      return false;
+    }
+  }
+
   if (!('Notification' in window)) {
     return false;
   }
@@ -69,11 +84,31 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
   return permission === 'granted';
 };
 
-// Show browser notification
-const showBrowserNotification = (notification: Notification) => {
+// Show desktop notification
+const showDesktopNotification = async (notification: Notification) => {
   // Only show if tab is not focused
   if (document.visibilityState === 'visible') return;
-  
+
+  if (isTauri()) {
+    try {
+      const { isPermissionGranted, requestPermission, sendNotification } = await import('@tauri-apps/plugin-notification');
+      let granted = await isPermissionGranted();
+      if (!granted) {
+        const permission = await requestPermission();
+        granted = permission === 'granted';
+      }
+      if (!granted) return;
+
+      sendNotification({
+        title: notification.title,
+        body: notification.body || undefined,
+      });
+    } catch {
+      // Ignore in browser / non-tauri environments
+    }
+    return;
+  }
+
   if (Notification.permission !== 'granted') return;
 
   const browserNotification = new window.Notification(notification.title, {

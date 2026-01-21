@@ -69,7 +69,7 @@ export const AvatarDecorationModal = ({ open, onOpenChange, onSelect }: AvatarDe
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-w-[calc(100vw-2rem)]">
+      <DialogContent className="sm:max-w-2xl max-w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] overflow-hidden">
         <DialogHeader>
           <DialogTitle>Avatar Decoration</DialogTitle>
           <DialogDescription>
@@ -97,46 +97,48 @@ export const AvatarDecorationModal = ({ open, onOpenChange, onSelect }: AvatarDe
           </div>
 
           {/* Decoration Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {/* None option */}
-            <button
-              onClick={() => setSelectedDecoration(null)}
-              className={cn(
-                'flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all',
-                selectedDecoration === null
-                  ? 'border-primary bg-primary/10'
-                  : 'border-border hover:border-primary/50'
-              )}
-            >
-              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-                <span className="text-2xl">✕</span>
-              </div>
-              <span className="text-xs font-medium">None</span>
-            </button>
-
-            {/* Available decorations */}
-            {AVATAR_DECORATIONS.map((decoration) => (
+          <div className="max-h-[40vh] sm:max-h-[50vh] overflow-y-auto pr-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {/* None option */}
               <button
-                key={decoration.id}
-                onClick={() => setSelectedDecoration(decoration.id)}
+                onClick={() => setSelectedDecoration(null)}
                 className={cn(
                   'flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all',
-                  selectedDecoration === decoration.id
+                  selectedDecoration === null
                     ? 'border-primary bg-primary/10'
                     : 'border-border hover:border-primary/50'
                 )}
               >
-                <div className="relative w-16 h-16 rounded-full bg-muted overflow-hidden">
-                  <img
-                    src={decoration.src}
-                    alt={decoration.name}
-                    className="w-full h-full object-contain"
-                    style={{ imageRendering: 'pixelated' }}
-                  />
+                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+                  <span className="text-2xl">✕</span>
                 </div>
-                <span className="text-xs font-medium text-center">{decoration.name}</span>
+                <span className="text-xs font-medium">None</span>
               </button>
-            ))}
+
+              {/* Available decorations */}
+              {AVATAR_DECORATIONS.map((decoration) => (
+                <button
+                  key={decoration.id}
+                  onClick={() => setSelectedDecoration(decoration.id)}
+                  className={cn(
+                    'flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all',
+                    selectedDecoration === decoration.id
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border hover:border-primary/50'
+                  )}
+                >
+                  <div className="relative w-16 h-16 rounded-full bg-muted overflow-hidden">
+                    <img
+                      src={decoration.src}
+                      alt={decoration.name}
+                      className="w-full h-full object-contain"
+                      style={{ imageRendering: 'pixelated' }}
+                    />
+                  </div>
+                  <span className="text-xs font-medium text-center">{decoration.name}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Actions */}

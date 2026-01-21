@@ -45,6 +45,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { isTauri } from "@/lib/tauriRuntime";
 
 // Theme preview colors for the selector
 const THEME_PREVIEWS: Record<Theme, { bg: string; sidebar: string; accent: string }> = {
@@ -58,6 +59,7 @@ const THEME_PREVIEWS: Record<Theme, { bg: string; sidebar: string; accent: strin
 export const UserSettingsModal = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const isTauriApp = isTauri();
   const {
     activeModal,
     closeModal,
@@ -471,12 +473,39 @@ export const UserSettingsModal = () => {
         icon={Bell}
         label="Desktop Notifications"
         description={
-          Notification.permission === "denied" ? "Blocked in browser settings" : "Show desktop alerts for new messages"
+          !isTauriApp && Notification.permission === "denied"
+            ? "Blocked in browser settings"
+            : "Show desktop alerts for new messages"
         }
         checked={desktopNotificationsEnabled}
-        disabled={Notification.permission === "denied"}
+        disabled={!isTauriApp && Notification.permission === "denied"}
         onCheckedChange={async (checked) => {
-          if (checked && Notification.permission === "default") {
+          if (!checked) return setDesktopNotificationsEnabled(false);
+
+          if (isTauriApp) {
+            try {
+              const { isPermissionGranted, requestPermission } = await import("@tauri-apps/plugin-notification");
+              let granted = await isPermissionGranted();
+              if (!granted) {
+                const permission = await requestPermission();
+                granted = permission === "granted";
+              }
+
+              if (granted) {
+                setDesktopNotificationsEnabled(true);
+                toast.success("Desktop notifications enabled!");
+              } else {
+                setDesktopNotificationsEnabled(false);
+                toast.error("Notification permission denied. Enable in system settings.");
+              }
+            } catch {
+              setDesktopNotificationsEnabled(false);
+              toast.error("Unable to enable notifications on desktop.");
+            }
+            return;
+          }
+
+          if (Notification.permission === "default") {
             const permission = await Notification.requestPermission();
             if (permission === "granted") {
               setDesktopNotificationsEnabled(true);
@@ -484,9 +513,10 @@ export const UserSettingsModal = () => {
             } else if (permission === "denied") {
               toast.error("Notification permission denied. Enable in browser settings.");
             }
-          } else {
-            setDesktopNotificationsEnabled(checked);
+            return;
           }
+
+          setDesktopNotificationsEnabled(true);
         }}
       />
 
