@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { format } from 'date-fns';
-import { MessageCircle, UserPlus, UserMinus, Loader2, Check, X } from 'lucide-react';
+import { MessageCircle, UserPlus, UserMinus, Loader2, Check, X, Clock } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -26,19 +26,59 @@ const statusColors: Record<UserStatus, string> = {
   offline: 'bg-gray-500',
 };
 
+const COOLDOWN_MINUTES = 5;
+
 export const UserProfilePopup = () => {
   const { activeModal, modalData, closeModal } = useUIStore();
   const { user: currentUser } = useAuthStore();
   const { servers, setCurrentServer, currentServer, members } = useServerStore();
-  const { friends, pendingRequests, outgoingRequests, sendRequest, removeFriend, acceptRequest, declineRequest } = useFriendStore();
+  const { friends, pendingRequests, outgoingRequests, sendRequest, removeFriend, acceptRequest, declineRequest, error: friendError } = useFriendStore();
   const { openConversation, setCurrentConversation } = useDMStore();
 
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [sharedServers, setSharedServers] = useState<typeof servers>([]);
+  const [cooldownSeconds, setCooldownSeconds] = useState<number>(0);
+  const [isSendingRequest, setIsSendingRequest] = useState(false);
 
   const isOpen = activeModal === 'userProfile';
   const userId = modalData?.userId as string | undefined;
+
+  // Check for cooldown from declined requests
+  const checkCooldown = useCallback(async () => {
+    if (!currentUser?.id || !userId || currentUser.id === userId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('declined_friend_requests')
+        .select('declined_at')
+        .eq('requester_id', currentUser.id)
+        .eq('addressee_id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows
+        console.error('Failed to check cooldown:', error);
+        return;
+      }
+
+      if (data?.declined_at) {
+        const declinedAt = new Date(data.declined_at);
+        const cooldownEnd = new Date(declinedAt.getTime() + COOLDOWN_MINUTES * 60 * 1000);
+        const now = new Date();
+        const remainingMs = cooldownEnd.getTime() - now.getTime();
+        
+        if (remainingMs > 0) {
+          setCooldownSeconds(Math.ceil(remainingMs / 1000));
+        } else {
+          setCooldownSeconds(0);
+        }
+      } else {
+        setCooldownSeconds(0);
+      }
+    } catch (err) {
+      console.error('Error checking cooldown:', err);
+    }
+  }, [currentUser?.id, userId]);
 
   // Fetch user profile
   useEffect(() => {
@@ -85,6 +125,9 @@ export const UserProfilePopup = () => {
         } else {
           setSharedServers([]);
         }
+
+        // Check cooldown after loading profile
+        await checkCooldown();
       } catch (error) {
         console.error('Failed to fetch profile:', error);
         toast.error('Failed to load profile');
@@ -94,12 +137,37 @@ export const UserProfilePopup = () => {
     };
 
     fetchProfile();
-  }, [isOpen, userId, servers]);
+  }, [isOpen, userId, servers, checkCooldown]);
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (cooldownSeconds <= 0) return;
+
+    const interval = setInterval(() => {
+      setCooldownSeconds(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [cooldownSeconds]);
 
   const isSelf = currentUser?.id === userId;
   const isFriend = friends.some(f => f.id === userId);
   const hasPendingRequest = pendingRequests.some(f => f.id === userId);
   const hasSentRequest = outgoingRequests.some(f => f.id === userId);
+  const isInCooldown = cooldownSeconds > 0;
+
+  // Format cooldown time as MM:SS
+  const formatCooldown = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   // Get user's roles in current server
   const userRoles = currentServer && userId
@@ -131,9 +199,16 @@ export const UserProfilePopup = () => {
         await removeFriend(friendship.friendship_id, currentUser.id);
         toast.success('Friend removed');
       }
-    } else if (!hasPendingRequest && !hasSentRequest) {
-      await sendRequest(currentUser.id, profileUser.username);
-      toast.success('Friend request sent!');
+    } else if (!hasPendingRequest && !hasSentRequest && !isInCooldown) {
+      setIsSendingRequest(true);
+      const success = await sendRequest(currentUser.id, profileUser.username);
+      setIsSendingRequest(false);
+      if (success) {
+        toast.success('Friend request sent!');
+      } else {
+        // Check cooldown again in case the error was about cooldown
+        await checkCooldown();
+      }
     }
   };
 
@@ -316,18 +391,31 @@ export const UserProfilePopup = () => {
                     </>
                   ) : (
                     <Button
-                      variant={isFriend ? 'destructive' : 'outline'}
+                      variant={isFriend ? 'destructive' : isInCooldown ? 'secondary' : 'outline'}
                       onClick={handleFriendAction}
-                      disabled={hasSentRequest}
-                      className="flex-1"
+                      disabled={hasSentRequest || isInCooldown || isSendingRequest}
+                      className={cn(
+                        "flex-1",
+                        isInCooldown && "opacity-80"
+                      )}
                     >
-                      {isFriend ? (
+                      {isSendingRequest ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Sending...
+                        </>
+                      ) : isFriend ? (
                         <>
                           <UserMinus className="w-4 h-4 mr-2" />
                           Remove
                         </>
                       ) : hasSentRequest ? (
                         'Request Sent'
+                      ) : isInCooldown ? (
+                        <>
+                          <Clock className="w-4 h-4 mr-2" />
+                          Retry in {formatCooldown(cooldownSeconds)}
+                        </>
                       ) : (
                         <>
                           <UserPlus className="w-4 h-4 mr-2" />
