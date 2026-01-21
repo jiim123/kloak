@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Copy, RefreshCw, Users, Loader2, Zap, Link2, X } from "lucide-react";
+import { Check, Copy, RefreshCw, Users, Loader2, Zap, Link2 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -111,10 +111,10 @@ export const InviteModal = () => {
           {/* Header with gradient accent */}
           <div className="relative px-6 pt-6 pb-4">
             {/* Decorative gradient blob */}
-            <div className="absolute -top-20 -right-20 w-40 h-40 bg-kloak-success/20 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -top-20 -right-20 w-40 h-40 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
 
             {/* Badge */}
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-kloak-success/10 px-3 py-1 text-xs font-medium text-kloak-success mb-4">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary mb-4">
               <Users className="w-3 h-3" />
               Share with friends
             </div>
@@ -132,16 +132,10 @@ export const InviteModal = () => {
                 Invite Code
               </Label>
               <div className="flex items-center gap-3">
-                <div className="flex-1 h-14 flex items-center justify-center rounded-xl border-2 border-kloak-success/20 bg-kloak-success/5">
-                  <span className="font-mono text-xl tracking-[0.25em] font-bold text-kloak-success">
-                    {displayCode}
-                  </span>
+                <div className="flex-1 h-14 flex items-center justify-center rounded-xl border-2 border-primary/20 bg-primary/5">
+                  <span className="font-mono text-xl tracking-[0.25em] font-bold text-primary">{displayCode}</span>
                 </div>
-                <Button
-                  size="icon"
-                  onClick={handleCopy}
-                  className="h-14 w-14 rounded-xl bg-kloak-success hover:bg-kloak-success/90 flex-shrink-0"
-                >
+                <Button size="icon" onClick={handleCopy} className="h-14 w-14 rounded-xl flex-shrink-0">
                   {copied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
                 </Button>
               </div>
@@ -158,7 +152,7 @@ export const InviteModal = () => {
                     key={index}
                     className="flex items-start gap-4 p-3 rounded-xl bg-secondary/50 border border-border/50"
                   >
-                    <div className="w-8 h-8 rounded-lg bg-kloak-success/10 flex items-center justify-center flex-shrink-0 text-kloak-success">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 text-primary">
                       {step.icon}
                     </div>
                     <div className="min-w-0 pt-0.5 flex-1">
@@ -198,8 +192,8 @@ export const InviteModal = () => {
         <AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-sm rounded-2xl">
           <AlertDialogHeader>
             {/* Icon */}
-            <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center mb-2">
-              <RefreshCw className="w-6 h-6 text-amber-500" />
+            <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center mb-2">
+              <RefreshCw className="w-6 h-6 text-muted-foreground" />
             </div>
             <AlertDialogTitle>Regenerate Invite Code?</AlertDialogTitle>
             <AlertDialogDescription className="leading-relaxed">
@@ -208,11 +202,7 @@ export const InviteModal = () => {
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-row gap-3 sm:gap-3">
             <AlertDialogCancel className="flex-1 m-0 rounded-xl">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleRegenerate}
-              disabled={isRegenerating}
-              className="flex-1 rounded-xl bg-amber-500 hover:bg-amber-600"
-            >
+            <AlertDialogAction onClick={handleRegenerate} disabled={isRegenerating} className="flex-1 rounded-xl">
               {isRegenerating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Regenerate
             </AlertDialogAction>
