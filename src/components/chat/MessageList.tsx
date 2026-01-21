@@ -16,15 +16,19 @@ interface MessageListProps {
   channelName: string;
 }
 
-// Group messages from same user within 5 minutes
+// Group messages from same user within 1 minute
 const shouldGroupMessages = (current: Message, previous: Message | null): boolean => {
   if (!previous) return false;
   if (current.user_id !== previous.user_id) return false;
   if (current.reply_to_id) return false; // Don't group replies
+
   const currentTime = new Date(current.created_at).getTime();
   const previousTime = new Date(previous.created_at).getTime();
-  const fiveMinutes = 5 * 60 * 1000;
-  return currentTime - previousTime < fiveMinutes;
+
+  // Changed from 5 minutes to 1 minute
+  const oneMinute = 1 * 60 * 1000;
+
+  return currentTime - previousTime < oneMinute;
 };
 
 /**
