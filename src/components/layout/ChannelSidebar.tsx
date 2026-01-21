@@ -1,16 +1,6 @@
 import { useState, useMemo, useCallback, useRef, useEffect, useLayoutEffect, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  ChevronDown,
-  ChevronRight,
-  Hash,
-  Volume2,
-  Settings,
-  Plus,
-  LogOut,
-  UserPlus,
-  FolderPlus,
-} from "lucide-react";
+import { ChevronDown, ChevronRight, Hash, Volume2, Settings, Plus, LogOut, UserPlus, FolderPlus } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -91,15 +81,14 @@ const UncategorizedDropZone = ({
       ref={setNodeRef}
       className={cn(
         "transition-all duration-200",
-        (isOver || isDragOver) && "ring-2 ring-primary/50 ring-offset-2 ring-offset-layout-sidebar-secondary rounded-md p-1 mb-2",
-        !hasChannels && (isOver || isDragOver) && "min-h-[60px] flex items-center justify-center"
+        (isOver || isDragOver) &&
+          "ring-2 ring-primary/50 ring-offset-2 ring-offset-layout-sidebar-secondary rounded-md p-1 mb-2",
+        !hasChannels && (isOver || isDragOver) && "min-h-[60px] flex items-center justify-center",
       )}
     >
       {children}
       {!hasChannels && (isOver || isDragOver) && (
-        <div className="text-xs text-muted-foreground text-center py-2">
-          Drop channel here to uncategorize
-        </div>
+        <div className="text-xs text-muted-foreground text-center py-2">Drop channel here to uncategorize</div>
       )}
     </div>
   );
@@ -279,7 +268,7 @@ const CategoryContent = ({
         });
       }
     }
-  }, [channels.length, channels.map(c => c.id).join(",")]);
+  }, [channels.length, channels.map((c) => c.id).join(",")]);
 
   // Fallback measurement after render if height is still 0
   useEffect(() => {
@@ -296,7 +285,7 @@ const CategoryContent = ({
       initial={{ height: 0, opacity: 0 }}
       animate={{
         height: height > 0 ? height : "auto",
-        opacity: 1
+        opacity: 1,
       }}
       exit={{ height: 0, opacity: 0 }}
       transition={{
@@ -304,14 +293,14 @@ const CategoryContent = ({
           type: "spring",
           stiffness: 300,
           damping: 30,
-          mass: 0.8
+          mass: 0.8,
         },
-        opacity: { duration: 0.15 }
+        opacity: { duration: 0.15 },
       }}
       className="space-y-0.5 ml-1 overflow-hidden"
       style={{
         contain: "layout style",
-        willChange: height > 0 ? "height" : undefined
+        willChange: height > 0 ? "height" : undefined,
       }}
     >
       <div ref={contentRef}>
@@ -388,7 +377,8 @@ const SortableCategory = ({
       style={style}
       className={cn(
         "mb-4 transition-all duration-200",
-        (isOver || isDragOver) && "ring-2 ring-primary/50 ring-offset-2 ring-offset-layout-sidebar-secondary rounded-md"
+        (isOver || isDragOver) &&
+          "ring-2 ring-primary/50 ring-offset-2 ring-offset-layout-sidebar-secondary rounded-md",
       )}
       layout
     >
@@ -488,9 +478,9 @@ export const ChannelSidebar = () => {
   const userRole = currentMembership?.role;
   // Use permission system instead of hardcoded role checks
   const { hasPermission } = useMemberPermissions();
-  const canManageChannels = hasPermission('manage_channels');
-  const canManageServer = hasPermission('manage_server');
-  const canManageRoles = hasPermission('manage_roles');
+  const canManageChannels = hasPermission("manage_channels");
+  const canManageServer = hasPermission("manage_server");
+  const canManageRoles = hasPermission("manage_roles");
   const isAdmin = canManageChannels; // For channel/category management
   const canSeeServerSettings = canManageChannels || canManageServer || canManageRoles;
   const isOwner = userRole === "owner";
@@ -616,9 +606,7 @@ export const ChannelSidebar = () => {
       // Check if dropped on a category drop zone
       if (overData?.type === "category-drop") {
         const targetCategoryId = overData.categoryId as string | null;
-        const targetChannels = targetCategoryId
-          ? getChannelsForCategory(targetCategoryId)
-          : uncategorizedChannels;
+        const targetChannels = targetCategoryId ? getChannelsForCategory(targetCategoryId) : uncategorizedChannels;
         const newPosition = targetChannels.length;
 
         // Only move if it's a different category
@@ -729,7 +717,8 @@ export const ChannelSidebar = () => {
             <div
               className="absolute inset-0 pointer-events-none"
               style={{
-                background: 'linear-gradient(to bottom, transparent 0%, transparent 40%, hsl(var(--sidebar-secondary)) 100%)'
+                background:
+                  "linear-gradient(to bottom, transparent 0%, transparent 40%, hsl(var(--sidebar-secondary)) 100%)",
               }}
             />
           </div>
@@ -740,12 +729,12 @@ export const ChannelSidebar = () => {
             <MotionButton
               className={cn(
                 "h-12 px-4 flex items-center justify-between border-b border-border/50 hover:bg-secondary/50 cursor-pointer w-full text-left transition-colors",
-                currentServer.banner_url && "border-t-0"
+                currentServer.banner_url && "border-t-0",
               )}
               whileHover={{ backgroundColor: "hsl(var(--secondary) / 0.5)" }}
               whileTap={{ scale: 0.99 }}
             >
-              <h2 className="font-semibold text-foreground truncate">{currentServer.name}</h2>
+              <h2 className="font-normal text-lg text-foreground truncate">{currentServer.name}</h2>
               <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             </MotionButton>
           </DropdownMenuTrigger>
@@ -755,13 +744,13 @@ export const ChannelSidebar = () => {
               Invite People
             </DropdownMenuItem>
 
-              {canSeeServerSettings && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => openServerSettings()}>
-                    <Settings className="w-4 h-4 mr-2" />
-                    Server Settings
-                  </DropdownMenuItem>
+            {canSeeServerSettings && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => openServerSettings()}>
+                  <Settings className="w-4 h-4 mr-2" />
+                  Server Settings
+                </DropdownMenuItem>
                 {canManageChannels && (
                   <>
                     <DropdownMenuItem onClick={() => openModal("create-channel", { serverId: currentServer.id })}>
@@ -810,7 +799,10 @@ export const ChannelSidebar = () => {
               >
                 {uncategorizedChannels.length > 0 && (
                   <div className="mb-4 space-y-0.5">
-                    <SortableContext items={uncategorizedChannels.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+                    <SortableContext
+                      items={uncategorizedChannels.map((c) => c.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
                       {uncategorizedChannels.map((channel) => {
                         const { unreadCount, mentionCount } = getChannelUnread(channel.id);
                         return (
@@ -884,9 +876,7 @@ export const ChannelSidebar = () => {
                 Create Category
               </ContextMenuItem>
               <ContextMenuSeparator />
-              <ContextMenuItem
-                onClick={() => openModal("create-channel", { serverId: currentServer.id })}
-              >
+              <ContextMenuItem onClick={() => openModal("create-channel", { serverId: currentServer.id })}>
                 <Plus className="w-4 h-4 mr-2" />
                 Create Channel
               </ContextMenuItem>
