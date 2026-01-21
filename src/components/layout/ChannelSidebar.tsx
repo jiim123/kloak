@@ -747,7 +747,7 @@ export const ChannelSidebar = () => {
             {/* Invite People */}
             <DropdownMenuItem
               onClick={() => openModal("invite", { serverId: currentServer.id })}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer focus:bg-secondary/80"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer hover:bg-secondary/60 focus:bg-secondary/80 transition-colors"
             >
               <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <UserPlus className="w-4 h-4 text-primary" />
@@ -762,7 +762,7 @@ export const ChannelSidebar = () => {
                 {/* Server Settings */}
                 <DropdownMenuItem
                   onClick={() => openServerSettings()}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer focus:bg-secondary/80"
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer hover:bg-secondary/60 focus:bg-secondary/80 transition-colors"
                 >
                   <div className="w-8 h-8 rounded-lg bg-secondary/80 flex items-center justify-center flex-shrink-0">
                     <Settings className="w-4 h-4 text-muted-foreground" />
@@ -775,7 +775,7 @@ export const ChannelSidebar = () => {
                     {/* Create Channel */}
                     <DropdownMenuItem
                       onClick={() => openModal("create-channel", { serverId: currentServer.id })}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer focus:bg-secondary/80"
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer hover:bg-secondary/60 focus:bg-secondary/80 transition-colors"
                     >
                       <div className="w-8 h-8 rounded-lg bg-secondary/80 flex items-center justify-center flex-shrink-0">
                         <Hash className="w-4 h-4 text-muted-foreground" />
@@ -786,7 +786,7 @@ export const ChannelSidebar = () => {
                     {/* Create Category */}
                     <DropdownMenuItem
                       onClick={() => openModal("create-channel", { serverId: currentServer.id, isCategory: true })}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer focus:bg-secondary/80"
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer hover:bg-secondary/60 focus:bg-secondary/80 transition-colors"
                     >
                       <div className="w-8 h-8 rounded-lg bg-secondary/80 flex items-center justify-center flex-shrink-0">
                         <FolderPlus className="w-4 h-4 text-muted-foreground" />
@@ -805,7 +805,7 @@ export const ChannelSidebar = () => {
                 {/* Leave Server */}
                 <DropdownMenuItem
                   onClick={handleLeaveServer}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-destructive hover:bg-destructive/10 focus:text-destructive focus:bg-destructive/10 transition-colors"
                 >
                   <div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center flex-shrink-0">
                     <LogOut className="w-4 h-4" />
