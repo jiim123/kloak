@@ -230,19 +230,10 @@ export const MessageItem = memo(function MessageItem({
       const url = customEmojiMap.get(match[1]);
       if (!url) return null;
       return (
-        <img
-          src={url}
-          alt={icon}
-          className="inline-block w-4 h-4 align-text-bottom object-contain"
-          loading="lazy"
-        />
+        <img src={url} alt={icon} className="inline-block w-4 h-4 align-text-bottom object-contain" loading="lazy" />
       );
     }
-    return (
-      <span className="text-sm leading-none font-emoji">
-        {icon}
-      </span>
-    );
+    return <span className="text-sm leading-none font-emoji">{icon}</span>;
   }, [priorityRoleWithIcon?.icon, customEmojiMap]);
 
   const reactionEmojiNode = useCallback(
@@ -259,33 +250,34 @@ export const MessageItem = memo(function MessageItem({
     [customEmojiMap],
   );
 
-  const RoleIconWrapper = forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLSpanElement> & { children: React.ReactNode }>(
-    ({ children, className, onMouseEnter, onMouseLeave, ...props }, ref) => (
-      <span
-        ref={ref}
-        className={cn("inline-flex items-center", hoveredRoleIcon && "animate-pulse", className)}
-        onMouseEnter={(e) => {
-          onMouseEnter?.(e);
-          setHoveredRoleIcon(true);
-        }}
-        onMouseLeave={(e) => {
-          onMouseLeave?.(e);
-          setHoveredRoleIcon(false);
-        }}
-        {...props}
-      >
-        {children}
-      </span>
-    ),
-  );
+  const RoleIconWrapper = forwardRef<
+    HTMLSpanElement,
+    React.HTMLAttributes<HTMLSpanElement> & { children: React.ReactNode }
+  >(({ children, className, onMouseEnter, onMouseLeave, ...props }, ref) => (
+    <span
+      ref={ref}
+      className={cn("inline-flex items-center", hoveredRoleIcon && "animate-pulse", className)}
+      onMouseEnter={(e) => {
+        onMouseEnter?.(e);
+        setHoveredRoleIcon(true);
+      }}
+      onMouseLeave={(e) => {
+        onMouseLeave?.(e);
+        setHoveredRoleIcon(false);
+      }}
+      {...props}
+    >
+      {children}
+    </span>
+  ));
   RoleIconWrapper.displayName = "RoleIconWrapper";
 
   // Check permissions using database-backed permission system
   const { hasPermission } = useMemberPermissions(message.channel_id);
-  const canPinMessages = hasPermission('pin_messages');
-  const canManageMessages = hasPermission('manage_messages');
-  const canAddReactions = hasPermission('add_reactions');
-  
+  const canPinMessages = hasPermission("pin_messages");
+  const canManageMessages = hasPermission("manage_messages");
+  const canAddReactions = hasPermission("add_reactions");
+
   // For backward compatibility, keep isAdmin for delete permission checks
   // Users can delete their own messages OR if they have manage_messages permission
   const isAdmin = canManageMessages;
@@ -303,7 +295,7 @@ export const MessageItem = memo(function MessageItem({
   const formattedTime = useMemo(() => {
     const timeStr = format(new Date(message.created_at), "h:mm a");
     // Replace space between time and AM/PM to prevent wrapping
-    return timeStr.replace(/\s+/, '\u00A0'); // Non-breaking space
+    return timeStr.replace(/\s+/, "\u00A0"); // Non-breaking space
   }, [message.created_at]);
 
   const formattedTimestamp = useMemo(() => formatMessageTimestamp(message.created_at), [message.created_at]);
@@ -433,9 +425,7 @@ export const MessageItem = memo(function MessageItem({
     if (memberRoles.length === 0) return null;
 
     // Resolve against roles store (has latest color/position)
-    const resolved = memberRoles
-      .map((mr) => roles.find((r) => r.id === mr.id) ?? mr)
-      .filter(Boolean);
+    const resolved = memberRoles.map((mr) => roles.find((r) => r.id === mr.id) ?? mr).filter(Boolean);
 
     // Highest priority role = lowest position (top of roles list)
     let best: CustomServerRole | null = null;
@@ -452,32 +442,29 @@ export const MessageItem = memo(function MessageItem({
     return best?.color ?? null;
   }, [messageMember?.roles, roles]);
 
-  const usernameColorClass = useMemo(
-    () => {
-      if (!topCustomRoleColor) return getRoleColor(messageMember?.role);
-      return isGradientColor(topCustomRoleColor) ? "text-transparent" : "text-foreground";
-    },
-    [topCustomRoleColor, messageMember?.role],
-  );
+  const usernameColorClass = useMemo(() => {
+    if (!topCustomRoleColor) return getRoleColor(messageMember?.role);
+    return isGradientColor(topCustomRoleColor) ? "text-transparent" : "text-foreground";
+  }, [topCustomRoleColor, messageMember?.role]);
 
-  const usernameColorStyle = useMemo(
-    () => {
-      if (!topCustomRoleColor) return undefined;
-      return isGradientColor(topCustomRoleColor)
-        ? getGradientTextStyle(topCustomRoleColor)
-        : ({ color: topCustomRoleColor } as React.CSSProperties);
-    },
-    [topCustomRoleColor],
-  );
+  const usernameColorStyle = useMemo(() => {
+    if (!topCustomRoleColor) return undefined;
+    return isGradientColor(topCustomRoleColor)
+      ? getGradientTextStyle(topCustomRoleColor)
+      : ({ color: topCustomRoleColor } as React.CSSProperties);
+  }, [topCustomRoleColor]);
   const displayName = messageMember?.nickname || messageUser?.display_name || messageUser?.username;
 
-  const handleUsernameClick = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (message.user_id) {
-      openModal('userProfile', { userId: message.user_id });
-    }
-  }, [message.user_id, openModal]);
+  const handleUsernameClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (message.user_id) {
+        openModal("userProfile", { userId: message.user_id });
+      }
+    },
+    [message.user_id, openModal],
+  );
 
   return (
     <>
@@ -516,11 +503,7 @@ export const MessageItem = memo(function MessageItem({
           ) : (
             <div className="w-10 flex-shrink-0">
               {!isGrouped && messageUser ? (
-                <AvatarWithDecoration 
-                  user={messageUser} 
-                  className="w-10 h-10 cursor-pointer"
-                  active={isRowHovered}
-                />
+                <AvatarWithDecoration user={messageUser} className="w-10 h-10 cursor-pointer" active={isRowHovered} />
               ) : (
                 <span className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                   {formattedTime}
@@ -536,7 +519,7 @@ export const MessageItem = memo(function MessageItem({
               <span className="inline">
                 <span
                   onClick={handleUsernameClick}
-                  className={`text-sm font-semibold tracking-tight hover:underline cursor-pointer mr-1.5 ${usernameColorClass}`}
+                  className={`text-base font-semibold tracking-tight hover:underline cursor-pointer mr-1.5 ${usernameColorClass}`}
                   style={usernameColorStyle}
                 >
                   {displayName}
@@ -545,9 +528,7 @@ export const MessageItem = memo(function MessageItem({
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <RoleIconWrapper>
-                        <span className="inline-flex items-center mr-1.5 cursor-help">
-                          {roleIconNode}
-                        </span>
+                        <span className="inline-flex items-center mr-1.5 cursor-help">{roleIconNode}</span>
                       </RoleIconWrapper>
                     </TooltipTrigger>
                     <TooltipContent>{priorityRoleWithIcon.name}</TooltipContent>
@@ -559,7 +540,7 @@ export const MessageItem = memo(function MessageItem({
               !isGrouped &&
               messageUser && (
                 <div className="flex items-baseline gap-2 mb-0.5">
-                  <span 
+                  <span
                     onClick={handleUsernameClick}
                     className={`text-sm font-semibold tracking-tight hover:underline cursor-pointer ${usernameColorClass}`}
                     style={usernameColorStyle}
@@ -570,9 +551,7 @@ export const MessageItem = memo(function MessageItem({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <RoleIconWrapper>
-                          <span className="inline-flex items-center cursor-help">
-                            {roleIconNode}
-                          </span>
+                          <span className="inline-flex items-center cursor-help">{roleIconNode}</span>
                         </RoleIconWrapper>
                       </TooltipTrigger>
                       <TooltipContent>{priorityRoleWithIcon.name}</TooltipContent>
@@ -590,7 +569,9 @@ export const MessageItem = memo(function MessageItem({
                 <CornerUpLeft className="w-3 h-3" />
                 <span>Replying to</span>
                 <span className="font-medium text-primary">@{message.reply_to.user?.username || "unknown"}</span>
-                <span className="truncate max-w-[200px]">{getMessagePreview(message.reply_to.content, 50, usersMap)}</span>
+                <span className="truncate max-w-[200px]">
+                  {getMessagePreview(message.reply_to.content, 50, usersMap)}
+                </span>
               </div>
             )}
 
@@ -636,7 +617,6 @@ export const MessageItem = memo(function MessageItem({
                 <TooltipContent>{new Date(message.edited_at).toLocaleString()}</TooltipContent>
               </Tooltip>
             )}
-
 
             {/* Attachments */}
             {message.attachments && message.attachments.length > 0 && (
