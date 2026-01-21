@@ -734,7 +734,7 @@ export const ChannelSidebar = () => {
               whileHover={{ backgroundColor: "hsl(var(--secondary) / 0.5)" }}
               whileTap={{ scale: 0.99 }}
             >
-              <h2 className="font-semibold text-foreground truncate">{currentServer.name}</h2>
+              <h2 className="font-normal text-lg text-foreground truncate">{currentServer.name}</h2>
               <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             </MotionButton>
           </DropdownMenuTrigger>
