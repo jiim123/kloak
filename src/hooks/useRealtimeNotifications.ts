@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNotificationStore } from '@/stores/notificationStore';
+import { useUIStore } from '@/stores/uiStore';
 import type { Notification } from '@/types';
 import { isTauri } from '@/lib/tauriRuntime';
 
@@ -84,10 +85,32 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
   return permission === 'granted';
 };
 
+// Track the last notification link for window focus fallback (Windows may not fire onAction for body clicks)
+let lastNotificationLink: string | null = null;
+
 // Show desktop notification
 const showDesktopNotification = async (notification: Notification) => {
-  // Only show if tab is not focused
-  if (document.visibilityState === 'visible') return;
+  // Respect user preference
+  if (!useUIStore.getState().desktopNotificationsEnabled) return;
+
+  // Only show if app isn't focused (browser tab or Tauri window).
+  // Note: In Tauri, `document.visibilityState` is often always "visible", even when unfocused/minimized,
+  // so we must rely on the window focus API when available.
+  if (isTauri()) {
+    try {
+      const { getCurrentWindow } = await import('@tauri-apps/api/window');
+      const focused = await getCurrentWindow().isFocused();
+      if (focused) return;
+      // If we can check Tauri focus, don't use visibilityState gating.
+      // Proceed to native notification.
+    } catch {
+      // If focus check fails, fall back to visibilityState below.
+    }
+  }
+
+  // Browser gating: only notify when the tab isn't visible.
+  // (In Tauri this is unreliable; see note above.)
+  if (!isTauri() && document.visibilityState === 'visible') return;
 
   if (isTauri()) {
     try {
@@ -99,12 +122,19 @@ const showDesktopNotification = async (notification: Notification) => {
       }
       if (!granted) return;
 
+      const link = notification.link || "/app";
+
+      // Use plugin's sendNotification (this works for showing notifications)
       sendNotification({
         title: notification.title,
         body: notification.body || undefined,
+        autoCancel: true,
+        extra: {
+          link: link,
+        } as any,
       });
-    } catch {
-      // Ignore in browser / non-tauri environments
+    } catch (err) {
+      console.error("Failed to send Tauri notification:", err);
     }
     return;
   }

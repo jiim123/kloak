@@ -520,6 +520,40 @@ export const UserSettingsModal = () => {
         }}
       />
 
+      {isTauriApp && (
+        <div className="flex justify-end pt-1">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={async () => {
+              try {
+                const { isPermissionGranted, requestPermission, sendNotification } = await import(
+                  "@tauri-apps/plugin-notification"
+                );
+                let granted = await isPermissionGranted();
+                if (!granted) {
+                  const permission = await requestPermission();
+                  granted = permission === "granted";
+                }
+                if (!granted) {
+                  toast.error("Notification permission denied. Enable in system settings.");
+                  return;
+                }
+                sendNotification({
+                  title: "Kloak",
+                  body: "Test notification from the desktop app.",
+                });
+              } catch {
+                toast.error("Failed to send a desktop notification.");
+              }
+            }}
+          >
+            Send test notification
+          </Button>
+        </div>
+      )}
+
       <div className="border-t border-border/50" />
 
       <SettingsToggle

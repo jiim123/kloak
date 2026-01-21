@@ -8,6 +8,7 @@ export { useRealtimeUsers } from './useRealtimeUsers';
 export { useRealtimePinnedMessages } from './useRealtimePinnedMessages';
 export { useRealtimeServer } from './useRealtimeServer';
 export { useRealtimeNotifications, requestNotificationPermission } from './useRealtimeNotifications';
+export { useTauriNotificationActions } from './useTauriNotificationActions';
 export { useTyping } from './useTyping';
 export { usePresence } from './usePresence';
 export { useUnread } from './useUnread';

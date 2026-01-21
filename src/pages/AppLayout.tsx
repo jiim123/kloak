@@ -37,7 +37,7 @@ import { DesktopTitleBar } from '@/components/layout/DesktopTitleBar';
 import { cn } from '@/lib/utils';
 import { useDMStore } from '@/stores/dmStore';
 import { supabase } from '@/integrations/supabase/client';
-import { usePresence, useRealtimeFriendships, useRealtimeUsers, useRealtimeServer, useRealtimeNotifications, useRealtimeDMs, useUnreadDMs, useRealtimeMessages, useRealtimeReactions } from '@/hooks';
+import { usePresence, useRealtimeFriendships, useRealtimeUsers, useRealtimeServer, useRealtimeNotifications, useRealtimeDMs, useUnreadDMs, useRealtimeMessages, useRealtimeReactions, useTauriNotificationActions } from '@/hooks';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useBackgroundSync } from '@/hooks/useBackgroundSync';
 import { usePreferencesSync } from '@/hooks/usePreferencesSync';
@@ -58,6 +58,9 @@ const AppLayout = () => {
   const currentPath = location.pathname.replace('/app', '') || '/';
   const showFriends = currentPath === '/friends';
   const showExplore = currentPath === '/explore';
+
+  // Handle native notification click deep-links in Tauri.
+  useTauriNotificationActions();
 
   // Handle conversation query parameter for DM notification redirects
   useEffect(() => {
