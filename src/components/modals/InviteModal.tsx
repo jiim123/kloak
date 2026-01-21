@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { Check, Copy, RefreshCw, Users, Loader2, Zap, Link2 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Check, Copy, RefreshCw, Users, Loader2, Zap, Link2, X } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +24,7 @@ export const InviteModal = () => {
   const { activeModal, modalData, closeModal } = useUIStore();
   const { currentServer, servers } = useServerStore();
   const { user } = useAuthStore();
+
   const [copied, setCopied] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false);
@@ -38,7 +38,7 @@ export const InviteModal = () => {
 
   // Check if current user can manage invites
   const { hasPermission } = useMemberPermissions();
-  const isAdmin = hasPermission('manage_invites');
+  const isAdmin = hasPermission("manage_invites");
 
   const displayCode = inviteCode || server?.invite_code || "";
 
@@ -59,16 +59,13 @@ export const InviteModal = () => {
     setIsRegenerating(true);
     try {
       // Generate new invite code and update directly
-      const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-      let newCode = '';
+      const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+      let newCode = "";
       for (let i = 0; i < 8; i++) {
         newCode += chars.charAt(Math.floor(Math.random() * chars.length));
       }
 
-      const { error } = await supabase
-        .from('servers')
-        .update({ invite_code: newCode })
-        .eq('id', server.id);
+      const { error } = await supabase.from("servers").update({ invite_code: newCode }).eq("id", server.id);
 
       if (error) throw error;
 
@@ -76,7 +73,7 @@ export const InviteModal = () => {
       toast.success("New invite code generated!");
       setShowRegenerateConfirm(false);
     } catch (error) {
-      console.error('Failed to regenerate invite code:', error);
+      console.error("Failed to regenerate invite code:", error);
       toast.error("Failed to regenerate code");
     } finally {
       setIsRegenerating(false);
@@ -89,171 +86,133 @@ export const InviteModal = () => {
     closeModal();
   };
 
-  // Animation variants
-  const cardVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, x: -10 },
-    visible: { opacity: 1, x: 0 },
-  };
-
   const steps = [
     {
       icon: <Zap className="h-4 w-4" />,
+      title: "Open server menu",
       text: "Click the + button in the server sidebar",
     },
     {
       icon: <Users className="h-4 w-4" />,
-      text: 'Select "Join a Server"',
+      title: "Join option",
+      text: 'Select "Join a Server" from the menu',
     },
     {
       icon: <Link2 className="h-4 w-4" />,
-      text: "Enter this invite code",
+      title: "Enter code",
+      text: "Paste or type this invite code",
     },
   ];
 
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-        <DialogContent className="sm:max-w-md max-w-[calc(100vw-2rem)] overflow-hidden p-0">
-          <motion.div initial="hidden" animate="visible" variants={cardVariants} className="relative p-6 sm:p-8">
-            {/* Decorative image in top-right - hidden on mobile */}
-            <div className="absolute right-4 top-4 opacity-20 pointer-events-none hidden sm:block">
-              <Users className="h-20 w-20 sm:h-24 sm:w-24 text-kloak-success" />
+        <DialogContent className="sm:max-w-md max-w-[calc(100vw-2rem)] overflow-hidden p-0 rounded-2xl gap-0">
+          {/* Header with gradient accent */}
+          <div className="relative px-6 pt-6 pb-4">
+            {/* Decorative gradient blob */}
+            <div className="absolute -top-20 -right-20 w-40 h-40 bg-kloak-success/20 rounded-full blur-3xl pointer-events-none" />
+
+            {/* Badge */}
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-kloak-success/10 px-3 py-1 text-xs font-medium text-kloak-success mb-4">
+              <Users className="w-3 h-3" />
+              Share with friends
             </div>
 
-            <div className="relative z-10">
-              <DialogHeader className="space-y-2 sm:space-y-3">
-                {/* Badge */}
-                <motion.div
-                  variants={itemVariants}
-                  className="inline-block self-start rounded-full bg-kloak-success/10 px-2.5 py-1 text-xs sm:text-sm font-medium text-kloak-success"
-                >
-                  Share with friends
-                </motion.div>
+            {/* Title & Description */}
+            <h2 className="text-xl font-semibold pr-8">Invite to {server?.name}</h2>
+            <p className="text-sm text-muted-foreground mt-1">Share this code to grant access to your server</p>
+          </div>
 
-                {/* Title */}
-                <motion.div variants={itemVariants}>
-                  <DialogTitle className="text-xl sm:text-2xl font-bold tracking-tight pr-16 sm:pr-20">
-                    Invite to {server?.name}
-                  </DialogTitle>
-                </motion.div>
-
-                <motion.div variants={itemVariants}>
-                  <DialogDescription className="text-sm text-muted-foreground">
-                    Share this code to grant access to your server
-                  </DialogDescription>
-                </motion.div>
-              </DialogHeader>
-
-              <div className="space-y-5 sm:space-y-6 mt-5 sm:mt-6">
-                {/* Invite Code Display */}
-                <motion.div variants={itemVariants} className="space-y-2">
-                  <Label className="text-xs sm:text-sm font-semibold">Your invite code:</Label>
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-11 sm:h-12 flex-grow items-center justify-center gap-2 rounded-lg border-2 border-kloak-success/20 bg-kloak-success/5 px-3 sm:px-4">
-                      <span className="font-mono text-base sm:text-xl tracking-[0.2em] sm:tracking-[0.3em] font-bold text-kloak-success">
-                        {displayCode}
-                      </span>
-                    </div>
-                    <Button
-                      size="icon"
-                      variant="default"
-                      onClick={handleCopy}
-                      className="h-11 w-11 sm:h-12 sm:w-12 shrink-0 bg-kloak-success hover:bg-kloak-success/90"
-                    >
-                      <AnimatePresence mode="wait" initial={false}>
-                        {copied ? (
-                          <motion.div
-                            key="copied"
-                            initial={{ scale: 0, rotate: -180 }}
-                            animate={{ scale: 1, rotate: 0 }}
-                            exit={{ scale: 0, rotate: 180 }}
-                            transition={{ duration: 0.2 }}
-                          >
-                            <Check className="h-4 w-4 sm:h-5 sm:w-5" />
-                          </motion.div>
-                        ) : (
-                          <motion.div
-                            key="copy"
-                            initial={{ scale: 0, rotate: -180 }}
-                            animate={{ scale: 1, rotate: 0 }}
-                            exit={{ scale: 0, rotate: 180 }}
-                            transition={{ duration: 0.2 }}
-                          >
-                            <Copy className="h-4 w-4 sm:h-5 sm:w-5" />
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </Button>
-                  </div>
-                </motion.div>
-
-                {/* How it works section */}
-                <div>
-                  <motion.h3 variants={itemVariants} className="mb-3 sm:mb-4 font-semibold text-xs sm:text-sm">
-                    How it works:
-                  </motion.h3>
-                  <motion.ul
-                    className="space-y-2.5 sm:space-y-3"
-                    initial="hidden"
-                    animate="visible"
-                    transition={{ staggerChildren: 0.1, delayChildren: 0.2 }}
-                  >
-                    {steps.map((step, index) => (
-                      <motion.li
-                        key={index}
-                        variants={itemVariants}
-                        className="flex items-start sm:items-center gap-2.5 sm:gap-3"
-                      >
-                        <span className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-kloak-success/10 text-kloak-success shrink-0 mt-0.5 sm:mt-0">
-                          {step.icon}
-                        </span>
-                        <span className="text-xs sm:text-sm text-muted-foreground leading-relaxed">{step.text}</span>
-                      </motion.li>
-                    ))}
-                  </motion.ul>
+          {/* Content */}
+          <div className="px-6 pb-6 space-y-6">
+            {/* Invite Code Display */}
+            <div className="space-y-3">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Invite Code
+              </Label>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-14 flex items-center justify-center rounded-xl border-2 border-kloak-success/20 bg-kloak-success/5">
+                  <span className="font-mono text-xl tracking-[0.25em] font-bold text-kloak-success">
+                    {displayCode}
+                  </span>
                 </div>
-
-                {/* Regenerate button (admin only) */}
-                {isAdmin && (
-                  <motion.div variants={itemVariants}>
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowRegenerateConfirm(true)}
-                      className="w-full border-dashed text-xs sm:text-sm h-9 sm:h-10"
-                      disabled={isRegenerating}
-                    >
-                      {isRegenerating ? (
-                        <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2 animate-spin" />
-                      ) : (
-                        <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2" />
-                      )}
-                      Regenerate Code
-                    </Button>
-                  </motion.div>
-                )}
+                <Button
+                  size="icon"
+                  onClick={handleCopy}
+                  className="h-14 w-14 rounded-xl bg-kloak-success hover:bg-kloak-success/90 flex-shrink-0"
+                >
+                  {copied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
+                </Button>
               </div>
             </div>
-          </motion.div>
+
+            {/* How it works section */}
+            <div className="space-y-4">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                How to join
+              </Label>
+              <div className="space-y-3">
+                {steps.map((step, index) => (
+                  <div
+                    key={index}
+                    className="flex items-start gap-4 p-3 rounded-xl bg-secondary/50 border border-border/50"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-kloak-success/10 flex items-center justify-center flex-shrink-0 text-kloak-success">
+                      {step.icon}
+                    </div>
+                    <div className="min-w-0 pt-0.5 flex-1">
+                      <p className="text-sm font-medium">{step.title}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{step.text}</p>
+                    </div>
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-secondary flex items-center justify-center text-xs font-medium text-muted-foreground">
+                      {index + 1}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Regenerate button (admin only) */}
+            {isAdmin && (
+              <Button
+                variant="outline"
+                onClick={() => setShowRegenerateConfirm(true)}
+                className="w-full h-11 rounded-xl border-dashed"
+                disabled={isRegenerating}
+              >
+                {isRegenerating ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                )}
+                Regenerate Code
+              </Button>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Regenerate Confirmation */}
       <AlertDialog open={showRegenerateConfirm} onOpenChange={setShowRegenerateConfirm}>
-        <AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-lg">
+        <AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-sm rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-base sm:text-lg">Regenerate Invite Code?</AlertDialogTitle>
-            <AlertDialogDescription className="text-sm">
+            {/* Icon */}
+            <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center mb-2">
+              <RefreshCw className="w-6 h-6 text-amber-500" />
+            </div>
+            <AlertDialogTitle>Regenerate Invite Code?</AlertDialogTitle>
+            <AlertDialogDescription className="leading-relaxed">
               This will invalidate the current invite code. Anyone with the old code will no longer be able to join.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-            <AlertDialogCancel className="m-0">Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleRegenerate} disabled={isRegenerating}>
+          <AlertDialogFooter className="flex-row gap-3 sm:gap-3">
+            <AlertDialogCancel className="flex-1 m-0 rounded-xl">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRegenerate}
+              disabled={isRegenerating}
+              className="flex-1 rounded-xl bg-amber-500 hover:bg-amber-600"
+            >
               {isRegenerating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Regenerate
             </AlertDialogAction>
