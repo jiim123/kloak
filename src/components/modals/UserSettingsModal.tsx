@@ -1,12 +1,12 @@
-import { useState, useRef, useCallback } from 'react';
-import { 
-  Loader2, 
-  Upload, 
-  User, 
-  Palette, 
-  Key, 
-  LogOut, 
-  Trash2, 
+import { useState, useRef } from "react";
+import {
+  Loader2,
+  Upload,
+  User,
+  Palette,
+  Key,
+  LogOut,
+  Trash2,
   Eye,
   EyeOff,
   Check,
@@ -18,15 +18,9 @@ import {
   Sparkles,
   Volume2,
   Sparkles as DecorationIcon,
-} from 'lucide-react';
-import { motion, AnimatePresence, type PanInfo } from 'framer-motion';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  X,
+} from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,40 +30,38 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { AvatarWithDecoration } from '@/components/ui/avatar-with-decoration';
-import { AvatarDecorationModal } from '@/components/modals/AvatarDecorationModal';
-import { useUIStore, THEMES, type Theme } from '@/stores/uiStore';
-import { useAuthStore } from '@/stores/authStore';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
-import { cn } from '@/lib/utils';
-import { useIsMobile } from '@/hooks/use-mobile';
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
+import { AvatarDecorationModal } from "@/components/modals/AvatarDecorationModal";
+import { useUIStore, THEMES, type Theme } from "@/stores/uiStore";
+import { useAuthStore } from "@/stores/authStore";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Theme preview colors for the selector
 const THEME_PREVIEWS: Record<Theme, { bg: string; sidebar: string; accent: string }> = {
-  default: { bg: '#0a0a0a', sidebar: '#171717', accent: '#f97316' },
-  nostalgia: { bg: '#452829', sidebar: '#2e1a1b', accent: '#E8D1C5' },
-  lofi: { bg: '#293462', sidebar: '#161c35', accent: '#FE5F55' },
-  cappuccino: { bg: '#493628', sidebar: '#2c2018', accent: '#AB886D' },
-  hokori: { bg: '#000000', sidebar: '#050505', accent: '#E43636' },
+  default: { bg: "#0a0a0a", sidebar: "#171717", accent: "#f97316" },
+  nostalgia: { bg: "#452829", sidebar: "#2e1a1b", accent: "#E8D1C5" },
+  lofi: { bg: "#293462", sidebar: "#161c35", accent: "#FE5F55" },
+  cappuccino: { bg: "#493628", sidebar: "#2c2018", accent: "#AB886D" },
+  hokori: { bg: "#000000", sidebar: "#050505", accent: "#E43636" },
 };
 
 export const UserSettingsModal = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { 
-    activeModal, 
-    closeModal, 
-    theme, 
+  const {
+    activeModal,
+    closeModal,
+    theme,
     setTheme,
     linkPreviewsEnabled,
     setLinkPreviewsEnabled,
@@ -87,8 +79,8 @@ export const UserSettingsModal = () => {
     setAnimateEmojis,
   } = useUIStore();
   const { user, secretKey, updateUser, logout } = useAuthStore();
-  
-  const [activeTab, setActiveTab] = useState('account');
+
+  const [activeTab, setActiveTab] = useState("account");
   const [isLoading, setIsLoading] = useState(false);
   const [showSecretKey, setShowSecretKey] = useState(false);
   const [showKeyConfirm, setShowKeyConfirm] = useState(false);
@@ -99,48 +91,38 @@ export const UserSettingsModal = () => {
     dm_count: number;
     reaction_count: number;
     friendship_count: number;
-    servers_to_transfer: Array<{ id: string; name: string; member_count: number; new_owner: { id: string; username: string } | null }>;
+    servers_to_transfer: Array<{
+      id: string;
+      name: string;
+      member_count: number;
+      new_owner: { id: string; username: string } | null;
+    }>;
     servers_to_delete: Array<{ id: string; name: string }>;
   } | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [keyRevealed, setKeyRevealed] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [swipeDirection, setSwipeDirection] = useState<'left' | 'right'>('right');
   const [showAvatarDecorationModal, setShowAvatarDecorationModal] = useState(false);
-  
+
   // Profile form state
-  const [displayName, setDisplayName] = useState(user?.display_name || '');
-  const [bio, setBio] = useState(user?.bio || '');
-  const [bannerColor, setBannerColor] = useState(user?.banner_color || '#5865F2');
-  
+  const [displayName, setDisplayName] = useState(user?.display_name || "");
+  const [bio, setBio] = useState(user?.bio || "");
+  const [bannerColor, setBannerColor] = useState(user?.banner_color || "#5865F2");
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const navItems = [
-    { id: 'account', label: 'Account', icon: Key },
-    { id: 'profile', label: 'Profile', icon: User },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
-    { id: 'appearance', label: 'Appearance', icon: Palette },
+    { id: "account", label: "Account", icon: Key },
+    { id: "profile", label: "Profile", icon: User },
+    { id: "notifications", label: "Notifications", icon: Bell },
+    { id: "appearance", label: "Appearance", icon: Palette },
   ];
 
-  const isOpen = activeModal === 'user-settings';
-
-  // Swipe gesture handling
-  const handleSwipe = useCallback((info: PanInfo) => {
-    const swipeThreshold = 50;
-    const currentIndex = navItems.findIndex(item => item.id === activeTab);
-    
-    if (info.offset.x < -swipeThreshold && currentIndex < navItems.length - 1) {
-      setSwipeDirection('left');
-      setActiveTab(navItems[currentIndex + 1].id);
-    } else if (info.offset.x > swipeThreshold && currentIndex > 0) {
-      setSwipeDirection('right');
-      setActiveTab(navItems[currentIndex - 1].id);
-    }
-  }, [activeTab, navItems]);
+  const isOpen = activeModal === "user-settings";
 
   const handleSaveProfile = async () => {
     if (!user) return;
-    
+
     setIsLoading(true);
     try {
       await updateUser({
@@ -148,9 +130,9 @@ export const UserSettingsModal = () => {
         bio: bio.trim() || null,
         banner_color: bannerColor,
       });
-      toast.success('Profile updated!');
+      toast.success("Profile updated!");
     } catch (error) {
-      toast.error('Failed to update profile');
+      toast.error("Failed to update profile");
     } finally {
       setIsLoading(false);
     }
@@ -160,36 +142,34 @@ export const UserSettingsModal = () => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file');
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image must be less than 5MB');
+      toast.error("Image must be less than 5MB");
       return;
     }
 
     setIsLoading(true);
     try {
-      const fileExt = file.name.split('.').pop();
+      const fileExt = file.name.split(".").pop();
       const filePath = `${user.id}/avatar.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, { upsert: true });
+      const { error: uploadError } = await supabase.storage.from("avatars").upload(filePath, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("avatars").getPublicUrl(filePath);
 
       await updateUser({ avatar_url: publicUrl });
-      toast.success('Avatar updated!');
+      toast.success("Avatar updated!");
     } catch (error) {
-      console.error('Upload error:', error);
-      toast.error('Failed to upload avatar');
+      console.error("Upload error:", error);
+      toast.error("Failed to upload avatar");
     } finally {
       setIsLoading(false);
     }
@@ -201,577 +181,556 @@ export const UserSettingsModal = () => {
       await navigator.clipboard.writeText(secretKey);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      toast.success('Secret key copied!');
+      toast.success("Secret key copied!");
     } catch {
-      toast.error('Failed to copy');
+      toast.error("Failed to copy");
     }
   };
 
   const handleLogout = () => {
     logout();
     closeModal();
-    navigate('/auth?mode=login');
+    navigate("/auth?mode=login");
   };
 
   const handleDeleteAccount = async () => {
     if (!user) return;
-    
+
     setIsLoading(true);
     try {
-      // Call RPC function to delete user and all related data
-      const { data, error } = await supabase.rpc('delete_user_account', {
-        _user_id: user.id
+      const { error } = await supabase.rpc("delete_user_account", {
+        _user_id: user.id,
       });
 
       if (error) throw error;
-      
+
       logout();
       closeModal();
-      navigate('/auth?mode=signup');
-      toast.success('Account deleted');
+      navigate("/auth?mode=signup");
+      toast.success("Account deleted");
     } catch (error) {
-      console.error('Failed to delete account:', error);
-      toast.error('Failed to delete account');
+      console.error("Failed to delete account:", error);
+      toast.error("Failed to delete account");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleClose = () => {
-    setActiveTab('account');
+    setActiveTab("account");
     setShowSecretKey(false);
     setKeyRevealed(false);
     closeModal();
   };
 
+  const handleDeletePreview = async () => {
+    if (!user) return;
+    setIsLoadingPreview(true);
+    setShowDeletePreview(true);
+    try {
+      const { data, error } = await supabase.rpc("get_deletion_preview", { _user_id: user.id });
+      if (error) throw error;
+      setDeletionPreview(data as typeof deletionPreview);
+    } catch (error) {
+      console.error("Failed to fetch deletion preview:", error);
+      toast.error("Failed to load deletion preview");
+      setShowDeletePreview(false);
+    } finally {
+      setIsLoadingPreview(false);
+    }
+  };
+
+  // Settings Toggle Component - defined as a stable component
+  const SettingsToggle = ({
+    icon: Icon,
+    label,
+    description,
+    checked,
+    onCheckedChange,
+    disabled = false,
+  }: {
+    icon: React.ElementType;
+    label: string;
+    description: string;
+    checked: boolean;
+    onCheckedChange: (checked: boolean) => void;
+    disabled?: boolean;
+  }) => (
+    <div className="flex items-center justify-between py-4">
+      <div className="flex items-start gap-4 flex-1 min-w-0">
+        <div className="w-10 h-10 rounded-xl bg-secondary/80 flex items-center justify-center flex-shrink-0">
+          <Icon className="w-5 h-5 text-muted-foreground" />
+        </div>
+        <div className="space-y-1 min-w-0">
+          <Label className="text-sm font-medium">{label}</Label>
+          <p className="text-xs text-muted-foreground leading-relaxed">{description}</p>
+        </div>
+      </div>
+      <Switch checked={checked} onCheckedChange={onCheckedChange} disabled={disabled} className="flex-shrink-0 ml-4" />
+    </div>
+  );
+
+  // Render content based on active tab
+  const renderContent = () => {
+    switch (activeTab) {
+      case "account":
+        return accountContent;
+      case "profile":
+        return profileContent;
+      case "notifications":
+        return notificationsContent;
+      case "appearance":
+        return appearanceContent;
+      default:
+        return null;
+    }
+  };
+
+  // Account Content
+  const accountContent = (
+    <div className="space-y-6">
+      {/* Username Display */}
+      <div className="space-y-3">
+        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Username</Label>
+        <div className="flex items-center gap-3 p-4 bg-secondary/50 rounded-xl border border-border/50">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <User className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <span className="font-medium">{user?.username}</span>
+            <p className="text-xs text-muted-foreground mt-0.5">Cannot be changed</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Secret Key Section */}
+      <div className="space-y-3">
+        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Secret Key</Label>
+        {!keyRevealed ? (
+          <Button variant="outline" onClick={() => setShowKeyConfirm(true)} className="w-full h-12 rounded-xl">
+            <Eye className="w-4 h-4 mr-2" />
+            View Secret Key
+          </Button>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <Input
+                type={showSecretKey ? "text" : "password"}
+                value={secretKey || ""}
+                readOnly
+                className="font-mono text-xs h-12 rounded-xl bg-secondary/50"
+              />
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setShowSecretKey(!showSecretKey)}
+                className="h-12 w-12 rounded-xl flex-shrink-0"
+              >
+                {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleCopyKey}
+                className="h-12 w-12 rounded-xl flex-shrink-0"
+              >
+                {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+              </Button>
+            </div>
+            <p className="text-xs text-destructive flex items-center gap-2">
+              <Key className="w-3 h-3" />
+              Keep this key safe! It's the only way to access your account.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Log Out */}
+      <Button variant="outline" onClick={handleLogout} className="w-full h-12 rounded-xl">
+        <LogOut className="w-4 h-4 mr-2" />
+        Log Out
+      </Button>
+
+      {/* Danger Zone */}
+      <div className="pt-6 mt-6 border-t border-destructive/20">
+        <div className="p-4 rounded-xl bg-destructive/5 border border-destructive/20 space-y-4">
+          <div>
+            <h4 className="text-sm font-semibold text-destructive">Danger Zone</h4>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              Deleting your account will permanently remove all your data including messages, servers, and friendships.
+            </p>
+          </div>
+          <Button variant="destructive" onClick={handleDeletePreview} className="w-full h-11 rounded-xl">
+            <Trash2 className="w-4 h-4 mr-2" />
+            Delete Account
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Profile Content
+  const profileContent = (
+    <div className="space-y-6">
+      {/* Avatar Upload */}
+      <div className="flex items-center gap-5">
+        <div className="cursor-pointer flex-shrink-0 group relative" onClick={() => fileInputRef.current?.click()}>
+          <AvatarWithDecoration
+            user={user}
+            className="w-20 h-20 ring-4 ring-secondary/50 group-hover:ring-primary/30 transition-all"
+          />
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+            <Upload className="w-6 h-6 text-white" />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Button
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isLoading}
+            className="h-10 rounded-xl"
+          >
+            <Upload className="w-4 h-4 mr-2" />
+            Upload Avatar
+          </Button>
+          <p className="text-xs text-muted-foreground">Max 5MB, JPG or PNG</p>
+        </div>
+        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+      </div>
+
+      {/* Display Name */}
+      <div className="space-y-3">
+        <Label htmlFor="displayName" className="text-sm font-medium">
+          Display Name
+        </Label>
+        <Input
+          id="displayName"
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+          placeholder="How others see you"
+          maxLength={32}
+          className="h-12 rounded-xl"
+        />
+      </div>
+
+      {/* Bio */}
+      <div className="space-y-3">
+        <Label htmlFor="bio" className="text-sm font-medium">
+          Bio
+        </Label>
+        <Textarea
+          id="bio"
+          value={bio}
+          onChange={(e) => setBio(e.target.value)}
+          placeholder="Tell us about yourself"
+          rows={3}
+          className="rounded-xl resize-none"
+        />
+      </div>
+
+      {/* Avatar Decoration */}
+      <div className="space-y-3">
+        <Label className="text-sm font-medium">Avatar Decoration</Label>
+        <Button variant="outline" onClick={() => setShowAvatarDecorationModal(true)} className="w-full h-12 rounded-xl">
+          <DecorationIcon className="w-4 h-4 mr-2" />
+          {user?.avatar_decoration ? "Change Decoration" : "Add Decoration"}
+        </Button>
+      </div>
+
+      {/* Banner Color */}
+      <div className="space-y-3">
+        <Label className="text-sm font-medium">Banner Color</Label>
+        <div className="flex items-center gap-3">
+          <input
+            type="color"
+            value={bannerColor}
+            onChange={(e) => setBannerColor(e.target.value)}
+            className="w-12 h-12 rounded-xl cursor-pointer border-2 border-border flex-shrink-0"
+          />
+          <Input
+            value={bannerColor}
+            onChange={(e) => setBannerColor(e.target.value)}
+            placeholder="#5865F2"
+            className="w-32 font-mono text-sm h-12 rounded-xl"
+          />
+          <div className="flex-1 h-12 rounded-xl border border-border/50" style={{ backgroundColor: bannerColor }} />
+        </div>
+      </div>
+
+      <Button onClick={handleSaveProfile} disabled={isLoading} className="w-full h-12 rounded-xl">
+        {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+        Save Profile
+      </Button>
+    </div>
+  );
+
+  // Notifications Content
+  const notificationsContent = (
+    <div className="space-y-2">
+      <SettingsToggle
+        icon={Bell}
+        label="Desktop Notifications"
+        description={
+          Notification.permission === "denied" ? "Blocked in browser settings" : "Show desktop alerts for new messages"
+        }
+        checked={desktopNotificationsEnabled}
+        disabled={Notification.permission === "denied"}
+        onCheckedChange={async (checked) => {
+          if (checked && Notification.permission === "default") {
+            const permission = await Notification.requestPermission();
+            if (permission === "granted") {
+              setDesktopNotificationsEnabled(true);
+              toast.success("Desktop notifications enabled!");
+            } else if (permission === "denied") {
+              toast.error("Notification permission denied. Enable in browser settings.");
+            }
+          } else {
+            setDesktopNotificationsEnabled(checked);
+          }
+        }}
+      />
+
+      <div className="border-t border-border/50" />
+
+      <SettingsToggle
+        icon={Volume2}
+        label="Notification Sound"
+        description="Play a sound when you receive notifications"
+        checked={notificationSoundEnabled}
+        onCheckedChange={setNotificationSoundEnabled}
+      />
+
+      <div className="border-t border-border/50" />
+
+      <SettingsToggle
+        icon={MessageSquare}
+        label="Message Preview"
+        description="Show message content in notifications"
+        checked={showMessagePreview}
+        onCheckedChange={setShowMessagePreview}
+      />
+    </div>
+  );
+
+  // Appearance Content
+  const appearanceContent = (
+    <div className="space-y-6">
+      {/* Theme Selector */}
+      <div className="space-y-4">
+        <Label className="text-sm font-medium">Theme</Label>
+        <div className="grid grid-cols-2 gap-3">
+          {THEMES.map((t) => {
+            const preview = THEME_PREVIEWS[t.id];
+            const isActive = theme === t.id;
+
+            return (
+              <button
+                key={t.id}
+                onClick={() => setTheme(t.id)}
+                className={cn(
+                  "group relative flex flex-col overflow-hidden rounded-xl border-2 transition-all",
+                  isActive ? "border-primary ring-2 ring-primary/20" : "border-border hover:border-primary/50",
+                )}
+              >
+                {/* Theme preview */}
+                <div className="h-16 w-full flex" style={{ backgroundColor: preview.bg }}>
+                  <div className="w-1/4 h-full" style={{ backgroundColor: preview.sidebar }} />
+                  <div className="flex-1 p-2.5 flex items-end">
+                    <div className="h-3 w-3/4 rounded" style={{ backgroundColor: preview.accent }} />
+                  </div>
+                </div>
+                {/* Theme info */}
+                <div className="px-3 py-2.5 bg-card flex items-center justify-between">
+                  <div className="text-left">
+                    <p className="text-sm font-medium">{t.name}</p>
+                  </div>
+                  {isActive && (
+                    <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                      <Check className="w-3 h-3 text-primary-foreground" />
+                    </div>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Message Display Section */}
+      <div className="space-y-2 pt-6 border-t border-border/50">
+        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Message Display</Label>
+
+        <SettingsToggle
+          icon={MessageSquare}
+          label="Compact Mode"
+          description="Condensed message format for more content"
+          checked={compactMode}
+          onCheckedChange={setCompactMode}
+        />
+
+        <div className="border-t border-border/50" />
+
+        <SettingsToggle
+          icon={Clock}
+          label="Show Timestamps"
+          description="Display time on every message"
+          checked={showTimestamps}
+          onCheckedChange={setShowTimestamps}
+        />
+
+        <div className="border-t border-border/50" />
+
+        <SettingsToggle
+          icon={Sparkles}
+          label="Animate Emojis"
+          description="Enable emoji animations in chat"
+          checked={animateEmojis}
+          onCheckedChange={setAnimateEmojis}
+        />
+
+        <div className="border-t border-border/50" />
+
+        <SettingsToggle
+          icon={Link}
+          label="Link Previews"
+          description="Show rich previews for links in messages"
+          checked={linkPreviewsEnabled}
+          onCheckedChange={setLinkPreviewsEnabled}
+        />
+      </div>
+    </div>
+  );
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-        <DialogContent className="sm:max-w-2xl max-w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] sm:max-h-[80vh] p-0 gap-0 overflow-hidden">
-          <div className="flex flex-col sm:flex-row h-full max-h-[calc(100vh-2rem)] sm:max-h-[70vh]">
-            {/* Mobile Tab Navigation */}
-            <div className="sm:hidden border-b border-border">
-              <div className="p-3">
-                <h2 className="font-semibold text-sm">User Settings</h2>
+      {/* Mobile: Custom Dialog with Dock */}
+      {isOpen && isMobile && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-end p-4 pb-6">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={handleClose} />
+
+          {/* Dialog */}
+          <div
+            className="relative bg-background rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-border mb-4"
+            style={{ maxHeight: "calc(100vh - 140px)" }}
+          >
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold">{navItems.find((n) => n.id === activeTab)?.label}</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {activeTab === "account" && "Manage your account"}
+                  {activeTab === "profile" && "Customize your profile"}
+                  {activeTab === "notifications" && "Notification settings"}
+                  {activeTab === "appearance" && "Personalize your app"}
+                </p>
               </div>
-              <nav className="flex overflow-x-auto px-2 pb-2 gap-1">
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = activeTab === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => setActiveTab(item.id)}
-                      className={cn(
-                        'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0',
-                        isActive 
-                          ? 'bg-primary text-primary-foreground' 
-                          : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                      )}
-                    >
-                      <Icon className="w-3.5 h-3.5" />
-                      {item.label}
-                    </button>
-                  );
-                })}
-              </nav>
+              <Button variant="ghost" size="icon" onClick={handleClose} className="rounded-full">
+                <X className="w-5 h-5" />
+              </Button>
             </div>
 
-            {/* Desktop Sidebar Navigation */}
-            <div className="hidden sm:flex w-48 bg-secondary/50 border-r border-border flex-col">
-              <div className="p-4 border-b border-border">
-                <h2 className="font-semibold text-sm">User Settings</h2>
-              </div>
-              <nav className="flex-1 p-2 space-y-1">
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = activeTab === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => setActiveTab(item.id)}
-                      className={cn(
-                        'w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors',
-                        isActive 
-                          ? 'bg-primary text-primary-foreground' 
-                          : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                      )}
-                    >
-                      <Icon className="w-4 h-4" />
-                      {item.label}
-                    </button>
-                  );
-                })}
-              </nav>
-            </div>
-
-            {/* Content Area */}
-            <div className="flex-1 flex flex-col overflow-hidden min-h-0">
-              <DialogHeader className="px-4 sm:px-6 py-2 sm:py-4 border-b border-border shrink-0">
-                <DialogTitle className="text-sm sm:text-lg">
-                  {navItems.find(n => n.id === activeTab)?.label}
-                </DialogTitle>
-                <DialogDescription className="text-[10px] sm:text-sm">
-                  {activeTab === 'account' && 'Manage your account credentials and security'}
-                  {activeTab === 'profile' && 'Customize how others see you'}
-                  {activeTab === 'notifications' && 'Control how you receive notifications'}
-                  {activeTab === 'appearance' && 'Personalize your app experience'}
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="flex-1 overflow-hidden min-h-0">
-                <AnimatePresence mode="wait" initial={false}>
-                  <motion.div
-                    key={activeTab}
-                    initial={isMobile ? { opacity: 0, x: swipeDirection === 'left' ? 50 : -50 } : { opacity: 1 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={isMobile ? { opacity: 0, x: swipeDirection === 'left' ? -50 : 50 } : { opacity: 0 }}
-                    transition={{ duration: 0.2, ease: 'easeOut' }}
-                    drag={isMobile ? 'x' : false}
-                    dragConstraints={{ left: 0, right: 0 }}
-                    dragElastic={0.2}
-                    onDragEnd={(_, info) => handleSwipe(info)}
-                    className="h-full overflow-y-auto p-3 sm:p-6 touch-pan-y"
-                  >
-                {/* Account Section */}
-                {activeTab === 'account' && (
-                  <div className="space-y-3 sm:space-y-4">
-                    {/* Username Display */}
-                    <div className="space-y-1.5 sm:space-y-2">
-                      <Label className="text-[10px] sm:text-xs font-bold uppercase text-muted-foreground">
-                        Username
-                      </Label>
-                      <div className="flex items-center gap-2 p-2 sm:p-3 bg-secondary rounded-lg">
-                        <span className="text-sm sm:text-base font-medium">{user?.username}</span>
-                        <span className="text-[10px] sm:text-xs text-muted-foreground">(cannot be changed)</span>
-                      </div>
-                    </div>
-
-                    {/* Secret Key Section */}
-                    <div className="space-y-1.5 sm:space-y-2">
-                      <Label className="text-[10px] sm:text-xs font-bold uppercase text-muted-foreground">
-                        Secret Key
-                      </Label>
-                      {!keyRevealed ? (
-                        <Button 
-                          variant="outline" 
-                          onClick={() => setShowKeyConfirm(true)}
-                          className="w-full h-9 sm:h-10 text-xs sm:text-sm"
-                        >
-                          <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2" />
-                          View Secret Key
-                        </Button>
-                      ) : (
-                        <div className="space-y-2">
-                          <div className="flex gap-1.5 sm:gap-2">
-                            <Input
-                              type={showSecretKey ? 'text' : 'password'}
-                              value={secretKey || ''}
-                              readOnly
-                              className="font-mono text-[10px] sm:text-xs h-9 sm:h-10"
-                            />
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setShowSecretKey(!showSecretKey)}
-                              className="h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0"
-                            >
-                              {showSecretKey ? <EyeOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={handleCopyKey}
-                              className="h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0"
-                            >
-                              {copied ? <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500" /> : <Copy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-                            </Button>
-                          </div>
-                          <p className="text-[10px] sm:text-xs text-destructive">
-                            Keep this key safe! It's the only way to access your account.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Log Out */}
-                    <Button variant="outline" onClick={handleLogout} className="w-full h-9 sm:h-10 text-xs sm:text-sm">
-                      <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2" />
-                      Log Out
-                    </Button>
-
-                    {/* Danger Zone */}
-                    <div className="border-t border-destructive/20 pt-3 sm:pt-4 mt-4 sm:mt-6">
-                      <h4 className="text-xs sm:text-sm font-semibold text-destructive mb-1.5 sm:mb-2">Danger Zone</h4>
-                      <p className="text-[10px] sm:text-xs text-muted-foreground mb-2 sm:mb-3">
-                        Deleting your account will permanently remove all your data.
-                      </p>
-                      <Button 
-                        variant="destructive" 
-                        size="sm"
-                        onClick={async () => {
-                          if (!user) return;
-                          setIsLoadingPreview(true);
-                          setShowDeletePreview(true);
-                          try {
-                            const { data, error } = await supabase.rpc('get_deletion_preview', { _user_id: user.id });
-                            if (error) throw error;
-                            setDeletionPreview(data as typeof deletionPreview);
-                          } catch (error) {
-                            console.error('Failed to fetch deletion preview:', error);
-                            toast.error('Failed to load deletion preview');
-                            setShowDeletePreview(false);
-                          } finally {
-                            setIsLoadingPreview(false);
-                          }
-                        }}
-                        className="text-xs h-8 sm:h-9"
-                      >
-                        <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
-                        Delete Account
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Profile Section */}
-                {activeTab === 'profile' && (
-                  <div className="space-y-3 sm:space-y-4">
-                    {/* Avatar Upload */}
-                    <div className="flex items-center gap-3 sm:gap-4">
-                      <div className="cursor-pointer flex-shrink-0" onClick={() => fileInputRef.current?.click()}>
-                        <AvatarWithDecoration 
-                          user={user} 
-                          className="w-14 h-14 sm:w-20 sm:h-20"
-                        />
-                      </div>
-                      <div className="min-w-0">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={isLoading}
-                          className="text-xs h-8 sm:h-9"
-                        >
-                          <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
-                          Upload Avatar
-                        </Button>
-                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">Max 5MB, JPG or PNG</p>
-                      </div>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleAvatarUpload}
-                      />
-                    </div>
-
-                    {/* Display Name */}
-                    <div className="space-y-1.5 sm:space-y-2">
-                      <Label htmlFor="displayName" className="text-xs sm:text-sm">Display Name</Label>
-                      <Input
-                        id="displayName"
-                        value={displayName}
-                        onChange={(e) => setDisplayName(e.target.value)}
-                        placeholder="How others see you"
-                        maxLength={32}
-                        className="h-9 sm:h-10 text-sm"
-                      />
-                    </div>
-
-                    {/* Bio */}
-                    <div className="space-y-1.5 sm:space-y-2">
-                      <Label htmlFor="bio" className="text-xs sm:text-sm">Bio</Label>
-                      <Textarea
-                        id="bio"
-                        value={bio}
-                        onChange={(e) => setBio(e.target.value)}
-                        placeholder="Tell us about yourself"
-                        rows={2}
-                        className="text-sm resize-none"
-                      />
-                    </div>
-
-                    {/* Avatar Decoration */}
-                    <div className="space-y-1.5 sm:space-y-2">
-                      <Label className="text-xs sm:text-sm">Avatar Decoration</Label>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowAvatarDecorationModal(true)}
-                        className="w-full h-9 sm:h-10 text-xs sm:text-sm"
-                      >
-                        <DecorationIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
-                        {user?.avatar_decoration ? 'Change Decoration' : 'Add Decoration'}
-                      </Button>
-                    </div>
-
-                    {/* Banner Color */}
-                    <div className="space-y-1.5 sm:space-y-2">
-                      <Label className="text-xs sm:text-sm">Banner Color</Label>
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <input
-                          type="color"
-                          value={bannerColor}
-                          onChange={(e) => setBannerColor(e.target.value)}
-                          className="w-10 h-9 sm:w-12 sm:h-10 rounded cursor-pointer border-0 flex-shrink-0"
-                        />
-                        <Input
-                          value={bannerColor}
-                          onChange={(e) => setBannerColor(e.target.value)}
-                          placeholder="#5865F2"
-                          className="w-20 sm:w-28 font-mono text-xs sm:text-sm h-9 sm:h-10"
-                        />
-                        <div 
-                          className="flex-1 h-9 sm:h-10 rounded min-w-[40px]"
-                          style={{ backgroundColor: bannerColor }}
-                        />
-                      </div>
-                    </div>
-
-                    <Button onClick={handleSaveProfile} disabled={isLoading} className="w-full h-9 sm:h-10 text-xs sm:text-sm">
-                      {isLoading && <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2 animate-spin" />}
-                      Save Profile
-                    </Button>
-                  </div>
-                )}
-
-                {/* Notifications Section */}
-                {activeTab === 'notifications' && (
-                  <div className="space-y-3 sm:space-y-4">
-                    <div className="space-y-2 sm:space-y-3">
-                      <Label className="text-[10px] sm:text-xs font-bold uppercase text-muted-foreground">
-                        Notification Settings
-                      </Label>
-                      
-                      {/* Desktop Notifications */}
-                      <div className="flex items-center justify-between py-1.5 sm:py-2 gap-3">
-                        <div className="space-y-0.5 sm:space-y-1 min-w-0">
-                          <div className="flex items-center gap-1.5 sm:gap-2">
-                            <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
-                            <Label className="text-xs sm:text-sm">Desktop Notifications</Label>
-                          </div>
-                          <p className="text-[10px] sm:text-xs text-muted-foreground">
-                            {Notification.permission === 'denied' 
-                              ? 'Blocked in browser'
-                              : 'Show desktop alerts'}
-                          </p>
-                        </div>
-                        <Switch
-                          checked={desktopNotificationsEnabled}
-                          disabled={Notification.permission === 'denied'}
-                          onCheckedChange={async (checked) => {
-                            if (checked && Notification.permission === 'default') {
-                              const permission = await Notification.requestPermission();
-                              if (permission === 'granted') {
-                                setDesktopNotificationsEnabled(true);
-                                toast.success('Desktop notifications enabled!');
-                              } else if (permission === 'denied') {
-                                toast.error('Notification permission denied. Enable in browser settings.');
-                              }
-                            } else {
-                              setDesktopNotificationsEnabled(checked);
-                            }
-                          }}
-                        />
-                      </div>
-
-                      {/* Notification Sound */}
-                      <div className="flex items-center justify-between py-1.5 sm:py-2 border-t pt-3 sm:pt-4 gap-3">
-                        <div className="space-y-0.5 sm:space-y-1 min-w-0">
-                          <div className="flex items-center gap-1.5 sm:gap-2">
-                            <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
-                            <Label className="text-xs sm:text-sm">Notification Sound</Label>
-                          </div>
-                          <p className="text-[10px] sm:text-xs text-muted-foreground">
-                            Play sound on notification
-                          </p>
-                        </div>
-                        <Switch
-                          checked={notificationSoundEnabled}
-                          onCheckedChange={setNotificationSoundEnabled}
-                        />
-                      </div>
-
-                      {/* Message Preview */}
-                      <div className="flex items-center justify-between py-1.5 sm:py-2 border-t pt-3 sm:pt-4 gap-3">
-                        <div className="space-y-0.5 sm:space-y-1 min-w-0">
-                          <div className="flex items-center gap-1.5 sm:gap-2">
-                            <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
-                            <Label className="text-xs sm:text-sm">Message Preview</Label>
-                          </div>
-                          <p className="text-[10px] sm:text-xs text-muted-foreground">
-                            Show content in notifications
-                          </p>
-                        </div>
-                        <Switch
-                          checked={showMessagePreview}
-                          onCheckedChange={setShowMessagePreview}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Appearance Section */}
-                {activeTab === 'appearance' && (
-                  <div className="space-y-3 sm:space-y-4">
-                    {/* Theme Selector */}
-                    <div className="space-y-2 sm:space-y-3">
-                      <Label className="text-xs sm:text-sm">Theme</Label>
-                      <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                        {THEMES.map((t) => {
-                          const preview = THEME_PREVIEWS[t.id];
-                          const isActive = theme === t.id;
-                          
-                          return (
-                            <button
-                              key={t.id}
-                              onClick={() => setTheme(t.id)}
-                              className={cn(
-                                'group relative flex flex-col overflow-hidden rounded-lg border-2 transition-all',
-                                isActive 
-                                  ? 'border-primary ring-2 ring-primary/20' 
-                                  : 'border-border hover:border-primary/50'
-                              )}
-                            >
-                              {/* Theme preview */}
-                              <div 
-                                className="h-10 sm:h-16 w-full flex"
-                                style={{ backgroundColor: preview.bg }}
-                              >
-                                {/* Sidebar preview */}
-                                <div 
-                                  className="w-1/4 h-full"
-                                  style={{ backgroundColor: preview.sidebar }}
-                                />
-                                {/* Chat area with accent message */}
-                                <div className="flex-1 p-1.5 sm:p-2 flex items-end">
-                                  <div 
-                                    className="h-2 sm:h-3 w-3/4 rounded-sm"
-                                    style={{ backgroundColor: preview.accent }}
-                                  />
-                                </div>
-                              </div>
-                              {/* Theme info */}
-                              <div className="px-2 sm:px-3 py-1.5 sm:py-2 bg-card flex items-center justify-between">
-                                <div className="text-left min-w-0">
-                                  <p className="text-xs sm:text-sm font-medium truncate">{t.name}</p>
-                                  <p className="text-[10px] sm:text-xs text-muted-foreground truncate hidden sm:block">{t.description}</p>
-                                </div>
-                                {isActive && (
-                                  <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                                    <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-primary-foreground" />
-                                  </div>
-                                )}
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Message Display Section */}
-                    <div className="space-y-2 sm:space-y-3 border-t pt-3 sm:pt-4">
-                      <Label className="text-[10px] sm:text-xs font-bold uppercase text-muted-foreground">
-                        Message Display
-                      </Label>
-
-                      {/* Compact Mode */}
-                      <div className="flex items-center justify-between py-1.5 sm:py-2 gap-3">
-                        <div className="space-y-0.5 sm:space-y-1 min-w-0">
-                          <div className="flex items-center gap-1.5 sm:gap-2">
-                            <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
-                            <Label className="text-xs sm:text-sm">Compact Mode</Label>
-                          </div>
-                          <p className="text-[10px] sm:text-xs text-muted-foreground">
-                            Condensed message format
-                          </p>
-                        </div>
-                        <Switch
-                          checked={compactMode}
-                          onCheckedChange={setCompactMode}
-                        />
-                      </div>
-
-                      {/* Show Timestamps */}
-                      <div className="flex items-center justify-between py-1.5 sm:py-2 border-t pt-3 sm:pt-4 gap-3">
-                        <div className="space-y-0.5 sm:space-y-1 min-w-0">
-                          <div className="flex items-center gap-1.5 sm:gap-2">
-                            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
-                            <Label className="text-xs sm:text-sm">Show Timestamps</Label>
-                          </div>
-                          <p className="text-[10px] sm:text-xs text-muted-foreground">
-                            Display time on messages
-                          </p>
-                        </div>
-                        <Switch
-                          checked={showTimestamps}
-                          onCheckedChange={setShowTimestamps}
-                        />
-                      </div>
-
-                      {/* Animate Emojis */}
-                      <div className="flex items-center justify-between py-1.5 sm:py-2 border-t pt-3 sm:pt-4 gap-3">
-                        <div className="space-y-0.5 sm:space-y-1 min-w-0">
-                          <div className="flex items-center gap-1.5 sm:gap-2">
-                            <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
-                            <Label className="text-xs sm:text-sm">Animate Emojis</Label>
-                          </div>
-                          <p className="text-[10px] sm:text-xs text-muted-foreground">
-                            Enable emoji animations
-                          </p>
-                        </div>
-                        <Switch
-                          checked={animateEmojis}
-                          onCheckedChange={setAnimateEmojis}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Link Previews */}
-                    <div className="flex items-center justify-between py-1.5 sm:py-2 border-t pt-3 sm:pt-4 gap-3">
-                      <div className="space-y-0.5 sm:space-y-1 min-w-0">
-                        <div className="flex items-center gap-1.5 sm:gap-2">
-                          <Link className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
-                          <Label className="text-xs sm:text-sm">Link Previews</Label>
-                        </div>
-                        <p className="text-[10px] sm:text-xs text-muted-foreground">
-                          Show link previews in messages
-                        </p>
-                      </div>
-                      <Switch
-                        checked={linkPreviewsEnabled}
-                        onCheckedChange={setLinkPreviewsEnabled}
-                      />
-                    </div>
-                  </div>
-                )}
-                  </motion.div>
-                </AnimatePresence>
-              </div>
+            {/* Content */}
+            <div className="overflow-y-auto p-5" style={{ maxHeight: "calc(100vh - 240px)" }}>
+              {renderContent()}
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+
+          {/* Dock Navigation */}
+          <div className="relative flex gap-2 p-2 bg-background/95 backdrop-blur-xl rounded-2xl border border-border shadow-2xl">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  className={cn(
+                    "relative flex flex-col items-center gap-1 px-4 py-2.5 rounded-xl transition-all",
+                    isActive
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground hover:bg-secondary",
+                  )}
+                >
+                  <Icon className="w-5 h-5" />
+                  <span className="text-[10px] font-medium">{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Desktop: Standard Dialog */}
+      {!isMobile && (
+        <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+          <DialogContent className="sm:max-w-3xl max-h-[85vh] p-0 gap-0 overflow-hidden rounded-2xl">
+            <div className="flex h-[70vh] max-h-[600px]">
+              {/* Sidebar Navigation */}
+              <div className="w-56 bg-secondary/30 border-r border-border flex flex-col">
+                <div className="p-5 border-b border-border">
+                  <h2 className="font-semibold text-base">User Settings</h2>
+                </div>
+                <nav className="flex-1 p-3 space-y-1">
+                  {navItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = activeTab === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => setActiveTab(item.id)}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-4 py-3 text-sm rounded-xl transition-all",
+                          isActive
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-foreground hover:bg-secondary/80",
+                        )}
+                      >
+                        <Icon className="w-4 h-4" />
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </nav>
+              </div>
+
+              {/* Content Area */}
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="px-8 py-5 border-b border-border shrink-0">
+                  <h3 className="text-xl font-semibold">{navItems.find((n) => n.id === activeTab)?.label}</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {activeTab === "account" && "Manage your account credentials and security"}
+                    {activeTab === "profile" && "Customize how others see you"}
+                    {activeTab === "notifications" && "Control how you receive notifications"}
+                    {activeTab === "appearance" && "Personalize your app experience"}
+                  </p>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-8">{renderContent()}</div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* View Key Confirmation */}
       <AlertDialog open={showKeyConfirm} onOpenChange={setShowKeyConfirm}>
-        <AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-lg">
+        <AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-base sm:text-lg">Reveal Secret Key?</AlertDialogTitle>
-            <AlertDialogDescription className="text-sm">
+            <AlertDialogTitle>Reveal Secret Key?</AlertDialogTitle>
+            <AlertDialogDescription className="leading-relaxed">
               Make sure no one is looking at your screen. Your secret key is the only way to access your account.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-            <AlertDialogCancel className="m-0">Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => {
-              setKeyRevealed(true);
-              setShowKeyConfirm(false);
-            }}>
+            <AlertDialogCancel className="m-0 rounded-xl">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setKeyRevealed(true);
+                setShowKeyConfirm(false);
+              }}
+              className="rounded-xl"
+            >
               Reveal Key
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -779,95 +738,109 @@ export const UserSettingsModal = () => {
       </AlertDialog>
 
       {/* Delete Account Preview */}
-      <AlertDialog open={showDeletePreview} onOpenChange={(open) => {
-        setShowDeletePreview(open);
-        if (!open) setDeletionPreview(null);
-      }}>
-        <AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-lg max-h-[80vh] overflow-y-auto">
+      <AlertDialog
+        open={showDeletePreview}
+        onOpenChange={(open) => {
+          setShowDeletePreview(open);
+          if (!open) setDeletionPreview(null);
+        }}
+      >
+        <AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-base sm:text-lg text-destructive">Delete Account?</AlertDialogTitle>
-            <AlertDialogDescription className="text-sm">
+            <AlertDialogTitle className="text-destructive">Delete Account?</AlertDialogTitle>
+            <AlertDialogDescription className="leading-relaxed">
               Review what will be deleted. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          
+
           {isLoadingPreview ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
             </div>
-          ) : deletionPreview && (
-            <div className="space-y-4 py-2">
-              {/* Data to be deleted */}
-              <div className="space-y-2">
-                <h4 className="text-xs font-semibold uppercase text-muted-foreground">Data to be deleted</h4>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="flex items-center justify-between p-2 bg-secondary rounded-md">
-                    <span className="text-muted-foreground">Messages</span>
-                    <span className="font-medium">{deletionPreview.message_count}</span>
-                  </div>
-                  <div className="flex items-center justify-between p-2 bg-secondary rounded-md">
-                    <span className="text-muted-foreground">Direct Messages</span>
-                    <span className="font-medium">{deletionPreview.dm_count}</span>
-                  </div>
-                  <div className="flex items-center justify-between p-2 bg-secondary rounded-md">
-                    <span className="text-muted-foreground">Reactions</span>
-                    <span className="font-medium">{deletionPreview.reaction_count}</span>
-                  </div>
-                  <div className="flex items-center justify-between p-2 bg-secondary rounded-md">
-                    <span className="text-muted-foreground">Friends</span>
-                    <span className="font-medium">{deletionPreview.friendship_count}</span>
+          ) : (
+            deletionPreview && (
+              <div className="space-y-5 py-2">
+                {/* Data to be deleted */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Data to be deleted
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { label: "Messages", count: deletionPreview.message_count },
+                      { label: "Direct Messages", count: deletionPreview.dm_count },
+                      { label: "Reactions", count: deletionPreview.reaction_count },
+                      { label: "Friends", count: deletionPreview.friendship_count },
+                    ].map((item) => (
+                      <div
+                        key={item.label}
+                        className="flex items-center justify-between p-3 bg-secondary/50 rounded-xl"
+                      >
+                        <span className="text-sm text-muted-foreground">{item.label}</span>
+                        <span className="font-semibold">{item.count}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </div>
 
-              {/* Servers to be transferred */}
-              {deletionPreview.servers_to_transfer.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="text-xs font-semibold uppercase text-muted-foreground">Servers to be transferred</h4>
-                  <div className="space-y-1.5">
-                    {deletionPreview.servers_to_transfer.map((server) => (
-                      <div key={server.id} className="p-2 bg-secondary rounded-md text-sm">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium">{server.name}</span>
-                          <span className="text-xs text-muted-foreground">{server.member_count} member{server.member_count !== 1 ? 's' : ''}</span>
+                {/* Servers to be transferred */}
+                {deletionPreview.servers_to_transfer.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Servers to be transferred
+                    </h4>
+                    <div className="space-y-2">
+                      {deletionPreview.servers_to_transfer.map((server) => (
+                        <div key={server.id} className="p-3 bg-secondary/50 rounded-xl">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium">{server.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {server.member_count} member{server.member_count !== 1 ? "s" : ""}
+                            </span>
+                          </div>
+                          {server.new_owner && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Will be transferred to{" "}
+                              <span className="text-foreground font-medium">@{server.new_owner.username}</span>
+                            </p>
+                          )}
                         </div>
-                        {server.new_owner && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Will be transferred to <span className="text-foreground font-medium">@{server.new_owner.username}</span>
-                          </p>
-                        )}
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Servers to be deleted */}
-              {deletionPreview.servers_to_delete.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="text-xs font-semibold uppercase text-destructive">Servers to be deleted</h4>
-                  <div className="space-y-1.5">
-                    {deletionPreview.servers_to_delete.map((server) => (
-                      <div key={server.id} className="p-2 bg-destructive/10 border border-destructive/20 rounded-md text-sm">
-                        <span className="font-medium">{server.name}</span>
-                        <p className="text-xs text-muted-foreground">No other members - will be permanently deleted</p>
-                      </div>
-                    ))}
+                {/* Servers to be deleted */}
+                {deletionPreview.servers_to_delete.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-destructive">
+                      Servers to be deleted
+                    </h4>
+                    <div className="space-y-2">
+                      {deletionPreview.servers_to_delete.map((server) => (
+                        <div key={server.id} className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl">
+                          <span className="font-medium">{server.name}</span>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            No other members - will be permanently deleted
+                          </p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )
           )}
 
           <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-            <AlertDialogCancel className="m-0">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="m-0 rounded-xl">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 setShowDeletePreview(false);
                 setShowDeleteConfirm(true);
               }}
               disabled={isLoadingPreview}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl"
             >
               Continue to Delete
             </AlertDialogAction>
@@ -877,24 +850,21 @@ export const UserSettingsModal = () => {
 
       {/* Final Delete Confirmation */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-lg">
+        <AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-base sm:text-lg text-destructive">Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription className="text-sm">
-              This is your final confirmation. Your account and all associated data will be permanently deleted. This action cannot be undone.
+            <AlertDialogTitle className="text-destructive">Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription className="leading-relaxed">
+              This is your final confirmation. Your account and all associated data will be permanently deleted. This
+              action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-            <AlertDialogCancel className="m-0">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="m-0 rounded-xl">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteAccount}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl"
             >
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Trash2 className="w-4 h-4 mr-2" />
-              )}
+              {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
               Delete Forever
             </AlertDialogAction>
           </AlertDialogFooter>
