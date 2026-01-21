@@ -846,8 +846,8 @@ export type Database = {
           created_at: string | null
           icon_url: string | null
           id: string
-          is_published: boolean
           invite_code: string
+          is_published: boolean
           name: string
           owner_id: string
         }
@@ -856,8 +856,8 @@ export type Database = {
           created_at?: string | null
           icon_url?: string | null
           id?: string
-          is_published?: boolean
           invite_code: string
+          is_published?: boolean
           name: string
           owner_id: string
         }
@@ -866,8 +866,8 @@ export type Database = {
           created_at?: string | null
           icon_url?: string | null
           id?: string
-          is_published?: boolean
           invite_code?: string
+          is_published?: boolean
           name?: string
           owner_id?: string
         }
@@ -927,6 +927,32 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "user_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_server_folders: {
+        Row: {
+          folder_data: Json
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          folder_data?: Json
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          folder_data?: Json
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_server_folders_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
             referencedRelation: "users"
@@ -1188,6 +1214,7 @@ export type Database = {
       get_user_by_id: { Args: { _user_id: string }; Returns: Json }
       get_user_dm_conversations: { Args: { _user_id: string }; Returns: Json }
       get_user_friends: { Args: { _user_id: string }; Returns: Json }
+      get_user_server_folders: { Args: { _user_id: string }; Returns: Json }
       get_user_servers: { Args: { _user_id: string }; Returns: Json }
       is_dm_participant: {
         Args: { _conversation_id: string; _user_id: string }
@@ -1214,17 +1241,17 @@ export type Database = {
         Returns: boolean
       }
       login_user: { Args: { _key_hash: string }; Returns: Json }
-      mark_dm_read: {
-        Args: { _conversation_id: string; _user_id: string }
-        Returns: boolean
-      }
       mark_channel_read: {
         Args: {
           _channel_id: string
-          _user_id: string
-          _last_read_message_id: string
           _last_read_at?: string
+          _last_read_message_id: string
+          _user_id: string
         }
+        Returns: boolean
+      }
+      mark_dm_read: {
+        Args: { _conversation_id: string; _user_id: string }
         Returns: boolean
       }
       open_dm_conversation: {
@@ -1253,6 +1280,10 @@ export type Database = {
       }
       remove_role_from_member: {
         Args: { _member_id: string; _role_id: string; _user_id: string }
+        Returns: boolean
+      }
+      save_user_server_folders: {
+        Args: { _folder_data: Json; _user_id: string }
         Returns: boolean
       }
       search_messages: {
