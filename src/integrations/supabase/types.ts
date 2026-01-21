@@ -203,6 +203,42 @@ export type Database = {
           },
         ]
       }
+      declined_friend_requests: {
+        Row: {
+          addressee_id: string
+          declined_at: string
+          id: string
+          requester_id: string
+        }
+        Insert: {
+          addressee_id: string
+          declined_at?: string
+          id?: string
+          requester_id: string
+        }
+        Update: {
+          addressee_id?: string
+          declined_at?: string
+          id?: string
+          requester_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "declined_friend_requests_addressee_id_fkey"
+            columns: ["addressee_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "declined_friend_requests_requester_id_fkey"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       direct_messages: {
         Row: {
           content: string
