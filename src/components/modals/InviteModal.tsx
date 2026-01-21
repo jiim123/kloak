@@ -114,7 +114,7 @@ export const InviteModal = () => {
             <div className="absolute -top-20 -right-20 w-40 h-40 bg-kloak-success/20 rounded-full blur-3xl pointer-events-none" />
 
             {/* Badge */}
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-kloak-success/10 px-3 py-1 text-xs font-medium text-kloak-success mb-4">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-background px-3 py-1 text-xs font-medium text-primary mb-4">
               <Users className="w-3 h-3" />
               Share with friends
             </div>
