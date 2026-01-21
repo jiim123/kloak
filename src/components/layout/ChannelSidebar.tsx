@@ -734,34 +734,64 @@ export const ChannelSidebar = () => {
               whileHover={{ backgroundColor: "hsl(var(--secondary) / 0.5)" }}
               whileTap={{ scale: 0.99 }}
             >
-              <h2 className="font-normal text-lg text-foreground truncate">{currentServer.name}</h2>
+              <h2 className="font-semibold text-foreground truncate">{currentServer.name}</h2>
               <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             </MotionButton>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56" align="start" sideOffset={0}>
-            <DropdownMenuItem onClick={() => openModal("invite", { serverId: currentServer.id })}>
-              <UserPlus className="w-4 h-4 mr-2" />
-              Invite People
+
+          <DropdownMenuContent
+            className="w-64 p-2 rounded-xl border-border/50 bg-popover/95 backdrop-blur-xl shadow-xl"
+            align="start"
+            sideOffset={4}
+          >
+            {/* Invite People */}
+            <DropdownMenuItem
+              onClick={() => openModal("invite", { serverId: currentServer.id })}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer focus:bg-secondary/80"
+            >
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <UserPlus className="w-4 h-4 text-primary" />
+              </div>
+              <span className="text-sm font-medium">Invite People</span>
             </DropdownMenuItem>
 
             {canSeeServerSettings && (
               <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => openServerSettings()}>
-                  <Settings className="w-4 h-4 mr-2" />
-                  Server Settings
+                <DropdownMenuSeparator className="my-2 bg-border/50" />
+
+                {/* Server Settings */}
+                <DropdownMenuItem
+                  onClick={() => openServerSettings()}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer focus:bg-secondary/80"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-secondary/80 flex items-center justify-center flex-shrink-0">
+                    <Settings className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                  <span className="text-sm font-medium">Server Settings</span>
                 </DropdownMenuItem>
+
                 {canManageChannels && (
                   <>
-                    <DropdownMenuItem onClick={() => openModal("create-channel", { serverId: currentServer.id })}>
-                      <Hash className="w-4 h-4 mr-2" />
-                      Create Channel
+                    {/* Create Channel */}
+                    <DropdownMenuItem
+                      onClick={() => openModal("create-channel", { serverId: currentServer.id })}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer focus:bg-secondary/80"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-secondary/80 flex items-center justify-center flex-shrink-0">
+                        <Hash className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                      <span className="text-sm font-medium">Create Channel</span>
                     </DropdownMenuItem>
+
+                    {/* Create Category */}
                     <DropdownMenuItem
                       onClick={() => openModal("create-channel", { serverId: currentServer.id, isCategory: true })}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer focus:bg-secondary/80"
                     >
-                      <FolderPlus className="w-4 h-4 mr-2" />
-                      Create Category
+                      <div className="w-8 h-8 rounded-lg bg-secondary/80 flex items-center justify-center flex-shrink-0">
+                        <FolderPlus className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                      <span className="text-sm font-medium">Create Category</span>
                     </DropdownMenuItem>
                   </>
                 )}
@@ -770,10 +800,17 @@ export const ChannelSidebar = () => {
 
             {!isOwner && (
               <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={handleLeaveServer}>
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Leave Server
+                <DropdownMenuSeparator className="my-2 bg-border/50" />
+
+                {/* Leave Server */}
+                <DropdownMenuItem
+                  onClick={handleLeaveServer}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center flex-shrink-0">
+                    <LogOut className="w-4 h-4" />
+                  </div>
+                  <span className="text-sm font-medium">Leave Server</span>
                 </DropdownMenuItem>
               </>
             )}
