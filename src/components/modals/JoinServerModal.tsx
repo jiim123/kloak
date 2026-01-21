@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -31,6 +32,7 @@ const joinServerSchema = z.object({
 type JoinServerForm = z.infer<typeof joinServerSchema>;
 
 export const JoinServerModal = () => {
+  const navigate = useNavigate();
   const { activeModal, closeModal } = useUIStore();
   const { joinServer, setCurrentServer, fetchChannels } = useServerStore();
   const { user } = useAuthStore();
@@ -70,6 +72,7 @@ export const JoinServerModal = () => {
         // Set the joined server as current and fetch channels
         setCurrentServer(joinedServer);
         await fetchChannels(joinedServer.id);
+        navigate(`/app/servers/${joinedServer.id}`);
         reset();
         closeModal();
       } else {

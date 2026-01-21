@@ -880,7 +880,10 @@ export const ServerSidebar = () => {
                         getServerInitials={getServerInitials}
                         onHover={() => setHoveredServer(server.id)}
                         onLeave={() => setHoveredServer(null)}
-                        onClick={() => setCurrentServer(server)}
+                        onClick={() => {
+                          setCurrentServer(server);
+                          navigate(`/app/servers/${server.id}`);
+                        }}
                       />
                     );
                   })}
@@ -908,7 +911,10 @@ export const ServerSidebar = () => {
                 getServerInitials={getServerInitials}
                 onHover={() => setHoveredServer(server.id)}
                 onLeave={() => setHoveredServer(null)}
-                onClick={() => setCurrentServer(server)}
+                onClick={() => {
+                  setCurrentServer(server);
+                  navigate(`/app/servers/${server.id}`);
+                }}
               />
             );
           })}

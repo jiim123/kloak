@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
@@ -21,6 +22,7 @@ type ExploreServer = {
 };
 
 export const ExploreServers = () => {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const { servers: myServers, joinServer, setCurrentServer } = useServerStore();
 
@@ -95,6 +97,7 @@ export const ExploreServers = () => {
 
     toast.success(`Joined ${joined.name}`);
     setCurrentServer(joined);
+    navigate(`/app/servers/${joined.id}`);
   };
 
   return (

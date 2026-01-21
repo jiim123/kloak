@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -44,6 +45,7 @@ type JoinServerForm = z.infer<typeof joinServerSchema>;
 type ModalView = 'choose' | 'create' | 'join';
 
 export const CreateServerModal = () => {
+  const navigate = useNavigate();
   const { activeModal, closeModal } = useUIStore();
   const { createServer, updateServer, joinServer, servers, setCurrentServer, fetchChannels } = useServerStore();
   const { user } = useAuthStore();
@@ -135,6 +137,7 @@ export const CreateServerModal = () => {
         toast.success(`Server "${server.name}" created!`);
         setCurrentServer(server);
         await fetchChannels(server.id);
+        navigate(`/app/servers/${server.id}`);
         handleClose();
       }
     } catch (error) {
@@ -158,6 +161,7 @@ export const CreateServerModal = () => {
         if (newServer) {
           setCurrentServer(newServer);
           await fetchChannels(newServer.id);
+          navigate(`/app/servers/${newServer.id}`);
         }
         handleClose();
       } else {

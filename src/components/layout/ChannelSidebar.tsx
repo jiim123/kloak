@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useRef, useEffect, useLayoutEffect, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { ChevronDown, ChevronRight, Hash, Volume2, Settings, Plus, LogOut, UserPlus, FolderPlus } from "lucide-react";
 import {
   DndContext,
@@ -448,6 +449,7 @@ const SortableCategory = ({
 };
 
 export const ChannelSidebar = () => {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const {
     currentServer,
@@ -528,8 +530,12 @@ export const ChannelSidebar = () => {
       setCurrentChannel(channel);
       // Mark channel as read when selected
       markAsRead(channel.id);
+      // Navigate to channel URL
+      if (currentServer) {
+        navigate(`/app/servers/${currentServer.id}/channels/${channel.id}`);
+      }
     },
-    [setCurrentChannel, markAsRead],
+    [setCurrentChannel, markAsRead, currentServer, navigate],
   );
 
   const handleLeaveServer = async () => {

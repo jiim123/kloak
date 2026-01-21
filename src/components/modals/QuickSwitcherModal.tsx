@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, Hash, Users, MessageCircle, Server } from 'lucide-react';
 import {
   Dialog,
@@ -24,6 +25,7 @@ interface SearchResult {
 }
 
 export const QuickSwitcherModal = () => {
+  const navigate = useNavigate();
   const { activeModal, closeModal } = useUIStore();
   const { servers, channels, currentServer, setCurrentServer, setCurrentChannel } = useServerStore();
   const { conversations, setCurrentConversation } = useDMStore();
@@ -104,6 +106,7 @@ export const QuickSwitcherModal = () => {
         const server = servers.find(s => s.id === result.id);
         if (server) {
           setCurrentServer(server);
+          navigate(`/app/servers/${server.id}`);
         }
         break;
       }
@@ -111,8 +114,11 @@ export const QuickSwitcherModal = () => {
         const channel = channels.find(c => c.id === result.id);
         if (channel) {
           const server = servers.find(s => s.id === channel.server_id);
-          if (server) setCurrentServer(server);
-          setCurrentChannel(channel);
+          if (server) {
+            setCurrentServer(server);
+            setCurrentChannel(channel);
+            navigate(`/app/servers/${server.id}/channels/${channel.id}`);
+          }
         }
         break;
       }
@@ -121,12 +127,13 @@ export const QuickSwitcherModal = () => {
         if (conversation) {
           setCurrentServer(null);
           setCurrentConversation(conversation);
+          navigate('/app');
         }
         break;
       }
     }
     closeModal();
-  }, [servers, channels, conversations, setCurrentServer, setCurrentChannel, setCurrentConversation, closeModal]);
+  }, [servers, channels, conversations, setCurrentServer, setCurrentChannel, setCurrentConversation, closeModal, navigate]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     switch (e.key) {

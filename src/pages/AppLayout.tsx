@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams, useLocation, Routes, Route } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation, useParams } from 'react-router-dom';
 import { useAuthStore, initializeAuth } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
@@ -47,10 +47,22 @@ import { PresenceDebugOverlay } from '@/components/debug/PresenceDebugOverlay';
 const AppLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const params = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, isLoading, isNewUser, setIsNewUser } = useAuthStore();
   const { isMemberSidebarOpen, isServerSettingsOpen, closeMobileSidebars } = useUIStore();
-  const { currentServer, currentChannel, setCurrentChannel, setCurrentServer, fetchChannels, fetchMembers, fetchRolePermissions, fetchRoles } = useServerStore();
+  const { 
+    currentServer, 
+    currentChannel, 
+    setCurrentChannel, 
+    setCurrentServer, 
+    fetchChannels, 
+    fetchMembers, 
+    fetchRolePermissions, 
+    fetchRoles,
+    servers,
+    channels
+  } = useServerStore();
   const { conversations, currentConversation, setCurrentConversation, fetchConversations } = useDMStore();
   const isMobile = useIsMobile();
 
@@ -58,6 +70,10 @@ const AppLayout = () => {
   const currentPath = location.pathname.replace('/app', '') || '/';
   const showFriends = currentPath === '/friends';
   const showExplore = currentPath === '/explore';
+  
+  // Extract serverId and channelId from URL params
+  const urlServerId = params.serverId;
+  const urlChannelId = params.channelId;
 
   // Handle native notification click deep-links in Tauri.
   useTauriNotificationActions();
@@ -147,6 +163,49 @@ const AppLayout = () => {
 
   // Sync preferences (theme, etc.) with database
   usePreferencesSync();
+
+  // Sync URL params with store state - read from URL and update store
+  useEffect(() => {
+    if (!user || !servers.length) return;
+    
+    // If URL has serverId, set it in the store
+    if (urlServerId) {
+      const server = servers.find(s => s.id === urlServerId);
+      if (server && server.id !== currentServer?.id) {
+        setCurrentServer(server);
+      } else if (!server) {
+        // Server not found in user's servers, redirect to home
+        navigate('/app', { replace: true });
+      }
+    }
+    // Don't auto-navigate when URL doesn't have serverId - let user stay on DM view
+  }, [urlServerId, servers, currentServer, setCurrentServer, user, navigate]);
+
+  // Sync channel from URL
+  useEffect(() => {
+    if (!currentServer || !urlServerId || currentServer.id !== urlServerId) return;
+    
+    // Wait for channels to be loaded
+    if (channels.length === 0) return;
+    
+    if (urlChannelId) {
+      const channel = channels.find(c => c.id === urlChannelId && c.server_id === currentServer.id);
+      if (channel && channel.id !== currentChannel?.id) {
+        setCurrentChannel(channel);
+      } else if (!channel) {
+        // Channel not found, navigate to server without channel
+        navigate(`/app/servers/${currentServer.id}`, { replace: true });
+      }
+    } else if (urlServerId && !urlChannelId && channels.length > 0) {
+      // On server page without channel, select first channel if none selected
+      if (!currentChannel || currentChannel.server_id !== currentServer.id) {
+        const firstChannel = channels[0];
+        if (firstChannel) {
+          navigate(`/app/servers/${currentServer.id}/channels/${firstChannel.id}`, { replace: true });
+        }
+      }
+    }
+  }, [urlChannelId, channels, currentChannel, currentServer, urlServerId, setCurrentChannel, navigate]);
 
   // Fetch channels, members, roles, and permissions when server changes
   useEffect(() => {
