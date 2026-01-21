@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { Reply, Pencil, Trash2, Copy, CornerUpLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -7,6 +7,8 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useDMStore } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -26,11 +28,13 @@ const animatedDMMessages = new Set<string>();
 export const DMMessageItem = ({ message, isFirst, onReply }: DMMessageItemProps) => {
   const { user } = useAuthStore();
   const { editMessage, deleteMessage, addReaction, removeReaction } = useDMStore();
+  const otherUser = useDMStore((state) => state.currentConversation?.other_user);
   
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [showMobileActions, setShowMobileActions] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [reactionDetailsEmoji, setReactionDetailsEmoji] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -109,6 +113,33 @@ export const DMMessageItem = ({ message, isFirst, onReply }: DMMessageItemProps)
   };
 
   const quickReactions = ['👍', '❤️', '😂', '😮', '😢', '🎉'];
+
+  const nameForUserId = useCallback(
+    (userId: string) => {
+      if (user?.id && userId === user.id) return 'You';
+      if (otherUser?.id && userId === otherUser.id) return otherUser.display_name ?? otherUser.username;
+      return userId;
+    },
+    [user?.id, otherUser?.id, otherUser?.display_name, otherUser?.username],
+  );
+
+  const getReactionUserNames = useCallback(
+    (userIds: string[]) => {
+      const unique = Array.from(new Set(userIds));
+      return unique.map(nameForUserId);
+    },
+    [nameForUserId],
+  );
+
+  const selectedReaction = useMemo(() => {
+    if (!reactionDetailsEmoji) return null;
+    return message.reactions?.find((r) => r.emoji === reactionDetailsEmoji) ?? null;
+  }, [message.reactions, reactionDetailsEmoji]);
+
+  const selectedReactionNames = useMemo(() => {
+    if (!selectedReaction) return [];
+    return getReactionUserNames(selectedReaction.users);
+  }, [selectedReaction, getReactionUserNames]);
 
   return (
     <>
@@ -207,19 +238,63 @@ export const DMMessageItem = ({ message, isFirst, onReply }: DMMessageItemProps)
           {message.reactions && message.reactions.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2">
               {message.reactions.map((reaction) => (
-                <button
-                  key={reaction.emoji}
-                  onClick={() => handleReactionClick(reaction.emoji)}
-                  className={cn(
-                    'flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border transition-all duration-200 animate-reaction-pop',
-                    reaction.hasReacted
-                      ? 'bg-primary/20 border-primary text-primary'
-                      : 'bg-secondary border-transparent hover:border-border'
-                  )}
-                >
-                  <span>{reaction.emoji}</span>
-                  <span className="text-[11px]">{reaction.count}</span>
-                </button>
+                <HoverCard key={reaction.emoji} openDelay={200}>
+                  <HoverCardTrigger asChild>
+                    <span className="inline-flex">
+                      <button
+                        onClick={() => handleReactionClick(reaction.emoji)}
+                        className={cn(
+                          'flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border transition-all duration-200 animate-reaction-pop',
+                          reaction.hasReacted
+                            ? 'bg-primary/20 border-primary text-primary'
+                            : 'bg-secondary border-transparent hover:border-border'
+                        )}
+                      >
+                        <span>{reaction.emoji}</span>
+                        <span className="text-[11px]">{reaction.count}</span>
+                      </button>
+                    </span>
+                  </HoverCardTrigger>
+                  <HoverCardContent className="w-auto p-1.5" align="start" side="top">
+                    {(() => {
+                      const names = getReactionUserNames(reaction.users);
+                      const preview = names.slice(0, 4);
+                      const remaining = Math.max(0, names.length - preview.length);
+                      return (
+                        <div className="flex items-center gap-1">
+                          <div className="shrink-0">
+                            <span className="text-2xl leading-none font-emoji">{reaction.emoji}</span>
+                          </div>
+                          <div className="min-w-0 text-sm leading-tight">
+                            <span className="text-muted-foreground">reacted by</span>{" "}
+                            {preview.map((name, idx) => (
+                              <span key={`${reaction.emoji}-${name}`}>
+                                <span className="truncate">{name}</span>
+                                {idx < preview.length - 1 ? ", " : ""}
+                              </span>
+                            ))}
+                            {remaining > 0 && (
+                              <>
+                                {preview.length > 0 ? ", " : ""}
+                                <button
+                                  type="button"
+                                  className="text-primary underline hover:no-underline"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setReactionDetailsEmoji(reaction.emoji);
+                                  }}
+                                >
+                                  {remaining} others
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </HoverCardContent>
+                </HoverCard>
               ))}
             </div>
           )}
@@ -304,6 +379,29 @@ export const DMMessageItem = ({ message, isFirst, onReply }: DMMessageItemProps)
           </div>
         </DrawerContent>
       </Drawer>
+
+      <Dialog open={!!reactionDetailsEmoji} onOpenChange={(open) => !open && setReactionDetailsEmoji(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <span className="text-base leading-none font-emoji">{reactionDetailsEmoji ?? ''}</span>
+              <span>Reactions</span>
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="max-h-[320px] overflow-auto space-y-1">
+            {selectedReactionNames.length > 0 ? (
+              selectedReactionNames.map((name, idx) => (
+                <div key={`${reactionDetailsEmoji ?? "reaction"}-${idx}`} className="text-sm">
+                  {name}
+                </div>
+              ))
+            ) : (
+              <div className="text-sm text-muted-foreground">No reactions</div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

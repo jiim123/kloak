@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -99,6 +101,7 @@ export const MessageItem = memo(function MessageItem({
   const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
   const [hoveredRoleIcon, setHoveredRoleIcon] = useState(false);
   const [isRowHovered, setIsRowHovered] = useState(false);
+  const [reactionDetailsEmoji, setReactionDetailsEmoji] = useState<string | null>(null);
 
   // Refs
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -249,6 +252,50 @@ export const MessageItem = memo(function MessageItem({
     },
     [customEmojiMap],
   );
+
+  const reactionEmojiNodeLarge = useCallback(
+    (emoji: string) => {
+      const match = emoji.match(/^:([a-z0-9_]{2,32}):$/i);
+      if (match) {
+        const url = customEmojiMap.get(match[1]);
+        if (url) {
+          return <img src={url} alt={emoji} className="w-8 h-8 object-contain" loading="lazy" />;
+        }
+      }
+      return <span className="text-2xl leading-none font-emoji">{emoji}</span>;
+    },
+    [customEmojiMap],
+  );
+
+  const memberNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const m of members) {
+      const name = m.nickname ?? m.user?.display_name ?? m.user?.username ?? m.user_id;
+      map.set(m.user_id, name);
+    }
+    if (user?.id) {
+      map.set(user.id, "You");
+    }
+    return map;
+  }, [members, user?.id]);
+
+  const getReactionUserNames = useCallback(
+    (userIds: string[]) => {
+      const unique = Array.from(new Set(userIds));
+      return unique.map((id) => memberNameById.get(id) ?? (id === user?.id ? "You" : id));
+    },
+    [memberNameById, user?.id],
+  );
+
+  const selectedReaction = useMemo(() => {
+    if (!reactionDetailsEmoji) return null;
+    return message.reactions?.find((r) => r.emoji === reactionDetailsEmoji) ?? null;
+  }, [message.reactions, reactionDetailsEmoji]);
+
+  const selectedReactionNames = useMemo(() => {
+    if (!selectedReaction) return [];
+    return getReactionUserNames(selectedReaction.users);
+  }, [selectedReaction, getReactionUserNames]);
 
   const RoleIconWrapper = forwardRef<
     HTMLSpanElement,
@@ -654,19 +701,61 @@ export const MessageItem = memo(function MessageItem({
             {message.reactions && message.reactions.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">
                 {message.reactions.map((reaction) => (
-                  <button
-                    key={reaction.emoji}
-                    onClick={() => canAddReactions && handleReactionClick(reaction.emoji, reaction.hasReacted)}
-                    disabled={!canAddReactions}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 text-sm rounded-md border transition-colors duration-200 ${
-                      reaction.hasReacted
-                        ? "bg-primary/20 border-primary text-primary"
-                        : "bg-secondary border-transparent hover:border-border"
-                    } ${!canAddReactions ? "opacity-50 cursor-not-allowed" : ""}`}
-                  >
-                    {reactionEmojiNode(reaction.emoji)}
-                    <span className="text-xs">{reaction.count}</span>
-                  </button>
+                  <HoverCard key={reaction.emoji} openDelay={200}>
+                    <HoverCardTrigger asChild>
+                      <span className="inline-flex">
+                        <button
+                          onClick={() => canAddReactions && handleReactionClick(reaction.emoji, reaction.hasReacted)}
+                          disabled={!canAddReactions}
+                          className={`flex items-center gap-1.5 px-2.5 py-1 text-sm rounded-md border transition-colors duration-200 ${
+                            reaction.hasReacted
+                              ? "bg-primary/20 border-primary text-primary"
+                              : "bg-secondary border-transparent hover:border-border"
+                          } ${!canAddReactions ? "opacity-50 cursor-not-allowed" : ""}`}
+                        >
+                          {reactionEmojiNode(reaction.emoji)}
+                          <span className="text-xs">{reaction.count}</span>
+                        </button>
+                      </span>
+                    </HoverCardTrigger>
+                    <HoverCardContent className="w-auto p-1.5" align="start" side="top">
+                      {(() => {
+                        const names = getReactionUserNames(reaction.users);
+                        const preview = names.slice(0, 4);
+                        const remaining = Math.max(0, names.length - preview.length);
+                        return (
+                          <div className="flex items-center gap-1">
+                            <div className="shrink-0">{reactionEmojiNodeLarge(reaction.emoji)}</div>
+                            <div className="min-w-0 text-sm leading-tight">
+                              <span className="text-muted-foreground">reacted by</span>{" "}
+                              {preview.map((name, idx) => (
+                                <span key={`${reaction.emoji}-${name}`}>
+                                  <span className="truncate">{name}</span>
+                                  {idx < preview.length - 1 ? ", " : ""}
+                                </span>
+                              ))}
+                              {remaining > 0 && (
+                                <>
+                                  {preview.length > 0 ? ", " : ""}
+                                  <button
+                                    type="button"
+                                    className="text-primary underline hover:no-underline"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setReactionDetailsEmoji(reaction.emoji);
+                                    }}
+                                  >
+                                    {remaining} others
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </HoverCardContent>
+                  </HoverCard>
                 ))}
               </div>
             )}
@@ -854,6 +943,29 @@ export const MessageItem = memo(function MessageItem({
 
       {/* Delete confirmation modal */}
       <DeleteMessageModal message={showDeleteModal ? message : null} onClose={() => setShowDeleteModal(false)} />
+
+      <Dialog open={!!reactionDetailsEmoji} onOpenChange={(open) => !open && setReactionDetailsEmoji(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <span className="inline-flex">{reactionDetailsEmoji ? reactionEmojiNode(reactionDetailsEmoji) : null}</span>
+              <span>Reactions</span>
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="max-h-[320px] overflow-auto space-y-1">
+            {selectedReactionNames.length > 0 ? (
+              selectedReactionNames.map((name, idx) => (
+                <div key={`${reactionDetailsEmoji ?? "reaction"}-${idx}`} className="text-sm">
+                  {name}
+                </div>
+              ))
+            ) : (
+              <div className="text-sm text-muted-foreground">No reactions</div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 });
