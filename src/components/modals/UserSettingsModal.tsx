@@ -240,7 +240,7 @@ export const UserSettingsModal = () => {
     }
   };
 
-  // Settings Toggle Component
+  // Settings Toggle Component - defined as a stable component
   const SettingsToggle = ({
     icon: Icon,
     label,
@@ -270,8 +270,24 @@ export const UserSettingsModal = () => {
     </div>
   );
 
-  // Account Section
-  const AccountSection = () => (
+  // Render content based on active tab
+  const renderContent = () => {
+    switch (activeTab) {
+      case "account":
+        return accountContent;
+      case "profile":
+        return profileContent;
+      case "notifications":
+        return notificationsContent;
+      case "appearance":
+        return appearanceContent;
+      default:
+        return null;
+    }
+  };
+
+  // Account Content
+  const accountContent = (
     <div className="space-y-6">
       {/* Username Display */}
       <div className="space-y-3">
@@ -353,8 +369,8 @@ export const UserSettingsModal = () => {
     </div>
   );
 
-  // Profile Section
-  const ProfileSection = () => (
+  // Profile Content
+  const profileContent = (
     <div className="space-y-6">
       {/* Avatar Upload */}
       <div className="flex items-center gap-5">
@@ -448,8 +464,8 @@ export const UserSettingsModal = () => {
     </div>
   );
 
-  // Notifications Section
-  const NotificationsSection = () => (
+  // Notifications Content
+  const notificationsContent = (
     <div className="space-y-2">
       <SettingsToggle
         icon={Bell}
@@ -496,8 +512,8 @@ export const UserSettingsModal = () => {
     </div>
   );
 
-  // Appearance Section
-  const AppearanceSection = () => (
+  // Appearance Content
+  const appearanceContent = (
     <div className="space-y-6">
       {/* Theme Selector */}
       <div className="space-y-4">
@@ -585,90 +601,43 @@ export const UserSettingsModal = () => {
     </div>
   );
 
-  // Render content based on active tab
-  const renderContent = () => {
-    switch (activeTab) {
-      case "account":
-        return <AccountSection />;
-      case "profile":
-        return <ProfileSection />;
-      case "notifications":
-        return <NotificationsSection />;
-      case "appearance":
-        return <AppearanceSection />;
-      default:
-        return null;
-    }
-  };
+  return (
+    <>
+      {/* Mobile: Custom Dialog with Dock */}
+      {isOpen && isMobile && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-end p-4 pb-6">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={handleClose} />
 
-  // Mobile Dialog with Dock
-  const MobileContent = () => (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-end p-4 pb-6">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={handleClose} />
+          {/* Dialog */}
+          <div
+            className="relative bg-background rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-border mb-4"
+            style={{ maxHeight: "calc(100vh - 140px)" }}
+          >
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold">{navItems.find((n) => n.id === activeTab)?.label}</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {activeTab === "account" && "Manage your account"}
+                  {activeTab === "profile" && "Customize your profile"}
+                  {activeTab === "notifications" && "Notification settings"}
+                  {activeTab === "appearance" && "Personalize your app"}
+                </p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={handleClose} className="rounded-full">
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
 
-      {/* Dialog */}
-      <div
-        className="relative bg-background rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-border mb-4"
-        style={{ maxHeight: "calc(100vh - 140px)" }}
-      >
-        {/* Header */}
-        <div className="px-5 py-4 border-b border-border flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold">{navItems.find((n) => n.id === activeTab)?.label}</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {activeTab === "account" && "Manage your account"}
-              {activeTab === "profile" && "Customize your profile"}
-              {activeTab === "notifications" && "Notification settings"}
-              {activeTab === "appearance" && "Personalize your app"}
-            </p>
+            {/* Content */}
+            <div className="overflow-y-auto p-5" style={{ maxHeight: "calc(100vh - 240px)" }}>
+              {renderContent()}
+            </div>
           </div>
-          <Button variant="ghost" size="icon" onClick={handleClose} className="rounded-full">
-            <X className="w-5 h-5" />
-          </Button>
-        </div>
 
-        {/* Content */}
-        <div className="overflow-y-auto p-5" style={{ maxHeight: "calc(100vh - 240px)" }}>
-          {renderContent()}
-        </div>
-      </div>
-
-      {/* Dock Navigation */}
-      <div className="relative flex gap-2 p-2 bg-background/95 backdrop-blur-xl rounded-2xl border border-border shadow-2xl">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeTab === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={cn(
-                "relative flex flex-col items-center gap-1 px-4 py-2.5 rounded-xl transition-all",
-                isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-secondary",
-              )}
-            >
-              <Icon className="w-5 h-5" />
-              <span className="text-[10px] font-medium">{item.label}</span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-
-  // Desktop Dialog
-  const DesktopContent = () => (
-    <DialogContent className="sm:max-w-3xl max-h-[85vh] p-0 gap-0 overflow-hidden rounded-2xl">
-      <div className="flex h-[70vh] max-h-[600px]">
-        {/* Sidebar Navigation */}
-        <div className="w-56 bg-secondary/30 border-r border-border flex flex-col">
-          <div className="p-5 border-b border-border">
-            <h2 className="font-semibold text-base">User Settings</h2>
-          </div>
-          <nav className="flex-1 p-3 space-y-1">
+          {/* Dock Navigation */}
+          <div className="relative flex gap-2 p-2 bg-background/95 backdrop-blur-xl rounded-2xl border border-border shadow-2xl">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -677,47 +646,70 @@ export const UserSettingsModal = () => {
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
                   className={cn(
-                    "w-full flex items-center gap-3 px-4 py-3 text-sm rounded-xl transition-all",
+                    "relative flex flex-col items-center gap-1 px-4 py-2.5 rounded-xl transition-all",
                     isActive
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground hover:bg-secondary/80",
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground hover:bg-secondary",
                   )}
                 >
-                  <Icon className="w-4 h-4" />
-                  {item.label}
+                  <Icon className="w-5 h-5" />
+                  <span className="text-[10px] font-medium">{item.label}</span>
                 </button>
               );
             })}
-          </nav>
-        </div>
-
-        {/* Content Area */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="px-8 py-5 border-b border-border shrink-0">
-            <h3 className="text-xl font-semibold">{navItems.find((n) => n.id === activeTab)?.label}</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              {activeTab === "account" && "Manage your account credentials and security"}
-              {activeTab === "profile" && "Customize how others see you"}
-              {activeTab === "notifications" && "Control how you receive notifications"}
-              {activeTab === "appearance" && "Personalize your app experience"}
-            </p>
           </div>
-
-          <div className="flex-1 overflow-y-auto p-8">{renderContent()}</div>
         </div>
-      </div>
-    </DialogContent>
-  );
-
-  return (
-    <>
-      {/* Mobile: Custom Dialog with Dock */}
-      {isOpen && isMobile && <MobileContent />}
+      )}
 
       {/* Desktop: Standard Dialog */}
       {!isMobile && (
         <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-          <DesktopContent />
+          <DialogContent className="sm:max-w-3xl max-h-[85vh] p-0 gap-0 overflow-hidden rounded-2xl">
+            <div className="flex h-[70vh] max-h-[600px]">
+              {/* Sidebar Navigation */}
+              <div className="w-56 bg-secondary/30 border-r border-border flex flex-col">
+                <div className="p-5 border-b border-border">
+                  <h2 className="font-semibold text-base">User Settings</h2>
+                </div>
+                <nav className="flex-1 p-3 space-y-1">
+                  {navItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = activeTab === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => setActiveTab(item.id)}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-4 py-3 text-sm rounded-xl transition-all",
+                          isActive
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-foreground hover:bg-secondary/80",
+                        )}
+                      >
+                        <Icon className="w-4 h-4" />
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </nav>
+              </div>
+
+              {/* Content Area */}
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="px-8 py-5 border-b border-border shrink-0">
+                  <h3 className="text-xl font-semibold">{navItems.find((n) => n.id === activeTab)?.label}</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {activeTab === "account" && "Manage your account credentials and security"}
+                    {activeTab === "profile" && "Customize how others see you"}
+                    {activeTab === "notifications" && "Control how you receive notifications"}
+                    {activeTab === "appearance" && "Personalize your app experience"}
+                  </p>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-8">{renderContent()}</div>
+              </div>
+            </div>
+          </DialogContent>
         </Dialog>
       )}
 
