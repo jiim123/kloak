@@ -98,17 +98,14 @@ export const ExploreServers = () => {
   };
 
   return (
-    <div className="flex-1 h-full bg-layout-chat overflow-y-auto w-full">
-      <div className="max-w-4xl mx-auto px-6 py-6 space-y-5">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-semibold text-foreground">Explore</h1>
-            <p className="text-sm text-muted-foreground">
-              Discover public servers and join communities.
-            </p>
-          </div>
-        </div>
+    <div className="h-full flex flex-col bg-layout-chat">
+      {/* Header - hidden on mobile since we have MobileHeader */}
+      <div className="h-12 px-4 hidden md:flex items-center justify-between border-b border-border shadow-sm">
+        <h2 className="font-semibold text-foreground">Explore</h2>
+      </div>
 
+      {/* Main content */}
+      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-6 space-y-5">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input

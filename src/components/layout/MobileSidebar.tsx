@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ interface MobileSidebarProps {
 }
 
 export const MobileSidebar = ({ isDMView, showFriends, onShowFriendsChange, showExplore, onShowExploreChange }: MobileSidebarProps) => {
+  const location = useLocation();
   const { isMobileSidebarOpen, setMobileSidebarOpen, closeMobileSidebars } = useUIStore();
   const { currentChannel } = useServerStore();
 
@@ -26,6 +28,14 @@ export const MobileSidebar = ({ isDMView, showFriends, onShowFriendsChange, show
       closeMobileSidebars();
     }
   }, [currentChannel, closeMobileSidebars]);
+
+  // Close sidebar when route changes (for Friends/Explore navigation)
+  // Only close if sidebar is actually open to avoid unnecessary updates
+  useEffect(() => {
+    if (isMobileSidebarOpen) {
+      closeMobileSidebars();
+    }
+  }, [location.pathname]); // Intentionally not including closeMobileSidebars or isMobileSidebarOpen to avoid loops
 
   // Handle friends change with sidebar close
   const handleShowFriendsChange = (show: boolean) => {

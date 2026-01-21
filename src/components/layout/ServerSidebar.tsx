@@ -1,5 +1,6 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, forwardRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { Folder, Plus, Settings, Home, ChevronDown, ChevronRight, Trash2, Edit2, Palette } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -222,7 +223,24 @@ const FolderItem = ({
   );
 };
 
-const DraggableServerItem = ({
+const DraggableServerItem = forwardRef<
+  HTMLDivElement,
+  {
+    server: ServerWithMembership;
+    index: number;
+    isActive: boolean;
+    isHovered: boolean;
+    hasUnread: boolean;
+    totalMentions: number;
+    tooltipsEnabled: boolean;
+    getPillState: (serverId: string | null, hasUnread: boolean) => string;
+    getServerColor: (name: string) => string;
+    getServerInitials: (name: string) => string;
+    onHover: () => void;
+    onLeave: () => void;
+    onClick: () => void;
+  }
+>(({
   server,
   index,
   isActive,
@@ -236,21 +254,7 @@ const DraggableServerItem = ({
   onHover,
   onLeave,
   onClick,
-}: {
-  server: ServerWithMembership;
-  index: number;
-  isActive: boolean;
-  isHovered: boolean;
-  hasUnread: boolean;
-  totalMentions: number;
-  tooltipsEnabled: boolean;
-  getPillState: (serverId: string | null, hasUnread: boolean) => string;
-  getServerColor: (name: string) => string;
-  getServerInitials: (name: string) => string;
-  onHover: () => void;
-  onLeave: () => void;
-  onClick: () => void;
-}) => {
+}, ref) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: getServerDragId(server.id),
   });
@@ -259,7 +263,14 @@ const DraggableServerItem = ({
 
   return (
     <motion.div
-      ref={setNodeRef}
+      ref={(node) => {
+        setNodeRef(node);
+        if (typeof ref === 'function') {
+          ref(node);
+        } else if (ref) {
+          ref.current = node;
+        }
+      }}
       style={style}
       custom={index}
       variants={serverItemVariants}
@@ -348,9 +359,12 @@ const DraggableServerItem = ({
       </Tooltip>
     </motion.div>
   );
-};
+});
+
+DraggableServerItem.displayName = 'DraggableServerItem';
 
 export const ServerSidebar = () => {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const { servers, currentServer, setCurrentServer, isLoading, fetchServers } = useServerStore();
   const { setCurrentConversation } = useDMStore();
@@ -778,6 +792,7 @@ export const ServerSidebar = () => {
                 setCurrentServer(null);
                 setCurrentConversation(null);
                 closeServerSettings();
+                navigate('/app');
               }}
               whileHover="hover"
               whileTap="tap"

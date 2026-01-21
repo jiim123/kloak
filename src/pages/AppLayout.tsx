@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation, Routes, Route } from 'react-router-dom';
 import { useAuthStore, initializeAuth } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
@@ -46,6 +46,7 @@ import { PresenceDebugOverlay } from '@/components/debug/PresenceDebugOverlay';
 
 const AppLayout = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, isLoading, isNewUser, setIsNewUser } = useAuthStore();
   const { isMemberSidebarOpen, isServerSettingsOpen, closeMobileSidebars } = useUIStore();
@@ -53,10 +54,10 @@ const AppLayout = () => {
   const { conversations, currentConversation, setCurrentConversation, fetchConversations } = useDMStore();
   const isMobile = useIsMobile();
 
-  // Track if showing friends list in DM view
-  // Default to false so we show the Landing page by default
-  const [showFriends, setShowFriends] = useState(false);
-  const [showExplore, setShowExplore] = useState(false);
+  // Determine current view based on route
+  const currentPath = location.pathname.replace('/app', '') || '/';
+  const showFriends = currentPath === '/friends';
+  const showExplore = currentPath === '/explore';
 
   // Handle conversation query parameter for DM notification redirects
   useEffect(() => {
@@ -73,8 +74,7 @@ const AppLayout = () => {
       
       if (existingConversation) {
         setCurrentConversation(existingConversation);
-        setShowFriends(false);
-        setShowExplore(false);
+        navigate('/app', { replace: true });
       } else {
         // Fetch conversations first, then find and set the target
         fetchConversations(user.id).then(() => {
@@ -82,8 +82,7 @@ const AppLayout = () => {
           const conv = useDMStore.getState().conversations.find(c => c.id === conversationId);
           if (conv) {
             setCurrentConversation(conv);
-            setShowFriends(false);
-            setShowExplore(false);
+            navigate('/app', { replace: true });
           } else {
             // Conversation not found in list, try to fetch participants to build it
             supabase
@@ -106,8 +105,7 @@ const AppLayout = () => {
                       other_user: otherUserData as unknown as User
                     };
                     setCurrentConversation(conversation);
-                    setShowFriends(false);
-                    setShowExplore(false);
+                    navigate('/app', { replace: true });
                   }
                 }
               });
@@ -115,7 +113,7 @@ const AppLayout = () => {
         });
       }
     }
-  }, [searchParams, user, conversations, setSearchParams, setCurrentServer, setCurrentConversation, fetchConversations]);
+  }, [searchParams, user, conversations, setSearchParams, setCurrentServer, setCurrentConversation, fetchConversations, navigate]);
 
   // Real-time updates
   useRealtimeFriendships(user?.id || null);
@@ -208,8 +206,7 @@ const AppLayout = () => {
   const handleMobileBack = () => {
     if (currentConversation) {
       setCurrentConversation(null);
-      setShowFriends(true);
-      setShowExplore(false);
+      navigate('/app/friends');
     }
   };
 
@@ -279,9 +276,9 @@ const AppLayout = () => {
                   {isDMView ? (
                     <DMSidebar
                       showFriends={showFriends}
-                      onShowFriendsChange={setShowFriends}
+                      onShowFriendsChange={(show: boolean) => navigate(show ? '/app/friends' : '/app')}
                       showExplore={showExplore}
-                      onShowExploreChange={setShowExplore}
+                      onShowExploreChange={(show: boolean) => navigate(show ? '/app/explore' : '/app')}
                     />
                   ) : (
                     <ChannelSidebar />
@@ -293,12 +290,18 @@ const AppLayout = () => {
                   {isDMView ? (
                     currentConversation ? (
                       <DMChatArea />
-                    ) : showFriends ? (
-                      <FriendsList onOpenDM={() => setShowFriends(false)} />
-                    ) : showExplore ? (
-                      <ExploreServers />
                     ) : (
-                      <HomeLanding />
+                      <>
+                        <div className={showFriends ? 'block' : 'hidden'}>
+                          <FriendsList onOpenDM={() => navigate('/app')} />
+                        </div>
+                        <div className={showExplore ? 'block' : 'hidden'}>
+                          <ExploreServers />
+                        </div>
+                        <div className={!showFriends && !showExplore ? 'block' : 'hidden'}>
+                          <HomeLanding />
+                        </div>
+                      </>
                     )
                   ) : (
                     <ChatArea />
@@ -323,12 +326,20 @@ const AppLayout = () => {
           {/* Mobile layout */}
           <div className="flex-1 md:hidden overflow-hidden bg-layout-chat">
             {isDMView ? (
-              showFriends ? (
-                <FriendsList onOpenDM={() => setShowFriends(false)} />
-              ) : showExplore ? (
-                <ExploreServers />
-              ) : (
+              currentConversation ? (
                 <DMChatArea />
+              ) : (
+                <>
+                  <div className={showFriends ? 'block h-full' : 'hidden'}>
+                    <FriendsList onOpenDM={() => navigate('/app')} />
+                  </div>
+                  <div className={showExplore ? 'block h-full' : 'hidden'}>
+                    <ExploreServers />
+                  </div>
+                  <div className={!showFriends && !showExplore ? 'block h-full' : 'hidden'}>
+                    <HomeLanding />
+                  </div>
+                </>
               )
             ) : (
               <ChatArea />
@@ -341,9 +352,9 @@ const AppLayout = () => {
       <MobileSidebar
         isDMView={isDMView}
         showFriends={showFriends}
-        onShowFriendsChange={setShowFriends}
+        onShowFriendsChange={(show: boolean) => navigate(show ? '/app/friends' : '/app')}
         showExplore={showExplore}
-        onShowExploreChange={setShowExplore}
+        onShowExploreChange={(show: boolean) => navigate(show ? '/app/explore' : '/app')}
       />
       <MobileMembersSidebar />
 

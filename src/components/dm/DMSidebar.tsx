@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, Users, X, MessageSquare, Compass } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
@@ -20,6 +21,7 @@ interface DMSidebarProps {
 }
 
 export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onShowExploreChange }: DMSidebarProps) => {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const { conversations, currentConversation, fetchConversations, setCurrentConversation, isLoading } = useDMStore();
   const { getUnreadCount, markAsRead } = useUnreadDMs(user?.id || null);
@@ -40,8 +42,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
 
   const handleSelectConversation = (conversation: DMConversation) => {
     setCurrentConversation(conversation);
-    onShowFriendsChange(false);
-    onShowExploreChange(false);
+    navigate('/app');
     // Mark as read when selecting
     markAsRead(conversation.id);
   };
@@ -96,8 +97,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
           )}
           onClick={() => {
             setCurrentConversation(null);
-            onShowFriendsChange(true);
-            onShowExploreChange(false);
+            navigate('/app/friends');
           }}
         >
           <Users className="w-5 h-5" />
@@ -115,8 +115,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
           )}
           onClick={() => {
             setCurrentConversation(null);
-            onShowFriendsChange(false);
-            onShowExploreChange(true);
+            navigate('/app/explore');
           }}
         >
           <Compass className="w-5 h-5" />
