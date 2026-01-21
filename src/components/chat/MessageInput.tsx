@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Paperclip, Smile, Send, X, Loader2, WifiOff, Type, Lock } from "lucide-react";
+import { Paperclip, Smile, Send, X, Loader2, WifiOff, Type, Lock, BarChart3 } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useMessageStore } from "@/stores/messageStore";
 import { useServerStore } from "@/stores/serverStore";
@@ -11,6 +11,7 @@ import { getMessagePreview, extractMentions } from "@/lib/message";
 import { MentionAutocomplete } from "./MentionAutocomplete";
 import { EmojiGifPicker } from "@/components/modals/EmojiGifPicker";
 import { ImageUploadDialog } from "@/components/modals/ImageUploadDialog";
+import { CreatePollModal } from "@/components/modals/CreatePollModal";
 import { FormatToolbar, FORMAT_SYNTAX, getColorSyntax, getCodeBlockSyntax } from "./FormatToolbar";
 import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showWarning, handleError } from "@/lib/errorHandler";
@@ -47,6 +48,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showFormatToolbar, setShowFormatToolbar] = useState(false);
   const [showImageUpload, setShowImageUpload] = useState(false);
+  const [showCreatePoll, setShowCreatePoll] = useState(false);
 
   // Track mention mappings (username -> userId) for converting on send
   const mentionMappingsRef = useRef<MentionMapping[]>([]);
@@ -662,6 +664,20 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
               <Type className="w-5 h-5" />
             </button>
 
+            {/* Poll button */}
+            <button
+              type="button"
+              onClick={() => setShowCreatePoll(true)}
+              disabled={!canSendMessage}
+              className={`p-2 rounded-xl transition-colors duration-150 ${
+                canSendMessage ? "text-muted-foreground hover:text-foreground hover:bg-muted" : "text-muted-foreground/50 cursor-not-allowed"
+              }`}
+              onMouseDown={(e) => e.preventDefault()}
+              title="Create poll"
+            >
+              <BarChart3 className="w-5 h-5" />
+            </button>
+
             {/* Emoji button with picker (GIF temporarily disabled) */}
             <EmojiGifPicker
               open={showEmojiPicker}
@@ -701,6 +717,9 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
 
       {/* Image upload dialog */}
       <ImageUploadDialog open={showImageUpload} onOpenChange={setShowImageUpload} onUpload={handleImageUpload} />
+
+      {/* Create poll modal */}
+      <CreatePollModal open={showCreatePoll} onOpenChange={setShowCreatePoll} channelId={channelId} />
     </div>
   );
 };

@@ -19,6 +19,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { useSyncStore } from "@/stores/syncStore";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { MessageContent } from "./MessageContent";
+import { PollMessage } from "./PollMessage";
 import { getMessagePreview } from "@/lib/message";
 import { formatMessageTimestamp } from "@/lib/format";
 import { DeleteMessageModal } from "@/components/modals/DeleteMessageModal";
@@ -27,6 +28,7 @@ import type { CustomServerRole, Message, ServerRole } from "@/types";
 import { format } from "date-fns";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
 import { cn } from "@/lib/utils";
+import { getPollIdFromContent } from "@/lib/poll";
 
 // Static data moved outside component
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🎉"] as const;
@@ -293,6 +295,8 @@ export const MessageItem = memo(function MessageItem({
     const content = message.content;
     return content.includes(`<@${user.id}>`) || content.includes("@everyone") || content.includes("@here");
   }, [user?.id, message.content]);
+
+  const pollId = useMemo(() => getPollIdFromContent(message.content), [message.content]);
 
   // Memoize formatted timestamps
   // Use shorter format for compact mode to prevent wrapping
@@ -615,7 +619,11 @@ export const MessageItem = memo(function MessageItem({
               </div>
             ) : (
               <div className="text-sm leading-relaxed">
-                <MessageContent content={message.content} currentUserId={user?.id} messageId={message.id} />
+                {pollId ? (
+                  <PollMessage pollId={pollId} />
+                ) : (
+                  <MessageContent content={message.content} currentUserId={user?.id} messageId={message.id} />
+                )}
               </div>
             )}
 

@@ -28,6 +28,15 @@ interface MessageState {
 
   // Message actions
   sendMessage: (channelId: string, userId: string, content: string, replyToId?: string) => Promise<Message | null>;
+  sendPoll: (
+    channelId: string,
+    userId: string,
+    question: string,
+    options: string[],
+    allowMultiple: boolean,
+    durationSeconds: number,
+    replyToId?: string,
+  ) => Promise<Message | null>;
   editMessage: (messageId: string, content: string, userId: string) => Promise<void>;
   deleteMessage: (messageId: string, userId: string) => Promise<void>;
   pinMessage: (messageId: string, isPinned: boolean, userId: string) => Promise<void>;
@@ -278,6 +287,99 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       return message;
     } catch (error) {
       console.error('Failed to send message:', error);
+      return null;
+    }
+  },
+
+  sendPoll: async (
+    channelId: string,
+    userId: string,
+    question: string,
+    options: string[],
+    allowMultiple: boolean,
+    durationSeconds: number,
+    replyToId?: string,
+  ) => {
+    try {
+      const { data, error } = await supabase.rpc('send_poll' as any, {
+        _channel_id: channelId,
+        _user_id: userId,
+        _question: question,
+        _options: options,
+        _allow_multiple: allowMultiple,
+        _duration_seconds: durationSeconds,
+        _reply_to_id: replyToId || null,
+      });
+
+      if (error) {
+        if (error.message.includes('muted')) {
+          throw new Error('You are muted in this server');
+        }
+        throw error;
+      }
+
+      // Prefer local auth user for immediate UI
+      const localUser = useAuthStore.getState().user;
+      const { data: userData } = localUser?.id === userId
+        ? { data: localUser }
+        : await supabase.rpc('get_user_by_id' as any, { _user_id: userId });
+
+      // If there's a reply_to_id, fetch the reply data separately
+      let replyData: MessageReply | undefined;
+      if (replyToId) {
+        const messages = get().getMessages();
+        const replyMsg = messages.find((m) => m.id === replyToId);
+        if (replyMsg) {
+          replyData = {
+            id: replyMsg.id,
+            content: replyMsg.content,
+            user: replyMsg.user,
+          };
+        }
+      }
+
+      const msgData = data as any;
+      const userDataParsed = userData as unknown as User;
+      const message: Message = {
+        id: msgData.id,
+        channel_id: msgData.channel_id,
+        user_id: msgData.user_id,
+        reply_to_id: msgData.reply_to_id,
+        content: msgData.content,
+        is_pinned: msgData.is_pinned || false,
+        edited_at: msgData.edited_at,
+        created_at: msgData.created_at,
+        user: userDataParsed,
+        reply_to: replyData,
+        attachments: [],
+        reactions: [],
+      };
+
+      // Add message to channel cache
+      set((state) => {
+        const existingCache = state.messagesByChannel[channelId];
+        if (!existingCache) return { replyingTo: null };
+
+        // Avoid duplicates
+        if (existingCache.messages.some((m) => m.id === message.id)) {
+          return { replyingTo: null };
+        }
+
+        return {
+          messagesByChannel: {
+            ...state.messagesByChannel,
+            [channelId]: {
+              ...existingCache,
+              messages: [...existingCache.messages, message],
+            },
+          },
+          replyingTo: null,
+        };
+      });
+
+      return message;
+    } catch (error) {
+      console.error('Failed to send poll:', error);
       return null;
     }
   },

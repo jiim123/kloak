@@ -8,6 +8,7 @@ import { useMessageStore } from "@/stores/messageStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useUnread } from "@/hooks/useUnread";
 import { useScrollToMessage } from "@/hooks/useScrollToMessage";
+import { useRealtimePolls } from "@/hooks/useRealtimePolls";
 import type { Message } from "@/types";
 
 interface MessageListProps {
@@ -45,6 +46,9 @@ const getStableMessageKey = (message: Message): string => {
 export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   const { user } = useAuthStore();
   const { isLoading, fetchMessages, setCurrentChannel, messagesByChannel } = useMessageStore();
+
+  // Polls realtime + auto-close expired (best effort)
+  useRealtimePolls(channelId);
 
   // Subscribe to messages for this specific channel
   const channelData = messagesByChannel[channelId];

@@ -165,6 +165,21 @@ export interface ChannelRead {
 // Message Types
 // ============================================
 
+export interface Poll {
+  id: string;
+  message_id: string;
+  channel_id: string;
+  created_by: string;
+  question: string;
+  options: string[];
+  allow_multiple: boolean;
+  ends_at: string;
+  is_closed: boolean;
+  results: number[]; // counts aligned with options[]
+  total_votes: number;
+  created_at: string;
+}
+
 export interface MessageReply {
   id: string;
   content: string;
