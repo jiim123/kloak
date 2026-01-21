@@ -40,7 +40,7 @@ export async function resizeWindowForApp(): Promise<void> {
 export async function getTauriWindowLabel(): Promise<string | null> {
   try {
     const { getCurrentWindow } = await import("@tauri-apps/api/window");
-    return getCurrentWindow().label();
+    return getCurrentWindow().label;
   } catch {
     return null;
   }

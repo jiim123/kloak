@@ -30,9 +30,9 @@ export const usePresence = () => {
     }
 
     // Set new idle timeout (only if not DND or invisible)
-    if (user.status !== 'dnd') {
+    if (user.status !== 'dnd' && user.status !== 'offline') {
       idleTimeoutRef.current = setTimeout(() => {
-        if (manualStatus !== 'dnd' && manualStatus !== 'offline') {
+        if ((manualStatus as string) !== 'dnd' && (manualStatus as string) !== 'offline') {
           isIdleRef.current = true;
           updateStatus('idle', { source: 'auto' });
         }

@@ -399,7 +399,7 @@ export const ServerSidebar = () => {
 
     const loadFromDatabase = async () => {
       try {
-        const { data, error } = await supabase.rpc("get_user_server_folders", {
+        const { data, error } = await supabase.rpc("get_user_server_folders" as any, {
           _user_id: user.id,
         });
 
@@ -460,7 +460,7 @@ export const ServerSidebar = () => {
     // Debounce database save
     const timeoutId = setTimeout(async () => {
       try {
-        const { error } = await supabase.rpc("save_user_server_folders", {
+        const { error } = await supabase.rpc("save_user_server_folders" as any, {
           _user_id: user.id,
           _folder_data: folderState,
         });
