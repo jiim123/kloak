@@ -17,7 +17,8 @@ import { useDMStore } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
 import { FriendItemSkeleton } from '@/components/ui/skeletons';
 import { toast } from 'sonner';
-import type { FriendWithUser } from '@/types';
+import type { FriendWithUser, UserStatus } from '@/types';
+import { getEffectivePresence } from '@/lib/presence';
 
 interface FriendsListProps {
   onOpenDM: () => void;
@@ -52,7 +53,10 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
     }
   }, [user?.id, fetchFriends]);
 
-  const onlineFriends = friends.filter((f) => f.status === 'online' || f.status === 'idle');
+  const onlineFriends = friends.filter((f) => {
+    const presence = getEffectivePresence((f.status as UserStatus) || 'offline', f.last_seen);
+    return !presence.isOffline;
+  });
   const allFriends = friends;
 
   const handleSendRequest = async () => {
@@ -97,12 +101,17 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
           user={friend}
           className="w-10 h-10"
         />
+        {(() => {
+          const presence = getEffectivePresence((friend.status as UserStatus) || 'offline', friend.last_seen);
+          return (
         <div
           className={cn(
             'absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-layout-chat',
-            getStatusClass(friend.status)
+            getStatusClass(presence.status)
           )}
         />
+          );
+        })()}
       </div>
 
       {/* Info */}
@@ -118,7 +127,14 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
         {friend.custom_status ? (
           <p className="text-sm text-muted-foreground truncate">{friend.custom_status}</p>
         ) : (
-          <p className="text-sm text-muted-foreground capitalize">{friend.status || 'Offline'}</p>
+          (() => {
+            const presence = getEffectivePresence((friend.status as UserStatus) || 'offline', friend.last_seen);
+            return (
+              <p className="text-sm text-muted-foreground capitalize">
+                {presence.status || 'offline'}
+              </p>
+            );
+          })()
         )}
       </div>
 

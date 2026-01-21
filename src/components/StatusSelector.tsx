@@ -115,7 +115,7 @@ export const StatusSelector = ({ children, side = 'right', align = 'start' }: St
   }, []);
 
   const handleStatusChange = async (status: UserStatus) => {
-    await updateStatus(status);
+    await updateStatus(status, { source: 'manual' });
   };
 
   const handleSaveCustomStatus = async () => {

@@ -28,23 +28,13 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Badge } from '@/components/ui/badge';
 import { MembersSidebarSkeleton } from '@/components/ui/skeletons';
 import { AvatarWithDecoration } from '@/components/ui/avatar-with-decoration';
-import type { ServerMember, ServerRole, CustomServerRole } from '@/types';
+import type { ServerMember, ServerRole, CustomServerRole, UserStatus } from '@/types';
+import { getEffectivePresence } from '@/lib/presence';
 
-const OFFLINE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
-
-// Helper to determine if a user should be shown as offline based on last_seen
-const isUserOffline = (member: ServerMember): boolean => {
-  if (member.user?.status === 'offline') return true;
-  
-  if (member.user?.last_seen) {
-    const lastSeen = new Date(member.user.last_seen).getTime();
-    const now = Date.now();
-    if (now - lastSeen > OFFLINE_THRESHOLD_MS) {
-      return true;
-    }
-  }
-  
-  return false;
+const getMemberPresence = (member: ServerMember) => {
+  const status = (member.user?.status as UserStatus | undefined) ?? 'offline';
+  const lastSeen = member.user?.last_seen;
+  return getEffectivePresence(status, lastSeen);
 };
 
 // Status indicator component
@@ -157,7 +147,7 @@ export const MembersSidebar = () => {
       const memberRoles = member.roles || [];
       if (memberRoles.length > 0) {
         // Only add online members to role groups
-        if (!isUserOffline(member)) {
+        if (!getMemberPresence(member).isOffline) {
           // Add to priority role (lowest position = top of list)
           const priorityRole = memberRoles.reduce((prev, curr) =>
             getResolvedRolePosition(curr) < getResolvedRolePosition(prev) ? curr : prev
@@ -181,7 +171,7 @@ export const MembersSidebar = () => {
     const offline: ServerMember[] = [];
     
     noRoleMembers.forEach(member => {
-      if (isUserOffline(member)) {
+      if (getMemberPresence(member).isOffline) {
         offline.push(member);
       } else {
         online.push(member);
@@ -263,7 +253,8 @@ export const MembersSidebar = () => {
 
   const MemberItem = ({ member }: { member: ServerMember }) => {
     const displayName = member.nickname || member.user?.display_name || member.user?.username || 'Unknown';
-    const memberIsOffline = isUserOffline(member);
+    const presence = getMemberPresence(member);
+    const memberIsOffline = presence.isOffline;
     const isSelf = member.user_id === user?.id;
     const isServerOwner = member.role === 'owner';
     const priorityCustomRoleColor = useMemo(() => {
@@ -320,8 +311,8 @@ export const MembersSidebar = () => {
             active={isHovered}
           />
           <StatusIndicator 
-            status={member.user?.status}
-            isStale={memberIsOffline && member.user?.status !== 'offline'}
+            status={presence.status}
+            isStale={presence.isOffline && presence.isStale}
             className="absolute -bottom-0.5 -right-0.5 border-2 border-layout-members z-10" 
           />
         </div>

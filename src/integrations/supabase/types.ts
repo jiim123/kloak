@@ -1218,6 +1218,15 @@ export type Database = {
         Args: { _conversation_id: string; _user_id: string }
         Returns: boolean
       }
+      mark_channel_read: {
+        Args: {
+          _channel_id: string
+          _user_id: string
+          _last_read_message_id: string
+          _last_read_at?: string
+        }
+        Returns: boolean
+      }
       open_dm_conversation: {
         Args: { _other_user_id: string; _user_id: string }
         Returns: Json

@@ -12,6 +12,11 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   isNewUser: boolean;
+  /**
+   * Manual status chosen by the user (e.g. Invisible / DND).
+   * Persisted to survive restarts and avoid treating stale DB "offline" as intentional Invisible.
+   */
+  manualStatus: UserStatus | null;
   
   // Actions
   setUser: (user: User | null) => void;
@@ -26,7 +31,7 @@ interface AuthState {
   login: (secretKey: string) => Promise<boolean>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => Promise<void>;
-  updateStatus: (status: UserStatus) => Promise<void>;
+  updateStatus: (status: UserStatus, options?: { source?: 'manual' | 'auto' }) => Promise<void>;
   updateLastSeen: () => Promise<void>;
 }
 
@@ -39,6 +44,7 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
       error: null,
       isNewUser: false,
+      manualStatus: null,
 
       setUser: (user) => set({ user, isAuthenticated: !!user }),
       setSecretKey: (key) => set({ secretKey: key }),
@@ -123,7 +129,8 @@ export const useAuthStore = create<AuthState>()(
             last_seen: userData.last_seen as string | null,
           };
 
-          set({ user, secretKey, isAuthenticated: true, isLoading: false, isNewUser: true });
+          // New account starts with no manual status override.
+          set({ user, secretKey, isAuthenticated: true, isLoading: false, isNewUser: true, manualStatus: null });
           return { secretKey, user };
         } catch (error) {
           console.error('Registration error:', error);
@@ -177,6 +184,13 @@ export const useAuthStore = create<AuthState>()(
           };
 
           set({ user, secretKey, isAuthenticated: true, isLoading: false });
+
+          // Re-apply a persisted manual status (e.g. Invisible/DND) on login.
+          const { manualStatus } = get();
+          if (manualStatus && (manualStatus === 'offline' || manualStatus === 'dnd')) {
+            // Use auto to avoid mutating persisted manualStatus redundantly.
+            await get().updateStatus(manualStatus, { source: 'auto' });
+          }
           return true;
         } catch (error) {
           console.error('Login error:', error);
@@ -229,7 +243,7 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      updateStatus: async (status) => {
+      updateStatus: async (status, options) => {
         const { user } = get();
         if (!user) return;
 
@@ -239,7 +253,16 @@ export const useAuthStore = create<AuthState>()(
             _status: status,
           });
 
-          set({ user: { ...user, status } });
+          const source = options?.source ?? 'manual';
+          const manualStatus = get().manualStatus;
+          const nextManualStatus =
+            source === 'manual' && (status === 'offline' || status === 'dnd')
+              ? status
+              : source === 'manual' && status === 'online'
+                ? null
+                : manualStatus;
+
+          set({ user: { ...user, status }, manualStatus: nextManualStatus });
         } catch (error) {
           console.error('Failed to update status:', error);
         }
@@ -262,7 +285,7 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'kloak-auth',
-      partialize: (state) => ({ secretKey: state.secretKey }),
+      partialize: (state) => ({ secretKey: state.secretKey, manualStatus: state.manualStatus }),
     }
   )
 );

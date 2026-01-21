@@ -77,13 +77,21 @@ export const useUnreadDMs = (userId: string | null) => {
     if (!userId) return;
 
     try {
-      const { error } = await supabase
-        .from('dm_participants')
-        .update({ last_read_at: new Date().toISOString() })
-        .eq('conversation_id', conversationId)
-        .eq('user_id', userId);
+      // Prefer SECURITY DEFINER RPC (this app uses custom auth, not Supabase Auth)
+      const { error: rpcError } = await supabase.rpc('mark_dm_read', {
+        _conversation_id: conversationId,
+        _user_id: userId,
+      });
 
-      if (error) throw error;
+      if (rpcError) {
+        // Back-compat fallback (in case migration hasn't been applied yet).
+        const { error } = await supabase
+          .from('dm_participants')
+          .update({ last_read_at: new Date().toISOString() })
+          .eq('conversation_id', conversationId)
+          .eq('user_id', userId);
+        if (error) throw error;
+      }
 
       // Update local state
       setUnreadState((prev) => ({
@@ -131,6 +139,22 @@ export const useUnreadDMs = (userId: string | null) => {
   // Fetch on mount and when userId changes
   useEffect(() => {
     fetchUnreadCounts();
+  }, [fetchUnreadCounts]);
+
+  // Reconcile on app focus / tab restore (realtime can be lossy during sleep/background)
+  useEffect(() => {
+    const handleFocus = () => fetchUnreadCounts();
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') fetchUnreadCounts();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [fetchUnreadCounts]);
 
   // Subscribe to dm_participants changes for real-time sync

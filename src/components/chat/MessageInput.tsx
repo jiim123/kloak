@@ -250,6 +250,18 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     try {
       // Send message directly - realtime will handle updating the UI
       const message = await sendMessage(channelId, user.id, contentToSend, currentReplyTo?.id);
+      
+      // Presence: sending a message is explicit activity; refresh last_seen immediately.
+      // (This prevents "still offline" for up to 30s if the heartbeat hasn't ticked yet.)
+      if (message) {
+        const auth = useAuthStore.getState();
+        if (auth.manualStatus !== "offline") {
+          auth.updateLastSeen();
+        }
+        if (auth.manualStatus !== "offline" && auth.manualStatus !== "dnd") {
+          auth.updateStatus("online", { source: "auto" });
+        }
+      }
 
       // Handle mentions in background (non-blocking)
       if (message && currentServer) {
@@ -503,6 +515,15 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
 
     // Send the image URL as a message
     await sendMessage(channelId, user.id, urlData.publicUrl, replyingTo?.id);
+
+    // Presence: uploading/sending is activity.
+    const auth = useAuthStore.getState();
+    if (auth.manualStatus !== "offline") {
+      auth.updateLastSeen();
+    }
+    if (auth.manualStatus !== "offline" && auth.manualStatus !== "dnd") {
+      auth.updateStatus("online", { source: "auto" });
+    }
 
     // Clear reply if any
     if (replyingTo) {

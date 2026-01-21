@@ -24,17 +24,18 @@ export const useUnread = (serverChannelIds: string[] = []) => {
   const [unreadState, setUnreadState] = useState<UnreadState>({});
   const [isLoading, setIsLoading] = useState(false);
   const channelIdsRef = useRef<string[]>([]);
+  const channelIdsKey = [...serverChannelIds].sort().join(',');
 
   // Fetch channel reads for user
   const fetchUnreadCounts = useCallback(async () => {
     if (!user || serverChannelIds.length === 0) return;
 
     // Avoid refetching if channel IDs haven't changed
-    const idsString = serverChannelIds.sort().join(',');
-    const prevIdsString = channelIdsRef.current.sort().join(',');
+    const idsString = [...serverChannelIds].sort().join(',');
+    const prevIdsString = [...channelIdsRef.current].sort().join(',');
     if (idsString === prevIdsString && Object.keys(unreadState).length > 0) return;
     
-    channelIdsRef.current = serverChannelIds;
+    channelIdsRef.current = [...serverChannelIds];
     setIsLoading(true);
 
     try {
@@ -121,30 +122,41 @@ export const useUnread = (serverChannelIds: string[] = []) => {
 
         const now = new Date().toISOString();
 
-        const { data: existing } = await supabase
-          .from('channel_reads')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('channel_id', channelId)
-          .maybeSingle();
+        // Prefer SECURITY DEFINER RPC (custom auth app)
+        const { error: rpcError } = await supabase.rpc('mark_channel_read', {
+          _channel_id: channelId,
+          _user_id: user.id,
+          _last_read_message_id: messageId,
+          _last_read_at: now,
+        });
 
-        if (existing) {
-          await supabase
+        if (rpcError) {
+          // Back-compat fallback (in case migration hasn't been applied yet).
+          const { data: existing } = await supabase
             .from('channel_reads')
-            .update({
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('channel_id', channelId)
+            .maybeSingle();
+
+          if (existing) {
+            await supabase
+              .from('channel_reads')
+              .update({
+                last_read_message_id: messageId,
+                last_read_at: now,
+                mention_count: 0,
+              })
+              .eq('id', existing.id);
+          } else {
+            await supabase.from('channel_reads').insert({
+              user_id: user.id,
+              channel_id: channelId,
               last_read_message_id: messageId,
               last_read_at: now,
               mention_count: 0,
-            })
-            .eq('id', existing.id);
-        } else {
-          await supabase.from('channel_reads').insert({
-            user_id: user.id,
-            channel_id: channelId,
-            last_read_message_id: messageId,
-            last_read_at: now,
-            mention_count: 0,
-          });
+            });
+          }
         }
 
         setUnreadState((prev) => ({
@@ -212,7 +224,7 @@ export const useUnread = (serverChannelIds: string[] = []) => {
   // Fetch on mount and when channel IDs change
   useEffect(() => {
     fetchUnreadCounts();
-  }, [serverChannelIds.length]); // Only re-run when count changes
+  }, [fetchUnreadCounts, channelIdsKey]);
 
   // Subscribe to realtime updates for channel_reads
   useEffect(() => {
@@ -240,6 +252,22 @@ export const useUnread = (serverChannelIds: string[] = []) => {
       supabase.removeChannel(channel);
     };
   }, [user, fetchUnreadCounts]);
+
+  // Reconcile on app focus / tab restore (realtime can be lossy during sleep/background)
+  useEffect(() => {
+    const handleFocus = () => fetchUnreadCounts();
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') fetchUnreadCounts();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [fetchUnreadCounts]);
 
   return {
     unreadState,

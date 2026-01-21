@@ -73,6 +73,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
             event: '*',
             schema: 'public',
             table: 'messages',
+            filter: `channel_id=eq.${channelId}`,
           },
           async (payload) => {
             try {
@@ -81,10 +82,8 @@ export const useRealtimeMessages = (channelId: string | null) => {
               if (eventType === 'INSERT') {
                 const newMsg = payload.new as any;
                 
-                // Filter client-side for this channel
-                if (newMsg.channel_id !== channelId) {
-                  return;
-                }
+                // Server-side filter should already ensure this, but keep as a guard.
+                if (newMsg.channel_id !== channelId) return;
                 
                 // Get current state directly from store
                 const store = useMessageStore.getState();
@@ -135,7 +134,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
               } else if (eventType === 'UPDATE') {
                 const updated = payload.new as any;
                 
-                // Filter client-side for this channel
+                // Server-side filter should already ensure this, but keep as a guard.
                 if (updated.channel_id !== channelId) return;
                 
                 useMessageStore.getState().updateMessage(updated.id, {

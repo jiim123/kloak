@@ -84,7 +84,18 @@ export const DMMessageInput = ({
     
     setIsSending(true);
     try {
-      await sendMessage(conversationId, user.id, messageContent, currentReplyTo?.id);
+      const sent = await sendMessage(conversationId, user.id, messageContent, currentReplyTo?.id);
+
+      // Presence: sending a DM is explicit activity; refresh last_seen immediately.
+      if (sent) {
+        const auth = useAuthStore.getState();
+        if (auth.manualStatus !== 'offline') {
+          auth.updateLastSeen();
+        }
+        if (auth.manualStatus !== 'offline' && auth.manualStatus !== 'dnd') {
+          auth.updateStatus('online', { source: 'auto' });
+        }
+      }
     } finally {
       setIsSending(false);
     }
@@ -281,6 +292,15 @@ export const DMMessageInput = ({
 
     // Send the image URL as a DM
     await sendMessage(conversationId, user.id, urlData.publicUrl, replyingTo?.id);
+
+    // Presence: uploading/sending is activity.
+    const auth = useAuthStore.getState();
+    if (auth.manualStatus !== 'offline') {
+      auth.updateLastSeen();
+    }
+    if (auth.manualStatus !== 'offline' && auth.manualStatus !== 'dnd') {
+      auth.updateStatus('online', { source: 'auto' });
+    }
 
     // Clear reply if any
     onCancelReply?.();

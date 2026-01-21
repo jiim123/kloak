@@ -37,11 +37,12 @@ import { DesktopTitleBar } from '@/components/layout/DesktopTitleBar';
 import { cn } from '@/lib/utils';
 import { useDMStore } from '@/stores/dmStore';
 import { supabase } from '@/integrations/supabase/client';
-import { useRealtimeFriendships, useRealtimeUsers, useRealtimeServer, useRealtimeNotifications, useRealtimeDMs, useUnreadDMs, useRealtimeMessages, useRealtimeReactions } from '@/hooks';
+import { usePresence, useRealtimeFriendships, useRealtimeUsers, useRealtimeServer, useRealtimeNotifications, useRealtimeDMs, useUnreadDMs, useRealtimeMessages, useRealtimeReactions } from '@/hooks';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useBackgroundSync } from '@/hooks/useBackgroundSync';
 import { usePreferencesSync } from '@/hooks/usePreferencesSync';
 import type { User } from '@/types';
+import { PresenceDebugOverlay } from '@/components/debug/PresenceDebugOverlay';
 
 const AppLayout = () => {
   const navigate = useNavigate();
@@ -121,6 +122,7 @@ const AppLayout = () => {
   useRealtimeUsers();
   useRealtimeServer(currentServer?.id || null);
   useRealtimeNotifications(user?.id || null);
+  usePresence();
 
   // Real-time channel messages and reactions - at app level for stability
   useRealtimeMessages(currentChannel?.id || null);
@@ -364,6 +366,9 @@ const AppLayout = () => {
 
       {/* Persistent embed container for Twitch/Kick streams */}
       <PersistentEmbedContainer />
+
+      {/* Dev-only presence diagnostics overlay (toggle via localStorage) */}
+      <PresenceDebugOverlay />
     </>
   );
 };
