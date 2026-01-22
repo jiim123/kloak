@@ -79,6 +79,7 @@ export function useVoiceRoom(opts: { channelId: string | null; userId: string | 
   const setPresence = useVoiceStore((s) => s.setPresence);
   const clearPresence = useVoiceStore((s) => s.clearPresence);
   const setConnection = useVoiceStore((s) => s.setConnection);
+  const setControls = useVoiceStore((s) => s.setControls);
 
   const [status, setStatus] = useState<VoiceRoomStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -848,6 +849,11 @@ export function useVoiceRoom(opts: { channelId: string | null; userId: string | 
     }),
     [deafened, muted, sharing, speaking],
   );
+
+  // Publish local mute/deafen into the global store so the sidebar banner can reflect and control it.
+  useEffect(() => {
+    setControls({ muted, deafened });
+  }, [deafened, muted, setControls]);
 
   return {
     status,

@@ -6,6 +6,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useVoiceRoom } from "@/hooks/useVoiceRoom";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
+import { useVoiceStore } from "@/stores/voiceStore";
 import type { Channel, ServerMember } from "@/types";
 
 function AudioPlayer({ stream, muted }: { stream: MediaStream; muted: boolean }) {
@@ -109,8 +110,21 @@ function getMemberDisplayName(member: ServerMember | undefined, userId: string):
 export function VoiceChannelArea({ channel }: { channel: Channel }) {
   const { user } = useAuthStore();
   const { members } = useServerStore();
+  const setJoinedChannel = useVoiceStore((s) => s.setJoinedChannel);
 
   const voice = useVoiceRoom({ channelId: channel.id, userId: user?.id || null });
+
+  // Persist the joined voice channel metadata so the session survives switching servers/home/DMs
+  // even if `useServerStore().channels` no longer contains this channel.
+  useEffect(() => {
+    if (voice.isJoined) {
+      setJoinedChannel(channel);
+    } else {
+      // Clear only if we were the persisted channel.
+      const prev = useVoiceStore.getState().joinedChannel;
+      if (prev?.id === channel.id) setJoinedChannel(null);
+    }
+  }, [channel, setJoinedChannel, voice.isJoined]);
 
   // Allow the sidebar banner to request a disconnect without tight coupling.
   useEffect(() => {
@@ -122,6 +136,26 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
     };
     window.addEventListener("kloak:voice:leave", handler as EventListener);
     return () => window.removeEventListener("kloak:voice:leave", handler as EventListener);
+  }, [channel.id, voice]);
+
+  // Allow sidebar banner to toggle mute/deafen while voice UI is offscreen.
+  useEffect(() => {
+    const onMute = (ev: Event) => {
+      const e = ev as CustomEvent<{ channelId?: string }>;
+      if (e.detail?.channelId !== channel.id) return;
+      voice.toggleMute();
+    };
+    const onDeafen = (ev: Event) => {
+      const e = ev as CustomEvent<{ channelId?: string }>;
+      if (e.detail?.channelId !== channel.id) return;
+      voice.toggleDeafen();
+    };
+    window.addEventListener("kloak:voice:toggleMute", onMute as EventListener);
+    window.addEventListener("kloak:voice:toggleDeafen", onDeafen as EventListener);
+    return () => {
+      window.removeEventListener("kloak:voice:toggleMute", onMute as EventListener);
+      window.removeEventListener("kloak:voice:toggleDeafen", onDeafen as EventListener);
+    };
   }, [channel.id, voice]);
 
   const memberByUserId = useMemo(() => {
@@ -157,6 +191,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
     userId,
     member,
     muted,
+    deafened,
     sharing,
     speaking,
     isYou,
@@ -164,6 +199,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
     userId: string;
     member: ServerMember | undefined;
     muted: boolean;
+    deafened: boolean;
     sharing: boolean;
     speaking: boolean;
     isYou: boolean;
@@ -190,6 +226,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
             <div className="text-xs text-muted-foreground truncate">{isYou ? "You" : "Member"}</div>
           </div>
           <div className="flex items-center gap-1 text-muted-foreground">
+            {deafened ? <VolumeX className="w-4 h-4" /> : null}
             {muted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
             {sharing ? <MonitorUp className="w-4 h-4" /> : null}
           </div>
@@ -227,23 +264,36 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
           )}
 
           {!voice.isJoined ? (
-            <div className="max-w-md w-full rounded-2xl border border-border bg-background/60 p-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <Volume2 className="w-5 h-5 text-primary" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="font-semibold">Join voice</div>
-                    <div className="text-sm text-muted-foreground">
-                      Talk with your friends and optionally share your screen.
+            <div className="max-w-md w-full rounded-2xl border border-border/70 bg-background/60 backdrop-blur p-6 relative overflow-hidden">
+              {/* Subtle backdrop */}
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent pointer-events-none" />
+
+              <div className="relative">
+                <div className="flex items-start gap-3">
+                  
+
+                  <div className="min-w-0 flex-1">
+                    
+
+                    <div className="mt-2 text-lg font-semibold text-foreground">
+                      Join <span className="text-primary">#{channel.name}</span>
+                    </div>
+                    <div className="mt-1 text-sm text-muted-foreground leading-relaxed">
+                      Talk with friends and share your screen seamlessly
+                    </div>
+
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      <span className="italic">Best experience:</span> 2–6 users
                     </div>
                   </div>
                 </div>
-                <div className="mt-4">
+
+                <div className="mt-5">
                   <Button className="w-full" disabled={!isReady || voice.status === "joining"} onClick={() => voice.join()}>
-                    {voice.status === "joining" ? "Joining…" : "Join voice"}
+                    {voice.status === "joining" ? "Connecting…" : "Join voice"}
                   </Button>
                 </div>
+              </div>
             </div>
           ) : stage ? (
             <div className="grid gap-4">
@@ -272,6 +322,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
                       userId={p.userId}
                       member={member}
                       muted={p.muted}
+                      deafened={p.deafened}
                       sharing={p.sharing}
                       speaking={speaking}
                       isYou={isYou}
@@ -292,6 +343,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
                     userId={p.userId}
                     member={member}
                     muted={p.muted}
+                    deafened={p.deafened}
                     sharing={p.sharing}
                     speaking={speaking}
                     isYou={isYou}

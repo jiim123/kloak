@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Headphones, Mic, Palette } from "lucide-react";
+import { Headphones, Mic, MicOff, VolumeX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { StatusSelector } from "@/components/StatusSelector";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { useAuthStore } from "@/stores/authStore";
-import { useUIStore } from "@/stores/uiStore";
+import { useVoiceStore } from "@/stores/voiceStore";
 
 interface LoggedInUserPanelProps {
   containerClassName?: string;
@@ -19,8 +19,23 @@ export const LoggedInUserPanel = ({
   statusBorderClassName = "border-layout-sidebar",
 }: LoggedInUserPanelProps) => {
   const { user } = useAuthStore();
-  const { cycleTheme } = useUIStore();
+  const connection = useVoiceStore((s) => s.connection);
+  const joinedVoiceChannelId = useVoiceStore((s) => s.joinedChannelId);
+  const controls = useVoiceStore((s) => s.controls);
   const [isUserAvatarHovered, setIsUserAvatarHovered] = useState(false);
+
+  const activeChannelId = connection.channelId ?? joinedVoiceChannelId;
+  const isVoiceActive = !!activeChannelId && connection.status !== "idle";
+
+  const toggleMute = () => {
+    if (!activeChannelId) return;
+    window.dispatchEvent(new CustomEvent("kloak:voice:toggleMute", { detail: { channelId: activeChannelId } }));
+  };
+
+  const toggleDeafen = () => {
+    if (!activeChannelId) return;
+    window.dispatchEvent(new CustomEvent("kloak:voice:toggleDeafen", { detail: { channelId: activeChannelId } }));
+  };
 
   return (
     <motion.div
@@ -75,20 +90,20 @@ export const LoggedInUserPanel = ({
       <div className="flex items-center gap-0.5">
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="w-8 h-8 text-muted-foreground hover:text-foreground">
-              <Mic className="w-4 h-4" />
+            <Button
+              variant="ghost"
+              size="icon"
+              disabled={!isVoiceActive}
+              onClick={toggleMute}
+              className={cn(
+                "w-8 h-8",
+                controls.muted ? "text-destructive hover:text-destructive" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {controls.muted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Mute</TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="w-8 h-8 text-muted-foreground hover:text-foreground">
-              <Headphones className="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Deafen</TooltipContent>
+          <TooltipContent>{!isVoiceActive ? "Not in voice" : controls.muted ? "Unmute" : "Mute"}</TooltipContent>
         </Tooltip>
 
         <Tooltip>
@@ -96,13 +111,17 @@ export const LoggedInUserPanel = ({
             <Button
               variant="ghost"
               size="icon"
-              className="w-8 h-8 text-muted-foreground hover:text-foreground"
-              onClick={cycleTheme}
+              disabled={!isVoiceActive}
+              onClick={toggleDeafen}
+              className={cn(
+                "w-8 h-8",
+                controls.deafened ? "text-destructive hover:text-destructive" : "text-muted-foreground hover:text-foreground",
+              )}
             >
-              <Palette className="w-4 h-4" />
+              {controls.deafened ? <VolumeX className="w-4 h-4" /> : <Headphones className="w-4 h-4" />}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Theme</TooltipContent>
+          <TooltipContent>{!isVoiceActive ? "Not in voice" : controls.deafened ? "Undeafen" : "Deafen"}</TooltipContent>
         </Tooltip>
       </div>
     </motion.div>

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { LoggedInUserPanel } from "@/components/layout/LoggedInUserPanel";
+import { VoiceConnectedBanner } from "@/components/layout/VoiceConnectedBanner";
 import { useDMStore } from "@/stores/dmStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useUnreadDMs } from "@/hooks/useUnreadDMs";
@@ -219,6 +220,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
         })}
       </div>
 
+      <VoiceConnectedBanner />
       <LoggedInUserPanel />
     </div>
   );

@@ -36,6 +36,7 @@ import {
 } from '@/components/modals';
 import { PersistentEmbedContainer } from '@/components/chat/PersistentEmbedContainer';
 import { DesktopTitleBar } from '@/components/layout/DesktopTitleBar';
+import { VoicePersistentHost } from '@/components/voice/VoicePersistentHost';
 import { cn } from '@/lib/utils';
 import { useDMStore } from '@/stores/dmStore';
 import { supabase } from '@/integrations/supabase/client';
@@ -382,6 +383,7 @@ const AppLayout = () => {
 
                 {/* Main area - flexible */}
                 <div className="flex-1 min-w-0 bg-layout-chat relative overflow-hidden">
+                  <VoicePersistentHost />
                   {isDMView ? (
                     currentConversation ? (
                       <DMChatArea />
@@ -425,7 +427,8 @@ const AppLayout = () => {
           </div>
 
           {/* Mobile layout */}
-          <div className="flex-1 md:hidden overflow-hidden bg-layout-chat">
+          <div className="flex-1 md:hidden overflow-hidden bg-layout-chat relative">
+            <VoicePersistentHost />
             {isDMView ? (
               currentConversation ? (
                 <DMChatArea />
