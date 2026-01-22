@@ -22,6 +22,8 @@ export const useRealtimeOwnMembership = () => {
   useEffect(() => {
     if (!user?.id) return;
 
+    console.log('[RealtimeOwnMembership] Setting up subscription for user:', user.id);
+
     const channel = supabase
       .channel(`own-membership:${user.id}`)
       // Listen for DELETE events on the current user's membership (kicked)
@@ -34,23 +36,34 @@ export const useRealtimeOwnMembership = () => {
           filter: `user_id=eq.${user.id}`,
         },
         async (payload) => {
+          console.log('[RealtimeOwnMembership] DELETE event received:', payload);
           const deletedServerId = payload.old?.server_id;
           if (!deletedServerId) return;
 
-          const { currentServer, servers, setCurrentServer, fetchServers } = serverStoreRef.current;
+          const { currentServer, servers, setCurrentServer } = serverStoreRef.current;
 
           // Find the server name for the toast
           const server = servers.find((s) => s.id === deletedServerId);
           const serverName = server?.name || 'the server';
 
-          // If user is currently viewing this server, navigate away
-          if (currentServer?.id === deletedServerId) {
-            setCurrentServer(null);
-            toast.error(`You have been removed from ${serverName}`);
+          // Immediately remove the server from state (optimistic update)
+          useServerStore.setState((state) => ({
+            servers: state.servers.filter((s) => s.id !== deletedServerId),
+            currentServer: state.currentServer?.id === deletedServerId ? null : state.currentServer,
+            currentChannel: state.currentServer?.id === deletedServerId ? null : state.currentChannel,
+            channels: state.currentServer?.id === deletedServerId ? [] : state.channels,
+            categories: state.currentServer?.id === deletedServerId ? [] : state.categories,
+            members: state.currentServer?.id === deletedServerId ? [] : state.members,
+          }));
+
+          // Clear localStorage if this was the persisted server
+          const persistedServerId = localStorage.getItem('kloak-current-server-id');
+          if (persistedServerId === deletedServerId) {
+            localStorage.removeItem('kloak-current-server-id');
+            localStorage.removeItem('kloak-current-channel-id');
           }
 
-          // Refresh the servers list to remove the server
-          await fetchServers(user.id);
+          toast.error(`You have been kicked from ${serverName}`);
         }
       )
       // Listen for UPDATE events where is_banned becomes true (banned)
@@ -63,6 +76,7 @@ export const useRealtimeOwnMembership = () => {
           filter: `user_id=eq.${user.id}`,
         },
         async (payload) => {
+          console.log('[RealtimeOwnMembership] UPDATE event received:', payload);
           const newData = payload.new as { server_id?: string; is_banned?: boolean };
           const oldData = payload.old as { is_banned?: boolean };
 
@@ -71,26 +85,39 @@ export const useRealtimeOwnMembership = () => {
             const bannedServerId = newData.server_id;
             if (!bannedServerId) return;
 
-            const { currentServer, servers, setCurrentServer, fetchServers } = serverStoreRef.current;
+            const { servers } = serverStoreRef.current;
 
             // Find the server name for the toast
             const server = servers.find((s) => s.id === bannedServerId);
             const serverName = server?.name || 'the server';
 
-            // If user is currently viewing this server, navigate away
-            if (currentServer?.id === bannedServerId) {
-              setCurrentServer(null);
-              toast.error(`You have been banned from ${serverName}`);
+            // Immediately remove the server from state (optimistic update)
+            useServerStore.setState((state) => ({
+              servers: state.servers.filter((s) => s.id !== bannedServerId),
+              currentServer: state.currentServer?.id === bannedServerId ? null : state.currentServer,
+              currentChannel: state.currentServer?.id === bannedServerId ? null : state.currentChannel,
+              channels: state.currentServer?.id === bannedServerId ? [] : state.channels,
+              categories: state.currentServer?.id === bannedServerId ? [] : state.categories,
+              members: state.currentServer?.id === bannedServerId ? [] : state.members,
+            }));
+
+            // Clear localStorage if this was the persisted server
+            const persistedServerId = localStorage.getItem('kloak-current-server-id');
+            if (persistedServerId === bannedServerId) {
+              localStorage.removeItem('kloak-current-server-id');
+              localStorage.removeItem('kloak-current-channel-id');
             }
 
-            // Refresh the servers list to remove the server
-            await fetchServers(user.id);
+            toast.error(`You have been banned from ${serverName}`);
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[RealtimeOwnMembership] Subscription status:', status);
+      });
 
     return () => {
+      console.log('[RealtimeOwnMembership] Cleaning up subscription');
       supabase.removeChannel(channel);
     };
   }, [user?.id]);

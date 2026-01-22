@@ -135,6 +135,26 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
       const { currentServer } = get();
 
+      // Check if current server is still in the user's servers list (handles kick/ban/leave)
+      if (currentServer) {
+        const stillMember = servers.find(s => s.id === currentServer.id);
+        if (!stillMember) {
+          // User was kicked/banned/left this server - clear it
+          localStorage.removeItem('kloak-current-server-id');
+          localStorage.removeItem('kloak-current-channel-id');
+          set({ 
+            servers, 
+            currentServer: null, 
+            currentChannel: null,
+            channels: [],
+            categories: [],
+            members: [],
+            isLoading: false 
+          });
+          return;
+        }
+      }
+
       // Try to restore persisted server/channel from localStorage
       const persistedServerId = localStorage.getItem('kloak-current-server-id');
       const isDMViewActive = localStorage.getItem('kloak-dm-view-active') === 'true';
