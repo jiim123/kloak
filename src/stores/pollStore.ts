@@ -63,7 +63,7 @@ export const usePollStore = create<PollState>((set, get) => ({
       const existing = get().pollsById[pollId];
       if (existing) return existing;
 
-      const { data, error } = await supabase.from("polls").select("*").eq("id", pollId).maybeSingle();
+      const { data, error } = await (supabase.from("polls") as any).select("*").eq("id", pollId).maybeSingle();
       if (error || !data) return null;
 
       const poll = normalizePoll(data);
