@@ -707,7 +707,7 @@ export const MessageItem = memo(function MessageItem({
                         <button
                           onClick={() => canAddReactions && handleReactionClick(reaction.emoji, reaction.hasReacted)}
                           disabled={!canAddReactions}
-                          className={`flex items-center gap-1.5 px-2.5 py-1 text-sm rounded-md border transition-colors duration-200 ${
+                          className={`flex items-center gap-1.5 px-2.5 py-1 text-lg rounded-md border transition-colors duration-200 ${
                             reaction.hasReacted
                               ? "bg-primary/20 border-primary text-primary"
                               : "bg-secondary border-transparent hover:border-border"
@@ -948,7 +948,9 @@ export const MessageItem = memo(function MessageItem({
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <span className="inline-flex">{reactionDetailsEmoji ? reactionEmojiNode(reactionDetailsEmoji) : null}</span>
+              <span className="inline-flex">
+                {reactionDetailsEmoji ? reactionEmojiNode(reactionDetailsEmoji) : null}
+              </span>
               <span>Reactions</span>
             </DialogTitle>
           </DialogHeader>
