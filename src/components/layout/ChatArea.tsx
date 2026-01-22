@@ -11,6 +11,7 @@ import { MessageSquare, Hash, ImageIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, handleError } from "@/lib/errorHandler";
+import { VoiceChannelArea } from "@/components/voice/VoiceChannelArea";
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -182,6 +183,10 @@ export const ChatArea = () => {
         </motion.div>
       </div>
     );
+  }
+
+  if (currentChannel.type === "voice") {
+    return <VoiceChannelArea channel={currentChannel} />;
   }
 
   return (

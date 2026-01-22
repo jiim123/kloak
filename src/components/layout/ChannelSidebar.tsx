@@ -28,12 +28,14 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
+import { useVoiceStore } from "@/stores/voiceStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useUnread } from "@/hooks/useUnread";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { MotionButton } from "@/components/ui/motion-elements";
 import { LoggedInUserPanel } from "@/components/layout/LoggedInUserPanel";
+import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -103,6 +105,8 @@ const SortableChannel = ({
   isUnread,
   mentionCount,
   isAdmin,
+  voiceUserIds,
+  resolveUser,
   onSelect,
   onEdit,
 }: {
@@ -111,6 +115,8 @@ const SortableChannel = ({
   isUnread: boolean;
   mentionCount: number;
   isAdmin: boolean;
+  voiceUserIds?: string[];
+  resolveUser?: (userId: string) => { avatarUser?: any; label: string };
   onSelect: () => void;
   onEdit: () => void;
 }) => {
@@ -236,6 +242,20 @@ const SortableChannel = ({
           </div>
         )}
       </button>
+
+      {channel.type === "voice" && voiceUserIds && voiceUserIds.length > 0 && resolveUser && (
+        <div className="ml-7 mt-1 space-y-1">
+          {voiceUserIds.map((id) => {
+            const info = resolveUser(id);
+            return (
+              <div key={id} className="flex items-center gap-2 px-2 py-1 rounded-md text-xs text-muted-foreground">
+                <AvatarWithDecoration user={info.avatarUser} size={18} />
+                <span className="truncate">{info.label}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </motion.div>
   );
 };
@@ -317,6 +337,8 @@ const CategoryContent = ({
                 isUnread={unreadCount > 0}
                 mentionCount={mentionCount}
                 isAdmin={isAdmin}
+                voiceUserIds={voicePresenceByChannel[channel.id]}
+                resolveUser={resolveUser}
                 onSelect={() => onSelectChannel(channel)}
                 onEdit={() => onEditChannel(channel.id)}
               />
@@ -459,11 +481,13 @@ export const ChannelSidebar = () => {
     setCurrentChannel,
     categories,
     channels,
+    members,
     servers,
     leaveServer,
     reorderCategories,
     reorderChannels,
   } = useServerStore();
+  const voicePresenceByChannel = useVoiceStore((s) => s.presenceByChannel);
   const { openModal, openServerSettings } = useUIStore();
 
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
@@ -478,6 +502,23 @@ export const ChannelSidebar = () => {
     if (!currentServer) return null;
     return servers.find((s) => s.id === currentServer.id);
   }, [servers, currentServer]);
+
+  const memberUserById = useMemo(() => {
+    const map = new Map<string, any>();
+    for (const m of members) {
+      map.set(m.user_id, m.user);
+    }
+    return map;
+  }, [members]);
+
+  const resolveUser = useCallback(
+    (userId: string) => {
+      const u = memberUserById.get(userId);
+      const label = u?.display_name || u?.username || userId.slice(0, 8);
+      return { avatarUser: u, label };
+    },
+    [memberUserById],
+  );
 
   const userRole = currentMembership?.role;
   // Use permission system instead of hardcoded role checks
@@ -946,6 +987,8 @@ export const ChannelSidebar = () => {
                             isUnread={unreadCount > 0}
                             mentionCount={mentionCount}
                             isAdmin={isAdmin}
+                            voiceUserIds={voicePresenceByChannel[channel.id]}
+                            resolveUser={resolveUser}
                             onSelect={() => handleSelectChannel(channel)}
                             onEdit={() => openModal("edit-channel", { channelId: channel.id })}
                           />
