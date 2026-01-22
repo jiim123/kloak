@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Paperclip, Smile, Send, X, Loader2, WifiOff, Type, Lock, BarChart3 } from "lucide-react";
+import { Paperclip, Smile, Send, X, Loader2, WifiOff, Type, Lock, BarChart3, SquareChartGantt } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useMessageStore } from "@/stores/messageStore";
 import { useServerStore } from "@/stores/serverStore";
@@ -252,7 +252,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     try {
       // Send message directly - realtime will handle updating the UI
       const message = await sendMessage(channelId, user.id, contentToSend, currentReplyTo?.id);
-      
+
       // Presence: sending a message is explicit activity; refresh last_seen immediately.
       // (This prevents "still offline" for up to 30s if the heartbeat hasn't ticked yet.)
       if (message) {
@@ -670,12 +670,14 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
               onClick={() => setShowCreatePoll(true)}
               disabled={!canSendMessage}
               className={`p-2 rounded-xl transition-colors duration-150 ${
-                canSendMessage ? "text-muted-foreground hover:text-foreground hover:bg-muted" : "text-muted-foreground/50 cursor-not-allowed"
+                canSendMessage
+                  ? "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  : "text-muted-foreground/50 cursor-not-allowed"
               }`}
               onMouseDown={(e) => e.preventDefault()}
               title="Create poll"
             >
-              <BarChart3 className="w-5 h-5" />
+              <SquareChartGantt className="w-5 h-5" />
             </button>
 
             {/* Emoji button with picker (GIF temporarily disabled) */}
