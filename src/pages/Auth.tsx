@@ -178,7 +178,7 @@ const Auth = () => {
         title: "Welcome back!",
         description: "Successfully logged in.",
       });
-      
+
       // Resize Tauri window to app size, then navigate
       await resizeWindowForApp();
       navigate("/app");
@@ -465,6 +465,14 @@ const Auth = () => {
                 </Button>
               </div>
             )}
+          </div>
+          <div className="mt-6 p-4 rounded-xl bg-secondary/30 border border-border/50 text-center">
+            <p className="text-sm text-muted-foreground mb-3">Want a faster experience? Get the Kloak desktop app.</p>
+            <Button variant="outline" disabled className="gap-2">
+              <Download className="w-4 h-4" />
+              Download App
+              <span className="text-xs text-muted-foreground ml-1">(Coming Soon)</span>
+            </Button>
           </div>
         </div>
         {/* Welcome Modal for new users */}
