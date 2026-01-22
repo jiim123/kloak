@@ -631,6 +631,112 @@ export type Database = {
           },
         ]
       }
+      poll_votes: {
+        Row: {
+          created_at: string
+          id: string
+          option_index: number
+          poll_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          option_index: number
+          poll_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          option_index?: number
+          poll_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "poll_votes_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "polls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "poll_votes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      polls: {
+        Row: {
+          allow_multiple: boolean
+          channel_id: string
+          created_at: string
+          created_by: string
+          ends_at: string
+          id: string
+          is_closed: boolean
+          message_id: string
+          options: string[]
+          question: string
+          results: Json
+          total_votes: number
+        }
+        Insert: {
+          allow_multiple?: boolean
+          channel_id: string
+          created_at?: string
+          created_by: string
+          ends_at: string
+          id?: string
+          is_closed?: boolean
+          message_id: string
+          options: string[]
+          question: string
+          results?: Json
+          total_votes?: number
+        }
+        Update: {
+          allow_multiple?: boolean
+          channel_id?: string
+          created_at?: string
+          created_by?: string
+          ends_at?: string
+          id?: string
+          is_closed?: boolean
+          message_id?: string
+          options?: string[]
+          question?: string
+          results?: Json
+          total_votes?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "polls_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "polls_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "polls_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: true
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reactions: {
         Row: {
           emoji: string
@@ -1099,6 +1205,8 @@ export type Database = {
         Args: { _username: string }
         Returns: boolean
       }
+      close_expired_polls: { Args: { _channel_id: string }; Returns: number }
+      close_poll: { Args: { _poll_id: string }; Returns: boolean }
       create_category: {
         Args: {
           _name: string
@@ -1294,6 +1402,7 @@ export type Database = {
         Args: { _other_user_id: string; _user_id: string }
         Returns: Json
       }
+      recompute_poll_results: { Args: { _poll_id: string }; Returns: undefined }
       regenerate_invite_code: {
         Args: { _server_id: string; _user_id: string }
         Returns: string
@@ -1356,6 +1465,18 @@ export type Database = {
         Args: {
           _channel_id: string
           _content: string
+          _reply_to_id?: string
+          _user_id: string
+        }
+        Returns: Json
+      }
+      send_poll: {
+        Args: {
+          _allow_multiple?: boolean
+          _channel_id: string
+          _duration_seconds?: number
+          _options: string[]
+          _question: string
           _reply_to_id?: string
           _user_id: string
         }
@@ -1465,6 +1586,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      vote_poll: {
+        Args: { _option_indexes: number[]; _poll_id: string; _user_id: string }
+        Returns: Json
       }
     }
     Enums: {
