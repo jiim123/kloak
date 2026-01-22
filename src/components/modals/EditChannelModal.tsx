@@ -19,10 +19,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Hash, Trash2, FolderOpen, Settings, Shield, Loader2, Clock, Lock, AlertTriangle } from "lucide-react";
+import { Hash, Trash2, FolderOpen, Settings, Shield, Loader2, Clock, Lock, AlertTriangle, X } from "lucide-react";
 import { toast } from "sonner";
 import { ChannelPermissionsEditor } from "./ChannelPermissionsEditor";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 import type { Channel } from "@/types";
 
 const SLOWMODE_OPTIONS = [
@@ -37,6 +38,7 @@ const SLOWMODE_OPTIONS = [
 ];
 
 export const EditChannelModal = () => {
+  const isMobile = useIsMobile();
   const { activeModal, modalData, closeModal } = useUIStore();
   const {
     channels,
@@ -72,6 +74,12 @@ export const EditChannelModal = () => {
   const hasValidTarget = isCategory ? !!category : !!channel;
   const targetName = isCategory ? category?.name : channel?.name;
 
+  const navItems = [
+    { id: "overview", label: "Overview", icon: Hash },
+    { id: "settings", label: "Settings", icon: Settings },
+    { id: "permissions", label: "Permissions", icon: Shield },
+  ];
+
   useEffect(() => {
     if (isCategory && category) {
       setName(category.name);
@@ -101,6 +109,7 @@ export const EditChannelModal = () => {
   const handleClose = () => {
     setError("");
     setShowDeleteConfirm(false);
+    setActiveTab("overview");
     closeModal();
   };
 
@@ -174,23 +183,6 @@ export const EditChannelModal = () => {
     }
   };
 
-  // Tab navigation item component
-  const TabButton = ({ value, icon: Icon, label }: { value: string; icon: React.ElementType; label: string }) => (
-    <button
-      type="button"
-      onClick={() => setActiveTab(value)}
-      className={cn(
-        "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-        activeTab === value
-          ? "bg-primary/10 text-primary"
-          : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
-      )}
-    >
-      <Icon className="w-4 h-4" />
-      {label}
-    </button>
-  );
-
   // Toggle card component for switches
   const ToggleCard = ({
     icon: Icon,
@@ -217,326 +209,385 @@ export const EditChannelModal = () => {
     </div>
   );
 
+  // Overview Tab Content
+  const overviewContent = (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-3">
+        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Channel Name</Label>
+        <div className="relative">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-secondary/80 flex items-center justify-center">
+            <Hash className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <Input
+            id="channel-name"
+            value={name}
+            onChange={(e) => setName(formatChannelName(e.target.value))}
+            placeholder="channel-name"
+            className="h-11 pl-14 rounded-xl border-border/50 bg-secondary/30"
+            maxLength={50}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Channel Topic
+          <span className="text-muted-foreground/70 font-normal normal-case ml-1">(optional)</span>
+        </Label>
+        <Textarea
+          id="channel-topic"
+          value={topic}
+          onChange={(e) => setTopic(e.target.value)}
+          placeholder="Let everyone know what this channel is for..."
+          className="rounded-xl border-border/50 bg-secondary/30 min-h-[100px] resize-none"
+          maxLength={1024}
+        />
+        <p className="text-xs text-muted-foreground text-right">{topic.length}/1024</p>
+      </div>
+
+      {error && (
+        <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20">
+          <p className="text-sm text-destructive">{error}</p>
+        </div>
+      )}
+
+      <div className="flex gap-3 pt-4">
+        <Button type="button" variant="outline" onClick={handleClose} className="flex-1 h-11 rounded-xl">
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isSubmitting || !name.trim()} className="flex-1 h-11 rounded-xl">
+          {isSubmitting ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Save Changes"
+          )}
+        </Button>
+      </div>
+    </form>
+  );
+
+  // Settings Tab Content
+  const settingsContent = (
+    <div className="space-y-6">
+      {/* Slowmode */}
+      <div className="space-y-3">
+        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Slowmode</Label>
+        <Select value={slowmodeSeconds} onValueChange={setSlowmodeSeconds}>
+          <SelectTrigger className="h-11 rounded-xl border-border/50 bg-secondary/30">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
+                <Clock className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <SelectValue />
+            </div>
+          </SelectTrigger>
+          <SelectContent className="rounded-xl border-border/50">
+            {SLOWMODE_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value} className="rounded-lg">
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          Members will only be able to send one message per this time period
+        </p>
+      </div>
+
+      {/* Toggles */}
+      <div className="space-y-3">
+        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Channel Options</Label>
+
+        <ToggleCard
+          icon={Lock}
+          label="Read-Only Channel"
+          description="Only admins and moderators can send messages"
+          checked={isReadOnly}
+          onCheckedChange={setIsReadOnly}
+        />
+
+        <ToggleCard
+          icon={AlertTriangle}
+          label="Age-Restricted Channel"
+          description="Mark this channel as NSFW"
+          checked={isNsfw}
+          onCheckedChange={setIsNsfw}
+        />
+      </div>
+
+      {/* Danger Zone */}
+      <div className="p-4 rounded-xl border border-destructive/30 bg-destructive/5 space-y-4">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center flex-shrink-0">
+            <Trash2 className="w-5 h-5 text-destructive" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-destructive">Danger Zone</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Deleting a channel is irreversible. All messages will be permanently lost.
+            </p>
+          </div>
+        </div>
+        <Button
+          type="button"
+          variant="destructive"
+          className="w-full h-10 rounded-xl"
+          onClick={() => setShowDeleteConfirm(true)}
+        >
+          <Trash2 className="h-4 w-4 mr-2" />
+          Delete Channel
+        </Button>
+      </div>
+
+      {/* Footer */}
+      <div className="flex gap-3 pt-4">
+        <Button type="button" variant="outline" onClick={handleClose} className="flex-1 h-11 rounded-xl">
+          Cancel
+        </Button>
+        <Button onClick={handleSubmit} disabled={isSubmitting || !name.trim()} className="flex-1 h-11 rounded-xl">
+          {isSubmitting ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Save Changes"
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+
+  // Permissions Tab Content
+  const permissionsContent = (
+    <div>
+      {channelId && currentServer ? (
+        <ChannelPermissionsEditor channelId={channelId} serverId={currentServer.id} onClose={handleClose} />
+      ) : (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="w-12 h-12 rounded-xl bg-secondary/80 flex items-center justify-center mb-4">
+            <Loader2 className="w-6 h-6 text-muted-foreground animate-spin" />
+          </div>
+          <p className="text-sm text-muted-foreground">Loading permissions...</p>
+        </div>
+      )}
+    </div>
+  );
+
+  // Render content based on active tab
+  const renderContent = () => {
+    switch (activeTab) {
+      case "overview":
+        return overviewContent;
+      case "settings":
+        return settingsContent;
+      case "permissions":
+        return permissionsContent;
+      default:
+        return null;
+    }
+  };
+
+  // Category content (simpler, no tabs needed)
+  const categoryContent = (
+    <>
+      {/* Header */}
+      <div className="relative px-6 pt-6 pb-4">
+        <div className="absolute -top-20 -right-20 w-40 h-40 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary mb-4">
+          <FolderOpen className="w-3 h-3" />
+          Edit Category
+        </div>
+
+        <h2 className="text-xl font-semibold">{category?.name}</h2>
+        <p className="text-sm text-muted-foreground mt-1">Modify category settings</p>
+      </div>
+
+      {/* Content */}
+      <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-6">
+        <div className="space-y-3">
+          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Category Name</Label>
+          <Input
+            id="category-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Category name"
+            className="h-11 rounded-xl border-border/50 bg-secondary/30"
+            maxLength={50}
+          />
+        </div>
+
+        {error && (
+          <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20">
+            <p className="text-sm text-destructive">{error}</p>
+          </div>
+        )}
+
+        {/* Danger Zone */}
+        <div className="p-4 rounded-xl border border-destructive/30 bg-destructive/5 space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center flex-shrink-0">
+              <Trash2 className="w-5 h-5 text-destructive" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-destructive">Danger Zone</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Deleting a category will move all its channels to uncategorized.
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            className="w-full h-10 rounded-xl"
+            onClick={() => setShowDeleteConfirm(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete Category
+          </Button>
+        </div>
+
+        {/* Footer */}
+        <div className="flex gap-3 pt-2">
+          <Button type="button" variant="outline" onClick={handleClose} className="flex-1 h-11 rounded-xl">
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isSubmitting || !name.trim()} className="flex-1 h-11 rounded-xl">
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save Changes"
+            )}
+          </Button>
+        </div>
+      </form>
+    </>
+  );
+
+  // Don't render if no valid target
+  if (!isOpen || !hasValidTarget) return null;
+
   return (
     <>
-      <Dialog open={isOpen && hasValidTarget} onOpenChange={(open) => !open && handleClose()}>
-        <DialogContent
-          className={cn(
-            "overflow-hidden p-0 rounded-2xl gap-0",
-            isCategory
-              ? "sm:max-w-md max-w-[calc(100vw-2rem)]"
-              : "sm:max-w-5xl max-w-[calc(100vw-2rem)] max-h-[90vh] sm:max-h-[85vh] flex flex-col",
-          )}
-        >
-          {isCategory && category ? (
-            // Category editing content
-            <>
-              {/* Header */}
-              <div className="relative px-6 pt-6 pb-4">
-                <div className="absolute -top-20 -right-20 w-40 h-40 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
+      {/* Category Modal (simple, same for mobile/desktop) */}
+      {isCategory && category && (
+        <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+          <DialogContent className="sm:max-w-md max-w-[calc(100vw-2rem)] overflow-hidden p-0 rounded-2xl gap-0">
+            {categoryContent}
+          </DialogContent>
+        </Dialog>
+      )}
 
-                <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary mb-4">
-                  <FolderOpen className="w-3 h-3" />
-                  Edit Category
-                </div>
+      {/* Channel Modal - Mobile with Dock */}
+      {!isCategory && channel && isMobile && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-end p-4 pb-6">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={handleClose} />
 
-                <h2 className="text-xl font-semibold">{category.name}</h2>
-                <p className="text-sm text-muted-foreground mt-1">Modify category settings</p>
+          {/* Dialog */}
+          <div
+            className="relative bg-background rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-border mb-4"
+            style={{ maxHeight: "calc(100vh - 140px)" }}
+          >
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold">{navItems.find((n) => n.id === activeTab)?.label}</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">#{channel.name}</p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={handleClose} className="rounded-full">
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+
+            {/* Content */}
+            <div className="overflow-y-auto p-5" style={{ maxHeight: "calc(100vh - 240px)" }}>
+              {renderContent()}
+            </div>
+          </div>
+
+          {/* Dock Navigation */}
+          <div className="relative flex gap-2 p-2 bg-background/95 backdrop-blur-xl rounded-2xl border border-border shadow-2xl">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  className={cn(
+                    "relative flex flex-col items-center gap-1 px-4 py-2.5 rounded-xl transition-all",
+                    isActive
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground hover:bg-secondary",
+                  )}
+                >
+                  <Icon className="w-5 h-5" />
+                  <span className="text-[10px] font-medium">{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Channel Modal - Desktop with Sidebar */}
+      {!isCategory && channel && !isMobile && (
+        <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+          <DialogContent className="sm:max-w-5xl max-w-[calc(100vw-2rem)] max-h-[90vh] sm:max-h-[85vh] overflow-hidden p-0 rounded-2xl gap-0 flex flex-col">
+            {/* Header */}
+            <div className="relative px-6 pt-6 pb-4 border-b border-border/50">
+              <div className="absolute -top-20 -right-20 w-40 h-40 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
+
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary mb-4">
+                <Hash className="w-3 h-3" />
+                Edit Channel
               </div>
 
-              {/* Content */}
-              <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-6">
-                <div className="space-y-3">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Category Name
-                  </Label>
-                  <Input
-                    id="category-name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Category name"
-                    className="h-11 rounded-xl border-border/50 bg-secondary/30"
-                    maxLength={50}
-                  />
-                </div>
+              <h2 className="text-xl font-semibold">#{channel.name}</h2>
+              <p className="text-sm text-muted-foreground mt-1">Modify channel settings and permissions</p>
+            </div>
 
-                {error && (
-                  <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20">
-                    <p className="text-sm text-destructive">{error}</p>
-                  </div>
-                )}
-
-                {/* Danger Zone */}
-                <div className="p-4 rounded-xl border border-destructive/30 bg-destructive/5 space-y-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center flex-shrink-0">
-                      <Trash2 className="w-5 h-5 text-destructive" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-destructive">Danger Zone</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Deleting a category will move all its channels to uncategorized.
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    className="w-full h-10 rounded-xl"
-                    onClick={() => setShowDeleteConfirm(true)}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete Category
-                  </Button>
-                </div>
-
-                {/* Footer */}
-                <div className="flex gap-3 pt-2">
-                  <Button type="button" variant="outline" onClick={handleClose} className="flex-1 h-11 rounded-xl">
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={isSubmitting || !name.trim()} className="flex-1 h-11 rounded-xl">
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      "Save Changes"
-                    )}
-                  </Button>
-                </div>
-              </form>
-            </>
-          ) : channel ? (
-            // Channel editing content
-            <>
-              {/* Header */}
-              <div className="relative px-6 pt-6 pb-4 border-b border-border/50">
-                <div className="absolute -top-20 -right-20 w-40 h-40 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
-
-                <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary mb-4">
-                  <Hash className="w-3 h-3" />
-                  Edit Channel
-                </div>
-
-                <h2 className="text-xl font-semibold">#{channel.name}</h2>
-                <p className="text-sm text-muted-foreground mt-1">Modify channel settings and permissions</p>
-              </div>
-
-              {/* Tabs Layout */}
-              <div className="flex-1 flex overflow-hidden">
-                {/* Sidebar */}
-                <div className="w-48 sm:w-56 border-r border-border/50 bg-secondary/20 p-3 space-y-1 flex-shrink-0">
-                  <TabButton value="overview" icon={Hash} label="Overview" />
-                  <TabButton value="settings" icon={Settings} label="Settings" />
-                  <TabButton value="permissions" icon={Shield} label="Permissions" />
-                </div>
-
-                {/* Content Area */}
-                <div className="flex-1 overflow-y-auto">
-                  {/* Overview Tab */}
-                  {activeTab === "overview" && (
-                    <form onSubmit={handleSubmit} className="p-6 space-y-6">
-                      <div className="space-y-3">
-                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          Channel Name
-                        </Label>
-                        <div className="relative">
-                          <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-secondary/80 flex items-center justify-center">
-                            <Hash className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                          <Input
-                            id="channel-name"
-                            value={name}
-                            onChange={(e) => setName(formatChannelName(e.target.value))}
-                            placeholder="channel-name"
-                            className="h-11 pl-14 rounded-xl border-border/50 bg-secondary/30"
-                            maxLength={50}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-3">
-                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          Channel Topic
-                          <span className="text-muted-foreground/70 font-normal normal-case ml-1">(optional)</span>
-                        </Label>
-                        <Textarea
-                          id="channel-topic"
-                          value={topic}
-                          onChange={(e) => setTopic(e.target.value)}
-                          placeholder="Let everyone know what this channel is for..."
-                          className="rounded-xl border-border/50 bg-secondary/30 min-h-[100px] resize-none"
-                          maxLength={1024}
-                        />
-                        <p className="text-xs text-muted-foreground text-right">{topic.length}/1024</p>
-                      </div>
-
-                      {error && (
-                        <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20">
-                          <p className="text-sm text-destructive">{error}</p>
-                        </div>
+            {/* Tabs Layout */}
+            <div className="flex-1 flex overflow-hidden">
+              {/* Sidebar */}
+              <div className="w-48 sm:w-56 border-r border-border/50 bg-secondary/20 p-3 space-y-1 flex-shrink-0">
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setActiveTab(item.id)}
+                      className={cn(
+                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                        isActive
+                          ? "bg-primary/10 text-primary"
+                          : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
                       )}
-
-                      <div className="flex gap-3 pt-4">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={handleClose}
-                          className="flex-1 h-11 rounded-xl"
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          type="submit"
-                          disabled={isSubmitting || !name.trim()}
-                          className="flex-1 h-11 rounded-xl"
-                        >
-                          {isSubmitting ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Saving...
-                            </>
-                          ) : (
-                            "Save Changes"
-                          )}
-                        </Button>
-                      </div>
-                    </form>
-                  )}
-
-                  {/* Settings Tab */}
-                  {activeTab === "settings" && (
-                    <div className="p-6 space-y-6">
-                      {/* Slowmode */}
-                      <div className="space-y-3">
-                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          Slowmode
-                        </Label>
-                        <Select value={slowmodeSeconds} onValueChange={setSlowmodeSeconds}>
-                          <SelectTrigger className="h-11 rounded-xl border-border/50 bg-secondary/30">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
-                                <Clock className="w-4 h-4 text-muted-foreground" />
-                              </div>
-                              <SelectValue />
-                            </div>
-                          </SelectTrigger>
-                          <SelectContent className="rounded-xl border-border/50">
-                            {SLOWMODE_OPTIONS.map((option) => (
-                              <SelectItem key={option.value} value={option.value} className="rounded-lg">
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <p className="text-xs text-muted-foreground">
-                          Members will only be able to send one message per this time period
-                        </p>
-                      </div>
-
-                      {/* Toggles */}
-                      <div className="space-y-3">
-                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          Channel Options
-                        </Label>
-
-                        <ToggleCard
-                          icon={Lock}
-                          label="Read-Only Channel"
-                          description="Only admins and moderators can send messages"
-                          checked={isReadOnly}
-                          onCheckedChange={setIsReadOnly}
-                        />
-
-                        <ToggleCard
-                          icon={AlertTriangle}
-                          label="Age-Restricted Channel"
-                          description="Mark this channel as NSFW"
-                          checked={isNsfw}
-                          onCheckedChange={setIsNsfw}
-                        />
-                      </div>
-
-                      {/* Danger Zone */}
-                      <div className="p-4 rounded-xl border border-destructive/30 bg-destructive/5 space-y-4">
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center flex-shrink-0">
-                            <Trash2 className="w-5 h-5 text-destructive" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-destructive">Danger Zone</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              Deleting a channel is irreversible. All messages will be permanently lost.
-                            </p>
-                          </div>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          className="w-full h-10 rounded-xl"
-                          onClick={() => setShowDeleteConfirm(true)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete Channel
-                        </Button>
-                      </div>
-
-                      {/* Footer */}
-                      <div className="flex gap-3 pt-4">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={handleClose}
-                          className="flex-1 h-11 rounded-xl"
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          onClick={handleSubmit}
-                          disabled={isSubmitting || !name.trim()}
-                          className="flex-1 h-11 rounded-xl"
-                        >
-                          {isSubmitting ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Saving...
-                            </>
-                          ) : (
-                            "Save Changes"
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Permissions Tab */}
-                  {activeTab === "permissions" && (
-                    <div className="p-6">
-                      {channelId && currentServer ? (
-                        <ChannelPermissionsEditor
-                          channelId={channelId}
-                          serverId={currentServer.id}
-                          onClose={handleClose}
-                        />
-                      ) : (
-                        <div className="flex flex-col items-center justify-center py-12 text-center">
-                          <div className="w-12 h-12 rounded-xl bg-secondary/80 flex items-center justify-center mb-4">
-                            <Loader2 className="w-6 h-6 text-muted-foreground animate-spin" />
-                          </div>
-                          <p className="text-sm text-muted-foreground">Loading permissions...</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                    >
+                      <Icon className="w-4 h-4" />
+                      {item.label}
+                    </button>
+                  );
+                })}
               </div>
-            </>
-          ) : null}
-        </DialogContent>
-      </Dialog>
+
+              {/* Content Area */}
+              <div className="flex-1 overflow-y-auto p-6">{renderContent()}</div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Delete confirmation dialog */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
