@@ -12,8 +12,31 @@ function AudioPlayer({ stream, muted }: { stream: MediaStream; muted: boolean })
   const ref = useRef<HTMLAudioElement | null>(null);
   useEffect(() => {
     if (!ref.current) return;
-    ref.current.srcObject = stream;
+    const el = ref.current;
+    el.srcObject = stream;
+
+    // Autoplay policies often block audio that starts asynchronously (e.g. when a remote track arrives).
+    // Best-effort: attempt to start playback when the stream is attached.
+    const tryPlay = () => {
+      // Keep mute in sync (deafen).
+      el.muted = muted;
+      const p = el.play();
+      if (p && typeof p.catch === "function") p.catch(() => {});
+    };
+
+    tryPlay();
+    el.addEventListener("canplay", tryPlay);
+    el.addEventListener("loadedmetadata", tryPlay);
+    return () => {
+      el.removeEventListener("canplay", tryPlay);
+      el.removeEventListener("loadedmetadata", tryPlay);
+    };
   }, [stream]);
+
+  useEffect(() => {
+    if (!ref.current) return;
+    ref.current.muted = muted;
+  }, [muted]);
   return <audio ref={ref} autoPlay playsInline muted={muted} />;
 }
 

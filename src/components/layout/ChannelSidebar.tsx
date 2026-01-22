@@ -41,6 +41,7 @@ import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useVoiceStore } from "@/stores/voiceStore";
+import { useVoicePresenceWatchers } from "@/hooks/useVoicePresenceWatchers";
 import { useUIStore } from "@/stores/uiStore";
 import { useUnread } from "@/hooks/useUnread";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
@@ -510,6 +511,7 @@ export const ChannelSidebar = () => {
     reorderChannels,
   } = useServerStore();
   const voicePresenceByChannel = useVoiceStore((s) => s.presenceByChannel);
+  const joinedVoiceChannelId = useVoiceStore((s) => s.joinedChannelId);
   const { openModal, openServerSettings } = useUIStore();
 
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
@@ -519,6 +521,16 @@ export const ChannelSidebar = () => {
 
   const channelIds = useMemo(() => channels.map((c) => c.id), [channels]);
   const { getChannelUnread, markAsRead } = useUnread(channelIds);
+
+  const voiceChannelIds = useMemo(() => channels.filter((c) => c.type === "voice").map((c) => c.id), [channels]);
+  // IMPORTANT: don't watch the voice channel topic we are actively joined to, otherwise we can end up with
+  // duplicate Realtime subscriptions to `voice:${channelId}` (watcher + voice join), which can cause
+  // "Voice signaling connection failed" (CHANNEL_ERROR / TIMED_OUT).
+  const watchedVoiceChannelIds = useMemo(
+    () => voiceChannelIds.filter((id) => id !== joinedVoiceChannelId),
+    [voiceChannelIds, joinedVoiceChannelId],
+  );
+  useVoicePresenceWatchers({ channelIds: watchedVoiceChannelIds, userId: user?.id ?? null });
 
   const currentMembership = useMemo(() => {
     if (!currentServer) return null;

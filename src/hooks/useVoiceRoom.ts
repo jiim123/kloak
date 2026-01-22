@@ -3,6 +3,7 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { getWebRTCIceServers } from "@/lib/webrtc";
 import { useVoiceStore } from "@/stores/voiceStore";
+import { pauseVoicePresenceWatch, resumeVoicePresenceWatch } from "@/hooks/useVoicePresenceWatchers";
 
 type VoiceRoomStatus = "idle" | "joining" | "joined" | "error";
 
@@ -69,8 +70,7 @@ export function useVoiceRoom(opts: { channelId: string | null; userId: string | 
   const { channelId, userId } = opts;
 
   const iceServers = useMemo(() => getWebRTCIceServers(), []);
-  const setPresence = useVoiceStore((s) => s.setPresence);
-  const clearPresence = useVoiceStore((s) => s.clearPresence);
+  const setJoinedChannelId = useVoiceStore((s) => s.setJoinedChannelId);
 
   const [status, setStatus] = useState<VoiceRoomStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -449,6 +449,9 @@ export function useVoiceRoom(opts: { channelId: string | null; userId: string | 
     setStatus("joining");
     setError(null);
 
+    // Avoid duplicate subscriptions to `voice:${channelId}` (sidebar watcher + voice join).
+    pauseVoicePresenceWatch(channelId);
+
     const ch = supabase.channel(`voice:${channelId}`, {
       config: {
         presence: { key: userId },
@@ -486,6 +489,7 @@ export function useVoiceRoom(opts: { channelId: string | null; userId: string | 
         } catch (e) {
           setError(e instanceof Error ? e.message : "Failed to access microphone");
           setStatus("error");
+          resumeVoicePresenceWatch(channelId);
           try {
             supabase.removeChannel(ch);
           } catch {
@@ -500,6 +504,7 @@ export function useVoiceRoom(opts: { channelId: string | null; userId: string | 
         setIsJoined(false);
         cleanupAllPeers();
         stopLocalStreams();
+        resumeVoicePresenceWatch(channelId);
       }
     });
   }, [
@@ -517,6 +522,8 @@ export function useVoiceRoom(opts: { channelId: string | null; userId: string | 
   const leave = useCallback(async () => {
     const ch = channelRef.current;
     if (!ch) return;
+
+    if (channelId) resumeVoicePresenceWatch(channelId);
 
     // Invalidate any pending subscribe callbacks.
     joinTokenRef.current += 1;
@@ -541,7 +548,17 @@ export function useVoiceRoom(opts: { channelId: string | null; userId: string | 
     setParticipants({});
     setRemoteMedia({});
     setSharing(false);
-  }, [cleanupAllPeers, stopLocalStreams]);
+  }, [channelId, cleanupAllPeers, stopLocalStreams]);
+
+  // Track which voice channel we are actually joined to (global), so the sidebar can avoid
+  // duplicating Realtime subscriptions for that one channel while still showing presence for others.
+  useEffect(() => {
+    if (!channelId || !userId) {
+      setJoinedChannelId(null);
+      return;
+    }
+    setJoinedChannelId(isJoined ? channelId : null);
+  }, [channelId, isJoined, setJoinedChannelId, userId]);
 
   // Keep presence meta in sync with local UI toggles.
   useEffect(() => {
@@ -558,15 +575,9 @@ export function useVoiceRoom(opts: { channelId: string | null; userId: string | 
     });
   }, [muted, deafened]);
 
-  // Publish presence to sidebar (local-only) so ChannelSidebar can show connected users.
-  useEffect(() => {
-    if (!channelId) return;
-    if (!isJoined) {
-      clearPresence(channelId);
-      return;
-    }
-    setPresence(channelId, Object.keys(participants));
-  }, [channelId, clearPresence, isJoined, participants, setPresence]);
+  // NOTE: Do not write to the global sidebar presence store from here.
+  // Presence for the sidebar is driven by lightweight presence subscriptions (watchers) so it works
+  // even when you are not on the voice channel page.
 
   // Auto-leave if channel changes while joined.
   useEffect(() => {
