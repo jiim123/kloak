@@ -1,7 +1,19 @@
 import { useState, useMemo, useCallback, useRef, useEffect, useLayoutEffect, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ChevronDown, ChevronRight, Hash, Volume2, Settings, Plus, LogOut, UserPlus, FolderPlus, Info, Users } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Hash,
+  Volume2,
+  Settings,
+  Plus,
+  LogOut,
+  UserPlus,
+  FolderPlus,
+  Info,
+  Users,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   DndContext,
@@ -268,6 +280,8 @@ const CategoryContent = ({
   isAdmin,
   onSelectChannel,
   onEditChannel,
+  voicePresenceByChannel,
+  resolveUser,
 }: {
   channels: Channel[];
   currentChannelId: string | undefined;
@@ -275,6 +289,8 @@ const CategoryContent = ({
   isAdmin: boolean;
   onSelectChannel: (channel: Channel) => void;
   onEditChannel: (channelId: string) => void;
+  voicePresenceByChannel: Record<string, string[]>;
+  resolveUser: (userId: string) => { avatarUser?: any; label: string };
 }) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState<number>(0);
@@ -363,6 +379,8 @@ const SortableCategory = ({
   onAddChannel,
   onEditChannel,
   isDragOver,
+  voicePresenceByChannel,
+  resolveUser,
 }: {
   category: ChannelCategory;
   channels: Channel[];
@@ -375,6 +393,8 @@ const SortableCategory = ({
   onAddChannel: () => void;
   onEditChannel: (channelId: string) => void;
   isDragOver?: boolean;
+  voicePresenceByChannel: Record<string, string[]>;
+  resolveUser: (userId: string) => { avatarUser?: any; label: string };
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: category.id,
@@ -464,6 +484,8 @@ const SortableCategory = ({
             isAdmin={isAdmin}
             onSelectChannel={onSelectChannel}
             onEditChannel={onEditChannel}
+            voicePresenceByChannel={voicePresenceByChannel}
+            resolveUser={resolveUser}
           />
         )}
       </AnimatePresence>
@@ -581,10 +603,8 @@ export const ChannelSidebar = () => {
     [setCurrentChannel, markAsRead, currentServer, navigate],
   );
 
-  const isOverviewActive =
-    !!currentServer && location.pathname === `/app/servers/${currentServer.id}/overview`;
-  const isMembersActive =
-    !!currentServer && location.pathname === `/app/servers/${currentServer.id}/members`;
+  const isOverviewActive = !!currentServer && location.pathname === `/app/servers/${currentServer.id}/overview`;
+  const isMembersActive = !!currentServer && location.pathname === `/app/servers/${currentServer.id}/members`;
 
   const handleSelectOverview = () => {
     if (!currentServer) return;
@@ -1015,6 +1035,8 @@ export const ChannelSidebar = () => {
                     onAddChannel={() => openModal("create-channel", { categoryId: category.id })}
                     onEditChannel={(channelId) => openModal("edit-channel", { channelId })}
                     isDragOver={overCategoryId === category.id && activeType === "channel"}
+                    voicePresenceByChannel={voicePresenceByChannel}
+                    resolveUser={resolveUser}
                   />
                 ))}
               </SortableContext>
