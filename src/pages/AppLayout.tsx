@@ -37,7 +37,7 @@ import { DesktopTitleBar } from '@/components/layout/DesktopTitleBar';
 import { cn } from '@/lib/utils';
 import { useDMStore } from '@/stores/dmStore';
 import { supabase } from '@/integrations/supabase/client';
-import { usePresence, useRealtimeFriendships, useRealtimeUsers, useRealtimeServer, useRealtimeNotifications, useRealtimeDMs, useUnreadDMs, useRealtimeMessages, useRealtimeReactions, useTauriNotificationActions } from '@/hooks';
+import { usePresence, useRealtimeFriendships, useRealtimeUsers, useRealtimeServer, useRealtimeNotifications, useRealtimeDMs, useUnreadDMs, useRealtimeMessages, useRealtimeReactions, useTauriNotificationActions, useRealtimeOwnMembership } from '@/hooks';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useBackgroundSync } from '@/hooks/useBackgroundSync';
 import { usePreferencesSync } from '@/hooks/usePreferencesSync';
@@ -140,6 +140,9 @@ const AppLayout = () => {
   useRealtimeServer(currentServer?.id || null);
   useRealtimeNotifications(user?.id || null);
   usePresence();
+  
+  // Listen for own membership changes (kicks/bans)
+  useRealtimeOwnMembership();
 
   // Real-time channel messages and reactions - at app level for stability
   useRealtimeMessages(currentChannel?.id || null);
