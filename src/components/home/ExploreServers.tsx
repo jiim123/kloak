@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Users } from 'lucide-react';
+import { Search, Users, Compass } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import { useServerStore } from '@/stores/serverStore';
@@ -108,29 +109,140 @@ export const ExploreServers = () => {
       </div>
 
       {/* Main content */}
-      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-6 space-y-5">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search servers"
-            className="pl-9 h-10 bg-secondary/50 border-0"
+      <div className="flex-1 overflow-y-auto">
+        {/* Hero Section */}
+        <div className="relative overflow-hidden border-b border-border/50">
+          {/* Background Image */}
+          <div 
+            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+            style={{
+              backgroundImage: 'url(https://images.unsplash.com/photo-1558844109-f45f2d162527?q=80&w=1317&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D)'
+            }}
           />
+          
+          {/* Dark Overlay for Text Readability */}
+          <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/70 to-background/60" />
+          
+          {/* Subtle Primary Overlay */}
+          <div className="absolute inset-0 bg-primary/5" />
+
+          {/* Hero Content */}
+          <div className="relative px-4 py-6 md:py-8 min-h-[200px] md:min-h-[220px] flex items-center">
+            <div className="max-w-4xl mx-auto w-full">
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="text-center space-y-4"
+              >
+                {/* Icon and Title Row */}
+                <div className="flex items-center justify-center gap-3">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.4, delay: 0.1 }}
+                    className="inline-flex items-center justify-center p-2 rounded-xl bg-background/80 backdrop-blur-md border border-primary/30 shadow-lg"
+                  >
+                    <Compass className="w-5 h-5 md:w-6 md:h-6 text-primary" />
+                  </motion.div>
+                  <motion.h1
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                    className="text-2xl md:text-3xl font-bold tracking-tight text-foreground drop-shadow-lg"
+                  >
+                    Discover{' '}
+                    <span className="text-primary relative inline-block drop-shadow-md">
+                      Communities
+                      <motion.span
+                        className="absolute -bottom-0.5 left-0 right-0 h-0.5 bg-primary/50 rounded-full"
+                        initial={{ scaleX: 0 }}
+                        animate={{ scaleX: 1 }}
+                        transition={{ duration: 0.6, delay: 0.5 }}
+                      />
+                    </span>
+                  </motion.h1>
+                </div>
+
+                {/* Description */}
+                <motion.p
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.3 }}
+                  className="text-sm md:text-base text-foreground/90 max-w-xl mx-auto drop-shadow-md"
+                >
+                  Explore public servers and join communities that match your interests
+                </motion.p>
+
+                {/* Search Bar */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.4 }}
+                  className="relative max-w-xl mx-auto pt-2"
+                >
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
+                  <Input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search servers"
+                    className="pl-9 h-10 bg-background/80 backdrop-blur-md border border-border/50 shadow-lg"
+                  />
+                </motion.div>
+              </motion.div>
+            </div>
+          </div>
         </div>
 
+        {/* Server Grid */}
+        <div className="px-4 pb-6 pt-5 space-y-5">
+
         {isLoading ? (
-          <div className="text-sm text-muted-foreground">Loading public servers…</div>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-sm text-muted-foreground text-center py-8"
+          >
+            <div className="inline-flex items-center gap-2">
+              <motion.div
+                className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              />
+              <span>Loading public servers…</span>
+            </div>
+          </motion.div>
         ) : filtered.length === 0 ? (
-          <div className="text-sm text-muted-foreground">No public servers found.</div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center py-12 space-y-3"
+          >
+            <div className="inline-flex items-center justify-center p-3 rounded-full bg-muted/50">
+              <Compass className="w-6 h-6 text-muted-foreground" />
+            </div>
+            <p className="text-sm text-muted-foreground">No public servers found.</p>
+            {query && (
+              <p className="text-xs text-muted-foreground/70">Try a different search term</p>
+            )}
+          </motion.div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {filtered.map((s) => {
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.6 }}
+            className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+          >
+            {filtered.map((s, index) => {
               const joined = myServerIds.has(s.id);
               return (
-                <div
+                <motion.div
                   key={s.id}
-                  className="rounded-xl border border-border bg-card/40 overflow-hidden"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: index * 0.05 }}
+                  whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                  className="rounded-xl border border-border bg-card/40 overflow-hidden hover:bg-card/60 transition-colors cursor-pointer group"
                 >
                   {s.banner_url ? (
                     <div className="h-28 w-full overflow-hidden bg-secondary">
@@ -191,11 +303,12 @@ export const ExploreServers = () => {
                       </div>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               );
             })}
-          </div>
+          </motion.div>
         )}
+        </div>
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Check, X, MessageSquare, MoreHorizontal, UserPlus, Ban, UserX, Users, Search, Inbox, Info } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,6 +47,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
   const [addFriendInput, setAddFriendInput] = useState('');
   const [isAddingFriend, setIsAddingFriend] = useState(false);
   const [showAddFriend, setShowAddFriend] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (user?.id) {
@@ -58,6 +60,37 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
     return !presence.isOffline;
   });
   const allFriends = friends;
+
+  // Filter function for users
+  const filterUser = (user: FriendWithUser, query: string) => {
+    if (!query.trim()) return true;
+    const q = query.toLowerCase();
+    const displayName = (user.display_name || '').toLowerCase();
+    const username = (user.username || '').toLowerCase();
+    return displayName.includes(q) || username.includes(q);
+  };
+
+  // Filtered lists based on search query (memoized for performance)
+  const filteredOnlineFriends = useMemo(() => 
+    onlineFriends.filter((f) => filterUser(f, searchQuery)),
+    [onlineFriends, searchQuery]
+  );
+  const filteredAllFriends = useMemo(() => 
+    allFriends.filter((f) => filterUser(f, searchQuery)),
+    [allFriends, searchQuery]
+  );
+  const filteredPendingRequests = useMemo(() => 
+    pendingRequests.filter((r) => filterUser(r, searchQuery)),
+    [pendingRequests, searchQuery]
+  );
+  const filteredOutgoingRequests = useMemo(() => 
+    outgoingRequests.filter((r) => filterUser(r, searchQuery)),
+    [outgoingRequests, searchQuery]
+  );
+  const filteredBlockedUsers = useMemo(() => 
+    blockedUsers.filter((b) => filterUser(b, searchQuery)),
+    [blockedUsers, searchQuery]
+  );
 
   const handleSendRequest = async () => {
     if (!user?.id || !addFriendInput.trim()) return;
@@ -266,18 +299,106 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
         </Button>
       </div>
 
-      {/* Mobile add friend button */}
-      <div className="md:hidden p-2 border-b border-border">
-        <Button
-          size="sm"
-          variant={showAddFriend ? "secondary" : "default"}
-          onClick={() => setShowAddFriend(!showAddFriend)}
-          className="w-full gap-2"
-        >
-          <UserPlus className="w-4 h-4" />
-          Add Friend
-        </Button>
-      </div>
+      {/* Main content */}
+      <div className="flex-1 overflow-y-auto">
+        {/* Hero Section */}
+        <div className="relative overflow-hidden border-b border-border/50">
+          {/* Background Image */}
+          <div 
+            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+            style={{
+              backgroundImage: 'url(https://images.unsplash.com/photo-1558844109-f45f2d162527?q=80&w=1317&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D)'
+            }}
+          />
+          
+          {/* Dark Overlay for Text Readability */}
+          <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/70 to-background/60" />
+          
+          {/* Subtle Primary Overlay */}
+          <div className="absolute inset-0 bg-primary/5" />
+
+          {/* Hero Content */}
+          <div className="relative px-4 py-6 md:py-8 min-h-[200px] md:min-h-[220px] flex items-center">
+            <div className="max-w-4xl mx-auto w-full">
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="text-center space-y-4"
+              >
+                {/* Icon and Title Row */}
+                <div className="flex items-center justify-center gap-3">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.4, delay: 0.1 }}
+                    className="inline-flex items-center justify-center p-2 rounded-xl bg-background/80 backdrop-blur-md border border-primary/30 shadow-lg"
+                  >
+                    <Users className="w-5 h-5 md:w-6 md:h-6 text-primary" />
+                  </motion.div>
+                  <motion.h1
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                    className="text-2xl md:text-3xl font-bold tracking-tight text-foreground drop-shadow-lg"
+                  >
+                    Connect with{' '}
+                    <span className="text-primary relative inline-block drop-shadow-md">
+                      Friends
+                      <motion.span
+                        className="absolute -bottom-0.5 left-0 right-0 h-0.5 bg-primary/50 rounded-full"
+                        initial={{ scaleX: 0 }}
+                        animate={{ scaleX: 1 }}
+                        transition={{ duration: 0.6, delay: 0.5 }}
+                      />
+                    </span>
+                  </motion.h1>
+                </div>
+
+                {/* Description */}
+                <motion.p
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.3 }}
+                  className="text-sm md:text-base text-foreground/90 max-w-xl mx-auto drop-shadow-md"
+                >
+                  Stay in touch with the people who matter most
+                </motion.p>
+
+                {/* Search Bar */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.4 }}
+                  className="relative max-w-xl mx-auto pt-2"
+                >
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
+                  <Input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search friends..."
+                    className="pl-9 h-10 bg-background/80 backdrop-blur-md border border-border/50 shadow-lg"
+                  />
+                </motion.div>
+              </motion.div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content Section */}
+        <div className="flex flex-col">
+          {/* Mobile add friend button */}
+          <div className="md:hidden p-2 border-b border-border">
+            <Button
+              size="sm"
+              variant={showAddFriend ? "secondary" : "default"}
+              onClick={() => setShowAddFriend(!showAddFriend)}
+              className="w-full gap-2"
+            >
+              <UserPlus className="w-4 h-4" />
+              Add Friend
+            </Button>
+          </div>
 
       {/* Add Friend Form */}
       {showAddFriend && (
@@ -311,20 +432,20 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
             <TabsTrigger value="online">
               Online
               {onlineFriends.length > 0 && (
-                <span className="ml-1.5 text-xs">— {onlineFriends.length}</span>
+                <span className="ml-1.5 text-xs">— {searchQuery ? filteredOnlineFriends.length : onlineFriends.length}</span>
               )}
             </TabsTrigger>
             <TabsTrigger value="all">
               All
               {allFriends.length > 0 && (
-                <span className="ml-1.5 text-xs">— {allFriends.length}</span>
+                <span className="ml-1.5 text-xs">— {searchQuery ? filteredAllFriends.length : allFriends.length}</span>
               )}
             </TabsTrigger>
             <TabsTrigger value="pending">
               Pending
               {(pendingRequests.length + outgoingRequests.length) > 0 && (
                 <span className="ml-1.5 text-xs bg-destructive text-destructive-foreground px-1.5 py-0.5 rounded-full">
-                  {pendingRequests.length + outgoingRequests.length}
+                  {searchQuery ? filteredPendingRequests.length + filteredOutgoingRequests.length : pendingRequests.length + outgoingRequests.length}
                 </span>
               )}
             </TabsTrigger>
@@ -341,19 +462,25 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
                 <FriendItemSkeleton />
                 <FriendItemSkeleton />
               </div>
-            ) : onlineFriends.length === 0 ? (
+            ) : filteredOnlineFriends.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
                   <Users className="w-8 h-8 text-muted-foreground" />
                 </div>
-                <h3 className="font-medium text-foreground mb-1">No one's around...</h3>
+                <h3 className="font-medium text-foreground mb-1">
+                  {searchQuery ? 'No matches found' : "No one's around..."}
+                </h3>
                 <p className="text-sm text-muted-foreground">
-                  {friends.length > 0 ? 'None of your friends are online right now.' : 'Add some friends to see who\'s online!'}
+                  {searchQuery 
+                    ? 'Try a different search term' 
+                    : friends.length > 0 
+                      ? 'None of your friends are online right now.' 
+                      : 'Add some friends to see who\'s online!'}
                 </p>
               </div>
             ) : (
               <div className="space-y-1">
-                {onlineFriends.map((friend) => (
+                {filteredOnlineFriends.map((friend) => (
                   <FriendItem key={friend.id} friend={friend} />
                 ))}
               </div>
@@ -367,23 +494,29 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
                 <FriendItemSkeleton />
                 <FriendItemSkeleton />
               </div>
-            ) : allFriends.length === 0 ? (
+            ) : filteredAllFriends.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
                   <UserPlus className="w-8 h-8 text-muted-foreground" />
                 </div>
-                <h3 className="font-medium text-foreground mb-1">No friends yet</h3>
+                <h3 className="font-medium text-foreground mb-1">
+                  {searchQuery ? 'No matches found' : 'No friends yet'}
+                </h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Wumpus is waiting for you to add a friend!
+                  {searchQuery 
+                    ? 'Try a different search term' 
+                    : 'Wumpus is waiting for you to add a friend!'}
                 </p>
-                <Button onClick={() => setShowAddFriend(true)} className="gap-2">
-                  <UserPlus className="w-4 h-4" />
-                  Add Friend
-                </Button>
+                {!searchQuery && (
+                  <Button onClick={() => setShowAddFriend(true)} className="gap-2">
+                    <UserPlus className="w-4 h-4" />
+                    Add Friend
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="space-y-1">
-                {allFriends.map((friend) => (
+                {filteredAllFriends.map((friend) => (
                   <FriendItem key={friend.id} friend={friend} />
                 ))}
               </div>
@@ -391,22 +524,24 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
           </TabsContent>
 
           <TabsContent value="pending" className="m-0">
-            {pendingRequests.length === 0 && outgoingRequests.length === 0 ? (
+            {filteredPendingRequests.length === 0 && filteredOutgoingRequests.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
                   <Inbox className="w-8 h-8 text-muted-foreground" />
                 </div>
-                <h3 className="font-medium text-foreground mb-1">No pending requests</h3>
+                <h3 className="font-medium text-foreground mb-1">
+                  {searchQuery ? 'No matches found' : 'No pending requests'}
+                </h3>
                 <p className="text-sm text-muted-foreground">
-                  Friend requests will appear here.
+                  {searchQuery ? 'Try a different search term' : 'Friend requests will appear here.'}
                 </p>
               </div>
             ) : (
               <div className="space-y-1">
-                {pendingRequests.map((request) => (
+                {filteredPendingRequests.map((request) => (
                   <PendingItem key={request.id} request={request} isOutgoing={false} />
                 ))}
-                {outgoingRequests.map((request) => (
+                {filteredOutgoingRequests.map((request) => (
                   <PendingItem key={request.id} request={request} isOutgoing />
                 ))}
               </div>
@@ -414,19 +549,21 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
           </TabsContent>
 
           <TabsContent value="blocked" className="m-0">
-            {blockedUsers.length === 0 ? (
+            {filteredBlockedUsers.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
                   <Ban className="w-8 h-8 text-muted-foreground" />
                 </div>
-                <h3 className="font-medium text-foreground mb-1">No blocked users</h3>
+                <h3 className="font-medium text-foreground mb-1">
+                  {searchQuery ? 'No matches found' : 'No blocked users'}
+                </h3>
                 <p className="text-sm text-muted-foreground">
-                  You haven't blocked anyone.
+                  {searchQuery ? 'Try a different search term' : "You haven't blocked anyone."}
                 </p>
               </div>
             ) : (
               <div className="space-y-1">
-                {blockedUsers.map((blocked) => (
+                {filteredBlockedUsers.map((blocked) => (
                   <BlockedItem key={blocked.id} blocked={blocked} />
                 ))}
               </div>
@@ -487,6 +624,8 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
           </TabsContent>
         </div>
       </Tabs>
+        </div>
+      </div>
     </div>
   );
 };
