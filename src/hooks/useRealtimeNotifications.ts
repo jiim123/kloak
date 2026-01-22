@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNotificationStore } from '@/stores/notificationStore';
+import { useServerStore } from '@/stores/serverStore';
 import { useUIStore } from '@/stores/uiStore';
 import type { Notification } from '@/types';
 import { isTauri } from '@/lib/tauriRuntime';
@@ -27,6 +28,12 @@ export const useRealtimeNotifications = (userId: string | null) => {
         (payload) => {
           const notification = payload.new as Notification;
           addNotification(notification);
+          
+          // Handle kick/ban notifications - refresh server list immediately
+          if (notification.title === 'You have been kicked' || notification.title === 'You have been banned') {
+            // Refresh servers list to remove the server user was kicked/banned from
+            useServerStore.getState().fetchServers(userId);
+          }
           
           // Show desktop notification if permitted
           void showDesktopNotification(notification);
