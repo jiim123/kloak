@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
 import { inviteCodeRateLimiter } from '@/lib/security';
+import { useAuthStore } from './authStore';
 import type {
   Server,
   ServerWithMembership,
@@ -804,39 +805,49 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }
   },
 
-  kickMember: async (serverId: string, userId: string) => {
+  kickMember: async (serverId: string, targetUserId: string) => {
     try {
-      const { error } = await supabase
-        .from('server_members')
-        .delete()
-        .eq('server_id', serverId)
-        .eq('user_id', userId);
+      // Get current user from auth store to pass as the kicker
+      const currentUserId = useAuthStore.getState().user?.id;
+      if (!currentUserId) throw new Error('Not authenticated');
+
+      const { error } = await supabase.rpc('kick_member', {
+        _server_id: serverId,
+        _user_id: currentUserId,
+        _target_user_id: targetUserId,
+      });
 
       if (error) throw error;
 
       set((state) => ({
-        members: state.members.filter((m) => m.user_id !== userId),
+        members: state.members.filter((m) => m.user_id !== targetUserId),
       }));
     } catch (error) {
       console.error('Failed to kick member:', error);
+      throw error;
     }
   },
 
-  banMember: async (serverId: string, userId: string) => {
+  banMember: async (serverId: string, targetUserId: string) => {
     try {
-      const { error } = await supabase
-        .from('server_members')
-        .update({ is_banned: true })
-        .eq('server_id', serverId)
-        .eq('user_id', userId);
+      // Get current user from auth store to pass as the banner
+      const currentUserId = useAuthStore.getState().user?.id;
+      if (!currentUserId) throw new Error('Not authenticated');
+
+      const { error } = await supabase.rpc('ban_member', {
+        _server_id: serverId,
+        _user_id: currentUserId,
+        _target_user_id: targetUserId,
+      });
 
       if (error) throw error;
 
       set((state) => ({
-        members: state.members.filter((m) => m.user_id !== userId),
+        members: state.members.filter((m) => m.user_id !== targetUserId),
       }));
     } catch (error) {
       console.error('Failed to ban member:', error);
+      throw error;
     }
   },
 
