@@ -24,7 +24,7 @@ interface MessageState {
   setCurrentChannel: (channelId: string | null) => void;
 
   // Fetch actions
-  fetchMessages: (channelId: string, limit?: number, before?: string, force?: boolean) => Promise<void>;
+  fetchMessages: (channelId: string, limit?: number, before?: string, force?: boolean, silent?: boolean) => Promise<void>;
 
   // Message actions
   sendMessage: (channelId: string, userId: string, content: string, replyToId?: string) => Promise<Message | null>;
@@ -103,7 +103,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     set({ currentChannelId: channelId, replyingTo: null });
   },
 
-  fetchMessages: async (channelId: string, limit = 50, before?: string, force = false) => {
+  fetchMessages: async (channelId: string, limit = 50, before?: string, force = false, silent = false) => {
     const { messagesByChannel } = get();
     const cached = messagesByChannel[channelId];
     
@@ -115,7 +115,10 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       }
     }
 
-    set({ isLoading: true });
+    // Only show loading indicator if not silent and (no messages yet or paginating)
+    if (!silent && (!cached || cached.messages.length === 0 || before)) {
+      set({ isLoading: true });
+    }
 
     try {
       let query = supabase
@@ -186,7 +189,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
                 lastFetched: existingCache.lastFetched,
               },
             },
-            isLoading: false,
+            isLoading: silent ? state.isLoading : false,
           };
         } else {
           // Fresh fetch - replace cache
@@ -199,13 +202,16 @@ export const useMessageStore = create<MessageState>((set, get) => ({
                 lastFetched: Date.now(),
               },
             },
-            isLoading: false,
+            isLoading: silent ? state.isLoading : false,
           };
         }
       });
     } catch (error) {
       console.error('Failed to fetch messages:', error);
-      set({ isLoading: false });
+      // Only clear loading if we set it (not in silent mode)
+      if (!silent) {
+        set({ isLoading: false });
+      }
     }
   },
 

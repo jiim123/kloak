@@ -134,8 +134,14 @@ export const CreateServerModal = () => {
           }
         }
         
+        // Set default banner for new servers
+        await updateServer(server.id, user.id, { banner_url: '/default_server_banner.png' });
+        
+        // Create server object with default banner
+        const serverWithBanner = { ...server, banner_url: '/default_server_banner.png' };
+        
         toast.success(`Server "${server.name}" created!`);
-        setCurrentServer(server);
+        setCurrentServer(serverWithBanner);
         await fetchChannels(server.id);
         navigate(`/app/servers/${server.id}`);
         handleClose();

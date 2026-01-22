@@ -112,14 +112,43 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   }, [channelId]);
 
   // Reconcile after sleep/background: refetch latest when app regains focus/visibility.
-  // This avoids "stale cache" situations where realtime missed events but cache prevents refetch.
+  // This ensures we catch any messages that realtime subscriptions might have missed
+  // when the tab was hidden (browsers throttle/pause WebSocket connections in hidden tabs).
+  // We always refetch, but silently (no loading indicator) if we already have messages.
+  const hiddenTimeRef = useRef<number | null>(null);
+  const isRefetchingRef = useRef(false);
+  
   useEffect(() => {
     const handleFocus = () => {
-      fetchMessages(channelId, 50, undefined, true);
+      // Always refetch when tab regains focus to catch missed realtime messages
+      // But only if we're not already refetching
+      if (!isRefetchingRef.current) {
+        isRefetchingRef.current = true;
+        // Silent refetch if we already have messages (no loading indicator)
+        const hasMessages = messages.length > 0;
+        fetchMessages(channelId, 50, undefined, true, hasMessages).finally(() => {
+          isRefetchingRef.current = false;
+        });
+      }
+      hiddenTimeRef.current = null;
     };
+    
     const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        fetchMessages(channelId, 50, undefined, true);
+      if (document.visibilityState === "hidden") {
+        // Track when tab becomes hidden
+        hiddenTimeRef.current = Date.now();
+      } else if (document.visibilityState === "visible") {
+        // Always refetch when tab becomes visible to catch missed realtime messages
+        // This ensures users see all messages even if realtime subscriptions were paused
+        if (!isRefetchingRef.current) {
+          isRefetchingRef.current = true;
+          // Silent refetch if we already have messages (no loading indicator)
+          const hasMessages = messages.length > 0;
+          fetchMessages(channelId, 50, undefined, true, hasMessages).finally(() => {
+            isRefetchingRef.current = false;
+          });
+        }
+        hiddenTimeRef.current = null;
       }
     };
 
@@ -129,7 +158,7 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
       window.removeEventListener("focus", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [channelId, fetchMessages]);
+  }, [channelId, fetchMessages, messages.length]);
 
   // Auto-scroll when new messages arrive (if near bottom)
   useEffect(() => {

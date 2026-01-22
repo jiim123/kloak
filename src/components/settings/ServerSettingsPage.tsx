@@ -154,7 +154,7 @@ const parseColorValue = (colorValue: string): { type: 'solid' | 'gradient'; colo
 };
 
 export const ServerSettingsPage = () => {
-  const { closeServerSettings } = useUIStore();
+  const { closeServerSettings, isServerSettingsOpen } = useUIStore();
   const { 
     currentServer, 
     servers, 
@@ -345,6 +345,25 @@ export const ServerSettingsPage = () => {
 
   // Real-time members updates
   useRealtimeMembers(server ? server.id : null);
+
+  // Track the server ID when settings open to detect server switches
+  const initialServerIdRef = useRef<string | null>(null);
+  
+  useEffect(() => {
+    if (isServerSettingsOpen && currentServer) {
+      if (initialServerIdRef.current === null) {
+        // First time opening settings - store the server ID
+        initialServerIdRef.current = currentServer.id;
+      } else if (initialServerIdRef.current !== currentServer.id) {
+        // Server changed while settings are open - close settings
+        closeServerSettings();
+        initialServerIdRef.current = null;
+      }
+    } else if (!isServerSettingsOpen) {
+      // Settings closed - reset the tracked server ID
+      initialServerIdRef.current = null;
+    }
+  }, [currentServer, isServerSettingsOpen, closeServerSettings]);
 
   // Fetch members and roles when page opens
   useEffect(() => {
