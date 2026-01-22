@@ -89,6 +89,7 @@ export interface Server {
   icon_url: string | null;
   banner_url: string | null;
   is_published: boolean;
+  about: string | null;
   owner_id: string;
   invite_code: string;
   created_at: string;

@@ -381,19 +381,19 @@ const AppLayout = () => {
                 </div>
 
                 {/* Main area - flexible */}
-                <div className="flex-1 min-w-0 bg-layout-chat relative">
+                <div className="flex-1 min-w-0 bg-layout-chat relative overflow-hidden">
                   {isDMView ? (
                     currentConversation ? (
                       <DMChatArea />
                     ) : (
                       <>
-                        <div className={showFriends ? 'block' : 'hidden'}>
+                        <div className={showFriends ? 'block h-full' : 'hidden'}>
                           <FriendsList onOpenDM={() => navigate('/app')} />
                         </div>
-                        <div className={showExplore ? 'block' : 'hidden'}>
+                        <div className={showExplore ? 'block h-full' : 'hidden'}>
                           <ExploreServers />
                         </div>
-                        <div className={!showFriends && !showExplore ? 'block' : 'hidden'}>
+                        <div className={!showFriends && !showExplore ? 'block h-full' : 'hidden'}>
                           <HomeLanding />
                         </div>
                       </>

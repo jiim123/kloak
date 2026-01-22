@@ -72,6 +72,13 @@ export const ServerOverviewView = () => {
           </div>
         </div>
 
+        {currentServer.about && (
+          <div className="rounded-2xl border border-border/50 bg-background/40 p-5">
+            <div className="text-sm font-medium mb-2">About</div>
+            <div className="text-sm text-muted-foreground whitespace-pre-wrap">{currentServer.about}</div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="rounded-2xl border border-border/50 bg-background/40 p-5">
             <div className="flex items-center gap-2 text-sm font-medium">

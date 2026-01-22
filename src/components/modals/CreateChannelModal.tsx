@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUIStore } from "@/stores/uiStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -25,6 +25,18 @@ export const CreateChannelModal = () => {
 
   const isOpen = activeModal === "create-channel";
   const presetCategoryId = modalData?.categoryId as string | undefined;
+  const isCategory = modalData?.isCategory as boolean | undefined;
+
+  // Set mode based on modalData when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      if (isCategory === true) {
+        setMode("category");
+      } else {
+        setMode("channel");
+      }
+    }
+  }, [isOpen, isCategory]);
 
   const handleClose = () => {
     setName("");

@@ -769,32 +769,32 @@ export const ChannelSidebar = () => {
           </DropdownMenuTrigger>
 
           <DropdownMenuContent
-            className="w-64 p-2 rounded-xl border-border/50 bg-popover/95 backdrop-blur-xl shadow-xl"
+            className="w-56 p-1.5 rounded-xl border-border/50 bg-popover/95 backdrop-blur-xl shadow-xl"
             align="start"
             sideOffset={4}
           >
             {/* Invite People */}
             <DropdownMenuItem
               onClick={() => openModal("invite", { serverId: currentServer.id })}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer hover:bg-secondary/60 focus:bg-secondary/80 transition-colors"
+              className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-secondary/60 focus:bg-secondary/80 transition-colors"
             >
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <UserPlus className="w-4 h-4 text-primary" />
+              <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <UserPlus className="w-3.5 h-3.5 text-primary" />
               </div>
               <span className="text-sm font-medium">Invite People</span>
             </DropdownMenuItem>
 
             {canSeeServerSettings && (
               <>
-                <DropdownMenuSeparator className="my-2 bg-border/50" />
+                <DropdownMenuSeparator className="my-1 bg-border/50" />
 
                 {/* Server Settings */}
                 <DropdownMenuItem
                   onClick={() => openServerSettings()}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer hover:bg-secondary/60 focus:bg-secondary/80 transition-colors"
+                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-secondary/60 focus:bg-secondary/80 transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-lg bg-secondary/80 flex items-center justify-center flex-shrink-0">
-                    <Settings className="w-4 h-4 text-muted-foreground" />
+                  <div className="w-6 h-6 rounded-lg bg-secondary/80 flex items-center justify-center flex-shrink-0">
+                    <Settings className="w-3.5 h-3.5 text-muted-foreground" />
                   </div>
                   <span className="text-sm font-medium">Server Settings</span>
                 </DropdownMenuItem>
@@ -804,10 +804,10 @@ export const ChannelSidebar = () => {
                     {/* Create Channel */}
                     <DropdownMenuItem
                       onClick={() => openModal("create-channel", { serverId: currentServer.id })}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer hover:bg-secondary/60 focus:bg-secondary/80 transition-colors"
+                      className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-secondary/60 focus:bg-secondary/80 transition-colors"
                     >
-                      <div className="w-8 h-8 rounded-lg bg-secondary/80 flex items-center justify-center flex-shrink-0">
-                        <Hash className="w-4 h-4 text-muted-foreground" />
+                      <div className="w-6 h-6 rounded-lg bg-secondary/80 flex items-center justify-center flex-shrink-0">
+                        <Hash className="w-3.5 h-3.5 text-muted-foreground" />
                       </div>
                       <span className="text-sm font-medium">Create Channel</span>
                     </DropdownMenuItem>
@@ -815,10 +815,10 @@ export const ChannelSidebar = () => {
                     {/* Create Category */}
                     <DropdownMenuItem
                       onClick={() => openModal("create-channel", { serverId: currentServer.id, isCategory: true })}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer hover:bg-secondary/60 focus:bg-secondary/80 transition-colors"
+                      className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-secondary/60 focus:bg-secondary/80 transition-colors"
                     >
-                      <div className="w-8 h-8 rounded-lg bg-secondary/80 flex items-center justify-center flex-shrink-0">
-                        <FolderPlus className="w-4 h-4 text-muted-foreground" />
+                      <div className="w-6 h-6 rounded-lg bg-secondary/80 flex items-center justify-center flex-shrink-0">
+                        <FolderPlus className="w-3.5 h-3.5 text-muted-foreground" />
                       </div>
                       <span className="text-sm font-medium">Create Category</span>
                     </DropdownMenuItem>
@@ -829,15 +829,15 @@ export const ChannelSidebar = () => {
 
             {!isOwner && (
               <>
-                <DropdownMenuSeparator className="my-2 bg-border/50" />
+                <DropdownMenuSeparator className="my-1 bg-border/50" />
 
                 {/* Leave Server */}
                 <DropdownMenuItem
                   onClick={handleLeaveServer}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-destructive hover:bg-destructive/10 focus:text-destructive focus:bg-destructive/10 transition-colors"
+                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer text-destructive hover:bg-destructive/10 focus:text-destructive focus:bg-destructive/10 transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center flex-shrink-0">
-                    <LogOut className="w-4 h-4" />
+                  <div className="w-6 h-6 rounded-lg bg-destructive/10 flex items-center justify-center flex-shrink-0">
+                    <LogOut className="w-3.5 h-3.5" />
                   </div>
                   <span className="text-sm font-medium">Leave Server</span>
                 </DropdownMenuItem>

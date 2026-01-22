@@ -40,6 +40,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useUIStore } from '@/stores/uiStore';
@@ -95,6 +96,11 @@ const serverSettingsSchema = z.object({
     .trim()
     .min(1, 'Server name is required')
     .max(100, 'Server name must be less than 100 characters'),
+  about: z.string()
+    .trim()
+    .max(500, 'About server must be less than 500 characters')
+    .optional()
+    .nullable(),
 });
 
 type ServerSettingsForm = z.infer<typeof serverSettingsSchema>;
@@ -340,7 +346,7 @@ export const ServerSettingsPage = () => {
     reset,
   } = useForm<ServerSettingsForm>({
     resolver: zodResolver(serverSettingsSchema),
-    defaultValues: { name: server?.name || '' },
+    defaultValues: { name: server?.name || '', about: server?.about || '' },
   });
 
   // Real-time members updates
@@ -370,7 +376,7 @@ export const ServerSettingsPage = () => {
     if (server) {
       fetchMembers(server.id);
       fetchRoles(server.id);
-      reset({ name: server.name });
+      reset({ name: server.name, about: server.about || '' });
       // Reset icon state
       setIconFile(null);
       setIconPreview(null);
@@ -719,7 +725,8 @@ export const ServerSettingsPage = () => {
       await updateServer(server.id, user.id, { 
         name: data.name,
         icon_url: iconUrl,
-        banner_url: bannerUrl
+        banner_url: bannerUrl,
+        about: data.about || null
       });
       
       toast.success('Server settings updated!');
@@ -1096,6 +1103,25 @@ export const ServerSettingsPage = () => {
                   {errors.name && (
                     <p className="text-xs text-destructive">{errors.name.message}</p>
                   )}
+                </div>
+
+                {/* About Server */}
+                <div className="space-y-2">
+                  <Label htmlFor="serverAbout" className="text-sm">About Server</Label>
+                  <Textarea
+                    id="serverAbout"
+                    {...register('about')}
+                    className={cn("min-h-[100px] text-sm resize-none", errors.about ? 'border-destructive' : '')}
+                    disabled={!canManageServer}
+                    placeholder="Tell people what your server is about..."
+                    maxLength={500}
+                  />
+                  {errors.about && (
+                    <p className="text-xs text-destructive">{errors.about.message}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    This description will be shown in the Explore page (if public) and server overview.
+                  </p>
                 </div>
 
                 {/* Publish Server (owner-only) */}

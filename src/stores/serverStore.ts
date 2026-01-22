@@ -32,7 +32,7 @@ interface ServerState {
   updateServer: (
     serverId: string,
     userId: string,
-    updates: { name?: string; icon_url?: string | null; banner_url?: string | null; is_published?: boolean }
+    updates: { name?: string; icon_url?: string | null; banner_url?: string | null; is_published?: boolean; about?: string | null }
   ) => Promise<void>;
   joinServer: (inviteCode: string, userId: string) => Promise<Server | null>;
   leaveServer: (serverId: string, userId: string) => Promise<void>;
@@ -113,6 +113,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         icon_url: string | null;
         banner_url: string | null;
         is_published?: boolean;
+        about?: string | null;
         created_at: string;
         role: ServerRole;
         nickname: string | null;
@@ -127,6 +128,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         icon_url: item.icon_url,
         banner_url: item.banner_url,
         is_published: item.is_published ?? false,
+        about: item.about ?? null,
         created_at: item.created_at,
         role: item.role,
         nickname: item.nickname,
@@ -234,7 +236,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
   updateServer: async (
     serverId: string,
     userId: string,
-    updates: { name?: string; icon_url?: string | null; banner_url?: string | null; is_published?: boolean }
+    updates: { name?: string; icon_url?: string | null; banner_url?: string | null; is_published?: boolean; about?: string | null }
   ) => {
     // Note: publishing is owner-only in the update_server RPC
     try {
