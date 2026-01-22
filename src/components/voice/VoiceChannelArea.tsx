@@ -112,6 +112,18 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
 
   const voice = useVoiceRoom({ channelId: channel.id, userId: user?.id || null });
 
+  // Allow the sidebar banner to request a disconnect without tight coupling.
+  useEffect(() => {
+    const handler = (ev: Event) => {
+      const e = ev as CustomEvent<{ channelId?: string }>;
+      const id = e.detail?.channelId;
+      if (!id || id !== channel.id) return;
+      voice.leave();
+    };
+    window.addEventListener("kloak:voice:leave", handler as EventListener);
+    return () => window.removeEventListener("kloak:voice:leave", handler as EventListener);
+  }, [channel.id, voice]);
+
   const memberByUserId = useMemo(() => {
     const map = new Map<string, ServerMember>();
     for (const m of members) map.set(m.user_id, m);
@@ -207,7 +219,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
       {/* Main (no right sidebar) */}
       <div className="flex-1 min-h-0">
         {/* Stage / tiles */}
-        <div className="min-h-0 p-4 overflow-y-auto">
+        <div className={cn("min-h-0 p-4", voice.isJoined ? "overflow-y-auto" : "h-full flex items-center justify-center")}>
           {voice.error && (
             <div className="mb-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {voice.error}
@@ -215,8 +227,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
           )}
 
           {!voice.isJoined ? (
-            <div className="h-full flex items-center justify-center">
-              <div className="max-w-md w-full rounded-2xl border border-border bg-background/60 p-6">
+            <div className="max-w-md w-full rounded-2xl border border-border bg-background/60 p-6">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                     <Volume2 className="w-5 h-5 text-primary" />
@@ -233,7 +244,6 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
                     {voice.status === "joining" ? "Joining…" : "Join voice"}
                   </Button>
                 </div>
-              </div>
             </div>
           ) : stage ? (
             <div className="grid gap-4">
@@ -255,7 +265,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
                 {participantList.map((p) => {
                   const member = memberByUserId.get(p.userId);
                   const isYou = p.userId === user?.id;
-                  const speaking = isYou ? localMicLevel > 0.06 : false;
+                  const speaking = isYou ? localMicLevel > 0.06 : p.speaking;
                   return (
                     <Tile
                       key={p.userId}
@@ -275,7 +285,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
               {participantList.map((p) => {
                 const member = memberByUserId.get(p.userId);
                 const isYou = p.userId === user?.id;
-                const speaking = isYou ? localMicLevel > 0.06 : false;
+                const speaking = isYou ? localMicLevel > 0.06 : p.speaking;
                 return (
                   <Tile
                     key={p.userId}
@@ -301,61 +311,50 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
       </div>
 
       {/* Discord-like bottom control bar */}
-      <div className="h-14 border-t border-border/60 bg-background/60 backdrop-blur flex items-center justify-between px-3 gap-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <AvatarWithDecoration user={user} size={32} />
-          <div className="min-w-0">
-            <div className="text-sm font-semibold truncate">{user?.display_name || user?.username || "You"}</div>
-            <div className="text-[11px] text-muted-foreground truncate">{voice.isJoined ? "Connected" : "Disconnected"}</div>
-          </div>
-        </div>
+      {voice.isJoined && (
+        <div className="h-14 border-t border-border/60 bg-background/60 backdrop-blur flex items-center justify-between px-3 gap-3">
+          {/* Left spacer (we show user identity in the sidebar already) */}
+          <div className="w-[140px] hidden sm:block" />
 
-        <div className="flex items-center gap-2">
-          {!voice.isJoined ? (
-            <Button size="sm" disabled={!isReady || voice.status === "joining"} onClick={() => voice.join()} className="px-6">
-              {voice.status === "joining" ? "Joining…" : "Join"}
+          <div className="flex items-center gap-2">
+            <Button
+              variant={voice.localState.muted ? "destructive" : "secondary"}
+              size="icon"
+              className="w-10 h-10"
+              onClick={voice.toggleMute}
+              title={voice.localState.muted ? "Unmute" : "Mute"}
+            >
+              {voice.localState.muted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
             </Button>
-          ) : (
-            <>
-              <Button
-                variant={voice.localState.muted ? "destructive" : "secondary"}
-                size="icon"
-                className="w-10 h-10"
-                onClick={voice.toggleMute}
-                title={voice.localState.muted ? "Unmute" : "Mute"}
-              >
-                {voice.localState.muted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-              </Button>
 
-              <Button
-                variant={voice.localState.deafened ? "destructive" : "secondary"}
-                size="icon"
-                className="w-10 h-10"
-                onClick={voice.toggleDeafen}
-                title={voice.localState.deafened ? "Undeafen" : "Deafen"}
-              >
-                {voice.localState.deafened ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-              </Button>
+            <Button
+              variant={voice.localState.deafened ? "destructive" : "secondary"}
+              size="icon"
+              className="w-10 h-10"
+              onClick={voice.toggleDeafen}
+              title={voice.localState.deafened ? "Undeafen" : "Deafen"}
+            >
+              {voice.localState.deafened ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+            </Button>
 
-              <Button
-                variant={voice.localState.sharing ? "destructive" : "secondary"}
-                size="icon"
-                className="w-10 h-10"
-                onClick={() => (voice.localState.sharing ? voice.stopScreenShare() : voice.startScreenShare())}
-                title={voice.localState.sharing ? "Stop sharing" : "Share screen"}
-              >
-                {voice.localState.sharing ? <MonitorOff className="w-5 h-5" /> : <MonitorUp className="w-5 h-5" />}
-              </Button>
+            <Button
+              variant={voice.localState.sharing ? "destructive" : "secondary"}
+              size="icon"
+              className="w-10 h-10"
+              onClick={() => (voice.localState.sharing ? voice.stopScreenShare() : voice.startScreenShare())}
+              title={voice.localState.sharing ? "Stop sharing" : "Share screen"}
+            >
+              {voice.localState.sharing ? <MonitorOff className="w-5 h-5" /> : <MonitorUp className="w-5 h-5" />}
+            </Button>
 
-              <Button variant="destructive" size="icon" className="w-10 h-10" onClick={() => voice.leave()} title="Disconnect">
-                <PhoneOff className="w-5 h-5" />
-              </Button>
-            </>
-          )}
+            <Button variant="destructive" size="icon" className="w-10 h-10" onClick={() => voice.leave()} title="Disconnect">
+              <PhoneOff className="w-5 h-5" />
+            </Button>
+          </div>
+
+          <div className="w-[140px] hidden sm:block" />
         </div>
-
-        <div className="w-[120px] hidden sm:block" />
-      </div>
+      )}
     </div>
   );
 }

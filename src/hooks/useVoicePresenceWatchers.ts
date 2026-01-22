@@ -7,6 +7,41 @@ import { useVoiceStore } from "@/stores/voiceStore";
 // and avoid duplicate subscriptions to the same `voice:${channelId}` topic.
 const watcherChannels = new Map<string, RealtimeChannel>();
 const pausedChannelIds = new Set<string>();
+let lastUserId: string | null = null;
+let lastDesiredIds: Set<string> = new Set();
+
+function ensureWatcher(channelId: string, userId: string) {
+  if (pausedChannelIds.has(channelId)) return;
+  if (watcherChannels.has(channelId)) return;
+
+  const ch = supabase.channel(`voice:${channelId}`, {
+    config: {
+      // Presence "key" is only used if we call track(); we don't.
+      // Still provide a stable key so the server accepts presence config.
+      presence: { key: `${userId}:watcher` },
+    },
+  });
+
+  const refresh = () => {
+    const state = ch.presenceState() as Record<string, unknown[]>;
+    const userIds = extractUserIdsFromPresenceState(state);
+    try {
+      useVoiceStore.getState().setPresence(channelId, userIds);
+    } catch {
+      // ignore
+    }
+  };
+
+  ch.on("presence", { event: "sync" }, refresh);
+  ch.on("presence", { event: "join" }, refresh);
+  ch.on("presence", { event: "leave" }, refresh);
+
+  ch.subscribe((status) => {
+    if (status === "SUBSCRIBED") refresh();
+  });
+
+  watcherChannels.set(channelId, ch);
+}
 
 export function pauseVoicePresenceWatch(channelId: string) {
   pausedChannelIds.add(channelId);
@@ -19,15 +54,13 @@ export function pauseVoicePresenceWatch(channelId: string) {
     }
     watcherChannels.delete(channelId);
   }
-  try {
-    useVoiceStore.getState().clearPresence(channelId);
-  } catch {
-    // ignore
-  }
 }
 
 export function resumeVoicePresenceWatch(channelId: string) {
   pausedChannelIds.delete(channelId);
+  if (!lastUserId) return;
+  if (!lastDesiredIds.has(channelId)) return;
+  ensureWatcher(channelId, lastUserId);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -64,6 +97,8 @@ export function useVoicePresenceWatchers(opts: { channelIds: string[]; userId: s
     if (!userId) return;
 
     const desired = new Set(channelIds);
+    lastUserId = userId;
+    lastDesiredIds = desired;
 
     // Unsubscribe removed watchers.
     for (const [id, ch] of watcherChannels.entries()) {
@@ -79,34 +114,7 @@ export function useVoicePresenceWatchers(opts: { channelIds: string[]; userId: s
 
     // Subscribe missing watchers.
     for (const channelId of desired) {
-      if (pausedChannelIds.has(channelId)) continue;
-      if (watcherChannels.has(channelId)) continue;
-
-      const ch = supabase.channel(`voice:${channelId}`, {
-        config: {
-          // Presence "key" is only used if we call track(); we don't.
-          // Still provide a stable key so the server accepts presence config.
-          presence: { key: `${userId}:watcher` },
-        },
-      });
-
-      const refresh = () => {
-        const state = ch.presenceState() as Record<string, unknown[]>;
-        const userIds = extractUserIdsFromPresenceState(state);
-        setPresence(channelId, userIds);
-      };
-
-      ch.on("presence", { event: "sync" }, refresh);
-      ch.on("presence", { event: "join" }, refresh);
-      ch.on("presence", { event: "leave" }, refresh);
-
-      ch.subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          refresh();
-        }
-      });
-
-      watcherChannels.set(channelId, ch);
+      ensureWatcher(channelId, userId);
     }
 
     return () => {

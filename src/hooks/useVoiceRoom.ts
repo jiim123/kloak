@@ -12,6 +12,7 @@ export type VoiceParticipantMeta = {
   muted: boolean;
   deafened: boolean;
   sharing: boolean;
+  speaking: boolean;
   joined_at: number;
 };
 
@@ -20,6 +21,7 @@ export type VoiceParticipant = {
   muted: boolean;
   deafened: boolean;
   sharing: boolean;
+  speaking: boolean;
   joinedAt: number;
 };
 
@@ -28,6 +30,8 @@ type SignalMessage =
   | { kind: "answer"; from: string; to: string; sdp: RTCSessionDescriptionInit }
   | { kind: "ice"; from: string; to: string; candidate: RTCIceCandidateInit }
   | { kind: "hangup"; from: string; to: string };
+
+type VoiceBroadcastMessage = { kind: "speaking"; from: string; speaking: boolean; ts: number };
 
 type RemoteMediaState = {
   audioStream?: MediaStream;
@@ -62,6 +66,7 @@ function getLatestMetaForPresenceKey(entries: unknown[]): VoiceParticipantMeta |
     muted: !!last.muted,
     deafened: !!last.deafened,
     sharing: !!last.sharing,
+    speaking: !!last.speaking,
     joined_at: typeof last.joined_at === "number" ? last.joined_at : Date.now(),
   };
 }
@@ -71,6 +76,9 @@ export function useVoiceRoom(opts: { channelId: string | null; userId: string | 
 
   const iceServers = useMemo(() => getWebRTCIceServers(), []);
   const setJoinedChannelId = useVoiceStore((s) => s.setJoinedChannelId);
+  const setPresence = useVoiceStore((s) => s.setPresence);
+  const clearPresence = useVoiceStore((s) => s.clearPresence);
+  const setConnection = useVoiceStore((s) => s.setConnection);
 
   const [status, setStatus] = useState<VoiceRoomStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -79,6 +87,7 @@ export function useVoiceRoom(opts: { channelId: string | null; userId: string | 
   const [muted, setMuted] = useState(false);
   const [deafened, setDeafened] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
 
   const [participants, setParticipants] = useState<Record<string, VoiceParticipant>>({});
   const [remoteMedia, setRemoteMedia] = useState<Record<string, RemoteMediaState>>({});
@@ -91,6 +100,10 @@ export function useVoiceRoom(opts: { channelId: string | null; userId: string | 
 
   const localMicStreamRef = useRef<MediaStream | null>(null);
   const localScreenStreamRef = useRef<MediaStream | null>(null);
+  const [micStream, setMicStream] = useState<MediaStream | null>(null);
+  const joinedAtRef = useRef<number | null>(null);
+  const remoteSpeakingRef = useRef<Map<string, { speaking: boolean; ts: number }>>(new Map());
+  const lastSpeakBroadcastRef = useRef<{ speaking: boolean; ts: number } | null>(null);
 
   const updatePresenceMeta = useCallback(async () => {
     if (!channelRef.current || !userId) return;
@@ -100,12 +113,14 @@ export function useVoiceRoom(opts: { channelId: string | null; userId: string | 
         muted,
         deafened,
         sharing,
-        joined_at: Date.now(),
+        speaking,
+        // Keep joined_at stable so other clients can sort reliably and we don't "jump" around.
+        joined_at: joinedAtRef.current ?? Date.now(),
       } satisfies VoiceParticipantMeta);
     } catch {
       // best-effort
     }
-  }, [userId, muted, deafened, sharing]);
+  }, [userId, muted, deafened, sharing, speaking]);
 
   const cleanupPeer = useCallback((remoteUserId: string) => {
     const pc = pcsRef.current.get(remoteUserId);
@@ -160,6 +175,9 @@ export function useVoiceRoom(opts: { channelId: string | null; userId: string | 
     }
     localMicStreamRef.current = null;
     localScreenStreamRef.current = null;
+    setMicStream(null);
+    setSpeaking(false);
+    joinedAtRef.current = null;
   }, []);
 
   const sendSignal = useCallback(async (msg: SignalMessage) => {
@@ -167,6 +185,16 @@ export function useVoiceRoom(opts: { channelId: string | null; userId: string | 
     if (!ch) return;
     try {
       await ch.send({ type: "broadcast", event: "signal", payload: msg });
+    } catch {
+      // best-effort
+    }
+  }, []);
+
+  const sendVoiceBroadcast = useCallback(async (msg: VoiceBroadcastMessage) => {
+    const ch = channelRef.current;
+    if (!ch) return;
+    try {
+      await ch.send({ type: "broadcast", event: "voice", payload: msg });
     } catch {
       // best-effort
     }
@@ -193,6 +221,27 @@ export function useVoiceRoom(opts: { channelId: string | null; userId: string | 
         }
       }
     }
+  }, []);
+
+  const attachLocalTracksToAllPeers = useCallback(() => {
+    const mic = localMicStreamRef.current;
+    if (!mic) return;
+    const audioTracks = mic.getAudioTracks();
+    if (!audioTracks.length) return;
+
+    pcsRef.current.forEach((pc) => {
+      // Only add if this pc doesn't already have an audio sender.
+      const hasAudioSender = pc.getSenders().some((s) => s.track && s.track.kind === "audio");
+      if (hasAudioSender) return;
+
+      for (const track of audioTracks) {
+        try {
+          pc.addTrack(track, mic);
+        } catch {
+          // ignore
+        }
+      }
+    });
   }, []);
 
   const flushPendingIce = useCallback(async (remoteUserId: string, pc: RTCPeerConnection) => {
@@ -394,11 +443,15 @@ export function useVoiceRoom(opts: { channelId: string | null; userId: string | 
       const meta = getLatestMetaForPresenceKey(entries);
       if (!meta) return;
       const id = meta.user_id || presenceKey;
+      const override = remoteSpeakingRef.current.get(id);
+      // Presence updates are sometimes delayed/batched; a recent broadcast is more "realtime".
+      const speakingNow = override && Date.now() - override.ts < 2500 ? override.speaking : meta.speaking;
       next[id] = {
         userId: id,
         muted: meta.muted,
         deafened: meta.deafened,
         sharing: meta.sharing,
+        speaking: speakingNow,
         joinedAt: meta.joined_at,
       };
     });
@@ -448,6 +501,7 @@ export function useVoiceRoom(opts: { channelId: string | null; userId: string | 
     const joinToken = (joinTokenRef.current += 1);
     setStatus("joining");
     setError(null);
+    setConnection({ channelId, status: "joining", error: null });
 
     // Avoid duplicate subscriptions to `voice:${channelId}` (sidebar watcher + voice join).
     pauseVoicePresenceWatch(channelId);
@@ -469,26 +523,58 @@ export function useVoiceRoom(opts: { channelId: string | null; userId: string | 
       handleSignal(msg);
     });
 
+    // Realtime "who is speaking" hints (best-effort).
+    ch.on("broadcast", { event: "voice" }, (payload) => {
+      const msg = payload.payload as VoiceBroadcastMessage | undefined;
+      if (!msg || !userId) return;
+      if (msg.kind !== "speaking") return;
+      if (msg.from === userId) return;
+
+      remoteSpeakingRef.current.set(msg.from, { speaking: !!msg.speaking, ts: msg.ts || Date.now() });
+      setParticipants((prev) => {
+        const existing = prev[msg.from];
+        if (!existing) return prev;
+        const nextSpeaking = !!msg.speaking;
+        if (existing.speaking === nextSpeaking) return prev;
+        return { ...prev, [msg.from]: { ...existing, speaking: nextSpeaking } };
+      });
+    });
+
     ch.subscribe(async (subStatus, err) => {
       if (joinTokenRef.current !== joinToken) return;
       if (subStatus === "SUBSCRIBED") {
         try {
           const mic = await navigator.mediaDevices.getUserMedia({ audio: true });
           localMicStreamRef.current = mic;
+          setMicStream(mic);
+          joinedAtRef.current = Date.now();
 
           // Apply mute state to mic immediately.
           mic.getAudioTracks().forEach((t) => {
             t.enabled = !muted && !deafened;
           });
 
+          // If any peer connections were created before mic acquisition (e.g. via early presence sync),
+          // ensure the mic tracks are attached and trigger renegotiation so remote peers can hear us.
+          attachLocalTracksToAllPeers();
+          Array.from(pcsRef.current.keys()).forEach((remoteId) => {
+            negotiate(remoteId);
+          });
+
           setIsJoined(true);
           setStatus("joined");
+          setConnection({ channelId, status: "joined", error: null });
 
           await updatePresenceMeta();
           refreshParticipantsFromPresence();
         } catch (e) {
           setError(e instanceof Error ? e.message : "Failed to access microphone");
           setStatus("error");
+          setConnection({
+            channelId,
+            status: "error",
+            error: e instanceof Error ? e.message : "Failed to access microphone",
+          });
           resumeVoicePresenceWatch(channelId);
           try {
             supabase.removeChannel(ch);
@@ -501,19 +587,35 @@ export function useVoiceRoom(opts: { channelId: string | null; userId: string | 
         // Treat these as disconnected; cleanup so user can rejoin cleanly.
         setStatus("error");
         setError(err?.message || "Voice signaling connection failed");
+        setConnection({ channelId, status: "error", error: err?.message || "Voice signaling connection failed" });
         setIsJoined(false);
         cleanupAllPeers();
         stopLocalStreams();
         resumeVoicePresenceWatch(channelId);
+        // Only remove ourselves locally; keep showing other users until watcher refreshes.
+        if (userId) {
+          const existing = useVoiceStore.getState().presenceByChannel[channelId] || [];
+          setPresence(
+            channelId,
+            existing.filter((id) => id !== userId),
+          );
+        } else {
+          clearPresence(channelId);
+        }
       }
     });
   }, [
+    attachLocalTracksToAllPeers,
     channelId,
+    clearPresence,
     cleanupAllPeers,
     deafened,
     handleSignal,
     muted,
+    negotiate,
     refreshParticipantsFromPresence,
+    setConnection,
+    setPresence,
     stopLocalStreams,
     updatePresenceMeta,
     userId,
@@ -524,12 +626,25 @@ export function useVoiceRoom(opts: { channelId: string | null; userId: string | 
     if (!ch) return;
 
     if (channelId) resumeVoicePresenceWatch(channelId);
+    if (channelId) {
+      // Only remove ourselves locally; keep showing other users until watcher refreshes.
+      if (userId) {
+        const existing = useVoiceStore.getState().presenceByChannel[channelId] || [];
+        setPresence(
+          channelId,
+          existing.filter((id) => id !== userId),
+        );
+      } else {
+        clearPresence(channelId);
+      }
+    }
 
     // Invalidate any pending subscribe callbacks.
     joinTokenRef.current += 1;
     setIsJoined(false);
     setStatus("idle");
     setError(null);
+    setConnection({ channelId: null, status: "idle", error: null });
 
     cleanupAllPeers();
     stopLocalStreams();
@@ -548,13 +663,14 @@ export function useVoiceRoom(opts: { channelId: string | null; userId: string | 
     setParticipants({});
     setRemoteMedia({});
     setSharing(false);
-  }, [channelId, cleanupAllPeers, stopLocalStreams]);
+  }, [channelId, cleanupAllPeers, clearPresence, setConnection, setPresence, stopLocalStreams, userId]);
 
   // Track which voice channel we are actually joined to (global), so the sidebar can avoid
   // duplicating Realtime subscriptions for that one channel while still showing presence for others.
   useEffect(() => {
     if (!channelId || !userId) {
       setJoinedChannelId(null);
+      setConnection({ channelId: null, status: "idle", error: null });
       return;
     }
     setJoinedChannelId(isJoined ? channelId : null);
@@ -564,7 +680,7 @@ export function useVoiceRoom(opts: { channelId: string | null; userId: string | 
   useEffect(() => {
     if (!isJoined) return;
     updatePresenceMeta();
-  }, [deafened, isJoined, muted, sharing, updatePresenceMeta]);
+  }, [deafened, isJoined, muted, sharing, speaking, updatePresenceMeta]);
 
   // When muting/deafening, update mic track enabled flag.
   useEffect(() => {
@@ -574,6 +690,82 @@ export function useVoiceRoom(opts: { channelId: string | null; userId: string | 
       t.enabled = !muted && !deafened;
     });
   }, [muted, deafened]);
+
+  // Detect local speaking and publish it via presence meta (boolean), so others can render it.
+  useEffect(() => {
+    if (!isJoined || !micStream || muted || deafened) {
+      setSpeaking(false);
+      return;
+    }
+
+    const audioTrack = micStream.getAudioTracks()[0];
+    if (!audioTrack) {
+      setSpeaking(false);
+      return;
+    }
+
+    const ctx = new AudioContext();
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 512;
+    analyser.smoothingTimeConstant = 0.8;
+    const source = ctx.createMediaStreamSource(micStream);
+    source.connect(analyser);
+    const data = new Uint8Array(analyser.frequencyBinCount);
+
+    let raf: number | null = null;
+    let last = false;
+
+    const tick = () => {
+      analyser.getByteTimeDomainData(data);
+      let sum = 0;
+      for (let i = 0; i < data.length; i++) {
+        const v = (data[i] - 128) / 128;
+        sum += v * v;
+      }
+      const rms = Math.sqrt(sum / data.length);
+
+      // Simple hysteresis to avoid flapping.
+      const next = last ? rms > 0.04 : rms > 0.06;
+      if (next !== last) {
+        last = next;
+        setSpeaking(next);
+      }
+      raf = requestAnimationFrame(tick);
+    };
+
+    raf = requestAnimationFrame(tick);
+
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      try {
+        source.disconnect();
+      } catch {
+        // ignore
+      }
+      ctx.close().catch(() => {});
+    };
+  }, [deafened, isJoined, micStream, muted]);
+
+  // Broadcast speaking edge changes quickly so other clients can animate "pulsing" reliably.
+  // (Presence updates can be delayed/batched.)
+  useEffect(() => {
+    if (!isJoined || !channelId || !userId) return;
+    const now = Date.now();
+    const last = lastSpeakBroadcastRef.current;
+    // Only send on change and no more often than ~4/s.
+    if (last && last.speaking === speaking) return;
+    if (last && now - last.ts < 250) return;
+    lastSpeakBroadcastRef.current = { speaking, ts: now };
+    sendVoiceBroadcast({ kind: "speaking", from: userId, speaking, ts: now });
+  }, [channelId, isJoined, sendVoiceBroadcast, speaking, userId]);
+
+  // Publish presence to the sidebar store for the voice channel we are actively joined to.
+  // The sidebar watcher intentionally does not subscribe to this channel while we're joined,
+  // to avoid duplicate Realtime subscriptions.
+  useEffect(() => {
+    if (!channelId || !isJoined) return;
+    setPresence(channelId, Object.keys(participants));
+  }, [channelId, isJoined, participants, setPresence]);
 
   // NOTE: Do not write to the global sidebar presence store from here.
   // Presence for the sidebar is driven by lightweight presence subscriptions (watchers) so it works
@@ -652,8 +844,9 @@ export function useVoiceRoom(opts: { channelId: string | null; userId: string | 
       muted,
       deafened,
       sharing,
+      speaking,
     }),
-    [deafened, muted, sharing],
+    [deafened, muted, sharing, speaking],
   );
 
   return {

@@ -48,6 +48,7 @@ import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { MotionButton } from "@/components/ui/motion-elements";
 import { LoggedInUserPanel } from "@/components/layout/LoggedInUserPanel";
+import { VoiceConnectedBanner } from "@/components/layout/VoiceConnectedBanner";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import {
   DropdownMenu,
@@ -1097,6 +1098,7 @@ export const ChannelSidebar = () => {
         <DragOverlay>{getActiveItem()}</DragOverlay>
       </DndContext>
 
+      <VoiceConnectedBanner />
       <LoggedInUserPanel />
     </div>
   );
