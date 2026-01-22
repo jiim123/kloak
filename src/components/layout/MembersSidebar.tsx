@@ -1,19 +1,26 @@
-import { useState, useMemo, useEffect } from 'react';
-import { cn } from '@/lib/utils';
-import { Crown, ChevronDown, ChevronRight, MessageSquare, Edit3, UserX, Ban, VolumeX, Volume2, Shield, ShieldAlert, ShieldOff, Users } from 'lucide-react';
-import { useServerStore } from '@/stores/serverStore';
-import { useAuthStore } from '@/stores/authStore';
-import { useUIStore } from '@/stores/uiStore';
-import { useRealtimeMembers } from '@/hooks/useRealtimeMembers';
-import { 
-  hasPermission, 
-  canModerate, 
-  canAssignRole, 
-  getAssignableRoles, 
-  getRoleInfo,
-  hasMemberPermission
-} from '@/lib/permissions';
-import { useMemberPermissions } from '@/hooks/useMemberPermissions';
+import { useState, useMemo, useEffect, memo } from "react";
+import { cn } from "@/lib/utils";
+import {
+  Crown,
+  ChevronDown,
+  ChevronRight,
+  MessageSquare,
+  Edit3,
+  UserX,
+  Ban,
+  VolumeX,
+  Volume2,
+  Shield,
+  ShieldAlert,
+  ShieldOff,
+  Users,
+} from "lucide-react";
+import { useServerStore } from "@/stores/serverStore";
+import { useAuthStore } from "@/stores/authStore";
+import { useUIStore } from "@/stores/uiStore";
+import { useRealtimeMembers } from "@/hooks/useRealtimeMembers";
+import { canModerate, canAssignRole, getAssignableRoles, getRoleInfo } from "@/lib/permissions";
+import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -23,61 +30,71 @@ import {
   ContextMenuSubContent,
   ContextMenuSubTrigger,
   ContextMenuTrigger,
-} from '@/components/ui/context-menu';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Badge } from '@/components/ui/badge';
-import { MembersSidebarSkeleton } from '@/components/ui/skeletons';
-import { AvatarWithDecoration } from '@/components/ui/avatar-with-decoration';
-import type { ServerMember, ServerRole, CustomServerRole, UserStatus } from '@/types';
-import { getEffectivePresence } from '@/lib/presence';
+} from "@/components/ui/context-menu";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { MembersSidebarSkeleton } from "@/components/ui/skeletons";
+import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
+import type { ServerMember, ServerRole, CustomServerRole, UserStatus } from "@/types";
+import { getEffectivePresence } from "@/lib/presence";
 
 const getMemberPresence = (member: ServerMember) => {
-  const status = (member.user?.status as UserStatus | undefined) ?? 'offline';
+  const status = (member.user?.status as UserStatus | undefined) ?? "offline";
   const lastSeen = member.user?.last_seen;
   return getEffectivePresence(status, lastSeen);
 };
 
-// Status indicator component
-const StatusIndicator = ({ status, isStale, className }: { status?: string; isStale?: boolean; className?: string }) => {
-  if (isStale) {
-    return <div className={cn('w-3 h-3 rounded-full bg-gray-500', className)} />;
-  }
-  
-  switch (status) {
-    case 'online':
-      return <div className={cn('w-3 h-3 rounded-full bg-green-500', className)} />;
-    case 'idle':
-      return (
-        <div className={cn('w-3 h-3 rounded-full bg-yellow-500 relative', className)}>
-          <div className="absolute inset-0.5 bg-layout-members rounded-full" style={{ clipPath: 'polygon(50% 0%, 100% 0%, 100% 100%, 50% 100%)' }} />
-        </div>
-      );
-    case 'dnd':
-      return (
-        <div className={cn('w-3 h-3 rounded-full bg-red-500 flex items-center justify-center', className)}>
-          <div className="w-1.5 h-0.5 bg-layout-members rounded-full" />
-        </div>
-      );
-    default:
-      return <div className={cn('w-3 h-3 rounded-full bg-gray-500', className)} />;
-  }
-};
+// Memoized Status indicator component
+const StatusIndicator = memo(
+  ({ status, isStale, className }: { status?: string; isStale?: boolean; className?: string }) => {
+    if (isStale) {
+      return <div className={cn("w-2.5 h-2.5 rounded-full bg-zinc-500", className)} />;
+    }
 
-// Role badge component
-const RoleBadge = ({ role }: { role: ServerRole }) => {
-  const info = getRoleInfo(role);
-  
-  if (role === 'member') return null;
-  
-  return (
-    <Badge 
-      variant="outline" 
-      className={cn('text-[10px] px-1 py-0 h-4 font-medium border-0', info.bgColor, info.color)}
-    >
-      {info.label}
-    </Badge>
-  );
-};
+    switch (status) {
+      case "online":
+        return <div className={cn("w-2.5 h-2.5 rounded-full bg-emerald-500", className)} />;
+      case "idle":
+        return (
+          <div className={cn("w-2.5 h-2.5 rounded-full bg-amber-500 relative", className)}>
+            <div
+              className="absolute inset-[3px] bg-background rounded-full"
+              style={{ clipPath: "polygon(50% 0%, 100% 0%, 100% 100%, 50% 100%)" }}
+            />
+          </div>
+        );
+      case "dnd":
+        return (
+          <div className={cn("w-2.5 h-2.5 rounded-full bg-red-500 flex items-center justify-center", className)}>
+            <div className="w-1.5 h-[2px] bg-background rounded-full" />
+          </div>
+        );
+      default:
+        return <div className={cn("w-2.5 h-2.5 rounded-full bg-zinc-500", className)} />;
+    }
+  },
+);
+
+StatusIndicator.displayName = "StatusIndicator";
+
+// Section header component
+const SectionHeader = memo(
+  ({ label, count, color, colorDot }: { label: string; count: number; color?: string; colorDot?: string }) => (
+    <div className="flex items-center gap-2 px-3 py-2">
+      {colorDot && (
+        <div
+          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+          style={colorDot.startsWith("linear-gradient") ? { background: colorDot } : { backgroundColor: colorDot }}
+        />
+      )}
+      <span className="text-[11px] font-semibold uppercase tracking-wider" style={color ? { color } : undefined}>
+        {label}
+      </span>
+      <span className="text-[11px] font-medium text-muted-foreground/70">{count}</span>
+    </div>
+  ),
+);
+
+SectionHeader.displayName = "SectionHeader";
 
 export const MembersSidebar = () => {
   const { members, currentServer, roles, isLoading, fetchRolePermissions } = useServerStore();
@@ -96,9 +113,9 @@ export const MembersSidebar = () => {
   }, [currentServer?.id, fetchRolePermissions]);
 
   // Get current user's role in this server
-  const currentUserMember = members.find(m => m.user_id === user?.id);
+  const currentUserMember = members.find((m) => m.user_id === user?.id);
   const currentUserRole = currentUserMember?.role;
-  
+
   // Use database-backed permission checking
   const { hasPermission: checkPermission } = useMemberPermissions();
 
@@ -109,7 +126,7 @@ export const MembersSidebar = () => {
 
     const getResolvedRolePosition = (role: CustomServerRole): number => {
       const fromStore = rolePositionById.get(role.id);
-      return typeof fromStore === 'number' ? fromStore : role.position;
+      return typeof fromStore === "number" ? fromStore : role.position;
     };
 
     // Sort by role hierarchy then alphabetically
@@ -118,39 +135,31 @@ export const MembersSidebar = () => {
       const roleA = roleOrder[a.role as keyof typeof roleOrder] ?? 3;
       const roleB = roleOrder[b.role as keyof typeof roleOrder] ?? 3;
       if (roleA !== roleB) return roleA - roleB;
-      
-      // Sort by custom role priority: higher in list (lower position) = higher priority
-      const aPriorityPos = a.roles && a.roles.length > 0
-        ? Math.min(...a.roles.map(getResolvedRolePosition))
-        : Number.POSITIVE_INFINITY;
-      const bPriorityPos = b.roles && b.roles.length > 0
-        ? Math.min(...b.roles.map(getResolvedRolePosition))
-        : Number.POSITIVE_INFINITY;
+
+      const aPriorityPos =
+        a.roles && a.roles.length > 0 ? Math.min(...a.roles.map(getResolvedRolePosition)) : Number.POSITIVE_INFINITY;
+      const bPriorityPos =
+        b.roles && b.roles.length > 0 ? Math.min(...b.roles.map(getResolvedRolePosition)) : Number.POSITIVE_INFINITY;
       if (aPriorityPos !== bPriorityPos) return aPriorityPos - bPriorityPos;
-      
-      const nameA = a.nickname || a.user?.display_name || a.user?.username || '';
-      const nameB = b.nickname || b.user?.display_name || b.user?.username || '';
+
+      const nameA = a.nickname || a.user?.display_name || a.user?.username || "";
+      const nameB = b.nickname || b.user?.display_name || b.user?.username || "";
       return nameA.localeCompare(nameB);
     };
-    
-    // Group ONLINE members by roles only
+
     const roleGroupsMap: Map<string, ServerMember[]> = new Map();
     const noRoleMembers: ServerMember[] = [];
-    
-    // Create groups for each role
-    roles.forEach(role => {
+
+    roles.forEach((role) => {
       roleGroupsMap.set(role.id, []);
     });
-    
-    // Distribute members to their roles (only online members)
-    members.forEach(member => {
+
+    members.forEach((member) => {
       const memberRoles = member.roles || [];
       if (memberRoles.length > 0) {
-        // Only add online members to role groups
         if (!getMemberPresence(member).isOffline) {
-          // Add to priority role (lowest position = top of list)
           const priorityRole = memberRoles.reduce((prev, curr) =>
-            getResolvedRolePosition(curr) < getResolvedRolePosition(prev) ? curr : prev
+            getResolvedRolePosition(curr) < getResolvedRolePosition(prev) ? curr : prev,
           );
           const roleMembers = roleGroupsMap.get(priorityRole.id) || [];
           roleMembers.push(member);
@@ -160,24 +169,22 @@ export const MembersSidebar = () => {
         noRoleMembers.push(member);
       }
     });
-    
-    // Sort members within each role group
+
     roleGroupsMap.forEach((membersList, roleId) => {
       roleGroupsMap.set(roleId, membersList.sort(sortMembers));
     });
-    
-    // Separate no-role members by online/offline
+
     const online: ServerMember[] = [];
     const offline: ServerMember[] = [];
-    
-    noRoleMembers.forEach(member => {
+
+    noRoleMembers.forEach((member) => {
       if (getMemberPresence(member).isOffline) {
         offline.push(member);
       } else {
         online.push(member);
       }
     });
-    
+
     return {
       roleGroups: roleGroupsMap,
       onlineNoRoleMembers: online.sort(sortMembers),
@@ -185,181 +192,180 @@ export const MembersSidebar = () => {
     };
   }, [members, roles]);
 
-  // Show skeleton while loading - AFTER all hooks
+  // Show skeleton while loading
   if (isLoading) {
     return <MembersSidebarSkeleton />;
   }
 
   const handleMemberClick = (member: ServerMember) => {
-    openModal('userProfile', { userId: member.user_id, user: member.user });
+    openModal("userProfile", { userId: member.user_id, user: member.user });
   };
 
   const handleMessage = (member: ServerMember) => {
-    openModal('userProfile', { userId: member.user_id, user: member.user, openDM: true });
+    openModal("userProfile", { userId: member.user_id, user: member.user, openDM: true });
   };
 
   const handleChangeNickname = (member: ServerMember) => {
-    openModal('changeNickname', { member });
+    openModal("changeNickname", { member });
   };
 
   const handleKick = (member: ServerMember) => {
-    openModal('confirmAction', { 
-      action: 'kick', 
+    openModal("confirmAction", {
+      action: "kick",
       member,
       title: `Kick ${member.nickname || member.user?.username}`,
-      message: `Are you sure you want to kick ${member.nickname || member.user?.username} from the server?`
+      message: `Are you sure you want to kick ${member.nickname || member.user?.username} from the server?`,
     });
   };
 
   const handleBan = (member: ServerMember) => {
-    openModal('confirmAction', { 
-      action: 'ban', 
+    openModal("confirmAction", {
+      action: "ban",
       member,
       title: `Ban ${member.nickname || member.user?.username}`,
-      message: `Are you sure you want to ban ${member.nickname || member.user?.username} from the server? They will not be able to rejoin.`
+      message: `Are you sure you want to ban ${member.nickname || member.user?.username} from the server? They will not be able to rejoin.`,
     });
   };
 
   const handleToggleMute = (member: ServerMember) => {
-    openModal('confirmAction', { 
-      action: member.is_muted ? 'unmute' : 'mute', 
+    openModal("confirmAction", {
+      action: member.is_muted ? "unmute" : "mute",
       member,
-      title: member.is_muted ? `Unmute ${member.nickname || member.user?.username}` : `Mute ${member.nickname || member.user?.username}`,
-      message: member.is_muted 
+      title: member.is_muted
+        ? `Unmute ${member.nickname || member.user?.username}`
+        : `Mute ${member.nickname || member.user?.username}`,
+      message: member.is_muted
         ? `Are you sure you want to unmute ${member.nickname || member.user?.username}?`
-        : `Are you sure you want to mute ${member.nickname || member.user?.username}? They will be able to view but not send messages.`
+        : `Are you sure you want to mute ${member.nickname || member.user?.username}? They will be able to view but not send messages.`,
     });
   };
 
   const handleTransferOwnership = (member: ServerMember) => {
-    openModal('confirmAction', { 
-      action: 'transferOwnership', 
+    openModal("confirmAction", {
+      action: "transferOwnership",
       member,
-      title: 'Transfer Ownership',
-      message: `Are you sure you want to transfer server ownership to ${member.nickname || member.user?.username}? This action cannot be undone.`
+      title: "Transfer Ownership",
+      message: `Are you sure you want to transfer server ownership to ${member.nickname || member.user?.username}? This action cannot be undone.`,
     });
   };
 
   const handleChangeRole = (member: ServerMember, newRole: ServerRole) => {
     const roleInfo = getRoleInfo(newRole);
-    openModal('confirmAction', { 
-      action: 'changeRole', 
+    openModal("confirmAction", {
+      action: "changeRole",
       member,
       newRole,
-      title: 'Change Role',
-      message: `Change ${member.nickname || member.user?.username}'s role to ${roleInfo.label}?`
+      title: "Change Role",
+      message: `Change ${member.nickname || member.user?.username}'s role to ${roleInfo.label}?`,
     });
   };
 
-  const MemberItem = ({ member }: { member: ServerMember }) => {
-    const displayName = member.nickname || member.user?.display_name || member.user?.username || 'Unknown';
+  // Memoized MemberItem component
+  const MemberItem = memo(({ member }: { member: ServerMember }) => {
+    const displayName = member.nickname || member.user?.display_name || member.user?.username || "Unknown";
     const presence = getMemberPresence(member);
     const memberIsOffline = presence.isOffline;
     const isSelf = member.user_id === user?.id;
-    const isServerOwner = member.role === 'owner';
+    const isServerOwner = member.role === "owner";
+
     const priorityCustomRoleColor = useMemo(() => {
       const memberRoles = member.roles || [];
       if (memberRoles.length === 0) return null;
-
       const resolved = memberRoles
         .map((mr) => roles.find((r) => r.id === mr.id) ?? mr)
         .filter(Boolean) as CustomServerRole[];
-
       let best: CustomServerRole | null = null;
       for (const r of resolved) {
         if (!best) {
           best = r;
           continue;
         }
-        const aPos = typeof r.position === 'number' ? r.position : Number.POSITIVE_INFINITY;
-        const bPos = typeof best.position === 'number' ? best.position : Number.POSITIVE_INFINITY;
+        const aPos = typeof r.position === "number" ? r.position : Number.POSITIVE_INFINITY;
+        const bPos = typeof best.position === "number" ? best.position : Number.POSITIVE_INFINITY;
         if (aPos < bPos) best = r;
       }
       return best?.color ?? null;
-    }, [member.roles, roles]);
+    }, [member.roles]);
 
-    const isGradientName = !!priorityCustomRoleColor && priorityCustomRoleColor.startsWith('linear-gradient');
-    
-    // Permission checks using database-backed permission system
-    const canKick = checkPermission('kick_members') && canModerate(currentUserRole, member.role) && !isSelf;
-    const canBan = checkPermission('ban_members') && canModerate(currentUserRole, member.role) && !isSelf;
-    const canMute = checkPermission('mute_members') && canModerate(currentUserRole, member.role) && !isSelf;
-    const canChangeNickname = checkPermission('manage_nicknames') && (canModerate(currentUserRole, member.role) || isSelf);
-    const canTransfer = checkPermission('transfer_ownership') && !isSelf && member.role !== 'owner';
-    const assignableRoles = getAssignableRoles(currentUserRole).filter(role => 
-      canAssignRole(currentUserRole, member.role, role) && role !== member.role
+    const isGradientName = !!priorityCustomRoleColor && priorityCustomRoleColor.startsWith("linear-gradient");
+
+    // Permission checks
+    const canKick = checkPermission("kick_members") && canModerate(currentUserRole, member.role) && !isSelf;
+    const canBan = checkPermission("ban_members") && canModerate(currentUserRole, member.role) && !isSelf;
+    const canMute = checkPermission("mute_members") && canModerate(currentUserRole, member.role) && !isSelf;
+    const canChangeNickname =
+      checkPermission("manage_nicknames") && (canModerate(currentUserRole, member.role) || isSelf);
+    const canTransfer = checkPermission("transfer_ownership") && !isSelf && member.role !== "owner";
+    const assignableRoles = getAssignableRoles(currentUserRole).filter(
+      (role) => canAssignRole(currentUserRole, member.role, role) && role !== member.role,
     );
-    
-    const hasAdminActions = canKick || canBan || canMute || canChangeNickname || canTransfer || assignableRoles.length > 0;
 
+    const hasAdminActions =
+      canKick || canBan || canMute || canChangeNickname || canTransfer || assignableRoles.length > 0;
     const roleInfo = getRoleInfo(member.role);
 
-    const [isHovered, setIsHovered] = useState(false);
-
     const content = (
-      <div 
-        className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-secondary/50 cursor-pointer transition-smooth group"
+      <div
+        className={cn(
+          "group flex items-center gap-2.5 mx-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors",
+          "hover:bg-secondary/60 active:bg-secondary/80",
+        )}
         onClick={() => handleMemberClick(member)}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
       >
         {/* Avatar with status */}
         <div className="relative flex-shrink-0">
           <AvatarWithDecoration
             user={member.user}
-            className={cn('w-8 h-8', memberIsOffline && 'opacity-50')}
-            active={isHovered}
+            className={cn("w-8 h-8 rounded-full", memberIsOffline && "opacity-40 grayscale-[30%]")}
           />
-          <StatusIndicator 
-            status={presence.status}
-            isStale={presence.isOffline && presence.isStale}
-            className="absolute -bottom-0.5 -right-0.5 border-2 border-layout-members z-10" 
-          />
+          <div className="absolute -bottom-0.5 -right-0.5 p-[2px] bg-background rounded-full">
+            <StatusIndicator status={presence.status} isStale={presence.isOffline && presence.isStale} />
+          </div>
         </div>
 
         {/* Name and info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            {isServerOwner && (
-              <Crown className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0" />
-            )}
-            <span className={cn(
-              'text-sm truncate font-medium',
-              memberIsOffline
-                ? 'text-muted-foreground'
-                : priorityCustomRoleColor
-                  ? (isGradientName ? 'text-transparent' : 'text-foreground')
-                  : roleInfo.color
-            )}
-            style={
-              !memberIsOffline && priorityCustomRoleColor
-                ? isGradientName
-                  ? ({
-                      background: priorityCustomRoleColor,
-                      WebkitBackgroundClip: 'text',
-                      backgroundClip: 'text',
-                      color: 'transparent',
-                    } as React.CSSProperties)
-                  : ({ color: priorityCustomRoleColor } as React.CSSProperties)
-                : undefined
-            }
+            {isServerOwner && <Crown className="w-3 h-3 text-amber-400 flex-shrink-0" />}
+            <span
+              className={cn(
+                "text-sm truncate",
+                memberIsOffline
+                  ? "text-muted-foreground/70"
+                  : priorityCustomRoleColor
+                    ? isGradientName
+                      ? "font-medium"
+                      : ""
+                    : roleInfo.color,
+              )}
+              style={
+                !memberIsOffline && priorityCustomRoleColor
+                  ? isGradientName
+                    ? ({
+                        background: priorityCustomRoleColor,
+                        WebkitBackgroundClip: "text",
+                        backgroundClip: "text",
+                        color: "transparent",
+                      } as React.CSSProperties)
+                    : ({ color: priorityCustomRoleColor } as React.CSSProperties)
+                  : undefined
+              }
             >
               {displayName}
             </span>
-            {member.is_muted && (
-              <VolumeX className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-            )}
+            {member.is_muted && <VolumeX className="w-3 h-3 text-muted-foreground/50 flex-shrink-0" />}
           </div>
-          <div className="flex items-center gap-1">
-            {!isServerOwner && member.role !== 'member' && (
-              <RoleBadge role={member.role} />
-            )}
-            {member.user?.custom_status && (
-              <p className="text-xs text-muted-foreground truncate">
-                {member.user.custom_status}
-              </p>
-            )}
-          </div>
+
+          {member.user?.custom_status && (
+            <p
+              className={cn(
+                "text-[11px] truncate mt-0.5",
+                memberIsOffline ? "text-muted-foreground/50" : "text-muted-foreground",
+              )}
+            >
+              {member.user.custom_status}
+            </p>
+          )}
         </div>
       </div>
     );
@@ -371,60 +377,58 @@ export const MembersSidebar = () => {
 
     return (
       <ContextMenu>
-        <ContextMenuTrigger asChild>
-          {content}
-        </ContextMenuTrigger>
-        <ContextMenuContent className="w-52">
+        <ContextMenuTrigger asChild>{content}</ContextMenuTrigger>
+        <ContextMenuContent className="w-52 rounded-xl border-border/50 p-1.5">
           {/* Basic actions */}
-          <ContextMenuItem onClick={() => handleMessage(member)}>
-            <MessageSquare className="w-4 h-4 mr-2" />
+          <ContextMenuItem onClick={() => handleMessage(member)} className="rounded-lg gap-3">
+            <MessageSquare className="w-4 h-4" />
             Message
           </ContextMenuItem>
-          
+
           {canChangeNickname && (
-            <ContextMenuItem onClick={() => handleChangeNickname(member)}>
-              <Edit3 className="w-4 h-4 mr-2" />
+            <ContextMenuItem onClick={() => handleChangeNickname(member)} className="rounded-lg gap-3">
+              <Edit3 className="w-4 h-4" />
               Change Nickname
             </ContextMenuItem>
           )}
-          
+
           {/* Moderation actions */}
           {(canKick || canBan || canMute) && (
             <>
-              <ContextMenuSeparator />
-              
+              <ContextMenuSeparator className="my-1.5" />
+
               {canMute && (
-                <ContextMenuItem onClick={() => handleToggleMute(member)}>
+                <ContextMenuItem onClick={() => handleToggleMute(member)} className="rounded-lg gap-3">
                   {member.is_muted ? (
                     <>
-                      <Volume2 className="w-4 h-4 mr-2" />
+                      <Volume2 className="w-4 h-4" />
                       Unmute
                     </>
                   ) : (
                     <>
-                      <VolumeX className="w-4 h-4 mr-2" />
+                      <VolumeX className="w-4 h-4" />
                       Mute
                     </>
                   )}
                 </ContextMenuItem>
               )}
-              
+
               {canKick && (
-                <ContextMenuItem 
+                <ContextMenuItem
                   onClick={() => handleKick(member)}
-                  className="text-orange-400 focus:text-orange-400"
+                  className="rounded-lg gap-3 text-orange-400 focus:text-orange-400"
                 >
-                  <UserX className="w-4 h-4 mr-2" />
+                  <UserX className="w-4 h-4" />
                   Kick
                 </ContextMenuItem>
               )}
-              
+
               {canBan && (
-                <ContextMenuItem 
+                <ContextMenuItem
                   onClick={() => handleBan(member)}
-                  className="text-destructive focus:text-destructive"
+                  className="rounded-lg gap-3 text-destructive focus:text-destructive"
                 >
-                  <Ban className="w-4 h-4 mr-2" />
+                  <Ban className="w-4 h-4" />
                   Ban
                 </ContextMenuItem>
               )}
@@ -434,23 +438,24 @@ export const MembersSidebar = () => {
           {/* Role management */}
           {assignableRoles.length > 0 && (
             <>
-              <ContextMenuSeparator />
+              <ContextMenuSeparator className="my-1.5" />
               <ContextMenuSub>
-                <ContextMenuSubTrigger>
-                  <Shield className="w-4 h-4 mr-2" />
+                <ContextMenuSubTrigger className="rounded-lg gap-3">
+                  <Shield className="w-4 h-4" />
                   Change Role
                 </ContextMenuSubTrigger>
-                <ContextMenuSubContent className="w-40">
-                  {assignableRoles.map(role => {
+                <ContextMenuSubContent className="w-40 rounded-xl border-border/50 p-1.5">
+                  {assignableRoles.map((role) => {
                     const info = getRoleInfo(role);
                     return (
-                      <ContextMenuItem 
+                      <ContextMenuItem
                         key={role}
                         onClick={() => handleChangeRole(member, role)}
+                        className="rounded-lg gap-3"
                       >
-                        {role === 'admin' && <ShieldAlert className={cn('w-4 h-4 mr-2', info.color)} />}
-                        {role === 'moderator' && <Shield className={cn('w-4 h-4 mr-2', info.color)} />}
-                        {role === 'member' && <ShieldOff className="w-4 h-4 mr-2 text-muted-foreground" />}
+                        {role === "admin" && <ShieldAlert className={cn("w-4 h-4", info.color)} />}
+                        {role === "moderator" && <Shield className={cn("w-4 h-4", info.color)} />}
+                        {role === "member" && <ShieldOff className="w-4 h-4 text-muted-foreground" />}
                         <span className={info.color}>{info.label}</span>
                       </ContextMenuItem>
                     );
@@ -459,16 +464,16 @@ export const MembersSidebar = () => {
               </ContextMenuSub>
             </>
           )}
-          
+
           {/* Ownership transfer */}
           {canTransfer && (
             <>
-              <ContextMenuSeparator />
-              <ContextMenuItem 
+              <ContextMenuSeparator className="my-1.5" />
+              <ContextMenuItem
                 onClick={() => handleTransferOwnership(member)}
-                className="text-yellow-400 focus:text-yellow-400"
+                className="rounded-lg gap-3 text-amber-400 focus:text-amber-400"
               >
-                <Crown className="w-4 h-4 mr-2" />
+                <Crown className="w-4 h-4" />
                 Transfer Ownership
               </ContextMenuItem>
             </>
@@ -476,95 +481,94 @@ export const MembersSidebar = () => {
         </ContextMenuContent>
       </ContextMenu>
     );
-  };
+  });
+
+  MemberItem.displayName = "MemberItem";
 
   const totalCount = members.length;
 
   return (
-    <div className="h-full flex flex-col bg-layout-members border-l border-border w-60">
+    <div className="h-full flex flex-col bg-background/50 border-l border-border/50 w-60">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-border">
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-          Members — {totalCount}
-        </h3>
+      <div className="px-4 py-3 border-b border-border/50">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Users className="w-3.5 h-3.5 text-primary" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold">Members</h3>
+            <p className="text-[10px] text-muted-foreground">{totalCount} total</p>
+          </div>
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2">
-        {/* Roles section - shows all members with roles (both online and offline) */}
+      {/* Members List */}
+      <div className="flex-1 overflow-y-auto py-2">
+        {/* Roles section */}
         {roles
           .sort((a, b) => a.position - b.position)
           .map((role) => {
             const roleMembers = roleGroups.get(role.id) || [];
             if (roleMembers.length === 0) return null;
-            
-            const isGradient = role.color.startsWith('linear-gradient');
-            const textColor = isGradient 
-              ? (role.color.match(/#[0-9a-fA-F]{6}/) || ['#5865F2'])[0] 
-              : role.color;
-            
+
+            const isGradient = role.color.startsWith("linear-gradient");
+            const textColor = isGradient ? (role.color.match(/#[0-9a-fA-F]{6}/) || ["#5865F2"])[0] : role.color;
+
             return (
-              <div key={role.id} className="mb-4">
-                <div className="px-2 py-1 flex items-center gap-2">
-                  <div
-                    className="w-3 h-3 rounded-full flex-shrink-0"
-                    style={
-                      isGradient
-                        ? { background: role.color }
-                        : { backgroundColor: role.color }
-                    }
-                  />
-                  <span 
-                    className="text-xs font-semibold uppercase tracking-wide"
-                    style={{ color: textColor }}
-                  >
-                    {role.name} — {roleMembers.length}
-                  </span>
+              <div key={role.id} className="mb-3">
+                <SectionHeader label={role.name} count={roleMembers.length} color={textColor} colorDot={role.color} />
+                <div className="space-y-0.5">
+                  {roleMembers.map((member) => (
+                    <MemberItem key={member.id} member={member} />
+                  ))}
                 </div>
-                {roleMembers.map((member) => (
-                  <MemberItem key={member.id} member={member} />
-                ))}
               </div>
             );
           })}
 
         {/* Online section - only members with no roles */}
         {onlineNoRoleMembers.length > 0 && (
-          <div className="mb-4">
-            <h3 className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-              Online — {onlineNoRoleMembers.length}
-            </h3>
-            {onlineNoRoleMembers.map((member) => (
-              <MemberItem key={member.id} member={member} />
-            ))}
+          <div className="mb-3">
+            <SectionHeader label="Online" count={onlineNoRoleMembers.length} />
+            <div className="space-y-0.5">
+              {onlineNoRoleMembers.map((member) => (
+                <MemberItem key={member.id} member={member} />
+              ))}
+            </div>
           </div>
         )}
 
-        {/* Offline section - only members with no roles */}
+        {/* Offline section - collapsible */}
         {offlineNoRoleMembers.length > 0 && (
           <Collapsible open={offlineExpanded} onOpenChange={setOfflineExpanded}>
-            <CollapsibleTrigger className="flex items-center gap-1 px-2 py-1 w-full hover:bg-secondary/30 rounded transition-smooth">
-              {offlineExpanded ? (
-                <ChevronDown className="w-3 h-3 text-muted-foreground" />
-              ) : (
+            <CollapsibleTrigger
+              className="flex items-center gap-2 px-3 py-2 w-full hover:bg-secondary/30 rounded-lg mx-2 transition-colors"
+              style={{ width: "calc(100% - 16px)" }}
+            >
+              <div className={cn("transition-transform duration-200", offlineExpanded && "rotate-90")}>
                 <ChevronRight className="w-3 h-3 text-muted-foreground" />
-              )}
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                Offline — {offlineNoRoleMembers.length}
-              </span>
+              </div>
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Offline</span>
+              <span className="text-[11px] font-medium text-muted-foreground/70">{offlineNoRoleMembers.length}</span>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              {offlineNoRoleMembers.map((member) => (
-                <MemberItem key={member.id} member={member} />
-              ))}
+              <div className="space-y-0.5 pt-1">
+                {offlineNoRoleMembers.map((member) => (
+                  <MemberItem key={member.id} member={member} />
+                ))}
+              </div>
             </CollapsibleContent>
           </Collapsible>
         )}
 
         {/* Empty state */}
         {members.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-32 text-center px-4">
-            <Users className="w-10 h-10 text-muted-foreground/50 mb-2" />
-            <p className="text-sm text-muted-foreground">No members to display</p>
+          <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+            <div className="w-12 h-12 rounded-xl bg-secondary/50 flex items-center justify-center mb-3">
+              <Users className="w-6 h-6 text-muted-foreground/50" />
+            </div>
+            <p className="text-sm font-medium text-muted-foreground">No members</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">Members will appear here</p>
           </div>
         )}
       </div>
