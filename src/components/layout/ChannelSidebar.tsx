@@ -1,7 +1,8 @@
 import { useState, useMemo, useCallback, useRef, useEffect, useLayoutEffect, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";
-import { ChevronDown, ChevronRight, Hash, Volume2, Settings, Plus, LogOut, UserPlus, FolderPlus } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { ChevronDown, ChevronRight, Hash, Volume2, Settings, Plus, LogOut, UserPlus, FolderPlus, Info, Users } from "lucide-react";
+import { toast } from "sonner";
 import {
   DndContext,
   closestCenter,
@@ -450,6 +451,7 @@ const SortableCategory = ({
 
 export const ChannelSidebar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuthStore();
   const {
     currentServer,
@@ -537,6 +539,27 @@ export const ChannelSidebar = () => {
     },
     [setCurrentChannel, markAsRead, currentServer, navigate],
   );
+
+  const isOverviewActive =
+    !!currentServer && location.pathname === `/app/servers/${currentServer.id}/overview`;
+  const isMembersActive =
+    !!currentServer && location.pathname === `/app/servers/${currentServer.id}/members`;
+
+  const handleSelectOverview = () => {
+    if (!currentServer) return;
+    setCurrentChannel(null);
+    navigate(`/app/servers/${currentServer.id}/overview`);
+  };
+
+  const handleSelectMembers = () => {
+    if (!currentServer) return;
+    if (!isOwner && !canManageServer) {
+      toast.error("You don't have permission to view server members");
+      return;
+    }
+    setCurrentChannel(null);
+    navigate(`/app/servers/${currentServer.id}/members`);
+  };
 
   const handleLeaveServer = async () => {
     if (!currentServer || !user || isOwner) return;
@@ -835,6 +858,73 @@ export const ChannelSidebar = () => {
         <ContextMenu>
           <ContextMenuTrigger asChild>
             <div className="flex-1 overflow-y-auto scrollbar-overlay p-2 scrollbar-hide">
+              {/* Default sections */}
+              <div className="mb-3 space-y-0.5">
+                <button
+                  onClick={handleSelectOverview}
+                  className={cn(
+                    "group relative w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-all duration-150 select-none",
+                    "hover:bg-secondary/80",
+                    isOverviewActive && "bg-secondary text-foreground",
+                    !isOverviewActive && "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <AnimatePresence>
+                    {isOverviewActive && (
+                      <motion.div
+                        layoutId="channel-indicator"
+                        className="absolute -left-2 top-0 bottom-0 w-1 bg-primary rounded-full"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                      />
+                    )}
+                  </AnimatePresence>
+                  <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
+                    <Info
+                      className={cn(
+                        "w-4 h-4 flex-shrink-0 transition-colors translate-y-[0.5px]",
+                        isOverviewActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground",
+                      )}
+                    />
+                  </div>
+                  <span className="truncate flex-1 text-left">Overview</span>
+                </button>
+
+                {(isOwner || canManageServer) && (
+                  <button
+                    onClick={handleSelectMembers}
+                    className={cn(
+                      "group relative w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-all duration-150 select-none",
+                      "hover:bg-secondary/80",
+                      isMembersActive && "bg-secondary text-foreground",
+                      !isMembersActive && "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <AnimatePresence>
+                      {isMembersActive && (
+                        <motion.div
+                          layoutId="channel-indicator"
+                          className="absolute -left-2 top-0 bottom-0 w-1 bg-primary rounded-full"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                        />
+                      )}
+                    </AnimatePresence>
+                    <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
+                      <Users
+                        className={cn(
+                          "w-4 h-4 flex-shrink-0 transition-colors translate-y-[0.5px]",
+                          isMembersActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground",
+                        )}
+                      />
+                    </div>
+                    <span className="truncate flex-1 text-left">Members</span>
+                  </button>
+                )}
+              </div>
+
               {/* Uncategorized channels */}
               <UncategorizedDropZone
                 isDragOver={overCategoryId === null && activeType === "channel"}

@@ -31,6 +31,8 @@ const App = () => (
             <Route path="friends" element={<EmptyRoute />} />
             <Route path="explore" element={<EmptyRoute />} />
             <Route path="servers/:serverId" element={<EmptyRoute />} />
+            <Route path="servers/:serverId/overview" element={<EmptyRoute />} />
+            <Route path="servers/:serverId/members" element={<EmptyRoute />} />
             <Route path="servers/:serverId/channels/:channelId" element={<EmptyRoute />} />
           </Route>
           <Route path="/terms" element={<Terms />} />

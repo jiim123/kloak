@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams, useLocation, useParams, Outlet } from 'react-router-dom';
 import { useAuthStore, initializeAuth } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -9,6 +9,8 @@ import { ExploreServers } from '@/components/home/ExploreServers';
 import { ChannelSidebar } from '@/components/layout/ChannelSidebar';
 import { ChatArea } from '@/components/layout/ChatArea';
 import { MembersSidebar } from '@/components/layout/MembersSidebar';
+import { ServerOverviewView } from '@/components/layout/ServerOverviewView';
+import { ServerMembersView } from '@/components/layout/ServerMembersView';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { MobileSidebar } from '@/components/layout/MobileSidebar';
 import { MobileMembersSidebar } from '@/components/layout/MobileMembersSidebar';
@@ -38,6 +40,7 @@ import { cn } from '@/lib/utils';
 import { useDMStore } from '@/stores/dmStore';
 import { supabase } from '@/integrations/supabase/client';
 import { usePresence, useRealtimeFriendships, useRealtimeUsers, useRealtimeServer, useRealtimeNotifications, useRealtimeDMs, useUnreadDMs, useRealtimeMessages, useRealtimeReactions, useTauriNotificationActions, useRealtimeOwnMembership } from '@/hooks';
+import { useMemberPermissions } from '@/hooks/useMemberPermissions';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useBackgroundSync } from '@/hooks/useBackgroundSync';
 import { usePreferencesSync } from '@/hooks/usePreferencesSync';
@@ -65,11 +68,24 @@ const AppLayout = () => {
   } = useServerStore();
   const { conversations, currentConversation, setCurrentConversation, fetchConversations } = useDMStore();
   const isMobile = useIsMobile();
+  const { hasPermission } = useMemberPermissions();
 
   // Determine current view based on route
   const currentPath = location.pathname.replace('/app', '') || '/';
   const showFriends = currentPath === '/friends';
   const showExplore = currentPath === '/explore';
+  const isServerOverviewView = !!params.serverId && currentPath === `/servers/${params.serverId}/overview`;
+  const isServerMembersView = !!params.serverId && currentPath === `/servers/${params.serverId}/members`;
+
+  const currentMembership = useMemo(() => {
+    if (!currentServer) return null;
+    return servers.find((s) => s.id === currentServer.id) ?? null;
+  }, [servers, currentServer]);
+
+  const isOwner = currentMembership?.role === 'owner';
+  const canViewMembersPage = isOwner || hasPermission('manage_server');
+  const isServerMembersViewAllowed = isServerMembersView && canViewMembersPage;
+  const isServerSpecialView = isServerOverviewView || isServerMembersViewAllowed;
   
   // Extract serverId and channelId from URL params
   const urlServerId = params.serverId;
@@ -199,7 +215,7 @@ const AppLayout = () => {
         // Channel not found, navigate to server without channel
         navigate(`/app/servers/${currentServer.id}`, { replace: true });
       }
-    } else if (urlServerId && !urlChannelId && channels.length > 0) {
+    } else if (urlServerId && !urlChannelId && channels.length > 0 && !isServerSpecialView) {
       // On server page without channel, select first channel if none selected
       if (!currentChannel || currentChannel.server_id !== currentServer.id) {
         const firstChannel = channels[0];
@@ -208,7 +224,16 @@ const AppLayout = () => {
         }
       }
     }
-  }, [urlChannelId, channels, currentChannel, currentServer, urlServerId, setCurrentChannel, navigate]);
+  }, [urlChannelId, channels, currentChannel, currentServer, urlServerId, setCurrentChannel, navigate, isServerSpecialView]);
+
+  // When visiting server special views, clear current channel selection (so sidebar highlights correctly)
+  useEffect(() => {
+    if (!currentServer) return;
+    if (!isServerSpecialView) return;
+    if (currentChannel) {
+      setCurrentChannel(null);
+    }
+  }, [isServerSpecialView, currentServer, currentChannel, setCurrentChannel]);
 
   // Fetch channels, members, roles, and permissions when server changes
   useEffect(() => {
@@ -301,7 +326,11 @@ const AppLayout = () => {
             currentConversation.other_user?.username ||
             "Direct Messages")
         : "Direct Messages"
-      : currentChannel
+      : isServerOverviewView
+        ? `${currentServer?.name || "Server"} • Overview`
+        : isServerMembersViewAllowed
+          ? `${currentServer?.name || "Server"} • Members`
+          : currentChannel
         ? `# ${currentChannel.name}`
         : currentServer
           ? currentServer.name
@@ -370,12 +399,18 @@ const AppLayout = () => {
                       </>
                     )
                   ) : (
-                    <ChatArea />
+                    isServerOverviewView ? (
+                      <ServerOverviewView />
+                    ) : isServerMembersViewAllowed ? (
+                      <ServerMembersView />
+                    ) : (
+                      <ChatArea />
+                    )
                   )}
                 </div>
 
                 {/* Members sidebar - 240px, collapsible, only in server view */}
-                {!isDMView && (
+                {!isDMView && !isServerSpecialView && (
                   <div
                     className={cn(
                       "flex-shrink-0 bg-layout-members transition-all duration-200",
@@ -408,7 +443,13 @@ const AppLayout = () => {
                 </>
               )
             ) : (
-              <ChatArea />
+              isServerOverviewView ? (
+                <ServerOverviewView />
+              ) : isServerMembersViewAllowed ? (
+                <ServerMembersView />
+              ) : (
+                <ChatArea />
+              )
             )}
           </div>
         </div>
