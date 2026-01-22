@@ -17,6 +17,7 @@ import {
   UserPlus,
   Shield,
   CircleUserRound,
+  Download,
 } from "lucide-react";
 import kloakLogo from "@/assets/kloak-logo.svg";
 import { Button } from "@/components/ui/button";
@@ -465,14 +466,6 @@ const Auth = () => {
                 </Button>
               </div>
             )}
-          </div>
-          <div className="mt-6 p-4 rounded-xl bg-secondary/30 border border-border/50 text-center">
-            <p className="text-sm text-muted-foreground mb-3">Want a faster experience? Get the Kloak desktop app.</p>
-            <Button variant="outline" disabled className="gap-2">
-              <Download className="w-4 h-4" />
-              Download App
-              <span className="text-xs text-muted-foreground ml-1">(Coming Soon)</span>
-            </Button>
           </div>
         </div>
         {/* Welcome Modal for new users */}
