@@ -1,31 +1,27 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { formatDistanceToNow } from 'date-fns';
-import { Bell, Check, Trash2, MessageCircle, AtSign, UserPlus, Mail, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
-import { useNotificationStore } from '@/stores/notificationStore';
-import { useFriendStore } from '@/stores/friendStore';
-import { useAuthStore } from '@/stores/authStore';
-import { requestNotificationPermission } from '@/hooks/useRealtimeNotifications';
-import { cn } from '@/lib/utils';
-import type { NotificationType, Notification } from '@/types';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { formatDistanceToNow } from "date-fns";
+import { Bell, Check, Trash2, MessageCircle, AtSign, UserPlus, Mail, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { useNotificationStore } from "@/stores/notificationStore";
+import { useFriendStore } from "@/stores/friendStore";
+import { useAuthStore } from "@/stores/authStore";
+import { requestNotificationPermission } from "@/hooks/useRealtimeNotifications";
+import { cn } from "@/lib/utils";
+import type { NotificationType, Notification } from "@/types";
 
 const getNotificationIcon = (type: NotificationType) => {
   switch (type) {
-    case 'mention':
+    case "mention":
       return <AtSign className="w-4 h-4" />;
-    case 'dm':
+    case "dm":
       return <MessageCircle className="w-4 h-4" />;
-    case 'friend_request':
+    case "friend_request":
       return <UserPlus className="w-4 h-4" />;
-    case 'server_invite':
+    case "server_invite":
       return <Mail className="w-4 h-4" />;
     default:
       return <Bell className="w-4 h-4" />;
@@ -63,7 +59,6 @@ export const NotificationBell = () => {
   const handleNotificationClick = (notificationId: string, link: string | null) => {
     markAsRead(notificationId);
     if (link) {
-      // Use React Router for client-side navigation instead of full page reload
       navigate(link);
     }
     setIsOpen(false);
@@ -71,19 +66,16 @@ export const NotificationBell = () => {
 
   const handleAcceptFriendRequest = async (notification: Notification) => {
     if (!user) return;
-    
+
     const username = extractUsernameFromBody(notification.body);
     if (!username) return;
 
-    // Find the pending request by username
-    const request = pendingRequests.find(
-      (r) => r.username?.toLowerCase() === username.toLowerCase()
-    );
-    
+    const request = pendingRequests.find((r) => r.username?.toLowerCase() === username.toLowerCase());
+
     if (!request) return;
 
     setProcessingIds((prev) => new Set(prev).add(notification.id));
-    
+
     try {
       await acceptRequest(request.friendship_id, user.id);
       deleteNotification(notification.id);
@@ -98,19 +90,16 @@ export const NotificationBell = () => {
 
   const handleDeclineFriendRequest = async (notification: Notification) => {
     if (!user) return;
-    
+
     const username = extractUsernameFromBody(notification.body);
     if (!username) return;
 
-    // Find the pending request by username
-    const request = pendingRequests.find(
-      (r) => r.username?.toLowerCase() === username.toLowerCase()
-    );
-    
+    const request = pendingRequests.find((r) => r.username?.toLowerCase() === username.toLowerCase());
+
     if (!request) return;
 
     setProcessingIds((prev) => new Set(prev).add(notification.id));
-    
+
     try {
       await declineRequest(request.friendship_id, user.id);
       deleteNotification(notification.id);
@@ -123,14 +112,11 @@ export const NotificationBell = () => {
     }
   };
 
-  // Check if a friend request notification is still pending
   const isFriendRequestPending = (notification: Notification): boolean => {
-    if (notification.type !== 'friend_request') return false;
+    if (notification.type !== "friend_request") return false;
     const username = extractUsernameFromBody(notification.body);
     if (!username) return false;
-    return pendingRequests.some(
-      (r) => r.username?.toLowerCase() === username.toLowerCase()
-    );
+    return pendingRequests.some((r) => r.username?.toLowerCase() === username.toLowerCase());
   };
 
   return (
@@ -139,113 +125,140 @@ export const NotificationBell = () => {
         <Button variant="ghost" size="icon" className="relative w-8 h-8">
           <Bell className="w-4 h-4" />
           {unreadCount > 0 && (
-            <Badge 
-              variant="destructive" 
+            <Badge
+              variant="destructive"
               className="absolute -top-1 -right-1 w-5 h-5 p-0 flex items-center justify-center text-[10px]"
             >
-              {unreadCount > 99 ? '99+' : unreadCount}
+              {unreadCount > 99 ? "99+" : unreadCount}
             </Badge>
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="end">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <h3 className="font-semibold">Notifications</h3>
+
+      <PopoverContent
+        className="w-96 p-0 rounded-xl border-border/50 bg-popover/95 backdrop-blur-xl shadow-xl"
+        align="end"
+        sideOffset={8}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Bell className="w-4 h-4 text-primary" />
+            </div>
+            <h3 className="font-semibold">Notifications</h3>
+            {unreadCount > 0 && (
+              <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                {unreadCount}
+              </span>
+            )}
+          </div>
           {unreadCount > 0 && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-7 text-xs"
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-3 text-xs rounded-lg hover:bg-secondary/60 transition-colors"
               onClick={handleMarkAllAsRead}
             >
-              <Check className="w-3 h-3 mr-1" />
+              <Check className="w-3 h-3 mr-1.5" />
               Mark all read
             </Button>
           )}
         </div>
 
-        <ScrollArea className="max-h-96">
+        {/* Notifications List */}
+        <ScrollArea className="max-h-[420px]">
           {notifications.length > 0 ? (
-            <div className="divide-y divide-border">
-              {notifications.map((notification) => {
+            <div className="p-2 space-y-1">
+              {notifications.map((notification, index) => {
                 const isProcessing = processingIds.has(notification.id);
                 const showFriendActions = isFriendRequestPending(notification);
+                const isUnread = !notification.is_read;
 
                 return (
                   <div
                     key={notification.id}
                     className={cn(
-                      "group flex flex-col gap-2 px-4 py-3 transition-colors animate-notification-enter",
-                      !notification.is_read && "bg-accent/30",
-                      !showFriendActions && "cursor-pointer hover:bg-accent/50"
+                      "group relative flex flex-col gap-2 p-3 rounded-xl transition-colors animate-notification-enter",
+                      isUnread && "bg-primary/5",
+                      !showFriendActions && "cursor-pointer hover:bg-secondary/60",
                     )}
-                    style={{ animationDelay: `${notifications.indexOf(notification) * 50}ms`, animationFillMode: 'both' }}
+                    style={{
+                      animationDelay: `${index * 50}ms`,
+                      animationFillMode: "both",
+                    }}
                     onClick={() => !showFriendActions && handleNotificationClick(notification.id, notification.link)}
                   >
+                    {/* Unread indicator */}
+                    {isUnread && (
+                      <div className="absolute left-1 top-1/2 -translate-y-1/2 w-1 h-8 rounded-full bg-primary" />
+                    )}
+
                     <div className="flex items-start gap-3">
-                      <div className={cn(
-                        "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center",
-                        !notification.is_read ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                      )}>
+                      {/* Icon container */}
+                      <div
+                        className={cn(
+                          "flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center",
+                          isUnread ? "bg-primary/10 text-primary" : "bg-secondary/80 text-muted-foreground",
+                        )}
+                      >
                         {getNotificationIcon(notification.type)}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className={cn(
-                          "text-sm line-clamp-2",
-                          !notification.is_read && "font-medium"
-                        )}>
-                          {notification.title}
-                        </p>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0 pt-0.5">
+                        <p className={cn("text-sm line-clamp-2", isUnread && "font-medium")}>{notification.title}</p>
                         {notification.body && (
-                          <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-                            {notification.body}
-                          </p>
+                          <p className="text-xs text-muted-foreground line-clamp-1 mt-1">{notification.body}</p>
                         )}
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {notification.created_at && formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
+                        <p className="text-xs text-muted-foreground/70 mt-1.5">
+                          {notification.created_at &&
+                            formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
                         </p>
                       </div>
+
+                      {/* Delete button */}
                       {!showFriendActions && (
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="w-6 h-6 opacity-0 group-hover:opacity-100"
+                          className="w-8 h-8 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-secondary transition-all"
                           onClick={(e) => {
                             e.stopPropagation();
                             deleteNotification(notification.id);
                           }}
                         >
-                          <Trash2 className="w-3 h-3" />
+                          <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
                         </Button>
                       )}
                     </div>
 
                     {/* Friend request actions */}
                     {showFriendActions && (
-                      <div className="flex gap-2 ml-11">
+                      <div className="flex gap-2 ml-[52px]">
                         <Button
                           size="sm"
-                          className="h-7 text-xs flex-1"
+                          className="h-9 text-xs flex-1 rounded-lg"
                           disabled={isProcessing}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleAcceptFriendRequest(notification);
                           }}
                         >
-                          <Check className="w-3 h-3 mr-1" />
+                          <Check className="w-3.5 h-3.5 mr-1.5" />
                           Accept
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-7 text-xs flex-1"
+                          className="h-9 text-xs flex-1 rounded-lg"
                           disabled={isProcessing}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDeclineFriendRequest(notification);
                           }}
                         >
-                          <X className="w-3 h-3 mr-1" />
+                          <X className="w-3.5 h-3.5 mr-1.5" />
                           Decline
                         </Button>
                       </div>
@@ -255,9 +268,13 @@ export const NotificationBell = () => {
               })}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Bell className="w-10 h-10 text-muted-foreground/50 mb-2" />
-              <p className="text-sm text-muted-foreground">No notifications</p>
+            /* Empty state */
+            <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-secondary/80 flex items-center justify-center mb-4">
+                <Bell className="w-7 h-7 text-muted-foreground/50" />
+              </div>
+              <p className="text-sm font-medium text-muted-foreground">No notifications yet</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">We'll let you know when something arrives</p>
             </div>
           )}
         </ScrollArea>
