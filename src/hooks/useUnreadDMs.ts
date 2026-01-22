@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface DMUnreadInfo {
@@ -14,6 +14,7 @@ interface UnreadDMState {
 export const useUnreadDMs = (userId: string | null) => {
   const [unreadState, setUnreadState] = useState<UnreadDMState>({});
   const [isLoading, setIsLoading] = useState(true);
+  const fetchSeqRef = useRef(0);
 
   const fetchUnreadCounts = useCallback(async () => {
     if (!userId) {
@@ -22,6 +23,7 @@ export const useUnreadDMs = (userId: string | null) => {
       return;
     }
 
+    const seq = ++fetchSeqRef.current;
     try {
       // Get all conversations where user is a participant
       const { data: participations, error: partError } = await supabase
@@ -64,11 +66,15 @@ export const useUnreadDMs = (userId: string | null) => {
         }
       }
 
-      setUnreadState(newState);
+      if (fetchSeqRef.current === seq) {
+        setUnreadState(newState);
+      }
     } catch (error) {
       console.error('Failed to fetch DM unread counts:', error);
     } finally {
-      setIsLoading(false);
+      if (fetchSeqRef.current === seq) {
+        setIsLoading(false);
+      }
     }
   }, [userId]);
 
@@ -181,6 +187,16 @@ export const useUnreadDMs = (userId: string | null) => {
     return () => {
       supabase.removeChannel(channel);
     };
+  }, [userId, fetchUnreadCounts]);
+
+  // Periodic refresh (cheap, avoids stuck counts when realtime is missed)
+  useEffect(() => {
+    if (!userId) return;
+    const interval = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      fetchUnreadCounts();
+    }, 30000);
+    return () => clearInterval(interval);
   }, [userId, fetchUnreadCounts]);
 
   return {

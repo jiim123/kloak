@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useDMStore } from '@/stores/dmStore';
 import type { DirectMessage, ReactionGroup } from '@/types';
@@ -37,6 +37,7 @@ export const useRealtimeDMs = ({
   onNewMessage,
 }: UseRealtimeDMsOptions) => {
   const { addMessage, updateMessage, removeMessage, updateConversation, fetchConversations } = useDMStore();
+  const conversationIdsRef = useRef<Set<string>>(new Set());
 
   // Handle incoming message
   const handleNewMessage = useCallback(
@@ -150,6 +151,18 @@ export const useRealtimeDMs = ({
   useEffect(() => {
     if (!userId) return;
 
+    // Prime a local set of conversation IDs for this user to avoid
+    // doing a DB lookup for every global direct_messages event.
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('dm_participants')
+        .select('conversation_id')
+        .eq('user_id', userId);
+      if (cancelled) return;
+      conversationIdsRef.current = new Set((data || []).map((r: any) => r.conversation_id));
+    })();
+
     // Subscribe to all direct_messages where user is a participant
     const channel = supabase
       .channel(`all-dms:${userId}`)
@@ -161,17 +174,10 @@ export const useRealtimeDMs = ({
           table: 'direct_messages',
         },
         async (payload) => {
-          // Check if user is a participant in this conversation
-          const { data: participation } = await supabase
-            .from('dm_participants')
-            .select('id')
-            .eq('conversation_id', payload.new.conversation_id)
-            .eq('user_id', userId)
-            .single();
-
-          if (participation) {
-            handleNewMessage(payload);
-          }
+          const convId = payload.new?.conversation_id as string | undefined;
+          if (!convId) return;
+          if (!conversationIdsRef.current.has(convId)) return;
+          handleNewMessage(payload);
         }
       )
       .on(
@@ -195,6 +201,7 @@ export const useRealtimeDMs = ({
       .subscribe();
 
     return () => {
+      cancelled = true;
       supabase.removeChannel(channel);
     };
   }, [userId, handleNewMessage, handleMessageUpdate, handleMessageDelete]);
@@ -245,8 +252,26 @@ export const useRealtimeDMs = ({
           filter: `user_id=eq.${userId}`,
         },
         () => {
-          // New conversation created, refetch conversations
-          fetchConversations(userId);
+          // New conversation created, refetch conversations and update cache
+          fetchConversations(userId).then(() => {
+            const ids = useDMStore.getState().conversations.map((c) => c.id);
+            conversationIdsRef.current = new Set(ids);
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'dm_participants',
+          filter: `user_id=eq.${userId}`,
+        },
+        () => {
+          fetchConversations(userId).then(() => {
+            const ids = useDMStore.getState().conversations.map((c) => c.id);
+            conversationIdsRef.current = new Set(ids);
+          });
         }
       )
       .subscribe();

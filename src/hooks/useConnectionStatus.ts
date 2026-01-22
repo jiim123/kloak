@@ -5,6 +5,25 @@ import { useOnlineStatus } from './useOnlineStatus';
 
 const HEARTBEAT_INTERVAL = 30000; // 30 seconds
 const LATENCY_CHECK_INTERVAL = 60000; // 1 minute
+const HEARTBEAT_FAILURES_BEFORE_RECONNECT = 2;
+
+type RealtimeListener = (connected: boolean) => void;
+
+let sharedRealtimeChannel: ReturnType<typeof supabase.channel> | null = null;
+let sharedHeartbeatTimer: NodeJS.Timeout | null = null;
+let sharedLatencyTimer: NodeJS.Timeout | null = null;
+let sharedSubscriberCount = 0;
+const realtimeListeners = new Set<RealtimeListener>();
+
+const notifyRealtimeConnected = (connected: boolean) => {
+  realtimeListeners.forEach((fn) => {
+    try {
+      fn(connected);
+    } catch {
+      // ignore listener errors
+    }
+  });
+};
 
 /**
  * Hook for monitoring connection status and latency
@@ -23,6 +42,7 @@ export function useConnectionStatus() {
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(true);
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
   const latencyRef = useRef<NodeJS.Timeout | null>(null);
+  const heartbeatFailuresRef = useRef(0);
 
   // Check latency by timing a simple query
   const checkLatency = useCallback(async () => {
@@ -41,40 +61,60 @@ export function useConnectionStatus() {
 
   // Monitor Supabase realtime connection
   useEffect(() => {
-    const channel = supabase.channel('connection-status');
-    
-    channel
-      .on('system', { event: '*' }, (payload) => {
-        if (payload.extension === 'presence') {
-          setIsRealtimeConnected(true);
-          setConnectionStatus('connected');
-          resetReconnectAttempts();
-        }
-      })
-      .subscribe((status) => {
+    sharedSubscriberCount += 1;
+
+    const onRealtime = (connected: boolean) => setIsRealtimeConnected(connected);
+    realtimeListeners.add(onRealtime);
+
+    // Create a single shared realtime channel to avoid multiple subscriptions
+    // fighting each other and causing "reconnecting" chatter.
+    if (!sharedRealtimeChannel) {
+      const channel = supabase.channel('connection-status');
+      sharedRealtimeChannel = channel;
+
+      channel.subscribe((status) => {
         switch (status) {
           case 'SUBSCRIBED':
-            setIsRealtimeConnected(true);
+            notifyRealtimeConnected(true);
             setConnectionStatus('connected');
             resetReconnectAttempts();
             break;
           case 'CLOSED':
           case 'CHANNEL_ERROR':
-            setIsRealtimeConnected(false);
-            if (isOnline) {
+            notifyRealtimeConnected(false);
+            if (navigator.onLine) {
               setConnectionStatus('reconnecting');
               incrementReconnectAttempts();
+            } else {
+              setConnectionStatus('disconnected');
             }
             break;
           case 'TIMED_OUT':
-            setIsRealtimeConnected(false);
+            notifyRealtimeConnected(false);
             setConnectionStatus('disconnected');
             break;
         }
       });
+    } else {
+      // Sync local state with current shared status
+      setIsRealtimeConnected(true);
+    }
 
     return () => {
-      supabase.removeChannel(channel);
+      realtimeListeners.delete(onRealtime);
+      sharedSubscriberCount = Math.max(0, sharedSubscriberCount - 1);
+      if (sharedSubscriberCount === 0 && sharedRealtimeChannel) {
+        try {
+          supabase.removeChannel(sharedRealtimeChannel);
+        } catch {
+          // ignore
+        }
+        sharedRealtimeChannel = null;
+        if (sharedHeartbeatTimer) clearInterval(sharedHeartbeatTimer);
+        if (sharedLatencyTimer) clearInterval(sharedLatencyTimer);
+        sharedHeartbeatTimer = null;
+        sharedLatencyTimer = null;
+      }
     };
   }, [isOnline, setConnectionStatus, resetReconnectAttempts, incrementReconnectAttempts]);
 
@@ -86,15 +126,19 @@ export function useConnectionStatus() {
       try {
         const { error } = await supabase.from('users').select('id').limit(1);
         if (error) throw error;
+        heartbeatFailuresRef.current = 0;
         
         if (connection.status !== 'connected') {
           setConnectionStatus('connected');
           resetReconnectAttempts();
         }
       } catch (error) {
-        if (connection.status === 'connected') {
-          setConnectionStatus('reconnecting');
-          incrementReconnectAttempts();
+        heartbeatFailuresRef.current += 1;
+        if (heartbeatFailuresRef.current >= HEARTBEAT_FAILURES_BEFORE_RECONNECT) {
+          if (connection.status === 'connected') {
+            setConnectionStatus('reconnecting');
+            incrementReconnectAttempts();
+          }
         }
       }
     };
@@ -103,12 +147,14 @@ export function useConnectionStatus() {
     heartbeat();
     
     // Periodic heartbeat
-    heartbeatRef.current = setInterval(heartbeat, HEARTBEAT_INTERVAL);
+    // Use a shared timer so multiple components don't create multiple heartbeats.
+    if (!sharedHeartbeatTimer) {
+      sharedHeartbeatTimer = setInterval(heartbeat, HEARTBEAT_INTERVAL);
+    }
+    heartbeatRef.current = sharedHeartbeatTimer;
 
     return () => {
-      if (heartbeatRef.current) {
-        clearInterval(heartbeatRef.current);
-      }
+      // shared timer is cleaned up when last subscriber unmounts
     };
   }, [isOnline, connection.status, setConnectionStatus, resetReconnectAttempts, incrementReconnectAttempts]);
 
@@ -117,12 +163,13 @@ export function useConnectionStatus() {
     if (!isOnline) return;
 
     checkLatency();
-    latencyRef.current = setInterval(checkLatency, LATENCY_CHECK_INTERVAL);
+    if (!sharedLatencyTimer) {
+      sharedLatencyTimer = setInterval(checkLatency, LATENCY_CHECK_INTERVAL);
+    }
+    latencyRef.current = sharedLatencyTimer;
 
     return () => {
-      if (latencyRef.current) {
-        clearInterval(latencyRef.current);
-      }
+      // shared timer is cleaned up when last subscriber unmounts
     };
   }, [isOnline, checkLatency]);
 

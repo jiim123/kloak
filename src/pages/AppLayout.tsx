@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams, useLocation, useParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation, useParams, Outlet } from 'react-router-dom';
 import { useAuthStore, initializeAuth } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
@@ -276,7 +276,8 @@ const AppLayout = () => {
   const isDMView = currentServer === null;
 
   // Show loading state - AFTER all hooks
-  if (isLoading) {
+  // Only full-screen block when we truly don't have a user yet.
+  if (isLoading && !user) {
     return (
       <div className="h-screen bg-layout-chat flex items-center justify-center">
         <div className="animate-pulse-subtle text-primary">
@@ -442,6 +443,9 @@ const AppLayout = () => {
 
       {/* Dev-only presence diagnostics overlay (toggle via localStorage) */}
       <PresenceDebugOverlay />
+
+      {/* Nested route placeholder (AppLayout is the /app layout route) */}
+      <Outlet />
     </>
   );
 };

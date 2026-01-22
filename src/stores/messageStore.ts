@@ -24,7 +24,7 @@ interface MessageState {
   setCurrentChannel: (channelId: string | null) => void;
 
   // Fetch actions
-  fetchMessages: (channelId: string, limit?: number, before?: string) => Promise<void>;
+  fetchMessages: (channelId: string, limit?: number, before?: string, force?: boolean) => Promise<void>;
 
   // Message actions
   sendMessage: (channelId: string, userId: string, content: string, replyToId?: string) => Promise<Message | null>;
@@ -103,12 +103,12 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     set({ currentChannelId: channelId, replyingTo: null });
   },
 
-  fetchMessages: async (channelId: string, limit = 50, before?: string) => {
+  fetchMessages: async (channelId: string, limit = 50, before?: string, force = false) => {
     const { messagesByChannel } = get();
     const cached = messagesByChannel[channelId];
     
     // If we have cached messages and they're fresh, don't refetch (unless paginating)
-    if (!before && cached && cached.messages.length > 0) {
+    if (!before && !force && cached && cached.messages.length > 0) {
       const isFresh = Date.now() - cached.lastFetched < CACHE_EXPIRY_MS;
       if (isFresh) {
         return;

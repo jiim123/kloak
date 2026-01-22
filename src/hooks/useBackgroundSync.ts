@@ -106,6 +106,10 @@ export function useBackgroundSync() {
       const { error } = await supabase.from('users').select('id').limit(1);
       
       if (!error) {
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+          reconnectTimeoutRef.current = null;
+        }
         setConnectionStatus('connected');
         resetReconnectAttempts();
         
@@ -129,9 +133,8 @@ export function useBackgroundSync() {
     
     // Schedule next attempt
     reconnectTimeoutRef.current = setTimeout(() => {
-      if (!isOnline) {
-        attemptReconnect();
-      }
+      // Retry while the device is online; don't rely on a potentially stale closure value.
+      if (navigator.onLine) attemptReconnect();
     }, delay);
   }, [connection.reconnectAttempts, isOnline, setConnectionStatus, incrementReconnectAttempts, resetReconnectAttempts, processQueue, refreshData]);
 

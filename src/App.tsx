@@ -14,6 +14,8 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+const EmptyRoute = () => null;
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -23,11 +25,14 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
-          <Route path="/app" element={<AppLayout />} />
-          <Route path="/app/friends" element={<AppLayout />} />
-          <Route path="/app/explore" element={<AppLayout />} />
-          <Route path="/app/servers/:serverId" element={<AppLayout />} />
-          <Route path="/app/servers/:serverId/channels/:channelId" element={<AppLayout />} />
+          {/* Keep AppLayout mounted across /app navigation to avoid full remount/reconnect storms */}
+          <Route path="/app" element={<AppLayout />}>
+            <Route index element={<EmptyRoute />} />
+            <Route path="friends" element={<EmptyRoute />} />
+            <Route path="explore" element={<EmptyRoute />} />
+            <Route path="servers/:serverId" element={<EmptyRoute />} />
+            <Route path="servers/:serverId/channels/:channelId" element={<EmptyRoute />} />
+          </Route>
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/cookies" element={<Cookies />} />

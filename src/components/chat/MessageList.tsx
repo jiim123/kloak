@@ -111,6 +111,26 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelId]);
 
+  // Reconcile after sleep/background: refetch latest when app regains focus/visibility.
+  // This avoids "stale cache" situations where realtime missed events but cache prevents refetch.
+  useEffect(() => {
+    const handleFocus = () => {
+      fetchMessages(channelId, 50, undefined, true);
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        fetchMessages(channelId, 50, undefined, true);
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [channelId, fetchMessages]);
+
   // Auto-scroll when new messages arrive (if near bottom)
   useEffect(() => {
     const currentLength = messages.length;
