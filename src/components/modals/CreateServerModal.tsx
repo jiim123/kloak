@@ -18,7 +18,7 @@ const MAX_ICON_SIZE = 1 * 1024 * 1024; // 1MB
 const ALLOWED_ICON_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 const createServerSchema = z.object({
-  name: z.string().trim().min(1, "Server name is required").max(100, "Server name must be less than 100 characters"),
+  name: z.string().trim().min(1, "Server name is required").max(50, "Server name must be less than 50 characters"),
 });
 
 const joinServerSchema = z.object({
