@@ -208,6 +208,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         icon_url: string | null;
         banner_url: string | null;
         is_published?: boolean;
+        about?: string | null;
         created_at: string;
       };
 
@@ -219,6 +220,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         icon_url: serverData.icon_url,
         banner_url: serverData.banner_url,
         is_published: serverData.is_published ?? false,
+        about: serverData.about ?? null,
         created_at: serverData.created_at,
       };
 
@@ -310,6 +312,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         icon_url: string | null;
         banner_url: string | null;
         is_published?: boolean;
+        about?: string | null;
         created_at: string;
       };
 
@@ -321,6 +324,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         icon_url: serverData.icon_url,
         banner_url: serverData.banner_url,
         is_published: serverData.is_published ?? false,
+        about: serverData.about ?? null,
         created_at: serverData.created_at,
       };
 
