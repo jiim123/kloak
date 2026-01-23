@@ -31,7 +31,7 @@ import { cn } from "@/lib/utils";
 import { getPollIdFromContent } from "@/lib/poll";
 
 // Static data moved outside component
-const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🎉"] as const;
+const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🎉", "🔥", "👀", "💯", "🙌", "😍", "🤔"] as const;
 
 const ROLE_COLORS: Record<string, string> = {
   owner: "text-yellow-400",
@@ -873,34 +873,38 @@ export const MessageItem = memo(function MessageItem({
             <DrawerTitle className="text-sm font-medium text-muted-foreground">Message Actions</DrawerTitle>
           </DrawerHeader>
           <div className="px-4 pb-8">
-            {/* Quick reactions row */}
+            {/* Quick reactions row - horizontally scrollable */}
             {canAddReactions && (
-              <div className="flex items-center justify-center gap-2 p-3 mb-4 rounded-xl bg-muted/50">
-                {QUICK_REACTIONS.map((emoji) => (
-                  <button
-                    key={emoji}
-                    onClick={() => handleMobileAddReaction(emoji)}
-                    className="text-2xl p-2.5 hover:bg-accent rounded-xl active:scale-90 transition-all"
+              <div className="mb-4 rounded-xl bg-muted/50 overflow-hidden">
+                <div className="flex items-center gap-1.5 p-2 overflow-x-auto scrollbar-hide">
+                  {QUICK_REACTIONS.map((emoji) => (
+                    <button
+                      key={emoji}
+                      onClick={() => handleMobileAddReaction(emoji)}
+                      className="text-2xl p-2.5 hover:bg-accent rounded-xl active:scale-90 transition-all flex-shrink-0"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                  {/* Divider */}
+                  <div className="w-px h-8 bg-border/50 mx-1 flex-shrink-0" />
+                  {/* Full emoji picker - Mobile (separate state) */}
+                  <EmojiGifPicker
+                    open={showMobileEmojiPicker}
+                    onOpenChange={setShowMobileEmojiPicker}
+                    onEmojiSelect={handleMobileAddReaction}
+                    disableGif
+                    serverId={currentServer?.id}
+                    serverName={currentServer?.name}
                   >
-                    {emoji}
-                  </button>
-                ))}
-                {/* Full emoji picker - Mobile (separate state) */}
-                <EmojiGifPicker
-                  open={showMobileEmojiPicker}
-                  onOpenChange={setShowMobileEmojiPicker}
-                  onEmojiSelect={handleMobileAddReaction}
-                  disableGif
-                  serverId={currentServer?.id}
-                  serverName={currentServer?.name}
-                >
-                  <button
-                    className="p-2.5 rounded-xl bg-muted hover:bg-accent transition-colors"
-                    aria-label="More emojis"
-                  >
-                    <MoreHorizontal className="w-5 h-5 text-muted-foreground" />
-                  </button>
-                </EmojiGifPicker>
+                    <button
+                      className="p-2.5 rounded-xl bg-secondary/80 hover:bg-accent transition-colors flex-shrink-0"
+                      aria-label="More emojis"
+                    >
+                      <MoreHorizontal className="w-5 h-5 text-muted-foreground" />
+                    </button>
+                  </EmojiGifPicker>
+                </div>
               </div>
             )}
 
