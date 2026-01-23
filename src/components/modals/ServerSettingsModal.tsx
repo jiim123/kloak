@@ -25,7 +25,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -43,7 +42,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
@@ -235,7 +233,7 @@ export const ServerSettingsModal = () => {
         ref={setNodeRef}
         style={style}
         className={cn(
-          "flex items-center gap-2 sm:gap-3 p-1.5 sm:p-2 rounded-lg hover:bg-secondary/50 transition-colors",
+          "flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-xl bg-secondary/30 border border-border/30 hover:bg-secondary/50 transition-colors",
           isDragging && "opacity-80 bg-secondary/60 ring-1 ring-primary/30 shadow-md relative z-50",
         )}
       >
@@ -263,7 +261,7 @@ export const ServerSettingsModal = () => {
             variant="ghost"
             size="sm"
             onClick={() => setEditingRolePermissions(role)}
-            className="text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3"
+            className="text-[10px] sm:text-xs h-8 px-2 sm:px-3 rounded-xl"
             title="Edit Permissions"
           >
             <KeyRound className="w-3 h-3" />
@@ -272,7 +270,7 @@ export const ServerSettingsModal = () => {
             variant="ghost"
             size="sm"
             onClick={() => handleEditRole(role)}
-            className="text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3"
+            className="text-[10px] sm:text-xs h-8 px-2 sm:px-3 rounded-xl"
             title="Edit Role"
           >
             <Edit2 className="w-3 h-3" />
@@ -281,7 +279,7 @@ export const ServerSettingsModal = () => {
             variant="ghost"
             size="sm"
             onClick={() => handleDeleteRole(role)}
-            className="text-muted-foreground hover:text-destructive text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3"
+            className="text-muted-foreground hover:text-destructive text-[10px] sm:text-xs h-8 px-2 sm:px-3 rounded-xl"
             title="Delete Role"
           >
             <Trash2 className="w-3 h-3" />
@@ -488,7 +486,6 @@ export const ServerSettingsModal = () => {
       }
     } catch (e) {
       console.error('Failed to check emoji limit:', e);
-      // If we can't verify, don't allow upload (safer for team-shared)
       toast.error('Unable to verify emoji limit. Please try again.');
       return;
     }
@@ -612,7 +609,6 @@ export const ServerSettingsModal = () => {
       .from('server-icons')
       .getPublicUrl(filePath);
 
-    // Add cache buster to force refresh
     return `${publicUrl}?t=${Date.now()}`;
   };
 
@@ -662,7 +658,6 @@ export const ServerSettingsModal = () => {
       .from('server-icons')
       .getPublicUrl(filePath);
 
-    // Add cache buster to force refresh
     return `${publicUrl}?t=${Date.now()}`;
   };
 
@@ -702,7 +697,6 @@ export const ServerSettingsModal = () => {
       let iconUrl = server.icon_url;
       let bannerUrl = server.banner_url;
       
-      // Upload new icon if selected
       if (iconFile) {
         setIsUploadingIcon(true);
         const uploadedUrl = await uploadIcon(server.id, iconFile);
@@ -712,7 +706,6 @@ export const ServerSettingsModal = () => {
         setIsUploadingIcon(false);
       }
       
-      // Upload new banner if selected
       if (bannerFile) {
         setIsUploadingBanner(true);
         const uploadedUrl = await uploadBanner(server.id, bannerFile);
@@ -794,7 +787,6 @@ export const ServerSettingsModal = () => {
     
     try {
       await createRole(server.id, user.id, roleName.trim(), roleColor, roleIcon.trim() ? roleIcon.trim() : null);
-      // Refetch roles to ensure UI is up to date
       await fetchRoles(server.id);
       toast.success('Role created');
       setRoleName('');
@@ -818,7 +810,6 @@ export const ServerSettingsModal = () => {
     
     try {
       await updateRole(editingRole.id, user.id, { name: roleName.trim(), color: roleColor, icon: roleIcon.trim() ? roleIcon.trim() : null });
-      // Refetch roles to ensure UI is up to date
       await fetchRoles(server.id);
       toast.success('Role updated');
       setEditingRole(null);
@@ -838,7 +829,6 @@ export const ServerSettingsModal = () => {
     
     try {
       await deleteRole(role.id, user.id);
-      // Refetch roles to ensure UI is up to date
       await fetchRoles(server.id);
       toast.success('Role deleted');
     } catch (error) {
@@ -888,9 +878,7 @@ export const ServerSettingsModal = () => {
     );
   }
 
-  // Determine which icon to show
   const displayIconUrl = iconPreview || server.icon_url;
-  // Determine which banner to show
   const displayBannerUrl = bannerPreview || server.banner_url;
 
   return (
@@ -919,614 +907,624 @@ export const ServerSettingsModal = () => {
       />
 
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-        <DialogContent className="w-[calc(100vw-4rem)] h-[calc(100vh-4rem)] max-w-none p-0 flex flex-col">
-          <DialogHeader className="px-6 pt-6 pb-4 border-b border-border">
-            <DialogTitle className="text-lg">Server Settings</DialogTitle>
-            <DialogDescription className="text-sm">
-              Manage your server settings and members
-            </DialogDescription>
+        <DialogContent className="bg-background/95 backdrop-blur-xl border-border/50 rounded-2xl p-0 max-h-[90vh] max-w-[calc(100vw-2rem)] w-full sm:max-w-4xl flex flex-col">
+          {/* Header */}
+          <DialogHeader className="p-4 sm:p-6 pb-0">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <Settings className="w-5 h-5 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <DialogTitle className="text-base sm:text-lg font-semibold">Server Settings</DialogTitle>
+                <DialogDescription className="text-xs sm:text-sm text-muted-foreground">
+                  Manage your server settings and members
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex overflow-hidden">
-            <TabsList className="flex flex-col items-start justify-start h-full w-48 sm:w-56 border-r border-border bg-secondary/30 p-2 gap-1 rounded-none inline-flex">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col sm:flex-row overflow-hidden p-4 sm:p-6 pt-4 gap-4">
+            {/* Sidebar Navigation */}
+            <TabsList className="flex sm:flex-col items-start justify-start sm:h-full sm:w-48 bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-1.5 gap-1 flex-shrink-0 overflow-x-auto sm:overflow-x-visible">
               <TabsTrigger 
                 value="overview" 
-                className="w-full justify-start gap-2 text-xs sm:text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                className="w-full justify-start gap-2 text-xs sm:text-sm px-3 py-2.5 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap"
               >
-                <Settings className="w-4 h-4" />
+                <Settings className="w-4 h-4 flex-shrink-0" />
                 <span>Overview</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="members" 
-                className="w-full justify-start gap-2 text-xs sm:text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                className="w-full justify-start gap-2 text-xs sm:text-sm px-3 py-2.5 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap"
               >
-                <Users className="w-4 h-4" />
+                <Users className="w-4 h-4 flex-shrink-0" />
                 <span>Members</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="roles" 
-                className="w-full justify-start gap-2 text-xs sm:text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                className="w-full justify-start gap-2 text-xs sm:text-sm px-3 py-2.5 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap"
               >
-                <Palette className="w-4 h-4" />
+                <Palette className="w-4 h-4 flex-shrink-0" />
                 <span>Roles</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="bans" 
-                className="w-full justify-start gap-2 text-xs sm:text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                className="w-full justify-start gap-2 text-xs sm:text-sm px-3 py-2.5 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap"
               >
-                <Ban className="w-4 h-4" />
+                <Ban className="w-4 h-4 flex-shrink-0" />
                 <span>Bans</span>
               </TabsTrigger>
               {canManageEmojis && (
                 <TabsTrigger
                   value="emojis"
-                  className="w-full justify-start gap-2 text-xs sm:text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                  className="w-full justify-start gap-2 text-xs sm:text-sm px-3 py-2.5 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap"
                 >
-                  <Smile className="w-4 h-4" />
+                  <Smile className="w-4 h-4 flex-shrink-0" />
                   <span>Emojis</span>
                 </TabsTrigger>
               )}
             </TabsList>
             
-            <div className="flex-1 overflow-y-auto">
+            {/* Content Area */}
+            <div className="flex-1 overflow-y-auto overscroll-contain touch-pan-y min-h-0">
 
               {/* Overview Tab */}
-              <TabsContent value="overview" className="m-0 p-6">
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-5">
-                {/* Server Icon */}
-                <div className="flex items-center gap-3 sm:gap-4">
-                  <div className="relative">
-                    <div 
-                      onClick={() => canManageServer && fileInputRef.current?.click()}
-                      className={cn(
-                        "w-14 h-14 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-secondary flex items-center justify-center border-2 border-dashed border-muted-foreground/50 transition-colors flex-shrink-0 overflow-hidden",
-                        canManageServer && "cursor-pointer hover:border-primary"
-                      )}
-                    >
-                      {displayIconUrl ? (
-                        <img src={displayIconUrl} alt={server.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <Upload className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground" />
-                      )}
-                    </div>
-                    {/* Remove icon button - show for new preview OR existing server icon */}
-                    {canManageServer && displayIconUrl && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (iconPreview) {
-                            clearIcon();
-                          } else {
-                            handleRemoveIcon();
-                          }
-                        }}
-                        disabled={isUploadingIcon}
-                        className="absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/90 disabled:opacity-50"
-                      >
-                        <X className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                      </button>
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs sm:text-sm font-medium">Server Icon</p>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground">
-                      {canManageServer ? 'Click to upload • Recommended 512x512' : 'Recommended 512x512'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Server Banner */}
-                <div className="space-y-1.5 sm:space-y-2">
-                  <Label className="text-xs sm:text-sm">Server Banner</Label>
-                  <div className="relative">
-                    <div 
-                      onClick={() => canManageServer && bannerInputRef.current?.click()}
-                      className={cn(
-                        "w-full h-24 sm:h-32 rounded-lg sm:rounded-xl bg-secondary flex items-center justify-center border-2 border-dashed border-muted-foreground/50 transition-colors overflow-hidden",
-                        canManageServer && "cursor-pointer hover:border-primary"
-                      )}
-                    >
-                      {displayBannerUrl ? (
-                        <img src={displayBannerUrl} alt="Server banner" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                          <Upload className="w-5 h-5 sm:w-6 sm:h-6" />
-                          <span className="text-[10px] sm:text-xs">Click to upload banner</span>
-                        </div>
-                      )}
-                    </div>
-                    {/* Remove banner button */}
-                    {canManageServer && displayBannerUrl && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (bannerPreview) {
-                            clearBanner();
-                          } else {
-                            handleRemoveBanner();
-                          }
-                        }}
-                        disabled={isUploadingBanner}
-                        className="absolute top-2 right-2 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/90 disabled:opacity-50"
-                      >
-                        <X className="w-3 h-3 sm:w-4 sm:h-4" />
-                      </button>
-                    )}
-                  </div>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">
-                    {canManageServer ? 'Recommended 960x540 • Shown in server list' : 'Shown in server list'}
-                  </p>
-                </div>
-
-                {/* Server Name */}
-                <div className="space-y-1.5 sm:space-y-2">
-                  <Label htmlFor="serverName" className="text-xs sm:text-sm">Server Name</Label>
-                  <Input
-                    id="serverName"
-                    {...register('name')}
-                    className={cn("h-9 sm:h-10 text-sm", errors.name ? 'border-destructive' : '')}
-                    disabled={!canManageServer}
-                  />
-                  {errors.name && (
-                    <p className="text-[10px] sm:text-xs text-destructive">{errors.name.message}</p>
-                  )}
-                </div>
-
-                {isAdmin && (
-                  <DialogFooter className="pt-2 sm:pt-4">
-                    <Button type="submit" disabled={isLoading || isUploadingIcon || isUploadingBanner} size="sm" className="w-full sm:w-auto">
-                      {(isLoading || isUploadingIcon || isUploadingBanner) && <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2 animate-spin" />}
-                      Save Changes
-                    </Button>
-                  </DialogFooter>
-                )}
-              </form>
-
-              {/* Danger Zone */}
-              {isOwner && (
-                <div className="border-t border-destructive/20 pt-3 sm:pt-4 mt-4 sm:mt-6">
-                  <h4 className="text-xs sm:text-sm font-semibold text-destructive mb-1.5 sm:mb-2">Danger Zone</h4>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground mb-2 sm:mb-3">
-                    Deleting this server will permanently remove all channels, messages, and members.
-                  </p>
-                  <Button 
-                    variant="destructive" 
-                    size="sm"
-                    onClick={() => setShowDeleteConfirm(true)}
-                    className="text-xs sm:text-sm h-8 sm:h-9"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
-                    Delete Server
-                  </Button>
-                </div>
-              )}
-            </TabsContent>
-
-              {/* Members Tab */}
-              <TabsContent value="members" className="m-0 p-6">
-                <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  {members.length} member{members.length !== 1 ? 's' : ''}
-                </p>
-              </div>
-              <ScrollArea className="h-[400px] sm:h-[500px] pr-2 sm:pr-4">
-                <div className="space-y-1.5 sm:space-y-2">
-                  {members.map((member) => {
-                    const memberRoles = member.roles || [];
-                    const hasRoles = memberRoles.length > 0;
-                    
-                    return (
-                      <div 
-                        key={member.id}
-                        className="flex items-center gap-2 sm:gap-3 p-1.5 sm:p-2 rounded-lg hover:bg-secondary/50"
-                      >
-                        <Avatar className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
-                          <AvatarImage src={member.user?.avatar_url || undefined} />
-                          <AvatarFallback style={{ backgroundColor: member.user?.banner_color || '#5865F2' }}>
-                            {member.user?.username?.[0]?.toUpperCase() || '?'}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                            <span className="text-xs sm:text-sm font-medium truncate">
-                              {member.nickname || member.user?.display_name || member.user?.username}
-                            </span>
-                            {getRoleIcon(member.role)}
-                            {hasRoles && (
-                              <div className="flex items-center gap-1 flex-wrap">
-                                {memberRoles.map((role) => {
-                                  const isGradient = role.color.startsWith('linear-gradient');
-                                  return (
-                                    <Badge
-                                      key={role.id}
-                                      variant="outline"
-                                      className="text-[10px] px-1.5 py-0 h-4 font-medium border-0"
-                                      style={
-                                        isGradient
-                                          ? { background: role.color, color: '#fff' }
-                                          : { backgroundColor: role.color + '20', color: role.color }
-                                      }
-                                    >
-                                      {role.name}
-                                    </Badge>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                          <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
-                            {member.user?.username} • {getRoleLabel(member.role)}
-                          </p>
-                        </div>
-                        
-                        {/* Actions (not for self or higher roles) */}
-                        {canManageRoles && member.user_id !== user?.id && member.role !== 'owner' && (
-                          <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
-                            {roles.length > 0 && (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm"
-                                    className="text-muted-foreground hover:text-foreground text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3"
-                                  >
-                                    Roles
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-48">
-                                  {roles.map((role) => {
-                                    const hasRole = memberRoles.some(r => r.id === role.id);
-                                    return (
-                                      <DropdownMenuItem
-                                        key={role.id}
-                                        onClick={() => hasRole 
-                                          ? handleRemoveRole(member, role)
-                                          : handleAssignRole(member, role)
-                                        }
-                                      >
-                                        <div className="flex items-center gap-2 w-full">
-                                          <div 
-                                            className="w-3 h-3 rounded-full flex-shrink-0"
-                                            style={
-                                              role.color.startsWith('linear-gradient')
-                                                ? { background: role.color }
-                                                : { backgroundColor: role.color }
-                                            }
-                                          />
-                                          <span className="flex-1">{role.name}</span>
-                                          {hasRole && <span className="text-xs text-muted-foreground">✓</span>}
-                                        </div>
-                                      </DropdownMenuItem>
-                                    );
-                                  })}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            )}
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleKickMember(member)}
-                              className="text-muted-foreground hover:text-destructive text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3"
-                            >
-                              Kick
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleBanMember(member)}
-                              className="text-muted-foreground hover:text-destructive text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3"
-                            >
-                              Ban
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </ScrollArea>
-            </TabsContent>
-
-              {/* Roles Tab */}
-              <TabsContent value="roles" className="m-0 p-6">
-                {canManageRoles ? (
-                  <div className="space-y-5">
-                    {/* Create/Edit Role Form */}
-                    <div className="space-y-4 p-4 border rounded-lg bg-secondary/50">
-                    <h4 className="text-xs sm:text-sm font-semibold">
-                      {editingRole ? 'Edit Role' : 'Create Role'}
-                    </h4>
-                    <div className="space-y-2">
-                      <Label className="text-xs sm:text-sm">Role Name & Color</Label>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          id="roleName"
-                          value={roleName}
-                          onChange={(e) => setRoleName(e.target.value)}
-                          placeholder="Enter role name"
-                          className="h-9 sm:h-10 text-sm flex-1"
-                          maxLength={100}
-                        />
-                        <div className="relative flex items-center gap-2">
-                          {/* Circular color picker button */}
-                          <label
-                            htmlFor="roleColor"
-                            className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-border cursor-pointer overflow-hidden flex-shrink-0 hover:border-primary transition-colors"
-                            style={{ backgroundColor: roleColor }}
-                          >
-                            <input
-                              type="color"
-                              id="roleColor"
-                              value={roleColor}
-                              onChange={(e) => setRoleColor(e.target.value)}
-                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                            />
-                          </label>
-                          <Input
-                            value={roleColor}
-                            onChange={(e) => setRoleColor(e.target.value)}
-                            placeholder="#5865F2"
-                            className="h-9 sm:h-10 text-sm w-20 sm:w-24"
-                            maxLength={7}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs sm:text-sm">Role Icon (optional)</Label>
-                      <div className="flex items-center gap-2">
-                        <EmojiGifPicker
-                          disableGif
-                          serverId={server.id}
-                          serverName={server.name}
-                          open={undefined}
-                          onOpenChange={undefined}
-                          onEmojiSelect={(emoji) => setRoleIcon(emoji)}
+              <TabsContent value="overview" className="m-0 h-full">
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                  {/* Server Icon Section */}
+                  <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4">
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <div className="relative">
+                        <div 
+                          onClick={() => canManageServer && fileInputRef.current?.click()}
+                          className={cn(
+                            "w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-secondary/50 flex items-center justify-center border border-border/30 transition-colors flex-shrink-0 overflow-hidden",
+                            canManageServer && "cursor-pointer hover:border-primary/50"
+                          )}
                         >
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-9 sm:h-10 px-3 flex items-center gap-2"
-                          >
-                            <Smile className="w-4 h-4" />
-                            <span className="text-xs sm:text-sm">
-                              {roleIcon ? 'Change' : 'Select'}
-                            </span>
-                          </Button>
-                        </EmojiGifPicker>
-                        <div className="flex-1 min-w-0">
-                          {roleIcon ? (
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-emoji leading-none">{roleIcon}</span>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="w-7 h-7"
-                                onClick={() => setRoleIcon('')}
-                                title="Clear role icon"
-                              >
-                                <X className="w-3.5 h-3.5" />
-                              </Button>
-                            </div>
+                          {displayIconUrl ? (
+                            <img src={displayIconUrl} alt={server.name} className="w-full h-full object-cover" />
                           ) : (
-                            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
-                              Emoji or existing server emoji (e.g. <span className="font-mono">:cat:</span>)
-                            </p>
+                            <Upload className="w-5 h-5 text-muted-foreground" />
                           )}
                         </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        onClick={editingRole ? handleUpdateRole : handleCreateRole}
-                        disabled={!roleName.trim()}
-                        size="sm"
-                        className="flex-1"
-                      >
-                        {editingRole ? (
-                          <>
-                            <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2" />
-                            Update Role
-                          </>
-                        ) : (
-                          <>
-                            <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2" />
-                            Create Role
-                          </>
+                        {canManageServer && displayIconUrl && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (iconPreview) {
+                                clearIcon();
+                              } else {
+                                handleRemoveIcon();
+                              }
+                            }}
+                            disabled={isUploadingIcon}
+                            className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/90 disabled:opacity-50"
+                          >
+                            <X className="w-2.5 h-2.5" />
+                          </button>
                         )}
-                      </Button>
-                      {editingRole && (
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            setEditingRole(null);
-                            setRoleName('');
-                            setRoleColor('#5865F2');
-                            setRoleIcon('');
-                          }}
-                          size="sm"
-                        >
-                          Cancel
-                        </Button>
-                      )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium">Server Icon</p>
+                        <p className="text-xs text-muted-foreground">
+                          {canManageServer ? 'Click to upload • 512x512 recommended' : '512x512 recommended'}
+                        </p>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Roles List */}
-                  <div className="space-y-2">
-                    <h4 className="text-xs sm:text-sm font-semibold">Server Roles</h4>
-                    {roles.length > 0 ? (
-                      <ScrollArea className="h-[400px] sm:h-[500px] pr-2 sm:pr-4">
-                        <DndContext
-                          sensors={roleSensors}
-                          collisionDetection={closestCenter}
-                          onDragStart={handleRoleDragStart}
-                          onDragEnd={handleRoleDragEnd}
-                          onDragCancel={handleRoleDragCancel}
-                        >
-                          <SortableContext items={roleIds} strategy={verticalListSortingStrategy}>
-                            <div className="space-y-1.5 sm:space-y-2">
-                              {roles.map((role) => (
-                                <SortableRoleRow key={role.id} role={role} />
-                              ))}
-                            </div>
-                          </SortableContext>
-                        </DndContext>
-                      </ScrollArea>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center py-6 sm:py-8 text-center">
-                        <Palette className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground/50 mb-2 sm:mb-3" />
-                        <p className="text-xs sm:text-sm text-muted-foreground">No roles created</p>
-                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
-                          Create roles to organize your server members
-                        </p>
+                  {/* Server Banner Section */}
+                  <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4 space-y-3">
+                    <Label className="text-sm font-medium">Server Banner</Label>
+                    <div className="relative">
+                      <div 
+                        onClick={() => canManageServer && bannerInputRef.current?.click()}
+                        className={cn(
+                          "w-full h-24 sm:h-32 rounded-xl bg-secondary/50 flex items-center justify-center border border-border/30 transition-colors overflow-hidden",
+                          canManageServer && "cursor-pointer hover:border-primary/50"
+                        )}
+                      >
+                        {displayBannerUrl ? (
+                          <img src={displayBannerUrl} alt="Server banner" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                            <Upload className="w-5 h-5" />
+                            <span className="text-xs">Click to upload banner</span>
+                          </div>
+                        )}
                       </div>
+                      {canManageServer && displayBannerUrl && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (bannerPreview) {
+                              clearBanner();
+                            } else {
+                              handleRemoveBanner();
+                            }
+                          }}
+                          disabled={isUploadingBanner}
+                          className="absolute top-2 right-2 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/90 disabled:opacity-50"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {canManageServer ? '960x540 recommended • Shown in server list' : 'Shown in server list'}
+                    </p>
+                  </div>
+
+                  {/* Server Name Section */}
+                  <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4 space-y-3">
+                    <Label htmlFor="serverName" className="text-sm font-medium">Server Name</Label>
+                    <Input
+                      id="serverName"
+                      {...register('name')}
+                      className={cn("h-10 rounded-xl bg-secondary/50 border-border/30", errors.name && 'border-destructive')}
+                      disabled={!canManageServer}
+                    />
+                    {errors.name && (
+                      <p className="text-xs text-destructive">{errors.name.message}</p>
                     )}
                   </div>
+
+                  {isAdmin && (
+                    <div className="flex flex-col-reverse sm:flex-row gap-2 pt-2">
+                      <Button type="submit" disabled={isLoading || isUploadingIcon || isUploadingBanner} className="h-10 rounded-xl flex-1 sm:flex-none">
+                        {(isLoading || isUploadingIcon || isUploadingBanner) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                        Save Changes
+                      </Button>
+                    </div>
+                  )}
+                </form>
+
+                {/* Danger Zone */}
+                {isOwner && (
+                  <div className="bg-destructive/10 backdrop-blur-sm rounded-xl border border-destructive/30 p-3 sm:p-4 mt-4 space-y-3">
+                    <h4 className="text-sm font-semibold text-destructive">Danger Zone</h4>
+                    <p className="text-xs text-muted-foreground">
+                      Deleting this server will permanently remove all channels, messages, and members.
+                    </p>
+                    <Button 
+                      variant="destructive" 
+                      onClick={() => setShowDeleteConfirm(true)}
+                      className="h-10 rounded-xl"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete Server
+                    </Button>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Members Tab */}
+              <TabsContent value="members" className="m-0 h-full">
+                <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm text-muted-foreground">
+                      {members.length} member{members.length !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  <div className="max-h-[400px] sm:max-h-[500px] overflow-y-auto overscroll-contain touch-pan-y space-y-2">
+                    {members.map((member) => {
+                      const memberRoles = member.roles || [];
+                      const hasRoles = memberRoles.length > 0;
+                      
+                      return (
+                        <div 
+                          key={member.id}
+                          className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-xl bg-background/50 border border-border/30"
+                        >
+                          <Avatar className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
+                            <AvatarImage src={member.user?.avatar_url || undefined} />
+                            <AvatarFallback style={{ backgroundColor: member.user?.banner_color || '#5865F2' }}>
+                              {member.user?.username?.[0]?.toUpperCase() || '?'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-sm font-medium truncate">
+                                {member.nickname || member.user?.display_name || member.user?.username}
+                              </span>
+                              {getRoleIcon(member.role)}
+                              {hasRoles && (
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  {memberRoles.map((role) => {
+                                    const isGradient = role.color.startsWith('linear-gradient');
+                                    return (
+                                      <Badge
+                                        key={role.id}
+                                        variant="outline"
+                                        className="text-[10px] px-1.5 py-0 h-4 font-medium border-0 rounded-md"
+                                        style={
+                                          isGradient
+                                            ? { background: role.color, color: '#fff' }
+                                            : { backgroundColor: role.color + '20', color: role.color }
+                                        }
+                                      >
+                                        {role.name}
+                                      </Badge>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {member.user?.username} • {getRoleLabel(member.role)}
+                            </p>
+                          </div>
+                          
+                          {canManageRoles && member.user_id !== user?.id && member.role !== 'owner' && (
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              {roles.length > 0 && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm"
+                                      className="text-muted-foreground hover:text-foreground text-xs h-8 px-2 sm:px-3 rounded-xl"
+                                    >
+                                      Roles
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="w-48 rounded-xl">
+                                    {roles.map((role) => {
+                                      const hasRole = memberRoles.some(r => r.id === role.id);
+                                      return (
+                                        <DropdownMenuItem
+                                          key={role.id}
+                                          onClick={() => hasRole 
+                                            ? handleRemoveRole(member, role)
+                                            : handleAssignRole(member, role)
+                                          }
+                                          className="rounded-lg"
+                                        >
+                                          <div className="flex items-center gap-2 w-full">
+                                            <div 
+                                              className="w-3 h-3 rounded-full flex-shrink-0"
+                                              style={
+                                                role.color.startsWith('linear-gradient')
+                                                  ? { background: role.color }
+                                                  : { backgroundColor: role.color }
+                                              }
+                                            />
+                                            <span className="flex-1">{role.name}</span>
+                                            {hasRole && <span className="text-xs text-muted-foreground">✓</span>}
+                                          </div>
+                                        </DropdownMenuItem>
+                                      );
+                                    })}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleKickMember(member)}
+                                className="text-muted-foreground hover:text-destructive text-xs h-8 px-2 sm:px-3 rounded-xl"
+                              >
+                                Kick
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleBanMember(member)}
+                                className="text-muted-foreground hover:text-destructive text-xs h-8 px-2 sm:px-3 rounded-xl"
+                              >
+                                Ban
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
+              </TabsContent>
+
+              {/* Roles Tab */}
+              <TabsContent value="roles" className="m-0 h-full">
+                {canManageRoles ? (
+                  <div className="space-y-4">
+                    {/* Create/Edit Role Form */}
+                    <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4 space-y-4">
+                      <h4 className="text-sm font-semibold">
+                        {editingRole ? 'Edit Role' : 'Create Role'}
+                      </h4>
+                      <div className="space-y-3">
+                        <Label className="text-sm">Role Name & Color</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id="roleName"
+                            value={roleName}
+                            onChange={(e) => setRoleName(e.target.value)}
+                            placeholder="Enter role name"
+                            className="h-10 rounded-xl bg-secondary/50 border-border/30 flex-1"
+                            maxLength={100}
+                          />
+                          <div className="relative flex items-center gap-2">
+                            <label
+                              htmlFor="roleColor"
+                              className="relative w-10 h-10 rounded-xl border border-border/30 cursor-pointer overflow-hidden flex-shrink-0 hover:border-primary/50 transition-colors"
+                              style={{ backgroundColor: roleColor }}
+                            >
+                              <input
+                                type="color"
+                                id="roleColor"
+                                value={roleColor}
+                                onChange={(e) => setRoleColor(e.target.value)}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                              />
+                            </label>
+                            <Input
+                              value={roleColor}
+                              onChange={(e) => setRoleColor(e.target.value)}
+                              placeholder="#5865F2"
+                              className="h-10 rounded-xl bg-secondary/50 border-border/30 w-24"
+                              maxLength={7}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <Label className="text-sm">Role Icon (optional)</Label>
+                        <div className="flex items-center gap-2">
+                          <EmojiGifPicker
+                            disableGif
+                            serverId={server.id}
+                            serverName={server.name}
+                            open={undefined}
+                            onOpenChange={undefined}
+                            onEmojiSelect={(emoji) => setRoleIcon(emoji)}
+                          >
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-10 px-3 rounded-xl flex items-center gap-2"
+                            >
+                              <Smile className="w-4 h-4" />
+                              <span className="text-sm">
+                                {roleIcon ? 'Change' : 'Select'}
+                              </span>
+                            </Button>
+                          </EmojiGifPicker>
+                          <div className="flex-1 min-w-0">
+                            {roleIcon ? (
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-emoji leading-none">{roleIcon}</span>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="w-8 h-8 rounded-xl"
+                                  onClick={() => setRoleIcon('')}
+                                  title="Clear role icon"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <p className="text-xs text-muted-foreground truncate">
+                                Emoji or existing server emoji
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex flex-col-reverse sm:flex-row gap-2">
+                        <Button
+                          onClick={editingRole ? handleUpdateRole : handleCreateRole}
+                          disabled={!roleName.trim()}
+                          className="h-10 rounded-xl flex-1"
+                        >
+                          {editingRole ? (
+                            <>
+                              <Edit2 className="w-4 h-4 mr-2" />
+                              Update Role
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="w-4 h-4 mr-2" />
+                              Create Role
+                            </>
+                          )}
+                        </Button>
+                        {editingRole && (
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setEditingRole(null);
+                              setRoleName('');
+                              setRoleColor('#5865F2');
+                              setRoleIcon('');
+                            }}
+                            className="h-10 rounded-xl"
+                          >
+                            Cancel
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Roles List */}
+                    <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4 space-y-3">
+                      <h4 className="text-sm font-semibold">Server Roles</h4>
+                      {roles.length > 0 ? (
+                        <div className="max-h-[350px] sm:max-h-[400px] overflow-y-auto overscroll-contain touch-pan-y">
+                          <DndContext
+                            sensors={roleSensors}
+                            collisionDetection={closestCenter}
+                            onDragStart={handleRoleDragStart}
+                            onDragEnd={handleRoleDragEnd}
+                            onDragCancel={handleRoleDragCancel}
+                          >
+                            <SortableContext items={roleIds} strategy={verticalListSortingStrategy}>
+                              <div className="space-y-2">
+                                {roles.map((role) => (
+                                  <SortableRoleRow key={role.id} role={role} />
+                                ))}
+                              </div>
+                            </SortableContext>
+                          </DndContext>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-8 text-center">
+                          <div className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center mb-3">
+                            <Palette className="w-5 h-5 text-muted-foreground" />
+                          </div>
+                          <p className="text-sm text-muted-foreground">No roles created</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Create roles to organize your server members
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center py-6 sm:py-8 text-center">
-                    <Shield className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground/50 mb-2 sm:mb-3" />
-                    <p className="text-xs sm:text-sm text-muted-foreground">Only admins can manage roles</p>
+                  <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-6 flex flex-col items-center justify-center text-center">
+                    <div className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center mb-3">
+                      <Shield className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">Only admins can manage roles</p>
                   </div>
                 )}
               </TabsContent>
 
               {/* Bans Tab */}
-              <TabsContent value="bans" className="m-0 p-6">
-                {bannedMembers.length > 0 ? (
-                  <ScrollArea className="h-[400px] sm:h-[500px] pr-2 sm:pr-4">
-                  <div className="space-y-1.5 sm:space-y-2">
-                    {bannedMembers.map((member) => (
-                      <div 
-                        key={member.id}
-                        className="flex items-center gap-2 sm:gap-3 p-1.5 sm:p-2 rounded-lg hover:bg-secondary/50"
-                      >
-                        <Avatar className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
-                          <AvatarImage src={member.user?.avatar_url || undefined} />
-                          <AvatarFallback style={{ backgroundColor: (member.user as any)?.banner_color || '#5865F2' }}>
-                            {member.user?.username?.[0]?.toUpperCase() || '?'}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <span className="text-xs sm:text-sm font-medium truncate">
-                            {member.user?.username}
-                          </span>
+              <TabsContent value="bans" className="m-0 h-full">
+                <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4">
+                  {bannedMembers.length > 0 ? (
+                    <div className="max-h-[400px] sm:max-h-[500px] overflow-y-auto overscroll-contain touch-pan-y space-y-2">
+                      {bannedMembers.map((member) => (
+                        <div 
+                          key={member.id}
+                          className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-xl bg-background/50 border border-border/30"
+                        >
+                          <Avatar className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
+                            <AvatarImage src={member.user?.avatar_url || undefined} />
+                            <AvatarFallback style={{ backgroundColor: (member.user as any)?.banner_color || '#5865F2' }}>
+                              {member.user?.username?.[0]?.toUpperCase() || '?'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-medium truncate">
+                              {member.user?.username}
+                            </span>
+                          </div>
+                          {canManageRoles && (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={async () => {
+                                try {
+                                  const { error } = await supabase.rpc('unban_member', {
+                                    _server_id: server.id,
+                                    _user_id: user!.id,
+                                    _target_user_id: member.user_id,
+                                  });
+                                  if (error) throw error;
+                                  toast.success(`${member.user?.username} has been unbanned`);
+                                } catch {
+                                  toast.error('Failed to unban');
+                                }
+                              }}
+                              className="text-xs h-8 px-3 rounded-xl flex-shrink-0"
+                            >
+                              Unban
+                            </Button>
+                          )}
                         </div>
-                        {canManageRoles && (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={async () => {
-                              try {
-                                const { error } = await supabase.rpc('unban_member', {
-                                  _server_id: server.id,
-                                  _user_id: user!.id,
-                                  _target_user_id: member.user_id,
-                                });
-                                if (error) throw error;
-                                toast.success(`${member.user?.username} has been unbanned`);
-                              } catch {
-                                toast.error('Failed to unban');
-                              }
-                            }}
-                            className="text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 flex-shrink-0"
-                          >
-                            Unban
-                          </Button>
-                        )}
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                      <div className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center mb-3">
+                        <Ban className="w-5 h-5 text-muted-foreground" />
                       </div>
-                    ))}
-                  </div>
-                  </ScrollArea>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-6 sm:py-8 text-center">
-                    <Ban className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground/50 mb-2 sm:mb-3" />
-                    <p className="text-xs sm:text-sm text-muted-foreground">No banned users</p>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
-                      Users you ban will appear here
-                    </p>
-                  </div>
-                )}
+                      <p className="text-sm text-muted-foreground">No banned users</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Users you ban will appear here
+                      </p>
+                    </div>
+                  )}
+                </div>
               </TabsContent>
 
               {/* Emojis Tab */}
-              <TabsContent value="emojis" className="m-0 p-6">
+              <TabsContent value="emojis" className="m-0 h-full">
                 {canManageEmojis ? (
-                  <div className="space-y-5">
-                    <div className="space-y-2">
-                      <h4 className="text-xs sm:text-sm font-semibold">Custom Emojis</h4>
-                      <p className="text-[10px] sm:text-xs text-muted-foreground">
+                  <div className="space-y-4">
+                    <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4 space-y-3">
+                      <h4 className="text-sm font-semibold">Custom Emojis</h4>
+                      <p className="text-xs text-muted-foreground">
                         Upload an emoji and set a name (2-32 chars: a-z, 0-9, underscore). Use it in chat as <span className="font-mono">:name:</span>
                       </p>
-                    </div>
 
-                    {/* Upload row */}
-                    <div className="flex flex-col sm:flex-row gap-3 sm:items-end p-4 border rounded-lg bg-secondary/50">
-                      <div className="flex items-center gap-3">
-                        <div
-                          onClick={() => emojiInputRef.current?.click()}
-                          className={cn(
-                            "w-14 h-14 rounded-xl bg-secondary flex items-center justify-center border-2 border-dashed border-muted-foreground/50 transition-colors flex-shrink-0 overflow-hidden cursor-pointer hover:border-primary"
-                          )}
-                        >
-                          {emojiPreview ? (
-                            <img src={emojiPreview} alt="Emoji preview" className="w-full h-full object-cover" />
-                          ) : (
-                            <Upload className="w-5 h-5 text-muted-foreground" />
-                          )}
+                      {/* Upload row */}
+                      <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+                        <div className="flex items-center gap-3">
+                          <div
+                            onClick={() => emojiInputRef.current?.click()}
+                            className="w-14 h-14 rounded-xl bg-secondary/50 flex items-center justify-center border border-border/30 transition-colors flex-shrink-0 overflow-hidden cursor-pointer hover:border-primary/50"
+                          >
+                            {emojiPreview ? (
+                              <img src={emojiPreview} alt="Emoji preview" className="w-full h-full object-cover" />
+                            ) : (
+                              <Upload className="w-5 h-5 text-muted-foreground" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium">Emoji Image</p>
+                            <p className="text-xs text-muted-foreground">PNG/GIF/WebP/JPEG • Max 1MB</p>
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-xs sm:text-sm font-medium">Emoji Image</p>
-                          <p className="text-[10px] sm:text-xs text-muted-foreground">PNG/GIF/WebP/JPEG • Max 1MB</p>
+
+                        <div className="flex-1 space-y-2">
+                          <Label className="text-sm" htmlFor="emojiName">Emoji Name</Label>
+                          <Input
+                            id="emojiName"
+                            value={emojiName}
+                            onChange={(e) => setEmojiName(e.target.value)}
+                            placeholder="e.g. cat"
+                            className="h-10 rounded-xl bg-secondary/50 border-border/30"
+                            maxLength={32}
+                          />
                         </div>
-                      </div>
 
-                      <div className="flex-1 space-y-2">
-                        <Label className="text-xs sm:text-sm" htmlFor="emojiName">Emoji Name</Label>
-                        <Input
-                          id="emojiName"
-                          value={emojiName}
-                          onChange={(e) => setEmojiName(e.target.value)}
-                          placeholder="e.g. cat"
-                          className="h-9 sm:h-10 text-sm"
-                          maxLength={32}
-                        />
-                      </div>
-
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={uploadServerEmoji}
-                          disabled={isUploadingEmoji || !emojiFile || !emojiName.trim()}
-                          className="flex-1 sm:flex-none"
-                        >
-                          {isUploadingEmoji && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                          Upload
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={clearEmoji}
-                          disabled={isUploadingEmoji && !!emojiFile}
-                        >
-                          Clear
-                        </Button>
+                        <div className="flex flex-col-reverse sm:flex-row gap-2">
+                          <Button
+                            type="button"
+                            onClick={uploadServerEmoji}
+                            disabled={isUploadingEmoji || !emojiFile || !emojiName.trim()}
+                            className="h-10 rounded-xl flex-1 sm:flex-none"
+                          >
+                            {isUploadingEmoji && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            Upload
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={clearEmoji}
+                            disabled={isUploadingEmoji && !!emojiFile}
+                            className="h-10 rounded-xl"
+                          >
+                            Clear
+                          </Button>
+                        </div>
                       </div>
                     </div>
 
                     {/* Emoji list */}
-                    <div className="space-y-2">
-                      <h4 className="text-xs sm:text-sm font-semibold">Server Emojis</h4>
+                    <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4 space-y-3">
+                      <h4 className="text-sm font-semibold">Server Emojis</h4>
                       {serverEmojis.length > 0 ? (
-                        <ScrollArea className="h-[420px] sm:h-[520px] pr-2 sm:pr-4">
-                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        <div className="max-h-[350px] sm:max-h-[400px] overflow-y-auto overscroll-contain touch-pan-y">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                             {serverEmojis.map((emoji) => {
                               const { data: urlData } = supabase.storage
                                 .from('server-emojis')
@@ -1536,38 +1534,39 @@ export const ServerSettingsModal = () => {
                               return (
                                 <div
                                   key={emoji.id}
-                                  className="flex items-center gap-3 p-2 rounded-lg border bg-background/40"
+                                  className="flex items-center gap-2 p-2 rounded-xl bg-background/50 border border-border/30"
                                 >
                                   <img
                                     src={url}
                                     alt={emoji.name}
-                                    className="w-10 h-10 rounded-md object-cover bg-secondary"
+                                    className="w-8 h-8 rounded-lg object-cover bg-secondary"
                                     loading="lazy"
                                   />
                                   <div className="min-w-0 flex-1">
-                                    <div className="text-xs sm:text-sm font-medium truncate">:{emoji.name}:</div>
-                                    <div className="text-[10px] sm:text-xs text-muted-foreground truncate">{emoji.name}</div>
+                                    <div className="text-xs font-medium truncate">:{emoji.name}:</div>
                                   </div>
                                   <Button
                                     type="button"
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => deleteServerEmoji(emoji)}
-                                    className="text-muted-foreground hover:text-destructive h-8 px-2"
+                                    className="text-muted-foreground hover:text-destructive h-8 w-8 p-0 rounded-xl"
                                     title="Delete emoji"
                                   >
-                                    <Trash2 className="w-4 h-4" />
+                                    <Trash2 className="w-3.5 h-3.5" />
                                   </Button>
                                 </div>
                               );
                             })}
                           </div>
-                        </ScrollArea>
+                        </div>
                       ) : (
                         <div className="flex flex-col items-center justify-center py-8 text-center">
-                          <Smile className="w-12 h-12 text-muted-foreground/50 mb-3" />
-                          <p className="text-xs sm:text-sm text-muted-foreground">No custom emojis yet</p>
-                          <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
+                          <div className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center mb-3">
+                            <Smile className="w-5 h-5 text-muted-foreground" />
+                          </div>
+                          <p className="text-sm text-muted-foreground">No custom emojis yet</p>
+                          <p className="text-xs text-muted-foreground mt-1">
                             Upload your first emoji above
                           </p>
                         </div>
@@ -1575,9 +1574,11 @@ export const ServerSettingsModal = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center py-6 sm:py-8 text-center">
-                    <Shield className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground/50 mb-2 sm:mb-3" />
-                    <p className="text-xs sm:text-sm text-muted-foreground">You do not have permission to manage emojis</p>
+                  <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-6 flex flex-col items-center justify-center text-center">
+                    <div className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center mb-3">
+                      <Shield className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">You do not have permission to manage emojis</p>
                   </div>
                 )}
               </TabsContent>
@@ -1589,7 +1590,7 @@ export const ServerSettingsModal = () => {
       {/* Role Permissions Editor */}
       {editingRolePermissions && server && (
         <Dialog open={!!editingRolePermissions} onOpenChange={(open) => !open && setEditingRolePermissions(null)}>
-          <DialogContent className="max-w-2xl max-h-[90vh]">
+          <DialogContent className="bg-background/95 backdrop-blur-xl border-border/50 rounded-2xl max-w-2xl max-h-[90vh]">
             <RolePermissionsEditor
               role={editingRolePermissions}
               serverId={server.id}
@@ -1601,24 +1602,24 @@ export const ServerSettingsModal = () => {
 
       {/* Delete Confirmation */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-lg">
+        <AlertDialogContent className="bg-background/95 backdrop-blur-xl border-border/50 rounded-2xl max-w-[calc(100vw-2rem)] sm:max-w-lg">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-base sm:text-lg">Delete Server</AlertDialogTitle>
-            <AlertDialogDescription className="text-xs sm:text-sm">
+            <AlertDialogTitle className="text-lg">Delete Server</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm">
               Are you sure you want to delete <strong>{server.name}</strong>? 
               This action cannot be undone. All channels, messages, and members will be permanently removed.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
-            <AlertDialogCancel className="w-full sm:w-auto">Cancel</AlertDialogCancel>
+          <AlertDialogFooter className="flex flex-col-reverse sm:flex-row gap-2">
+            <AlertDialogCancel className="h-10 rounded-xl">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteServer}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full sm:w-auto"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 h-10 rounded-xl"
             >
               {isLoading ? (
-                <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2 animate-spin" />
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               ) : (
-                <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2" />
+                <Trash2 className="w-4 h-4 mr-2" />
               )}
               Delete Server
             </AlertDialogAction>

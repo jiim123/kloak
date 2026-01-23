@@ -1118,6 +1118,7 @@ export type Database = {
           id: string
           key_hash: string
           last_seen: string | null
+          profile_effect: string | null
           profile_theme_accent: string | null
           profile_theme_primary: string | null
           status: Database["public"]["Enums"]["user_status"] | null
@@ -1135,6 +1136,7 @@ export type Database = {
           id?: string
           key_hash: string
           last_seen?: string | null
+          profile_effect?: string | null
           profile_theme_accent?: string | null
           profile_theme_primary?: string | null
           status?: Database["public"]["Enums"]["user_status"] | null
@@ -1152,6 +1154,7 @@ export type Database = {
           id?: string
           key_hash?: string
           last_seen?: string | null
+          profile_effect?: string | null
           profile_theme_accent?: string | null
           profile_theme_primary?: string | null
           status?: Database["public"]["Enums"]["user_status"] | null
