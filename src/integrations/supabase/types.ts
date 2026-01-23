@@ -984,6 +984,7 @@ export type Database = {
       }
       servers: {
         Row: {
+          about: string | null
           banner_url: string | null
           created_at: string | null
           icon_url: string | null
@@ -994,6 +995,7 @@ export type Database = {
           owner_id: string
         }
         Insert: {
+          about?: string | null
           banner_url?: string | null
           created_at?: string | null
           icon_url?: string | null
@@ -1004,6 +1006,7 @@ export type Database = {
           owner_id: string
         }
         Update: {
+          about?: string | null
           banner_url?: string | null
           created_at?: string | null
           icon_url?: string | null
@@ -1106,8 +1109,8 @@ export type Database = {
         Row: {
           avatar_decoration: string | null
           avatar_url: string | null
-          banner_url: string | null
           banner_color: string | null
+          banner_url: string | null
           bio: string | null
           created_at: string | null
           custom_status: string | null
@@ -1123,8 +1126,8 @@ export type Database = {
         Insert: {
           avatar_decoration?: string | null
           avatar_url?: string | null
-          banner_url?: string | null
           banner_color?: string | null
+          banner_url?: string | null
           bio?: string | null
           created_at?: string | null
           custom_status?: string | null
@@ -1140,8 +1143,8 @@ export type Database = {
         Update: {
           avatar_decoration?: string | null
           avatar_url?: string | null
-          banner_url?: string | null
           banner_color?: string | null
+          banner_url?: string | null
           bio?: string | null
           created_at?: string | null
           custom_status?: string | null

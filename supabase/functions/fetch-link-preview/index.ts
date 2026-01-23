@@ -20,6 +20,79 @@ interface LinkPreview {
   soundcloudUrl?: string; // For SoundCloud embed URL
 }
 
+// SSRF protection: Block private IPs and cloud metadata endpoints
+const BLOCKED_IP_PATTERNS = [
+  /^127\./,                           // localhost
+  /^10\./,                            // private class A
+  /^172\.(1[6-9]|2[0-9]|3[01])\./,   // private class B
+  /^192\.168\./,                      // private class C
+  /^169\.254\./,                      // link-local (AWS metadata)
+  /^0\./,                             // reserved
+  /^::1$/,                            // IPv6 localhost
+  /^fc00:/i,                          // IPv6 private
+  /^fe80:/i,                          // IPv6 link-local
+  /^fd[0-9a-f]{2}:/i,                // IPv6 private
+  /^100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\./, // Carrier-grade NAT
+];
+
+const BLOCKED_HOSTNAMES = [
+  'localhost',
+  'metadata.google.internal',
+  'metadata',
+  'metadata.azure.com',
+  'instance-data',
+  'kubernetes.default',
+  'kubernetes.default.svc',
+  'kubernetes',
+];
+
+// Validate URL is safe to fetch (prevents SSRF)
+function isUrlSafe(urlString: string): { safe: boolean; error?: string } {
+  let parsed: URL;
+  try {
+    parsed = new URL(urlString);
+  } catch {
+    return { safe: false, error: 'Invalid URL format' };
+  }
+
+  // Only allow http/https protocols
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    return { safe: false, error: 'Only HTTP(S) protocols allowed' };
+  }
+
+  const hostname = parsed.hostname.toLowerCase();
+
+  // Block known metadata/internal hostnames
+  if (BLOCKED_HOSTNAMES.includes(hostname)) {
+    return { safe: false, error: 'Blocked hostname' };
+  }
+
+  // Block private IP addresses
+  if (BLOCKED_IP_PATTERNS.some(pattern => pattern.test(hostname))) {
+    return { safe: false, error: 'Private IP addresses not allowed' };
+  }
+
+  // Block numeric IPs that resolve to internal ranges (additional check)
+  if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname)) {
+    const parts = hostname.split('.').map(Number);
+    // Additional IP range checks
+    if (parts[0] === 0 || parts[0] === 127 || parts[0] === 10) {
+      return { safe: false, error: 'Private IP addresses not allowed' };
+    }
+    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) {
+      return { safe: false, error: 'Private IP addresses not allowed' };
+    }
+    if (parts[0] === 192 && parts[1] === 168) {
+      return { safe: false, error: 'Private IP addresses not allowed' };
+    }
+    if (parts[0] === 169 && parts[1] === 254) {
+      return { safe: false, error: 'Link-local addresses not allowed' };
+    }
+  }
+
+  return { safe: true };
+}
+
 // Extract Open Graph and meta tags from HTML
 function extractMetadata(html: string, url: string): LinkPreview {
   const preview: LinkPreview = { url };
@@ -137,6 +210,16 @@ serve(async (req) => {
       );
     }
 
+    // SSRF protection: Validate URL before fetching
+    const urlValidation = isUrlSafe(url);
+    if (!urlValidation.safe) {
+      console.log(`Blocked unsafe URL: ${url} - ${urlValidation.error}`);
+      return new Response(
+        JSON.stringify({ error: urlValidation.error }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.log('Fetching link preview for:', url);
 
     // Handle direct images
@@ -157,7 +240,9 @@ serve(async (req) => {
       // Fetch YouTube oEmbed data
       try {
         const oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`;
-        const oembedResponse = await fetch(oembedUrl);
+        const oembedResponse = await fetch(oembedUrl, { 
+          signal: AbortSignal.timeout(10000) // 10 second timeout
+        });
         if (oembedResponse.ok) {
           const oembed = await oembedResponse.json();
           return new Response(
@@ -215,6 +300,7 @@ serve(async (req) => {
             'User-Agent': 'Mozilla/5.0 (compatible; LinkPreviewBot/1.0)',
             'Accept': 'text/html,application/xhtml+xml',
           },
+          signal: AbortSignal.timeout(10000), // 10 second timeout
         });
         
         if (response.ok) {
@@ -263,6 +349,7 @@ serve(async (req) => {
           headers: {
             'User-Agent': 'Mozilla/5.0 (compatible; LinkPreviewBot/1.0)',
           },
+          signal: AbortSignal.timeout(10000), // 10 second timeout
         });
         
         if (response.ok) {
@@ -301,12 +388,14 @@ serve(async (req) => {
       );
     }
 
+    // General URL fetch with timeout and size limit
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.5',
       },
+      signal: AbortSignal.timeout(10000), // 10 second timeout
     });
 
     // If fetch fails (403, 401, etc.), return basic preview with domain info
@@ -343,8 +432,23 @@ serve(async (req) => {
       );
     }
 
-    // Parse HTML
-    const html = await response.text();
+    // Parse HTML (limit to first 512KB to prevent memory issues)
+    const reader = response.body?.getReader();
+    let html = '';
+    let bytesRead = 0;
+    const maxBytes = 512 * 1024; // 512KB limit
+    
+    if (reader) {
+      const decoder = new TextDecoder();
+      while (bytesRead < maxBytes) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        bytesRead += value.length;
+        html += decoder.decode(value, { stream: true });
+      }
+      reader.cancel(); // Cancel if we hit the limit
+    }
+    
     const preview = extractMetadata(html, url);
 
     console.log('Link preview extracted:', preview.title);
