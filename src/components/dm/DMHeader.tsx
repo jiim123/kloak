@@ -76,7 +76,7 @@ export const DMHeader = ({ otherUser }: DMHeaderProps) => {
   const handleBlockUser = async () => {
     if (!user?.id || !otherUser?.id) return;
     try {
-      await blockUser(otherUser.id, user.id);
+      await blockUser(user.id, otherUser.id);
       toast.success(`Blocked ${otherUser.display_name || otherUser.username}`);
     } catch (error) {
       toast.error("Failed to block user");

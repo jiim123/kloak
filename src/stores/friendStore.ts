@@ -8,6 +8,7 @@ interface FriendState {
   pendingRequests: FriendWithUser[];
   outgoingRequests: FriendWithUser[];
   blockedUsers: FriendWithUser[];
+  visibilityBlockedUserIds: string[];
   isLoading: boolean;
   error: string | null;
 
@@ -30,6 +31,7 @@ export const useFriendStore = create<FriendState>((set, get) => ({
   pendingRequests: [],
   outgoingRequests: [],
   blockedUsers: [],
+  visibilityBlockedUserIds: [],
   isLoading: false,
   error: null,
 
@@ -38,19 +40,26 @@ export const useFriendStore = create<FriendState>((set, get) => ({
 
     try {
       // Use RPC functions to fetch all friend data
-      const [friendsRes, pendingRes, outgoingRes, blockedRes] = await Promise.all([
+      const [friendsRes, pendingRes, outgoingRes, blockedRes, visibilityBlockedRes] = await Promise.all([
         supabase.rpc('get_user_friends', { _user_id: userId }),
         supabase.rpc('get_pending_friend_requests', { _user_id: userId }),
         supabase.rpc('get_outgoing_friend_requests', { _user_id: userId }),
         supabase.rpc('get_blocked_users', { _user_id: userId }),
+        supabase.rpc('get_blocked_user_ids_for_visibility', { _user_id: userId }),
       ]);
 
       if (friendsRes.error) throw friendsRes.error;
+      if (pendingRes.error) throw pendingRes.error;
+      if (outgoingRes.error) throw outgoingRes.error;
+      if (blockedRes.error) throw blockedRes.error;
+      if (visibilityBlockedRes.error) throw visibilityBlockedRes.error;
 
       const friendsData = Array.isArray(friendsRes.data) ? friendsRes.data : [];
       const pendingData = Array.isArray(pendingRes.data) ? pendingRes.data : [];
       const outgoingData = Array.isArray(outgoingRes.data) ? outgoingRes.data : [];
       const blockedData = Array.isArray(blockedRes.data) ? blockedRes.data : [];
+      const visibilityBlockedDataRaw = Array.isArray(visibilityBlockedRes.data) ? visibilityBlockedRes.data : [];
+      const visibilityBlockedData = visibilityBlockedDataRaw.filter((id: unknown): id is string => typeof id === 'string');
 
       const friends: FriendWithUser[] = friendsData.map((f: any) => ({
         ...f.user,
@@ -85,6 +94,7 @@ export const useFriendStore = create<FriendState>((set, get) => ({
         pendingRequests,
         outgoingRequests,
         blockedUsers,
+        visibilityBlockedUserIds: visibilityBlockedData,
         isLoading: false,
       });
     } catch (error) {
@@ -214,9 +224,7 @@ export const useFriendStore = create<FriendState>((set, get) => ({
 
       if (error) throw error;
 
-      set((state) => ({
-        blockedUsers: state.blockedUsers.filter((u) => u.id !== blockedUserId),
-      }));
+      await get().fetchFriends(userId);
     } catch (error) {
       console.error('Failed to unblock user:', error);
     }

@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useVoiceStore } from "@/stores/voiceStore";
+import { useFriendStore } from "@/stores/friendStore";
 
 // Module-scoped watcher state so the voice join flow can temporarily pause watchers
 // and avoid duplicate subscriptions to the same `voice:${channelId}` topic.
@@ -25,8 +26,10 @@ function ensureWatcher(channelId: string, userId: string) {
   const refresh = () => {
     const state = ch.presenceState() as Record<string, unknown[]>;
     const userIds = extractUserIdsFromPresenceState(state);
+    const blocked = new Set(useFriendStore.getState().visibilityBlockedUserIds);
+    const filtered = blocked.size > 0 ? userIds.filter((id) => !blocked.has(id)) : userIds;
     try {
-      useVoiceStore.getState().setPresence(channelId, userIds);
+      useVoiceStore.getState().setPresence(channelId, filtered);
     } catch {
       // ignore
     }

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
+import { useFriendStore } from '@/stores/friendStore';
 import type { Message, MessageReply, ReactionGroup, User } from '@/types';
 
 interface ChannelMessages {
@@ -90,7 +91,11 @@ export const useMessageStore = create<MessageState>((set, get) => ({
   getMessages: () => {
     const { currentChannelId, messagesByChannel } = get();
     if (!currentChannelId) return [];
-    return messagesByChannel[currentChannelId]?.messages || [];
+    const msgs = messagesByChannel[currentChannelId]?.messages || [];
+    const blocked = useFriendStore.getState().visibilityBlockedUserIds;
+    if (!blocked || blocked.length === 0) return msgs;
+    const blockedSet = new Set(blocked);
+    return msgs.filter((m) => !blockedSet.has(m.user_id));
   },
 
   getHasMore: () => {
@@ -121,6 +126,9 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     }
 
     try {
+      const blockedUserIds = useFriendStore.getState().visibilityBlockedUserIds;
+      const blockedIn = blockedUserIds.length > 0 ? `(${blockedUserIds.map((id) => `"${id}"`).join(',')})` : null;
+
       let query = supabase
         .from('messages')
         .select(`
@@ -132,6 +140,10 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         .eq('channel_id', channelId)
         .order('created_at', { ascending: false })
         .limit(limit);
+
+      if (blockedIn) {
+        query = query.not('user_id', 'in', blockedIn);
+      }
 
       if (before) {
         query = query.lt('created_at', before);
@@ -149,10 +161,17 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       // Fetch reply messages separately if there are any
       let replyMap: Record<string, MessageReply> = {};
       if (replyToIds.length > 0) {
-        const { data: replyData } = await supabase
+        let replyQuery = supabase
           .from('messages')
           .select('id, content, user:users (*)')
+
           .in('id', replyToIds);
+
+        if (blockedIn) {
+          replyQuery = replyQuery.not('user_id', 'in', blockedIn);
+        }
+
+        const { data: replyData } = await replyQuery;
 
         if (replyData) {
           replyData.forEach((reply: any) => {
@@ -170,7 +189,11 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         user: msg.user,
         reply_to: msg.reply_to_id ? replyMap[msg.reply_to_id] : undefined,
         attachments: msg.attachments || [],
-        reactions: groupReactions(msg.reactions || []),
+        reactions: groupReactions(
+          blockedUserIds.length > 0
+            ? (msg.reactions || []).filter((r: any) => !blockedUserIds.includes(r.user_id))
+            : (msg.reactions || []),
+        ),
       }));
 
       const hasMore = messages.length === limit;

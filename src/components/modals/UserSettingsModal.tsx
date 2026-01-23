@@ -3,6 +3,7 @@ import {
   Loader2,
   Upload,
   User,
+  UserX,
   Palette,
   Key,
   LogOut,
@@ -41,6 +42,7 @@ import { AvatarDecorationModal } from "@/components/modals/AvatarDecorationModal
 import { ProfileEffectModal } from "@/components/modals/ProfileEffectModal";
 import { useUIStore, THEMES, type Theme } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
+import { useFriendStore } from "@/stores/friendStore";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -85,6 +87,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     setAnimateEmojis,
   } = useUIStore();
   const { user, secretKey, updateUser, logout } = useAuthStore();
+  const { blockedUsers, unblockUser, fetchFriends, isLoading: isFriendsLoading } = useFriendStore();
 
   const [activeTab, setActiveTab] = useState("account");
   const [isLoading, setIsLoading] = useState(false);
@@ -137,9 +140,16 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     { id: "profile", label: "Profile", icon: User },
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "appearance", label: "Appearance", icon: Palette },
+    { id: "blocked", label: "Blocked", icon: UserX },
   ];
 
   const isOpen = activeModal === "user-settings";
+
+  useEffect(() => {
+    if (!user?.id) return;
+    if (variant === "modal" && !isOpen) return;
+    fetchFriends(user.id);
+  }, [fetchFriends, isOpen, user?.id, variant]);
 
   const handleSaveProfile = async () => {
     if (!user) return;
@@ -351,6 +361,57 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     </div>
   );
 
+  const blockedContent = (
+    <div className="space-y-6">
+      <div>
+        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Blocked Users</Label>
+        <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+          You won&apos;t see each other&apos;s messages, presence, or server entries while blocked.
+        </p>
+      </div>
+
+      {isFriendsLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : blockedUsers.length === 0 ? (
+        <div className="p-6 rounded-xl bg-secondary/30 border border-border/50">
+          <div className="text-sm font-medium">No blocked users</div>
+          <div className="text-xs text-muted-foreground mt-1">When you block someone, they will show up here.</div>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {blockedUsers.map((u) => (
+            <div
+              key={u.id}
+              className="flex items-center justify-between gap-3 p-4 bg-secondary/50 rounded-xl border border-border/50"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <AvatarWithDecoration user={u as unknown as UserType} className="w-10 h-10 flex-shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-sm font-medium truncate">{u.display_name || u.username}</div>
+                  <div className="text-xs text-muted-foreground truncate">@{u.username}</div>
+                </div>
+              </div>
+
+              <Button
+                variant="outline"
+                className="rounded-xl"
+                onClick={async () => {
+                  if (!user?.id) return;
+                  await unblockUser(user.id, u.id);
+                  toast.success(`Unblocked @${u.username}`);
+                }}
+              >
+                Unblock
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   // Render content based on active tab
   const renderContent = () => {
     switch (activeTab) {
@@ -362,6 +423,8 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         return notificationsContent;
       case "appearance":
         return appearanceContent;
+      case "blocked":
+        return blockedContent;
       default:
         return null;
     }
@@ -1066,6 +1129,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                   {activeTab === "profile" && "Customize your profile"}
                   {activeTab === "notifications" && "Notification settings"}
                   {activeTab === "appearance" && "Personalize your app"}
+                  {activeTab === "blocked" && "Manage blocked users"}
                 </p>
               </div>
               <Button variant="ghost" size="icon" onClick={handleClose} className="rounded-full">
@@ -1153,6 +1217,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                   {activeTab === "profile" && "Customize how others see you"}
                   {activeTab === "notifications" && "Control how you receive notifications"}
                   {activeTab === "appearance" && "Personalize your app experience"}
+                  {activeTab === "blocked" && "View and unblock users"}
                 </p>
               </div>
 

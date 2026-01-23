@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useFriendStore } from '@/stores/friendStore';
 import type { Message } from '@/types';
 
 export const useRealtimePinnedMessages = (channelId: string | null) => {
@@ -14,6 +15,9 @@ export const useRealtimePinnedMessages = (channelId: string | null) => {
 
     setIsLoading(true);
     try {
+      const blockedUserIds = useFriendStore.getState().visibilityBlockedUserIds;
+      const blockedIn = blockedUserIds.length > 0 ? `(${blockedUserIds.map((id) => `"${id}"`).join(',')})` : null;
+
       const { data, error } = await supabase
         .from('messages')
         .select(`
@@ -22,6 +26,7 @@ export const useRealtimePinnedMessages = (channelId: string | null) => {
         `)
         .eq('channel_id', channelId)
         .eq('is_pinned', true)
+        .not('user_id', 'in', blockedIn || '("00000000-0000-0000-0000-000000000000")')
         .order('created_at', { ascending: false });
 
       if (error) throw error;

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useMessageStore } from '@/stores/messageStore';
+import { useFriendStore } from '@/stores/friendStore';
 import { useConnectionStatus } from './useConnectionStatus';
 import type { Message, User } from '@/types';
 
@@ -84,6 +85,10 @@ export const useRealtimeMessages = (channelId: string | null) => {
                 
                 // Server-side filter should already ensure this, but keep as a guard.
                 if (newMsg.channel_id !== channelId) return;
+                
+                // Mutual block invisibility: don't surface messages from blocked/blocked-by users.
+                const blocked = useFriendStore.getState().visibilityBlockedUserIds;
+                if (Array.isArray(blocked) && blocked.includes(newMsg.user_id)) return;
                 
                 // Get current state directly from store
                 const store = useMessageStore.getState();

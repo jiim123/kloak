@@ -41,6 +41,7 @@ import { DesktopTitleBar } from '@/components/layout/DesktopTitleBar';
 import { VoicePersistentHost } from '@/components/voice/VoicePersistentHost';
 import { cn } from '@/lib/utils';
 import { useDMStore } from '@/stores/dmStore';
+import { useFriendStore } from '@/stores/friendStore';
 import { supabase } from '@/integrations/supabase/client';
 import { usePresence, useRealtimeFriendships, useRealtimeUsers, useRealtimeServer, useRealtimeNotifications, useRealtimeDMs, useUnreadDMs, useRealtimeMessages, useRealtimeReactions, useTauriNotificationActions, useRealtimeOwnMembership } from '@/hooks';
 import { useMemberPermissions } from '@/hooks/useMemberPermissions';
@@ -70,6 +71,7 @@ const AppLayout = () => {
     channels
   } = useServerStore();
   const { conversations, currentConversation, setCurrentConversation, fetchConversations } = useDMStore();
+  const { fetchFriends } = useFriendStore();
   const isMobile = useIsMobile();
   const { hasPermission } = useMemberPermissions();
 
@@ -159,6 +161,16 @@ const AppLayout = () => {
   useRealtimeServer(currentServer?.id || null);
   useRealtimeNotifications(user?.id || null);
   usePresence();
+
+  useEffect(() => {
+    if (!user?.id) return;
+    fetchFriends(user.id).finally(() => {
+      const serverId = useServerStore.getState().currentServer?.id;
+      if (serverId) {
+        useServerStore.getState().fetchMembers(serverId);
+      }
+    });
+  }, [user?.id, fetchFriends]);
   
   // Listen for own membership changes (kicks/bans)
   useRealtimeOwnMembership();

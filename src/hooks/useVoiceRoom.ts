@@ -3,6 +3,7 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { getWebRTCIceServers } from "@/lib/webrtc";
 import { useVoiceStore } from "@/stores/voiceStore";
+import { useFriendStore } from "@/stores/friendStore";
 import { pauseVoicePresenceWatch, resumeVoicePresenceWatch } from "@/hooks/useVoicePresenceWatchers";
 
 type VoiceRoomStatus = "idle" | "joining" | "joined" | "error";
@@ -760,12 +761,15 @@ export function useVoiceRoom(opts: { channelId: string | null; userId: string | 
     sendVoiceBroadcast({ kind: "speaking", from: userId, speaking, ts: now });
   }, [channelId, isJoined, sendVoiceBroadcast, speaking, userId]);
 
-  // Publish presence to the sidebar store for the voice channel we are actively joined to.
+  // Publish presence to the global voice store for the voice channel we are actively joined to.
   // The sidebar watcher intentionally does not subscribe to this channel while we're joined,
   // to avoid duplicate Realtime subscriptions.
   useEffect(() => {
     if (!channelId || !isJoined) return;
-    setPresence(channelId, Object.keys(participants));
+    const blocked = new Set(useFriendStore.getState().visibilityBlockedUserIds);
+    const ids = Object.keys(participants);
+    const filtered = blocked.size > 0 ? ids.filter((id) => !blocked.has(id)) : ids;
+    setPresence(channelId, filtered);
   }, [channelId, isJoined, participants, setPresence]);
 
   // NOTE: Do not write to the global sidebar presence store from here.

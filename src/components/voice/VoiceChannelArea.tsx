@@ -7,6 +7,7 @@ import { useServerStore } from "@/stores/serverStore";
 import { useVoiceRoom } from "@/hooks/useVoiceRoom";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { useVoiceStore } from "@/stores/voiceStore";
+import { useFriendStore } from "@/stores/friendStore";
 import type { Channel, ServerMember } from "@/types";
 
 function AudioPlayer({ stream, muted }: { stream: MediaStream; muted: boolean }) {
@@ -165,12 +166,16 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
   }, [members]);
 
   const participantList = useMemo(() => {
-    return Object.values(voice.participants).sort((a, b) => a.joinedAt - b.joinedAt);
+    const blocked = new Set(useFriendStore.getState().visibilityBlockedUserIds);
+    return Object.values(voice.participants)
+      .filter((p) => !blocked.has(p.userId))
+      .sort((a, b) => a.joinedAt - b.joinedAt);
   }, [voice.participants]);
 
   const screenSharers = useMemo(() => {
+    const blocked = new Set(useFriendStore.getState().visibilityBlockedUserIds);
     return Object.values(voice.participants)
-      .filter((p) => p.sharing && p.userId !== user?.id)
+      .filter((p) => p.sharing && p.userId !== user?.id && !blocked.has(p.userId))
       .map((p) => {
         const stream = voice.remoteMedia[p.userId]?.screenStream;
         return stream ? { userId: p.userId, stream } : null;

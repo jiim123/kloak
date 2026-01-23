@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
+import { useFriendStore } from '@/stores/friendStore';
 
 interface ChannelUnreadInfo {
   unreadCount: number;
@@ -94,6 +95,12 @@ export const useUnread = (serverChannelIds: string[] = []) => {
           .neq('user_id', user.id)
           .order('created_at', { ascending: true })
           .limit(1);
+
+        const blockedUserIds = useFriendStore.getState().visibilityBlockedUserIds;
+        const blockedIn = blockedUserIds.length > 0 ? `(${blockedUserIds.map((id) => `"${id}"`).join(',')})` : null;
+        if (blockedIn) {
+          query = query.not('user_id', 'in', blockedIn);
+        }
 
         if (channelRead?.last_read_at) {
           query = query.gt('created_at', channelRead.last_read_at);

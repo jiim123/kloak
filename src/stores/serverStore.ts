@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
 import { inviteCodeRateLimiter } from '@/lib/security';
 import { useAuthStore } from './authStore';
+import { useFriendStore } from './friendStore';
 import type {
   Server,
   ServerWithMembership,
@@ -788,8 +789,11 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
       console.log('membersData before processing:', typedMembersData, 'length:', typedMembersData?.length);
 
+      const blockedUserIdSet = new Set(useFriendStore.getState().visibilityBlockedUserIds);
+
       const members: ServerMember[] = typedMembersData
         .filter(item => !item.is_banned)
+        .filter(item => !blockedUserIdSet.has(item.user_id))
         .map((item) => ({
           id: item.id,
           server_id: item.server_id,

@@ -6,6 +6,7 @@ import { MessageItem } from "./MessageItem";
 import { MessageListSkeleton } from "@/components/ui/skeletons";
 import { useMessageStore } from "@/stores/messageStore";
 import { useAuthStore } from "@/stores/authStore";
+import { useFriendStore } from "@/stores/friendStore";
 import { useUnread } from "@/hooks/useUnread";
 import { useScrollToMessage } from "@/hooks/useScrollToMessage";
 import { useRealtimePolls } from "@/hooks/useRealtimePolls";
@@ -50,13 +51,19 @@ const getStableMessageKey = (message: Message): string => {
 export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   const { user } = useAuthStore();
   const { isLoading, fetchMessages, setCurrentChannel, messagesByChannel } = useMessageStore();
+  const visibilityBlockedUserIds = useFriendStore((s) => s.visibilityBlockedUserIds);
 
   // Polls realtime + auto-close expired (best effort)
   useRealtimePolls(channelId);
 
   // Subscribe to messages for this specific channel
   const channelData = messagesByChannel[channelId];
-  const messages = channelData?.messages || [];
+  const rawMessages = channelData?.messages || [];
+  const messages = useMemo(() => {
+    if (!visibilityBlockedUserIds || visibilityBlockedUserIds.length === 0) return rawMessages;
+    const blocked = new Set(visibilityBlockedUserIds);
+    return rawMessages.filter((m) => !blocked.has(m.user_id));
+  }, [rawMessages, visibilityBlockedUserIds]);
   const hasMore = channelData?.hasMore ?? true;
 
   const containerRef = useRef<HTMLDivElement>(null);
