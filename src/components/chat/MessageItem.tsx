@@ -545,7 +545,12 @@ export const MessageItem = memo(function MessageItem({
           ) : (
             <div className="w-10 flex-shrink-0">
               {!isGrouped && messageUser ? (
-                <AvatarWithDecoration user={messageUser} className="w-10 h-10 cursor-pointer" active={isRowHovered} />
+                <AvatarWithDecoration 
+                  user={messageUser} 
+                  className="w-10 h-10 cursor-pointer" 
+                  active={isRowHovered}
+                  onClick={handleUsernameClick}
+                />
               ) : (
                 <span className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                   {formattedTime}

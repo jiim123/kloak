@@ -78,6 +78,7 @@ interface AvatarWithDecorationProps {
    * When false, show a captured still frame so animations do not play.
    */
   active?: boolean;
+  onClick?: (e: React.MouseEvent) => void;
 }
 
 export const AvatarWithDecoration = ({ 
@@ -86,6 +87,7 @@ export const AvatarWithDecoration = ({
   size,
   showDecoration = true,
   active = false,
+  onClick,
 }: AvatarWithDecorationProps) => {
   const decorationImage = useMemo(() => {
     return getAvatarDecorationSrc(user?.avatar_decoration);
@@ -171,6 +173,10 @@ export const AvatarWithDecoration = ({
     <div 
       className={cn('relative', className)}
       style={size ? { width: size, height: size } : undefined}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick(e as unknown as React.MouseEvent); } : undefined}
     >
       <Avatar className="w-full h-full">
         <AvatarImage src={user?.avatar_url || undefined} />
