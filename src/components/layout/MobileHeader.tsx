@@ -42,7 +42,7 @@ export const MobileHeader = ({ isDMView, showFriends, showExplore }: MobileHeade
   };
 
   return (
-    <div className="px-4 pt-4 pb-2 md:hidden">
+    <div className="sticky top-0 z-40 px-4 pt-4 pb-2 md:hidden bg-background">
       <div className="flex items-center gap-2">
         {/* Section 1: Sidebar Toggle */}
         <button
