@@ -1,14 +1,13 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { ArrowDown } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useDMStore } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useUnreadDMs } from '@/hooks/useUnreadDMs';
 import { DMMessageInput } from './DMMessageInput';
 import { DMMessageItem } from './DMMessageItem';
-import type { DirectMessage, UserStatus } from '@/types';
-import { getEffectivePresence } from '@/lib/presence';
+import { DMHeader } from './DMHeader';
+import type { DirectMessage } from '@/types';
 
 export const DMChatArea = () => {
   const { user } = useAuthStore();
@@ -85,15 +84,6 @@ export const DMChatArea = () => {
 
   const groupedMessages = groupMessages(messages);
 
-  const getStatusClass = (status?: string) => {
-    switch (status) {
-      case 'online': return 'status-online';
-      case 'idle': return 'status-idle';
-      case 'dnd': return 'status-dnd';
-      default: return 'status-offline';
-    }
-  };
-
   if (!currentConversation) {
     return (
       <div className="h-full flex items-center justify-center bg-layout-chat">
@@ -105,38 +95,11 @@ export const DMChatArea = () => {
   }
 
   const otherUser = currentConversation.other_user;
-  const otherPresence = getEffectivePresence((otherUser?.status as UserStatus) || 'offline', otherUser?.last_seen);
 
   return (
     <div className="h-full flex flex-col bg-layout-chat">
-      {/* Header - hidden on mobile since we have MobileHeader */}
-      <div className="h-12 px-4 hidden md:flex items-center gap-3 border-b border-border shadow-sm">
-        <div className="relative flex-shrink-0">
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
-            style={{ backgroundColor: otherUser?.banner_color || '#5865F2' }}
-          >
-            {otherUser?.avatar_url ? (
-              <img
-                src={otherUser.avatar_url}
-                alt={otherUser.username}
-                className="w-full h-full rounded-full object-cover"
-              />
-            ) : (
-              (otherUser?.username?.[0] || '?').toUpperCase()
-            )}
-          </div>
-          <div
-            className={cn(
-              'absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-layout-chat',
-              getStatusClass(otherPresence.status)
-            )}
-          />
-        </div>
-        <span className="font-semibold text-foreground">
-          {otherUser?.display_name || otherUser?.username || 'Unknown'}
-        </span>
-      </div>
+      {/* DM Header - sticky on mobile, hidden desktop handled inside */}
+      <DMHeader otherUser={otherUser} />
 
       {/* Messages container */}
       <div
