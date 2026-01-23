@@ -20,7 +20,7 @@ import { useSyncStore } from "@/stores/syncStore";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { MessageContent } from "./MessageContent";
 import { PollMessage } from "./PollMessage";
-import { getMessagePreview, isImageOnlyMessage } from "@/lib/message";
+import { getMessagePreview, isImageOnlyMessage, convertMentionsToReadable, convertMentionsToRaw } from "@/lib/message";
 import { formatMessageTimestamp } from "@/lib/format";
 import { DeleteMessageModal } from "@/components/modals/DeleteMessageModal";
 import { EmojiGifPicker } from "@/components/modals/EmojiGifPicker";
@@ -330,40 +330,53 @@ export const MessageItem = memo(function MessageItem({
 
   const formattedTimestamp = useMemo(() => formatMessageTimestamp(message.created_at), [message.created_at]);
 
-  // Focus textarea when editing
+  // Focus textarea when editing starts (only on initial mount into edit mode)
+  const hasInitializedEdit = useRef(false);
   useEffect(() => {
-    if (isEditing && textareaRef.current) {
+    if (isEditing && textareaRef.current && !hasInitializedEdit.current) {
+      hasInitializedEdit.current = true;
       textareaRef.current.focus();
-      textareaRef.current.setSelectionRange(editContent.length, editContent.length);
+      // Place cursor at end only on initial focus
+      const len = textareaRef.current.value.length;
+      textareaRef.current.setSelectionRange(len, len);
     }
-  }, [isEditing, editContent.length]);
+    if (!isEditing) {
+      hasInitializedEdit.current = false;
+    }
+  }, [isEditing]);
 
   // Custom event handler for external edit trigger
   useEffect(() => {
     const handler = (e: CustomEvent<{ messageId: string }>) => {
       if (e.detail.messageId === message.id && isOwnMessage) {
-        setEditContent(message.content);
+        const readableContent = convertMentionsToReadable(message.content, usersMap);
+        setEditContent(readableContent);
         setIsEditing(true);
         onStartEdit?.();
       }
     };
     window.addEventListener("startEditMessage" as keyof WindowEventMap, handler as EventListener);
     return () => window.removeEventListener("startEditMessage" as keyof WindowEventMap, handler as EventListener);
-  }, [message.id, message.content, isOwnMessage, onStartEdit]);
+  }, [message.id, message.content, isOwnMessage, onStartEdit, usersMap]);
 
   // Callbacks
   const handleEdit = useCallback(async () => {
     const trimmed = editContent.trim();
-    if (trimmed && trimmed !== message.content && user) {
-      await editMessage(message.id, trimmed, user.id);
+    if (trimmed && user) {
+      // Convert readable mentions back to UUID format before saving
+      const rawContent = convertMentionsToRaw(trimmed, usersMap);
+      if (rawContent !== message.content) {
+        await editMessage(message.id, rawContent, user.id);
+      }
     }
     setIsEditing(false);
-  }, [editContent, message.content, message.id, user, editMessage]);
+  }, [editContent, message.content, message.id, user, editMessage, usersMap]);
 
   const handleCancelEdit = useCallback(() => {
     setIsEditing(false);
-    setEditContent(message.content);
-  }, [message.content]);
+    const readableContent = convertMentionsToReadable(message.content, usersMap);
+    setEditContent(readableContent);
+  }, [message.content, usersMap]);
 
   const handlePin = useCallback(async () => {
     if (!user) return;
@@ -430,9 +443,11 @@ export const MessageItem = memo(function MessageItem({
   }, []);
 
   const handleStartEditing = useCallback(() => {
-    setEditContent(message.content);
+    // Convert UUID mentions to readable format for editing
+    const readableContent = convertMentionsToReadable(message.content, usersMap);
+    setEditContent(readableContent);
     setIsEditing(true);
-  }, [message.content]);
+  }, [message.content, usersMap]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
