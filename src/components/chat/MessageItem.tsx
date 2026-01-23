@@ -763,7 +763,8 @@ export const MessageItem = memo(function MessageItem({
 
           {/* Hover actions - Desktop (CSS-driven visibility) */}
           {!isEditing && (
-            <div className="absolute right-2 -top-3 hidden md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 md:flex items-center gap-0.5 bg-background border border-border rounded-lg shadow-lg p-0.5 transition-opacity duration-150">
+            <div className="absolute right-2 -top-4 hidden md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 md:flex items-center gap-1 bg-background/95 backdrop-blur-sm border border-border rounded-xl shadow-xl p-1 transition-opacity duration-200">
+              {/* Reactions */}
               {canAddReactions && (
                 <EmojiGifPicker
                   open={dropdownState.emoji}
@@ -773,78 +774,102 @@ export const MessageItem = memo(function MessageItem({
                   serverId={currentServer?.id}
                   serverName={currentServer?.name}
                 >
-                  <Button variant="ghost" size="icon" className="w-7 h-7 hover:bg-muted">
+                  <button
+                    className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                    aria-label="Add reaction"
+                    title="Add reaction"
+                  >
                     <Smile className="w-4 h-4" />
-                  </Button>
+                  </button>
                 </EmojiGifPicker>
               )}
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="w-7 h-7 hover:bg-muted"
-                    onClick={() => setReplyingTo(message)}
-                  >
-                    <Reply className="w-4 h-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Reply</TooltipContent>
-              </Tooltip>
+              {/* Reply */}
+              <button
+                className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                onClick={() => setReplyingTo(message)}
+                aria-label="Reply"
+                title="Reply"
+              >
+                <Reply className="w-4 h-4" />
+              </button>
 
+              {/* Edit (own messages) */}
               {isOwnMessage && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="w-7 h-7 hover:bg-muted" onClick={handleStartEditing}>
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Edit</TooltipContent>
-                </Tooltip>
+                <button
+                  className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                  onClick={handleStartEditing}
+                  aria-label="Edit"
+                  title="Edit"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
               )}
 
-              {(isOwnMessage || isAdmin) && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="w-7 h-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => setShowDeleteModal(true)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Delete</TooltipContent>
-                </Tooltip>
-              )}
+              {/* Divider */}
+              <div className="w-px h-5 bg-border mx-0.5" />
 
+              {/* Pin (if permission) */}
               {canPinMessages && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="w-7 h-7 hover:bg-muted" onClick={handlePin}>
-                      <Pin className={`w-4 h-4 ${message.is_pinned ? "text-primary" : ""}`} />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{message.is_pinned ? "Unpin" : "Pin"}</TooltipContent>
-                </Tooltip>
+                <button
+                  className={cn(
+                    "p-2 rounded-lg bg-transparent hover:bg-muted transition-colors",
+                    message.is_pinned ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                  )}
+                  onClick={handlePin}
+                  aria-label={message.is_pinned ? "Unpin" : "Pin"}
+                  title={message.is_pinned ? "Unpin" : "Pin"}
+                >
+                  <Pin className="w-4 h-4" />
+                </button>
               )}
 
+              {/* Copy */}
+              <button
+                className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                onClick={handleCopyText}
+                aria-label="Copy text"
+                title="Copy text"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+
+              {/* More menu */}
               <DropdownMenu
                 open={dropdownState.more}
                 onOpenChange={(open) => setDropdownState((s) => ({ ...s, more: open }))}
               >
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="w-7 h-7 hover:bg-muted">
+                  <button
+                    className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                    aria-label="More actions"
+                    title="More"
+                  >
                     <MoreHorizontal className="w-4 h-4" />
-                  </Button>
+                  </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={handleCopyText}>Copy Text</DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleCopyMessageId}>Copy Message ID</DropdownMenuItem>
+                <DropdownMenuContent align="end" className="min-w-[160px]">
+                  <DropdownMenuItem onClick={handleCopyMessageId}>
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copy Message ID
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+
+              {/* Divider before destructive */}
+              {(isOwnMessage || isAdmin) && <div className="w-px h-5 bg-border mx-0.5" />}
+
+              {/* Delete */}
+              {(isOwnMessage || isAdmin) && (
+                <button
+                  className="p-2 rounded-lg bg-transparent hover:bg-destructive/10 transition-colors text-destructive"
+                  onClick={() => setShowDeleteModal(true)}
+                  aria-label="Delete"
+                  title="Delete"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -858,8 +883,9 @@ export const MessageItem = memo(function MessageItem({
           </DrawerHeader>
 
           <div className="px-4 pb-8">
+            {/* Quick reactions row */}
             {canAddReactions && (
-              <div className="flex justify-center gap-3 mb-4 pb-4 border-b border-border">
+              <div className="flex items-center justify-center gap-2 p-3 mb-4 rounded-xl bg-muted/50">
                 {QUICK_REACTIONS.map((emoji) => (
                   <button
                     key={emoji}
@@ -867,74 +893,117 @@ export const MessageItem = memo(function MessageItem({
                       handleAddReaction(emoji);
                       setShowMobileActions(false);
                     }}
-                    className="text-2xl p-2 hover:bg-accent rounded-full active:scale-90 transition-transform"
+                    className="text-2xl p-2.5 hover:bg-accent rounded-xl active:scale-90 transition-all"
                   >
                     {emoji}
                   </button>
                 ))}
+                {/* Full emoji picker button */}
+                <EmojiGifPicker
+                  open={dropdownState.emoji}
+                  onOpenChange={(open) => setDropdownState((s) => ({ ...s, emoji: open }))}
+                  onEmojiSelect={(emoji) => {
+                    handleAddReaction(emoji);
+                    setShowMobileActions(false);
+                  }}
+                  disableGif
+                  serverId={currentServer?.id}
+                  serverName={currentServer?.name}
+                >
+                  <button
+                    className="p-2.5 rounded-xl bg-muted hover:bg-accent transition-colors"
+                    aria-label="More emojis"
+                  >
+                    <MoreHorizontal className="w-5 h-5 text-muted-foreground" />
+                  </button>
+                </EmojiGifPicker>
               </div>
             )}
 
+            {/* Action buttons list */}
             <div className="space-y-1">
+              {/* Reply */}
               <button
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-accent active:bg-accent text-left"
+                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-accent active:bg-accent text-left transition-colors"
                 onClick={() => {
                   setReplyingTo(message);
                   setShowMobileActions(false);
                 }}
               >
                 <Reply className="w-5 h-5 text-muted-foreground" />
-                <span>Reply</span>
+                <span className="font-medium">Reply</span>
               </button>
 
+              {/* Edit (own messages) */}
               {isOwnMessage && (
                 <button
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-accent active:bg-accent text-left"
+                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-accent active:bg-accent text-left transition-colors"
                   onClick={() => {
                     handleStartEditing();
                     setShowMobileActions(false);
                   }}
                 >
                   <Pencil className="w-5 h-5 text-muted-foreground" />
-                  <span>Edit</span>
+                  <span className="font-medium">Edit</span>
                 </button>
               )}
 
+              {/* Pin (if permission) */}
+              {canPinMessages && (
+                <button
+                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-accent active:bg-accent text-left transition-colors"
+                  onClick={() => {
+                    handlePin();
+                    setShowMobileActions(false);
+                  }}
+                >
+                  <Pin className={cn("w-5 h-5", message.is_pinned ? "text-primary" : "text-muted-foreground")} />
+                  <span className="font-medium">{message.is_pinned ? "Unpin Message" : "Pin Message"}</span>
+                </button>
+              )}
+
+              {/* Divider */}
+              <div className="my-2 h-px bg-border" />
+
+              {/* Copy Text */}
               <button
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-accent active:bg-accent text-left"
+                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-accent active:bg-accent text-left transition-colors"
                 onClick={() => {
                   handleCopyText();
                   setShowMobileActions(false);
                 }}
               >
                 <Copy className="w-5 h-5 text-muted-foreground" />
-                <span>Copy Text</span>
+                <span className="font-medium">Copy Text</span>
               </button>
 
-              {canPinMessages && (
-                <button
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-accent active:bg-accent text-left"
-                  onClick={() => {
-                    handlePin();
-                    setShowMobileActions(false);
-                  }}
-                >
-                  <Pin className={`w-5 h-5 ${message.is_pinned ? "text-primary" : "text-muted-foreground"}`} />
-                  <span>{message.is_pinned ? "Unpin" : "Pin"}</span>
-                </button>
-              )}
+              {/* Copy Message ID */}
+              <button
+                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-accent active:bg-accent text-left transition-colors"
+                onClick={() => {
+                  handleCopyMessageId();
+                  setShowMobileActions(false);
+                }}
+              >
+                <Copy className="w-5 h-5 text-muted-foreground" />
+                <span className="font-medium">Copy Message ID</span>
+              </button>
 
+              {/* Delete (if allowed) */}
               {(isOwnMessage || isAdmin) && (
-                <button
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-destructive/10 active:bg-destructive/10 text-left text-destructive"
-                  onClick={() => {
-                    setShowDeleteModal(true);
-                    setShowMobileActions(false);
-                  }}
-                >
-                  <Trash2 className="w-5 h-5" />
-                  <span>Delete</span>
-                </button>
+                <>
+                  <div className="my-2 h-px bg-border" />
+                  <button
+                    className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-destructive/10 active:bg-destructive/10 text-left text-destructive transition-colors"
+                    onClick={() => {
+                      setShowDeleteModal(true);
+                      setShowMobileActions(false);
+                    }}
+                  >
+                    <Trash2 className="w-5 h-5" />
+                    <span className="font-medium">Delete Message</span>
+                  </button>
+                </>
               )}
             </div>
           </div>
