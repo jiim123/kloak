@@ -45,6 +45,7 @@ import { useVoicePresenceWatchers } from "@/hooks/useVoicePresenceWatchers";
 import { useUIStore } from "@/stores/uiStore";
 import { useUnread } from "@/hooks/useUnread";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { MotionButton } from "@/components/ui/motion-elements";
 import { LoggedInUserPanel } from "@/components/layout/LoggedInUserPanel";
@@ -513,7 +514,8 @@ export const ChannelSidebar = () => {
   } = useServerStore();
   const voicePresenceByChannel = useVoiceStore((s) => s.presenceByChannel);
   const joinedVoiceChannelId = useVoiceStore((s) => s.joinedChannelId);
-  const { openModal, openServerSettings } = useUIStore();
+  const { openModal, openServerSettings, openServerSettingsPage } = useUIStore();
+  const isMobile = useIsMobile();
 
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -864,7 +866,7 @@ export const ChannelSidebar = () => {
 
                 {/* Server Settings */}
                 <DropdownMenuItem
-                  onClick={() => openServerSettings()}
+                  onClick={() => (isMobile ? openServerSettings() : openServerSettingsPage())}
                   className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-secondary/60 focus:bg-secondary/80 transition-colors"
                 >
                   <div className="w-6 h-6 rounded-lg bg-secondary/80 flex items-center justify-center flex-shrink-0">

@@ -42,7 +42,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -96,6 +98,11 @@ const serverSettingsSchema = z.object({
     .trim()
     .min(1, 'Server name is required')
     .max(100, 'Server name must be less than 100 characters'),
+  about: z.string()
+    .trim()
+    .max(500, 'About server must be less than 500 characters')
+    .optional()
+    .nullable(),
 });
 
 type ServerSettingsForm = z.infer<typeof serverSettingsSchema>;
@@ -111,6 +118,47 @@ const getRoleIcon = (role: ServerRole) => {
 
 const getRoleLabel = (role: ServerRole) => {
   return role.charAt(0).toUpperCase() + role.slice(1);
+};
+
+// Gradient presets
+const gradientPresets = [
+  { name: 'Ocean', colors: ['#667eea', '#764ba2'], angle: 135 },
+  { name: 'Sunset', colors: ['#ff6b6b', '#feca57'], angle: 135 },
+  { name: 'Forest', colors: ['#11998e', '#38ef7d'], angle: 135 },
+  { name: 'Fire', colors: ['#f12711', '#f5af19'], angle: 135 },
+  { name: 'Purple Dream', colors: ['#c471f5', '#fa71cd'], angle: 135 },
+  { name: 'Cool Blues', colors: ['#2193b0', '#6dd5ed'], angle: 135 },
+  { name: 'Peach', colors: ['#ed4264', '#ffedbc'], angle: 135 },
+  { name: 'Mint', colors: ['#00b4db', '#0083b0'], angle: 135 },
+  { name: 'Cosmic', colors: ['#4e54c8', '#8f94fb'], angle: 135 },
+  { name: 'Rose', colors: ['#f093fb', '#f5576c'], angle: 135 },
+  { name: 'Rainbow', colors: ['#ff0080', '#ff8c00', '#40e0d0'], angle: 90 },
+  { name: 'Neon', colors: ['#00f260', '#0575e6'], angle: 135 },
+  { name: 'Lavender', colors: ['#834d9b', '#d04ed6'], angle: 135 },
+  { name: 'Cyber', colors: ['#08aeea', '#2af598'], angle: 135 },
+  { name: 'Aurora', colors: ['#a8edea', '#fed6e3'], angle: 135 },
+  { name: 'Sunset Wave', colors: ['#ff9a56', '#ff6a88', '#ffd364'], angle: 120 },
+  { name: 'Deep Space', colors: ['#000428', '#004e92'], angle: 135 },
+  { name: 'Candy', colors: ['#fc6c8f', '#ffb88c', '#ffd98a'], angle: 90 },
+  { name: 'Electric', colors: ['#8e2de2', '#4a00e0'], angle: 135 },
+  { name: 'Tropical', colors: ['#f2994a', '#f2c94c'], angle: 135 },
+];
+
+const createGradientString = (colors: string[], angle: number = 135) => {
+  return `linear-gradient(${angle}deg, ${colors.join(', ')})`;
+};
+
+const parseColorValue = (colorValue: string): { type: 'solid' | 'gradient'; color?: string; colors?: string[]; angle?: number } => {
+  if (colorValue.startsWith('linear-gradient')) {
+    // Parse gradient string
+    const match = colorValue.match(/linear-gradient\((\d+)deg,\s*(.+)\)/);
+    if (match) {
+      const angle = parseInt(match[1]);
+      const colors = match[2].split(',').map(c => c.trim());
+      return { type: 'gradient', colors, angle };
+    }
+  }
+  return { type: 'solid', color: colorValue };
 };
 
 export const ServerSettingsModal = () => {
@@ -138,6 +186,7 @@ export const ServerSettingsModal = () => {
   const isMobile = useIsMobile();
   
   const [isLoading, setIsLoading] = useState(false);
+  const [pendingIsPublished, setPendingIsPublished] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [editingRole, setEditingRole] = useState<CustomServerRole | null>(null);
@@ -146,6 +195,9 @@ export const ServerSettingsModal = () => {
   const [roleColor, setRoleColor] = useState('#5865F2');
   const [roleIcon, setRoleIcon] = useState<string>('');
   const [activeRoleId, setActiveRoleId] = useState<string | null>(null);
+  const [colorType, setColorType] = useState<'solid' | 'gradient'>('solid');
+  const [gradientColors, setGradientColors] = useState<string[]>(['#5865F2', '#7289DA']);
+  const [gradientAngle, setGradientAngle] = useState(135);
   
   // Icon upload state
   const [iconFile, setIconFile] = useState<File | null>(null);
@@ -177,7 +229,7 @@ export const ServerSettingsModal = () => {
     }>
   >([]);
 
-  const isOpen = activeModal === 'server-settings';
+  const isOpen = isMobile && activeModal === 'server-settings';
   
   // Get server from modal data or use current server
   const serverId = modalData?.serverId as string | undefined;
@@ -327,10 +379,11 @@ export const ServerSettingsModal = () => {
     register,
     handleSubmit,
     formState: { errors },
+    getValues,
     reset,
   } = useForm<ServerSettingsForm>({
     resolver: zodResolver(serverSettingsSchema),
-    defaultValues: { name: server?.name || '' },
+    defaultValues: { name: server?.name || '', about: server?.about || '' },
   });
 
   // Real-time members updates
@@ -394,7 +447,8 @@ export const ServerSettingsModal = () => {
     if (isOpen && server) {
       fetchMembers(server.id);
       fetchRoles(server.id);
-      reset({ name: server.name });
+      reset({ name: server.name, about: server.about || '' });
+      setPendingIsPublished(!!server.is_published);
       // Reset icon state
       setIconFile(null);
       setIconPreview(null);
@@ -414,6 +468,9 @@ export const ServerSettingsModal = () => {
       setRoleName('');
       setRoleColor('#5865F2');
       setRoleIcon('');
+      setColorType('solid');
+      setGradientColors(['#5865F2', '#7289DA']);
+      setGradientAngle(135);
     }
   }, [isOpen, server, fetchMembers, fetchRoles, reset]);
 
@@ -731,10 +788,28 @@ export const ServerSettingsModal = () => {
         setIsUploadingBanner(false);
       }
       
+      const aboutValue = (data.about || '').trim();
+
+      // Publishing prerequisites: require icon, banner, and description
+      let publishToSend = pendingIsPublished;
+      if (isOwner && pendingIsPublished) {
+        const hasIcon = !!iconUrl;
+        const hasBanner = !!bannerUrl;
+        const hasAbout = !!aboutValue;
+
+        if (!hasIcon || !hasBanner || !hasAbout) {
+          publishToSend = false;
+          setPendingIsPublished(false);
+          toast.error('Add a server icon, banner, and description before making this server public.');
+        }
+      }
+      
       await updateServer(server.id, user.id, { 
         name: data.name,
         icon_url: iconUrl,
-        banner_url: bannerUrl
+        banner_url: bannerUrl,
+        about: aboutValue || null,
+        ...(isOwner ? { is_published: publishToSend } : {}),
       });
       
       toast.success('Server settings updated!');
@@ -746,6 +821,32 @@ export const ServerSettingsModal = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handlePublishChange = (checked: boolean) => {
+    if (!server || !user) return;
+    if (!isOwner) return;
+
+    // If trying to publish, require icon, banner, and description (or pending changes that will be saved)
+    if (checked) {
+      const aboutValue = (getValues('about') ?? '').trim();
+      const hasIcon = !!(iconFile || iconPreview || server.icon_url);
+      const hasBanner = !!(bannerFile || bannerPreview || server.banner_url);
+      const hasAbout = !!(aboutValue || (server.about ?? '').trim());
+
+      const missing: string[] = [];
+      if (!hasIcon) missing.push('server icon');
+      if (!hasBanner) missing.push('server banner');
+      if (!hasAbout) missing.push('server description');
+
+      if (missing.length > 0) {
+        toast.error(`Please add a ${missing.join(', ')} before making this server public.`);
+        return;
+      }
+    }
+
+    // Don't publish immediately — only apply on "Save Changes"
+    setPendingIsPublished(checked);
   };
 
   const handleDeleteServer = async () => {
@@ -795,19 +896,29 @@ export const ServerSettingsModal = () => {
     setRoleName('');
     setRoleColor('#5865F2');
     setRoleIcon('');
+    setColorType('solid');
+    setGradientColors(['#5865F2', '#7289DA']);
+    setGradientAngle(135);
     closeModal();
   };
 
   const handleCreateRole = async () => {
     if (!server || !user || !roleName.trim()) return;
     
+    const finalColor = colorType === 'gradient' 
+      ? createGradientString(gradientColors, gradientAngle)
+      : roleColor;
+    
     try {
-      await createRole(server.id, user.id, roleName.trim(), roleColor, roleIcon.trim() ? roleIcon.trim() : null);
+      await createRole(server.id, user.id, roleName.trim(), finalColor, roleIcon.trim() ? roleIcon.trim() : null);
       await fetchRoles(server.id);
       toast.success('Role created');
       setRoleName('');
       setRoleColor('#5865F2');
       setRoleIcon('');
+      setColorType('solid');
+      setGradientColors(['#5865F2', '#7289DA']);
+      setGradientAngle(135);
     } catch (error: any) {
       console.error('Failed to create role:', error);
       const errorMessage = error?.message || 'Failed to create role';
@@ -824,14 +935,21 @@ export const ServerSettingsModal = () => {
   const handleUpdateRole = async () => {
     if (!server || !user || !editingRole || !roleName.trim()) return;
     
+    const finalColor = colorType === 'gradient' 
+      ? createGradientString(gradientColors, gradientAngle)
+      : roleColor;
+    
     try {
-      await updateRole(editingRole.id, user.id, { name: roleName.trim(), color: roleColor, icon: roleIcon.trim() ? roleIcon.trim() : null });
+      await updateRole(editingRole.id, user.id, { name: roleName.trim(), color: finalColor, icon: roleIcon.trim() ? roleIcon.trim() : null });
       await fetchRoles(server.id);
       toast.success('Role updated');
       setEditingRole(null);
       setRoleName('');
       setRoleColor('#5865F2');
       setRoleIcon('');
+      setColorType('solid');
+      setGradientColors(['#5865F2', '#7289DA']);
+      setGradientAngle(135);
     } catch (error) {
       console.error('Failed to update role:', error);
       toast.error('Failed to update role');
@@ -856,7 +974,15 @@ export const ServerSettingsModal = () => {
   const handleEditRole = (role: CustomServerRole) => {
     setEditingRole(role);
     setRoleName(role.name);
-    setRoleColor(role.color);
+    const parsed = parseColorValue(role.color);
+    if (parsed.type === 'gradient') {
+      setColorType('gradient');
+      setGradientColors(parsed.colors || ['#5865F2', '#7289DA']);
+      setGradientAngle(parsed.angle || 135);
+    } else {
+      setColorType('solid');
+      setRoleColor(parsed.color || '#5865F2');
+    }
     setRoleIcon(role.icon || '');
   };
 
@@ -1052,6 +1178,46 @@ export const ServerSettingsModal = () => {
                     )}
                   </div>
 
+                  {/* About Server Section */}
+                  <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 space-y-3">
+                    <Label htmlFor="serverAboutMobile" className="text-sm font-medium">About Server</Label>
+                    <Textarea
+                      id="serverAboutMobile"
+                      {...register('about')}
+                      className={cn("min-h-[100px] rounded-xl bg-secondary/50 border-border/30 resize-none text-sm", errors.about && 'border-destructive')}
+                      disabled={!canManageServer}
+                      placeholder="Tell people what your server is about..."
+                      maxLength={500}
+                    />
+                    {errors.about && (
+                      <p className="text-xs text-destructive">{errors.about.message}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      This description will be shown in the Explore page (if public) and server overview.
+                    </p>
+                  </div>
+
+                  {/* Publish Server (owner-only) */}
+                  {isOwner && (
+                    <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 space-y-3">
+                      <Label className="text-sm font-medium">Publish Server</Label>
+                      <div className="flex items-start gap-3 p-3 rounded-lg border bg-background/50">
+                        <Checkbox
+                          checked={pendingIsPublished}
+                          disabled={isLoading || isUploadingIcon || isUploadingBanner}
+                          onCheckedChange={(v) => handlePublishChange(v === true)}
+                          className="mt-0.5"
+                        />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-foreground">Make this server public</p>
+                          <p className="text-xs text-muted-foreground">
+                            Public servers appear on the Explore page so people can discover and join.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {isAdmin && (
                     <Button type="submit" disabled={isLoading || isUploadingIcon || isUploadingBanner} className="h-10 rounded-xl w-full">
                       {(isLoading || isUploadingIcon || isUploadingBanner) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
@@ -1085,6 +1251,7 @@ export const ServerSettingsModal = () => {
                   <div className="max-h-[400px] overflow-y-auto overscroll-contain touch-pan-y space-y-2">
                     {members.map((member) => {
                       const memberRoles = member.roles || [];
+                      const hasRoles = memberRoles.length > 0;
                       return (
                         <div key={member.id} className="flex items-center gap-2 p-2 rounded-xl bg-background/50 border border-border/30">
                           <Avatar className="w-8 h-8 flex-shrink-0">
@@ -1099,13 +1266,75 @@ export const ServerSettingsModal = () => {
                                 {member.nickname || member.user?.display_name || member.user?.username}
                               </span>
                               {getRoleIcon(member.role)}
+                              {hasRoles && (
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  {memberRoles.map((role) => {
+                                    const isGradient = role.color.startsWith('linear-gradient');
+                                    return (
+                                      <Badge
+                                        key={role.id}
+                                        variant="outline"
+                                        className="text-[10px] px-1.5 py-0 h-4 font-medium border-0 rounded-md"
+                                        style={
+                                          isGradient
+                                            ? { background: role.color, color: '#fff' }
+                                            : { backgroundColor: role.color + '20', color: role.color }
+                                        }
+                                      >
+                                        {role.name}
+                                      </Badge>
+                                    );
+                                  })}
+                                </div>
+                              )}
                             </div>
                             <p className="text-xs text-muted-foreground truncate">
-                              {member.user?.username}
+                              {member.user?.username} • {getRoleLabel(member.role)}
                             </p>
                           </div>
                           {canManageRoles && member.user_id !== user?.id && member.role !== 'owner' && (
                             <div className="flex items-center gap-1 flex-shrink-0">
+                              {roles.length > 0 && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm"
+                                      className="text-muted-foreground hover:text-foreground text-xs h-7 px-2 rounded-lg"
+                                    >
+                                      Roles
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="w-48 rounded-xl">
+                                    {roles.map((role) => {
+                                      const hasRole = memberRoles.some(r => r.id === role.id);
+                                      return (
+                                        <DropdownMenuItem
+                                          key={role.id}
+                                          onClick={() => hasRole 
+                                            ? handleRemoveRole(member, role)
+                                            : handleAssignRole(member, role)
+                                          }
+                                          className="rounded-lg"
+                                        >
+                                          <div className="flex items-center gap-2 w-full">
+                                            <div 
+                                              className="w-3 h-3 rounded-full flex-shrink-0"
+                                              style={
+                                                role.color.startsWith('linear-gradient')
+                                                  ? { background: role.color }
+                                                  : { backgroundColor: role.color }
+                                              }
+                                            />
+                                            <span className="flex-1">{role.name}</span>
+                                            {hasRole && <span className="text-xs text-muted-foreground">✓</span>}
+                                          </div>
+                                        </DropdownMenuItem>
+                                      );
+                                    })}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
                               <Button 
                                 variant="ghost" 
                                 size="sm"
@@ -1113,6 +1342,14 @@ export const ServerSettingsModal = () => {
                                 className="text-muted-foreground hover:text-destructive text-xs h-7 px-2 rounded-lg"
                               >
                                 Kick
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleBanMember(member)}
+                                className="text-muted-foreground hover:text-destructive text-xs h-7 px-2 rounded-lg"
+                              >
+                                Ban
                               </Button>
                             </div>
                           )}
@@ -1129,26 +1366,209 @@ export const ServerSettingsModal = () => {
                     <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 space-y-4">
                       <h4 className="text-sm font-semibold">{editingRole ? 'Edit Role' : 'Create Role'}</h4>
                       <div className="space-y-3">
-                        <Label className="text-sm">Name & Color</Label>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            value={roleName}
-                            onChange={(e) => setRoleName(e.target.value)}
-                            placeholder="Role name"
-                            className="h-10 rounded-xl bg-secondary/50 border-border/30 flex-1"
-                            maxLength={100}
-                          />
-                          <label
-                            className="relative w-10 h-10 rounded-xl border border-border/30 cursor-pointer overflow-hidden flex-shrink-0 hover:border-primary/50 transition-colors"
-                            style={{ backgroundColor: roleColor }}
+                        <Label className="text-sm">Role Name</Label>
+                        <Input
+                          value={roleName}
+                          onChange={(e) => setRoleName(e.target.value)}
+                          placeholder="Role name"
+                          className="h-10 rounded-xl bg-secondary/50 border-border/30"
+                          maxLength={100}
+                        />
+                      </div>
+                      <div className="space-y-3">
+                        <Label className="text-sm">Role Color</Label>
+                        {/* Color Type Selector */}
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant={colorType === 'solid' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setColorType('solid')}
+                            className="flex-1 h-9 text-xs"
                           >
-                            <input
-                              type="color"
+                            Solid
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={colorType === 'gradient' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setColorType('gradient')}
+                            className="flex-1 h-9 text-xs"
+                          >
+                            Gradient
+                          </Button>
+                        </div>
+                        {/* Solid Color Picker */}
+                        {colorType === 'solid' && (
+                          <div className="flex items-center gap-2">
+                            <label
+                              className="relative w-10 h-10 rounded-xl border border-border/30 cursor-pointer overflow-hidden flex-shrink-0 hover:border-primary/50 transition-colors"
+                              style={{ backgroundColor: roleColor }}
+                            >
+                              <input
+                                type="color"
+                                value={roleColor}
+                                onChange={(e) => setRoleColor(e.target.value)}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                              />
+                            </label>
+                            <Input
                               value={roleColor}
                               onChange={(e) => setRoleColor(e.target.value)}
-                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                              placeholder="#5865F2"
+                              className="h-10 rounded-xl bg-secondary/50 border-border/30 flex-1"
+                              maxLength={7}
                             />
-                          </label>
+                          </div>
+                        )}
+                        {/* Gradient Options */}
+                        {colorType === 'gradient' && (
+                          <div className="space-y-3">
+                            {/* Gradient Presets */}
+                            <div className="space-y-2">
+                              <p className="text-xs text-muted-foreground">Presets</p>
+                              <div className="grid grid-cols-4 gap-2 max-h-32 overflow-y-auto">
+                                {gradientPresets.map((preset, idx) => (
+                                  <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => {
+                                      setGradientColors(preset.colors);
+                                      setGradientAngle(preset.angle);
+                                    }}
+                                    className="relative h-10 rounded-lg border-2 border-border hover:border-primary transition-colors overflow-hidden"
+                                    style={{ background: createGradientString(preset.colors, preset.angle) }}
+                                    title={preset.name}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                            {/* Custom Gradient Preview */}
+                            <div 
+                              className="h-12 rounded-lg border-2 border-border"
+                              style={{ background: createGradientString(gradientColors, gradientAngle) }}
+                            />
+                            {/* Gradient Angle */}
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between">
+                                <Label className="text-xs">Angle</Label>
+                                <span className="text-xs text-muted-foreground">{gradientAngle}°</span>
+                              </div>
+                              <input
+                                type="range"
+                                min="0"
+                                max="360"
+                                value={gradientAngle}
+                                onChange={(e) => setGradientAngle(parseInt(e.target.value))}
+                                className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer"
+                              />
+                            </div>
+                            {/* Gradient Colors */}
+                            <div className="space-y-2">
+                              <Label className="text-xs">Colors ({gradientColors.length})</Label>
+                              {gradientColors.map((color, idx) => (
+                                <div key={idx} className="flex items-center gap-2">
+                                  <label
+                                    className="relative w-8 h-8 rounded-lg border border-border cursor-pointer overflow-hidden flex-shrink-0"
+                                    style={{ backgroundColor: color }}
+                                  >
+                                    <input
+                                      type="color"
+                                      value={color}
+                                      onChange={(e) => {
+                                        const newColors = [...gradientColors];
+                                        newColors[idx] = e.target.value;
+                                        setGradientColors(newColors);
+                                      }}
+                                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    />
+                                  </label>
+                                  <Input
+                                    value={color}
+                                    onChange={(e) => {
+                                      const newColors = [...gradientColors];
+                                      newColors[idx] = e.target.value;
+                                      setGradientColors(newColors);
+                                    }}
+                                    placeholder="#5865F2"
+                                    className="h-8 rounded-lg bg-secondary/50 border-border/30 flex-1 text-xs"
+                                    maxLength={7}
+                                  />
+                                  {gradientColors.length > 2 && (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => {
+                                        setGradientColors(gradientColors.filter((_, i) => i !== idx));
+                                      }}
+                                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </Button>
+                                  )}
+                                </div>
+                              ))}
+                              {gradientColors.length < 4 && (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setGradientColors([...gradientColors, '#5865F2'])}
+                                  className="h-8 w-full text-xs"
+                                >
+                                  <Plus className="w-3 h-3 mr-1" />
+                                  Add Color
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Role Icon (optional)</Label>
+                        <div className="flex items-center gap-2">
+                          <EmojiGifPicker
+                            disableGif
+                            serverId={server.id}
+                            serverName={server.name}
+                            open={undefined}
+                            onOpenChange={undefined}
+                            onEmojiSelect={(emoji) => setRoleIcon(emoji)}
+                          >
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-10 px-3 rounded-xl flex items-center gap-2"
+                            >
+                              <Smile className="w-4 h-4" />
+                              <span className="text-sm">
+                                {roleIcon ? 'Change' : 'Select'}
+                              </span>
+                            </Button>
+                          </EmojiGifPicker>
+                          <div className="flex-1 min-w-0">
+                            {roleIcon ? (
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-emoji leading-none">{roleIcon}</span>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="w-8 h-8 rounded-xl"
+                                  onClick={() => setRoleIcon('')}
+                                  title="Clear role icon"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <p className="text-xs text-muted-foreground truncate">
+                                Emoji or server emoji
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <Button
@@ -1166,6 +1586,9 @@ export const ServerSettingsModal = () => {
                             setRoleName('');
                             setRoleColor('#5865F2');
                             setRoleIcon('');
+                            setColorType('solid');
+                            setGradientColors(['#5865F2', '#7289DA']);
+                            setGradientAngle(135);
                           }}
                           className="h-10 rounded-xl w-full"
                         >
@@ -1191,6 +1614,9 @@ export const ServerSettingsModal = () => {
                                     : { backgroundColor: role.color }
                                 } 
                               />
+                              {role.icon && (
+                                <span className="text-sm font-emoji leading-none">{role.icon}</span>
+                              )}
                               <span className="text-sm font-medium flex-1">{role.name}</span>
                               <Button
                                 variant="ghost"

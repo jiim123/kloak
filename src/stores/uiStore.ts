@@ -89,6 +89,7 @@ interface UIState {
   openSettings: () => void;
   closeSettings: () => void;
   openServerSettings: () => void;
+  openServerSettingsPage: () => void;
   closeServerSettings: () => void;
 
   // Link preview actions
@@ -210,6 +211,11 @@ export const useUIStore = create<UIState>()(
         // Close user settings when opening server settings to prevent stacking
         // Set activeModal to 'server-settings' so the modal works on mobile
         set({ isServerSettingsOpen: true, isSettingsOpen: false, activeModal: 'server-settings' });
+      },
+
+      openServerSettingsPage: () => {
+        // Desktop-only: open the server settings page without triggering the modal
+        set({ isServerSettingsOpen: true, isSettingsOpen: false, activeModal: null });
       },
 
       closeServerSettings: () => {

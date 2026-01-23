@@ -9,6 +9,18 @@ export const HomeLanding = () => {
     const { openModal } = useUIStore();
     const { user } = useAuthStore();
 
+    const getTimeGreeting = () => {
+        const hour = new Date().getHours();
+
+        if (hour >= 5 && hour < 12) return { text: "Good morning", emoji: "☀️" };
+        if (hour >= 12 && hour < 17) return { text: "Good afternoon", emoji: "🌤️" };
+        if (hour >= 17 && hour < 22) return { text: "Good evening", emoji: "🌙" };
+        return { text: "Good night", emoji: "🌙" };
+    };
+
+    const greeting = getTimeGreeting();
+    const displayName = user?.display_name || user?.username || "there";
+
     const container = {
         hidden: { opacity: 0 },
         show: {
@@ -38,7 +50,9 @@ export const HomeLanding = () => {
                         <img src={kloakLogo} alt="Kloak" className="h-16 md:h-20 mx-auto" />
                         <div className="space-y-4">
                             <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-foreground">
-                                Hi, <span className="text-primary">{user?.display_name || user?.username || 'there'}</span>
+                                {greeting.text},{" "}
+                                <span className="text-primary">{displayName}</span>{" "}
+                                <span aria-hidden="true">{greeting.emoji}</span>
                             </h1>
                             <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-xl mx-auto">
                                 Chat with friends, build communities, and connect — all without giving up your privacy.
