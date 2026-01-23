@@ -28,6 +28,49 @@ const statusColors: Record<UserStatus, string> = {
 
 const COOLDOWN_MINUTES = 5;
 
+const withAlpha = (hex: string, alphaHex: string) => {
+  // Supports "#RRGGBB" -> "#RRGGBBAA"
+  if (!hex || !hex.startsWith('#') || hex.length !== 7) return hex;
+  return `${hex}${alphaHex}`;
+};
+
+const hexToRgb = (hex: string) => {
+  const h = hex.trim().toLowerCase();
+  if (!h.startsWith('#') || h.length !== 7) return null;
+  const r = parseInt(h.slice(1, 3), 16);
+  const g = parseInt(h.slice(3, 5), 16);
+  const b = parseInt(h.slice(5, 7), 16);
+  if ([r, g, b].some((n) => Number.isNaN(n))) return null;
+  return { r, g, b };
+};
+
+const relLuminance = (hex: string) => {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return null;
+  const srgb = [rgb.r, rgb.g, rgb.b].map((v) => v / 255);
+  const lin = srgb.map((c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)));
+  return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2];
+};
+
+const isLightTheme = (primary?: string | null, accent?: string | null, fallback?: string | null) => {
+  const lums: number[] = [];
+  if (primary) {
+    const l = relLuminance(primary);
+    if (l !== null) lums.push(l);
+  }
+  if (accent) {
+    const l = relLuminance(accent);
+    if (l !== null) lums.push(l);
+  }
+  if (lums.length === 0 && fallback) {
+    const l = relLuminance(fallback);
+    if (l !== null) lums.push(l);
+  }
+  if (lums.length === 0) return false;
+  const avg = lums.reduce((a, b) => a + b, 0) / lums.length;
+  return avg > 0.62;
+};
+
 export const UserProfilePopup = () => {
   const { activeModal, modalData, closeModal } = useUIStore();
   const { user: currentUser } = useAuthStore();
@@ -100,8 +143,11 @@ export const UserProfilePopup = () => {
           username: data.username,
           display_name: data.display_name,
           avatar_url: data.avatar_url,
+          banner_url: data.banner_url ?? null,
           avatar_decoration: data.avatar_decoration,
           banner_color: data.banner_color || '#5865F2',
+          profile_theme_primary: data.profile_theme_primary ?? null,
+          profile_theme_accent: data.profile_theme_accent ?? null,
           bio: data.bio,
           status: data.status as UserStatus,
           custom_status: data.custom_status,
@@ -237,27 +283,58 @@ export const UserProfilePopup = () => {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="sm:max-w-md p-0 overflow-hidden">
+      <DialogContent
+        className="sm:max-w-md p-0 overflow-hidden"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
           </div>
         ) : profileUser ? (
-          <div className="flex flex-col">
-            {/* Subtle gradient header */}
-            <div
-              className="h-32 w-full relative overflow-hidden"
-              style={{
-                background: `linear-gradient(135deg, ${profileUser.banner_color}15 0%, ${profileUser.banner_color}05 100%)`
-              }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background/50" />
-            </div>
+          (() => {
+            const light = isLightTheme(profileUser.profile_theme_primary, profileUser.profile_theme_accent, profileUser.banner_color);
+            const fg = light ? "#0b0b0f" : "#f8fafc";
+            const muted = light ? "rgba(11, 11, 15, 0.66)" : "rgba(248, 250, 252, 0.72)";
+            const overlay = light ? "rgba(255, 255, 255, 0.46)" : "rgba(0, 0, 0, 0.34)";
+            const bannerUrl = profileUser.banner_url;
 
-            {/* Profile Content */}
-            <div className="px-6 pb-6 -mt-16">
+            return (
+              <div
+                className="relative overflow-hidden"
+                style={{
+                  background:
+                    profileUser.profile_theme_primary && profileUser.profile_theme_accent
+                      ? `linear-gradient(180deg, ${profileUser.profile_theme_primary} 0%, ${profileUser.profile_theme_accent} 100%)`
+                      : `linear-gradient(180deg, ${withAlpha(profileUser.banner_color, '33')} 0%, ${withAlpha(
+                          profileUser.banner_color,
+                          '14',
+                        )} 100%)`,
+                }}
+              >
+                {/* Soft overlay so text stays readable */}
+                <div className="absolute inset-0" style={{ backgroundColor: overlay }} />
+
+                {/* Profile Content */}
+                <div
+                  className="relative px-6 py-6"
+                  style={
+                    {
+                      color: fg,
+                      ["--profile-muted" as any]: muted,
+                    } as React.CSSProperties
+                  }
+                >
+                  {/* Banner image */}
+                  {bannerUrl && (
+                    <div className="-mx-6 -mt-6 mb-5 h-28 relative overflow-hidden">
+                      <img src={bannerUrl} alt="Profile banner" className="absolute inset-0 w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-b from-black/0 to-black/35" />
+                    </div>
+                  )}
+
               {/* Avatar with subtle status */}
-              <div className="mb-4">
+                  <div className={cn("mb-4", bannerUrl && "-mt-12")}>
                 <div className="relative inline-block">
                   <AvatarWithDecoration 
                     user={profileUser} 
@@ -278,11 +355,11 @@ export const UserProfilePopup = () => {
                     {profileUser.display_name || profileUser.username}
                   </h2>
                 </div>
-                <p className="text-sm text-muted-foreground font-medium">@{profileUser.username}</p>
+                <p className="text-sm font-medium text-[color:var(--profile-muted)]">@{profileUser.username}</p>
 
                 {/* Custom Status */}
                 {profileUser.custom_status && (
-                  <p className="text-sm text-muted-foreground mt-2 italic">
+                  <p className="text-sm mt-2 italic text-[color:var(--profile-muted)]">
                     {profileUser.custom_status}
                   </p>
                 )}
@@ -294,7 +371,7 @@ export const UserProfilePopup = () => {
               {/* Bio */}
               {profileUser.bio && (
                 <div className="mb-6">
-                  <p className="text-sm leading-relaxed text-foreground/90">{profileUser.bio}</p>
+                  <p className="text-sm leading-relaxed opacity-90">{profileUser.bio}</p>
                 </div>
               )}
 
@@ -302,10 +379,10 @@ export const UserProfilePopup = () => {
               <div className="space-y-4 mb-6">
                 {/* Member Since */}
                 <div className="flex items-start gap-3">
-                  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider min-w-[100px] pt-0.5">
+                  <div className="text-xs font-medium text-[color:var(--profile-muted)] uppercase tracking-wider min-w-[100px] pt-0.5">
                     Member Since
                   </div>
-                  <div className="text-sm text-foreground">
+                  <div className="text-sm">
                     {profileUser.created_at
                       ? format(new Date(profileUser.created_at), 'MMMM d, yyyy')
                       : 'Unknown'
@@ -316,7 +393,7 @@ export const UserProfilePopup = () => {
                 {/* Server Roles */}
                 {currentServer && userId && userRoles.length > 0 && (
                   <div className="flex items-start gap-3">
-                    <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider min-w-[100px] pt-0.5">
+                    <div className="text-xs font-medium text-[color:var(--profile-muted)] uppercase tracking-wider min-w-[100px] pt-0.5">
                       Roles
                     </div>
                     <div className="flex flex-wrap gap-1.5 flex-1">
@@ -343,7 +420,7 @@ export const UserProfilePopup = () => {
                 {/* Shared Servers */}
                 {sharedServers.length > 0 && (
                   <div className="flex items-start gap-3">
-                    <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider min-w-[100px] pt-0.5">
+                    <div className="text-xs font-medium text-[color:var(--profile-muted)] uppercase tracking-wider min-w-[100px] pt-0.5">
                       Servers
                     </div>
                     <div className="flex gap-2 flex-1">
@@ -426,8 +503,10 @@ export const UserProfilePopup = () => {
                   )}
                 </div>
               )}
-            </div>
-          </div>
+                </div>
+              </div>
+            );
+          })()
         ) : null}
       </DialogContent>
     </Dialog>

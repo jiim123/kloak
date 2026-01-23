@@ -1106,6 +1106,7 @@ export type Database = {
         Row: {
           avatar_decoration: string | null
           avatar_url: string | null
+          banner_url: string | null
           banner_color: string | null
           bio: string | null
           created_at: string | null
@@ -1114,12 +1115,15 @@ export type Database = {
           id: string
           key_hash: string
           last_seen: string | null
+          profile_theme_accent: string | null
+          profile_theme_primary: string | null
           status: Database["public"]["Enums"]["user_status"] | null
           username: string
         }
         Insert: {
           avatar_decoration?: string | null
           avatar_url?: string | null
+          banner_url?: string | null
           banner_color?: string | null
           bio?: string | null
           created_at?: string | null
@@ -1128,12 +1132,15 @@ export type Database = {
           id?: string
           key_hash: string
           last_seen?: string | null
+          profile_theme_accent?: string | null
+          profile_theme_primary?: string | null
           status?: Database["public"]["Enums"]["user_status"] | null
           username: string
         }
         Update: {
           avatar_decoration?: string | null
           avatar_url?: string | null
+          banner_url?: string | null
           banner_color?: string | null
           bio?: string | null
           created_at?: string | null
@@ -1142,6 +1149,8 @@ export type Database = {
           id?: string
           key_hash?: string
           last_seen?: string | null
+          profile_theme_accent?: string | null
+          profile_theme_primary?: string | null
           status?: Database["public"]["Enums"]["user_status"] | null
           username?: string
         }

@@ -24,6 +24,7 @@ import {
   CreateChannelModal,
   EditChannelModal,
   UserSettingsModal,
+  UserSettingsPage,
   UserProfilePopup,
   PinnedMessagesPanel,
   SearchModal,
@@ -54,7 +55,7 @@ const AppLayout = () => {
   const params = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, isLoading, isNewUser, setIsNewUser } = useAuthStore();
-  const { isMemberSidebarOpen, isServerSettingsOpen, closeMobileSidebars } = useUIStore();
+  const { isMemberSidebarOpen, isServerSettingsOpen, closeMobileSidebars, activeModal } = useUIStore();
   const { 
     currentServer, 
     currentChannel, 
@@ -364,6 +365,10 @@ const AppLayout = () => {
             {isServerSettingsOpen ? (
               <div className="flex-1 min-w-0">
                 <ServerSettingsPage />
+              </div>
+            ) : activeModal === 'user-settings' ? (
+              <div className="flex-1 min-w-0">
+                <UserSettingsPage />
               </div>
             ) : (
               <>

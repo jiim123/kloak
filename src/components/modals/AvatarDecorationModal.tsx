@@ -82,7 +82,7 @@ export const AvatarDecorationModal = ({ open, onOpenChange, onSelect }: AvatarDe
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-hidden bg-background/95 backdrop-blur-xl border-border/50 rounded-2xl p-0">
+      <DialogContent className="sm:max-w-xl max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-hidden bg-background/95 backdrop-blur-xl border-border/50 rounded-2xl p-0 flex flex-col">
         {/* Header */}
         <DialogHeader className="p-4 sm:p-6 pb-0">
           <div className="flex items-center gap-3">
@@ -98,7 +98,7 @@ export const AvatarDecorationModal = ({ open, onOpenChange, onSelect }: AvatarDe
           </div>
         </DialogHeader>
 
-        <div className="p-4 sm:p-6 pt-4 space-y-4 sm:space-y-6">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 pt-4 space-y-4 sm:space-y-6">
           {/* Preview Section */}
           <div className="flex flex-col items-center gap-3 p-4 sm:p-6 bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30">
             <div
@@ -118,54 +118,54 @@ export const AvatarDecorationModal = ({ open, onOpenChange, onSelect }: AvatarDe
           </div>
 
           {/* Decoration Grid */}
-          <div className="max-h-[35vh] sm:max-h-[40vh] overflow-y-auto pr-1 -mr-1">
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-3">
-              {/* None option */}
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-3">
+            {/* None option */}
+            <button
+              onClick={handleSelectNone}
+              className={cn(
+                "flex flex-col items-center gap-2 p-3 sm:p-4 rounded-xl border-2 transition-all duration-200",
+                selectedDecoration === null
+                  ? "border-primary bg-primary/10 shadow-lg shadow-primary/10"
+                  : "border-border/50 hover:border-primary/50 hover:bg-secondary/50",
+              )}
+            >
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-muted/50 flex items-center justify-center border border-border/30">
+                <X className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground" />
+              </div>
+              <span className="text-[10px] sm:text-xs font-medium">None</span>
+            </button>
+
+            {/* Available decorations */}
+            {AVATAR_DECORATIONS.map((decoration) => (
               <button
-                onClick={handleSelectNone}
+                key={decoration.id}
+                onClick={() => setSelectedDecoration(decoration.id)}
                 className={cn(
                   "flex flex-col items-center gap-2 p-3 sm:p-4 rounded-xl border-2 transition-all duration-200",
-                  selectedDecoration === null
+                  selectedDecoration === decoration.id
                     ? "border-primary bg-primary/10 shadow-lg shadow-primary/10"
                     : "border-border/50 hover:border-primary/50 hover:bg-secondary/50",
                 )}
               >
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-muted/50 flex items-center justify-center border border-border/30">
-                  <X className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground" />
+                <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-muted/50 overflow-hidden border border-border/30">
+                  <img
+                    src={decoration.src}
+                    alt={decoration.name}
+                    className="w-full h-full object-contain"
+                    style={{ imageRendering: "pixelated" }}
+                  />
                 </div>
-                <span className="text-[10px] sm:text-xs font-medium">None</span>
+                <span className="text-[10px] sm:text-xs font-medium text-center leading-tight line-clamp-2">
+                  {decoration.name}
+                </span>
               </button>
-
-              {/* Available decorations */}
-              {AVATAR_DECORATIONS.map((decoration) => (
-                <button
-                  key={decoration.id}
-                  onClick={() => setSelectedDecoration(decoration.id)}
-                  className={cn(
-                    "flex flex-col items-center gap-2 p-3 sm:p-4 rounded-xl border-2 transition-all duration-200",
-                    selectedDecoration === decoration.id
-                      ? "border-primary bg-primary/10 shadow-lg shadow-primary/10"
-                      : "border-border/50 hover:border-primary/50 hover:bg-secondary/50",
-                  )}
-                >
-                  <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-muted/50 overflow-hidden border border-border/30">
-                    <img
-                      src={decoration.src}
-                      alt={decoration.name}
-                      className="w-full h-full object-contain"
-                      style={{ imageRendering: "pixelated" }}
-                    />
-                  </div>
-                  <span className="text-[10px] sm:text-xs font-medium text-center leading-tight line-clamp-2">
-                    {decoration.name}
-                  </span>
-                </button>
-              ))}
-            </div>
+            ))}
           </div>
+        </div>
 
-          {/* Actions */}
-          <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 pt-2 border-t border-border/30">
+        {/* Actions (sticky footer) */}
+        <div className="p-4 sm:p-6 pt-3 border-t border-border/30">
+          <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
             <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1 sm:flex-none rounded-xl">
               Cancel
             </Button>

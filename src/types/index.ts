@@ -14,8 +14,11 @@ export interface User {
   username: string;
   display_name: string | null;
   avatar_url: string | null;
+  banner_url: string | null;
   avatar_decoration: string | null;
   banner_color: string;
+  profile_theme_primary: string | null;
+  profile_theme_accent: string | null;
   bio: string | null;
   status: UserStatus;
   custom_status: string | null;
