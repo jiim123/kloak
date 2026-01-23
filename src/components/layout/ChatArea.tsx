@@ -6,7 +6,10 @@ import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useMessageStore } from "@/stores/messageStore";
+import { useUIStore } from "@/stores/uiStore";
 import { useTyping } from "@/hooks/useTyping";
+import { useSwipeGestureRef } from "@/hooks/useSwipeGesture";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { MessageSquare, Hash, ImageIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,11 +22,21 @@ export const ChatArea = () => {
   const { currentChannel } = useServerStore();
   const { user } = useAuthStore();
   const { sendMessage, replyingTo, setReplyingTo } = useMessageStore();
+  const { setMobileSidebarOpen, setMemberSidebarOpen } = useUIStore();
   const { typingUsers, startTyping, stopTyping } = useTyping(currentChannel?.id || null);
+  const isMobile = useIsMobile();
   
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const isProcessingPasteRef = useRef(false);
+
+  // Swipe gestures for mobile
+  const swipeRef = useSwipeGestureRef({
+    onSwipeRight: () => setMobileSidebarOpen(true),
+    onSwipeLeft: () => setMemberSidebarOpen(true),
+    threshold: 50,
+    enabled: isMobile,
+  });
 
   const uploadImage = useCallback(async (file: File) => {
     if (!user || !currentChannel) return;
@@ -207,6 +220,7 @@ export const ChatArea = () => {
 
   return (
     <div 
+      ref={swipeRef}
       className="h-full flex flex-col min-w-0 bg-background relative"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
