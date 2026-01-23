@@ -3,6 +3,7 @@ export { JoinServerModal } from './JoinServerModal';
 export { InviteModal } from './InviteModal';
 export { CreateChannelModal } from './CreateChannelModal';
 export { EditChannelModal } from './EditChannelModal';
+export { ServerSettingsModal } from './ServerSettingsModal';
 export { UserSettingsModal, UserSettingsPage } from './UserSettingsModal';
 export { UserProfilePopup } from './UserProfilePopup';
 export { EmojiPicker } from './EmojiPicker';

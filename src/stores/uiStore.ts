@@ -208,11 +208,12 @@ export const useUIStore = create<UIState>()(
 
       openServerSettings: () => {
         // Close user settings when opening server settings to prevent stacking
-        set({ isServerSettingsOpen: true, isSettingsOpen: false, activeModal: null });
+        // Set activeModal to 'server-settings' so the modal works on mobile
+        set({ isServerSettingsOpen: true, isSettingsOpen: false, activeModal: 'server-settings' });
       },
 
       closeServerSettings: () => {
-        set({ isServerSettingsOpen: false });
+        set({ isServerSettingsOpen: false, activeModal: null });
       },
 
       setLinkPreviewsEnabled: (enabled) => {

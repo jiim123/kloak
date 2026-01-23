@@ -23,6 +23,7 @@ import {
   InviteModal,
   CreateChannelModal,
   EditChannelModal,
+  ServerSettingsModal,
   UserSettingsModal,
   UserSettingsPage,
   UserProfilePopup,
@@ -481,6 +482,7 @@ const AppLayout = () => {
       <InviteModal />
       <CreateChannelModal />
       <EditChannelModal />
+      <ServerSettingsModal />
       <UserSettingsModal />
       <UserProfilePopup />
       <PinnedMessagesPanel />
