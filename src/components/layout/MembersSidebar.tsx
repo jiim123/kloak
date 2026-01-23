@@ -492,7 +492,6 @@ export const MembersSidebar = () => {
       {/* Header */}
       <div className="px-4 py-3 border-b border-border/50">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center"></div>
           <div>
             <h3 className="text-sm font-normal">Members</h3>
             <p className="text-[10px] text-muted-foreground">{totalCount} total</p>
