@@ -10,6 +10,48 @@ export interface Mention {
 }
 
 /**
+ * Check if a URL is an image URL
+ */
+export const isImageUrl = (url: string): boolean => {
+  // Check for common image extensions
+  const imageExtensions = /\.(gif|jpe?g|png|webp|bmp|svg)(\?.*)?$/i;
+  if (imageExtensions.test(url)) return true;
+  
+  // Check for known image hosting services
+  const imageHosts = [
+    /media\d*\.giphy\.com/i,
+    /i\.giphy\.com/i,
+    /tenor\.com.*\.gif/i,
+    /i\.imgur\.com/i,
+    /pbs\.twimg\.com/i,
+    /media\.discordapp\.net/i,
+    /cdn\.discordapp\.com/i,
+    /supabase\.co\/storage/i, // Supabase storage
+  ];
+  
+  return imageHosts.some(pattern => pattern.test(url));
+};
+
+/**
+ * Check if message content is image-only (single image URL with no other text)
+ */
+export const isImageOnlyMessage = (content: string): boolean => {
+  const trimmed = content.trim();
+  // Must be a single URL with no other content
+  const urlPattern = /^https?:\/\/[^\s]+$/;
+  if (!urlPattern.test(trimmed)) return false;
+  return isImageUrl(trimmed);
+};
+
+/**
+ * Extract image URL from image-only message content
+ */
+export const getImageUrlFromContent = (content: string): string | null => {
+  if (!isImageOnlyMessage(content)) return null;
+  return content.trim();
+};
+
+/**
  * Extract mentions from message content
  * Supports @username, @everyone, @here patterns
  */

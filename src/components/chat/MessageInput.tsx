@@ -7,7 +7,7 @@ import { useOfflineQueueStore } from "@/stores/offlineQueueStore";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { saveDraft, getDraft, clearDraft } from "@/lib/storage";
-import { getMessagePreview, extractMentions } from "@/lib/message";
+import { getMessagePreview, extractMentions, isImageOnlyMessage } from "@/lib/message";
 import { MentionAutocomplete } from "./MentionAutocomplete";
 import { EmojiGifPicker } from "@/components/modals/EmojiGifPicker";
 import { ImageUploadDialog } from "@/components/modals/ImageUploadDialog";
@@ -779,12 +779,20 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
           <span className="text-xs sm:text-sm text-muted-foreground">
             Replying to <span className="font-medium text-primary">@{replyingTo.user?.username}</span>
           </span>
-          <span className="text-xs sm:text-sm text-muted-foreground truncate flex-1 hidden sm:inline">
-            {getMessagePreview(replyingTo.content, 50)}
-          </span>
+          {isImageOnlyMessage(replyingTo.content) ? (
+            <img 
+              src={replyingTo.content.trim()} 
+              alt="Image attachment" 
+              className="w-8 h-8 rounded object-cover flex-shrink-0"
+            />
+          ) : (
+            <span className="text-xs sm:text-sm text-muted-foreground truncate flex-1 hidden sm:inline">
+              {getMessagePreview(replyingTo.content, 50)}
+            </span>
+          )}
           <button
             onClick={cancelReply}
-            className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
+            className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150 ml-auto"
           >
             <X className="w-4 h-4" />
           </button>

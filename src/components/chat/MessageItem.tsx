@@ -20,7 +20,7 @@ import { useSyncStore } from "@/stores/syncStore";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { MessageContent } from "./MessageContent";
 import { PollMessage } from "./PollMessage";
-import { getMessagePreview } from "@/lib/message";
+import { getMessagePreview, isImageOnlyMessage } from "@/lib/message";
 import { formatMessageTimestamp } from "@/lib/format";
 import { DeleteMessageModal } from "@/components/modals/DeleteMessageModal";
 import { EmojiGifPicker } from "@/components/modals/EmojiGifPicker";
@@ -612,13 +612,21 @@ export const MessageItem = memo(function MessageItem({
 
             {/* Reply reference */}
             {message.reply_to && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1 cursor-pointer hover:text-foreground">
-                <CornerUpLeft className="w-3 h-3" />
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1 cursor-pointer hover:text-foreground">
+                <CornerUpLeft className="w-3 h-3 flex-shrink-0" />
                 <span>Replying to</span>
                 <span className="font-medium text-primary">@{message.reply_to.user?.username || "unknown"}</span>
-                <span className="truncate max-w-[200px]">
-                  {getMessagePreview(message.reply_to.content, 50, usersMap)}
-                </span>
+                {isImageOnlyMessage(message.reply_to.content) ? (
+                  <img 
+                    src={message.reply_to.content.trim()} 
+                    alt="Image" 
+                    className="w-6 h-6 rounded object-cover flex-shrink-0"
+                  />
+                ) : (
+                  <span className="truncate max-w-[200px]">
+                    {getMessagePreview(message.reply_to.content, 50, usersMap)}
+                  </span>
+                )}
               </div>
             )}
 
