@@ -588,24 +588,30 @@ export const useServerStore = create<ServerState>((set, get) => ({
   },
 
   updateCategory: async (categoryId: string, updates: Partial<ChannelCategory>, userId: string) => {
-    try {
-      // Use RPC function to bypass RLS
-      const { error } = await supabase.rpc('update_category', {
-        _category_id: categoryId,
-        _user_id: userId,
-        _updates: JSON.stringify(updates),
-      });
+    const updatesJson: Record<string, unknown> = {};
+    if (typeof updates.name !== 'undefined') updatesJson.name = updates.name;
+    if (typeof updates.position !== 'undefined') updatesJson.position = updates.position;
+    if (typeof updates.is_collapsed !== 'undefined') updatesJson.is_collapsed = updates.is_collapsed;
 
-      if (error) throw error;
+    // Use RPC function to bypass RLS
+    const { data, error } = await supabase.rpc('update_category', {
+      _category_id: categoryId,
+      _user_id: userId,
+      _updates: updatesJson as any,
+    });
 
-      set((state) => ({
-        categories: state.categories.map((c) =>
-          c.id === categoryId ? { ...c, ...updates } : c
-        ),
-      }));
-    } catch (error) {
+    if (error) {
       console.error('Failed to update category:', error);
+      throw new Error(error.message || 'Failed to update category');
     }
+
+    // Use returned values from the RPC to ensure UI matches DB
+    const categoryData = data as unknown as Partial<ChannelCategory>;
+    set((state) => ({
+      categories: state.categories.map((c) =>
+        c.id === categoryId ? { ...c, ...categoryData } : c
+      ),
+    }));
   },
 
   deleteCategory: async (categoryId: string, userId: string) => {

@@ -381,6 +381,7 @@ const SortableCategory = ({
   onSelectChannel,
   onAddChannel,
   onEditChannel,
+  onEditCategory,
   isDragOver,
   voicePresenceByChannel,
   resolveUser,
@@ -395,6 +396,7 @@ const SortableCategory = ({
   onSelectChannel: (channel: Channel) => void;
   onAddChannel: () => void;
   onEditChannel: (channelId: string) => void;
+  onEditCategory: () => void;
   isDragOver?: boolean;
   voicePresenceByChannel: Record<string, string[]>;
   resolveUser: (userId: string) => { avatarUser?: any; label: string };
@@ -444,6 +446,16 @@ const SortableCategory = ({
           <span className="truncate">{category.name}</span>
           {isCollapsed && <span className="ml-1 text-muted-foreground/60">({channels.length})</span>}
         </button>
+
+        {isAdmin && (
+          <Settings
+            className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground cursor-pointer flex-shrink-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEditCategory();
+            }}
+          />
+        )}
 
         {/* Add channel button */}
         {isAdmin && (
@@ -1056,6 +1068,7 @@ export const ChannelSidebar = () => {
                     onSelectChannel={handleSelectChannel}
                     onAddChannel={() => openModal("create-channel", { categoryId: category.id })}
                     onEditChannel={(channelId) => openModal("edit-channel", { channelId })}
+                    onEditCategory={() => openModal("edit-channel", { isCategory: true, categoryId: category.id })}
                     isDragOver={overCategoryId === category.id && activeType === "channel"}
                     voicePresenceByChannel={voicePresenceByChannel}
                     resolveUser={resolveUser}

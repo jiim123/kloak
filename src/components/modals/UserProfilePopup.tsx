@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { format } from "date-fns";
 import { MessageCircle, UserPlus, UserMinus, Loader2, Check, X, Clock, Calendar } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
@@ -76,6 +77,7 @@ const isLightTheme = (primary?: string | null, accent?: string | null, fallback?
 export const UserProfilePopup = () => {
   const { activeModal, modalData, closeModal } = useUIStore();
   const { user: currentUser } = useAuthStore();
+  const navigate = useNavigate();
   const { servers, setCurrentServer, currentServer, members } = useServerStore();
   const {
     friends,
@@ -290,6 +292,8 @@ export const UserProfilePopup = () => {
     try {
       const conversation = await openConversation(currentUser.id, profileUser.id);
       if (conversation) {
+        // Navigate using the app's built-in DM deep-link handler (avoids URL/store race with server routes)
+        navigate(`/app?conversation=${conversation.id}`, { replace: true });
         setCurrentServer(null);
         setCurrentConversation(conversation);
         closeModal();
