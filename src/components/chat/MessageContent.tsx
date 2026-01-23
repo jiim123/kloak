@@ -377,7 +377,7 @@ export const MessageContent = ({ content, currentUserId, messageId, users }: Mes
       
       {/* Inline images (GIFs, etc.) */}
       {imageUrls.length > 0 && (
-        <div className="flex flex-col gap-2 mt-1">
+        <div className="flex flex-wrap gap-2 mt-1">
           {imageUrls.map((url, index) => (
             <button
               key={`img-${index}`}
@@ -413,9 +413,10 @@ export const MessageContent = ({ content, currentUserId, messageId, users }: Mes
         </div>
       )}
 
-      {/* Image lightbox */}
+      {/* Image lightbox with all images for thumbnail navigation */}
       <ImageLightbox
         imageUrl={lightboxImage}
+        imageUrls={imageUrls}
         onClose={() => setLightboxImage(null)}
       />
     </div>
