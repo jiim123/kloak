@@ -9,17 +9,16 @@ import {
   UserX,
   Ban,
   VolumeX,
-  Volume2,
   Shield,
-  ShieldAlert,
-  ShieldOff,
   Users,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useUIStore } from "@/stores/uiStore";
+import { useDMStore } from "@/stores/dmStore";
 import { useRealtimeMembers } from "@/hooks/useRealtimeMembers";
-import { canModerate, canAssignRole, getAssignableRoles, getRoleInfo } from "@/lib/permissions";
+import { canModerate, getRoleInfo } from "@/lib/permissions";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import {
   ContextMenu,
@@ -97,9 +96,12 @@ const SectionHeader = memo(
 SectionHeader.displayName = "SectionHeader";
 
 export const MembersSidebar = () => {
-  const { members, currentServer, roles, isLoading, fetchRolePermissions } = useServerStore();
+  const { members, currentServer, roles, isLoading, fetchRolePermissions, assignRoleToMember, removeRoleFromMember } =
+    useServerStore();
   const { user } = useAuthStore();
   const { openModal } = useUIStore();
+  const navigate = useNavigate();
+  const { openConversation } = useDMStore();
   const [offlineExpanded, setOfflineExpanded] = useState(false);
 
   // Subscribe to realtime member updates
@@ -201,8 +203,17 @@ export const MembersSidebar = () => {
     openModal("userProfile", { userId: member.user_id, user: member.user });
   };
 
-  const handleMessage = (member: ServerMember) => {
-    openModal("userProfile", { userId: member.user_id, user: member.user, openDM: true });
+  const handleMessage = async (member: ServerMember) => {
+    if (!user) return;
+    try {
+      const conversation = await openConversation(user.id, member.user_id);
+      if (conversation) {
+        // Navigate using the app's built-in DM deep-link handler
+        navigate(`/app?conversation=${conversation.id}`, { replace: true });
+      }
+    } catch (error) {
+      console.error("Failed to open conversation:", error);
+    }
   };
 
   const handleChangeNickname = (member: ServerMember) => {
@@ -227,19 +238,6 @@ export const MembersSidebar = () => {
     });
   };
 
-  const handleToggleMute = (member: ServerMember) => {
-    openModal("confirmAction", {
-      action: member.is_muted ? "unmute" : "mute",
-      member,
-      title: member.is_muted
-        ? `Unmute ${member.nickname || member.user?.username}`
-        : `Mute ${member.nickname || member.user?.username}`,
-      message: member.is_muted
-        ? `Are you sure you want to unmute ${member.nickname || member.user?.username}?`
-        : `Are you sure you want to mute ${member.nickname || member.user?.username}? They will be able to view but not send messages.`,
-    });
-  };
-
   const handleTransferOwnership = (member: ServerMember) => {
     openModal("confirmAction", {
       action: "transferOwnership",
@@ -249,15 +247,19 @@ export const MembersSidebar = () => {
     });
   };
 
-  const handleChangeRole = (member: ServerMember, newRole: ServerRole) => {
-    const roleInfo = getRoleInfo(newRole);
-    openModal("confirmAction", {
-      action: "changeRole",
-      member,
-      newRole,
-      title: "Change Role",
-      message: `Change ${member.nickname || member.user?.username}'s role to ${roleInfo.label}?`,
-    });
+  const toggleServerRole = async (member: ServerMember, roleId: string) => {
+    if (!user) return;
+    const memberRoles = member.roles || [];
+    const hasRole = memberRoles.some((r) => r.id === roleId);
+    try {
+      if (hasRole) {
+        await removeRoleFromMember(member.id, roleId, user.id);
+      } else {
+        await assignRoleToMember(member.id, roleId, user.id);
+      }
+    } catch (error) {
+      console.error("Failed to update roles:", error);
+    }
   };
 
   // Memoized MemberItem component
@@ -292,16 +294,13 @@ export const MembersSidebar = () => {
     // Permission checks
     const canKick = checkPermission("kick_members") && canModerate(currentUserRole, member.role) && !isSelf;
     const canBan = checkPermission("ban_members") && canModerate(currentUserRole, member.role) && !isSelf;
-    const canMute = checkPermission("mute_members") && canModerate(currentUserRole, member.role) && !isSelf;
     const canChangeNickname =
       checkPermission("manage_nicknames") && (canModerate(currentUserRole, member.role) || isSelf);
     const canTransfer = checkPermission("transfer_ownership") && !isSelf && member.role !== "owner";
-    const assignableRoles = getAssignableRoles(currentUserRole).filter(
-      (role) => canAssignRole(currentUserRole, member.role, role) && role !== member.role,
-    );
+    const canManageRoles = checkPermission("manage_roles") && canModerate(currentUserRole, member.role) && !isSelf;
 
     const hasAdminActions =
-      canKick || canBan || canMute || canChangeNickname || canTransfer || assignableRoles.length > 0;
+      canKick || canBan || canChangeNickname || canTransfer || (canManageRoles && roles.length > 0);
     const roleInfo = getRoleInfo(member.role);
 
     const content = (
@@ -393,25 +392,9 @@ export const MembersSidebar = () => {
           )}
 
           {/* Moderation actions */}
-          {(canKick || canBan || canMute) && (
+          {(canKick || canBan) && (
             <>
               <ContextMenuSeparator className="my-1.5" />
-
-              {canMute && (
-                <ContextMenuItem onClick={() => handleToggleMute(member)} className="rounded-lg gap-3">
-                  {member.is_muted ? (
-                    <>
-                      <Volume2 className="w-4 h-4" />
-                      Unmute
-                    </>
-                  ) : (
-                    <>
-                      <VolumeX className="w-4 h-4" />
-                      Mute
-                    </>
-                  )}
-                </ContextMenuItem>
-              )}
 
               {canKick && (
                 <ContextMenuItem
@@ -436,27 +419,31 @@ export const MembersSidebar = () => {
           )}
 
           {/* Role management */}
-          {assignableRoles.length > 0 && (
+          {canManageRoles && roles.length > 0 && (
             <>
               <ContextMenuSeparator className="my-1.5" />
               <ContextMenuSub>
                 <ContextMenuSubTrigger className="rounded-lg gap-3">
                   <Shield className="w-4 h-4" />
-                  Change Role
+                  Change Roles
                 </ContextMenuSubTrigger>
                 <ContextMenuSubContent className="w-40 rounded-xl border-border/50 p-1.5">
-                  {assignableRoles.map((role) => {
-                    const info = getRoleInfo(role);
+                  {roles.map((role) => {
+                    const memberRoles = member.roles || [];
+                    const hasRole = memberRoles.some((r) => r.id === role.id);
+                    const isGradient = role.color.startsWith("linear-gradient");
                     return (
                       <ContextMenuItem
-                        key={role}
-                        onClick={() => handleChangeRole(member, role)}
+                        key={role.id}
+                        onClick={() => toggleServerRole(member, role.id)}
                         className="rounded-lg gap-3"
                       >
-                        {role === "admin" && <ShieldAlert className={cn("w-4 h-4", info.color)} />}
-                        {role === "moderator" && <Shield className={cn("w-4 h-4", info.color)} />}
-                        {role === "member" && <ShieldOff className="w-4 h-4 text-muted-foreground" />}
-                        <span className={info.color}>{info.label}</span>
+                        <div
+                          className="w-3 h-3 rounded-full flex-shrink-0"
+                          style={isGradient ? { background: role.color } : { backgroundColor: role.color }}
+                        />
+                        <span className="flex-1 truncate">{role.name}</span>
+                        {hasRole && <span className="text-xs text-muted-foreground">✓</span>}
                       </ContextMenuItem>
                     );
                   })}
@@ -492,8 +479,11 @@ export const MembersSidebar = () => {
       {/* Header */}
       <div className="px-4 py-3 border-b border-border/50">
         <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Users className="w-3.5 h-3.5 text-primary" />
+          </div>
           <div>
-            <h3 className="text-sm font-normal">Members</h3>
+            <h3 className="text-sm font-semibold">Members</h3>
             <p className="text-[10px] text-muted-foreground">{totalCount} total</p>
           </div>
         </div>

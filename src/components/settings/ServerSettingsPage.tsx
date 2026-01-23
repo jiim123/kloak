@@ -85,6 +85,8 @@ import { CSS } from "@dnd-kit/utilities";
 
 const MAX_ICON_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_ICON_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_BANNER_SIZE = 8 * 1024 * 1024; // 8MB
+const ALLOWED_BANNER_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 const MAX_EMOJI_SIZE = 1 * 1024 * 1024; // 1MB
 const ALLOWED_EMOJI_TYPES = ['image/png', 'image/gif', 'image/webp', 'image/jpeg'];
@@ -688,13 +690,13 @@ export const ServerSettingsPage = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!ALLOWED_ICON_TYPES.includes(file.type)) {
-      toast.error('Please select a JPEG, PNG, or WebP image');
+    if (!ALLOWED_BANNER_TYPES.includes(file.type)) {
+      toast.error('Please select a JPEG, PNG, WebP, or GIF image');
       return;
     }
 
-    if (file.size > MAX_ICON_SIZE) {
-      toast.error('Image must be less than 5MB');
+    if (file.size > MAX_BANNER_SIZE) {
+      toast.error('Image must be less than 8MB');
       return;
     }
 
@@ -1024,7 +1026,7 @@ export const ServerSettingsPage = () => {
       <input
         ref={bannerInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept="image/jpeg,image/png,image/webp,image/gif"
         onChange={handleBannerSelect}
         className="hidden"
       />

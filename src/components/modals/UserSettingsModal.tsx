@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import {
   Loader2,
   Upload,
@@ -115,9 +115,20 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const [bio, setBio] = useState(user?.bio || "");
   const [profileThemePrimary, setProfileThemePrimary] = useState<string | null>(user?.profile_theme_primary ?? null);
   const [profileThemeAccent, setProfileThemeAccent] = useState<string | null>(user?.profile_theme_accent ?? null);
+  const [localAvatarUrl, setLocalAvatarUrl] = useState<string | null>(user?.avatar_url ?? null);
+  const [localBannerUrl, setLocalBannerUrl] = useState<string | null>(user?.banner_url ?? null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
+
+  // Keep local preview URLs in sync with store updates
+  useEffect(() => {
+    setLocalAvatarUrl(user?.avatar_url ?? null);
+  }, [user?.avatar_url]);
+
+  useEffect(() => {
+    setLocalBannerUrl(user?.banner_url ?? null);
+  }, [user?.banner_url]);
 
   const navItems = [
     { id: "account", label: "Account", icon: Key },
@@ -174,6 +185,8 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         data: { publicUrl },
       } = supabase.storage.from("avatars").getPublicUrl(filePath);
 
+      // Update preview immediately
+      setLocalAvatarUrl(publicUrl);
       await updateUser({ avatar_url: publicUrl });
       toast.success("Avatar updated!");
     } catch (error) {
@@ -211,6 +224,8 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         data: { publicUrl },
       } = supabase.storage.from("avatars").getPublicUrl(filePath);
 
+      // Update preview immediately
+      setLocalBannerUrl(publicUrl);
       await updateUser({ banner_url: publicUrl });
       toast.success("Banner updated!");
     } catch (error) {
@@ -227,6 +242,8 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     if (!user) return;
     setIsBannerUploading(true);
     try {
+      // Update preview immediately
+      setLocalBannerUrl(null);
       await updateUser({ banner_url: null });
       toast.success("Banner removed!");
     } catch (error) {
@@ -491,12 +508,14 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       if (!user) return null;
       return {
         ...user,
+        avatar_url: localAvatarUrl,
+        banner_url: localBannerUrl,
         display_name: (displayName.trim() || null) as UserType["display_name"],
         bio: (bio.trim() || null) as UserType["bio"],
         profile_theme_primary: profileThemePrimary,
         profile_theme_accent: profileThemeAccent,
       };
-    }, [user, displayName, bio, profileThemePrimary, profileThemeAccent]);
+    }, [user, localAvatarUrl, localBannerUrl, displayName, bio, profileThemePrimary, profileThemeAccent]);
 
     const editor = (
       <div className="space-y-6">
@@ -504,7 +523,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         <div className="flex items-center gap-5">
           <div className="cursor-pointer flex-shrink-0 group relative" onClick={() => fileInputRef.current?.click()}>
             <AvatarWithDecoration
-              user={user}
+              user={previewUser ?? user}
               className="w-20 h-20 ring-4 ring-secondary/50 group-hover:ring-primary/30 transition-all"
             />
             <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
@@ -529,6 +548,34 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         {/* Profile Banner */}
         <div className="space-y-3">
           <Label className="text-sm font-medium">Profile Banner</Label>
+          <div className="relative h-24 w-full max-w-md rounded-xl overflow-hidden border border-border/50 bg-secondary/30">
+            {localBannerUrl ? (
+              <>
+                <img src={localBannerUrl} alt="Profile banner" className="absolute inset-0 w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/0 to-black/40" />
+              </>
+            ) : (
+              <div
+                className="absolute inset-0"
+                style={{
+                  background:
+                    previewUser?.profile_theme_primary && previewUser?.profile_theme_accent
+                      ? `linear-gradient(180deg, ${previewUser.profile_theme_primary} 0%, ${previewUser.profile_theme_accent} 100%)`
+                      : previewUser
+                        ? `linear-gradient(180deg, ${withAlpha(previewUser.banner_color, "33")} 0%, ${withAlpha(
+                            previewUser.banner_color,
+                            "14",
+                          )} 100%)`
+                        : undefined,
+                }}
+              />
+            )}
+            {!localBannerUrl && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-xs text-muted-foreground">No banner uploaded</span>
+              </div>
+            )}
+          </div>
           <div className="flex items-center gap-3">
             <Button
               type="button"
@@ -544,7 +591,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
               type="button"
               variant="outline"
               onClick={handleRemoveBanner}
-              disabled={isBannerUploading || !user?.banner_url}
+              disabled={isBannerUploading || !localBannerUrl}
               className="h-10 rounded-xl"
             >
               Remove Banner
