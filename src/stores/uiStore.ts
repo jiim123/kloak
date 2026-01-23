@@ -193,15 +193,17 @@ export const useUIStore = create<UIState>()(
       },
 
       openSettings: () => {
-        set({ isSettingsOpen: true });
+        // Close server settings when opening user settings to prevent stacking
+        set({ isSettingsOpen: true, isServerSettingsOpen: false, activeModal: 'user-settings' });
       },
 
       closeSettings: () => {
-        set({ isSettingsOpen: false });
+        set({ isSettingsOpen: false, activeModal: null });
       },
 
       openServerSettings: () => {
-        set({ isServerSettingsOpen: true });
+        // Close user settings when opening server settings to prevent stacking
+        set({ isServerSettingsOpen: true, isSettingsOpen: false, activeModal: null });
       },
 
       closeServerSettings: () => {
