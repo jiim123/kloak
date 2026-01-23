@@ -1,12 +1,13 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Plus, Users, Compass } from "lucide-react";
-import { useUIStore } from "@/stores";
+import { useUIStore, useAuthStore } from "@/stores";
 import kloakLogo from "@/assets/kloak-logo.svg";
 
 export const HomeLanding = () => {
     const navigate = useNavigate();
     const { openModal } = useUIStore();
+    const { user } = useAuthStore();
 
     const container = {
         hidden: { opacity: 0 },
@@ -37,7 +38,7 @@ export const HomeLanding = () => {
                         <img src={kloakLogo} alt="Kloak" className="h-16 md:h-20 mx-auto" />
                         <div className="space-y-4">
                             <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-foreground">
-                                Welcome Back
+                                Hi, <span className="text-primary">{user?.display_name || user?.username || 'there'}</span>
                             </h1>
                             <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-xl mx-auto">
                                 Chat with friends, build communities, and connect — all without giving up your privacy.
