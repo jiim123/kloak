@@ -106,7 +106,7 @@ export const ChannelHeader = ({ channel }: ChannelHeaderProps) => {
     {
       id: "members",
       icon: Users,
-      label: "Members",
+      label: isMemberSidebarOpen ? "Hide" : "Show",
       onClick: toggleMemberSidebar,
     },
   ];
