@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useServerStore } from "@/stores/serverStore";
@@ -15,6 +15,7 @@ import { VoiceChannelArea } from "@/components/voice/VoiceChannelArea";
  */
 export function VoicePersistentHost() {
   const navigate = useNavigate();
+  const { serverId, channelId } = useParams();
   const { currentChannel, channels } = useServerStore();
   const joinedVoiceChannelId = useVoiceStore((s) => s.joinedChannelId);
   const joinedChannelSnapshot = useVoiceStore((s) => s.joinedChannel);
@@ -28,20 +29,29 @@ export function VoicePersistentHost() {
     );
   }, [channels, joinedChannelSnapshot, joinedVoiceChannelId]);
 
+  // Only show voice UI *onscreen* when the user is actually on a channel route.
+  // Otherwise (Home/Explore/Friends/DMs/etc), keep it mounted offscreen so audio stays alive.
+  const isOnChannelRoute = !!serverId && !!channelId;
+
   // If we're currently browsing a voice channel but connected to a different one,
   // keep the connection alive offscreen and show a notice in the main area.
   const isViewingDifferentVoiceChannel =
     !!joinedChannel &&
-    currentChannel?.type === "voice" &&
-    currentChannel.id !== joinedChannel.id;
+    isOnChannelRoute &&
+    channelId !== joinedChannel.id &&
+    currentChannel?.type === "voice";
 
   const isViewingJoinedVoiceChannel =
     !!joinedChannel &&
-    currentChannel?.type === "voice" &&
-    currentChannel.id === joinedChannel.id;
+    isOnChannelRoute &&
+    channelId === joinedChannel.id;
 
   // When not connected, just render the current voice channel normally (so the join card works).
-  const showCurrentVoice = !joinedChannel && currentChannel?.type === "voice";
+  const showCurrentVoice =
+    !joinedChannel &&
+    isOnChannelRoute &&
+    currentChannel?.type === "voice" &&
+    currentChannel.id === channelId;
 
   if (isViewingDifferentVoiceChannel) {
     return (
