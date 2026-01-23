@@ -16,6 +16,7 @@ export interface User {
   avatar_url: string | null;
   banner_url: string | null;
   avatar_decoration: string | null;
+  profile_effect: string | null;
   banner_color: string;
   profile_theme_primary: string | null;
   profile_theme_accent: string | null;

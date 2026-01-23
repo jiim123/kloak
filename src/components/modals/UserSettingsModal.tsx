@@ -38,6 +38,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { AvatarDecorationModal } from "@/components/modals/AvatarDecorationModal";
+import { ProfileEffectModal } from "@/components/modals/ProfileEffectModal";
 import { useUIStore, THEMES, type Theme } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
 import { supabase } from "@/integrations/supabase/client";
@@ -108,6 +109,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const [keyRevealed, setKeyRevealed] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showAvatarDecorationModal, setShowAvatarDecorationModal] = useState(false);
+  const [showProfileEffectModal, setShowProfileEffectModal] = useState(false);
   const [isBannerUploading, setIsBannerUploading] = useState(false);
 
   // Profile form state
@@ -643,6 +645,15 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           <Button variant="outline" onClick={() => setShowAvatarDecorationModal(true)} className="w-full h-12 rounded-xl">
             <DecorationIcon className="w-4 h-4 mr-2" />
             {user?.avatar_decoration ? "Change Decoration" : "Add Decoration"}
+          </Button>
+        </div>
+
+        {/* Profile Effect */}
+        <div className="space-y-3">
+          <Label className="text-sm font-medium">Profile Effect</Label>
+          <Button variant="outline" onClick={() => setShowProfileEffectModal(true)} className="w-full h-12 rounded-xl">
+            <Sparkles className="w-4 h-4 mr-2" />
+            {user?.profile_effect ? "Change Effect" : "Add Effect"}
           </Button>
         </div>
 
@@ -1313,6 +1324,13 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       <AvatarDecorationModal
         open={showAvatarDecorationModal}
         onOpenChange={setShowAvatarDecorationModal}
+        onSelect={() => {}}
+      />
+
+      {/* Profile Effect Modal */}
+      <ProfileEffectModal
+        open={showProfileEffectModal}
+        onOpenChange={setShowProfileEffectModal}
         onSelect={() => {}}
       />
     </>

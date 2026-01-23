@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { format } from "date-fns";
 import { MessageCircle, UserPlus, UserMinus, Loader2, Check, X, Clock, Calendar } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -12,6 +12,7 @@ import { useDMStore } from "@/stores/dmStore";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { getProfileEffectSrc } from "@/lib/profileEffects";
 import type { User, UserStatus } from "@/types";
 
 const statusColors: Record<UserStatus, string> = {
@@ -93,6 +94,10 @@ export const UserProfilePopup = () => {
   const [sharedServers, setSharedServers] = useState<typeof servers>([]);
   const [cooldownSeconds, setCooldownSeconds] = useState<number>(0);
   const [isSendingRequest, setIsSendingRequest] = useState(false);
+  const profileEffectPlayedRef = useRef(false);
+  const profileEffectImgRef = useRef<HTMLImageElement | null>(null);
+  const [profileEffectStillFrame, setProfileEffectStillFrame] = useState<string | null>(null);
+  const profileEffectAnimationEndedRef = useRef(false);
 
   const isOpen = activeModal === "userProfile";
   const userId = modalData?.userId as string | undefined;
@@ -132,6 +137,58 @@ export const UserProfilePopup = () => {
     }
   }, [currentUser?.id, userId]);
 
+  // Reset profile effect play state when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      profileEffectPlayedRef.current = false;
+      profileEffectAnimationEndedRef.current = false;
+      setProfileEffectStillFrame(null);
+    }
+  }, [isOpen]);
+
+  // Capture still frame after animation plays once to prevent looping
+  useEffect(() => {
+    if (!profileUser?.profile_effect || !isOpen) return;
+    
+    const effectSrc = getProfileEffectSrc(profileUser.profile_effect);
+    if (!effectSrc) return;
+
+    // If we already have a still frame, don't recapture
+    if (profileEffectStillFrame) return;
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = effectSrc;
+    
+    // Wait for image to load, then after animation duration, capture the last frame
+    const captureStillFrame = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || 800;
+        canvas.height = img.naturalHeight || 600;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/png');
+        setProfileEffectStillFrame(dataUrl);
+        profileEffectAnimationEndedRef.current = true;
+      } catch (e) {
+        console.error('Failed to capture still frame:', e);
+      }
+    };
+
+    img.onload = () => {
+      // Wait for animation to complete (heuristic: 3 seconds for most animations)
+      // Then capture the last frame to prevent looping
+      setTimeout(captureStillFrame, 3000);
+    };
+
+    return () => {
+      img.onload = null;
+    };
+  }, [profileUser?.profile_effect, isOpen, profileEffectStillFrame]);
+
   // Fetch user profile
   useEffect(() => {
     if (!isOpen || !userId) return;
@@ -150,6 +207,7 @@ export const UserProfilePopup = () => {
           avatar_url: data.avatar_url,
           banner_url: data.banner_url ?? null,
           avatar_decoration: data.avatar_decoration,
+          profile_effect: (data as any).profile_effect ?? null,
           banner_color: data.banner_color || "#5865F2",
           profile_theme_primary: data.profile_theme_primary ?? null,
           profile_theme_accent: data.profile_theme_accent ?? null,
@@ -340,7 +398,7 @@ export const UserProfilePopup = () => {
                 >
                   {/* Banner image */}
                   {bannerUrl && (
-                    <div className="-mx-4 sm:-mx-6 -mt-4 sm:-mt-6 mb-4 h-24 sm:h-28 relative overflow-hidden">
+                    <div className="-mx-4 sm:-mx-6 -mt-4 sm:-mt-6 mb-4 h-24 sm:h-28 relative overflow-hidden" style={{ zIndex: 0 }}>
                       <img
                         src={bannerUrl}
                         alt="Profile banner"
@@ -350,25 +408,55 @@ export const UserProfilePopup = () => {
                     </div>
                   )}
 
-                  {/* Avatar Section */}
-                  <div className={cn("flex items-end gap-4 mb-4", bannerUrl && "-mt-14 sm:-mt-16")}>
-                    <div className="relative flex-shrink-0">
-                      <div className="rounded-2xl p-1" style={{ backgroundColor: cardBg, backdropFilter: "blur(8px)" }}>
-                        <AvatarWithDecoration user={profileUser} className="w-20 h-20 sm:w-24 sm:h-24" active={true} />
+                  {/* Profile Effect - rendered once when modal opens, stops after first play, above banner but below content */}
+                  {profileUser.profile_effect && getProfileEffectSrc(profileUser.profile_effect) && (() => {
+                    const effectSrc = getProfileEffectSrc(profileUser.profile_effect);
+                    // Use still frame if animation has ended, otherwise use animated version
+                    const displaySrc = profileEffectAnimationEndedRef.current && profileEffectStillFrame 
+                      ? profileEffectStillFrame 
+                      : effectSrc;
+                    const effectKey = profileEffectPlayedRef.current ? `played-${userId}` : `effect-${profileUser.profile_effect}-${userId}`;
+                    
+                    return (
+                      <div className="absolute -inset-4 sm:-inset-6 pointer-events-none overflow-hidden" style={{ zIndex: 2 }}>
+                        <img
+                          ref={profileEffectImgRef}
+                          key={effectKey}
+                          src={displaySrc!}
+                          alt="Profile effect"
+                          className="absolute top-0 left-0 w-full h-full object-cover object-top"
+                          style={{
+                            imageRendering: 'auto',
+                          }}
+                          onLoad={() => {
+                            if (!profileEffectPlayedRef.current) {
+                              profileEffectPlayedRef.current = true;
+                            }
+                          }}
+                          onError={() => {
+                            profileEffectPlayedRef.current = true;
+                          }}
+                        />
                       </div>
+                    );
+                  })()}
+
+                  {/* Avatar Section */}
+                  <div className={cn("flex items-end gap-4 mb-4 relative", bannerUrl && "-mt-14 sm:-mt-16 pt-2")} style={{ zIndex: 10 }}>
+                    <div className="relative flex-shrink-0">
+                      <AvatarWithDecoration user={profileUser} className="w-20 h-20 sm:w-24 sm:h-24" active={true} />
                       {/* Status indicator */}
                       <div
                         className={cn(
-                          "absolute bottom-1 right-1 w-5 h-5 rounded-full border-[3px] shadow-lg z-10",
+                          "absolute bottom-1 right-1 w-5 h-5 rounded-full border-[3px] shadow-lg z-10 border-background",
                           statusColors[profileUser.status],
                         )}
-                        style={{ borderColor: cardBg }}
                         title={statusLabels[profileUser.status]}
                       />
                     </div>
 
                     {/* Name and username - shown next to avatar on larger screens */}
-                    <div className="hidden sm:block flex-1 min-w-0 pb-1">
+                    <div className="hidden sm:block flex-1 min-w-0 pb-1 pt-2">
                       <h2 className="text-xl font-semibold tracking-tight truncate">
                         {profileUser.display_name || profileUser.username}
                       </h2>
@@ -379,7 +467,7 @@ export const UserProfilePopup = () => {
                   </div>
 
                   {/* Name and username - shown below avatar on mobile */}
-                  <div className="sm:hidden mb-4">
+                  <div className="sm:hidden mb-4 relative" style={{ zIndex: 10 }}>
                     <h2 className="text-xl font-semibold tracking-tight">
                       {profileUser.display_name || profileUser.username}
                     </h2>
@@ -389,8 +477,8 @@ export const UserProfilePopup = () => {
                   {/* Custom Status */}
                   {profileUser.custom_status && (
                     <div
-                      className="mb-4 px-3 py-2 rounded-xl text-sm"
-                      style={{ backgroundColor: cardBg, backdropFilter: "blur(8px)" }}
+                      className="mb-4 px-3 py-2 rounded-xl text-sm relative"
+                      style={{ backgroundColor: cardBg, backdropFilter: "blur(8px)", zIndex: 10 }}
                     >
                       <p className="italic text-[color:var(--profile-muted)]">"{profileUser.custom_status}"</p>
                     </div>
@@ -398,15 +486,15 @@ export const UserProfilePopup = () => {
 
                   {/* Bio */}
                   {profileUser.bio && (
-                    <div className="mb-4">
+                    <div className="mb-4 relative" style={{ zIndex: 10 }}>
                       <p className="text-sm leading-relaxed opacity-90">{profileUser.bio}</p>
                     </div>
                   )}
 
                   {/* Info Cards */}
                   <div
-                    className="rounded-xl p-3 sm:p-4 space-y-3 mb-4"
-                    style={{ backgroundColor: cardBg, backdropFilter: "blur(8px)" }}
+                    className="rounded-xl p-3 sm:p-4 space-y-3 mb-4 relative"
+                    style={{ backgroundColor: cardBg, backdropFilter: "blur(8px)", zIndex: 10 }}
                   >
                     {/* Member Since */}
                     <div className="flex items-center gap-3">
@@ -489,7 +577,7 @@ export const UserProfilePopup = () => {
 
                   {/* Action Buttons */}
                   {!isSelf && (
-                    <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t" style={{ borderColor: divider }}>
+                    <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t relative z-10" style={{ borderColor: divider }}>
                       <Button onClick={handleMessage} className="flex-1 rounded-xl h-10" variant="default">
                         <MessageCircle className="w-4 h-4 mr-2" />
                         Message
