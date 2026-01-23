@@ -1,48 +1,38 @@
-import { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Loader2, Upload, Plus, Users, ArrowLeft, X } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useUIStore } from '@/stores/uiStore';
-import { useServerStore } from '@/stores/serverStore';
-import { useAuthStore } from '@/stores/authStore';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Loader2, Upload, Plus, Users, ArrowLeft, X, Sparkles } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useUIStore } from "@/stores/uiStore";
+import { useServerStore } from "@/stores/serverStore";
+import { useAuthStore } from "@/stores/authStore";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const MAX_ICON_SIZE = 5 * 1024 * 1024; // 5MB
-const ALLOWED_ICON_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const ALLOWED_ICON_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 const createServerSchema = z.object({
-  name: z.string()
-    .trim()
-    .min(1, 'Server name is required')
-    .max(100, 'Server name must be less than 100 characters'),
+  name: z.string().trim().min(1, "Server name is required").max(100, "Server name must be less than 100 characters"),
 });
 
 const joinServerSchema = z.object({
-  inviteCode: z.string()
+  inviteCode: z
+    .string()
     .trim()
-    .min(1, 'Invite code is required')
-    .max(8, 'Invite code must be 8 characters')
-    .regex(/^[A-Z0-9]+$/i, 'Invalid invite code format'),
+    .min(1, "Invite code is required")
+    .max(8, "Invite code must be 8 characters")
+    .regex(/^[A-Z0-9]+$/i, "Invalid invite code format"),
 });
 
 type CreateServerForm = z.infer<typeof createServerSchema>;
 type JoinServerForm = z.infer<typeof joinServerSchema>;
-
-type ModalView = 'choose' | 'create' | 'join';
+type ModalView = "choose" | "create" | "join";
 
 export const CreateServerModal = () => {
   const navigate = useNavigate();
@@ -50,9 +40,9 @@ export const CreateServerModal = () => {
   const { createServer, updateServer, joinServer, servers, setCurrentServer, fetchChannels } = useServerStore();
   const { user } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
-  const [view, setView] = useState<ModalView>('choose');
+  const [view, setView] = useState<ModalView>("choose");
   const [joinError, setJoinError] = useState<string | null>(null);
-  
+
   // Icon upload state
   const [iconFile, setIconFile] = useState<File | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
@@ -60,27 +50,27 @@ export const CreateServerModal = () => {
 
   const createForm = useForm<CreateServerForm>({
     resolver: zodResolver(createServerSchema),
-    defaultValues: { name: '' },
+    defaultValues: { name: "" },
   });
 
   const joinForm = useForm<JoinServerForm>({
     resolver: zodResolver(joinServerSchema),
-    defaultValues: { inviteCode: '' },
+    defaultValues: { inviteCode: "" },
   });
 
-  const isOpen = activeModal === 'create-server';
+  const isOpen = activeModal === "create-server";
 
   const handleIconSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (!ALLOWED_ICON_TYPES.includes(file.type)) {
-      toast.error('Please select a JPEG, PNG, or WebP image');
+      toast.error("Please select a JPEG, PNG, or WebP image");
       return;
     }
 
     if (file.size > MAX_ICON_SIZE) {
-      toast.error('Image must be less than 5MB');
+      toast.error("Image must be less than 5MB");
       return;
     }
 
@@ -95,33 +85,31 @@ export const CreateServerModal = () => {
       setIconPreview(null);
     }
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
   const uploadIcon = async (serverId: string, file: File): Promise<string | null> => {
-    const ext = file.name.split('.').pop() || 'png';
+    const ext = file.name.split(".").pop() || "png";
     const filePath = `${serverId}/icon.${ext}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from('server-icons')
-      .upload(filePath, file, { upsert: true });
+    const { error: uploadError } = await supabase.storage.from("server-icons").upload(filePath, file, { upsert: true });
 
     if (uploadError) {
-      console.error('Failed to upload icon:', uploadError);
+      console.error("Failed to upload icon:", uploadError);
       return null;
     }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from('server-icons')
-      .getPublicUrl(filePath);
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("server-icons").getPublicUrl(filePath);
 
     return publicUrl;
   };
 
   const onCreateSubmit = async (data: CreateServerForm) => {
     if (!user) return;
-    
+
     setIsLoading(true);
     try {
       const server = await createServer(data.name, user.id);
@@ -133,13 +121,13 @@ export const CreateServerModal = () => {
             await updateServer(server.id, user.id, { icon_url: iconUrl });
           }
         }
-        
+
         // Set default banner for new servers
-        await updateServer(server.id, user.id, { banner_url: '/default_server_banner.png' });
-        
+        await updateServer(server.id, user.id, { banner_url: "/default_server_banner.png" });
+
         // Create server object with default banner
-        const serverWithBanner = { ...server, banner_url: '/default_server_banner.png' };
-        
+        const serverWithBanner = { ...server, banner_url: "/default_server_banner.png" };
+
         toast.success(`Server "${server.name}" created!`);
         setCurrentServer(serverWithBanner);
         await fetchChannels(server.id);
@@ -147,7 +135,7 @@ export const CreateServerModal = () => {
         handleClose();
       }
     } catch (error) {
-      toast.error('Failed to create server');
+      toast.error("Failed to create server");
     } finally {
       setIsLoading(false);
     }
@@ -155,15 +143,15 @@ export const CreateServerModal = () => {
 
   const onJoinSubmit = async (data: JoinServerForm) => {
     if (!user) return;
-    
+
     setIsLoading(true);
     setJoinError(null);
-    
+
     try {
       const success = await joinServer(data.inviteCode.toUpperCase(), user.id);
       if (success) {
-        toast.success('Successfully joined server!');
-        const newServer = servers.find(s => s.invite_code === data.inviteCode.toUpperCase());
+        toast.success("Successfully joined server!");
+        const newServer = servers.find((s) => s.invite_code === data.inviteCode.toUpperCase());
         if (newServer) {
           setCurrentServer(newServer);
           await fetchChannels(newServer.id);
@@ -171,10 +159,10 @@ export const CreateServerModal = () => {
         }
         handleClose();
       } else {
-        setJoinError('Invalid invite code or you may already be a member');
+        setJoinError("Invalid invite code or you may already be a member");
       }
     } catch (error) {
-      setJoinError('Failed to join server');
+      setJoinError("Failed to join server");
     } finally {
       setIsLoading(false);
     }
@@ -183,26 +171,29 @@ export const CreateServerModal = () => {
   const handleClose = () => {
     createForm.reset();
     joinForm.reset();
-    setView('choose');
+    setView("choose");
     setJoinError(null);
     clearIcon();
     closeModal();
   };
 
   const handleInviteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
-    joinForm.setValue('inviteCode', value);
+    const value = e.target.value
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, "")
+      .slice(0, 8);
+    joinForm.setValue("inviteCode", value);
   };
 
   const handleBack = () => {
-    setView('choose');
+    setView("choose");
     setJoinError(null);
     clearIcon();
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-hidden bg-background/95 backdrop-blur-xl border-border/50 rounded-2xl p-0">
         {/* Hidden file input */}
         <input
           ref={fileInputRef}
@@ -213,72 +204,82 @@ export const CreateServerModal = () => {
         />
 
         {/* Choose View */}
-        {view === 'choose' && (
-          <>
-            <DialogHeader>
-              <DialogTitle className="text-center text-xl">Add a Server</DialogTitle>
-              <DialogDescription className="text-center">
-                Create your own server or join an existing one with an invite code.
-              </DialogDescription>
+        {view === "choose" && (
+          <div className="p-4 sm:p-6">
+            <DialogHeader className="pb-4">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Sparkles className="w-6 h-6 text-primary" />
+                </div>
+                <div className="text-center">
+                  <DialogTitle className="text-xl font-semibold">Add a Server</DialogTitle>
+                  <DialogDescription className="text-sm text-muted-foreground mt-1">
+                    Create your own server or join an existing one
+                  </DialogDescription>
+                </div>
+              </div>
             </DialogHeader>
 
-            <div className="space-y-3 py-4">
+            <div className="space-y-3 py-2">
               <button
-                onClick={() => setView('create')}
-                className="w-full p-4 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/60 transition-colors flex items-center gap-4 group"
+                onClick={() => setView("create")}
+                className="w-full p-4 rounded-xl border-2 border-border/50 bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-all duration-200 flex items-center gap-4 group"
               >
-                <div className="w-12 h-12 rounded-full bg-nomo-success/20 flex items-center justify-center group-hover:bg-nomo-success/30 transition-colors">
-                  <Plus className="w-6 h-6 text-nomo-success" />
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[hsl(var(--kloak-success))]/15 flex items-center justify-center group-hover:bg-[hsl(var(--kloak-success))]/25 transition-colors flex-shrink-0">
+                  <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-[hsl(var(--kloak-success))]" />
                 </div>
-                <div className="text-left flex-1">
+                <div className="text-left flex-1 min-w-0">
                   <p className="font-semibold tracking-tight">Create My Own</p>
-                  <p className="text-sm text-muted-foreground">Start fresh with your own server</p>
+                  <p className="text-sm text-muted-foreground truncate">Start fresh with your own server</p>
                 </div>
               </button>
 
               <button
-                onClick={() => setView('join')}
-                className="w-full p-4 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/60 transition-colors flex items-center gap-4 group"
+                onClick={() => setView("join")}
+                className="w-full p-4 rounded-xl border-2 border-border/50 bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-all duration-200 flex items-center gap-4 group"
               >
-                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center group-hover:bg-primary/30 transition-colors">
-                  <Users className="w-6 h-6 text-primary" />
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-primary/15 flex items-center justify-center group-hover:bg-primary/25 transition-colors flex-shrink-0">
+                  <Users className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
                 </div>
-                <div className="text-left flex-1">
+                <div className="text-left flex-1 min-w-0">
                   <p className="font-semibold tracking-tight">Join a Server</p>
-                  <p className="text-sm text-muted-foreground">Enter an invite code to join</p>
+                  <p className="text-sm text-muted-foreground truncate">Enter an invite code to join</p>
                 </div>
               </button>
             </div>
 
-            <DialogFooter className="sm:justify-center">
-              <Button variant="ghost" onClick={handleClose}>
+            <div className="pt-4 border-t border-border/30 mt-4">
+              <Button variant="ghost" onClick={handleClose} className="w-full sm:w-auto rounded-xl">
                 Cancel
               </Button>
-            </DialogFooter>
-          </>
+            </div>
+          </div>
         )}
 
         {/* Create View */}
-        {view === 'create' && (
-          <>
-            <DialogHeader>
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" onClick={handleBack} className="h-8 w-8">
+        {view === "create" && (
+          <div className="p-4 sm:p-6">
+            <DialogHeader className="pb-4">
+              <div className="flex items-center gap-3">
+                <Button variant="ghost" size="icon" onClick={handleBack} className="h-9 w-9 rounded-xl flex-shrink-0">
                   <ArrowLeft className="w-4 h-4" />
                 </Button>
-                <DialogTitle className="text-xl">Create Your Server</DialogTitle>
+                <div>
+                  <DialogTitle className="text-lg font-semibold">Create Your Server</DialogTitle>
+                  <DialogDescription className="text-sm text-muted-foreground">
+                    Make yours and start talking
+                  </DialogDescription>
+                </div>
               </div>
-              <DialogDescription className="text-center">
-                Your server is where you and your friends hang out. Make yours and start talking.
-              </DialogDescription>
             </DialogHeader>
 
-            <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-4">
-              <div className="flex justify-center">
+            <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-5">
+              {/* Icon Upload */}
+              <div className="flex flex-col items-center gap-2 p-4 bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30">
                 <div className="relative">
-                  <div 
+                  <div
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center border-2 border-dashed border-muted-foreground/50 cursor-pointer hover:border-primary transition-colors overflow-hidden"
+                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-secondary flex items-center justify-center border-2 border-dashed border-muted-foreground/30 cursor-pointer hover:border-primary/50 transition-all duration-200 overflow-hidden"
                   >
                     {iconPreview ? (
                       <img src={iconPreview} alt="Server icon preview" className="w-full h-full object-cover" />
@@ -293,26 +294,25 @@ export const CreateServerModal = () => {
                         e.stopPropagation();
                         clearIcon();
                       }}
-                      className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/90"
+                      className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/90 transition-colors shadow-lg"
                     >
-                      <X className="w-3 h-3" />
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
+                <p className="text-xs text-muted-foreground">Click to upload an icon (optional)</p>
               </div>
-              <p className="text-xs text-muted-foreground text-center">
-                Click to upload an icon (optional)
-              </p>
 
+              {/* Server Name */}
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-xs font-bold uppercase text-muted-foreground">
+                <Label htmlFor="name" className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">
                   Server Name
                 </Label>
                 <Input
                   id="name"
                   placeholder="My Awesome Server"
-                  {...createForm.register('name')}
-                  className={createForm.formState.errors.name ? 'border-destructive' : ''}
+                  {...createForm.register("name")}
+                  className={`rounded-xl ${createForm.formState.errors.name ? "border-destructive focus-visible:ring-destructive" : ""}`}
                   autoFocus
                 />
                 {createForm.formState.errors.name && (
@@ -324,80 +324,100 @@ export const CreateServerModal = () => {
                 By creating a server, you agree to our Community Guidelines.
               </p>
 
-              <DialogFooter className="flex gap-2 sm:justify-between">
-                <Button type="button" variant="ghost" onClick={handleBack}>
+              {/* Actions */}
+              <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 pt-2 border-t border-border/30">
+                <Button type="button" variant="ghost" onClick={handleBack} className="flex-1 sm:flex-none rounded-xl">
                   Back
                 </Button>
-                <Button type="submit" disabled={isLoading}>
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="flex-1 sm:flex-none rounded-xl bg-primary hover:bg-primary/90"
+                >
                   {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Create
+                  Create Server
                 </Button>
-              </DialogFooter>
+              </div>
             </form>
-          </>
+          </div>
         )}
 
         {/* Join View */}
-        {view === 'join' && (
-          <>
-            <DialogHeader>
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" onClick={handleBack} className="h-8 w-8">
+        {view === "join" && (
+          <div className="p-4 sm:p-6">
+            <DialogHeader className="pb-4">
+              <div className="flex items-center gap-3">
+                <Button variant="ghost" size="icon" onClick={handleBack} className="h-9 w-9 rounded-xl flex-shrink-0">
                   <ArrowLeft className="w-4 h-4" />
                 </Button>
-                <DialogTitle className="text-xl">Join a Server</DialogTitle>
+                <div>
+                  <DialogTitle className="text-lg font-semibold">Join a Server</DialogTitle>
+                  <DialogDescription className="text-sm text-muted-foreground">
+                    Enter an invite code to join
+                  </DialogDescription>
+                </div>
               </div>
-              <DialogDescription className="text-center">
-                Enter an invite code to join an existing server.
-              </DialogDescription>
             </DialogHeader>
 
-            <form onSubmit={joinForm.handleSubmit(onJoinSubmit)} className="space-y-4">
-              <div className="flex justify-center">
-                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Users className="w-8 h-8 text-primary" />
+            <form onSubmit={joinForm.handleSubmit(onJoinSubmit)} className="space-y-5">
+              {/* Icon */}
+              <div className="flex justify-center py-2">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-primary/10 flex items-center justify-center">
+                  <Users className="w-8 h-8 sm:w-10 sm:h-10 text-primary" />
                 </div>
               </div>
 
+              {/* Invite Code Input */}
               <div className="space-y-2">
-                <Label htmlFor="inviteCode" className="text-xs font-bold uppercase text-muted-foreground">
+                <Label
+                  htmlFor="inviteCode"
+                  className="text-xs font-semibold uppercase text-muted-foreground tracking-wide"
+                >
                   Invite Code
                 </Label>
                 <Input
                   id="inviteCode"
                   placeholder="ABC12XYZ"
-                  {...joinForm.register('inviteCode')}
+                  {...joinForm.register("inviteCode")}
                   onChange={handleInviteChange}
-                  className={`text-center font-mono text-lg tracking-widest ${joinForm.formState.errors.inviteCode || joinError ? 'border-destructive' : ''}`}
+                  className={`text-center font-mono text-lg tracking-widest rounded-xl ${
+                    joinForm.formState.errors.inviteCode || joinError
+                      ? "border-destructive focus-visible:ring-destructive"
+                      : ""
+                  }`}
                   autoFocus
                   maxLength={8}
                 />
                 {joinForm.formState.errors.inviteCode && (
                   <p className="text-xs text-destructive text-center">{joinForm.formState.errors.inviteCode.message}</p>
                 )}
-                {joinError && (
-                  <p className="text-xs text-destructive text-center">{joinError}</p>
-                )}
+                {joinError && <p className="text-xs text-destructive text-center">{joinError}</p>}
               </div>
 
-              <div className="bg-secondary/50 rounded-lg p-3">
+              {/* Example */}
+              <div className="bg-secondary/30 backdrop-blur-sm rounded-xl p-3 border border-border/30">
                 <p className="text-xs text-muted-foreground">
-                  <strong>Invites should look like:</strong>
+                  <span className="font-medium">Invites should look like:</span>
                 </p>
                 <p className="text-sm font-mono text-foreground mt-1">ABC12XYZ</p>
               </div>
 
-              <DialogFooter className="flex gap-2 sm:justify-between">
-                <Button type="button" variant="ghost" onClick={handleBack}>
+              {/* Actions */}
+              <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 pt-2 border-t border-border/30">
+                <Button type="button" variant="ghost" onClick={handleBack} className="flex-1 sm:flex-none rounded-xl">
                   Back
                 </Button>
-                <Button type="submit" disabled={isLoading}>
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="flex-1 sm:flex-none rounded-xl bg-primary hover:bg-primary/90"
+                >
                   {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Join Server
                 </Button>
-              </DialogFooter>
+              </div>
             </form>
-          </>
+          </div>
         )}
       </DialogContent>
     </Dialog>
