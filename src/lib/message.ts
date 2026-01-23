@@ -237,3 +237,51 @@ export const getMessagePreview = (
   if (stripped.length <= maxLength) return stripped;
   return stripped.slice(0, maxLength - 3) + '...'
 };
+
+/**
+ * Convert raw message content with UUID mentions to readable format for editing
+ * Converts <@userId> to @username
+ */
+export const convertMentionsToReadable = (
+  content: string,
+  usersMap: Map<string, { username: string; display_name?: string | null; nickname?: string | null }>
+): string => {
+  return content.replace(
+    /<@(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})>/g,
+    (match, userId) => {
+      const userInfo = usersMap.get(userId);
+      const displayName = userInfo?.nickname || userInfo?.display_name || userInfo?.username;
+      return displayName ? `@${displayName}` : match;
+    }
+  );
+};
+
+/**
+ * Convert readable mentions back to UUID format for saving
+ * Converts @username to <@userId>
+ */
+export const convertMentionsToRaw = (
+  content: string,
+  usersMap: Map<string, { username: string; display_name?: string | null; nickname?: string | null }>
+): string => {
+  // Build reverse lookup: username/display_name/nickname -> userId
+  const namesToId = new Map<string, string>();
+  usersMap.forEach((info, id) => {
+    if (info.username) namesToId.set(info.username.toLowerCase(), id);
+    if (info.display_name) namesToId.set(info.display_name.toLowerCase(), id);
+    if (info.nickname) namesToId.set(info.nickname.toLowerCase(), id);
+  });
+  
+  // Match @mentions that are not already in <@uuid> format
+  return content.replace(
+    /@(\w+)/g,
+    (match, name) => {
+      // Skip if it's @everyone or @here
+      if (name.toLowerCase() === 'everyone' || name.toLowerCase() === 'here') {
+        return match;
+      }
+      const userId = namesToId.get(name.toLowerCase());
+      return userId ? `<@${userId}>` : match;
+    }
+  );
+};
