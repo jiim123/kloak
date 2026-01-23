@@ -347,12 +347,14 @@ const AppLayout = () => {
         <ConnectionStatus />
 
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-          {/* Mobile header */}
-          <MobileHeader
-            isDMView={isDMView}
-            showFriends={showFriends}
-            showExplore={showExplore}
-          />
+          {/* Mobile header - hide when in DM conversation (DMHeader handles it) */}
+          {!(isDMView && currentConversation) && (
+            <MobileHeader
+              isDMView={isDMView}
+              showFriends={showFriends}
+              showExplore={showExplore}
+            />
+          )}
 
           {/* Desktop layout */}
           <div className="hidden md:flex flex-1 overflow-hidden">
