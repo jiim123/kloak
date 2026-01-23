@@ -514,7 +514,7 @@ export const ChannelSidebar = () => {
   } = useServerStore();
   const voicePresenceByChannel = useVoiceStore((s) => s.presenceByChannel);
   const joinedVoiceChannelId = useVoiceStore((s) => s.joinedChannelId);
-  const { openModal, openServerSettings, openServerSettingsPage } = useUIStore();
+  const { openModal, openServerSettings, openServerSettingsPage, closeMobileSidebars } = useUIStore();
   const isMobile = useIsMobile();
 
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
@@ -866,7 +866,14 @@ export const ChannelSidebar = () => {
 
                 {/* Server Settings */}
                 <DropdownMenuItem
-                  onClick={() => (isMobile ? openServerSettings() : openServerSettingsPage())}
+                  onClick={() => {
+                    if (isMobile) {
+                      openServerSettings();
+                      closeMobileSidebars();
+                      return;
+                    }
+                    openServerSettingsPage();
+                  }}
                   className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-secondary/60 focus:bg-secondary/80 transition-colors"
                 >
                   <div className="w-6 h-6 rounded-lg bg-secondary/80 flex items-center justify-center flex-shrink-0">

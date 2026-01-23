@@ -58,6 +58,16 @@ export const MobileSidebar = ({ isDMView, showFriends, onShowFriendsChange, show
         side="left"
         className="p-0 gap-0 bg-transparent shadow-none border-r-0 w-[calc(72px+240px)] max-w-[85vw] flex"
         hideCloseButton
+        onInteractOutside={(event) => {
+          const target = event.target as HTMLElement | null;
+          if (!target) return;
+
+          // Dropdown menus are portalled to <body>, which Radix Sheet treats as an outside click.
+          // Prevent the sheet from closing so menu item clicks can run, and let handlers close it explicitly.
+          if (target.closest('[data-radix-popper-content-wrapper]') || target.closest('[role="menu"]')) {
+            event.preventDefault();
+          }
+        }}
       >
         <SheetHeader className="sr-only">
           <SheetTitle>Navigation</SheetTitle>
