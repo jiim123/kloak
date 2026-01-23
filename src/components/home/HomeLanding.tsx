@@ -23,65 +23,77 @@ export const HomeLanding = () => {
 
     return (
         <div className="flex-1 h-full bg-layout-chat overflow-y-auto w-full flex items-center justify-center">
-            <div className="max-w-2xl mx-auto px-6 py-12">
+            <div className="max-w-3xl mx-auto px-6 py-12">
                 <motion.div
                     variants={container}
                     initial="hidden"
                     animate="show"
-                    className="space-y-12"
+                    className="space-y-16"
                 >
                     {/* Hero Section */}
-                    <motion.div variants={item} className="text-center space-y-6">
-                        <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-primary/10 mb-4">
-                            <img src={kloakLogo} alt="Kloak" className="w-10 h-10" />
+                    <motion.div variants={item} className="text-center space-y-8">
+                        <img src={kloakLogo} alt="Kloak" className="h-16 md:h-20 mx-auto" />
+                        <div className="space-y-4">
+                            <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-foreground">
+                                Welcome Back
+                            </h1>
+                            <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-xl mx-auto">
+                                Chat with friends, build communities, and connect — all without giving up your privacy.
+                            </p>
                         </div>
-                        <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">
-                            Welcome to <span className="text-primary">Kloak</span>
-                        </h1>
-                        <p className="text-lg text-muted-foreground leading-relaxed max-w-lg mx-auto">
-                            Chat with friends, build communities, and connect — all without giving up your privacy.
-                        </p>
                     </motion.div>
 
                     {/* Action Boxes */}
-                    <motion.div variants={item} className="grid sm:grid-cols-3 gap-4 pt-4">
+                    <motion.div variants={item} className="grid sm:grid-cols-3 gap-6">
                         <button
                             onClick={() => openModal('create-server')}
-                            className="p-4 rounded-lg bg-card/50 border border-border/50 hover:bg-card hover:border-primary/50 transition-colors text-left group"
+                            className="p-8 rounded-2xl bg-card/50 border border-border/50 hover:bg-card hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200 text-left group"
                         >
-                            <div className="flex items-center gap-3 mb-2">
-                                <Plus className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
-                                <h3 className="font-semibold text-sm">Create Server</h3>
+                            <div className="flex flex-col items-center text-center gap-4">
+                                <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                                    <Plus className="w-7 h-7 text-primary" />
+                                </div>
+                                <div className="space-y-2">
+                                    <h3 className="font-semibold text-lg">Create Server</h3>
+                                    <p className="text-sm text-muted-foreground">
+                                        Start your own private community
+                                    </p>
+                                </div>
                             </div>
-                            <p className="text-xs text-muted-foreground">
-                                Start your own community
-                            </p>
                         </button>
 
                         <button
                             onClick={() => openModal('join-server')}
-                            className="p-4 rounded-lg bg-card/50 border border-border/50 hover:bg-card hover:border-primary/50 transition-colors text-left group"
+                            className="p-8 rounded-2xl bg-card/50 border border-border/50 hover:bg-card hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200 text-left group"
                         >
-                            <div className="flex items-center gap-3 mb-2">
-                                <Users className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
-                                <h3 className="font-semibold text-sm">Join Server</h3>
+                            <div className="flex flex-col items-center text-center gap-4">
+                                <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                                    <Users className="w-7 h-7 text-primary" />
+                                </div>
+                                <div className="space-y-2">
+                                    <h3 className="font-semibold text-lg">Join Server</h3>
+                                    <p className="text-sm text-muted-foreground">
+                                        Enter an invite code to join
+                                    </p>
+                                </div>
                             </div>
-                            <p className="text-xs text-muted-foreground">
-                                Enter an invite code
-                            </p>
                         </button>
 
                         <button
                             onClick={() => openModal('search')}
-                            className="p-4 rounded-lg bg-card/50 border border-border/50 hover:bg-card hover:border-primary/50 transition-colors text-left group"
+                            className="p-8 rounded-2xl bg-card/50 border border-border/50 hover:bg-card hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200 text-left group"
                         >
-                            <div className="flex items-center gap-3 mb-2">
-                                <Compass className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
-                                <h3 className="font-semibold text-sm">Discover</h3>
+                            <div className="flex flex-col items-center text-center gap-4">
+                                <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                                    <Compass className="w-7 h-7 text-primary" />
+                                </div>
+                                <div className="space-y-2">
+                                    <h3 className="font-semibold text-lg">Discover</h3>
+                                    <p className="text-sm text-muted-foreground">
+                                        Explore public communities
+                                    </p>
+                                </div>
                             </div>
-                            <p className="text-xs text-muted-foreground">
-                                Explore public communities
-                            </p>
                         </button>
                     </motion.div>
                 </motion.div>
