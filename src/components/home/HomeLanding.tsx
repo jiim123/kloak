@@ -1,7 +1,11 @@
 import { motion } from "framer-motion";
-import { Shield, Zap } from "lucide-react";
+import { Plus, Users, Compass } from "lucide-react";
+import { useUIStore } from "@/stores";
+import kloakLogo from "@/assets/kloak-logo.svg";
 
 export const HomeLanding = () => {
+    const { openModal } = useUIStore();
+
     const container = {
         hidden: { opacity: 0 },
         show: {
@@ -29,37 +33,56 @@ export const HomeLanding = () => {
                     {/* Hero Section */}
                     <motion.div variants={item} className="text-center space-y-6">
                         <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-primary/10 mb-4">
-                            <Shield className="w-10 h-10 text-primary" />
+                            <img src={kloakLogo} alt="Kloak" className="w-10 h-10" />
                         </div>
                         <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">
                             Welcome to <span className="text-primary">Kloak</span>
                         </h1>
                         <p className="text-lg text-muted-foreground leading-relaxed max-w-lg mx-auto">
-                            Your private sanctuary for secure communication. Select a conversation to start chatting, or find friends in the sidebar.
+                            Chat with friends, build communities, and connect — all without giving up your privacy.
                         </p>
                     </motion.div>
 
-                    {/* Feature Highlights - Compact */}
-                    <motion.div variants={item} className="grid sm:grid-cols-2 gap-4 pt-4">
-                        <div className="p-4 rounded-lg bg-card/50 border border-border/50">
+                    {/* Action Boxes */}
+                    <motion.div variants={item} className="grid sm:grid-cols-3 gap-4 pt-4">
+                        <button
+                            onClick={() => openModal('create-server')}
+                            className="p-4 rounded-lg bg-card/50 border border-border/50 hover:bg-card hover:border-primary/50 transition-colors text-left group"
+                        >
                             <div className="flex items-center gap-3 mb-2">
-                                <Zap className="w-5 h-5 text-primary" />
-                                <h3 className="font-semibold text-sm">Lightning Fast</h3>
+                                <Plus className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
+                                <h3 className="font-semibold text-sm">Create Server</h3>
                             </div>
                             <p className="text-xs text-muted-foreground">
-                                Optimized for speed. Messages deliver instantly.
+                                Start your own community
                             </p>
-                        </div>
+                        </button>
 
-                        <div className="p-4 rounded-lg bg-card/50 border border-border/50">
+                        <button
+                            onClick={() => openModal('join-server')}
+                            className="p-4 rounded-lg bg-card/50 border border-border/50 hover:bg-card hover:border-primary/50 transition-colors text-left group"
+                        >
                             <div className="flex items-center gap-3 mb-2">
-                                <Shield className="w-5 h-5 text-primary" />
-                                <h3 className="font-semibold text-sm">Secure by Default</h3>
+                                <Users className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
+                                <h3 className="font-semibold text-sm">Join Server</h3>
                             </div>
                             <p className="text-xs text-muted-foreground">
-                                No tracking, no ads. Encrypted in transit.
+                                Enter an invite code
                             </p>
-                        </div>
+                        </button>
+
+                        <button
+                            onClick={() => openModal('search')}
+                            className="p-4 rounded-lg bg-card/50 border border-border/50 hover:bg-card hover:border-primary/50 transition-colors text-left group"
+                        >
+                            <div className="flex items-center gap-3 mb-2">
+                                <Compass className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
+                                <h3 className="font-semibold text-sm">Discover</h3>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                Explore public communities
+                            </p>
+                        </button>
                     </motion.div>
                 </motion.div>
             </div>
