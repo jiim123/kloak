@@ -14,7 +14,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-const MAX_ICON_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_ICON_SIZE = 1 * 1024 * 1024; // 1MB
 const ALLOWED_ICON_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 const createServerSchema = z.object({
