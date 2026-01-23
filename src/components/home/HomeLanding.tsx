@@ -1,9 +1,11 @@
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { Plus, Users, Compass } from "lucide-react";
 import { useUIStore } from "@/stores";
 import kloakLogo from "@/assets/kloak-logo.svg";
 
 export const HomeLanding = () => {
+    const navigate = useNavigate();
     const { openModal } = useUIStore();
 
     const container = {
@@ -80,7 +82,7 @@ export const HomeLanding = () => {
                         </button>
 
                         <button
-                            onClick={() => openModal('search')}
+                            onClick={() => navigate('/app/explore')}
                             className="p-8 rounded-2xl bg-card/50 border border-border/50 hover:bg-card hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200 text-left group"
                         >
                             <div className="flex flex-col items-center text-center gap-4">
