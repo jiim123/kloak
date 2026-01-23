@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, useDragControls, PanInfo } from 'framer-motion';
 import { X, Download, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
 interface ImageLightboxProps {
   imageUrl: string | null;
   imageUrls?: string[];
@@ -160,7 +160,7 @@ export const ImageLightbox = ({ imageUrl, imageUrls = [], onClose }: ImageLightb
     setPosition({ x: 0, y: 0 });
   }, [hasMultipleImages, allImages.length]);
 
-  return (
+  const lightboxContent = (
     <AnimatePresence>
       {imageUrl && currentImage && (
         <motion.div
@@ -169,7 +169,7 @@ export const ImageLightbox = ({ imageUrl, imageUrls = [], onClose }: ImageLightb
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/95 backdrop-blur-md"
+          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/95 backdrop-blur-md"
           onClick={handleBackdropClick}
         >
           {/* Top controls bar */}
@@ -326,4 +326,7 @@ export const ImageLightbox = ({ imageUrl, imageUrls = [], onClose }: ImageLightb
       )}
     </AnimatePresence>
   );
+
+  // Use portal to render at document body level, escaping any overflow:hidden containers
+  return createPortal(lightboxContent, document.body);
 };
