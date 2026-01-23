@@ -64,6 +64,8 @@ export const JoinServerModal = () => {
     
     setIsLoading(true);
     setError(null);
+    // Clear any previous store error so we don't show stale messages
+    useServerStore.setState({ error: null });
     
     try {
       const joinedServer = await joinServer(data.inviteCode.toUpperCase(), user.id);
@@ -76,7 +78,8 @@ export const JoinServerModal = () => {
         reset();
         closeModal();
       } else {
-        setError('Invalid invite code or you may already be a member');
+        const storeError = useServerStore.getState().error;
+        setError(storeError || 'Invalid invite code or you may already be a member');
       }
     } catch (error) {
       setError('Failed to join server');

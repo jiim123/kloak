@@ -216,6 +216,16 @@ export const ServerSettingsPage = () => {
   const [isUploadingEmoji, setIsUploadingEmoji] = useState(false);
   const [serverEmojis, setServerEmojis] = useState<Array<{ id: string; name: string; file_path: string }>>([]);
   const emojiInputRef = useRef<HTMLInputElement>(null);
+
+  // Banned members state (separate from `members`, which intentionally excludes banned)
+  const [bannedMembers, setBannedMembers] = useState<
+    Array<{
+      id: string;
+      user_id: string;
+      joined_at?: string | null;
+      user: { id: string; username: string; display_name?: string | null; avatar_url?: string | null; banner_color?: string };
+    }>
+  >([]);
   
   const server = currentServer;
 
@@ -352,6 +362,62 @@ export const ServerSettingsPage = () => {
 
   // Real-time members updates
   useRealtimeMembers(server ? server.id : null);
+
+  // Load + subscribe to banned members for the Bans tab
+  useEffect(() => {
+    if (!isServerSettingsOpen) return;
+    if (!server?.id || !user?.id) return;
+
+    let cancelled = false;
+
+    const loadBannedMembers = async () => {
+      try {
+        const { data, error } = await supabase.rpc('get_banned_members', {
+          _server_id: server.id,
+          _user_id: user.id,
+        });
+
+        if (cancelled) return;
+        if (error) throw error;
+
+        let rows: any[] = [];
+        if (!data) {
+          rows = [];
+        } else if (typeof data === 'string') {
+          rows = JSON.parse(data);
+        } else if (Array.isArray(data)) {
+          rows = data;
+        } else {
+          rows = [];
+        }
+
+        setBannedMembers(rows as any);
+      } catch {
+        // If the viewer lacks permission, just show empty list (no toast spam).
+        if (!cancelled) setBannedMembers([]);
+      }
+    };
+
+    // Initial load
+    loadBannedMembers();
+
+    // Realtime updates for bans/unbans (server_members is_banned flips, inserts, deletes)
+    const channel = supabase
+      .channel(`bans:${server.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'server_members', filter: `server_id=eq.${server.id}` },
+        () => {
+          loadBannedMembers();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [isServerSettingsOpen, server?.id, user?.id]);
 
   // Track the server ID when settings open to detect server switches
   const initialServerIdRef = useRef<string | null>(null);
@@ -1745,17 +1811,17 @@ export const ServerSettingsPage = () => {
 
             {/* Bans Tab */}
             <TabsContent value="bans" className="m-0 p-6">
-              {members.filter(m => m.is_banned).length > 0 ? (
+              {bannedMembers.length > 0 ? (
                 <ScrollArea className="h-[calc(100vh-16rem)] pr-4">
                   <div className="space-y-2 max-w-4xl">
-                    {members.filter(m => m.is_banned).map((member) => (
+                    {bannedMembers.map((member) => (
                       <div 
                         key={member.id}
                         className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/50"
                       >
                         <Avatar className="w-10 h-10 flex-shrink-0">
                           <AvatarImage src={member.user?.avatar_url || undefined} />
-                          <AvatarFallback style={{ backgroundColor: member.user?.banner_color || '#5865F2' }}>
+                          <AvatarFallback style={{ backgroundColor: (member.user as any)?.banner_color || '#5865F2' }}>
                             {member.user?.username?.[0]?.toUpperCase() || '?'}
                           </AvatarFallback>
                         </Avatar>
@@ -1770,7 +1836,13 @@ export const ServerSettingsPage = () => {
                             size="sm"
                             onClick={async () => {
                               try {
-                                await updateMember(member.id, { is_banned: false });
+                                // Use RPC so pre-emptive bans are properly removed (and user can re-join)
+                                const { error } = await supabase.rpc('unban_member', {
+                                  _server_id: server.id,
+                                  _user_id: user!.id,
+                                  _target_user_id: member.user_id,
+                                });
+                                if (error) throw error;
                                 toast.success(`${member.user?.username} has been unbanned`);
                               } catch {
                                 toast.error('Failed to unban');
