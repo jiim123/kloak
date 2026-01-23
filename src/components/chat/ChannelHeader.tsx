@@ -85,7 +85,7 @@ const HeaderButton = ({ icon: Icon, label, onClick, isHovered, onMouseEnter, onM
 };
 
 export const ChannelHeader = ({ channel }: ChannelHeaderProps) => {
-  const { toggleMemberSidebar, openModal } = useUIStore();
+  const { isMemberSidebarOpen, toggleMemberSidebar, openModal } = useUIStore();
   const [hoveredButton, setHoveredButton] = useState<string | null>(null);
 
   const ChannelIcon = channel.type === "voice" ? Volume2 : Hash;
