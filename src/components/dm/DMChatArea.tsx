@@ -3,7 +3,10 @@ import { ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useDMStore } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useUIStore } from '@/stores/uiStore';
 import { useUnreadDMs } from '@/hooks/useUnreadDMs';
+import { useSwipeGestureRef } from '@/hooks/useSwipeGesture';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { DMMessageInput } from './DMMessageInput';
 import { DMMessageItem } from './DMMessageItem';
 import { DMHeader } from './DMHeader';
@@ -12,7 +15,9 @@ import type { DirectMessage } from '@/types';
 export const DMChatArea = () => {
   const { user } = useAuthStore();
   const { currentConversation, isLoading, fetchMessages, getMessages } = useDMStore();
+  const { setMobileSidebarOpen } = useUIStore();
   const { markAsRead } = useUnreadDMs(user?.id || null);
+  const isMobile = useIsMobile();
   
   // Get messages for current conversation from cache
   const messages = currentConversation ? getMessages(currentConversation.id) : [];
@@ -23,6 +28,13 @@ export const DMChatArea = () => {
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [newMessageCount, setNewMessageCount] = useState(0);
   const [replyingTo, setReplyingTo] = useState<DirectMessage | null>(null);
+
+  // Swipe gesture for mobile - swipe right to open sidebar
+  const swipeRef = useSwipeGestureRef({
+    onSwipeRight: () => setMobileSidebarOpen(true),
+    threshold: 50,
+    enabled: isMobile,
+  });
 
   // Fetch messages and mark as read when conversation changes
   useEffect(() => {
@@ -97,7 +109,7 @@ export const DMChatArea = () => {
   const otherUser = currentConversation.other_user;
 
   return (
-    <div className="h-full flex flex-col bg-layout-chat">
+    <div ref={swipeRef} className="h-full flex flex-col bg-layout-chat">
       {/* DM Header - sticky on mobile, hidden desktop handled inside */}
       <DMHeader otherUser={otherUser} />
 
