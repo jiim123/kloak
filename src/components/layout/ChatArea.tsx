@@ -18,7 +18,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 export const ChatArea = () => {
   const { currentChannel } = useServerStore();
   const { user } = useAuthStore();
-  const { sendMessage } = useMessageStore();
+  const { sendMessage, replyingTo, setReplyingTo } = useMessageStore();
   const { typingUsers, startTyping, stopTyping } = useTyping(currentChannel?.id || null);
   
   const [isDragging, setIsDragging] = useState(false);
@@ -40,6 +40,7 @@ export const ChatArea = () => {
 
     setIsUploading(true);
     try {
+      const replyToId = replyingTo?.id;
       const timestamp = Date.now();
       const fileExt = file.name.split('.').pop() || 'png';
       const fileName = `${user.id}/${timestamp}-${crypto.randomUUID()}.${fileExt}`;
@@ -57,7 +58,12 @@ export const ChatArea = () => {
         .from('attachments')
         .getPublicUrl(data.path);
 
-      await sendMessage(currentChannel.id, user.id, urlData.publicUrl);
+      await sendMessage(currentChannel.id, user.id, urlData.publicUrl, replyToId);
+
+      // Clear reply (only if still replying to the same message)
+      if (replyToId && useMessageStore.getState().replyingTo?.id === replyToId) {
+        setReplyingTo(null);
+      }
 
       showSuccess('Image uploaded successfully');
     } catch (error) {
@@ -65,7 +71,7 @@ export const ChatArea = () => {
     } finally {
       setIsUploading(false);
     }
-  }, [user, currentChannel, sendMessage]);
+  }, [user, currentChannel, sendMessage, replyingTo?.id, setReplyingTo]);
 
   // Reset paste processing ref when upload completes
   useEffect(() => {
@@ -83,6 +89,16 @@ export const ChatArea = () => {
     const handlePaste = (e: ClipboardEvent) => {
       // Prevent duplicate processing
       if (!currentChannel || !user || isUploading || isProcessingPasteRef.current) return;
+
+      // If the user is actively pasting into a textarea/contenteditable (e.g. MessageInput),
+      // let that component handle the paste so it can include any typed text/reply state.
+      const activeEl = document.activeElement as HTMLElement | null;
+      if (activeEl) {
+        const tag = activeEl.tagName?.toLowerCase();
+        if (tag === 'textarea' || tag === 'input' || activeEl.isContentEditable) {
+          return;
+        }
+      }
       
       const items = e.clipboardData?.items;
       if (!items) return;

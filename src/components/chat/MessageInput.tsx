@@ -30,6 +30,8 @@ interface MentionMapping {
 }
 
 const MAX_LENGTH = 2000;
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+const MAX_IMAGE_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }: MessageInputProps) => {
   const { user } = useAuthStore();
@@ -390,6 +392,115 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     }
   };
 
+  const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    if (!user || isMuted || isSending) return;
+
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    const imageItem = Array.from(items).find((it) => it.type.startsWith("image/"));
+    if (!imageItem) return;
+
+    const file = imageItem.getAsFile();
+    if (!file) return;
+
+    // Match existing paste behavior constraints from ChatArea
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      showWarning("Invalid image", "Only JPEG, PNG, GIF, and WebP images are allowed");
+      return;
+    }
+    if (file.size > MAX_IMAGE_FILE_SIZE) {
+      showWarning("Image too large", "File size must be less than 10MB");
+      return;
+    }
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    setIsSending(true);
+    const currentReplyTo = replyingTo;
+    try {
+      // Upload to Supabase Storage
+      const timestamp = Date.now();
+      const fileExt = file.name.split(".").pop() || "png";
+      const fileName = `${user.id}/${timestamp}-${crypto.randomUUID()}.${fileExt}`;
+
+      const { data, error } = await supabase.storage.from("attachments").upload(fileName, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+
+      if (error) throw error;
+
+      const { data: urlData } = supabase.storage.from("attachments").getPublicUrl(data.path);
+
+      // Send as ONE message so the typed text/caption is included
+      const caption = content.trim();
+      const captionToSend = caption ? convertMentionsForSend(caption) : "";
+      const combined = captionToSend ? `${captionToSend}\n${urlData.publicUrl}` : urlData.publicUrl;
+
+      // Clear input immediately for instant feedback
+      setContent("");
+      clearDraft(channelId);
+      mentionMappingsRef.current = [];
+      onStopTyping();
+      setShowMentions(false);
+      setReplyingTo(null);
+
+      const message = await sendMessage(channelId, user.id, combined, currentReplyTo?.id);
+
+      // Presence: uploading/sending is activity.
+      if (message) {
+        const auth = useAuthStore.getState();
+        if (auth.manualStatus !== "offline") {
+          auth.updateLastSeen();
+        }
+        if (auth.manualStatus !== "offline" && auth.manualStatus !== "dnd") {
+          auth.updateStatus("online", { source: "auto" });
+        }
+
+        // Handle mentions in background (non-blocking)
+        if (currentServer) {
+          const mentions = extractMentions(combined);
+          Promise.resolve()
+            .then(async () => {
+              for (const mention of mentions) {
+                if (mention.type === "user" && mention.id && mention.id !== user.id) {
+                  await supabase.from("mentions").insert({
+                    message_id: message.id,
+                    user_id: mention.id,
+                    mention_type: "user",
+                  });
+                } else if (mention.type === "everyone" || mention.type === "here") {
+                  const targetMembers =
+                    mention.type === "here"
+                      ? members.filter((m) => m.user?.status === "online" && m.user_id !== user.id)
+                      : members.filter((m) => m.user_id !== user.id);
+
+                  for (const member of targetMembers.slice(0, 50)) {
+                    await supabase.from("mentions").insert({
+                      message_id: message.id,
+                      user_id: member.user_id,
+                      mention_type: mention.type,
+                    });
+                  }
+                }
+              }
+            })
+            .catch((err) => console.error("Failed to process mentions:", err));
+        }
+      }
+
+      showSuccess("Image uploaded successfully");
+    } catch (error) {
+      // If upload/send fails, restore reply state so the user doesn't lose context
+      setReplyingTo(currentReplyTo ?? null);
+      handleError(error, "Failed to upload image");
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   // Get queued messages for this channel
   const queuedMessages = getQueuedForChannel(channelId);
 
@@ -625,6 +736,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             placeholder={`Message #${channelName}`}
             rows={1}
             className="flex-1 bg-transparent resize-none outline-none text-foreground placeholder:text-muted-foreground text-[15px] leading-relaxed py-2 px-1 font-light"

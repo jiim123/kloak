@@ -183,7 +183,7 @@ export const ServerSettingsPage = () => {
   const { user } = useAuthStore();
   
   const [isLoading, setIsLoading] = useState(false);
-  const [isPublishing, setIsPublishing] = useState(false);
+  const [pendingIsPublished, setPendingIsPublished] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [editingRole, setEditingRole] = useState<CustomServerRole | null>(null);
@@ -343,6 +343,7 @@ export const ServerSettingsPage = () => {
     register,
     handleSubmit,
     formState: { errors },
+    getValues,
     reset,
   } = useForm<ServerSettingsForm>({
     resolver: zodResolver(serverSettingsSchema),
@@ -377,6 +378,7 @@ export const ServerSettingsPage = () => {
       fetchMembers(server.id);
       fetchRoles(server.id);
       reset({ name: server.name, about: server.about || '' });
+      setPendingIsPublished(!!server.is_published);
       // Reset icon state
       setIconFile(null);
       setIconPreview(null);
@@ -722,11 +724,28 @@ export const ServerSettingsPage = () => {
         setIsUploadingBanner(false);
       }
       
+      const aboutValue = (data.about || '').trim();
+
+      // Publishing prerequisites: require icon, banner, and description
+      let publishToSend = pendingIsPublished;
+      if (isOwner && pendingIsPublished) {
+        const hasIcon = !!iconUrl;
+        const hasBanner = !!bannerUrl;
+        const hasAbout = !!aboutValue;
+
+        if (!hasIcon || !hasBanner || !hasAbout) {
+          publishToSend = false;
+          setPendingIsPublished(false);
+          toast.error('Add a server icon, banner, and description before making this server public.');
+        }
+      }
+
       await updateServer(server.id, user.id, { 
         name: data.name,
         icon_url: iconUrl,
         banner_url: bannerUrl,
-        about: data.about || null
+        about: aboutValue || null,
+        ...(isOwner ? { is_published: publishToSend } : {}),
       });
       
       toast.success('Server settings updated!');
@@ -739,20 +758,30 @@ export const ServerSettingsPage = () => {
     }
   };
 
-  const handlePublishChange = async (checked: boolean) => {
+  const handlePublishChange = (checked: boolean) => {
     if (!server || !user) return;
     if (!isOwner) return;
 
-    setIsPublishing(true);
-    try {
-      await updateServer(server.id, user.id, { is_published: checked });
-      toast.success(checked ? 'Server published' : 'Server unpublished');
-    } catch (error: any) {
-      const msg = error?.message || 'Failed to update publish setting';
-      toast.error(msg);
-    } finally {
-      setIsPublishing(false);
+    // If trying to publish, require icon, banner, and description (or pending changes that will be saved)
+    if (checked) {
+      const aboutValue = (getValues('about') ?? '').trim();
+      const hasIcon = !!(iconFile || iconPreview || server.icon_url);
+      const hasBanner = !!(bannerFile || bannerPreview || server.banner_url);
+      const hasAbout = !!(aboutValue || (server.about ?? '').trim());
+
+      const missing: string[] = [];
+      if (!hasIcon) missing.push('server icon');
+      if (!hasBanner) missing.push('server banner');
+      if (!hasAbout) missing.push('server description');
+
+      if (missing.length > 0) {
+        toast.error(`Please add a ${missing.join(', ')} before making this server public.`);
+        return;
+      }
     }
+
+    // Don't publish immediately — only apply on "Save Changes"
+    setPendingIsPublished(checked);
   };
 
   const handleDeleteServer = async () => {
@@ -1130,8 +1159,8 @@ export const ServerSettingsPage = () => {
                     <Label className="text-sm">Publish Server</Label>
                     <div className="flex items-start gap-3 p-3 rounded-lg border bg-secondary/30">
                       <Checkbox
-                        checked={!!server.is_published}
-                        disabled={isPublishing}
+                        checked={pendingIsPublished}
+                        disabled={isLoading || isUploadingIcon || isUploadingBanner}
                         onCheckedChange={(v) => handlePublishChange(v === true)}
                         className="mt-0.5"
                       />
@@ -1145,7 +1174,7 @@ export const ServerSettingsPage = () => {
                   </div>
                 )}
 
-                {isAdmin && (
+                {(isAdmin || isOwner) && (
                   <div className="pt-4">
                     <Button type="submit" disabled={isLoading || isUploadingIcon || isUploadingBanner} size="sm">
                       {(isLoading || isUploadingIcon || isUploadingBanner) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
