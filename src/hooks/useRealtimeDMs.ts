@@ -66,6 +66,7 @@ export const useRealtimeDMs = ({
           avatar_url: data.sender.avatar_url,
           banner_url: data.sender.banner_url ?? null,
           avatar_decoration: data.sender.avatar_decoration,
+          profile_effect: data.sender.profile_effect ?? null,
           banner_color: data.sender.banner_color || '#5865F2',
           profile_theme_primary: data.sender.profile_theme_primary ?? null,
           profile_theme_accent: data.sender.profile_theme_accent ?? null,
