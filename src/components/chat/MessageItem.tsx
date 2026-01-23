@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo, memo, forwardRef } from "react";
 import { Smile, Reply, Pencil, Trash2, Pin, MoreHorizontal, CornerUpLeft, Copy } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
@@ -64,11 +62,9 @@ interface MessageItemProps {
 }
 
 // Track animations by a STABLE key that survives optimistic→real message replacement
-// Using: timestamp (rounded to second) + user_id + first 50 chars of content
 const animatedMessages = new Set<string>();
 
 const getStableAnimationKey = (message: Message): string => {
-  // Round timestamp to nearest second to handle minor discrepancies
   const timestamp = Math.floor(new Date(message.created_at).getTime() / 1000);
   const contentPrefix = message.content.substring(0, 50);
   return `${timestamp}-${message.user_id}-${contentPrefix}`;
@@ -83,7 +79,7 @@ export const MessageItem = memo(function MessageItem({
 }: MessageItemProps) {
   // Selectors
   const user = useAuthStore((state) => state.user);
-  const { setReplyingTo, editMessage, pinMessage, addReaction, removeReaction, removeMessage } = useMessageStore();
+  const { setReplyingTo, editMessage, pinMessage, addReaction, removeReaction } = useMessageStore();
   const members = useServerStore((state) => state.members);
   const roles = useServerStore((state) => state.roles);
   const currentServer = useServerStore((state) => state.currentServer);
@@ -92,12 +88,14 @@ export const MessageItem = memo(function MessageItem({
   const { openModal } = useUIStore();
   const { getOptimisticStatus } = useSyncStore();
 
-  // State
+  // State - SEPARATE states for desktop and mobile emoji pickers
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showMobileActions, setShowMobileActions] = useState(false);
-  const [dropdownState, setDropdownState] = useState({ emoji: false, more: false });
+  const [showDesktopEmojiPicker, setShowDesktopEmojiPicker] = useState(false);
+  const [showMobileEmojiPicker, setShowMobileEmojiPicker] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
   const [hoveredRoleIcon, setHoveredRoleIcon] = useState(false);
   const [isRowHovered, setIsRowHovered] = useState(false);
@@ -107,19 +105,16 @@ export const MessageItem = memo(function MessageItem({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Stable animation key that persists across temp→real ID change
+  // Stable animation key
   const animationKey = useMemo(
     () => getStableAnimationKey(message),
     [message.created_at, message.user_id, message.content],
   );
 
-  // Check animation status ONCE on mount using stable key
+  // Check animation status ONCE on mount
   const shouldAnimate = useMemo(() => {
-    if (animatedMessages.has(animationKey)) {
-      return false;
-    }
+    if (animatedMessages.has(animationKey)) return false;
     animatedMessages.add(animationKey);
-    // Cleanup old entries periodically
     if (animatedMessages.size > 500) {
       const entries = Array.from(animatedMessages);
       entries.slice(0, 250).forEach((key) => animatedMessages.delete(key));
@@ -127,7 +122,7 @@ export const MessageItem = memo(function MessageItem({
     return true;
   }, [animationKey]);
 
-  // Check if this is a pending optimistic message (for styling)
+  // Check if pending optimistic message
   const isPending = useMemo(() => {
     return message.id.startsWith("temp-") || getOptimisticStatus(message.id) === "pending";
   }, [message.id, getOptimisticStatus]);
@@ -154,14 +149,13 @@ export const MessageItem = memo(function MessageItem({
     };
   }, [members, user?.id, message.user_id]);
 
-  // Load server emoji map for :name: rendering (server context only)
+  // Load server emoji map
   useEffect(() => {
     const serverId = currentServer?.id;
     if (!serverId) {
       setCustomEmojiMap(new Map());
       return;
     }
-
     let cancelled = false;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -173,10 +167,9 @@ export const MessageItem = memo(function MessageItem({
         emojis.forEach((e) => map.set(e.name, e.url));
         setCustomEmojiMap(map);
       } catch (e) {
-        console.error("Failed to load server emojis for role icon rendering:", e);
+        console.error("Failed to load server emojis:", e);
         if (cancelled) return;
         setCustomEmojiMap(new Map());
-
         if (attempt < 3) {
           const backoffMs = 750 * Math.pow(2, attempt);
           retryTimer = setTimeout(() => load(attempt + 1), backoffMs);
@@ -185,7 +178,6 @@ export const MessageItem = memo(function MessageItem({
     };
 
     load(0);
-
     return () => {
       cancelled = true;
       if (retryTimer) clearTimeout(retryTimer);
@@ -196,12 +188,10 @@ export const MessageItem = memo(function MessageItem({
     const memberRoles = messageMember?.roles ?? [];
     if (memberRoles.length === 0) return null;
 
-    // Prefer full roles from store (has created_at + icon) over member payload (often lacks created_at)
     const resolved: CustomServerRole[] = memberRoles
       .map((mr) => (roles.find((r) => r.id === mr.id) ?? mr) as CustomServerRole)
       .filter(Boolean);
 
-    // Priority: higher in the roles list (lower position) wins
     let best: CustomServerRole | null = null;
     for (const r of resolved) {
       if (!r?.icon) continue;
@@ -215,12 +205,10 @@ export const MessageItem = memo(function MessageItem({
         if (aPos < bPos) best = r;
         continue;
       }
-      // Stable tie-breaker
       const aCreated = r.created_at ? Date.parse(r.created_at) : Number.POSITIVE_INFINITY;
       const bCreated = best.created_at ? Date.parse(best.created_at) : Number.POSITIVE_INFINITY;
       if (aCreated < bCreated) best = r;
     }
-
     if (!best?.icon) return null;
     return { name: best.name, icon: best.icon };
   }, [messageMember?.roles, roles]);
@@ -319,14 +307,11 @@ export const MessageItem = memo(function MessageItem({
   ));
   RoleIconWrapper.displayName = "RoleIconWrapper";
 
-  // Check permissions using database-backed permission system
+  // Permissions
   const { hasPermission } = useMemberPermissions(message.channel_id);
   const canPinMessages = hasPermission("pin_messages");
   const canManageMessages = hasPermission("manage_messages");
   const canAddReactions = hasPermission("add_reactions");
-
-  // For backward compatibility, keep isAdmin for delete permission checks
-  // Users can delete their own messages OR if they have manage_messages permission
   const isAdmin = canManageMessages;
 
   const isMentioned = useMemo(() => {
@@ -338,16 +323,14 @@ export const MessageItem = memo(function MessageItem({
   const pollId = useMemo(() => getPollIdFromContent(message.content), [message.content]);
 
   // Memoize formatted timestamps
-  // Use shorter format for compact mode to prevent wrapping
   const formattedTime = useMemo(() => {
     const timeStr = format(new Date(message.created_at), "h:mm a");
-    // Replace space between time and AM/PM to prevent wrapping
-    return timeStr.replace(/\s+/, "\u00A0"); // Non-breaking space
+    return timeStr.replace(/\s+/, "\u00A0");
   }, [message.created_at]);
 
   const formattedTimestamp = useMemo(() => formatMessageTimestamp(message.created_at), [message.created_at]);
 
-  // Focus textarea when editing starts
+  // Focus textarea when editing
   useEffect(() => {
     if (isEditing && textareaRef.current) {
       textareaRef.current.focus();
@@ -404,9 +387,25 @@ export const MessageItem = memo(function MessageItem({
       if (user) {
         addReaction(message.id, user.id, emoji);
       }
-      setDropdownState((prev) => ({ ...prev, emoji: false }));
     },
     [user, message.id, addReaction],
+  );
+
+  const handleDesktopAddReaction = useCallback(
+    (emoji: string) => {
+      handleAddReaction(emoji);
+      setShowDesktopEmojiPicker(false);
+    },
+    [handleAddReaction],
+  );
+
+  const handleMobileAddReaction = useCallback(
+    (emoji: string) => {
+      handleAddReaction(emoji);
+      setShowMobileEmojiPicker(false);
+      setShowMobileActions(false);
+    },
+    [handleAddReaction],
   );
 
   const handleCopyText = useCallback(() => {
@@ -470,11 +469,7 @@ export const MessageItem = memo(function MessageItem({
   const topCustomRoleColor = useMemo(() => {
     const memberRoles = messageMember?.roles ?? [];
     if (memberRoles.length === 0) return null;
-
-    // Resolve against roles store (has latest color/position)
     const resolved = memberRoles.map((mr) => roles.find((r) => r.id === mr.id) ?? mr).filter(Boolean);
-
-    // Highest priority role = lowest position (top of roles list)
     let best: CustomServerRole | null = null;
     for (const r of resolved as CustomServerRole[]) {
       if (!best) {
@@ -485,7 +480,6 @@ export const MessageItem = memo(function MessageItem({
       const bPos = typeof best.position === "number" ? best.position : Number.POSITIVE_INFINITY;
       if (aPos < bPos) best = r;
     }
-
     return best?.color ?? null;
   }, [messageMember?.roles, roles]);
 
@@ -500,6 +494,7 @@ export const MessageItem = memo(function MessageItem({
       ? getGradientTextStyle(topCustomRoleColor)
       : ({ color: topCustomRoleColor } as React.CSSProperties);
   }, [topCustomRoleColor]);
+
   const displayName = messageMember?.nickname || messageUser?.display_name || messageUser?.username;
 
   const handleUsernameClick = useCallback(
@@ -761,15 +756,15 @@ export const MessageItem = memo(function MessageItem({
             )}
           </div>
 
-          {/* Hover actions - Desktop (CSS-driven visibility) */}
+          {/* Hover actions - Desktop only */}
           {!isEditing && (
             <div className="absolute right-2 -top-4 hidden md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 md:flex items-center gap-1 bg-background/95 backdrop-blur-sm border border-border rounded-xl shadow-xl p-1 transition-opacity duration-200">
-              {/* Reactions */}
+              {/* Reactions - Desktop */}
               {canAddReactions && (
                 <EmojiGifPicker
-                  open={dropdownState.emoji}
-                  onOpenChange={(open) => setDropdownState((s) => ({ ...s, emoji: open }))}
-                  onEmojiSelect={handleAddReaction}
+                  open={showDesktopEmojiPicker}
+                  onOpenChange={setShowDesktopEmojiPicker}
+                  onEmojiSelect={handleDesktopAddReaction}
                   disableGif
                   serverId={currentServer?.id}
                   serverName={currentServer?.name}
@@ -806,15 +801,14 @@ export const MessageItem = memo(function MessageItem({
                 </button>
               )}
 
-              {/* Divider */}
               <div className="w-px h-5 bg-border mx-0.5" />
 
-              {/* Pin (if permission) */}
+              {/* Pin */}
               {canPinMessages && (
                 <button
                   className={cn(
                     "p-2 rounded-lg bg-transparent hover:bg-muted transition-colors",
-                    message.is_pinned ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                    message.is_pinned ? "text-primary" : "text-muted-foreground hover:text-foreground",
                   )}
                   onClick={handlePin}
                   aria-label={message.is_pinned ? "Unpin" : "Pin"}
@@ -835,10 +829,7 @@ export const MessageItem = memo(function MessageItem({
               </button>
 
               {/* More menu */}
-              <DropdownMenu
-                open={dropdownState.more}
-                onOpenChange={(open) => setDropdownState((s) => ({ ...s, more: open }))}
-              >
+              <DropdownMenu open={showMoreMenu} onOpenChange={setShowMoreMenu}>
                 <DropdownMenuTrigger asChild>
                   <button
                     className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
@@ -856,19 +847,19 @@ export const MessageItem = memo(function MessageItem({
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              {/* Divider before destructive */}
-              {(isOwnMessage || isAdmin) && <div className="w-px h-5 bg-border mx-0.5" />}
-
               {/* Delete */}
               {(isOwnMessage || isAdmin) && (
-                <button
-                  className="p-2 rounded-lg bg-transparent hover:bg-destructive/10 transition-colors text-destructive"
-                  onClick={() => setShowDeleteModal(true)}
-                  aria-label="Delete"
-                  title="Delete"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <>
+                  <div className="w-px h-5 bg-border mx-0.5" />
+                  <button
+                    className="p-2 rounded-lg bg-transparent hover:bg-destructive/10 transition-colors text-destructive"
+                    onClick={() => setShowDeleteModal(true)}
+                    aria-label="Delete"
+                    title="Delete"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </>
               )}
             </div>
           )}
@@ -881,7 +872,6 @@ export const MessageItem = memo(function MessageItem({
           <DrawerHeader className="pb-2">
             <DrawerTitle className="text-sm font-medium text-muted-foreground">Message Actions</DrawerTitle>
           </DrawerHeader>
-
           <div className="px-4 pb-8">
             {/* Quick reactions row */}
             {canAddReactions && (
@@ -889,23 +879,17 @@ export const MessageItem = memo(function MessageItem({
                 {QUICK_REACTIONS.map((emoji) => (
                   <button
                     key={emoji}
-                    onClick={() => {
-                      handleAddReaction(emoji);
-                      setShowMobileActions(false);
-                    }}
+                    onClick={() => handleMobileAddReaction(emoji)}
                     className="text-2xl p-2.5 hover:bg-accent rounded-xl active:scale-90 transition-all"
                   >
                     {emoji}
                   </button>
                 ))}
-                {/* Full emoji picker button */}
+                {/* Full emoji picker - Mobile (separate state) */}
                 <EmojiGifPicker
-                  open={dropdownState.emoji}
-                  onOpenChange={(open) => setDropdownState((s) => ({ ...s, emoji: open }))}
-                  onEmojiSelect={(emoji) => {
-                    handleAddReaction(emoji);
-                    setShowMobileActions(false);
-                  }}
+                  open={showMobileEmojiPicker}
+                  onOpenChange={setShowMobileEmojiPicker}
+                  onEmojiSelect={handleMobileAddReaction}
                   disableGif
                   serverId={currentServer?.id}
                   serverName={currentServer?.name}
@@ -948,7 +932,7 @@ export const MessageItem = memo(function MessageItem({
                 </button>
               )}
 
-              {/* Pin (if permission) */}
+              {/* Pin */}
               {canPinMessages && (
                 <button
                   className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-accent active:bg-accent text-left transition-colors"
@@ -962,7 +946,6 @@ export const MessageItem = memo(function MessageItem({
                 </button>
               )}
 
-              {/* Divider */}
               <div className="my-2 h-px bg-border" />
 
               {/* Copy Text */}
@@ -989,7 +972,7 @@ export const MessageItem = memo(function MessageItem({
                 <span className="font-medium">Copy Message ID</span>
               </button>
 
-              {/* Delete (if allowed) */}
+              {/* Delete */}
               {(isOwnMessage || isAdmin) && (
                 <>
                   <div className="my-2 h-px bg-border" />
@@ -1013,6 +996,7 @@ export const MessageItem = memo(function MessageItem({
       {/* Delete confirmation modal */}
       <DeleteMessageModal message={showDeleteModal ? message : null} onClose={() => setShowDeleteModal(false)} />
 
+      {/* Reaction details dialog */}
       <Dialog open={!!reactionDetailsEmoji} onOpenChange={(open) => !open && setReactionDetailsEmoji(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
@@ -1023,7 +1007,6 @@ export const MessageItem = memo(function MessageItem({
               <span>Reactions</span>
             </DialogTitle>
           </DialogHeader>
-
           <div className="max-h-[320px] overflow-auto space-y-1">
             {selectedReactionNames.length > 0 ? (
               selectedReactionNames.map((name, idx) => (
