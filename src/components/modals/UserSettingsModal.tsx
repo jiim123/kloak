@@ -678,6 +678,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           const fg = light ? "#0b0b0f" : "#f8fafc";
           const muted = light ? "rgba(11, 11, 15, 0.66)" : "rgba(248, 250, 252, 0.72)";
           const overlay = light ? "rgba(255, 255, 255, 0.46)" : "rgba(0, 0, 0, 0.34)";
+          const divider = light ? "rgba(11, 11, 15, 0.18)" : "rgba(248, 250, 252, 0.18)";
           const bannerUrl = previewUser?.banner_url || user?.banner_url;
 
           return (
@@ -736,7 +737,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
             )}
 
             {/* Divider */}
-            <div className="mt-5 h-px bg-border/60" />
+            <div className="mt-5 h-px" style={{ backgroundColor: divider }} />
 
             {/* Info rows (placeholders to feel like full profile) */}
             <div className="mt-4 space-y-3">

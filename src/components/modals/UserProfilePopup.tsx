@@ -297,6 +297,7 @@ export const UserProfilePopup = () => {
             const fg = light ? "#0b0b0f" : "#f8fafc";
             const muted = light ? "rgba(11, 11, 15, 0.66)" : "rgba(248, 250, 252, 0.72)";
             const overlay = light ? "rgba(255, 255, 255, 0.46)" : "rgba(0, 0, 0, 0.34)";
+            const divider = light ? "rgba(11, 11, 15, 0.18)" : "rgba(248, 250, 252, 0.18)";
             const bannerUrl = profileUser.banner_url;
 
             return (
@@ -366,7 +367,7 @@ export const UserProfilePopup = () => {
               </div>
 
               {/* Divider */}
-              <div className="h-px bg-border mb-6" />
+              <div className="h-px mb-6" style={{ backgroundColor: divider }} />
 
               {/* Bio */}
               {profileUser.bio && (
@@ -444,7 +445,7 @@ export const UserProfilePopup = () => {
 
               {/* Action Buttons */}
               {!isSelf && (
-                <div className="flex gap-2 pt-4 border-t border-border">
+                <div className="flex gap-2 pt-4 border-t" style={{ borderColor: divider }}>
                   <Button onClick={handleMessage} className="flex-1" variant="default">
                     <MessageCircle className="w-4 h-4 mr-2" />
                     Message

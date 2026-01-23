@@ -368,7 +368,7 @@ export const ServerSidebar = () => {
   const { user } = useAuthStore();
   const { servers, currentServer, setCurrentServer, isLoading, fetchServers } = useServerStore();
   const { setCurrentConversation } = useDMStore();
-  const { openModal, activeModal, closeServerSettings } = useUIStore();
+  const { openModal, activeModal, closeModal, closeServerSettings } = useUIStore();
   const [serverChannels, setServerChannels] = useState<ServerChannels>({});
   const [hoveredServer, setHoveredServer] = useState<string | null>(null);
   const [tooltipsEnabled, setTooltipsEnabled] = useState(false);
@@ -792,6 +792,7 @@ export const ServerSidebar = () => {
                 setCurrentServer(null);
                 setCurrentConversation(null);
                 closeServerSettings();
+                closeModal();
                 navigate('/app');
               }}
               whileHover="hover"
@@ -882,6 +883,9 @@ export const ServerSidebar = () => {
                         onLeave={() => setHoveredServer(null)}
                         onClick={() => {
                           setCurrentServer(server);
+                          setCurrentConversation(null);
+                          closeServerSettings();
+                          closeModal();
                           navigate(`/app/servers/${server.id}`);
                         }}
                       />
@@ -913,6 +917,9 @@ export const ServerSidebar = () => {
                 onLeave={() => setHoveredServer(null)}
                 onClick={() => {
                   setCurrentServer(server);
+                  setCurrentConversation(null);
+                  closeServerSettings();
+                  closeModal();
                   navigate(`/app/servers/${server.id}`);
                 }}
               />
