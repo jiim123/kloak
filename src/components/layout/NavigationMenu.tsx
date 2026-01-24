@@ -185,8 +185,15 @@ export const NavigationMenu = () => {
             <Separator />
           </div>
 
-          {/* CTA Button */}
-          <Link to="/app" className="hidden sm:block">
+          {/* Mobile CTA - visible only on mobile */}
+          <Link to="/app" className="md:hidden">
+            <Button size="sm" className="rounded-xl">
+              Open Kloak
+            </Button>
+          </Link>
+
+          {/* Desktop CTA Button */}
+          <Link to="/app" className="hidden md:block">
             <Button size="sm" className="rounded-xl">
               <CircleUserRound className="h-4 w-4" />
               Login
