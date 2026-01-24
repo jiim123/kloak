@@ -237,12 +237,6 @@ const Auth = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
         <div className="w-full max-w-md">
-          {/* Minimal logo for Tauri */}
-          <div className="text-center mb-6">
-            <img src={kloakLogo} alt="Kloak" className="h-10 mx-auto mb-3" />
-            <p className="text-foreground text-sm font-medium">Your community. Your conversations. Your business.</p>
-          </div>
-
           {/* Auth card */}
           <div className="bg-card border border-border rounded-xl p-6 shadow-xl">
             {authStep === "form" ? (
@@ -481,14 +475,6 @@ const Auth = () => {
       <NavigationMenu />
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
-          {/* Logo and branding */}
-          <div className="text-center mb-8">
-            <Link to="/">
-              <img src={kloakLogo} alt="Kloak" className="h-12 mx-auto mb-4" />
-            </Link>
-            <p className="text-foreground mt-1 font-medium">Your community. Your conversations. Your business.</p>
-          </div>
-
           {/* Auth card */}
           <div className="bg-card border border-border rounded-xl p-6 shadow-xl">
             {authStep === "form" ? (
