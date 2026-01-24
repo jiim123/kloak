@@ -5,6 +5,8 @@ import { Footer } from "@/components/ui/footer-section";
 import { NavigationMenu } from "@/components/layout/NavigationMenu";
 import HeroAscii from "@/components/landing/HeroAscii";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { SEO } from "@/components/seo";
+import { SEO_CONFIG } from "@/lib/seo";
 
 const Index = () => {
   const comparisonData = [
@@ -20,6 +22,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center">
+      <SEO {...SEO_CONFIG.home} />
       <div className="w-full max-w-[1920px]">
         <NavigationMenu />
         <main className="pt-10">

@@ -3,6 +3,8 @@ import { Footer } from "@/components/ui/footer-section";
 import { NavigationMenu } from "@/components/layout/NavigationMenu";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { SEO } from "@/components/seo";
+import { SEO_CONFIG } from "@/lib/seo";
 
 interface FAQItemProps {
   question: string;
@@ -101,6 +103,7 @@ const NoCookieCard = ({ name, whyTheyUseIt, whyWeDont }: { name: string; whyThey
 const Cookies = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <SEO {...SEO_CONFIG.cookies} />
       <NavigationMenu />
       <main className="flex-1 pt-20">
         <div className="max-w-3xl mx-auto px-6 py-16 w-full">
