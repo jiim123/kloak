@@ -1,38 +1,25 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, Check, X, MessageCircle, Lock, Users, Zap, Shield } from "lucide-react";
+import { Shield, ArrowRight, Key, MessageCircle, Users, Zap, Lock, X, Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Footer } from "@/components/ui/footer-section";
-import { LandingNav } from "@/components/landing/LandingNav";
-import HeroPalantir from "@/components/landing/HeroPalantir";
+import { NavigationMenu } from "@/components/layout/NavigationMenu";
+import HeroAscii from "@/components/landing/HeroAscii";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-// Fade in animation for sections
 const fadeInUp = {
-  initial: { opacity: 0, y: 40 },
-  whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true, margin: "-100px" },
-  transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] as const },
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
 };
 
-// HUD corner component for sections
-const SectionCorners = () => (
-  <>
-    <div className="absolute top-8 left-8 w-8 h-8 border-l border-t border-primary/20" />
-    <div className="absolute top-8 right-8 w-8 h-8 border-r border-t border-primary/20" />
-    <div className="absolute bottom-8 left-8 w-8 h-8 border-l border-b border-primary/20" />
-    <div className="absolute bottom-8 right-8 w-8 h-8 border-r border-b border-primary/20" />
-  </>
-);
-
-// Section label component
-const SectionLabel = ({ number, label }: { number: string; label: string }) => (
-  <div className="flex items-center gap-4 mb-8">
-    <span className="text-[10px] font-mono text-primary/50 tracking-widest">{number}</span>
-    <div className="w-12 h-px bg-gradient-to-r from-primary/40 to-transparent" />
-    <span className="text-[10px] font-mono text-primary/70 tracking-[0.3em] uppercase">
-      {label}
-    </span>
-  </div>
-);
+const stagger = {
+  animate: {
+    transition: {
+      staggerChildren: 0.15,
+    },
+  },
+};
 
 const Index = () => {
   const comparisonData = [
@@ -46,399 +33,734 @@ const Index = () => {
     { label: "You control your identity", others: false, kloak: true },
   ];
 
-  const principles = [
-    {
-      number: "01",
-      title: "Zero data collection",
-      description:
-        "No email. No phone. No identity. We collect only what's essential for the app to function.",
-    },
-    {
-      number: "02",
-      title: "Cryptographic keys",
-      description:
-        "Your account is secured by a 64-character key that only you possess. Unrecoverable by design.",
-    },
-    {
-      number: "03",
-      title: "No surveillance",
-      description:
-        "No ads. No tracking. No profiling. No analytics. No pixels. No fingerprinting.",
-    },
-    {
-      number: "04",
-      title: "Open architecture",
-      description:
-        "Transparent approach. We tell you exactly what we do and don't do. No fine print.",
-    },
-  ];
-
-  const capabilities = [
-    {
-      icon: MessageCircle,
-      title: "Real-Time Messaging",
-      description: "Instant delivery across servers and channels. Built for speed.",
-      size: "large",
-    },
-    {
-      icon: Lock,
-      title: "Key-Based Auth",
-      description: "One cryptographic key. No passwords. No vulnerabilities.",
-      size: "small",
-    },
-    {
-      icon: Users,
-      title: "Communities",
-      description: "Servers, channels, categories. Organized your way.",
-      size: "small",
-    },
-    {
-      icon: Zap,
-      title: "Modern Stack",
-      description: "Fast, responsive, and built to scale with you.",
-      size: "large",
-    },
-  ];
-
   return (
-    <div className="min-h-screen bg-background">
-      <LandingNav />
+    <div className="min-h-screen bg-background flex flex-col items-center">
+      <div className="w-full max-w-[1920px]">
+        <NavigationMenu />
+        <main className="pt-10">
+          {/* Hero Section */}
+          <HeroAscii />
 
-      <main>
-        {/* Hero Section */}
-        <HeroPalantir />
+          {/* The Problem Section */}
+          <section className="relative py-32 px-6 border-t border-border/20 overflow-hidden">
+            {/* Corner Frame Accents */}
+            <div className="absolute top-4 left-4 w-8 h-8 border-l border-t border-primary/20" />
+            <div className="absolute top-4 right-4 w-8 h-8 border-r border-t border-primary/20" />
+            <div className="absolute bottom-4 left-4 w-8 h-8 border-l border-b border-primary/20" />
+            <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/20" />
 
-        {/* Problem Section */}
-        <section className="relative py-32 px-6 overflow-hidden">
-          <SectionCorners />
-
-          <div className="max-w-7xl mx-auto">
-            <motion.div className="grid lg:grid-cols-2 gap-16 items-start" {...fadeInUp}>
-              <div>
-                <SectionLabel number="001" label="The Problem" />
-                <h2 className="text-4xl sm:text-5xl lg:text-6xl font-semibold text-foreground leading-[1.1] tracking-tight">
-                  Every message is{" "}
-                  <span className="text-primary">monetized.</span>
-                </h2>
-              </div>
-
-              <div className="lg:pt-16">
-                <p className="text-lg text-muted-foreground leading-relaxed mb-6">
-                  Most platforms treat your conversations as inventory. Your words become data
-                  points. Your relationships become ad targets.
-                </p>
-                <p className="text-lg text-muted-foreground leading-relaxed">
-                  We built Kloak because communication is a human right — not a business model.
-                </p>
-              </div>
-            </motion.div>
-          </div>
-        </section>
-
-        {/* Comparison Section */}
-        <section className="relative py-32 px-6 border-y border-border/10 overflow-hidden">
-          <SectionCorners />
-
-          <div className="max-w-7xl mx-auto">
-            <motion.div className="mb-16" {...fadeInUp}>
-              <SectionLabel number="002" label="The Difference" />
-              <h2 className="text-4xl sm:text-5xl lg:text-6xl font-semibold text-foreground leading-[1.1] tracking-tight max-w-3xl">
-                What they collect.{" "}
-                <span className="text-primary">What we don't.</span>
-              </h2>
-            </motion.div>
-
-            {/* Comparison table */}
-            <motion.div
-              className="border border-border/20 overflow-hidden"
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-100px" }}
-              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] as const, delay: 0.2 }}
-            >
-              {/* Header */}
-              <div className="grid grid-cols-[1fr,100px,100px] sm:grid-cols-[1fr,120px,120px] border-b border-border/20">
-                <div className="p-4 sm:p-6 text-[10px] font-mono text-muted-foreground tracking-widest uppercase">
-                  Feature
-                </div>
-                <div className="p-4 sm:p-6 text-center text-[10px] font-mono text-muted-foreground tracking-widest uppercase border-l border-border/20">
-                  Others
-                </div>
-                <div className="p-4 sm:p-6 text-center text-[10px] font-mono text-primary tracking-widest uppercase border-l border-border/20">
-                  Kloak
-                </div>
-              </div>
-
-              {/* Rows */}
-              {comparisonData.map((row, index) => (
-                <motion.div
-                  key={row.label}
-                  className="grid grid-cols-[1fr,100px,100px] sm:grid-cols-[1fr,120px,120px] border-b border-border/10 last:border-b-0 hover:bg-muted/5 transition-colors duration-300"
-                  initial={{ opacity: 0, x: -20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: index * 0.05 }}
-                >
-                  <div className="p-4 sm:p-6 text-sm text-foreground">{row.label}</div>
-                  <div className="p-4 sm:p-6 flex items-center justify-center border-l border-border/10">
-                    {row.others ? (
-                      <div className="w-6 h-6 rounded-full bg-destructive/10 flex items-center justify-center">
-                        <Check className="w-3 h-3 text-destructive" />
-                      </div>
-                    ) : (
-                      <div className="w-6 h-6 rounded-full bg-muted/30 flex items-center justify-center">
-                        <X className="w-3 h-3 text-muted-foreground/30" />
-                      </div>
-                    )}
+            <div className="max-w-6xl mx-auto">
+              <motion.div
+                className="grid lg:grid-cols-2 gap-16 items-start"
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.8 }}
+              >
+                <div>
+                  {/* Section header with ASCII style */}
+                  <div className="flex items-center gap-4 mb-4">
+                    <span className="text-xs font-mono text-primary/70">002</span>
+                    <div className="w-8 h-px bg-gradient-to-r from-primary/50 to-transparent" />
+                    <span className="text-xs font-mono text-primary tracking-widest uppercase">The Problem</span>
                   </div>
-                  <div className="p-4 sm:p-6 flex items-center justify-center border-l border-border/10">
-                    {row.kloak ? (
-                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Check className="w-3 h-3 text-primary" />
-                      </div>
-                    ) : (
-                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
-                        <X className="w-3 h-3 text-primary" />
-                      </div>
-                    )}
+                  <div className="flex items-start gap-4">
+                    <div className="hidden md:block w-px h-20 bg-gradient-to-b from-primary/50 to-transparent" />
+                    <h2 className="text-4xl sm:text-5xl font-semibold text-foreground leading-tight tracking-tight">
+                      Every message you send is <span className="text-primary">monetized.</span>
+                    </h2>
                   </div>
-                </motion.div>
-              ))}
-            </motion.div>
-
-            {/* Tagline */}
-            <motion.p
-              className="text-center text-muted-foreground text-lg font-mono mt-12"
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-100px" }}
-              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] as const, delay: 0.4 }}
-            >
-              The less we know about you, the less anyone can take.
-            </motion.p>
-          </div>
-        </section>
-
-        {/* Principles Section */}
-        <section className="relative py-32 px-6 overflow-hidden">
-          <SectionCorners />
-
-          {/* Subtle grid background */}
-          <div
-            className="absolute inset-0 opacity-[0.02] pointer-events-none"
-            style={{
-              backgroundImage: `
-                linear-gradient(hsl(var(--primary)) 1px, transparent 1px),
-                linear-gradient(90deg, hsl(var(--primary)) 1px, transparent 1px)
-              `,
-              backgroundSize: "60px 60px",
-            }}
-          />
-
-          <div className="max-w-7xl mx-auto relative">
-            <motion.div className="mb-20" {...fadeInUp}>
-              <SectionLabel number="003" label="Our Principles" />
-              <h2 className="text-4xl sm:text-5xl lg:text-6xl font-semibold text-foreground leading-[1.1] tracking-tight max-w-3xl">
-                Privacy isn't a feature.{" "}
-                <span className="text-primary">It's the architecture.</span>
-              </h2>
-            </motion.div>
-
-            {/* Principles grid */}
-            <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
-              {principles.map((principle, index) => (
-                <motion.div
-                  key={principle.number}
-                  className="group relative border border-border/20 p-8 lg:p-12 bg-transparent hover:border-primary/30 transition-all duration-500"
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
-                >
-                  {/* Corner accents */}
-                  <div className="absolute top-0 left-0 w-4 h-4 border-l border-t border-primary/30 group-hover:border-primary/50 transition-colors" />
-                  <div className="absolute top-0 right-0 w-4 h-4 border-r border-t border-primary/30 group-hover:border-primary/50 transition-colors" />
-                  <div className="absolute bottom-0 left-0 w-4 h-4 border-l border-b border-primary/30 group-hover:border-primary/50 transition-colors" />
-                  <div className="absolute bottom-0 right-0 w-4 h-4 border-r border-b border-primary/30 group-hover:border-primary/50 transition-colors" />
-
-                  <div className="flex items-start gap-6">
-                    <span className="text-5xl font-mono font-light text-primary/30 group-hover:text-primary/50 transition-colors">
-                      {principle.number}
-                    </span>
-                    <div>
-                      <h3 className="text-xl font-semibold text-foreground mb-3 tracking-tight">
-                        {principle.title}
-                      </h3>
-                      <p className="text-muted-foreground leading-relaxed">
-                        {principle.description}
-                      </p>
-                    </div>
+                </div>
+                <div className="relative">
+                  <div className="space-y-6 text-lg text-muted-foreground leading-relaxed">
+                    <p>
+                      Most platforms treat your conversations as inventory. Your words become data points. Your
+                      relationships become ad targets. Your private moments become profit.
+                    </p>
+                    <p>We built Kloak because we believe communication is a human right — not a business model.</p>
                   </div>
-                </motion.div>
-              ))}
+                  {/* Technical corner accent */}
+                  <div className="hidden md:block absolute -right-4 bottom-0 text-[8px] font-mono text-primary/40">
+                    <div className="border-l border-primary/20 pl-2">◇ DATA.EXPLOITATION</div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Bottom technical notation */}
+              <div className="hidden md:flex items-center gap-4 mt-12 text-xs font-mono text-muted-foreground/50">
+                <div className="flex gap-0.5">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="w-1 h-2 bg-primary/20" />
+                  ))}
+                </div>
+                <span>PRIVACY.VIOLATED</span>
+                <div className="w-16 h-px bg-gradient-to-r from-primary/20 to-transparent" />
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        {/* Capabilities Section */}
-        <section className="relative py-32 px-6 border-y border-border/10 overflow-hidden">
-          <SectionCorners />
+          {/* Comparison Section */}
+          <section className="relative py-32 px-6 bg-card/50 border-y border-border/20 overflow-hidden">
+            {/* Corner Frame Accents */}
+            <div className="absolute top-4 left-4 w-8 h-8 border-l border-t border-primary/20" />
+            <div className="absolute top-4 right-4 w-8 h-8 border-r border-t border-primary/20" />
+            <div className="absolute bottom-4 left-4 w-8 h-8 border-l border-b border-primary/20" />
+            <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/20" />
 
-          <div className="max-w-7xl mx-auto">
-            <motion.div className="mb-20" {...fadeInUp}>
-              <SectionLabel number="004" label="Capabilities" />
-              <h2 className="text-4xl sm:text-5xl lg:text-6xl font-semibold text-foreground leading-[1.1] tracking-tight max-w-2xl">
-                Full-featured.{" "}
-                <span className="text-primary">Zero compromise.</span>
-              </h2>
-            </motion.div>
+            <div className="max-w-6xl mx-auto">
+              <motion.div
+                className="mb-16"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+              >
+                {/* Section header with ASCII style */}
+                <div className="flex items-center gap-4 mb-4">
+                  <span className="text-xs font-mono text-primary/70">003</span>
+                  <div className="w-8 h-px bg-gradient-to-r from-primary/50 to-transparent" />
+                  <span className="text-xs font-mono text-primary tracking-widest uppercase">The Difference</span>
+                </div>
+                <div className="flex items-start gap-4">
+                  <div className="hidden md:block w-px h-20 bg-gradient-to-b from-primary/50 to-transparent" />
+                  <h2 className="text-4xl sm:text-5xl font-semibold text-foreground leading-tight tracking-tight max-w-3xl">
+                    What they collect. <span className="text-primary">What we don't.</span>
+                  </h2>
+                </div>
+              </motion.div>
 
-            {/* Capabilities grid */}
-            <div className="grid lg:grid-cols-12 gap-6">
-              {capabilities.map((cap, index) => {
-                const Icon = cap.icon;
-                const isLarge = cap.size === "large";
+              <motion.div
+                className="rounded-lg border border-border/30 overflow-hidden bg-background relative"
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+              >
+                {/* Table corner accents */}
+                <div className="absolute top-0 left-0 w-4 h-4 border-l-2 border-t-2 border-primary/30" />
+                <div className="absolute top-0 right-0 w-4 h-4 border-r-2 border-t-2 border-primary/30" />
+                <div className="absolute bottom-0 left-0 w-4 h-4 border-l-2 border-b-2 border-primary/30" />
+                <div className="absolute bottom-0 right-0 w-4 h-4 border-r-2 border-b-2 border-primary/30" />
 
-                return (
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-border/30 hover:bg-transparent">
+                      <TableHead className="text-muted-foreground font-mono text-xs tracking-wider w-[50%]">
+                        FEATURE
+                      </TableHead>
+                      <TableHead className="text-center text-muted-foreground font-mono text-xs tracking-wider uppercase">
+                        OTHERS
+                      </TableHead>
+                      <TableHead className="text-center text-primary font-mono text-xs tracking-wider uppercase">
+                        KLOAK
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {comparisonData.map((row, index) => (
+                      <motion.tr
+                        key={row.label}
+                        className="border-border/20 transition-colors hover:bg-muted/30"
+                        initial={{ opacity: 0, x: -20 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.4, delay: index * 0.05 }}
+                      >
+                        <TableCell className="font-medium text-foreground">{row.label}</TableCell>
+                        <TableCell className="text-center">
+                          {row.others ? (
+                            <div className="w-8 h-8 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
+                              <Check className="w-4 h-4 text-destructive" />
+                            </div>
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center mx-auto">
+                              <X className="w-4 h-4 text-muted-foreground/50" />
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {row.kloak ? (
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                              <Check className="w-4 h-4 text-primary" />
+                            </div>
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                              <X className="w-4 h-4 text-primary" />
+                            </div>
+                          )}
+                        </TableCell>
+                      </motion.tr>
+                    ))}
+                  </TableBody>
+                </Table>
+              </motion.div>
+
+              <motion.div
+                className="flex flex-col md:flex-row items-center justify-center gap-4 mt-12"
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+              >
+                <div className="hidden md:flex gap-0.5">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="w-1 h-2 bg-primary/30" />
+                  ))}
+                </div>
+                <p className="text-center text-muted-foreground text-lg font-mono">
+                  The less we know about you, the less anyone can take.
+                </p>
+                <div className="hidden md:flex gap-0.5">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="w-1 h-2 bg-primary/30" />
+                  ))}
+                </div>
+              </motion.div>
+            </div>
+          </section>
+
+          {/* Principles Section */}
+          <section className="relative py-32 px-6 overflow-hidden">
+            {/* Corner Frame Accents */}
+            <div className="absolute top-4 left-4 w-8 h-8 border-l border-t border-primary/20" />
+            <div className="absolute top-4 right-4 w-8 h-8 border-r border-t border-primary/20" />
+            <div className="absolute bottom-4 left-4 w-8 h-8 border-l border-b border-primary/20" />
+            <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/20" />
+
+            {/* Background grid pattern */}
+            <div
+              className="absolute inset-0 opacity-[0.02]"
+              style={{
+                backgroundImage:
+                  "linear-gradient(hsl(var(--primary)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary)) 1px, transparent 1px)",
+                backgroundSize: "40px 40px",
+              }}
+            />
+
+            <div className="max-w-6xl mx-auto relative">
+              <motion.div
+                className="mb-20"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+              >
+                {/* Section header with ASCII style */}
+                <div className="flex items-center gap-4 mb-4">
+                  <span className="text-xs font-mono text-primary/70">004</span>
+                  <div className="w-8 h-px bg-gradient-to-r from-primary/50 to-transparent" />
+                  <span className="text-xs font-mono text-primary tracking-widest uppercase">Our Principles</span>
+                </div>
+                <div className="flex items-start gap-4">
+                  <div className="hidden md:block w-px h-20 bg-gradient-to-b from-primary/50 to-transparent" />
+                  <h2 className="text-4xl sm:text-5xl font-semibold text-foreground leading-tight tracking-tight max-w-2xl">
+                    Privacy isn't a feature. <span className="text-primary">It's the architecture.</span>
+                  </h2>
+                </div>
+              </motion.div>
+
+              <div className="grid md:grid-cols-2 gap-x-16 gap-y-16">
+                {[
+                  {
+                    number: "01",
+                    title: "Zero data collection",
+                    description:
+                      "We don't ask for your email, phone number, or identity. We collect only what's essential for the app to function. Nothing more.",
+                  },
+                  {
+                    number: "02",
+                    title: "Cryptographic keys, not passwords",
+                    description:
+                      "Your account is secured by a 64-character key that only you possess. We can't recover it. We can't reset it. We can't access it.",
+                  },
+                  {
+                    number: "03",
+                    title: "No ads, no tracking, no profiling",
+                    description:
+                      "We will never monetize your data. There are no analytics tracking your behavior. No pixels. No fingerprinting. No exceptions.",
+                  },
+                  {
+                    number: "04",
+                    title: "Open architecture",
+                    description:
+                      "Our approach is transparent. We tell you exactly what we do and don't do. There's no fine print designed to confuse you.",
+                  },
+                ].map((principle, index) => (
                   <motion.div
-                    key={cap.title}
-                    className={`relative border border-border/20 p-8 lg:p-10 group hover:border-primary/30 transition-all duration-500 bg-transparent ${
-                      isLarge ? "lg:col-span-7" : "lg:col-span-5"
-                    }`}
-                    initial={{ opacity: 0, y: 40 }}
+                    key={principle.number}
+                    className="group relative"
+                    initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.6, delay: index * 0.1 }}
                   >
-                    {/* Corner accents */}
-                    <div className="absolute top-0 left-0 w-4 h-4 border-l-2 border-t-2 border-primary/30 group-hover:border-primary/50 transition-colors" />
-                    <div className="absolute top-0 right-0 w-4 h-4 border-r-2 border-t-2 border-primary/30 group-hover:border-primary/50 transition-colors" />
-                    <div className="absolute bottom-0 left-0 w-4 h-4 border-l-2 border-b-2 border-primary/30 group-hover:border-primary/50 transition-colors" />
-                    <div className="absolute bottom-0 right-0 w-4 h-4 border-r-2 border-b-2 border-primary/30 group-hover:border-primary/50 transition-colors" />
+                    {/* Card with ASCII styling */}
+                    <div className="relative border border-border/20 p-8 bg-card/30 hover:border-primary/30 transition-colors duration-300">
+                      {/* Corner accents */}
+                      <div className="absolute top-0 left-0 w-3 h-3 border-l border-t border-primary/40" />
+                      <div className="absolute top-0 right-0 w-3 h-3 border-r border-t border-primary/40" />
+                      <div className="absolute bottom-0 left-0 w-3 h-3 border-l border-b border-primary/40" />
+                      <div className="absolute bottom-0 right-0 w-3 h-3 border-r border-b border-primary/40" />
 
-                    <Icon
-                      className={`text-primary mb-6 ${isLarge ? "w-10 h-10" : "w-8 h-8"}`}
-                    />
-                    <h3
-                      className={`font-semibold text-foreground tracking-tight mb-3 ${
-                        isLarge ? "text-3xl sm:text-4xl" : "text-2xl"
-                      }`}
-                    >
-                      {cap.title}
-                    </h3>
-                    <p className="text-muted-foreground leading-relaxed max-w-md">
-                      {cap.description}
-                    </p>
+                      <div className="flex items-start gap-4">
+                        <span className="text-4xl font-mono font-semibold text-primary/40 group-hover:text-primary/60 transition-colors duration-300">
+                          {principle.number}
+                        </span>
+                        <div className="w-px h-12 bg-gradient-to-b from-primary/30 to-transparent" />
+                        <div className="flex-1">
+                          <h3 className="text-xl font-semibold text-foreground mb-3 tracking-tight">
+                            {principle.title}
+                          </h3>
+                          <p className="text-muted-foreground leading-relaxed text-sm">{principle.description}</p>
+                        </div>
+                      </div>
+                    </div>
                   </motion.div>
-                );
-              })}
+                ))}
+              </div>
+
+              {/* Bottom technical notation */}
+              <div className="hidden md:flex items-center justify-center gap-4 mt-16 text-xs font-mono text-muted-foreground/50">
+                <span>◇</span>
+                <div className="w-16 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+                <span>CORE.VALUES</span>
+                <div className="w-16 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+                <span>◇</span>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        {/* For Everyone Section */}
-        <section className="relative py-32 px-6 overflow-hidden">
-          <SectionCorners />
+          {/* Capabilities Section */}
+          <section className="relative py-32 px-6 bg-card/50 border-y border-border/20 overflow-hidden">
+            {/* Corner Frame Accents */}
+            <div className="absolute top-4 left-4 w-8 h-8 border-l border-t border-primary/20" />
+            <div className="absolute top-4 right-4 w-8 h-8 border-r border-t border-primary/20" />
+            <div className="absolute bottom-4 left-4 w-8 h-8 border-l border-b border-primary/20" />
+            <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/20" />
 
-          <div className="max-w-7xl mx-auto">
-            <motion.div className="text-center mb-20" {...fadeInUp}>
-              <SectionLabel number="005" label="For Everyone" />
-              <h2 className="text-4xl sm:text-5xl lg:text-6xl font-semibold text-foreground leading-[1.1] tracking-tight max-w-4xl mx-auto mb-6">
-                Free speech starts with{" "}
-                <span className="text-primary">free infrastructure.</span>
-              </h2>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                No premium tiers. No enterprise-only security. Everyone gets everything.
-              </p>
-            </motion.div>
+            <div className="max-w-6xl mx-auto">
+              <motion.div
+                className="mb-20"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+              >
+                {/* Section header with ASCII style */}
+                <div className="flex items-center gap-4 mb-4">
+                  <span className="text-xs font-mono text-primary/70">005</span>
+                  <div className="w-8 h-px bg-gradient-to-r from-primary/50 to-transparent" />
+                  <span className="text-xs font-mono text-primary tracking-widest uppercase">Capabilities</span>
+                </div>
+                <div className="flex items-start gap-4">
+                  <div className="hidden md:block w-px h-20 bg-gradient-to-b from-primary/50 to-transparent" />
+                  <h2 className="text-4xl sm:text-5xl font-semibold text-foreground leading-tight tracking-tight max-w-2xl">
+                    Full-featured. <span className="text-primary">Zero compromise.</span>
+                  </h2>
+                </div>
+              </motion.div>
 
-            {/* Use case cards */}
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[
-                {
-                  title: "Activists & Organizers",
-                  description: "Coordinate movements without surveillance.",
-                },
-                {
-                  title: "Creative Communities",
-                  description: "Share your art in spaces you control.",
-                },
-                {
-                  title: "Gaming Groups",
-                  description: "Voice chat and guild coordination.",
-                },
-                {
-                  title: "Small Businesses",
-                  description: "Team communication without Big Tech.",
-                },
-                {
-                  title: "Friends & Family",
-                  description: "Private group chats that stay private.",
-                },
-                {
-                  title: "Privacy Advocates",
-                  description: "A platform that practices what it preaches.",
-                },
-              ].map((card, index) => (
+              {/* Feature Grid with ASCII styling */}
+              <div className="grid lg:grid-cols-12 gap-6">
+                {/* Main Feature - Large */}
                 <motion.div
-                  key={card.title}
-                  className="group relative border border-border/20 p-8 hover:border-primary/30 transition-all duration-500"
-                  initial={{ opacity: 0, y: 30 }}
+                  className="lg:col-span-7 relative border border-border/30 p-10 group overflow-hidden bg-background"
+                  initial={{ opacity: 0, y: 40 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-50px" }}
-                  transition={{ duration: 0.5, delay: index * 0.08 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6 }}
                 >
                   {/* Corner accents */}
-                  <div className="absolute top-0 left-0 w-3 h-3 border-l border-t border-primary/20 group-hover:border-primary/40 transition-colors" />
-                  <div className="absolute top-0 right-0 w-3 h-3 border-r border-t border-primary/20 group-hover:border-primary/40 transition-colors" />
-                  <div className="absolute bottom-0 left-0 w-3 h-3 border-l border-b border-primary/20 group-hover:border-primary/40 transition-colors" />
-                  <div className="absolute bottom-0 right-0 w-3 h-3 border-r border-b border-primary/20 group-hover:border-primary/40 transition-colors" />
+                  <div className="absolute top-0 left-0 w-4 h-4 border-l-2 border-t-2 border-primary/40" />
+                  <div className="absolute top-0 right-0 w-4 h-4 border-r-2 border-t-2 border-primary/40" />
+                  <div className="absolute bottom-0 left-0 w-4 h-4 border-l-2 border-b-2 border-primary/40" />
+                  <div className="absolute bottom-0 right-0 w-4 h-4 border-r-2 border-b-2 border-primary/40" />
 
-                  <h3 className="text-lg font-semibold text-foreground mb-2 tracking-tight">
-                    {card.title}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">{card.description}</p>
+                  <div className="flex items-center gap-4 mb-4">
+                    <MessageCircle className="w-8 h-8 text-primary shrink-0" />
+                    <h3 className="text-3xl sm:text-4xl font-semibold text-foreground tracking-tight">
+                      Real-Time Messaging
+                    </h3>
+                  </div>
+                  <p className="text-lg text-muted-foreground leading-relaxed max-w-md">
+                    Instant message delivery across servers, channels, and direct conversations. Built for speed without
+                    sacrificing privacy.
+                  </p>
+                  <div className="absolute bottom-4 right-4 text-[8px] font-mono text-primary/40">MSG.001</div>
                 </motion.div>
-              ))}
+
+                {/* Secondary Feature */}
+                <motion.div
+                  className="lg:col-span-5 relative border border-border/30 p-10 group overflow-hidden bg-background"
+                  initial={{ opacity: 0, y: 40 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6, delay: 0.1 }}
+                >
+                  <div className="absolute top-0 left-0 w-4 h-4 border-l-2 border-t-2 border-primary/40" />
+                  <div className="absolute top-0 right-0 w-4 h-4 border-r-2 border-t-2 border-primary/40" />
+                  <div className="absolute bottom-0 left-0 w-4 h-4 border-l-2 border-b-2 border-primary/40" />
+                  <div className="absolute bottom-0 right-0 w-4 h-4 border-r-2 border-b-2 border-primary/40" />
+
+                  <div className="flex items-center gap-3 mb-4">
+                    <Lock className="w-7 h-7 text-primary shrink-0" />
+                    <h3 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight">
+                      Key-Based Auth
+                    </h3>
+                  </div>
+                  <p className="text-muted-foreground leading-relaxed">
+                    One cryptographic key. Full control. No password managers, no recovery emails, no vulnerabilities.
+                  </p>
+                  <div className="absolute bottom-4 right-4 text-[8px] font-mono text-primary/40">AUTH.002</div>
+                </motion.div>
+
+                {/* Third Feature */}
+                <motion.div
+                  className="lg:col-span-5 relative border border-border/30 p-10 group overflow-hidden bg-background"
+                  initial={{ opacity: 0, y: 40 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6, delay: 0.2 }}
+                >
+                  <div className="absolute top-0 left-0 w-4 h-4 border-l-2 border-t-2 border-primary/40" />
+                  <div className="absolute top-0 right-0 w-4 h-4 border-r-2 border-t-2 border-primary/40" />
+                  <div className="absolute bottom-0 left-0 w-4 h-4 border-l-2 border-b-2 border-primary/40" />
+                  <div className="absolute bottom-0 right-0 w-4 h-4 border-r-2 border-b-2 border-primary/40" />
+
+                  <div className="flex items-center gap-3 mb-4">
+                    <Users className="w-7 h-7 text-primary shrink-0" />
+                    <h3 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight">Communities</h3>
+                  </div>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Create spaces for your people. Organize with servers, channels, and categories — your way.
+                  </p>
+                  <div className="absolute bottom-4 right-4 text-[8px] font-mono text-primary/40">COMM.003</div>
+                </motion.div>
+
+                {/* Fourth Feature - Large */}
+                <motion.div
+                  className="lg:col-span-7 relative border border-border/30 p-10 group overflow-hidden bg-background"
+                  initial={{ opacity: 0, y: 40 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6, delay: 0.3 }}
+                >
+                  <div className="absolute top-0 left-0 w-4 h-4 border-l-2 border-t-2 border-primary/40" />
+                  <div className="absolute top-0 right-0 w-4 h-4 border-r-2 border-t-2 border-primary/40" />
+                  <div className="absolute bottom-0 left-0 w-4 h-4 border-l-2 border-b-2 border-primary/40" />
+                  <div className="absolute bottom-0 right-0 w-4 h-4 border-r-2 border-b-2 border-primary/40" />
+
+                  <div className="flex items-center gap-4 mb-4">
+                    <Zap className="w-8 h-8 text-primary shrink-0" />
+                    <h3 className="text-3xl sm:text-4xl font-semibold text-foreground tracking-tight">
+                      Modern Infrastructure
+                    </h3>
+                  </div>
+                  <p className="text-lg text-muted-foreground leading-relaxed max-w-md">
+                    Built on a modern tech stack for performance and reliability. Fast, responsive, and built to scale
+                    with you.
+                  </p>
+                  <div className="absolute bottom-4 right-4 text-[8px] font-mono text-primary/40">INFRA.004</div>
+                </motion.div>
+              </div>
+
+              {/* Bottom technical notation */}
+              <div className="hidden md:flex items-center gap-4 mt-12 text-xs font-mono text-muted-foreground/50">
+                <div className="flex gap-0.5">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} className="w-1 h-3 bg-primary/20" style={{ opacity: 0.2 + i * 0.1 }} />
+                  ))}
+                </div>
+                <span>FEATURES.LOADED</span>
+                <div className="w-16 h-px bg-gradient-to-r from-primary/30 to-transparent" />
+                <span>∞</span>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        {/* CTA Section */}
-        <section className="relative py-32 px-6 border-t border-border/10 overflow-hidden">
-          <SectionCorners />
+          {/* For Everyone Section */}
+          <section className="relative py-32 px-6 overflow-hidden">
+            {/* Corner Frame Accents */}
+            <div className="absolute top-4 left-4 w-8 h-8 border-l border-t border-primary/20" />
+            <div className="absolute top-4 right-4 w-8 h-8 border-r border-t border-primary/20" />
+            <div className="absolute bottom-4 left-4 w-8 h-8 border-l border-b border-primary/20" />
+            <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/20" />
 
-          <div className="max-w-4xl mx-auto text-center">
-            <motion.div {...fadeInUp}>
-              <h2 className="text-4xl sm:text-5xl lg:text-6xl font-semibold text-foreground leading-[1.1] tracking-tight mb-8">
-                Ready to take back{" "}
-                <span className="text-primary">your privacy?</span>
+            <div className="max-w-6xl mx-auto">
+              {/* Section Header */}
+              <motion.div
+                className="text-center mb-20"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+              >
+                {/* Section header with ASCII style */}
+                <div className="flex items-center justify-center gap-4 mb-6">
+                  <div className="w-12 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+                  <span className="text-xs font-mono text-primary/70">006</span>
+                  <div className="w-8 h-px bg-gradient-to-r from-primary/50 to-transparent" />
+                  <span className="text-xs font-mono text-primary tracking-widest uppercase">For Everyone</span>
+                  <div className="w-8 h-px bg-gradient-to-l from-primary/50 to-transparent" />
+                  <span className="text-xs font-mono text-primary/70">◇</span>
+                  <div className="w-12 h-px bg-gradient-to-l from-transparent via-primary/50 to-transparent" />
+                </div>
+
+                <h2 className="text-4xl sm:text-5xl lg:text-6xl font-semibold text-foreground leading-tight tracking-tight mb-6 max-w-4xl mx-auto">
+                  Free speech starts with <span className="text-primary">free infrastructure.</span>
+                </h2>
+                <p className="text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+                  No premium tiers that unlock privacy features. No enterprise-only security. Everyone gets everything.
+                </p>
+              </motion.div>
+
+              {/* Cards Grid with ASCII styling */}
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[
+                  {
+                    title: "Activists & Organizers",
+                    description: "Coordinate movements without surveillance. Your cause, your privacy.",
+                    icon: "megaphone",
+                    code: "ACT.001",
+                  },
+                  {
+                    title: "Creative Communities",
+                    description: "Share your art, music, and ideas in spaces you control.",
+                    icon: "palette",
+                    code: "CRT.002",
+                  },
+                  {
+                    title: "Gaming Groups",
+                    description: "Voice chat, strategy sessions, and guild coordination — lag-free.",
+                    icon: "gamepad",
+                    code: "GMR.003",
+                  },
+                  {
+                    title: "Small Businesses",
+                    description: "Team communication without Big Tech reading your roadmap.",
+                    icon: "briefcase",
+                    code: "BIZ.004",
+                  },
+                  {
+                    title: "Friends & Family",
+                    description: "Private group chats that stay private. Period.",
+                    icon: "heart",
+                    code: "FAM.005",
+                  },
+                  {
+                    title: "Privacy Advocates",
+                    description: "Finally, a platform that practices what it preaches.",
+                    icon: "shield",
+                    code: "PRV.006",
+                  },
+                ].map((card, index) => (
+                  <motion.div
+                    key={card.title}
+                    className="group relative border border-border/30 p-8 overflow-hidden hover:border-primary/40 transition-colors duration-300 bg-card/30"
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: "-50px" }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                  >
+                    {/* Corner accents */}
+                    <div className="absolute top-0 left-0 w-3 h-3 border-l border-t border-primary/30 group-hover:border-primary/50 transition-colors" />
+                    <div className="absolute top-0 right-0 w-3 h-3 border-r border-t border-primary/30 group-hover:border-primary/50 transition-colors" />
+                    <div className="absolute bottom-0 left-0 w-3 h-3 border-l border-b border-primary/30 group-hover:border-primary/50 transition-colors" />
+                    <div className="absolute bottom-0 right-0 w-3 h-3 border-r border-b border-primary/30 group-hover:border-primary/50 transition-colors" />
+
+                    {/* Icon */}
+                    <div className="relative mb-6">
+                      <div className="w-14 h-14 border border-primary/30 flex items-center justify-center group-hover:border-primary/50 transition-colors duration-300">
+                        {card.icon === "megaphone" && (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="28"
+                            height="28"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="text-primary"
+                          >
+                            <path d="m3 11 18-5v12L3 13v-2z" />
+                            <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
+                          </svg>
+                        )}
+                        {card.icon === "palette" && (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="28"
+                            height="28"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="text-primary"
+                          >
+                            <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
+                            <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
+                            <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
+                            <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
+                            <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.555C21.965 6.012 17.461 2 12 2z" />
+                          </svg>
+                        )}
+                        {card.icon === "gamepad" && (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="28"
+                            height="28"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="text-primary"
+                          >
+                            <line x1="6" x2="10" y1="12" y2="12" />
+                            <line x1="8" x2="8" y1="10" y2="14" />
+                            <line x1="15" x2="15.01" y1="13" y2="13" />
+                            <line x1="18" x2="18.01" y1="11" y2="11" />
+                            <rect width="20" height="12" x="2" y="6" rx="2" />
+                          </svg>
+                        )}
+                        {card.icon === "briefcase" && (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="28"
+                            height="28"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="text-primary"
+                          >
+                            <path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                            <rect width="20" height="14" x="2" y="6" rx="2" />
+                          </svg>
+                        )}
+                        {card.icon === "heart" && (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="28"
+                            height="28"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="text-primary"
+                          >
+                            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+                          </svg>
+                        )}
+                        {card.icon === "shield" && <Shield className="w-7 h-7 text-primary" />}
+                      </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="relative">
+                      <h3 className="text-lg font-semibold text-foreground mb-2 tracking-tight">{card.title}</h3>
+                      <p className="text-muted-foreground text-sm leading-relaxed">{card.description}</p>
+                    </div>
+
+                    {/* Code notation */}
+                    <div className="absolute bottom-3 right-3 text-[8px] font-mono text-primary/40">{card.code}</div>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Bottom technical notation */}
+              <div className="hidden md:flex items-center justify-center gap-4 mt-16 text-xs font-mono text-muted-foreground/50">
+                <div className="flex gap-1">
+                  <div className="w-2 h-2 rounded-full bg-primary/30" />
+                  <div className="w-2 h-2 rounded-full bg-primary/20" />
+                  <div className="w-2 h-2 rounded-full bg-primary/10" />
+                </div>
+                <span>ALL.USERS.WELCOME</span>
+                <div className="flex gap-1">
+                  <div className="w-2 h-2 rounded-full bg-primary/10" />
+                  <div className="w-2 h-2 rounded-full bg-primary/20" />
+                  <div className="w-2 h-2 rounded-full bg-primary/30" />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* CTA Section */}
+          <section className="relative py-32 px-6 bg-card/50 border-t border-border/20 overflow-hidden">
+            {/* Corner Frame Accents */}
+            <div className="absolute top-4 left-4 w-8 h-8 border-l border-t border-primary/30" />
+            <div className="absolute top-4 right-4 w-8 h-8 border-r border-t border-primary/30" />
+            <div className="absolute bottom-4 left-4 w-8 h-8 border-l border-b border-primary/30" />
+            <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/30" />
+
+            <motion.div
+              className="max-w-3xl mx-auto text-center relative"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+            >
+              {/* Section code */}
+              <div className="flex items-center justify-center gap-4 mb-8">
+                <div className="w-12 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+                <span className="text-xs font-mono text-primary/70">007</span>
+                <div className="w-12 h-px bg-gradient-to-l from-transparent via-primary/50 to-transparent" />
+              </div>
+
+              <div className="w-16 h-16 border border-primary/40 flex items-center justify-center mx-auto mb-8">
+                <Shield className="w-8 h-8 text-primary" />
+              </div>
+
+              <h2 className="text-4xl sm:text-5xl font-semibold text-foreground mb-6 tracking-tight">
+                Take Back Your <span className="text-primary">Privacy.</span>
               </h2>
-
-              <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-12">
-                Join Kloak and experience communication without compromise.
+              <p className="text-xl text-muted-foreground mb-10 max-w-lg mx-auto">
+                No signup forms. No verification emails. Generate your key and start communicating freely.
               </p>
 
-              <div className="flex items-center justify-center gap-4 flex-wrap">
-                <Link to="/app">
-                  <button className="group flex items-center gap-3 bg-foreground text-background px-8 py-4 text-sm font-medium tracking-[0.1em] uppercase transition-all duration-300 hover:bg-primary hover:text-primary-foreground">
+              <Link to="/auth">
+                <button className="group relative px-10 py-4 bg-primary text-primary-foreground font-medium transition-all duration-300 hover:bg-primary/90 uppercase tracking-wider">
+                  <span className="absolute -top-px -left-px w-3 h-3 border-l border-t border-primary-foreground/30" />
+                  <span className="absolute -top-px -right-px w-3 h-3 border-r border-t border-primary-foreground/30" />
+                  <span className="absolute -bottom-px -left-px w-3 h-3 border-l border-b border-primary-foreground/30" />
+                  <span className="absolute -bottom-px -right-px w-3 h-3 border-r border-b border-primary-foreground/30" />
+                  <span className="flex items-center gap-2">
+                    <Key className="w-5 h-5" />
                     Get Started
-                    <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
-                  </button>
-                </Link>
+                  </span>
+                </button>
+              </Link>
 
-                <Link to="/philosophy">
-                  <button className="flex items-center gap-3 border border-border/50 px-8 py-4 text-sm font-medium tracking-[0.1em] uppercase text-muted-foreground transition-all duration-300 hover:border-foreground/50 hover:text-foreground">
-                    Our Philosophy
-                  </button>
-                </Link>
+              {/* Bottom technical notation */}
+              <div className="flex items-center justify-center gap-4 mt-12 text-xs font-mono text-muted-foreground/50">
+                <span>◐ READY</span>
+                <div className="flex gap-0.5">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="w-1 h-3 bg-primary/30 animate-pulse"
+                      style={{ animationDelay: `${i * 0.1}s` }}
+                    />
+                  ))}
+                </div>
+                <span>AWAITING.INPUT</span>
               </div>
             </motion.div>
-          </div>
-        </section>
-      </main>
+          </section>
 
-      <Footer />
+          {/* Footer */}
+          <Footer />
+        </main>
+      </div>
     </div>
   );
 };
