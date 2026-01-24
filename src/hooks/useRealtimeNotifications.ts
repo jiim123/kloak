@@ -146,6 +146,8 @@ const showDesktopNotification = async (notification: Notification) => {
     return;
   }
 
+  // Check if browser supports Notification API before using it
+  if (!('Notification' in window)) return;
   if (Notification.permission !== 'granted') return;
 
   const browserNotification = new window.Notification(notification.title, {
