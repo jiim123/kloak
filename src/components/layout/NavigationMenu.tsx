@@ -243,20 +243,21 @@ export const NavigationMenu = () => {
               {/* Sidebar Content */}
               <div className="flex-1 overflow-y-auto p-6">
                 <div className="space-y-6">
-                  {/* Primary CTAs - Two buttons side by side */}
-                  <div className="flex gap-3">
-                    <Link to="/app" onClick={() => setMenuOpen(false)} className="flex-1">
-                      <Button variant="outline" className="w-full h-12 text-base">
-                        <Key className="h-4 w-4" />
-                        Create Account
-                      </Button>
-                    </Link>
-                    <Link to="/app" onClick={() => setMenuOpen(false)} className="flex-1">
-                      <Button className="w-full h-12 text-base">
-                        <Sparkles className="h-4 w-4" />
-                        Open Kloak
-                      </Button>
-                    </Link>
+                  {/* Join Kloak CTA Box */}
+                  <div className="rounded-xl border border-border/50 bg-muted/30 p-4">
+                    <h3 className="text-sm font-semibold text-foreground mb-3">Join Kloak</h3>
+                    <div className="flex gap-3">
+                      <Link to="/app" onClick={() => setMenuOpen(false)} className="flex-1">
+                        <Button variant="outline" className="w-full">
+                          Create Account
+                        </Button>
+                      </Link>
+                      <Link to="/app" onClick={() => setMenuOpen(false)} className="flex-1">
+                        <Button className="w-full">
+                          Open Kloak
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
 
                   <div className="h-px bg-border/30" />
@@ -290,11 +291,6 @@ export const NavigationMenu = () => {
                       ))}
                   </div>
                 </div>
-              </div>
-
-              {/* Sidebar Footer */}
-              <div className="p-6 border-t border-border/20">
-                <p className="text-center text-xs text-muted-foreground">Free forever. No credit card required.</p>
               </div>
             </motion.div>
           </>
