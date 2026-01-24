@@ -403,7 +403,7 @@ DraggableServerItem.displayName = 'DraggableServerItem';
 export const ServerSidebar = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { servers, currentServer, setCurrentServer, isLoading, fetchServers } = useServerStore();
+  const { servers, currentServer, setCurrentServer, isLoading, fetchServers, leaveServer } = useServerStore();
   const { setCurrentConversation } = useDMStore();
   const { openModal, activeModal, closeModal, closeServerSettings, openServerSettings } = useUIStore();
   const [serverChannels, setServerChannels] = useState<ServerChannels>({});
