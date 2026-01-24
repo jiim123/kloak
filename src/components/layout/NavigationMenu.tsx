@@ -9,10 +9,8 @@ import {
   FileText,
   Cookie,
   ScrollText,
-  Sparkles,
   Menu,
   X,
-  Key,
   CircleUserRound,
   HelpCircle,
   LucideIcon,
@@ -154,7 +152,7 @@ export const NavigationMenu = () => {
                     custom={isExpanded}
                     transition={transition}
                     className={cn(
-                      "relative flex items-center rounded-xl px-4 py-2 text-sm font-medium transition-colors duration-300",
+                      "relative flex items-center rounded-xl px-4 py-2 landing-nav-link transition-colors duration-300",
                       isActive
                         ? "bg-muted text-primary"
                         : isHovered
@@ -187,14 +185,14 @@ export const NavigationMenu = () => {
 
           {/* Mobile CTA - visible only on mobile */}
           <Link to="/app" className="md:hidden">
-            <Button size="sm" className="rounded-xl">
+            <Button size="sm" className="rounded-xl uppercase font-semibold tracking-wider">
               Open Kloak
             </Button>
           </Link>
 
           {/* Desktop CTA Button */}
           <Link to="/app" className="hidden md:block">
-            <Button size="sm" className="rounded-xl">
+            <Button size="sm" className="rounded-xl uppercase font-semibold tracking-wider">
               <CircleUserRound className="h-4 w-4" />
               Login
             </Button>
@@ -252,15 +250,15 @@ export const NavigationMenu = () => {
                 <div className="space-y-6">
                   {/* Join Kloak CTA Box */}
                   <div className="rounded-xl border border-border/50 bg-muted/30 p-4">
-                    <h3 className="text-sm font-semibold text-foreground mb-3">Join Kloak</h3>
+                    <h3 className="landing-card-title text-foreground mb-3 text-sm">Join Kloak</h3>
                     <div className="flex gap-3">
                       <Link to="/app" onClick={() => setMenuOpen(false)} className="flex-1">
-                        <Button variant="outline" className="w-full">
+                        <Button variant="outline" className="w-full uppercase font-semibold tracking-wider text-xs">
                           Create Account
                         </Button>
                       </Link>
                       <Link to="/app" onClick={() => setMenuOpen(false)} className="flex-1">
-                        <Button className="w-full">
+                        <Button className="w-full uppercase font-semibold tracking-wider text-xs">
                           Open Kloak
                         </Button>
                       </Link>
@@ -293,7 +291,7 @@ export const NavigationMenu = () => {
                           >
                             <link.icon className="h-4 w-4" />
                           </div>
-                          <span className="text-sm font-medium">{link.title}</span>
+                          <span className="landing-nav-link">{link.title}</span>
                         </Link>
                       ))}
                   </div>

@@ -1,25 +1,10 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Shield, ArrowRight, Key, MessageCircle, Users, Zap, Lock, X, Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Shield, Key, MessageCircle, Users, Zap, Lock, X, Check } from "lucide-react";
 import { Footer } from "@/components/ui/footer-section";
 import { NavigationMenu } from "@/components/layout/NavigationMenu";
 import HeroAscii from "@/components/landing/HeroAscii";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-
-const fadeInUp = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
-};
-
-const stagger = {
-  animate: {
-    transition: {
-      staggerChildren: 0.15,
-    },
-  },
-};
 
 const Index = () => {
   const comparisonData = [
@@ -66,18 +51,20 @@ const Index = () => {
                   </div>
                   <div className="flex items-start gap-4">
                     <div className="hidden md:block w-px h-20 bg-gradient-to-b from-primary/50 to-transparent" />
-                    <h2 className="text-4xl sm:text-5xl font-semibold text-foreground leading-tight tracking-tight">
+                    <h2 className="landing-section-title text-foreground">
                       Every message you send is <span className="text-primary">monetized.</span>
                     </h2>
                   </div>
                 </div>
                 <div className="relative">
-                  <div className="space-y-6 text-lg text-muted-foreground leading-relaxed">
-                    <p>
+                  <div className="space-y-6">
+                    <p className="landing-body text-muted-foreground">
                       Most platforms treat your conversations as inventory. Your words become data points. Your
                       relationships become ad targets. Your private moments become profit.
                     </p>
-                    <p>We built Kloak because we believe communication is a human right — not a business model.</p>
+                    <p className="landing-body text-muted-foreground">
+                      We built Kloak because we believe communication is a human right — not a business model.
+                    </p>
                   </div>
                   {/* Technical corner accent */}
                   <div className="hidden md:block absolute -right-4 bottom-0 text-[8px] font-mono text-primary/40">
@@ -123,7 +110,7 @@ const Index = () => {
                 </div>
                 <div className="flex items-start gap-4">
                   <div className="hidden md:block w-px h-20 bg-gradient-to-b from-primary/50 to-transparent" />
-                  <h2 className="text-4xl sm:text-5xl font-semibold text-foreground leading-tight tracking-tight max-w-3xl">
+                  <h2 className="landing-section-title text-foreground max-w-3xl">
                     What they collect. <span className="text-primary">What we don't.</span>
                   </h2>
                 </div>
@@ -145,14 +132,14 @@ const Index = () => {
                 <Table>
                   <TableHeader>
                     <TableRow className="border-border/30 hover:bg-transparent">
-                      <TableHead className="text-muted-foreground font-mono text-xs tracking-wider w-[50%]">
-                        FEATURE
+                      <TableHead className="text-muted-foreground font-mono text-xs tracking-wider w-[50%] uppercase">
+                        Feature
                       </TableHead>
                       <TableHead className="text-center text-muted-foreground font-mono text-xs tracking-wider uppercase">
-                        OTHERS
+                        Others
                       </TableHead>
                       <TableHead className="text-center text-primary font-mono text-xs tracking-wider uppercase">
-                        KLOAK
+                        Kloak
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -166,7 +153,7 @@ const Index = () => {
                         viewport={{ once: true }}
                         transition={{ duration: 0.4, delay: index * 0.05 }}
                       >
-                        <TableCell className="font-medium text-foreground">{row.label}</TableCell>
+                        <TableCell className="font-light text-foreground uppercase tracking-wider text-sm">{row.label}</TableCell>
                         <TableCell className="text-center">
                           {row.others ? (
                             <div className="w-8 h-8 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
@@ -207,7 +194,7 @@ const Index = () => {
                     <div key={i} className="w-1 h-2 bg-primary/30" />
                   ))}
                 </div>
-                <p className="text-center text-muted-foreground text-lg font-mono">
+                <p className="text-center landing-body text-muted-foreground">
                   The less we know about you, the less anyone can take.
                 </p>
                 <div className="hidden md:flex gap-0.5">
@@ -253,7 +240,7 @@ const Index = () => {
                 </div>
                 <div className="flex items-start gap-4">
                   <div className="hidden md:block w-px h-20 bg-gradient-to-b from-primary/50 to-transparent" />
-                  <h2 className="text-4xl sm:text-5xl font-semibold text-foreground leading-tight tracking-tight max-w-2xl">
+                  <h2 className="landing-section-title text-foreground max-w-2xl">
                     Privacy isn't a feature. <span className="text-primary">It's the architecture.</span>
                   </h2>
                 </div>
@@ -308,10 +295,10 @@ const Index = () => {
                         </span>
                         <div className="w-px h-12 bg-gradient-to-b from-primary/30 to-transparent" />
                         <div className="flex-1">
-                          <h3 className="text-xl font-semibold text-foreground mb-3 tracking-tight">
+                          <h3 className="landing-card-title text-foreground mb-3">
                             {principle.title}
                           </h3>
-                          <p className="text-muted-foreground leading-relaxed text-sm">{principle.description}</p>
+                          <p className="landing-body text-muted-foreground text-sm">{principle.description}</p>
                         </div>
                       </div>
                     </div>
@@ -354,7 +341,7 @@ const Index = () => {
                 </div>
                 <div className="flex items-start gap-4">
                   <div className="hidden md:block w-px h-20 bg-gradient-to-b from-primary/50 to-transparent" />
-                  <h2 className="text-4xl sm:text-5xl font-semibold text-foreground leading-tight tracking-tight max-w-2xl">
+                  <h2 className="landing-section-title text-foreground max-w-2xl">
                     Full-featured. <span className="text-primary">Zero compromise.</span>
                   </h2>
                 </div>
@@ -378,11 +365,11 @@ const Index = () => {
 
                   <div className="flex items-center gap-4 mb-4">
                     <MessageCircle className="w-8 h-8 text-primary shrink-0" />
-                    <h3 className="text-3xl sm:text-4xl font-semibold text-foreground tracking-tight">
+                    <h3 className="landing-card-title text-foreground text-xl sm:text-2xl">
                       Real-Time Messaging
                     </h3>
                   </div>
-                  <p className="text-lg text-muted-foreground leading-relaxed max-w-md">
+                  <p className="landing-body text-muted-foreground max-w-md text-sm">
                     Instant message delivery across servers, channels, and direct conversations. Built for speed without
                     sacrificing privacy.
                   </p>
@@ -404,11 +391,11 @@ const Index = () => {
 
                   <div className="flex items-center gap-3 mb-4">
                     <Lock className="w-7 h-7 text-primary shrink-0" />
-                    <h3 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight">
+                    <h3 className="landing-card-title text-foreground text-lg sm:text-xl">
                       Key-Based Auth
                     </h3>
                   </div>
-                  <p className="text-muted-foreground leading-relaxed">
+                  <p className="landing-body text-muted-foreground text-sm">
                     One cryptographic key. Full control. No password managers, no recovery emails, no vulnerabilities.
                   </p>
                   <div className="absolute bottom-4 right-4 text-[8px] font-mono text-primary/40">AUTH.002</div>
@@ -429,9 +416,9 @@ const Index = () => {
 
                   <div className="flex items-center gap-3 mb-4">
                     <Users className="w-7 h-7 text-primary shrink-0" />
-                    <h3 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight">Communities</h3>
+                    <h3 className="landing-card-title text-foreground text-lg sm:text-xl">Communities</h3>
                   </div>
-                  <p className="text-muted-foreground leading-relaxed">
+                  <p className="landing-body text-muted-foreground text-sm">
                     Create spaces for your people. Organize with servers, channels, and categories — your way.
                   </p>
                   <div className="absolute bottom-4 right-4 text-[8px] font-mono text-primary/40">COMM.003</div>
@@ -452,11 +439,11 @@ const Index = () => {
 
                   <div className="flex items-center gap-4 mb-4">
                     <Zap className="w-8 h-8 text-primary shrink-0" />
-                    <h3 className="text-3xl sm:text-4xl font-semibold text-foreground tracking-tight">
+                    <h3 className="landing-card-title text-foreground text-xl sm:text-2xl">
                       Modern Infrastructure
                     </h3>
                   </div>
-                  <p className="text-lg text-muted-foreground leading-relaxed max-w-md">
+                  <p className="landing-body text-muted-foreground max-w-md text-sm">
                     Built on a modern tech stack for performance and reliability. Fast, responsive, and built to scale
                     with you.
                   </p>
@@ -506,10 +493,10 @@ const Index = () => {
                   <div className="w-12 h-px bg-gradient-to-l from-transparent via-primary/50 to-transparent" />
                 </div>
 
-                <h2 className="text-4xl sm:text-5xl lg:text-6xl font-semibold text-foreground leading-tight tracking-tight mb-6 max-w-4xl mx-auto">
+                <h2 className="landing-section-title text-foreground mb-6 max-w-4xl mx-auto">
                   Free speech starts with <span className="text-primary">free infrastructure.</span>
                 </h2>
-                <p className="text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+                <p className="landing-body text-muted-foreground max-w-2xl mx-auto">
                   No premium tiers that unlock privacy features. No enterprise-only security. Everyone gets everything.
                 </p>
               </motion.div>
@@ -667,8 +654,8 @@ const Index = () => {
 
                     {/* Content */}
                     <div className="relative">
-                      <h3 className="text-lg font-semibold text-foreground mb-2 tracking-tight">{card.title}</h3>
-                      <p className="text-muted-foreground text-sm leading-relaxed">{card.description}</p>
+                      <h3 className="landing-card-title text-foreground mb-2 text-base">{card.title}</h3>
+                      <p className="landing-body text-muted-foreground text-sm">{card.description}</p>
                     </div>
 
                     {/* Code notation */}
@@ -720,15 +707,15 @@ const Index = () => {
                 <Shield className="w-8 h-8 text-primary" />
               </div>
 
-              <h2 className="text-4xl sm:text-5xl font-semibold text-foreground mb-6 tracking-tight">
+              <h2 className="landing-section-title text-foreground mb-6">
                 Take Back Your <span className="text-primary">Privacy.</span>
               </h2>
-              <p className="text-xl text-muted-foreground mb-10 max-w-lg mx-auto">
+              <p className="landing-body text-muted-foreground mb-10 max-w-lg mx-auto">
                 No signup forms. No verification emails. Generate your key and start communicating freely.
               </p>
 
               <Link to="/auth">
-                <button className="group relative px-10 py-4 bg-primary text-primary-foreground font-medium transition-all duration-300 hover:bg-primary/90 uppercase tracking-wider">
+                <button className="group relative px-10 py-4 bg-primary text-primary-foreground font-semibold transition-all duration-300 hover:bg-primary/90 uppercase tracking-wider">
                   <span className="absolute -top-px -left-px w-3 h-3 border-l border-t border-primary-foreground/30" />
                   <span className="absolute -top-px -right-px w-3 h-3 border-r border-t border-primary-foreground/30" />
                   <span className="absolute -bottom-px -left-px w-3 h-3 border-l border-b border-primary-foreground/30" />
