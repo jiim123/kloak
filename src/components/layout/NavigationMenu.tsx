@@ -243,13 +243,21 @@ export const NavigationMenu = () => {
               {/* Sidebar Content */}
               <div className="flex-1 overflow-y-auto p-6">
                 <div className="space-y-6">
-                  {/* Primary CTA */}
-                  <Link to="/app" onClick={() => setMenuOpen(false)}>
-                    <Button className="w-full h-12 text-base">
-                      <Key className="h-4 w-4" />
-                      Create Account
-                    </Button>
-                  </Link>
+                  {/* Primary CTAs - Two buttons side by side */}
+                  <div className="flex gap-3">
+                    <Link to="/app" onClick={() => setMenuOpen(false)} className="flex-1">
+                      <Button variant="outline" className="w-full h-12 text-base">
+                        <Key className="h-4 w-4" />
+                        Create Account
+                      </Button>
+                    </Link>
+                    <Link to="/app" onClick={() => setMenuOpen(false)} className="flex-1">
+                      <Button className="w-full h-12 text-base">
+                        <Sparkles className="h-4 w-4" />
+                        Open Kloak
+                      </Button>
+                    </Link>
+                  </div>
 
                   <div className="h-px bg-border/30" />
 
@@ -286,13 +294,7 @@ export const NavigationMenu = () => {
 
               {/* Sidebar Footer */}
               <div className="p-6 border-t border-border/20">
-                <Link to="/app" onClick={() => setMenuOpen(false)}>
-                  <Button className="w-full h-12 text-base">
-                    <Sparkles className="h-4 w-4" />
-                    Get Started
-                  </Button>
-                </Link>
-                <p className="text-center text-xs text-muted-foreground mt-3">Free forever. No credit card required.</p>
+                <p className="text-center text-xs text-muted-foreground">Free forever. No credit card required.</p>
               </div>
             </motion.div>
           </>
