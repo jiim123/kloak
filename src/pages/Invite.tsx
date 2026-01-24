@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { initializeAuth, useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
 import { toast } from "sonner";
+import { SEO } from "@/components/seo";
+import { SEO_CONFIG } from "@/lib/seo";
 
 type InviteServer = {
   id: string;
@@ -136,6 +138,10 @@ const Invite = () => {
 
   return (
     <div className="relative min-h-screen overflow-hidden flex flex-col bg-background">
+      <SEO 
+        title={server ? `Join ${server.name}` : SEO_CONFIG.invite.title}
+        description={server?.about || SEO_CONFIG.invite.description}
+      />
 
       <NavigationMenu />
 

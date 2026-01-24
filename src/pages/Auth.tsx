@@ -31,6 +31,8 @@ import { WelcomeModal } from "@/components/modals/WelcomeModal";
 import { NavigationMenu } from "@/components/layout/NavigationMenu";
 import { Footer } from "@/components/ui/footer-section";
 import { isTauriWindow, resizeWindowForApp } from "@/lib/tauriRuntime";
+import { SEO } from "@/components/seo";
+import { SEO_CONFIG } from "@/lib/seo";
 
 const tabContentVariants = {
   enter: (direction: number) => ({
@@ -483,6 +485,7 @@ const Auth = () => {
   // Browser version with navigation and footer
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <SEO {...SEO_CONFIG.auth} noIndex />
       {/* Navigation */}
       <NavigationMenu />
       <div className="flex-1 flex items-center justify-center p-4">
