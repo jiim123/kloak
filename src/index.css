@@ -464,6 +464,16 @@
     overflow-x: hidden;
   }
 
+  /* Hide scrollbar but keep scrolling functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+  }
+
   /* Status indicator colors */
   .status-online {
     @apply bg-[hsl(var(--kloak-online))];

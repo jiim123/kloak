@@ -2012,7 +2012,7 @@ export const ServerSettingsModal = () => {
           </div>
 
           {/* Dock Navigation */}
-          <div className="relative flex flex-nowrap gap-2 p-2 bg-background/95 backdrop-blur-xl rounded-2xl border border-border shadow-2xl overflow-x-auto touch-pan-x">
+          <div className="relative w-full flex gap-2 p-2 bg-background/95 backdrop-blur-xl rounded-2xl border border-border shadow-2xl overflow-x-auto scrollbar-hide scroll-smooth justify-start">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
