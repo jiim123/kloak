@@ -186,9 +186,9 @@ export const useUIStore = create<UIState>()(
       },
 
       openModal: (modal, data = null) => {
-        // Close server settings when opening user-settings to prevent stacking
+        // Close server settings and mobile sidebars when opening user-settings to prevent stacking
         if (modal === 'user-settings') {
-          set({ activeModal: modal, modalData: data, isServerSettingsOpen: false, isSettingsOpen: true });
+          set({ activeModal: modal, modalData: data, isServerSettingsOpen: false, isSettingsOpen: true, isMobileSidebarOpen: false, isMobileChannelSidebarOpen: false });
         } else {
           set({ activeModal: modal, modalData: data });
         }
@@ -199,8 +199,8 @@ export const useUIStore = create<UIState>()(
       },
 
       openSettings: () => {
-        // Close server settings when opening user settings to prevent stacking
-        set({ isSettingsOpen: true, isServerSettingsOpen: false, activeModal: 'user-settings' });
+        // Close server settings and mobile sidebars when opening user settings to prevent stacking
+        set({ isSettingsOpen: true, isServerSettingsOpen: false, activeModal: 'user-settings', isMobileSidebarOpen: false, isMobileChannelSidebarOpen: false });
       },
 
       closeSettings: () => {
