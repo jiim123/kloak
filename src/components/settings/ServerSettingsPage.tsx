@@ -173,8 +173,10 @@ export const ServerSettingsPage = () => {
     servers, 
     members, 
     roles,
+    channels,
     fetchMembers,
     fetchRoles,
+    fetchServers,
     createRole,
     updateRole,
     deleteRole,
@@ -193,6 +195,8 @@ export const ServerSettingsPage = () => {
   const [pendingIsPublished, setPendingIsPublished] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  const [systemChannelJoinId, setSystemChannelJoinId] = useState<string>('');
+  const [systemChannelLeaveId, setSystemChannelLeaveId] = useState<string>('');
   const [invites, setInvites] = useState<
     Array<{
       id: string;
@@ -471,6 +475,10 @@ export const ServerSettingsPage = () => {
       fetchRoles(server.id);
       reset({ name: server.name, about: server.about || '' });
       setPendingIsPublished(!!server.is_published);
+      
+      // Initialize system message channel settings
+      setSystemChannelJoinId(server.system_channel_join_id || '');
+      setSystemChannelLeaveId(server.system_channel_leave_id || '');
 
       // Reset icon state
       setIconFile(null);
@@ -930,15 +938,44 @@ export const ServerSettingsPage = () => {
         }
       }
 
-      await updateServer(server.id, user.id, { 
+      // Always include system message fields explicitly, even if null
+      const updates: any = { 
         name: data.name,
-        icon_url: iconUrl,
-        banner_url: bannerUrl,
-        about: aboutValue || null,
-        ...(isOwner ? { is_published: publishToSend } : {}),
-      });
+      };
       
-      toast.success('Server settings updated!');
+      if (iconUrl !== undefined) {
+        updates.icon_url = iconUrl;
+      }
+      if (bannerUrl !== undefined) {
+        updates.banner_url = bannerUrl;
+      }
+      if (aboutValue !== undefined) {
+        updates.about = aboutValue || null;
+      }
+      
+      // Always include system message fields
+      updates.system_channel_join_id = systemChannelJoinId || null;
+      updates.system_channel_leave_id = systemChannelLeaveId || null;
+      updates.enable_join_messages = !!systemChannelJoinId;
+      updates.enable_leave_messages = !!systemChannelLeaveId;
+      
+      if (isOwner) {
+        updates.is_published = publishToSend;
+      }
+      
+      await updateServer(server.id, user.id, updates);
+       
+       // Refresh server data to get updated fields
+       await fetchServers(user.id);
+       
+      // Update local state from the refreshed server data
+      const updatedServer = useServerStore.getState().currentServer;
+      if (updatedServer) {
+        setSystemChannelJoinId(updatedServer.system_channel_join_id || '');
+         setSystemChannelLeaveId(updatedServer.system_channel_leave_id || '');
+       }
+       
+       toast.success('Server settings updated!');
       clearIcon();
       clearBanner();
     } catch (error) {
@@ -1369,6 +1406,57 @@ export const ServerSettingsPage = () => {
                           Public servers appear on the Explore page so people can discover and join.
                         </p>
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* System Message Channels */}
+                {(isAdmin || isOwner) && (
+                  <div className="space-y-3 border-t border-border pt-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <Label className="text-sm font-medium">User Joined Messages</Label>
+                      <Select
+                        value={systemChannelJoinId || 'none'}
+                        onValueChange={(value) => setSystemChannelJoinId(value === 'none' ? '' : value)}
+                        disabled={isLoading || isUploadingIcon || isUploadingBanner}
+                      >
+                        <SelectTrigger className="h-9 text-sm w-48">
+                          <SelectValue placeholder="Select a channel" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {channels
+                            .filter((ch) => ch.server_id === server.id && ch.type === 'text')
+                            .map((channel) => (
+                              <SelectItem key={channel.id} value={channel.id}>
+                                #{channel.name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-4">
+                      <Label className="text-sm font-medium">User Left Messages</Label>
+                      <Select
+                        value={systemChannelLeaveId || 'none'}
+                        onValueChange={(value) => setSystemChannelLeaveId(value === 'none' ? '' : value)}
+                        disabled={isLoading || isUploadingIcon || isUploadingBanner}
+                      >
+                        <SelectTrigger className="h-9 text-sm w-48">
+                          <SelectValue placeholder="Select a channel" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {channels
+                            .filter((ch) => ch.server_id === server.id && ch.type === 'text')
+                            .map((channel) => (
+                              <SelectItem key={channel.id} value={channel.id}>
+                                #{channel.name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 )}

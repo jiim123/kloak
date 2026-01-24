@@ -344,7 +344,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   }, []);
 
   const handleSubmit = useCallback(async () => {
-    if (!content.trim() || !user || isMuted || isSending) return;
+    if (!content.trim() || !user || isMuted || isSending || !canSendMessage) return;
 
     const messageContent = content.trim();
 
@@ -431,6 +431,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     user,
     isMuted,
     isSending,
+    canSendMessage,
     channelId,
     replyingTo,
     setReplyingTo,
@@ -526,7 +527,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
 
   const handlePaste = useCallback(
     async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-      if (!user || isMuted || isSending) return;
+      if (!user || isMuted || isSending || !canSendMessage) return;
 
       const items = e.clipboardData?.items;
       if (!items) return;
@@ -602,6 +603,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       user,
       isMuted,
       isSending,
+      canSendMessage,
       content,
       channelId,
       replyingTo,
@@ -750,6 +752,18 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     );
   }
 
+  // No permission to send messages
+  if (!canSendMessagesPermission) {
+    return (
+      <div className="px-4 pb-6">
+        <div className="flex items-center justify-center gap-2 py-4 px-4 bg-secondary rounded-2xl border border-border">
+          <Lock className="w-4 h-4 text-muted-foreground" />
+          <span className="text-muted-foreground">You do not have permission to send messages in this channel</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="px-4 pb-4 sm:pb-6 relative">
       {/* Queued messages indicator */}
@@ -811,7 +825,12 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
           {/* Attachment button */}
           <button
             onClick={() => setShowImageUpload(true)}
-            className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150 mb-0.5 flex-shrink-0"
+            disabled={!canSendMessage}
+            className={`p-2 rounded-xl transition-colors duration-150 mb-0.5 flex-shrink-0 ${
+              canSendMessage
+                ? "text-muted-foreground hover:text-foreground hover:bg-muted"
+                : "text-muted-foreground/50 cursor-not-allowed"
+            }`}
             title="Upload image"
           >
             <Paperclip className="w-5 h-5" />
@@ -826,9 +845,12 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
             onBlur={() => setIsFocused(false)}
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
-            placeholder={`Message #${channelName}`}
+            placeholder={canSendMessage ? `Message #${channelName}` : "You do not have permission to send messages in this channel"}
+            disabled={!canSendMessage}
             rows={1}
-            className="flex-1 bg-transparent resize-none outline-none text-foreground placeholder:text-muted-foreground text-sm sm:text-[15px] leading-relaxed py-2 px-1 font-light min-w-0"
+            className={`flex-1 bg-transparent resize-none outline-none text-foreground placeholder:text-muted-foreground text-sm sm:text-[15px] leading-relaxed py-2 px-1 font-light min-w-0 ${
+              !canSendMessage ? "cursor-not-allowed opacity-50" : ""
+            }`}
             style={{ fontFamily: "system-ui, -apple-system, sans-serif, 'Noto Color Emoji'" }}
           />
 

@@ -115,6 +115,10 @@ export const useServerStore = create<ServerState>((set, get) => ({
         banner_url: string | null;
         is_published?: boolean;
         about?: string | null;
+        system_channel_join_id?: string | null;
+        system_channel_leave_id?: string | null;
+        enable_join_messages?: boolean;
+        enable_leave_messages?: boolean;
         created_at: string;
         role: ServerRole;
         nickname: string | null;
@@ -122,19 +126,23 @@ export const useServerStore = create<ServerState>((set, get) => ({
       }>;
 
       const servers: ServerWithMembership[] = serverData.map((item) => ({
-        id: item.id,
-        name: item.name,
-        owner_id: item.owner_id,
-        invite_code: item.invite_code,
-        icon_url: item.icon_url,
-        banner_url: item.banner_url,
-        is_published: item.is_published ?? false,
-        about: item.about ?? null,
-        created_at: item.created_at,
-        role: item.role,
-        nickname: item.nickname,
-        joined_at: item.joined_at,
-      }));
+          id: item.id,
+          name: item.name,
+          owner_id: item.owner_id,
+          invite_code: item.invite_code,
+          icon_url: item.icon_url,
+          banner_url: item.banner_url,
+          is_published: item.is_published ?? false,
+          about: item.about ?? null,
+          system_channel_join_id: item.system_channel_join_id ?? null,
+          system_channel_leave_id: item.system_channel_leave_id ?? null,
+          enable_join_messages: item.enable_join_messages ?? true,
+          enable_leave_messages: item.enable_leave_messages ?? true,
+          created_at: item.created_at,
+          role: item.role,
+          nickname: item.nickname,
+          joined_at: item.joined_at,
+        }));
 
       const { currentServer } = get();
 
@@ -239,7 +247,17 @@ export const useServerStore = create<ServerState>((set, get) => ({
   updateServer: async (
     serverId: string,
     userId: string,
-    updates: { name?: string; icon_url?: string | null; banner_url?: string | null; is_published?: boolean; about?: string | null }
+    updates: { 
+      name?: string; 
+      icon_url?: string | null; 
+      banner_url?: string | null; 
+      is_published?: boolean; 
+      about?: string | null;
+      system_channel_join_id?: string | null;
+      system_channel_leave_id?: string | null;
+      enable_join_messages?: boolean;
+      enable_leave_messages?: boolean;
+    }
   ) => {
     // Note: publishing is owner-only in the update_server RPC
     try {
@@ -250,20 +268,33 @@ export const useServerStore = create<ServerState>((set, get) => ({
         _updates: updates,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('update_server RPC error:', error);
+        throw error;
+      }
 
       const result = data as { success: boolean; error?: string; server?: any };
       if (!result.success) {
+        console.error('update_server failed:', result.error);
         throw new Error(result.error || 'Failed to update server');
       }
 
+      // Use the server data returned from RPC if available, otherwise use updates
+      const serverUpdates = result.server ? {
+        ...updates,
+        system_channel_join_id: result.server.system_channel_join_id ?? null,
+        system_channel_leave_id: result.server.system_channel_leave_id ?? null,
+        enable_join_messages: result.server.enable_join_messages ?? false,
+        enable_leave_messages: result.server.enable_leave_messages ?? false,
+      } : updates;
+      
       set((state) => ({
         servers: state.servers.map((s) =>
-          s.id === serverId ? { ...s, ...updates } : s
+          s.id === serverId ? { ...s, ...serverUpdates } : s
         ),
         currentServer:
           state.currentServer?.id === serverId
-            ? { ...state.currentServer, ...updates }
+            ? { ...state.currentServer, ...serverUpdates }
             : state.currentServer,
       }));
     } catch (error) {
@@ -288,6 +319,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
       });
 
       if (error) {
+        console.error('join_server_by_invite RPC error:', error);
         // Handle specific error messages
         if (error.message.includes('Invalid invite code')) {
           set({ error: 'Invalid invite code' });
@@ -301,7 +333,14 @@ export const useServerStore = create<ServerState>((set, get) => ({
           set({ error: 'You are already a member of this server' });
           return null;
         }
-        throw error;
+        // Generic error fallback
+        set({ error: error.message || 'Failed to join server' });
+        return null;
+      }
+
+      if (!data) {
+        set({ error: 'Invalid invite code' });
+        return null;
       }
 
       // Parse the server data from the RPC response
@@ -315,7 +354,29 @@ export const useServerStore = create<ServerState>((set, get) => ({
         is_published?: boolean;
         about?: string | null;
         created_at: string;
+        debug?: {
+          system_channel_join_id: string | null;
+          enable_join_messages: boolean | null;
+          user_id?: string;
+          message_inserted: boolean;
+          message_id?: string | null;
+          insert_error?: string | null;
+          channel_exists?: boolean;
+        };
       };
+
+      // Log debug info if available
+      if (serverData.debug) {
+        console.log('[Join Server Debug]', {
+          system_channel_join_id: serverData.debug.system_channel_join_id,
+          enable_join_messages: serverData.debug.enable_join_messages,
+          user_id: serverData.debug.user_id,
+          message_inserted: serverData.debug.message_inserted,
+          message_id: serverData.debug.message_id,
+          insert_error: serverData.debug.insert_error,
+          channel_exists: serverData.debug.channel_exists,
+        });
+      }
 
       const server: Server = {
         id: serverData.id,
@@ -342,11 +403,11 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   leaveServer: async (serverId: string, userId: string) => {
     try {
-      const { error } = await supabase
-        .from('server_members')
-        .delete()
-        .eq('server_id', serverId)
-        .eq('user_id', userId);
+      // Use RPC function to properly leave server (posts leave message if enabled)
+      const { error } = await supabase.rpc('leave_server', {
+        _server_id: serverId,
+        _user_id: userId,
+      });
 
       if (error) throw error;
 
@@ -741,8 +802,6 @@ export const useServerStore = create<ServerState>((set, get) => ({
         throw error;
       }
 
-      console.log('get_server_members response:', { data, type: typeof data, isArray: Array.isArray(data) });
-
       // Handle JSON response - Supabase RPC may return JSON string or parsed array
       let membersData: Array<any>;
       if (!data) {
@@ -793,8 +852,6 @@ export const useServerStore = create<ServerState>((set, get) => ({
         };
       }>;
 
-      console.log('membersData before processing:', typedMembersData, 'length:', typedMembersData?.length);
-
       const blockedUserIdSet = new Set(useFriendStore.getState().visibilityBlockedUserIds);
 
       const members: ServerMember[] = typedMembersData
@@ -813,7 +870,6 @@ export const useServerStore = create<ServerState>((set, get) => ({
           roles: item.roles as any,
         }));
 
-      console.log('Processed members:', members, 'length:', members.length);
       set({ members });
     } catch (error) {
       console.error('Failed to fetch members:', error);

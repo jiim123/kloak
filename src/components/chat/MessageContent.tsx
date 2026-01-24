@@ -19,6 +19,7 @@ interface MessageContentProps {
   currentUserId?: string;
   messageId?: string;
   users?: UserInfo[];
+  messageUser?: UserInfo | null;
 }
 
 interface ParsedSegment {
@@ -242,7 +243,7 @@ const parseTextContent = (
   return parsed;
 };
 
-export const MessageContent = ({ content, currentUserId, messageId, users }: MessageContentProps) => {
+export const MessageContent = ({ content, currentUserId, messageId, users, messageUser }: MessageContentProps) => {
   const { linkPreviewsEnabled, openModal } = useUIStore();
   const { members, currentServer } = useServerStore();
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
@@ -298,6 +299,16 @@ export const MessageContent = ({ content, currentUserId, messageId, users }: Mes
       users.forEach(u => map.set(u.id, u));
     }
     
+    // Add message user (important for system messages where user might not be a member)
+    if (messageUser) {
+      map.set(messageUser.id, {
+        id: messageUser.id,
+        username: messageUser.username,
+        display_name: messageUser.display_name,
+        nickname: undefined, // Message user doesn't have nickname context
+      });
+    }
+    
     // Add members from server store (for channel messages)
     members.forEach(member => {
       if (member.user) {
@@ -311,7 +322,7 @@ export const MessageContent = ({ content, currentUserId, messageId, users }: Mes
     });
     
     return map;
-  }, [users, members]);
+  }, [users, members, messageUser]);
   
   // Extract URLs for link previews (only from text segments, not code blocks)
   // Separate image URLs from regular URLs

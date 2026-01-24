@@ -113,6 +113,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
                   reply_to_id: newMsg.reply_to_id,
                   content: newMsg.content,
                   is_pinned: newMsg.is_pinned || false,
+                  is_system_message: newMsg.is_system_message || false,
                   edited_at: newMsg.edited_at,
                   created_at: newMsg.created_at,
                   user,

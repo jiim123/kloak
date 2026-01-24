@@ -568,36 +568,68 @@ export const MessageItem = memo(function MessageItem({
               onTouchEnd={clearLongPress}
               onTouchMove={clearLongPress}
             >
-          {/* Avatar / Timestamp column */}
-          {compactMode ? (
-            <div className="w-16 flex-shrink-0 pt-0.5">
-              <span
-                className={`text-[10px] text-muted-foreground transition-opacity duration-150 whitespace-nowrap block ${
-                  showTimestamps || !isGrouped ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                }`}
-              >
-                {formattedTime}
-              </span>
-            </div>
-          ) : (
-            <div className="w-10 flex-shrink-0">
-              {!isGrouped && messageUser ? (
-                <AvatarWithDecoration 
-                  user={messageUser} 
-                  className="w-10 h-10 cursor-pointer" 
-                  active={isRowHovered}
-                  onClick={handleUsernameClick}
-                />
+          {/* Avatar / Timestamp column - hidden for system messages */}
+          {!message.is_system_message && (
+            <>
+              {compactMode ? (
+                <div className="w-16 flex-shrink-0 pt-0.5">
+                  <span
+                    className={`text-[10px] text-muted-foreground transition-opacity duration-150 whitespace-nowrap block ${
+                      showTimestamps || !isGrouped ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                    }`}
+                  >
+                    {formattedTime}
+                  </span>
+                </div>
               ) : (
-                <span className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                  {formattedTime}
-                </span>
+                <div className="w-10 flex-shrink-0">
+                  {!isGrouped && messageUser ? (
+                    <AvatarWithDecoration 
+                      user={messageUser} 
+                      className="w-10 h-10 cursor-pointer" 
+                      active={isRowHovered}
+                      onClick={handleUsernameClick}
+                    />
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                      {formattedTime}
+                    </span>
+                  )}
+                </div>
               )}
-            </div>
+            </>
           )}
 
           {/* Content */}
           <div className="flex-1 min-w-0">
+            {/* System Message - Special rendering */}
+            {message.is_system_message ? (
+              <div className="flex items-center gap-2 py-1">
+                {messageUser && (
+                  <>
+                    <AvatarWithDecoration 
+                      user={messageUser} 
+                      className="w-5 h-5 cursor-pointer flex-shrink-0" 
+                      active={isRowHovered}
+                      onClick={handleUsernameClick}
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      <MessageContent 
+                        content={message.content} 
+                        currentUserId={user?.id} 
+                        messageId={message.id}
+                        messageUser={messageUser ? {
+                          id: messageUser.id,
+                          username: messageUser.username,
+                          display_name: messageUser.display_name,
+                        } : undefined}
+                      />
+                    </span>
+                  </>
+                )}
+              </div>
+            ) : (
+              <>
             {/* Header */}
             {compactMode ? (
               <span className="inline">
@@ -695,7 +727,16 @@ export const MessageItem = memo(function MessageItem({
                 {pollId ? (
                   <PollMessage pollId={pollId} />
                 ) : (
-                  <MessageContent content={message.content} currentUserId={user?.id} messageId={message.id} />
+                  <MessageContent 
+                    content={message.content} 
+                    currentUserId={user?.id} 
+                    messageId={message.id}
+                    messageUser={messageUser ? {
+                      id: messageUser.id,
+                      username: messageUser.username,
+                      display_name: messageUser.display_name,
+                    } : undefined}
+                  />
                 )}
               </div>
             )}
@@ -710,8 +751,8 @@ export const MessageItem = memo(function MessageItem({
               </Tooltip>
             )}
 
-            {/* Attachments */}
-            {message.attachments && message.attachments.length > 0 && (
+            {/* Attachments - skip for system messages */}
+            {!message.is_system_message && message.attachments && message.attachments.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
                 {message.attachments.map((attachment) => (
                   <div key={attachment.id} className="relative">
@@ -742,8 +783,8 @@ export const MessageItem = memo(function MessageItem({
               </div>
             )}
 
-            {/* Reactions */}
-            {message.reactions && message.reactions.length > 0 && (
+            {/* Reactions - skip for system messages */}
+            {!message.is_system_message && message.reactions && message.reactions.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">
                 {message.reactions.map((reaction) => (
                   <HoverCard key={reaction.emoji} openDelay={200}>
@@ -804,10 +845,12 @@ export const MessageItem = memo(function MessageItem({
                 ))}
               </div>
             )}
+              </>
+            )}
           </div>
 
-          {/* Hover actions - Desktop only */}
-          {!isEditing && (
+          {/* Hover actions - Desktop only - skip for system messages */}
+          {!isEditing && !message.is_system_message && (
             <div className="absolute right-2 -top-4 hidden md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 md:flex items-center gap-1 bg-background/95 backdrop-blur-sm border border-border rounded-xl shadow-xl p-1 transition-opacity duration-200">
               {/* Reactions - Desktop */}
               {canAddReactions && (

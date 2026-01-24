@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, forwardRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Folder, Plus, Settings, Home, ChevronDown, ChevronRight, Trash2, Edit2, Palette } from "lucide-react";
+import { Folder, Plus, Settings, Home, ChevronDown, ChevronRight, Trash2, Edit2, Palette, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { MotionButton, MotionDiv } from "@/components/ui/motion-elements";
@@ -239,6 +239,8 @@ const DraggableServerItem = forwardRef<
     onHover: () => void;
     onLeave: () => void;
     onClick: () => void;
+    onLeaveServer?: (serverId: string) => void;
+    onOpenSettings?: () => void;
   }
 >(({
   server,
@@ -254,6 +256,8 @@ const DraggableServerItem = forwardRef<
   onHover,
   onLeave,
   onClick,
+  onLeaveServer,
+  onOpenSettings,
 }, ref) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: getServerDragId(server.id),
@@ -261,36 +265,40 @@ const DraggableServerItem = forwardRef<
 
   const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined;
 
+  const isOwner = server.role === 'owner';
+
   return (
-    <motion.div
-      ref={(node) => {
-        setNodeRef(node);
-        if (typeof ref === 'function') {
-          ref(node);
-        } else if (ref) {
-          ref.current = node;
-        }
-      }}
-      style={style}
-      custom={index}
-      variants={serverItemVariants}
-      initial="hidden"
-      animate="visible"
-      exit={{ opacity: 0, x: -20, transition: { duration: 0.15 } }}
-      layout
-    >
-      <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
-        <TooltipTrigger asChild>
-          <MotionButton
-            className={cn("relative group", isDragging && "opacity-40")}
-            onMouseEnter={onHover}
-            onMouseLeave={onLeave}
-            onClick={onClick}
-            whileHover="hover"
-            whileTap="tap"
-            {...attributes}
-            {...listeners}
-          >
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <motion.div
+          ref={(node) => {
+            setNodeRef(node);
+            if (typeof ref === 'function') {
+              ref(node);
+            } else if (ref) {
+              ref.current = node;
+            }
+          }}
+          style={style}
+          custom={index}
+          variants={serverItemVariants}
+          initial="hidden"
+          animate="visible"
+          exit={{ opacity: 0, x: -20, transition: { duration: 0.15 } }}
+          layout
+        >
+          <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
+            <TooltipTrigger asChild>
+              <MotionButton
+                className={cn("relative group", isDragging && "opacity-40")}
+                onMouseEnter={onHover}
+                onMouseLeave={onLeave}
+                onClick={onClick}
+                whileHover="hover"
+                whileTap="tap"
+                {...attributes}
+                {...listeners}
+              >
             {/* Indicator pill */}
             <motion.span
               className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 bg-foreground rounded-r-full"
@@ -357,7 +365,36 @@ const DraggableServerItem = forwardRef<
           {server.name}
         </TooltipContent>
       </Tooltip>
-    </motion.div>
+        </motion.div>
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        {isOwner && onOpenSettings && (
+          <ContextMenuItem
+            onSelect={(e) => {
+              e.preventDefault();
+              onOpenSettings();
+            }}
+          >
+            <Settings className="w-4 h-4 mr-2" />
+            Server Settings
+          </ContextMenuItem>
+        )}
+        {!isOwner && onLeaveServer && (
+          <ContextMenuItem
+            onSelect={(e) => {
+              e.preventDefault();
+              if (window.confirm(`Are you sure you want to leave "${server.name}"?`)) {
+                onLeaveServer(server.id);
+              }
+            }}
+            className="text-destructive focus:text-destructive"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Leave Server
+          </ContextMenuItem>
+        )}
+      </ContextMenuContent>
+    </ContextMenu>
   );
 });
 
@@ -368,7 +405,7 @@ export const ServerSidebar = () => {
   const { user } = useAuthStore();
   const { servers, currentServer, setCurrentServer, isLoading, fetchServers } = useServerStore();
   const { setCurrentConversation } = useDMStore();
-  const { openModal, activeModal, closeModal, closeServerSettings } = useUIStore();
+  const { openModal, activeModal, closeModal, closeServerSettings, openServerSettings } = useUIStore();
   const [serverChannels, setServerChannels] = useState<ServerChannels>({});
   const [hoveredServer, setHoveredServer] = useState<string | null>(null);
   const [tooltipsEnabled, setTooltipsEnabled] = useState(false);
@@ -888,6 +925,22 @@ export const ServerSidebar = () => {
                           closeModal();
                           navigate(`/app/servers/${server.id}`);
                         }}
+                        onLeaveServer={async (serverId) => {
+                          if (user?.id) {
+                            try {
+                              await leaveServer(serverId, user.id);
+                              if (currentServer?.id === serverId) {
+                                navigate('/app');
+                              }
+                            } catch (error) {
+                              console.error('Failed to leave server:', error);
+                            }
+                          }
+                        }}
+                        onOpenSettings={() => {
+                          setCurrentServer(server);
+                          openServerSettings();
+                        }}
                       />
                     );
                   })}
@@ -921,6 +974,22 @@ export const ServerSidebar = () => {
                   closeServerSettings();
                   closeModal();
                   navigate(`/app/servers/${server.id}`);
+                }}
+                onLeaveServer={async (serverId) => {
+                  if (user?.id) {
+                    try {
+                      await leaveServer(serverId, user.id);
+                      if (currentServer?.id === serverId) {
+                        navigate('/app');
+                      }
+                    } catch (error) {
+                      console.error('Failed to leave server:', error);
+                    }
+                  }
+                }}
+                onOpenSettings={() => {
+                  setCurrentServer(server);
+                  openServerSettings();
                 }}
               />
             );

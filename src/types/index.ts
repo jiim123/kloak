@@ -97,6 +97,10 @@ export interface Server {
   owner_id: string;
   invite_code: string;
   created_at: string;
+  system_channel_join_id?: string | null;
+  system_channel_leave_id?: string | null;
+  enable_join_messages?: boolean;
+  enable_leave_messages?: boolean;
 }
 
 export interface ServerWithMembership extends Server {
@@ -198,6 +202,7 @@ export interface Message {
   reply_to_id: string | null;
   content: string;
   is_pinned: boolean;
+  is_system_message?: boolean;
   edited_at: string | null;
   created_at: string;
   user?: User;
