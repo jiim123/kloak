@@ -29,12 +29,12 @@ export const HeroImage = () => {
           <motion.div {...fadeIn} className="absolute inset-x-0 bottom-0 p-5 sm:p-8 md:p-10 lg:p-14 xl:p-16">
             <div className="max-w-3xl">
               {/* Tagline */}
-              <p className="text-xs sm:text-sm font-medium text-white mb-2 sm:mb-3 md:mb-4 uppercase tracking-wide">
+              <p className="landing-body text-white/80 mb-2 sm:mb-3 md:mb-4 text-xs sm:text-sm">
                 For Gamers · Communities · Teams · Everyone
               </p>
 
               {/* Headline */}
-              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl 2xl:text-7xl font-semibold text-white leading-[1.1] mb-3 sm:mb-4 md:mb-6">
+              <h1 className="landing-hero-title text-white mb-3 sm:mb-4 md:mb-6">
                 Where conversations
                 <br className="hidden sm:block" />
                 <span className="sm:hidden"> </span>
@@ -42,13 +42,13 @@ export const HeroImage = () => {
               </h1>
 
               {/* Description */}
-              <p className="text-sm sm:text-base md:text-lg lg:text-xl text-white/80 mb-4 sm:mb-6 md:mb-8 leading-relaxed max-w-xl">
+              <p className="landing-body text-white/80 mb-4 sm:mb-6 md:mb-8 max-w-xl text-sm sm:text-base">
                 A space for your community to connect, create, and grow together—without ads, tracking, or compromise.
               </p>
 
               {/* CTA Button */}
               <Link to="/app">
-                <Button size="lg" className="h-10 sm:h-11 md:h-12 px-5 sm:px-6 md:px-8 text-sm sm:text-base rounded-xl">
+                <Button size="lg" className="h-10 sm:h-11 md:h-12 px-5 sm:px-6 md:px-8 text-sm sm:text-base rounded-xl uppercase font-semibold tracking-wider">
                   Join Kloak
                   <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2" />
                 </Button>

@@ -17,7 +17,7 @@ export function Footer() {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <img src={KloakLogo} alt="Kloak" className="h-5 opacity-50" />
-            <span className="text-muted-foreground/60 text-xs">
+            <span className="text-muted-foreground/60 text-xs uppercase font-light tracking-wider">
               © {new Date().getFullYear()}
             </span>
           </div>
@@ -27,7 +27,7 @@ export function Footer() {
               <Link
                 key={link.title}
                 to={link.href}
-                className="text-muted-foreground/70 hover:text-foreground text-xs transition-colors"
+                className="text-muted-foreground/70 hover:text-foreground text-xs uppercase font-light tracking-wider transition-colors"
               >
                 {link.title}
               </Link>

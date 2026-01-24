@@ -427,6 +427,94 @@
     letter-spacing: 0.01em;
   }
 
+  /* ========================================
+     LANDING PAGE TYPOGRAPHY
+     ======================================== */
+  
+  /* Landing titles - 1.375em, uppercase, semi-bold, line-height 1.2 */
+  .landing-title {
+    font-size: 1.375em;
+    font-weight: 600;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  /* Landing body text - 1em, uppercase, light, line-height 1.5 */
+  .landing-body {
+    font-size: 1em;
+    font-weight: 300;
+    line-height: 1.5;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  /* Landing hero title - larger variant */
+  .landing-hero-title {
+    font-size: 2.5em;
+    font-weight: 600;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+  }
+
+  @media (min-width: 640px) {
+    .landing-hero-title {
+      font-size: 3em;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .landing-hero-title {
+      font-size: 3.5em;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .landing-hero-title {
+      font-size: 4em;
+    }
+  }
+
+  /* Landing section title - medium variant */
+  .landing-section-title {
+    font-size: 1.75em;
+    font-weight: 600;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+  }
+
+  @media (min-width: 640px) {
+    .landing-section-title {
+      font-size: 2.25em;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .landing-section-title {
+      font-size: 2.75em;
+    }
+  }
+
+  /* Landing card title */
+  .landing-card-title {
+    font-size: 1.375em;
+    font-weight: 600;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  /* Landing nav link */
+  .landing-nav-link {
+    font-size: 0.875em;
+    font-weight: 600;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
   /* Emoji-only message styling - 2.5x size */
   .emoji-only {
     font-size: 2.5em;
