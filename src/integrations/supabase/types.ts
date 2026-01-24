@@ -860,6 +860,58 @@ export type Database = {
           },
         ]
       }
+      server_invites: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string
+          id: string
+          revoked_at: string | null
+          revoked_by: string | null
+          server_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by: string
+          id?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          server_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          server_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "server_invites_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "server_invites_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "server_invites_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       server_member_roles: {
         Row: {
           created_at: string | null
@@ -1253,6 +1305,10 @@ export type Database = {
         }
         Returns: string
       }
+      create_server_invite: {
+        Args: { _server_id: string; _user_id: string }
+        Returns: string
+      }
       create_server_role: {
         Args: {
           _color?: string
@@ -1328,8 +1384,11 @@ export type Database = {
         Args: { _server_id: string; _user_id: string }
         Returns: Json
       }
+      get_blocked_user_ids_for_visibility: {
+        Args: { _user_id: string }
+        Returns: Json
+      }
       get_blocked_users: { Args: { _user_id: string }; Returns: Json }
-      get_blocked_user_ids_for_visibility: { Args: { _user_id: string }; Returns: Json }
       get_channel_messages: {
         Args: {
           _before_id?: string
@@ -1400,6 +1459,19 @@ export type Database = {
         Args: { _server_id: string; _user_id: string }
         Returns: boolean
       }
+      list_server_invites: {
+        Args: { _server_id: string; _user_id: string }
+        Returns: {
+          code: string
+          created_at: string
+          created_by: string
+          created_by_username: string
+          id: string
+          revoked_at: string
+          revoked_by: string
+          revoked_by_username: string
+        }[]
+      }
       login_user: { Args: { _key_hash: string }; Returns: Json }
       mark_channel_read: {
         Args: {
@@ -1441,6 +1513,10 @@ export type Database = {
       }
       remove_role_from_member: {
         Args: { _member_id: string; _role_id: string; _user_id: string }
+        Returns: boolean
+      }
+      revoke_server_invite: {
+        Args: { _invite_id: string; _user_id: string }
         Returns: boolean
       }
       save_user_server_folders: {
