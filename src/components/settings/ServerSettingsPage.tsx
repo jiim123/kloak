@@ -2008,7 +2008,24 @@ export const ServerSettingsPage = () => {
                           const usesCount = invite.uses_count ?? 0;
                           const maxUses = invite.max_uses ?? null;
                           const isMaxed = maxUses !== null && usesCount >= maxUses;
-                          const expiresLabel = invite.expires_at ? new Date(invite.expires_at).toLocaleString() : 'Never';
+                          const expiresLabel = (() => {
+                            if (!invite.expires_at) return 'Never';
+                            const diffMs = new Date(invite.expires_at).getTime() - Date.now();
+                            if (diffMs <= 0) return 'Expired';
+                            const minute = 60 * 1000;
+                            const hour = 60 * minute;
+                            const day = 24 * hour;
+                            if (diffMs >= day) {
+                              const d = Math.ceil(diffMs / day);
+                              return `in ${d} day${d === 1 ? '' : 's'}`;
+                            }
+                            if (diffMs >= hour) {
+                              const h = Math.ceil(diffMs / hour);
+                              return `in ${h} hour${h === 1 ? '' : 's'}`;
+                            }
+                            const m = Math.ceil(diffMs / minute);
+                            return `in ${m} minute${m === 1 ? '' : 's'}`;
+                          })();
                           const maxUsesLabel = maxUses !== null ? String(maxUses) : '∞';
                           return (
                             <div

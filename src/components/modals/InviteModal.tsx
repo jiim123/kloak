@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Copy, Users, Loader2, Zap, Link2 } from "lucide-react";
+import { Check, Copy, Users, Loader2, Link2 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -108,24 +108,6 @@ export const InviteModal = () => {
     closeModal();
   };
 
-  const steps = [
-    {
-      icon: <Zap className="h-4 w-4" />,
-      title: "Open server menu",
-      text: "Click the + button in the server sidebar",
-    },
-    {
-      icon: <Users className="h-4 w-4" />,
-      title: "Join option",
-      text: 'Select "Join a Server" from the menu',
-    },
-    {
-      icon: <Link2 className="h-4 w-4" />,
-      title: "Enter code",
-      text: "Paste or type this invite code",
-    },
-  ];
-
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
@@ -229,33 +211,6 @@ export const InviteModal = () => {
                 Copy Invite Link
               </Button>
             </div>
-
-            {/* How it works section */}
-            <div className="space-y-4">
-              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                How to join
-              </Label>
-              <div className="space-y-3">
-                {steps.map((step, index) => (
-                  <div
-                    key={index}
-                    className="flex items-start gap-4 p-3 rounded-xl bg-secondary/50 border border-border/50"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 text-primary">
-                      {step.icon}
-                    </div>
-                    <div className="min-w-0 pt-0.5 flex-1">
-                      <p className="text-sm font-medium">{step.title}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{step.text}</p>
-                    </div>
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-secondary flex items-center justify-center text-xs font-medium text-muted-foreground">
-                      {index + 1}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
           </div>
         </DialogContent>
       </Dialog>
