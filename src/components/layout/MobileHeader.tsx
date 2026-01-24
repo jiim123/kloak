@@ -21,7 +21,7 @@ export const MobileHeader = ({ isDMView, showFriends, showExplore }: MobileHeade
       if (currentConversation?.other_user) {
         return currentConversation.other_user.display_name || currentConversation.other_user.username;
       }
-      return 'Direct Messages';
+      return 'Home';
     }
     
     if (currentChannel) {

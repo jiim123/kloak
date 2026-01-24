@@ -86,12 +86,35 @@ export const ImageLightbox = ({ imageUrl, imageUrls = [], onClose }: ImageLightb
     return false;
   }, []);
 
-  // Close on backdrop click
+  // Close on backdrop click - close when clicking anywhere except interactive elements
   const handleBackdropClick = useCallback((e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
+    const target = e.target as HTMLElement;
+    
+    // Don't close if clicking on:
+    // - Buttons or their children
+    // - The image itself (when zoomed, allow dragging)
+    // - Thumbnails
+    // - Control bars
+    if (
+      target.closest('button') ||
+      target.tagName === 'IMG' ||
+      target.closest('.bg-gradient-to-b') || // Top controls bar
+      target.closest('.bg-gradient-to-t')    // Bottom thumbnails bar
+    ) {
+      return;
+    }
+    
+    // Close on backdrop or empty areas
+    onClose();
+  }, [onClose]);
+
+  // Close when clicking on the image container (but not on the image itself)
+  const handleImageContainerClick = useCallback((e: React.MouseEvent) => {
+    // Only close if clicking on the container (empty space), not the image
+    if (e.target === e.currentTarget && scale === 1) {
       onClose();
     }
-  }, [onClose]);
+  }, [scale, onClose]);
 
   // Download image
   const handleDownload = useCallback(async () => {
@@ -231,6 +254,7 @@ export const ImageLightbox = ({ imageUrl, imageUrls = [], onClose }: ImageLightb
           <motion.div
             className="flex-1 flex items-center justify-center w-full overflow-hidden select-none touch-none"
             onContextMenu={handleContextMenu}
+            onClick={handleImageContainerClick}
           >
             <motion.img
               src={currentImage}
