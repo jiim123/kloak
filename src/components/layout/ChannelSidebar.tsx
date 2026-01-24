@@ -13,6 +13,10 @@ import {
   FolderPlus,
   Info,
   Users,
+  Edit2,
+  Trash2,
+  Link2,
+  Copy,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -124,6 +128,8 @@ const SortableChannel = ({
   resolveUser,
   onSelect,
   onEdit,
+  onDelete,
+  onCopyLink,
 }: {
   channel: Channel;
   isActive: boolean;
@@ -134,6 +140,8 @@ const SortableChannel = ({
   resolveUser?: (userId: string) => { avatarUser?: any; label: string };
   onSelect: () => void;
   onEdit: () => void;
+  onDelete: () => void;
+  onCopyLink: () => void;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: channel.id,
@@ -182,16 +190,18 @@ const SortableChannel = ({
       transition={{ type: "spring", stiffness: 500, damping: 30 }}
       className="relative"
     >
-      <button
-        onClick={onSelect}
-        className={cn(
-          "group relative w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-all duration-150 select-none",
-          "hover:bg-secondary/80",
-          isActive && "bg-secondary text-foreground",
-          !isActive && "text-muted-foreground hover:text-foreground",
-          isUnread && !isActive && "text-foreground font-semibold",
-        )}
-      >
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <button
+            onClick={onSelect}
+            className={cn(
+              "group relative w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-all duration-150 select-none",
+              "hover:bg-secondary/80",
+              isActive && "bg-secondary text-foreground",
+              !isActive && "text-muted-foreground hover:text-foreground",
+              isUnread && !isActive && "text-foreground font-semibold",
+            )}
+          >
         {/* Active indicator */}
         <AnimatePresence>
           {isActive && (
@@ -256,7 +266,28 @@ const SortableChannel = ({
             </div>
           </div>
         )}
-      </button>
+          </button>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          {isAdmin && (
+            <>
+              <ContextMenuItem onClick={onEdit}>
+                <Edit2 className="w-4 h-4 mr-2" />
+                Edit Channel
+              </ContextMenuItem>
+              <ContextMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Channel
+              </ContextMenuItem>
+              <ContextMenuSeparator />
+            </>
+          )}
+          <ContextMenuItem onClick={onCopyLink}>
+            <Copy className="w-4 h-4 mr-2" />
+            Copy Channel Link
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
 
       {channel.type === "voice" && voiceUserIds && voiceUserIds.length > 0 && resolveUser && (
         <div className="ml-7 mt-1 space-y-1">
@@ -283,6 +314,8 @@ const CategoryContent = ({
   isAdmin,
   onSelectChannel,
   onEditChannel,
+  onDeleteChannel,
+  onCopyChannelLink,
   voicePresenceByChannel,
   resolveUser,
 }: {
@@ -292,6 +325,8 @@ const CategoryContent = ({
   isAdmin: boolean;
   onSelectChannel: (channel: Channel) => void;
   onEditChannel: (channelId: string) => void;
+  onDeleteChannel: (channelId: string) => void;
+  onCopyChannelLink: (channelId: string) => void;
   voicePresenceByChannel: Record<string, string[]>;
   resolveUser: (userId: string) => { avatarUser?: any; label: string };
 }) => {
@@ -360,6 +395,8 @@ const CategoryContent = ({
                 resolveUser={resolveUser}
                 onSelect={() => onSelectChannel(channel)}
                 onEdit={() => onEditChannel(channel.id)}
+                onDelete={() => onDeleteChannel(channel.id)}
+                onCopyLink={() => onCopyChannelLink(channel.id)}
               />
             );
           })}
@@ -382,6 +419,9 @@ const SortableCategory = ({
   onAddChannel,
   onEditChannel,
   onEditCategory,
+  onDeleteCategory,
+  onDeleteChannel,
+  onCopyChannelLink,
   isDragOver,
   voicePresenceByChannel,
   resolveUser,
@@ -397,6 +437,9 @@ const SortableCategory = ({
   onAddChannel: () => void;
   onEditChannel: (channelId: string) => void;
   onEditCategory: () => void;
+  onDeleteCategory: () => void;
+  onDeleteChannel: (channelId: string) => void;
+  onCopyChannelLink: (channelId: string) => void;
   isDragOver?: boolean;
   voicePresenceByChannel: Record<string, string[]>;
   resolveUser: (userId: string) => { avatarUser?: any; label: string };
@@ -433,10 +476,12 @@ const SortableCategory = ({
     >
       {/* Category header */}
       <div className="group flex items-center gap-1 px-0.5 mb-1">
-        <button
-          className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground uppercase tracking-wider flex-1 py-1"
-          onClick={onToggle}
-        >
+        <ContextMenu>
+          <ContextMenuTrigger asChild>
+            <button
+              className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground uppercase tracking-wider flex-1 py-1"
+              onClick={onToggle}
+            >
           <motion.div
             animate={{ rotate: isCollapsed ? -90 : 0 }}
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
@@ -445,7 +490,21 @@ const SortableCategory = ({
           </motion.div>
           <span className="truncate">{category.name}</span>
           {isCollapsed && <span className="ml-1 text-muted-foreground/60">({channels.length})</span>}
-        </button>
+            </button>
+          </ContextMenuTrigger>
+          {isAdmin && (
+            <ContextMenuContent>
+              <ContextMenuItem onClick={onEditCategory}>
+                <Edit2 className="w-4 h-4 mr-2" />
+                Edit Category
+              </ContextMenuItem>
+              <ContextMenuItem onClick={onDeleteCategory} className="text-destructive focus:text-destructive">
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Category
+              </ContextMenuItem>
+            </ContextMenuContent>
+          )}
+        </ContextMenu>
 
         {isAdmin && (
           <Settings
@@ -499,6 +558,8 @@ const SortableCategory = ({
             isAdmin={isAdmin}
             onSelectChannel={onSelectChannel}
             onEditChannel={onEditChannel}
+            onDeleteChannel={onDeleteChannel}
+            onCopyChannelLink={onCopyChannelLink}
             voicePresenceByChannel={voicePresenceByChannel}
             resolveUser={resolveUser}
           />
@@ -523,6 +584,8 @@ export const ChannelSidebar = () => {
     leaveServer,
     reorderCategories,
     reorderChannels,
+    deleteChannel,
+    deleteCategory,
   } = useServerStore();
   const voicePresenceByChannel = useVoiceStore((s) => s.presenceByChannel);
   const joinedVoiceChannelId = useVoiceStore((s) => s.joinedChannelId);
@@ -653,6 +716,45 @@ export const ChannelSidebar = () => {
     if (!currentServer || !user || isOwner) return;
     await leaveServer(currentServer.id, user.id);
   };
+
+  const handleCopyChannelLink = useCallback(
+    (channelId: string) => {
+      if (!currentServer) return;
+      const channelLink = `${window.location.origin}/app/servers/${currentServer.id}/channels/${channelId}`;
+      navigator.clipboard.writeText(channelLink).then(() => {
+        toast.success("Channel link copied!");
+      }).catch(() => {
+        toast.error("Failed to copy channel link");
+      });
+    },
+    [currentServer],
+  );
+
+  const handleDeleteChannel = useCallback(
+    async (channelId: string) => {
+      if (!user) return;
+      try {
+        await deleteChannel(channelId, user.id);
+        toast.success("Channel deleted");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to delete channel");
+      }
+    },
+    [user, deleteChannel],
+  );
+
+  const handleDeleteCategory = useCallback(
+    async (categoryId: string) => {
+      if (!user) return;
+      try {
+        await deleteCategory(categoryId, user.id);
+        toast.success("Category deleted");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to delete category");
+      }
+    },
+    [user, deleteCategory],
+  );
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
@@ -1045,6 +1147,8 @@ export const ChannelSidebar = () => {
                             resolveUser={resolveUser}
                             onSelect={() => handleSelectChannel(channel)}
                             onEdit={() => openModal("edit-channel", { channelId: channel.id })}
+                            onDelete={() => handleDeleteChannel(channel.id)}
+                            onCopyLink={() => handleCopyChannelLink(channel.id)}
                           />
                         );
                       })}
@@ -1069,6 +1173,9 @@ export const ChannelSidebar = () => {
                     onAddChannel={() => openModal("create-channel", { categoryId: category.id })}
                     onEditChannel={(channelId) => openModal("edit-channel", { channelId })}
                     onEditCategory={() => openModal("edit-channel", { isCategory: true, categoryId: category.id })}
+                    onDeleteCategory={() => handleDeleteCategory(category.id)}
+                    onDeleteChannel={handleDeleteChannel}
+                    onCopyChannelLink={handleCopyChannelLink}
                     isDragOver={overCategoryId === category.id && activeType === "channel"}
                     voicePresenceByChannel={voicePresenceByChannel}
                     resolveUser={resolveUser}

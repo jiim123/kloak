@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo, memo, forwardRef } from "react";
 import { Smile, Reply, Pencil, Trash2, Pin, MoreHorizontal, CornerUpLeft, Copy } from "lucide-react";
+import { toast } from "sonner";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
@@ -10,6 +11,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuthStore } from "@/stores/authStore";
@@ -380,7 +388,13 @@ export const MessageItem = memo(function MessageItem({
 
   const handlePin = useCallback(async () => {
     if (!user) return;
-    await pinMessage(message.id, !message.is_pinned, user.id);
+    try {
+      await pinMessage(message.id, !message.is_pinned, user.id);
+      toast.success(message.is_pinned ? "Message unpinned" : "Message pinned");
+    } catch (error) {
+      console.error("Failed to pin/unpin message:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to pin/unpin message");
+    }
   }, [user, message.id, message.is_pinned, pinMessage]);
 
   const handleReactionClick = useCallback(
@@ -421,8 +435,14 @@ export const MessageItem = memo(function MessageItem({
     [handleAddReaction],
   );
 
-  const handleCopyText = useCallback(() => {
-    navigator.clipboard.writeText(message.content);
+  const handleCopyText = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      toast.success("Message copied to clipboard");
+    } catch (error) {
+      console.error("Failed to copy text:", error);
+      toast.error("Failed to copy message");
+    }
   }, [message.content]);
 
   const handleCopyMessageId = useCallback(() => {
@@ -538,14 +558,16 @@ export const MessageItem = memo(function MessageItem({
         className={outerClassName}
         style={shouldAnimate ? { animationFillMode: "both" } : undefined}
       >
-        <div
-          className={innerClassName}
-          onMouseEnter={() => setIsRowHovered(true)}
-          onMouseLeave={() => setIsRowHovered(false)}
-          onTouchStart={handleTouchStart}
-          onTouchEnd={clearLongPress}
-          onTouchMove={clearLongPress}
-        >
+        <ContextMenu>
+          <ContextMenuTrigger asChild>
+            <div
+              className={innerClassName}
+              onMouseEnter={() => setIsRowHovered(true)}
+              onMouseLeave={() => setIsRowHovered(false)}
+              onTouchStart={handleTouchStart}
+              onTouchEnd={clearLongPress}
+              onTouchMove={clearLongPress}
+            >
           {/* Avatar / Timestamp column */}
           {compactMode ? (
             <div className="w-16 flex-shrink-0 pt-0.5">
@@ -891,7 +913,46 @@ export const MessageItem = memo(function MessageItem({
               )}
             </div>
           )}
-        </div>
+          </div>
+          </ContextMenuTrigger>
+          <ContextMenuContent>
+            <ContextMenuItem onClick={() => setReplyingTo(message)}>
+              <Reply className="w-4 h-4 mr-2" />
+              Reply
+            </ContextMenuItem>
+            <ContextMenuItem onClick={handleCopyText}>
+              <Copy className="w-4 h-4 mr-2" />
+              Copy Text
+            </ContextMenuItem>
+            {isOwnMessage && (
+              <>
+                <ContextMenuSeparator />
+                <ContextMenuItem onClick={handleStartEditing}>
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Edit Message
+                </ContextMenuItem>
+              </>
+            )}
+            {canPinMessages && (
+              <>
+                <ContextMenuSeparator />
+                <ContextMenuItem onClick={handlePin}>
+                  <Pin className="w-4 h-4 mr-2" />
+                  {message.is_pinned ? "Unpin Message" : "Pin Message"}
+                </ContextMenuItem>
+              </>
+            )}
+            {(isOwnMessage || isAdmin) && (
+              <>
+                <ContextMenuSeparator />
+                <ContextMenuItem onClick={() => setShowDeleteModal(true)} className="text-destructive focus:text-destructive">
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Message
+                </ContextMenuItem>
+              </>
+            )}
+          </ContextMenuContent>
+        </ContextMenu>
       </div>
 
       {/* Mobile action drawer */}
