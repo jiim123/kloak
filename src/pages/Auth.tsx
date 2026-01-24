@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuthStore } from "@/stores/authStore";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,8 +51,20 @@ type AuthStep = "form" | "key-display";
 
 const Auth = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, isLoading, error, createAccount, login, setError } = useAuthStore();
   const { toast } = useToast();
+
+  const redirectParam = useMemo(() => new URLSearchParams(location.search).get("redirect"), [location.search]);
+
+  const redirectTo = useMemo(() => {
+    if (!redirectParam) return null;
+
+    // Prevent open redirects. Only allow in-app absolute paths.
+    if (!redirectParam.startsWith("/") || redirectParam.startsWith("//")) return null;
+
+    return redirectParam;
+  }, [redirectParam]);
 
   // Tab state
   const [activeTab, setActiveTab] = useState<"create" | "login">("create");
@@ -76,9 +88,9 @@ const Auth = () => {
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      navigate("/app");
+      navigate(redirectTo || "/app");
     }
-  }, [user, navigate]);
+  }, [user, navigate, redirectTo]);
 
   // Reset state when switching tabs
   useEffect(() => {
@@ -182,7 +194,7 @@ const Auth = () => {
 
       // Resize Tauri window to app size, then navigate
       await resizeWindowForApp();
-      navigate("/app");
+      navigate(redirectTo || "/app");
     }
   };
 
@@ -209,7 +221,7 @@ const Auth = () => {
   const continueToApp = async () => {
     // Resize Tauri window to app size, then navigate
     await resizeWindowForApp();
-    navigate("/app");
+    navigate(redirectTo || "/app");
   };
 
   // Handle welcome modal close

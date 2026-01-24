@@ -1,6 +1,7 @@
 import { useMemo, useCallback, useEffect, useState } from 'react';
 import { CodeBlock, InlineCode } from './CodeBlock';
 import { LinkPreview } from './LinkPreview';
+import { InviteLinkPreview } from './InviteLinkPreview';
 import { ImageLightbox } from '@/components/modals/ImageLightbox';
 import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
@@ -326,6 +327,21 @@ export const MessageContent = ({ content, currentUserId, messageId, users }: Mes
       linkUrls: allUrls.filter(url => !isImageUrl(url)),
     };
   }, [segments]);
+
+  const inviteCodes = useMemo(() => {
+    const codes = new Set<string>();
+    for (const url of linkUrls) {
+      const match = url.match(/\/invite\/([A-Za-z0-9]{8})/);
+      if (match?.[1]) codes.add(match[1].toUpperCase());
+    }
+    return Array.from(codes);
+  }, [linkUrls]);
+
+  const nonInviteLinkUrls = useMemo(() => {
+    if (inviteCodes.length === 0) return linkUrls;
+    return linkUrls.filter((url) => !/\/invite\/[A-Za-z0-9]{8}/.test(url));
+  }, [inviteCodes, linkUrls]);
+  
   // Handle click on mentions using event delegation
   const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
@@ -399,10 +415,19 @@ export const MessageContent = ({ content, currentUserId, messageId, users }: Mes
         </div>
       )}
 
-      {/* Link previews (excluding image URLs) */}
-      {linkPreviewsEnabled && linkUrls.length > 0 && (
+      {/* Invite link previews */}
+      {inviteCodes.length > 0 && (
         <div className="flex flex-col gap-2">
-          {linkUrls.slice(0, 3).map((url, index) => (
+          {inviteCodes.slice(0, 3).map((code) => (
+            <InviteLinkPreview key={code} inviteCode={code} />
+          ))}
+        </div>
+      )}
+
+      {/* Link previews (excluding image URLs) */}
+      {linkPreviewsEnabled && nonInviteLinkUrls.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {nonInviteLinkUrls.slice(0, 3).map((url, index) => (
             <LinkPreview 
               key={`${url}-${index}`} 
               url={url} 

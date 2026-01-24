@@ -1,18 +1,9 @@
 import { useState } from "react";
-import { Check, Copy, RefreshCw, Users, Loader2, Zap, Link2 } from "lucide-react";
+import { Check, Copy, Users, Loader2, Zap, Link2 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUIStore } from "@/stores/uiStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -26,9 +17,11 @@ export const InviteModal = () => {
   const { user } = useAuthStore();
 
   const [copied, setCopied] = useState(false);
-  const [isRegenerating, setIsRegenerating] = useState(false);
-  const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [expiresIn, setExpiresIn] = useState<string>("never");
+  const [maxUses, setMaxUses] = useState<string>("unlimited");
 
   const isOpen = activeModal === "invite";
 
@@ -40,7 +33,9 @@ export const InviteModal = () => {
   const { hasPermission } = useMemberPermissions();
   const isAdmin = hasPermission("manage_invites");
 
-  const displayCode = inviteCode || server?.invite_code || "";
+  const displayCode = inviteCode || "";
+
+  const inviteLink = displayCode ? `${window.location.origin}/invite/${displayCode}` : "";
 
   const handleCopy = async () => {
     try {
@@ -53,36 +48,63 @@ export const InviteModal = () => {
     }
   };
 
-  const handleRegenerate = async () => {
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      setLinkCopied(true);
+      toast.success("Invite link copied!");
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch (error) {
+      toast.error("Failed to copy");
+    }
+  };
+
+  const handleGenerateInvite = async () => {
     if (!server || !user) return;
 
-    setIsRegenerating(true);
-    try {
-      // Generate new invite code and update directly
-      const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-      let newCode = "";
-      for (let i = 0; i < 8; i++) {
-        newCode += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
+    const expiresInSeconds =
+      expiresIn === "never"
+        ? null
+        : expiresIn === "30m"
+          ? 30 * 60
+          : expiresIn === "1h"
+            ? 60 * 60
+            : expiresIn === "6h"
+              ? 6 * 60 * 60
+              : expiresIn === "12h"
+                ? 12 * 60 * 60
+                : expiresIn === "1d"
+                  ? 24 * 60 * 60
+                  : 7 * 24 * 60 * 60;
 
-      const { error } = await supabase.from("servers").update({ invite_code: newCode }).eq("id", server.id);
+    const maxUsesValue = maxUses === "unlimited" ? null : parseInt(maxUses, 10);
+
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.rpc('create_server_invite', {
+        _server_id: server.id,
+        _user_id: user.id,
+        _expires_in_seconds: expiresInSeconds,
+        _max_uses: maxUsesValue,
+      });
 
       if (error) throw error;
-
-      setInviteCode(newCode);
-      toast.success("New invite code generated!");
-      setShowRegenerateConfirm(false);
+      setInviteCode((data as unknown as string) || null);
+      toast.success("Invite generated!");
     } catch (error) {
-      console.error("Failed to regenerate invite code:", error);
-      toast.error("Failed to regenerate code");
+      console.error("Failed to generate invite:", error);
+      toast.error("Failed to generate invite");
     } finally {
-      setIsRegenerating(false);
+      setIsGenerating(false);
     }
   };
 
   const handleClose = () => {
     setCopied(false);
+    setLinkCopied(false);
     setInviteCode(null);
+    setExpiresIn("never");
+    setMaxUses("unlimited");
     closeModal();
   };
 
@@ -126,6 +148,57 @@ export const InviteModal = () => {
 
           {/* Content */}
           <div className="px-6 pb-6 space-y-6">
+            {/* Invite options */}
+            <div className="space-y-3">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Invite settings
+              </Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Expires</Label>
+                  <Select value={expiresIn} onValueChange={setExpiresIn}>
+                    <SelectTrigger className="h-10 rounded-xl">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="never">Never</SelectItem>
+                      <SelectItem value="30m">30 minutes</SelectItem>
+                      <SelectItem value="1h">1 hour</SelectItem>
+                      <SelectItem value="6h">6 hour</SelectItem>
+                      <SelectItem value="12h">12 hour</SelectItem>
+                      <SelectItem value="1d">1 day</SelectItem>
+                      <SelectItem value="7d">7 days</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Max uses</Label>
+                  <Select value={maxUses} onValueChange={setMaxUses}>
+                    <SelectTrigger className="h-10 rounded-xl">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unlimited">Unlimited</SelectItem>
+                      <SelectItem value="1">1</SelectItem>
+                      <SelectItem value="5">5</SelectItem>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="25">25</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <Button
+                onClick={handleGenerateInvite}
+                className="w-full h-11 rounded-xl"
+                disabled={!isAdmin || isGenerating || !server || !user}
+              >
+                {isGenerating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Generate Invite
+              </Button>
+            </div>
+
             {/* Invite Code Display */}
             <div className="space-y-3">
               <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -133,12 +206,28 @@ export const InviteModal = () => {
               </Label>
               <div className="flex items-center gap-3">
                 <div className="flex-1 h-14 flex items-center justify-center rounded-xl border-2 border-primary/20 bg-primary/5">
-                  <span className="font-mono text-xl tracking-[0.25em] font-bold text-primary">{displayCode}</span>
+                  <span className="font-mono text-xl tracking-[0.25em] font-bold text-primary">
+                    {displayCode || "--------"}
+                  </span>
                 </div>
-                <Button size="icon" onClick={handleCopy} className="h-14 w-14 rounded-xl flex-shrink-0">
+                <Button
+                  size="icon"
+                  onClick={handleCopy}
+                  className="h-14 w-14 rounded-xl flex-shrink-0"
+                  disabled={!displayCode}
+                >
                   {copied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
                 </Button>
               </div>
+              <Button
+                variant="outline"
+                onClick={handleCopyLink}
+                className="w-full h-11 rounded-xl"
+                disabled={!inviteLink}
+              >
+                {linkCopied ? <Check className="w-4 h-4 mr-2" /> : <Link2 className="w-4 h-4 mr-2" />}
+                Copy Invite Link
+              </Button>
             </div>
 
             {/* How it works section */}
@@ -167,48 +256,9 @@ export const InviteModal = () => {
               </div>
             </div>
 
-            {/* Regenerate button (admin only) */}
-            {isAdmin && (
-              <Button
-                variant="outline"
-                onClick={() => setShowRegenerateConfirm(true)}
-                className="w-full h-11 rounded-xl border-dashed"
-                disabled={isRegenerating}
-              >
-                {isRegenerating ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                )}
-                Regenerate Code
-              </Button>
-            )}
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Regenerate Confirmation */}
-      <AlertDialog open={showRegenerateConfirm} onOpenChange={setShowRegenerateConfirm}>
-        <AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-sm rounded-2xl">
-          <AlertDialogHeader>
-            {/* Icon */}
-            <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center mb-2">
-              <RefreshCw className="w-6 h-6 text-muted-foreground" />
-            </div>
-            <AlertDialogTitle>Regenerate Invite Code?</AlertDialogTitle>
-            <AlertDialogDescription className="leading-relaxed">
-              This will invalidate the current invite code. Anyone with the old code will no longer be able to join.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-row gap-3 sm:gap-3">
-            <AlertDialogCancel className="flex-1 m-0 rounded-xl">Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleRegenerate} disabled={isRegenerating} className="flex-1 rounded-xl">
-              {isRegenerating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Regenerate
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 };

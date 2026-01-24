@@ -18,10 +18,14 @@ import {
   Plus,
   Edit2,
   KeyRound,
+  Link2,
+  Copy,
+  Check,
   Smile,
   GripVertical,
   ArrowLeft
 } from 'lucide-react';
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -82,6 +86,7 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const MAX_ICON_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_ICON_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -188,6 +193,24 @@ export const ServerSettingsPage = () => {
   const [pendingIsPublished, setPendingIsPublished] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  const [invites, setInvites] = useState<
+    Array<{
+      id: string;
+      code: string;
+      created_at: string;
+      created_by_username: string;
+      expires_at?: string | null;
+      max_uses?: number | null;
+      uses_count?: number;
+      revoked_at: string | null;
+      revoked_by_username: string | null;
+    }>
+  >([]);
+  const [isLoadingInvites, setIsLoadingInvites] = useState(false);
+  const [isCreatingInvite, setIsCreatingInvite] = useState(false);
+  const [copiedInviteId, setCopiedInviteId] = useState<string | null>(null);
+  const [inviteExpiresIn, setInviteExpiresIn] = useState<string>('never');
+  const [inviteMaxUses, setInviteMaxUses] = useState<string>('unlimited');
   const [editingRole, setEditingRole] = useState<CustomServerRole | null>(null);
   const [editingRolePermissions, setEditingRolePermissions] = useState<CustomServerRole | null>(null);
   const [roleName, setRoleName] = useState('');
@@ -345,6 +368,7 @@ export const ServerSettingsPage = () => {
   const canManageServer = hasPermission('manage_server');
   const canManageRoles = hasPermission('manage_roles');
   const canManageChannels = hasPermission('manage_channels');
+  const canManageInvites = hasPermission('manage_invites');
   const canManageEmojis = hasPermission('manage_emojis');
   
   // For backward compatibility and specific checks
@@ -447,6 +471,7 @@ export const ServerSettingsPage = () => {
       fetchRoles(server.id);
       reset({ name: server.name, about: server.about || '' });
       setPendingIsPublished(!!server.is_published);
+
       // Reset icon state
       setIconFile(null);
       setIconPreview(null);
@@ -473,31 +498,128 @@ export const ServerSettingsPage = () => {
     }
   }, [server, fetchMembers, fetchRoles, reset]);
 
-  // Load server emojis when page opens
+  const loadInvites = async () => {
+    if (!server?.id || !user?.id) return;
+    if (!canManageInvites) return;
+
+    setIsLoadingInvites(true);
+    try {
+      const { data, error } = await supabase.rpc('list_server_invites', {
+        _server_id: server.id,
+        _user_id: user.id,
+      });
+
+      if (error) throw error;
+      setInvites((data ?? []) as any);
+    } catch {
+      setInvites([]);
+    } finally {
+      setIsLoadingInvites(false);
+    }
+  };
+
   useEffect(() => {
-    if (!server || !canManageEmojis) return;
+    if (!isServerSettingsOpen) return;
+    if (!server?.id || !user?.id) return;
+    if (!canManageInvites) return;
+
     let cancelled = false;
 
     (async () => {
-      const { data, error } = await supabase
-        .from('server_emojis')
-        .select('id,name,file_path')
-        .eq('server_id', server.id)
-        .order('created_at', { ascending: true });
+      setIsLoadingInvites(true);
+      try {
+        const { data, error } = await supabase.rpc('list_server_invites', {
+          _server_id: server.id,
+          _user_id: user.id,
+        });
 
-      if (cancelled) return;
-      if (error) {
-        console.error('Failed to load server emojis:', error);
-        setServerEmojis([]);
-        return;
+        if (error) throw error;
+        if (cancelled) return;
+        setInvites((data ?? []) as any);
+      } catch {
+        if (!cancelled) setInvites([]);
+      } finally {
+        if (!cancelled) setIsLoadingInvites(false);
       }
-      setServerEmojis((data ?? []) as Array<{ id: string; name: string; file_path: string }>);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [server?.id, canManageEmojis]);
+  }, [isServerSettingsOpen, server?.id, user?.id, canManageInvites]);
+
+  const createInvite = async () => {
+    if (!server?.id || !user?.id) return;
+    if (!canManageInvites) return;
+
+    const expiresInSeconds =
+      inviteExpiresIn === 'never'
+        ? null
+        : inviteExpiresIn === '30m'
+          ? 30 * 60
+          : inviteExpiresIn === '1h'
+            ? 60 * 60
+            : inviteExpiresIn === '6h'
+              ? 6 * 60 * 60
+              : inviteExpiresIn === '12h'
+                ? 12 * 60 * 60
+                : inviteExpiresIn === '1d'
+                  ? 24 * 60 * 60
+                  : 7 * 24 * 60 * 60;
+
+    const maxUsesValue = inviteMaxUses === 'unlimited' ? null : parseInt(inviteMaxUses, 10);
+
+    setIsCreatingInvite(true);
+    try {
+      const { error } = await supabase.rpc('create_server_invite', {
+        _server_id: server.id,
+        _user_id: user.id,
+        _expires_in_seconds: expiresInSeconds,
+        _max_uses: maxUsesValue,
+      });
+
+      if (error) throw error;
+
+      await loadInvites();
+      toast.success('Invite created');
+    } catch {
+      toast.error('Failed to create invite');
+    } finally {
+      setIsCreatingInvite(false);
+    }
+  };
+
+  const revokeInvite = async (inviteId: string) => {
+    if (!server?.id || !user?.id) return;
+    if (!canManageInvites) return;
+    if (!confirm('Revoke this invite?')) return;
+
+    try {
+      const { error } = await supabase.rpc('revoke_server_invite', {
+        _invite_id: inviteId,
+        _user_id: user.id,
+      });
+
+      if (error) throw error;
+
+      await loadInvites();
+      toast.success('Invite revoked');
+    } catch {
+      toast.error('Failed to revoke invite');
+    }
+  };
+
+  const copyInviteLink = async (code: string, inviteId: string) => {
+    const link = `${window.location.origin}/invite/${code}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopiedInviteId(inviteId);
+      setTimeout(() => setCopiedInviteId(null), 2000);
+      toast.success('Invite link copied!');
+    } catch {
+      toast.error('Failed to copy');
+    }
+  };
 
   const clearEmoji = () => {
     setEmojiFile(null);
@@ -1088,6 +1210,15 @@ export const ServerSettingsPage = () => {
               <Ban className="w-4 h-4" />
               <span>Bans</span>
             </TabsTrigger>
+            {canManageInvites && (
+              <TabsTrigger
+                value="invites"
+                className="w-full justify-start gap-2 text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+              >
+                <Link2 className="w-4 h-4" />
+                <span>Invites</span>
+              </TabsTrigger>
+            )}
             {canManageEmojis && (
               <TabsTrigger
                 value="emojis"
@@ -1807,6 +1938,162 @@ export const ServerSettingsPage = () => {
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <Shield className="w-12 h-12 text-muted-foreground/50 mb-3" />
                   <p className="text-sm text-muted-foreground">Only admins can manage roles</p>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Invites Tab */}
+            <TabsContent value="invites" className="m-0 p-6">
+              {canManageInvites ? (
+                <div className="space-y-4 max-w-4xl">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <h4 className="text-sm font-semibold">Invite Links</h4>
+                      <p className="text-xs text-muted-foreground">
+                        Create, copy, and revoke invite links.
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={createInvite}
+                      disabled={isCreatingInvite || isLoadingInvites}
+                      className="flex-shrink-0"
+                    >
+                      {isCreatingInvite && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      Create Invite
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 max-w-sm">
+                    <Select value={inviteExpiresIn} onValueChange={setInviteExpiresIn}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Expires" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="never">Never</SelectItem>
+                        <SelectItem value="30m">30 minutes</SelectItem>
+                        <SelectItem value="1h">1 hour</SelectItem>
+                        <SelectItem value="6h">6 hour</SelectItem>
+                        <SelectItem value="12h">12 hour</SelectItem>
+                        <SelectItem value="1d">1 day</SelectItem>
+                        <SelectItem value="7d">7 days</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={inviteMaxUses} onValueChange={setInviteMaxUses}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Max uses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unlimited">Unlimited</SelectItem>
+                        <SelectItem value="1">1</SelectItem>
+                        <SelectItem value="5">5</SelectItem>
+                        <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="25">25</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                        <SelectItem value="100">100</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {isLoadingInvites ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : invites.length > 0 ? (
+                    <ScrollArea className="h-[calc(100vh-16rem)] pr-4">
+                      <div className="space-y-2">
+                        {invites.map((invite) => {
+                          const isRevoked = !!invite.revoked_at;
+                          const isExpired = !!invite.expires_at && new Date(invite.expires_at).getTime() <= Date.now();
+                          const usesCount = invite.uses_count ?? 0;
+                          const maxUses = invite.max_uses ?? null;
+                          const isMaxed = maxUses !== null && usesCount >= maxUses;
+                          const expiresLabel = invite.expires_at ? new Date(invite.expires_at).toLocaleString() : 'Never';
+                          const maxUsesLabel = maxUses !== null ? String(maxUses) : '∞';
+                          return (
+                            <div
+                              key={invite.id}
+                              className="flex items-center gap-3 p-3 rounded-lg border bg-secondary/30"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-mono text-sm tracking-widest">{invite.code}</span>
+                                  {isRevoked && (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
+                                      Revoked
+                                    </Badge>
+                                  )}
+                                  {!isRevoked && isExpired && (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
+                                      Expired
+                                    </Badge>
+                                  )}
+                                  {!isRevoked && !isExpired && isMaxed && (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
+                                      Max uses reached
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Created by <span className="font-medium text-foreground">{invite.created_by_username}</span>
+                                  {" "}•{" "}
+                                  {new Date(invite.created_at).toLocaleString()}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  Expires: <span className="font-medium text-foreground">{expiresLabel}</span>
+                                  {" "}•{" "}
+                                  Uses: <span className="font-medium text-foreground">{usesCount}/{maxUsesLabel}</span>
+                                </p>
+                                {isRevoked && invite.revoked_by_username && (
+                                  <p className="text-xs text-muted-foreground mt-0.5">
+                                    Revoked by <span className="font-medium text-foreground">{invite.revoked_by_username}</span>
+                                  </p>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => copyInviteLink(invite.code, invite.id)}
+                                  className="h-8 px-3"
+                                >
+                                  {copiedInviteId === invite.id ? (
+                                    <Check className="w-4 h-4" />
+                                  ) : (
+                                    <Copy className="w-4 h-4" />
+                                  )}
+                                </Button>
+                                {!isRevoked && (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => revokeInvite(invite.id)}
+                                    className="h-8 px-3"
+                                  >
+                                    Revoke
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </ScrollArea>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                      <Link2 className="w-12 h-12 text-muted-foreground/50 mb-3" />
+                      <p className="text-sm text-muted-foreground">No invites created yet</p>
+                      <p className="text-xs text-muted-foreground mt-1">Create an invite to share a join link.</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <Shield className="w-12 h-12 text-muted-foreground/50 mb-3" />
+                  <p className="text-sm text-muted-foreground">You don't have permission to manage invites</p>
                 </div>
               )}
             </TabsContent>

@@ -1026,6 +1026,67 @@ export type Database = {
           },
         ]
       }
+      server_invites: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          max_uses: number | null
+          revoked_at: string | null
+          revoked_by: string | null
+          server_id: string
+          uses_count: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          max_uses?: number | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          server_id: string
+          uses_count?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          max_uses?: number | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          server_id?: string
+          uses_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "server_invites_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "server_invites_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "server_invites_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_preferences: {
         Row: {
           animate_emojis: boolean
@@ -1266,6 +1327,10 @@ export type Database = {
         Args: { _name: string; _owner_id: string }
         Returns: Json
       }
+      create_server_invite: {
+        Args: { _server_id: string; _user_id: string; _expires_in_seconds?: number | null; _max_uses?: number | null }
+        Returns: string
+      }
       debug_channel_permissions: {
         Args: { _channel_id: string; _user_id: string }
         Returns: Json
@@ -1352,9 +1417,37 @@ export type Database = {
         }
         Returns: Json
       }
+      list_server_invites: {
+        Args: { _server_id: string; _user_id: string }
+        Returns: {
+          code: string
+          created_at: string
+          created_by: string
+          created_by_username: string
+          expires_at: string | null
+          id: string
+          max_uses: number | null
+          revoked_at: string | null
+          revoked_by: string | null
+          revoked_by_username: string | null
+          uses_count: number
+        }[]
+      }
       get_outgoing_friend_requests: {
         Args: { _user_id: string }
         Returns: Json
+      }
+      get_invite_details_by_code: {
+        Args: { _invite_code: string }
+        Returns: {
+          about: string | null
+          banner_url: string | null
+          icon_url: string
+          id: string
+          invite_code: string
+          inviter_username: string
+          name: string
+        }[]
       }
       get_pending_friend_requests: { Args: { _user_id: string }; Returns: Json }
       get_role_permissions: { Args: { _server_id: string }; Returns: Json }
@@ -1422,6 +1515,10 @@ export type Database = {
       regenerate_invite_code: {
         Args: { _server_id: string; _user_id: string }
         Returns: string
+      }
+      revoke_server_invite: {
+        Args: { _invite_id: string; _user_id: string }
+        Returns: boolean
       }
       register_user: {
         Args: { _banner_color?: string; _key_hash: string; _username: string }
