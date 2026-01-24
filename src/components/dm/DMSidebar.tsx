@@ -74,22 +74,8 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
       {/* Header */}
       <div className="h-12 px-4 flex items-center border-b border-border shadow-sm">
         <h2 className="font-normal text-lg text-foreground">
-          {showFriends ? "Friends" : showExplore ? "Explore" : "Direct Messages"}
+          {showFriends ? "Friends" : showExplore ? "Explore" : "Home"}
         </h2>
-      </div>
-
-      {/* Search */}
-      <div className="p-2">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Find or start a conversation"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8 h-8 bg-secondary/50 border-0 text-sm"
-          />
-        </div>
       </div>
 
       {/* Friends Button */}
@@ -120,6 +106,20 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
           <Compass className="w-5 h-5" />
           <span>Explore</span>
         </Button>
+      </div>
+
+      {/* Search */}
+      <div className="p-2">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Find or start a conversation"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-8 h-8 bg-secondary/50 border border-border/80 text-sm"
+          />
+        </div>
       </div>
 
       {/* Section header */}

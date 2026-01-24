@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Check, X, MessageSquare, MoreHorizontal, UserPlus, Ban, UserX, Users, Search, Inbox, Info } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Check, X, MessageSquare, MoreHorizontal, UserPlus, Ban, UserX, Users, Inbox, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -301,90 +300,6 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
 
       {/* Main content */}
       <div className="flex-1 overflow-y-auto">
-        {/* Hero Section */}
-        <div className="relative overflow-hidden border-b border-border/50">
-          {/* Background Image */}
-          <div 
-            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-            style={{
-              backgroundImage: 'url(https://images.unsplash.com/photo-1558844109-f45f2d162527?q=80&w=1317&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D)'
-            }}
-          />
-          
-          {/* Dark Overlay for Text Readability */}
-          <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/70 to-background/60" />
-          
-          {/* Subtle Primary Overlay */}
-          <div className="absolute inset-0 bg-primary/5" />
-
-          {/* Hero Content */}
-          <div className="relative px-4 py-6 md:py-8 min-h-[200px] md:min-h-[220px] flex items-center">
-            <div className="max-w-4xl mx-auto w-full">
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="text-center space-y-4"
-              >
-                {/* Icon and Title Row */}
-                <div className="flex items-center justify-center gap-3">
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.4, delay: 0.1 }}
-                    className="inline-flex items-center justify-center p-2 rounded-xl bg-background/80 backdrop-blur-md border border-primary/30 shadow-lg"
-                  >
-                    <Users className="w-5 h-5 md:w-6 md:h-6 text-primary" />
-                  </motion.div>
-                  <motion.h1
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.2 }}
-                    className="text-2xl md:text-3xl font-bold tracking-tight text-foreground drop-shadow-lg"
-                  >
-                    Connect with{' '}
-                    <span className="text-primary relative inline-block drop-shadow-md">
-                      Friends
-                      <motion.span
-                        className="absolute -bottom-0.5 left-0 right-0 h-0.5 bg-primary/50 rounded-full"
-                        initial={{ scaleX: 0 }}
-                        animate={{ scaleX: 1 }}
-                        transition={{ duration: 0.6, delay: 0.5 }}
-                      />
-                    </span>
-                  </motion.h1>
-                </div>
-
-                {/* Description */}
-                <motion.p
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.3 }}
-                  className="text-sm md:text-base text-foreground/90 max-w-xl mx-auto drop-shadow-md"
-                >
-                  Stay in touch with the people who matter most
-                </motion.p>
-
-                {/* Search Bar */}
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.4 }}
-                  className="relative max-w-xl mx-auto pt-2"
-                >
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
-                  <Input
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search friends..."
-                    className="pl-9 h-10 bg-background/80 backdrop-blur-md border border-border/50 shadow-lg"
-                  />
-                </motion.div>
-              </motion.div>
-            </div>
-          </div>
-        </div>
-
         {/* Content Section */}
         <div className="flex flex-col">
           {/* Mobile add friend button */}
