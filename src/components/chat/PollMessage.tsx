@@ -17,12 +17,13 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
 
   const [selected, setSelected] = useState<number[]>([]);
   const [isVoting, setIsVoting] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
 
   useEffect(() => {
-    if (!poll) {
-      fetchPoll(pollId).catch(() => undefined);
+    if (!poll && !fetchError) {
+      fetchPoll(pollId).catch(() => setFetchError(true));
     }
-  }, [pollId, poll, fetchPoll]);
+  }, [pollId, poll, fetchPoll, fetchError]);
 
   // Auto-close exactly at end time (best effort) so the UI updates to results via realtime.
   useEffect(() => {
@@ -80,6 +81,14 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
       setIsVoting(false);
     }
   };
+
+  if (fetchError) {
+    return (
+      <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 max-w-[520px]">
+        <div className="text-sm text-destructive">Failed to load poll</div>
+      </div>
+    );
+  }
 
   if (!poll) {
     return (

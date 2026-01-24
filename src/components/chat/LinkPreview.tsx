@@ -61,6 +61,9 @@ export const LinkPreview = ({ url, disabled, messageId }: LinkPreviewProps) => {
       return;
     }
 
+    const controller = new AbortController();
+    let cancelled = false;
+
     const fetchPreview = async () => {
       setIsLoading(true);
       setError(null);
@@ -69,6 +72,8 @@ export const LinkPreview = ({ url, disabled, messageId }: LinkPreviewProps) => {
         const { data, error: fnError } = await supabase.functions.invoke("fetch-link-preview", {
           body: { url },
         });
+
+        if (cancelled) return;
 
         if (fnError) {
           console.error("Link preview error:", fnError);
@@ -84,14 +89,22 @@ export const LinkPreview = ({ url, disabled, messageId }: LinkPreviewProps) => {
         setPreview(data);
         previewCache.set(url, data);
       } catch (err) {
+        if (cancelled) return;
         console.error("Link preview fetch error:", err);
         setError("Failed to load preview");
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     };
 
     fetchPreview();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
   }, [url, disabled]);
 
   if (disabled) return null;
