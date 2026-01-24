@@ -38,16 +38,6 @@ export const HomeLanding = () => {
 
     return (
         <div className="flex-1 h-full bg-layout-chat overflow-y-auto w-full flex items-center justify-center relative min-h-0 py-4 sm:py-0">
-            {/* Background Image with Opacity */}
-            <div 
-                className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-                style={{
-                    backgroundImage: `url('https://img.freepik.com/free-photo/sunset-bike-ride_23-2151995338.jpg?t=st=1769254304~exp=1769257904~hmac=ef08dce584a865eaa79824be05567f1fa0b64271174038cee13863db1e3cf7d6&w=1060')`,
-                    opacity: 0.25
-                }}
-            />
-            {/* Dark overlay for better text readability */}
-            <div className="absolute inset-0 bg-layout-chat/60" />
             
             {/* Gradient Circle Background Effects */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">

@@ -135,15 +135,7 @@ const Invite = () => {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden flex flex-col">
-      <div
-        className="absolute inset-0 -z-10 bg-cover bg-center"
-        style={{
-          backgroundImage:
-            "url(https://img.freepik.com/free-photo/digital-art-beautiful-mountains_23-2151123780.jpg?t=st=1769242454~exp=1769246054~hmac=0e4bfda4302f38b9781b0438b0edb2ca0e0980fc63813b56c4d26f83fc063bd9&w=1060)",
-        }}
-      />
-      <div className="absolute inset-0 -z-10 bg-black/60" />
+    <div className="relative min-h-screen overflow-hidden flex flex-col bg-background">
 
       <NavigationMenu />
 
