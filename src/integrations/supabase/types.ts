@@ -543,6 +543,7 @@ export type Database = {
           edited_at: string | null
           id: string
           is_pinned: boolean | null
+          is_system_message: boolean | null
           reply_to_id: string | null
           user_id: string
         }
@@ -553,6 +554,7 @@ export type Database = {
           edited_at?: string | null
           id?: string
           is_pinned?: boolean | null
+          is_system_message?: boolean | null
           reply_to_id?: string | null
           user_id: string
         }
@@ -563,6 +565,7 @@ export type Database = {
           edited_at?: string | null
           id?: string
           is_pinned?: boolean | null
+          is_system_message?: boolean | null
           reply_to_id?: string | null
           user_id?: string
         }
@@ -1048,34 +1051,46 @@ export type Database = {
           about: string | null
           banner_url: string | null
           created_at: string | null
+          enable_join_messages: boolean | null
+          enable_leave_messages: boolean | null
           icon_url: string | null
           id: string
           invite_code: string
           is_published: boolean
           name: string
           owner_id: string
+          system_channel_join_id: string | null
+          system_channel_leave_id: string | null
         }
         Insert: {
           about?: string | null
           banner_url?: string | null
           created_at?: string | null
+          enable_join_messages?: boolean | null
+          enable_leave_messages?: boolean | null
           icon_url?: string | null
           id?: string
           invite_code: string
           is_published?: boolean
           name: string
           owner_id: string
+          system_channel_join_id?: string | null
+          system_channel_leave_id?: string | null
         }
         Update: {
           about?: string | null
           banner_url?: string | null
           created_at?: string | null
+          enable_join_messages?: boolean | null
+          enable_leave_messages?: boolean | null
           icon_url?: string | null
           id?: string
           invite_code?: string
           is_published?: boolean
           name?: string
           owner_id?: string
+          system_channel_join_id?: string | null
+          system_channel_leave_id?: string | null
         }
         Relationships: [
           {
@@ -1083,6 +1098,20 @@ export type Database = {
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "servers_system_channel_join_id_fkey"
+            columns: ["system_channel_join_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "servers_system_channel_leave_id_fkey"
+            columns: ["system_channel_leave_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
             referencedColumns: ["id"]
           },
         ]
@@ -1340,6 +1369,10 @@ export type Database = {
         Args: { _channel_id: string; _user_id: string }
         Returns: Json
       }
+      debug_server_system_messages: {
+        Args: { _server_id: string }
+        Returns: Json
+      }
       debug_user_permission: {
         Args: {
           _channel_id: string
@@ -1518,6 +1551,10 @@ export type Database = {
       open_dm_conversation: {
         Args: { _other_user_id: string; _user_id: string }
         Returns: Json
+      }
+      post_system_message: {
+        Args: { _channel_id: string; _content: string; _user_id: string }
+        Returns: string
       }
       recompute_poll_results: { Args: { _poll_id: string }; Returns: undefined }
       regenerate_invite_code: {
