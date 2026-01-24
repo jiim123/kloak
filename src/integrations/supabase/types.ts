@@ -1411,6 +1411,18 @@ export type Database = {
         }
         Returns: Json
       }
+      get_invite_details_by_code: {
+        Args: { _invite_code: string }
+        Returns: {
+          about: string
+          banner_url: string
+          icon_url: string
+          id: string
+          invite_code: string
+          inviter_username: string
+          name: string
+        }[]
+      }
       get_outgoing_friend_requests: {
         Args: { _user_id: string }
         Returns: Json
