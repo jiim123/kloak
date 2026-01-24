@@ -1393,8 +1393,11 @@ export type Database = {
         Args: { _server_id: string; _user_id: string }
         Returns: Json
       }
+      get_blocked_user_ids_for_visibility: {
+        Args: { _user_id: string }
+        Returns: Json
+      }
       get_blocked_users: { Args: { _user_id: string }; Returns: Json }
-      get_blocked_user_ids_for_visibility: { Args: { _user_id: string }; Returns: Json }
       get_channel_messages: {
         Args: {
           _before_id?: string

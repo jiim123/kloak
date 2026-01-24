@@ -185,8 +185,15 @@ export const NavigationMenu = () => {
             <Separator />
           </div>
 
-          {/* CTA Button */}
-          <Link to="/app" className="hidden sm:block">
+          {/* Mobile CTA - visible only on mobile */}
+          <Link to="/app" className="md:hidden">
+            <Button size="sm" className="rounded-xl">
+              Open Kloak
+            </Button>
+          </Link>
+
+          {/* Desktop CTA Button */}
+          <Link to="/app" className="hidden md:block">
             <Button size="sm" className="rounded-xl">
               <CircleUserRound className="h-4 w-4" />
               Login
@@ -243,18 +250,27 @@ export const NavigationMenu = () => {
               {/* Sidebar Content */}
               <div className="flex-1 overflow-y-auto p-6">
                 <div className="space-y-6">
-                  {/* Primary CTA */}
-                  <Link to="/app" onClick={() => setMenuOpen(false)}>
-                    <Button className="w-full h-12 text-base">
-                      <Key className="h-4 w-4" />
-                      Create Account
-                    </Button>
-                  </Link>
+                  {/* Join Kloak CTA Box */}
+                  <div className="rounded-xl border border-border/50 bg-muted/30 p-4">
+                    <h3 className="text-sm font-semibold text-foreground mb-3">Join Kloak</h3>
+                    <div className="flex gap-3">
+                      <Link to="/app" onClick={() => setMenuOpen(false)} className="flex-1">
+                        <Button variant="outline" className="w-full">
+                          Create Account
+                        </Button>
+                      </Link>
+                      <Link to="/app" onClick={() => setMenuOpen(false)} className="flex-1">
+                        <Button className="w-full">
+                          Open Kloak
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
 
                   <div className="h-px bg-border/30" />
 
                   {/* Menu Links */}
-                  <div className="space-y-1">
+                  <div className="space-y-0.5">
                     {tabs
                       .filter((tab): tab is Tab => tab.type !== "separator")
                       .map((link) => (
@@ -263,7 +279,7 @@ export const NavigationMenu = () => {
                           to={link.href}
                           onClick={() => setMenuOpen(false)}
                           className={cn(
-                            "flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-150 group",
+                            "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 group",
                             location.pathname === link.href
                               ? "bg-muted text-primary"
                               : "text-foreground/80 hover:bg-muted/50 hover:text-foreground",
@@ -271,28 +287,17 @@ export const NavigationMenu = () => {
                         >
                           <div
                             className={cn(
-                              "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
+                              "w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
                               location.pathname === link.href ? "bg-primary/10" : "bg-muted/50 group-hover:bg-muted",
                             )}
                           >
-                            <link.icon className="h-5 w-5" />
+                            <link.icon className="h-4 w-4" />
                           </div>
-                          <span className="text-base font-medium">{link.title}</span>
+                          <span className="text-sm font-medium">{link.title}</span>
                         </Link>
                       ))}
                   </div>
                 </div>
-              </div>
-
-              {/* Sidebar Footer */}
-              <div className="p-6 border-t border-border/20">
-                <Link to="/app" onClick={() => setMenuOpen(false)}>
-                  <Button className="w-full h-12 text-base">
-                    <Sparkles className="h-4 w-4" />
-                    Get Started
-                  </Button>
-                </Link>
-                <p className="text-center text-xs text-muted-foreground mt-3">Free forever. No credit card required.</p>
               </div>
             </motion.div>
           </>
