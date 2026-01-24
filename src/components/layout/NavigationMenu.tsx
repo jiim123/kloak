@@ -263,7 +263,7 @@ export const NavigationMenu = () => {
                   <div className="h-px bg-border/30" />
 
                   {/* Menu Links */}
-                  <div className="space-y-1">
+                  <div className="space-y-0.5">
                     {tabs
                       .filter((tab): tab is Tab => tab.type !== "separator")
                       .map((link) => (
@@ -272,7 +272,7 @@ export const NavigationMenu = () => {
                           to={link.href}
                           onClick={() => setMenuOpen(false)}
                           className={cn(
-                            "flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-150 group",
+                            "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 group",
                             location.pathname === link.href
                               ? "bg-muted text-primary"
                               : "text-foreground/80 hover:bg-muted/50 hover:text-foreground",
@@ -280,13 +280,13 @@ export const NavigationMenu = () => {
                         >
                           <div
                             className={cn(
-                              "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
+                              "w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
                               location.pathname === link.href ? "bg-primary/10" : "bg-muted/50 group-hover:bg-muted",
                             )}
                           >
-                            <link.icon className="h-5 w-5" />
+                            <link.icon className="h-4 w-4" />
                           </div>
-                          <span className="text-base font-medium">{link.title}</span>
+                          <span className="text-sm font-medium">{link.title}</span>
                         </Link>
                       ))}
                   </div>
