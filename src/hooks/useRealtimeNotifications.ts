@@ -76,20 +76,26 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
     }
   }
 
-  if (!('Notification' in window)) {
+  // Check if Notification API exists (not available on some iOS browsers)
+  if (typeof window === 'undefined' || !('Notification' in window)) {
     return false;
   }
 
-  if (Notification.permission === 'granted') {
-    return true;
-  }
+  try {
+    if (Notification.permission === 'granted') {
+      return true;
+    }
 
-  if (Notification.permission === 'denied') {
+    if (Notification.permission === 'denied') {
+      return false;
+    }
+
+    const permission = await Notification.requestPermission();
+    return permission === 'granted';
+  } catch {
+    // Notification API may throw on some iOS versions
     return false;
   }
-
-  const permission = await Notification.requestPermission();
-  return permission === 'granted';
 };
 
 // Track the last notification link for window focus fallback (Windows may not fire onAction for body clicks)
