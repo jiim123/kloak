@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { format } from "date-fns";
-import { MessageCircle, UserPlus, UserMinus, Loader2, Check, X, Clock, Calendar } from "lucide-react";
+import { MessageCircle, UserPlus, UserMinus, Loader2, Check, X, Clock, Calendar, Ban } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -83,10 +83,13 @@ export const UserProfilePopup = () => {
     friends,
     pendingRequests,
     outgoingRequests,
+    blockedUsers,
     sendRequest,
     removeFriend,
     acceptRequest,
     declineRequest,
+    blockUser,
+    unblockUser,
     error: friendError,
   } = useFriendStore();
   const { openConversation, setCurrentConversation } = useDMStore();
@@ -273,6 +276,7 @@ export const UserProfilePopup = () => {
   const isFriend = friends.some((f) => f.id === userId);
   const hasPendingRequest = pendingRequests.some((f) => f.id === userId);
   const hasSentRequest = outgoingRequests.some((f) => f.id === userId);
+  const isBlocked = blockedUsers.some((b) => b.id === userId);
   const isInCooldown = cooldownSeconds > 0;
 
   const formatCooldown = (seconds: number): string => {
@@ -339,6 +343,26 @@ export const UserProfilePopup = () => {
     if (pendingFriend) {
       await declineRequest(pendingFriend.friendship_id, currentUser.id);
       toast.success("Friend request declined");
+    }
+  };
+
+  const handleBlockUser = async () => {
+    if (!currentUser || !profileUser) return;
+    try {
+      await blockUser(currentUser.id, profileUser.id);
+      toast.success(`Blocked ${profileUser.display_name || profileUser.username}`);
+    } catch (error) {
+      toast.error("Failed to block user");
+    }
+  };
+
+  const handleUnblockUser = async () => {
+    if (!currentUser || !profileUser) return;
+    try {
+      await unblockUser(currentUser.id, profileUser.id);
+      toast.success(`Unblocked ${profileUser.display_name || profileUser.username}`);
+    } catch (error) {
+      toast.error("Failed to unblock user");
     }
   };
 
@@ -581,63 +605,81 @@ export const UserProfilePopup = () => {
 
                   {/* Action Buttons */}
                   {!isSelf && (
-                    <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t relative z-10" style={{ borderColor: divider }}>
-                      <Button onClick={handleMessage} className="flex-1 rounded-xl h-10" variant="default">
-                        <MessageCircle className="w-4 h-4 mr-2" />
-                        Message
-                      </Button>
+                    <div className="flex flex-col gap-2 pt-4 border-t relative z-10" style={{ borderColor: divider }}>
+                      {/* Primary row - Message + Friend actions */}
+                      {!isBlocked && (
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <Button onClick={handleMessage} className="flex-1 rounded-xl h-10" variant="default">
+                            <MessageCircle className="w-4 h-4 mr-2" />
+                            Message
+                          </Button>
 
-                      {hasPendingRequest ? (
-                        <div className="flex gap-2">
-                          <Button
-                            variant="default"
-                            onClick={handleAcceptRequest}
-                            className="flex-1 sm:flex-none rounded-xl h-10 bg-[hsl(var(--kloak-success))] hover:bg-[hsl(var(--kloak-success))]/90"
-                          >
-                            <Check className="w-4 h-4 sm:mr-0 mr-2" />
-                            <span className="sm:hidden">Accept</span>
-                          </Button>
-                          <Button
-                            variant="outline"
-                            onClick={handleDeclineRequest}
-                            className="flex-1 sm:flex-none rounded-xl h-10"
-                          >
-                            <X className="w-4 h-4 sm:mr-0 mr-2" />
-                            <span className="sm:hidden">Decline</span>
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button
-                          variant={isFriend ? "destructive" : isInCooldown ? "secondary" : "outline"}
-                          onClick={handleFriendAction}
-                          disabled={hasSentRequest || isInCooldown || isSendingRequest}
-                          className={cn("flex-1 rounded-xl h-10", isInCooldown && "opacity-80")}
-                        >
-                          {isSendingRequest ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Sending...
-                            </>
-                          ) : isFriend ? (
-                            <>
-                              <UserMinus className="w-4 h-4 mr-2" />
-                              Remove Friend
-                            </>
-                          ) : hasSentRequest ? (
-                            "Request Sent"
-                          ) : isInCooldown ? (
-                            <>
-                              <Clock className="w-4 h-4 mr-2" />
-                              Retry in {formatCooldown(cooldownSeconds)}
-                            </>
+                          {hasPendingRequest ? (
+                            <div className="flex gap-2">
+                              <Button
+                                variant="default"
+                                onClick={handleAcceptRequest}
+                                className="flex-1 sm:flex-none rounded-xl h-10 bg-[hsl(var(--kloak-success))] hover:bg-[hsl(var(--kloak-success))]/90"
+                              >
+                                <Check className="w-4 h-4 sm:mr-0 mr-2" />
+                                <span className="sm:hidden">Accept</span>
+                              </Button>
+                              <Button
+                                variant="outline"
+                                onClick={handleDeclineRequest}
+                                className="flex-1 sm:flex-none rounded-xl h-10"
+                              >
+                                <X className="w-4 h-4 sm:mr-0 mr-2" />
+                                <span className="sm:hidden">Decline</span>
+                              </Button>
+                            </div>
                           ) : (
-                            <>
-                              <UserPlus className="w-4 h-4 mr-2" />
-                              Add Friend
-                            </>
+                            <Button
+                              variant={isFriend ? "destructive" : isInCooldown ? "secondary" : "outline"}
+                              onClick={handleFriendAction}
+                              disabled={hasSentRequest || isInCooldown || isSendingRequest}
+                              className={cn("flex-1 rounded-xl h-10", isInCooldown && "opacity-80")}
+                            >
+                              {isSendingRequest ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                  Sending...
+                                </>
+                              ) : isFriend ? (
+                                <>
+                                  <UserMinus className="w-4 h-4 mr-2" />
+                                  Remove Friend
+                                </>
+                              ) : hasSentRequest ? (
+                                "Request Sent"
+                              ) : isInCooldown ? (
+                                <>
+                                  <Clock className="w-4 h-4 mr-2" />
+                                  Retry in {formatCooldown(cooldownSeconds)}
+                                </>
+                              ) : (
+                                <>
+                                  <UserPlus className="w-4 h-4 mr-2" />
+                                  Add Friend
+                                </>
+                              )}
+                            </Button>
                           )}
-                        </Button>
+                        </div>
                       )}
+
+                      {/* Block/Unblock button */}
+                      <Button
+                        variant={isBlocked ? "outline" : "ghost"}
+                        onClick={isBlocked ? handleUnblockUser : handleBlockUser}
+                        className={cn(
+                          "rounded-xl h-10",
+                          !isBlocked && "text-destructive hover:text-destructive hover:bg-destructive/10"
+                        )}
+                      >
+                        <Ban className="w-4 h-4 mr-2" />
+                        {isBlocked ? "Unblock User" : "Block User"}
+                      </Button>
                     </div>
                   )}
                 </div>
