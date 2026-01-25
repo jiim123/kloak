@@ -172,10 +172,10 @@ export const DMMessageItem = ({ message, isFirst, onReply }: DMMessageItemProps)
         <div className="flex-1 min-w-0">
           {isFirst && (
             <div className="flex items-baseline gap-2 mb-1">
-              <span className="font-medium text-foreground">
+              <span className="text-[0.9em] sm:text-[1em] font-medium text-foreground">
                 {message.sender?.display_name || message.sender?.username}
               </span>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-[0.7em] sm:text-[0.8em] text-muted-foreground">
                 {formatMessageTimestamp(message.created_at || '')}
               </span>
             </div>
@@ -225,7 +225,7 @@ export const DMMessageItem = ({ message, isFirst, onReply }: DMMessageItemProps)
               </div>
             </div>
           ) : (
-            <p className="text-foreground whitespace-pre-wrap break-words">
+            <p className="text-[0.9em] sm:text-[1em] font-light text-foreground whitespace-pre-wrap break-words">
               {message.content}
             </p>
           )}
