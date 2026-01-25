@@ -1,5 +1,12 @@
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
-import { Paperclip, Smile, Send, X, Loader2, WifiOff, Type, Lock, SquareChartGantt } from "lucide-react";
+import { Paperclip, Smile, Send, X, Loader2, WifiOff, Type, Lock, SquareChartGantt, MoreHorizontal } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuthStore } from "@/stores/authStore";
 import { useMessageStore } from "@/stores/messageStore";
 import { useServerStore } from "@/stores/serverStore";
@@ -51,6 +58,8 @@ const ActionButtons = memo(
     onSubmit,
     onEmojiSelect,
     currentServer,
+    showAttachButton,
+    onAttachClick,
   }: {
     showFormatToolbar: boolean;
     setShowFormatToolbar: (show: boolean) => void;
@@ -64,8 +73,12 @@ const ActionButtons = memo(
     onSubmit: () => void;
     onEmojiSelect: (emoji: string) => void;
     currentServer: any;
+    showAttachButton?: boolean;
+    onAttachClick?: () => void;
   }) => {
     const showCharacterWarning = content.length > MAX_LENGTH - 200;
+    const isMobile = useIsMobile();
+    const shouldCollapse = isMobile && content.length > 10;
 
     return (
       <div className="flex items-center gap-1 mb-0.5 relative">
@@ -85,54 +98,108 @@ const ActionButtons = memo(
           </span>
         )}
 
-        {/* Format button */}
-        <button
-          type="button"
-          onClick={() => setShowFormatToolbar(!showFormatToolbar)}
-          className={`p-2 rounded-xl transition-colors duration-150 ${
-            showFormatToolbar
-              ? "text-primary bg-primary/10"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted"
-          }`}
-          onMouseDown={(e) => e.preventDefault()}
-          title="Format text"
-        >
-          <Type className="w-5 h-5" />
-        </button>
+        {/* Collapsed mobile menu when typing */}
+        {shouldCollapse ? (
+          <>
+            {/* Collapsed actions dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
+                  onMouseDown={(e) => e.preventDefault()}
+                >
+                  <MoreHorizontal className="w-5 h-5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-[160px]">
+                {showAttachButton && (
+                  <DropdownMenuItem onClick={onAttachClick} disabled={!canSendMessage}>
+                    <Paperclip className="w-4 h-4 mr-2" />
+                    Upload image
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={() => setShowFormatToolbar(!showFormatToolbar)}>
+                  <Type className="w-4 h-4 mr-2" />
+                  Format text
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowCreatePoll(true)} disabled={!canSendMessage}>
+                  <SquareChartGantt className="w-4 h-4 mr-2" />
+                  Create poll
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-        {/* Poll button */}
-        <button
-          type="button"
-          onClick={() => setShowCreatePoll(true)}
-          disabled={!canSendMessage}
-          className={`p-2 rounded-xl transition-colors duration-150 ${
-            canSendMessage
-              ? "text-muted-foreground hover:text-foreground hover:bg-muted"
-              : "text-muted-foreground/50 cursor-not-allowed"
-          }`}
-          onMouseDown={(e) => e.preventDefault()}
-          title="Create poll"
-        >
-          <SquareChartGantt className="w-5 h-5" />
-        </button>
+            {/* Emoji button - always visible */}
+            <EmojiGifPicker
+              open={showEmojiPicker}
+              onOpenChange={setShowEmojiPicker}
+              onEmojiSelect={onEmojiSelect}
+              disableGif
+              serverId={currentServer?.id}
+              serverName={currentServer?.name}
+            >
+              <button
+                type="button"
+                className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
+                onMouseDown={(e) => e.preventDefault()}
+              >
+                <Smile className="w-5 h-5" />
+              </button>
+            </EmojiGifPicker>
+          </>
+        ) : (
+          <>
+            {/* Format button */}
+            <button
+              type="button"
+              onClick={() => setShowFormatToolbar(!showFormatToolbar)}
+              className={`p-2 rounded-xl transition-colors duration-150 ${
+                showFormatToolbar
+                  ? "text-primary bg-primary/10"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              }`}
+              onMouseDown={(e) => e.preventDefault()}
+              title="Format text"
+            >
+              <Type className="w-5 h-5" />
+            </button>
 
-        {/* Emoji button */}
-        <EmojiGifPicker
-          open={showEmojiPicker}
-          onOpenChange={setShowEmojiPicker}
-          onEmojiSelect={onEmojiSelect}
-          disableGif
-          serverId={currentServer?.id}
-          serverName={currentServer?.name}
-        >
-          <button
-            type="button"
-            className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
-            onMouseDown={(e) => e.preventDefault()}
-          >
-            <Smile className="w-5 h-5" />
-          </button>
-        </EmojiGifPicker>
+            {/* Poll button */}
+            <button
+              type="button"
+              onClick={() => setShowCreatePoll(true)}
+              disabled={!canSendMessage}
+              className={`p-2 rounded-xl transition-colors duration-150 ${
+                canSendMessage
+                  ? "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  : "text-muted-foreground/50 cursor-not-allowed"
+              }`}
+              onMouseDown={(e) => e.preventDefault()}
+              title="Create poll"
+            >
+              <SquareChartGantt className="w-5 h-5" />
+            </button>
+
+            {/* Emoji button */}
+            <EmojiGifPicker
+              open={showEmojiPicker}
+              onOpenChange={setShowEmojiPicker}
+              onEmojiSelect={onEmojiSelect}
+              disableGif
+              serverId={currentServer?.id}
+              serverName={currentServer?.name}
+            >
+              <button
+                type="button"
+                className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
+                onMouseDown={(e) => e.preventDefault()}
+              >
+                <Smile className="w-5 h-5" />
+              </button>
+            </EmojiGifPicker>
+          </>
+        )}
 
         {/* Send button */}
         <button
@@ -827,15 +894,99 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       )}
 
       {/* Floating input container */}
-      <div
-        className={`
-          rounded-2xl bg-secondary border transition-all duration-200 ease-out
-          ${isFocused ? "border-border shadow-lg" : "border-transparent"}
-          ${replyingTo ? "rounded-t-none" : ""}
-        `}
-      >
-        <div className="flex items-end gap-1 sm:gap-2 p-2 sm:p-3">
-          {/* Attachment button */}
+      <MobileOptimizedInput
+        content={content}
+        isFocused={isFocused}
+        replyingTo={replyingTo}
+        canSendMessage={canSendMessage}
+        channelName={channelName}
+        textareaRef={textareaRef}
+        handleChange={handleChange}
+        setIsFocused={setIsFocused}
+        handleKeyDown={handleKeyDown}
+        handlePaste={handlePaste}
+        showFormatToolbar={showFormatToolbar}
+        setShowFormatToolbar={setShowFormatToolbar}
+        showCreatePoll={showCreatePoll}
+        setShowCreatePoll={setShowCreatePoll}
+        showEmojiPicker={showEmojiPicker}
+        setShowEmojiPicker={setShowEmojiPicker}
+        isSending={isSending}
+        handleSubmit={handleSubmit}
+        handleEmojiSelect={handleEmojiSelect}
+        currentServer={currentServer}
+        setShowImageUpload={setShowImageUpload}
+      />
+
+      {/* Image upload dialog */}
+      <ImageUploadDialog open={showImageUpload} onOpenChange={setShowImageUpload} onUpload={handleImageUpload} />
+
+      {/* Create poll modal */}
+      <CreatePollModal open={showCreatePoll} onOpenChange={setShowCreatePoll} channelId={channelId} />
+    </div>
+  );
+};
+
+// Mobile-optimized input component
+const MobileOptimizedInput = memo(({
+  content,
+  isFocused,
+  replyingTo,
+  canSendMessage,
+  channelName,
+  textareaRef,
+  handleChange,
+  setIsFocused,
+  handleKeyDown,
+  handlePaste,
+  showFormatToolbar,
+  setShowFormatToolbar,
+  showCreatePoll,
+  setShowCreatePoll,
+  showEmojiPicker,
+  setShowEmojiPicker,
+  isSending,
+  handleSubmit,
+  handleEmojiSelect,
+  currentServer,
+  setShowImageUpload,
+}: {
+  content: string;
+  isFocused: boolean;
+  replyingTo: any;
+  canSendMessage: boolean;
+  channelName: string;
+  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  handleChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  setIsFocused: (focused: boolean) => void;
+  handleKeyDown: (e: React.KeyboardEvent) => void;
+  handlePaste: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
+  showFormatToolbar: boolean;
+  setShowFormatToolbar: (show: boolean) => void;
+  showCreatePoll: boolean;
+  setShowCreatePoll: (show: boolean) => void;
+  showEmojiPicker: boolean;
+  setShowEmojiPicker: (show: boolean) => void;
+  isSending: boolean;
+  handleSubmit: () => void;
+  handleEmojiSelect: (emoji: string) => void;
+  currentServer: any;
+  setShowImageUpload: (show: boolean) => void;
+}) => {
+  const isMobile = useIsMobile();
+  const shouldCollapse = isMobile && content.length > 10;
+
+  return (
+    <div
+      className={`
+        rounded-2xl bg-secondary border transition-all duration-200 ease-out
+        ${isFocused ? "border-border shadow-lg" : "border-transparent"}
+        ${replyingTo ? "rounded-t-none" : ""}
+      `}
+    >
+      <div className="flex items-end gap-1 sm:gap-2 p-2 sm:p-3">
+        {/* Attachment button - hidden when collapsed on mobile */}
+        {!shouldCollapse && (
           <button
             onClick={() => setShowImageUpload(true)}
             disabled={!canSendMessage}
@@ -848,48 +999,50 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
           >
             <Paperclip className="w-5 h-5" />
           </button>
+        )}
 
-          {/* Textarea */}
-          <textarea
-            ref={textareaRef}
-            value={content}
-            onChange={handleChange}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
-            onKeyDown={handleKeyDown}
-            onPaste={handlePaste}
-            placeholder={canSendMessage ? `Message #${channelName}` : "You do not have permission to send messages in this channel"}
-            disabled={!canSendMessage}
-            rows={1}
-            className={`flex-1 bg-transparent resize-none outline-none text-foreground placeholder:text-muted-foreground text-sm sm:text-[15px] leading-relaxed py-2 px-1 font-light min-w-0 ${
-              !canSendMessage ? "cursor-not-allowed opacity-50" : ""
-            }`}
-            style={{ fontFamily: "system-ui, -apple-system, sans-serif, 'Noto Color Emoji'" }}
-          />
+        {/* Textarea - with improved mobile styles */}
+        <textarea
+          ref={textareaRef}
+          value={content}
+          onChange={handleChange}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
+          placeholder={canSendMessage ? `Message #${channelName}` : "You do not have permission to send messages in this channel"}
+          disabled={!canSendMessage}
+          rows={1}
+          className={`flex-1 bg-transparent resize-none outline-none text-foreground placeholder:text-muted-foreground text-sm sm:text-[15px] leading-relaxed py-2 px-1 font-light min-w-0 ${
+            !canSendMessage ? "cursor-not-allowed opacity-50" : ""
+          } ${shouldCollapse ? "text-base" : ""}`}
+          style={{ 
+            fontFamily: "system-ui, -apple-system, sans-serif, 'Noto Color Emoji'",
+            // Prevent iOS zoom on focus by using 16px minimum
+            fontSize: isMobile ? '16px' : undefined,
+          }}
+        />
 
-          {/* Action buttons - memoized */}
-          <ActionButtons
-            showFormatToolbar={showFormatToolbar}
-            setShowFormatToolbar={setShowFormatToolbar}
-            showCreatePoll={showCreatePoll}
-            setShowCreatePoll={setShowCreatePoll}
-            showEmojiPicker={showEmojiPicker}
-            setShowEmojiPicker={setShowEmojiPicker}
-            canSendMessage={canSendMessage}
-            content={content}
-            isSending={isSending}
-            onSubmit={handleSubmit}
-            onEmojiSelect={handleEmojiSelect}
-            currentServer={currentServer}
-          />
-        </div>
+        {/* Action buttons - memoized */}
+        <ActionButtons
+          showFormatToolbar={showFormatToolbar}
+          setShowFormatToolbar={setShowFormatToolbar}
+          showCreatePoll={showCreatePoll}
+          setShowCreatePoll={setShowCreatePoll}
+          showEmojiPicker={showEmojiPicker}
+          setShowEmojiPicker={setShowEmojiPicker}
+          canSendMessage={canSendMessage}
+          content={content}
+          isSending={isSending}
+          onSubmit={handleSubmit}
+          onEmojiSelect={handleEmojiSelect}
+          currentServer={currentServer}
+          showAttachButton={shouldCollapse}
+          onAttachClick={() => setShowImageUpload(true)}
+        />
       </div>
-
-      {/* Image upload dialog */}
-      <ImageUploadDialog open={showImageUpload} onOpenChange={setShowImageUpload} onUpload={handleImageUpload} />
-
-      {/* Create poll modal */}
-      <CreatePollModal open={showCreatePoll} onOpenChange={setShowCreatePoll} channelId={channelId} />
     </div>
   );
-};
+});
+
+MobileOptimizedInput.displayName = "MobileOptimizedInput";
