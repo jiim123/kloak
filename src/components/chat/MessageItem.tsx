@@ -555,7 +555,7 @@ export const MessageItem = memo(function MessageItem({
       if (message.reply_to?.id) {
         // Set URL param - useScrollToMessage hook will handle scrolling and highlighting
         const newParams = new URLSearchParams(searchParams);
-        newParams.set('message', message.reply_to.id);
+        newParams.set("message", message.reply_to.id);
         setSearchParams(newParams, { replace: true });
       }
     },
@@ -588,400 +588,416 @@ export const MessageItem = memo(function MessageItem({
               onTouchEnd={clearLongPress}
               onTouchMove={clearLongPress}
             >
-          {/* Avatar / Timestamp column - hidden for system messages */}
-          {!message.is_system_message && (
-            <>
-              {compactMode ? (
-                <div className="w-16 flex-shrink-0 pt-0.5">
-                  <span
-                    className={`text-[11px] font-[Inter,system-ui,sans-serif] text-muted-foreground transition-opacity duration-150 whitespace-nowrap block ${
-                      showTimestamps || !isGrouped ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                    }`}
-                  >
-                    {formattedTime}
-                  </span>
-                </div>
-              ) : (
-                <div className="w-10 flex-shrink-0">
-                  {!isGrouped && messageUser ? (
-                    <AvatarWithDecoration 
-                      user={messageUser} 
-                      className="w-10 h-10 cursor-pointer" 
-                      active={isRowHovered}
-                      onClick={handleUsernameClick}
-                    />
+              {/* Avatar / Timestamp column - hidden for system messages */}
+              {!message.is_system_message && (
+                <>
+                  {compactMode ? (
+                    <div className="w-16 flex-shrink-0 pt-0.5">
+                      <span
+                        className={`text-[11px] font-[Inter,system-ui,sans-serif] text-muted-foreground transition-opacity duration-150 whitespace-nowrap block ${
+                          showTimestamps || !isGrouped ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                        }`}
+                      >
+                        {formattedTime}
+                      </span>
+                    </div>
                   ) : (
-                    <span className="text-[11px] font-[Inter,system-ui,sans-serif] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                      {formattedTime}
-                    </span>
+                    <div className="w-10 flex-shrink-0">
+                      {!isGrouped && messageUser ? (
+                        <AvatarWithDecoration
+                          user={messageUser}
+                          className="w-10 h-10 cursor-pointer"
+                          active={isRowHovered}
+                          onClick={handleUsernameClick}
+                        />
+                      ) : (
+                        <span className="text-[11px] font-[Inter,system-ui,sans-serif] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                          {formattedTime}
+                        </span>
+                      )}
+                    </div>
                   )}
-                </div>
+                </>
               )}
-            </>
-          )}
 
-          {/* Content */}
-          <div className="flex-1 min-w-0">
-            {/* System Message - Special rendering */}
-            {message.is_system_message ? (
-              <div className="flex items-center gap-2 py-1">
-                {messageUser && (
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                {/* System Message - Special rendering */}
+                {message.is_system_message ? (
+                  <div className="flex items-center gap-2 py-1">
+                    {messageUser && (
+                      <>
+                        <AvatarWithDecoration
+                          user={messageUser}
+                          className="w-5 h-5 cursor-pointer flex-shrink-0"
+                          active={isRowHovered}
+                          onClick={handleUsernameClick}
+                        />
+                        <span className="text-sm text-muted-foreground">
+                          <MessageContent
+                            content={message.content}
+                            currentUserId={user?.id}
+                            messageId={message.id}
+                            messageUser={
+                              messageUser
+                                ? {
+                                    id: messageUser.id,
+                                    username: messageUser.username,
+                                    display_name: messageUser.display_name,
+                                  }
+                                : undefined
+                            }
+                          />
+                        </span>
+                      </>
+                    )}
+                  </div>
+                ) : (
                   <>
-                    <AvatarWithDecoration 
-                      user={messageUser} 
-                      className="w-5 h-5 cursor-pointer flex-shrink-0" 
-                      active={isRowHovered}
-                      onClick={handleUsernameClick}
-                    />
-                    <span className="text-sm text-muted-foreground">
-                      <MessageContent 
-                        content={message.content} 
-                        currentUserId={user?.id} 
-                        messageId={message.id}
-                        messageUser={messageUser ? {
-                          id: messageUser.id,
-                          username: messageUser.username,
-                          display_name: messageUser.display_name,
-                        } : undefined}
-                      />
-                    </span>
+                    {/* Header */}
+                    {compactMode ? (
+                      <span className="inline font-[Inter,system-ui,sans-serif]">
+                        <span
+                          onClick={handleUsernameClick}
+                          className={`text-[14px] sm:text-[15px] font-medium leading-tight hover:underline cursor-pointer mr-1.5 ${usernameColorClass}`}
+                          style={usernameColorStyle}
+                        >
+                          {displayName}
+                        </span>
+                        {roleIconNode && priorityRoleWithIcon && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <RoleIconWrapper>
+                                <span className="inline-flex items-center mr-1.5 cursor-help">{roleIconNode}</span>
+                              </RoleIconWrapper>
+                            </TooltipTrigger>
+                            <TooltipContent>{priorityRoleWithIcon.name}</TooltipContent>
+                          </Tooltip>
+                        )}
+                        {message.is_pinned && <Pin className="w-3 h-3 text-muted-foreground inline mr-1" />}
+                      </span>
+                    ) : (
+                      !isGrouped &&
+                      messageUser && (
+                        <div className="flex items-baseline gap-2 mb-0.5 font-[Inter,system-ui,sans-serif]">
+                          <span
+                            onClick={handleUsernameClick}
+                            className={`text-[14px] sm:text-[15px] font-medium leading-tight hover:underline cursor-pointer ${usernameColorClass}`}
+                            style={usernameColorStyle}
+                          >
+                            {displayName}
+                          </span>
+                          {roleIconNode && priorityRoleWithIcon && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <RoleIconWrapper>
+                                  <span className="inline-flex items-center cursor-help">{roleIconNode}</span>
+                                </RoleIconWrapper>
+                              </TooltipTrigger>
+                              <TooltipContent>{priorityRoleWithIcon.name}</TooltipContent>
+                            </Tooltip>
+                          )}
+                          {showTimestamps && (
+                            <span className="text-[12px] sm:text-[13px] text-muted-foreground leading-none">
+                              {formattedTimestamp}
+                            </span>
+                          )}
+                          {message.is_pinned && <Pin className="w-3 h-3 text-muted-foreground" />}
+                        </div>
+                      )
+                    )}
+
+                    {/* Reply reference */}
+                    {message.reply_to && (
+                      <div
+                        className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1 cursor-pointer hover:text-foreground"
+                        onClick={handleReplyClick}
+                      >
+                        <CornerUpLeft className="w-3 h-3 flex-shrink-0" />
+                        <span>Replying to</span>
+                        <span className="font-medium text-primary">
+                          @{message.reply_to.user?.username || "unknown"}
+                        </span>
+                        {isPollMessageContent(message.reply_to.content) ? (
+                          <span className="italic">poll</span>
+                        ) : isImageOnlyMessage(message.reply_to.content) ? (
+                          <img
+                            src={message.reply_to.content.trim()}
+                            alt="Image"
+                            className="w-6 h-6 rounded object-cover flex-shrink-0"
+                          />
+                        ) : (
+                          <span className="truncate max-w-[200px]">
+                            <ReplyPreview content={message.reply_to.content} maxLength={50} />
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Message content */}
+                    {isEditing ? (
+                      <div className="flex flex-col gap-2">
+                        <Textarea
+                          ref={textareaRef}
+                          value={editContent}
+                          onChange={(e) => setEditContent(e.target.value)}
+                          className="min-h-[60px] resize-none text-sm"
+                          onKeyDown={handleKeyDown}
+                        />
+                        <div className="flex gap-2 text-[11px]">
+                          <span className="text-muted-foreground">
+                            escape to{" "}
+                            <button className="text-primary hover:underline" onClick={handleCancelEdit}>
+                              cancel
+                            </button>
+                            {" • "}enter to{" "}
+                            <button className="text-primary hover:underline" onClick={handleEdit}>
+                              save
+                            </button>
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-[14px] sm:text-[14px] font-normal leading-[1.5] font-[Inter,system-ui,sans-serif]">
+                        {pollId ? (
+                          <PollMessage pollId={pollId} />
+                        ) : (
+                          <MessageContent
+                            content={message.content}
+                            currentUserId={user?.id}
+                            messageId={message.id}
+                            messageUser={
+                              messageUser
+                                ? {
+                                    id: messageUser.id,
+                                    username: messageUser.username,
+                                    display_name: messageUser.display_name,
+                                  }
+                                : undefined
+                            }
+                          />
+                        )}
+                      </div>
+                    )}
+
+                    {/* Edited indicator */}
+                    {message.edited_at && !isEditing && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="text-[10px] text-muted-foreground cursor-help ml-1">(edited)</span>
+                        </TooltipTrigger>
+                        <TooltipContent>{new Date(message.edited_at).toLocaleString()}</TooltipContent>
+                      </Tooltip>
+                    )}
+
+                    {/* Attachments - skip for system messages */}
+                    {!message.is_system_message && message.attachments && message.attachments.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {message.attachments.map((attachment) => (
+                          <div key={attachment.id} className="relative">
+                            {attachment.file_type?.startsWith("image/") ? (
+                              <img
+                                src={attachment.file_url}
+                                alt={attachment.file_name}
+                                className="max-w-[400px] max-h-[300px] rounded-lg cursor-pointer hover:opacity-90"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <a
+                                href={attachment.file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 p-3 bg-secondary rounded-lg hover:bg-secondary/80"
+                              >
+                                <span className="text-sm font-medium">{attachment.file_name}</span>
+                                {attachment.file_size && (
+                                  <span className="text-xs text-muted-foreground">
+                                    ({Math.round(attachment.file_size / 1024)} KB)
+                                  </span>
+                                )}
+                              </a>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Reactions - skip for system messages */}
+                    {!message.is_system_message && message.reactions && message.reactions.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {message.reactions.map((reaction) => (
+                          <HoverCard key={reaction.emoji} openDelay={200}>
+                            <HoverCardTrigger asChild>
+                              <span className="inline-flex">
+                                <button
+                                  onClick={() =>
+                                    canAddReactions && handleReactionClick(reaction.emoji, reaction.hasReacted)
+                                  }
+                                  disabled={!canAddReactions}
+                                  className={`flex items-center gap-1.5 px-2.5 py-1 text-lg rounded-md border transition-colors duration-200 ${
+                                    reaction.hasReacted
+                                      ? "bg-primary/20 border-primary text-primary"
+                                      : "bg-secondary border-transparent hover:border-border"
+                                  } ${!canAddReactions ? "opacity-50 cursor-not-allowed" : ""}`}
+                                >
+                                  {reactionEmojiNode(reaction.emoji)}
+                                  <span className="text-xs">{reaction.count}</span>
+                                </button>
+                              </span>
+                            </HoverCardTrigger>
+                            <HoverCardContent className="w-auto p-1.5" align="start" side="top">
+                              {(() => {
+                                const names = getReactionUserNames(reaction.users);
+                                const preview = names.slice(0, 4);
+                                const remaining = Math.max(0, names.length - preview.length);
+                                return (
+                                  <div className="flex items-center gap-1">
+                                    <div className="shrink-0">{reactionEmojiNodeLarge(reaction.emoji)}</div>
+                                    <div className="min-w-0 text-sm leading-tight">
+                                      <span className="text-muted-foreground">reacted by</span>{" "}
+                                      {preview.map((name, idx) => (
+                                        <span key={`${reaction.emoji}-${name}`}>
+                                          <span className="truncate">{name}</span>
+                                          {idx < preview.length - 1 ? ", " : ""}
+                                        </span>
+                                      ))}
+                                      {remaining > 0 && (
+                                        <>
+                                          {preview.length > 0 ? ", " : ""}
+                                          <button
+                                            type="button"
+                                            className="text-primary underline hover:no-underline"
+                                            onClick={(e) => {
+                                              e.preventDefault();
+                                              e.stopPropagation();
+                                              setReactionDetailsEmoji(reaction.emoji);
+                                            }}
+                                          >
+                                            {remaining} others
+                                          </button>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+                            </HoverCardContent>
+                          </HoverCard>
+                        ))}
+                      </div>
+                    )}
                   </>
                 )}
               </div>
-            ) : (
-              <>
-            {/* Header */}
-            {compactMode ? (
-              <span className="inline font-[Inter,system-ui,sans-serif]">
-                <span
-                  onClick={handleUsernameClick}
-                  className={`text-[14px] sm:text-[15px] font-medium leading-tight hover:underline cursor-pointer mr-1.5 ${usernameColorClass}`}
-                  style={usernameColorStyle}
-                >
-                  {displayName}
-                </span>
-                {roleIconNode && priorityRoleWithIcon && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <RoleIconWrapper>
-                        <span className="inline-flex items-center mr-1.5 cursor-help">{roleIconNode}</span>
-                      </RoleIconWrapper>
-                    </TooltipTrigger>
-                    <TooltipContent>{priorityRoleWithIcon.name}</TooltipContent>
-                  </Tooltip>
-                )}
-                {message.is_pinned && <Pin className="w-3 h-3 text-muted-foreground inline mr-1" />}
-              </span>
-            ) : (
-              !isGrouped &&
-              messageUser && (
-                <div className="flex items-baseline gap-2 mb-0.5 font-[Inter,system-ui,sans-serif]">
-                  <span
-                    onClick={handleUsernameClick}
-                    className={`text-[14px] sm:text-[15px] font-medium leading-tight hover:underline cursor-pointer ${usernameColorClass}`}
-                    style={usernameColorStyle}
-                  >
-                    {displayName}
-                  </span>
-                  {roleIconNode && priorityRoleWithIcon && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <RoleIconWrapper>
-                          <span className="inline-flex items-center cursor-help">{roleIconNode}</span>
-                        </RoleIconWrapper>
-                      </TooltipTrigger>
-                      <TooltipContent>{priorityRoleWithIcon.name}</TooltipContent>
-                    </Tooltip>
-                  )}
-                  {showTimestamps && <span className="text-[12px] sm:text-[13px] text-muted-foreground leading-none">{formattedTimestamp}</span>}
-                  {message.is_pinned && <Pin className="w-3 h-3 text-muted-foreground" />}
-                </div>
-              )
-            )}
 
-            {/* Reply reference */}
-            {message.reply_to && (
-              <div 
-                className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1 cursor-pointer hover:text-foreground"
-                onClick={handleReplyClick}
-              >
-                <CornerUpLeft className="w-3 h-3 flex-shrink-0" />
-                <span>Replying to</span>
-                <span className="font-medium text-primary">@{message.reply_to.user?.username || "unknown"}</span>
-                {isPollMessageContent(message.reply_to.content) ? (
-                  <span className="italic">poll</span>
-                ) : isImageOnlyMessage(message.reply_to.content) ? (
-                  <img 
-                    src={message.reply_to.content.trim()} 
-                    alt="Image" 
-                    className="w-6 h-6 rounded object-cover flex-shrink-0"
-                  />
-                ) : (
-                  <span className="truncate max-w-[200px]">
-                    <ReplyPreview content={message.reply_to.content} maxLength={50} />
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* Message content */}
-            {isEditing ? (
-              <div className="flex flex-col gap-2">
-                <Textarea
-                  ref={textareaRef}
-                  value={editContent}
-                  onChange={(e) => setEditContent(e.target.value)}
-                  className="min-h-[60px] resize-none text-sm"
-                  onKeyDown={handleKeyDown}
-                />
-                <div className="flex gap-2 text-[11px]">
-                  <span className="text-muted-foreground">
-                    escape to{" "}
-                    <button className="text-primary hover:underline" onClick={handleCancelEdit}>
-                      cancel
-                    </button>
-                    {" • "}enter to{" "}
-                    <button className="text-primary hover:underline" onClick={handleEdit}>
-                      save
-                    </button>
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <div className="text-[14px] sm:text-[15px] font-normal leading-[1.5] font-[Inter,system-ui,sans-serif]">
-                {pollId ? (
-                  <PollMessage pollId={pollId} />
-                ) : (
-                  <MessageContent 
-                    content={message.content} 
-                    currentUserId={user?.id} 
-                    messageId={message.id}
-                    messageUser={messageUser ? {
-                      id: messageUser.id,
-                      username: messageUser.username,
-                      display_name: messageUser.display_name,
-                    } : undefined}
-                  />
-                )}
-              </div>
-            )}
-
-            {/* Edited indicator */}
-            {message.edited_at && !isEditing && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="text-[10px] text-muted-foreground cursor-help ml-1">(edited)</span>
-                </TooltipTrigger>
-                <TooltipContent>{new Date(message.edited_at).toLocaleString()}</TooltipContent>
-              </Tooltip>
-            )}
-
-            {/* Attachments - skip for system messages */}
-            {!message.is_system_message && message.attachments && message.attachments.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {message.attachments.map((attachment) => (
-                  <div key={attachment.id} className="relative">
-                    {attachment.file_type?.startsWith("image/") ? (
-                      <img
-                        src={attachment.file_url}
-                        alt={attachment.file_name}
-                        className="max-w-[400px] max-h-[300px] rounded-lg cursor-pointer hover:opacity-90"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <a
-                        href={attachment.file_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 p-3 bg-secondary rounded-lg hover:bg-secondary/80"
+              {/* Hover actions - Desktop only - skip for system messages */}
+              {!isEditing && !message.is_system_message && (
+                <div className="absolute right-2 -top-4 hidden md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 md:flex items-center gap-1 bg-background/95 backdrop-blur-sm border border-border rounded-xl shadow-xl p-1 transition-opacity duration-200">
+                  {/* Reactions - Desktop */}
+                  {canAddReactions && (
+                    <EmojiGifPicker
+                      open={showDesktopEmojiPicker}
+                      onOpenChange={setShowDesktopEmojiPicker}
+                      onEmojiSelect={handleDesktopAddReaction}
+                      disableGif
+                      serverId={currentServer?.id}
+                      serverName={currentServer?.name}
+                    >
+                      <button
+                        className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                        aria-label="Add reaction"
+                        title="Add reaction"
                       >
-                        <span className="text-sm font-medium">{attachment.file_name}</span>
-                        {attachment.file_size && (
-                          <span className="text-xs text-muted-foreground">
-                            ({Math.round(attachment.file_size / 1024)} KB)
-                          </span>
-                        )}
-                      </a>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Reactions - skip for system messages */}
-            {!message.is_system_message && message.reactions && message.reactions.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {message.reactions.map((reaction) => (
-                  <HoverCard key={reaction.emoji} openDelay={200}>
-                    <HoverCardTrigger asChild>
-                      <span className="inline-flex">
-                        <button
-                          onClick={() => canAddReactions && handleReactionClick(reaction.emoji, reaction.hasReacted)}
-                          disabled={!canAddReactions}
-                          className={`flex items-center gap-1.5 px-2.5 py-1 text-lg rounded-md border transition-colors duration-200 ${
-                            reaction.hasReacted
-                              ? "bg-primary/20 border-primary text-primary"
-                              : "bg-secondary border-transparent hover:border-border"
-                          } ${!canAddReactions ? "opacity-50 cursor-not-allowed" : ""}`}
-                        >
-                          {reactionEmojiNode(reaction.emoji)}
-                          <span className="text-xs">{reaction.count}</span>
-                        </button>
-                      </span>
-                    </HoverCardTrigger>
-                    <HoverCardContent className="w-auto p-1.5" align="start" side="top">
-                      {(() => {
-                        const names = getReactionUserNames(reaction.users);
-                        const preview = names.slice(0, 4);
-                        const remaining = Math.max(0, names.length - preview.length);
-                        return (
-                          <div className="flex items-center gap-1">
-                            <div className="shrink-0">{reactionEmojiNodeLarge(reaction.emoji)}</div>
-                            <div className="min-w-0 text-sm leading-tight">
-                              <span className="text-muted-foreground">reacted by</span>{" "}
-                              {preview.map((name, idx) => (
-                                <span key={`${reaction.emoji}-${name}`}>
-                                  <span className="truncate">{name}</span>
-                                  {idx < preview.length - 1 ? ", " : ""}
-                                </span>
-                              ))}
-                              {remaining > 0 && (
-                                <>
-                                  {preview.length > 0 ? ", " : ""}
-                                  <button
-                                    type="button"
-                                    className="text-primary underline hover:no-underline"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      setReactionDetailsEmoji(reaction.emoji);
-                                    }}
-                                  >
-                                    {remaining} others
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })()}
-                    </HoverCardContent>
-                  </HoverCard>
-                ))}
-              </div>
-            )}
-              </>
-            )}
-          </div>
-
-          {/* Hover actions - Desktop only - skip for system messages */}
-          {!isEditing && !message.is_system_message && (
-            <div className="absolute right-2 -top-4 hidden md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 md:flex items-center gap-1 bg-background/95 backdrop-blur-sm border border-border rounded-xl shadow-xl p-1 transition-opacity duration-200">
-              {/* Reactions - Desktop */}
-              {canAddReactions && (
-                <EmojiGifPicker
-                  open={showDesktopEmojiPicker}
-                  onOpenChange={setShowDesktopEmojiPicker}
-                  onEmojiSelect={handleDesktopAddReaction}
-                  disableGif
-                  serverId={currentServer?.id}
-                  serverName={currentServer?.name}
-                >
-                  <button
-                    className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                    aria-label="Add reaction"
-                    title="Add reaction"
-                  >
-                    <Smile className="w-4 h-4" />
-                  </button>
-                </EmojiGifPicker>
-              )}
-
-              {/* Reply */}
-              <button
-                className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                onClick={() => setReplyingTo(message)}
-                aria-label="Reply"
-                title="Reply"
-              >
-                <Reply className="w-4 h-4" />
-              </button>
-
-              {/* Edit (own messages) */}
-              {isOwnMessage && (
-                <button
-                  className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                  onClick={handleStartEditing}
-                  aria-label="Edit"
-                  title="Edit"
-                >
-                  <Pencil className="w-4 h-4" />
-                </button>
-              )}
-
-              <div className="w-px h-5 bg-border mx-0.5" />
-
-              {/* Pin */}
-              {canPinMessages && (
-                <button
-                  className={cn(
-                    "p-2 rounded-lg bg-transparent hover:bg-muted transition-colors",
-                    message.is_pinned ? "text-primary" : "text-muted-foreground hover:text-foreground",
+                        <Smile className="w-4 h-4" />
+                      </button>
+                    </EmojiGifPicker>
                   )}
-                  onClick={handlePin}
-                  aria-label={message.is_pinned ? "Unpin" : "Pin"}
-                  title={message.is_pinned ? "Unpin" : "Pin"}
-                >
-                  <Pin className="w-4 h-4" />
-                </button>
-              )}
 
-              {/* Copy */}
-              <button
-                className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                onClick={handleCopyText}
-                aria-label="Copy text"
-                title="Copy text"
-              >
-                <Copy className="w-4 h-4" />
-              </button>
-
-              {/* More menu */}
-              <DropdownMenu open={showMoreMenu} onOpenChange={setShowMoreMenu}>
-                <DropdownMenuTrigger asChild>
+                  {/* Reply */}
                   <button
                     className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                    aria-label="More actions"
-                    title="More"
+                    onClick={() => setReplyingTo(message)}
+                    aria-label="Reply"
+                    title="Reply"
                   >
-                    <MoreHorizontal className="w-4 h-4" />
+                    <Reply className="w-4 h-4" />
                   </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="min-w-[160px]">
-                  <DropdownMenuItem onClick={handleCopyMessageId}>
-                    <Copy className="w-4 h-4 mr-2" />
-                    Copy Message ID
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
 
-              {/* Delete */}
-              {(isOwnMessage || isAdmin) && (
-                <>
+                  {/* Edit (own messages) */}
+                  {isOwnMessage && (
+                    <button
+                      className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                      onClick={handleStartEditing}
+                      aria-label="Edit"
+                      title="Edit"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                  )}
+
                   <div className="w-px h-5 bg-border mx-0.5" />
+
+                  {/* Pin */}
+                  {canPinMessages && (
+                    <button
+                      className={cn(
+                        "p-2 rounded-lg bg-transparent hover:bg-muted transition-colors",
+                        message.is_pinned ? "text-primary" : "text-muted-foreground hover:text-foreground",
+                      )}
+                      onClick={handlePin}
+                      aria-label={message.is_pinned ? "Unpin" : "Pin"}
+                      title={message.is_pinned ? "Unpin" : "Pin"}
+                    >
+                      <Pin className="w-4 h-4" />
+                    </button>
+                  )}
+
+                  {/* Copy */}
                   <button
-                    className="p-2 rounded-lg bg-transparent hover:bg-destructive/10 transition-colors text-destructive"
-                    onClick={() => setShowDeleteModal(true)}
-                    aria-label="Delete"
-                    title="Delete"
+                    className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                    onClick={handleCopyText}
+                    aria-label="Copy text"
+                    title="Copy text"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Copy className="w-4 h-4" />
                   </button>
-                </>
+
+                  {/* More menu */}
+                  <DropdownMenu open={showMoreMenu} onOpenChange={setShowMoreMenu}>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                        aria-label="More actions"
+                        title="More"
+                      >
+                        <MoreHorizontal className="w-4 h-4" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="min-w-[160px]">
+                      <DropdownMenuItem onClick={handleCopyMessageId}>
+                        <Copy className="w-4 h-4 mr-2" />
+                        Copy Message ID
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* Delete */}
+                  {(isOwnMessage || isAdmin) && (
+                    <>
+                      <div className="w-px h-5 bg-border mx-0.5" />
+                      <button
+                        className="p-2 rounded-lg bg-transparent hover:bg-destructive/10 transition-colors text-destructive"
+                        onClick={() => setShowDeleteModal(true)}
+                        aria-label="Delete"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
+                </div>
               )}
             </div>
-          )}
-          </div>
           </ContextMenuTrigger>
           <ContextMenuContent>
             <ContextMenuItem onClick={() => setReplyingTo(message)}>
@@ -1013,7 +1029,10 @@ export const MessageItem = memo(function MessageItem({
             {(isOwnMessage || isAdmin) && (
               <>
                 <ContextMenuSeparator />
-                <ContextMenuItem onClick={() => setShowDeleteModal(true)} className="text-destructive focus:text-destructive">
+                <ContextMenuItem
+                  onClick={() => setShowDeleteModal(true)}
+                  className="text-destructive focus:text-destructive"
+                >
                   <Trash2 className="w-4 h-4 mr-2" />
                   Delete Message
                 </ContextMenuItem>
