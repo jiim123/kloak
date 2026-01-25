@@ -88,11 +88,17 @@ const Auth = () => {
   const [showSecretKey, setShowSecretKey] = useState(false);
 
   // Redirect if already logged in
+  // Note: On iOS, we need to ensure zustand has fully hydrated before redirecting
+  // The authStep check prevents redirect during account creation flow (key display step)
   useEffect(() => {
-    if (user) {
-      navigate(redirectTo || "/app");
+    if (user && authStep === "form") {
+      // Use a small delay to ensure iOS Safari has completed any pending state updates
+      const timeoutId = setTimeout(() => {
+        navigate(redirectTo || "/app", { replace: true });
+      }, 50);
+      return () => clearTimeout(timeoutId);
     }
-  }, [user, navigate, redirectTo]);
+  }, [user, navigate, redirectTo, authStep]);
 
   // Reset state when switching tabs
   useEffect(() => {
@@ -162,12 +168,22 @@ const Auth = () => {
       return;
     }
 
-    const result = await createAccount(username.trim().toLowerCase());
-    if (result) {
-      setGeneratedKey(result.secretKey);
-      setAuthStep("key-display");
-      // Show welcome modal for newly created accounts
-      setShowWelcomeModal(true);
+    try {
+      const result = await createAccount(username.trim().toLowerCase());
+      if (result) {
+        setGeneratedKey(result.secretKey);
+        setAuthStep("key-display");
+        // Show welcome modal for newly created accounts
+        setShowWelcomeModal(true);
+      }
+    } catch (err) {
+      console.error('Account creation error:', err);
+      // Error is already handled in authStore, but add extra logging for iOS debugging
+      toast({
+        variant: "destructive",
+        title: "Account creation failed",
+        description: "Please try again. If the problem persists, check your internet connection.",
+      });
     }
   };
 
@@ -196,7 +212,8 @@ const Auth = () => {
 
       // Resize Tauri window to app size, then navigate
       await resizeWindowForApp();
-      navigate(redirectTo || "/app");
+      // Use replace to prevent back navigation to auth page after login
+      navigate(redirectTo || "/app", { replace: true });
     }
   };
 
@@ -207,14 +224,43 @@ const Auth = () => {
     setSecretKey(pastedText);
   };
 
-  // Copy key to clipboard
+  // Copy key to clipboard with iOS Safari fallback
   const copyKey = async () => {
-    if (generatedKey) {
-      await navigator.clipboard.writeText(generatedKey);
+    if (!generatedKey) return;
+
+    try {
+      // Try modern Clipboard API first
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        await navigator.clipboard.writeText(generatedKey);
+      } else {
+        // Fallback for iOS Safari and older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = generatedKey;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        textArea.style.top = '-9999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+          document.execCommand('copy');
+        } finally {
+          document.body.removeChild(textArea);
+        }
+      }
+      
       setKeyCopied(true);
       toast({
         title: "Copied!",
         description: "Secret key copied to clipboard.",
+      });
+    } catch (err) {
+      console.error('Copy failed:', err);
+      toast({
+        variant: "destructive",
+        title: "Copy failed",
+        description: "Please manually select and copy the key.",
       });
     }
   };
@@ -223,7 +269,8 @@ const Auth = () => {
   const continueToApp = async () => {
     // Resize Tauri window to app size, then navigate
     await resizeWindowForApp();
-    navigate(redirectTo || "/app");
+    // Use replace to prevent back navigation to auth page after account creation
+    navigate(redirectTo || "/app", { replace: true });
   };
 
   // Handle welcome modal close
