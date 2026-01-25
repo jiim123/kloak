@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { ArrowDown } from 'lucide-react';
+import { ArrowDown, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useDMStore } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
+import { useFriendStore } from '@/stores/friendStore';
 import { useUnreadDMs } from '@/hooks/useUnreadDMs';
 import { useSwipeGestureRef } from '@/hooks/useSwipeGesture';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -16,11 +17,20 @@ export const DMChatArea = () => {
   const { user } = useAuthStore();
   const { currentConversation, isLoading, fetchMessages, getMessages } = useDMStore();
   const { setMobileSidebarOpen } = useUIStore();
+  const { blockedUsers, visibilityBlockedUserIds } = useFriendStore();
   const { markAsRead } = useUnreadDMs(user?.id || null);
   const isMobile = useIsMobile();
   
   // Get messages for current conversation from cache
   const messages = currentConversation ? getMessages(currentConversation.id) : [];
+  
+  // Check if either user has blocked the other
+  // blockedUsers = users that I have blocked
+  // visibilityBlockedUserIds = all users in a "blocked" relationship with me (both directions)
+  const otherUserId = currentConversation?.other_user?.id;
+  const isBlockedByMe = blockedUsers.some((b) => b.id === otherUserId);
+  // If other user is in visibility blocked but NOT in my blocked list, they blocked me
+  const isBlockedByThem = otherUserId ? visibilityBlockedUserIds.includes(otherUserId) && !isBlockedByMe : false;
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -107,6 +117,7 @@ export const DMChatArea = () => {
   }
 
   const otherUser = currentConversation.other_user;
+  const isBlocked = isBlockedByMe || isBlockedByThem;
 
   return (
     <div ref={swipeRef} className="h-full flex flex-col bg-layout-chat">
@@ -158,7 +169,7 @@ export const DMChatArea = () => {
                 key={message.id}
                 message={message}
                 isFirst={isFirst}
-                onReply={setReplyingTo}
+                onReply={isBlocked ? undefined : setReplyingTo}
               />
             ))}
           </div>
@@ -181,13 +192,27 @@ export const DMChatArea = () => {
         </div>
       )}
 
-      {/* Message input - matches channel input style */}
-      <DMMessageInput
-        conversationId={currentConversation.id}
-        otherUsername={otherUser?.username || 'user'}
-        replyingTo={replyingTo}
-        onCancelReply={() => setReplyingTo(null)}
-      />
+      {/* Blocked state indicator */}
+      {isBlocked ? (
+        <div className="px-4 pb-4 sm:pb-6">
+          <div className="flex items-center justify-center gap-2 py-4 px-4 bg-secondary rounded-2xl border border-border">
+            <Ban className="w-4 h-4 text-muted-foreground" />
+            <span className="text-[14px] sm:text-[15px] leading-[1.5] font-[Inter,system-ui,sans-serif] text-muted-foreground">
+              {isBlockedByMe 
+                ? "You have blocked this user" 
+                : "You cannot message this user"}
+            </span>
+          </div>
+        </div>
+      ) : (
+        /* Message input - matches channel input style */
+        <DMMessageInput
+          conversationId={currentConversation.id}
+          otherUsername={otherUser?.username || 'user'}
+          replyingTo={replyingTo}
+          onCancelReply={() => setReplyingTo(null)}
+        />
+      )}
     </div>
   );
 };
