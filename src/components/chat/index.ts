@@ -7,4 +7,5 @@ export * from './CodeBlock';
 export * from './LinkPreview';
 export * from './TypingIndicator';
 export * from './MentionAutocomplete';
+export * from './ChannelAutocomplete';
 export * from './FormatToolbar';

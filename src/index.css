@@ -632,6 +632,15 @@
     @apply bg-[hsl(var(--kloak-warning))]/20 text-[hsl(var(--kloak-warning))] cursor-default;
   }
 
+  /* Channel tag styling */
+  .channel-tag {
+    @apply bg-primary/20 text-primary px-1 rounded;
+  }
+
+  .channel-tag-clickable {
+    @apply cursor-pointer hover:bg-primary/30 hover:underline transition-colors;
+  }
+
   /* Message link styling */
   .message-link {
     @apply text-primary hover:underline;

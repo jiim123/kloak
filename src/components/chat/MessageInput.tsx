@@ -17,6 +17,7 @@ import { saveDraft, getDraft, clearDraft } from "@/lib/storage";
 import { extractMentions, isImageOnlyMessage } from "@/lib/message";
 import { ReplyPreview } from "./MessageContent";
 import { MentionAutocomplete } from "./MentionAutocomplete";
+import { ChannelAutocomplete } from "./ChannelAutocomplete";
 import { EmojiGifPicker } from "@/components/modals/EmojiGifPicker";
 import { ImageUploadDialog } from "@/components/modals/ImageUploadDialog";
 import { CreatePollModal } from "@/components/modals/CreatePollModal";
@@ -35,6 +36,11 @@ interface MessageInputProps {
 interface MentionMapping {
   username: string;
   userId: string;
+}
+
+interface ChannelMapping {
+  channelName: string;
+  channelId: string;
 }
 
 const MAX_LENGTH = 2000;
@@ -233,6 +239,10 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const [mentionQuery, setMentionQuery] = useState("");
   const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 });
   const [mentionStartIndex, setMentionStartIndex] = useState(-1);
+  const [showChannels, setShowChannels] = useState(false);
+  const [channelQuery, setChannelQuery] = useState("");
+  const [channelPosition, setChannelPosition] = useState({ top: 0, left: 0 });
+  const [channelStartIndex, setChannelStartIndex] = useState(-1);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showFormatToolbar, setShowFormatToolbar] = useState(false);
   const [showImageUpload, setShowImageUpload] = useState(false);
@@ -240,6 +250,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
 
   // Refs for non-reactive values
   const mentionMappingsRef = useRef<MentionMapping[]>([]);
+  const channelMappingsRef = useRef<ChannelMapping[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const draftSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -273,6 +284,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     const draft = getDraft(channelId);
     setContent(draft);
     mentionMappingsRef.current = [];
+    channelMappingsRef.current = [];
 
     // Reset textarea height
     if (textareaRef.current) {
@@ -336,6 +348,29 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     setMentionPosition({ top: 40, left: 0 });
   }, []);
 
+  // Detect channel tags efficiently
+  const detectChannelTag = useCallback((value: string, cursorPosition: number) => {
+    const textBeforeCursor = value.slice(0, cursorPosition);
+    const hashIndex = textBeforeCursor.lastIndexOf("#");
+
+    if (hashIndex === -1) {
+      setShowChannels(false);
+      return;
+    }
+
+    const textAfterHash = textBeforeCursor.slice(hashIndex + 1);
+
+    if (textAfterHash.includes(" ") || textAfterHash.includes("\n")) {
+      setShowChannels(false);
+      return;
+    }
+
+    setChannelQuery(textAfterHash);
+    setChannelStartIndex(hashIndex);
+    setShowChannels(true);
+    setChannelPosition({ top: 40, left: 0 });
+  }, []);
+
   // Optimized change handler
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -357,10 +392,11 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       }
       typingTimeoutRef.current = setTimeout(onStopTyping, TYPING_STOP_DELAY);
 
-      // Detect mentions
+      // Detect mentions and channel tags
       detectMention(value, e.target.selectionStart);
+      detectChannelTag(value, e.target.selectionStart);
     },
-    [channelId, saveDraftDebounced, resizeTextarea, onTyping, onStopTyping, detectMention],
+    [channelId, saveDraftDebounced, resizeTextarea, onTyping, onStopTyping, detectMention, detectChannelTag],
   );
 
   const handleMentionSelect = useCallback(
@@ -395,6 +431,33 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     [content, mentionStartIndex, mentionQuery],
   );
 
+  const handleChannelSelect = useCallback(
+    (option: { id: string; name: string; type: string }) => {
+      if (channelStartIndex === -1) return;
+
+      const beforeChannel = content.slice(0, channelStartIndex);
+      const afterChannel = content.slice(channelStartIndex + channelQuery.length + 1);
+
+      const channelText = `#${option.name} `;
+      const existingMapping = channelMappingsRef.current.find(
+        (m) => m.channelName === option.name && m.channelId === option.id,
+      );
+      if (!existingMapping) {
+        channelMappingsRef.current.push({
+          channelName: option.name,
+          channelId: option.id,
+        });
+      }
+
+      setContent(beforeChannel + channelText + afterChannel);
+      setShowChannels(false);
+      setChannelStartIndex(-1);
+
+      setTimeout(() => textareaRef.current?.focus(), 50);
+    },
+    [content, channelStartIndex, channelQuery],
+  );
+
   // Helper functions
   const escapeRegex = (string: string): string => {
     return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -402,9 +465,15 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
 
   const convertMentionsForSend = useCallback((text: string): string => {
     let result = text;
+    // Convert user mentions
     for (const mapping of mentionMappingsRef.current) {
       const regex = new RegExp(`@${escapeRegex(mapping.username)}(?=\\s|$|[.,!?;:])`, "g");
       result = result.replace(regex, `<@${mapping.userId}>`);
+    }
+    // Convert channel tags
+    for (const mapping of channelMappingsRef.current) {
+      const regex = new RegExp(`#${escapeRegex(mapping.channelName)}(?=\\s|$|[.,!?;:])`, "g");
+      result = result.replace(regex, `<#${mapping.channelId}>`);
     }
     result = result.replace(/@everyone(?=\s|$)/g, "@everyone");
     result = result.replace(/@here(?=\s|$)/g, "@here");
@@ -440,8 +509,10 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     setContent("");
     clearDraft(channelId);
     mentionMappingsRef.current = [];
+    channelMappingsRef.current = [];
     onStopTyping();
     setShowMentions(false);
+    setShowChannels(false);
 
     const currentReplyTo = replyingTo;
     setReplyingTo(null);
@@ -553,7 +624,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (showMentions && ["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"].includes(e.key)) {
+      if ((showMentions || showChannels) && ["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"].includes(e.key)) {
         return;
       }
 
@@ -596,7 +667,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
         );
       }
     },
-    [showMentions, applyFormatShortcut, handleSubmit, content, user?.id, channelId],
+    [showMentions, showChannels, applyFormatShortcut, handleSubmit, content, user?.id, channelId],
   );
 
   const handlePaste = useCallback(
@@ -864,6 +935,16 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
           onSelect={handleMentionSelect}
           onClose={() => setShowMentions(false)}
           isAdmin={hasPermission("manage_messages")}
+        />
+      )}
+
+      {/* Channel Autocomplete */}
+      {showChannels && (
+        <ChannelAutocomplete
+          query={channelQuery}
+          position={channelPosition}
+          onSelect={handleChannelSelect}
+          onClose={() => setShowChannels(false)}
         />
       )}
 
