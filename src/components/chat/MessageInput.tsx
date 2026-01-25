@@ -98,7 +98,7 @@ const ActionButtons = memo(
         {/* Character count warning */}
         {showCharacterWarning && (
           <span
-            className={`text-xs mr-1 ${content.length > MAX_LENGTH - 50 ? "text-destructive" : "text-muted-foreground"}`}
+            className={`text-[13px] font-[Inter,system-ui,sans-serif] mr-1 ${content.length > MAX_LENGTH - 50 ? "text-destructive" : "text-muted-foreground"}`}
           >
             {MAX_LENGTH - content.length}
           </span>
@@ -885,7 +885,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     return (
       <div className="px-4 pb-6">
         <div className="flex items-center justify-center py-4 px-4 bg-secondary rounded-2xl">
-          <span className="text-muted-foreground">You are muted in this server</span>
+          <span className="text-[14px] sm:text-[15px] leading-[1.5] font-[Inter,system-ui,sans-serif] text-muted-foreground">You are muted in this server</span>
         </div>
       </div>
     );
@@ -897,7 +897,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       <div className="px-4 pb-6">
         <div className="flex items-center justify-center gap-2 py-4 px-4 bg-secondary rounded-2xl border border-border">
           <Lock className="w-4 h-4 text-muted-foreground" />
-          <span className="text-muted-foreground">Read-only channel</span>
+          <span className="text-[14px] sm:text-[15px] leading-[1.5] font-[Inter,system-ui,sans-serif] text-muted-foreground">Read-only channel</span>
         </div>
       </div>
     );
@@ -909,7 +909,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       <div className="px-4 pb-6">
         <div className="flex items-center justify-center gap-2 py-4 px-4 bg-secondary rounded-2xl border border-border">
           <Lock className="w-4 h-4 text-muted-foreground" />
-          <span className="text-muted-foreground">You do not have permission to send messages in this channel</span>
+          <span className="text-[14px] sm:text-[15px] leading-[1.5] font-[Inter,system-ui,sans-serif] text-muted-foreground">You do not have permission to send messages in this channel</span>
         </div>
       </div>
     );
@@ -919,7 +919,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     <div className="px-4 pb-4 sm:pb-6 relative">
       {/* Queued messages indicator */}
       {queuedMessages.length > 0 && (
-        <div className="flex items-center gap-2 px-3 sm:px-4 py-2 mb-2 bg-[hsl(var(--kloak-warning))]/10 border border-[hsl(var(--kloak-warning))]/20 rounded-xl text-xs sm:text-sm text-[hsl(var(--kloak-warning))]">
+        <div className="flex items-center gap-2 px-3 sm:px-4 py-2 mb-2 bg-[hsl(var(--kloak-warning))]/10 border border-[hsl(var(--kloak-warning))]/20 rounded-xl text-[12px] sm:text-[13px] leading-[1.5] font-[Inter,system-ui,sans-serif] text-[hsl(var(--kloak-warning))]">
           <WifiOff className="w-4 h-4 flex-shrink-0" />
           <span>
             {queuedMessages.length} message{queuedMessages.length > 1 ? "s" : ""} waiting to send
@@ -950,8 +950,8 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
 
       {/* Reply preview */}
       {replyingTo && (
-        <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-secondary rounded-t-2xl border-b border-border">
-          <span className="text-xs sm:text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-secondary rounded-t-2xl border-b border-border font-[Inter,system-ui,sans-serif]">
+          <span className="text-[12px] sm:text-[13px] leading-[1.5] text-muted-foreground">
             Replying to <span className="font-medium text-primary">@{replyingTo.user?.username}</span>
           </span>
           {isImageOnlyMessage(replyingTo.content) ? (
@@ -961,7 +961,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
               className="w-8 h-8 rounded object-cover flex-shrink-0"
             />
           ) : (
-            <span className="text-xs sm:text-sm text-muted-foreground truncate flex-1 hidden sm:inline">
+            <span className="text-[12px] sm:text-[13px] leading-[1.5] text-muted-foreground truncate flex-1 hidden sm:inline">
               <ReplyPreview content={replyingTo.content} maxLength={50} />
             </span>
           )}
@@ -1094,13 +1094,14 @@ const MobileOptimizedInput = memo(({
           placeholder={canSendMessage ? `Message #${channelName}` : "You do not have permission to send messages in this channel"}
           disabled={!canSendMessage}
           rows={1}
-          className={`flex-1 bg-transparent resize-none outline-none text-foreground placeholder:text-muted-foreground text-sm sm:text-[15px] leading-relaxed py-2 px-1 font-light min-w-0 ${
+          className={`flex-1 bg-transparent resize-none outline-none text-foreground placeholder:text-muted-foreground py-2 px-1 min-w-0 font-[Inter,system-ui,sans-serif] ${
             !canSendMessage ? "cursor-not-allowed opacity-50" : ""
-          } ${shouldCollapse ? "text-base" : ""}`}
+          }`}
           style={{ 
-            fontFamily: "system-ui, -apple-system, sans-serif, 'Noto Color Emoji'",
             // Prevent iOS zoom on focus by using 16px minimum
-            fontSize: isMobile ? '16px' : undefined,
+            fontSize: isMobile ? '16px' : '15px',
+            lineHeight: '1.5',
+            fontWeight: 400,
           }}
         />
 
