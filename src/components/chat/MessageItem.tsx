@@ -27,6 +27,7 @@ import { useServerStore } from "@/stores/serverStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useSyncStore } from "@/stores/syncStore";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { MessageContent } from "./MessageContent";
 import { PollMessage } from "./PollMessage";
 import { isImageOnlyMessage, convertMentionsToReadable, convertMentionsToRaw } from "@/lib/message";
@@ -38,7 +39,7 @@ import type { CustomServerRole, Message, ServerRole } from "@/types";
 import { format } from "date-fns";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
 import { cn } from "@/lib/utils";
-import { getPollIdFromContent } from "@/lib/poll";
+import { getPollIdFromContent, isPollMessageContent } from "@/lib/poll";
 
 // Static data moved outside component
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🎉", "🔥", "👀", "💯", "🙌", "😍", "🤔"] as const;
@@ -98,6 +99,7 @@ export const MessageItem = memo(function MessageItem({
   const { openModal } = useUIStore();
   const { getOptimisticStatus } = useSyncStore();
   const [searchParams, setSearchParams] = useSearchParams();
+  const isMobile = useIsMobile();
 
   // State - SEPARATE states for desktop and mobile emoji pickers
   const [isEditing, setIsEditing] = useState(false);
@@ -575,8 +577,9 @@ export const MessageItem = memo(function MessageItem({
         className={outerClassName}
         style={shouldAnimate ? { animationFillMode: "both" } : undefined}
       >
+        {/* ContextMenu is disabled on mobile (use Drawer instead) */}
         <ContextMenu>
-          <ContextMenuTrigger asChild>
+          <ContextMenuTrigger asChild disabled={isMobile}>
             <div
               className={innerClassName}
               onMouseEnter={() => setIsRowHovered(true)}
@@ -705,7 +708,9 @@ export const MessageItem = memo(function MessageItem({
                 <CornerUpLeft className="w-3 h-3 flex-shrink-0" />
                 <span>Replying to</span>
                 <span className="font-medium text-primary">@{message.reply_to.user?.username || "unknown"}</span>
-                {isImageOnlyMessage(message.reply_to.content) ? (
+                {isPollMessageContent(message.reply_to.content) ? (
+                  <span className="italic">poll</span>
+                ) : isImageOnlyMessage(message.reply_to.content) ? (
                   <img 
                     src={message.reply_to.content.trim()} 
                     alt="Image" 
