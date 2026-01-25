@@ -398,7 +398,7 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
       const channel = channels.find(c => c.id === channelId);
       if (channel && currentServer) {
         setCurrentChannel(channel);
-        navigate(`/servers/${currentServer.id}/channels/${channelId}`);
+        navigate(`/app/servers/${currentServer.id}/channels/${channelId}`);
       }
     }
   }, [openModal, channels, currentServer, setCurrentChannel, navigate]);
@@ -417,7 +417,7 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
         const channel = channels.find(c => c.id === channelId);
         if (channel && currentServer) {
           setCurrentChannel(channel);
-          navigate(`/servers/${currentServer.id}/channels/${channelId}`);
+          navigate(`/app/servers/${currentServer.id}/channels/${channelId}`);
         }
       }
     }
