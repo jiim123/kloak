@@ -3,6 +3,7 @@ import { useServerStore } from '@/stores/serverStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useDMStore } from '@/stores/dmStore';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { Button } from '@/components/ui/button';
 
 interface MobileHeaderProps {
   isDMView: boolean;
@@ -46,12 +47,16 @@ export const MobileHeader = ({ isDMView, showFriends, showExplore }: MobileHeade
     <div className="sticky top-0 z-40 px-4 pt-4 pb-2 md:hidden bg-background">
       <div className="flex items-center gap-2">
         {/* Section 1: Sidebar Toggle */}
-        <button
-          onClick={() => setMobileSidebarOpen(true)}
-          className="p-2 rounded-2xl bg-secondary text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
+        <div className="p-1 rounded-2xl bg-secondary">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="w-8 h-8"
+            onClick={() => setMobileSidebarOpen(true)}
+          >
+            <Menu className="w-4 h-4" />
+          </Button>
+        </div>
 
         {/* Section 2: Current Channel/View */}
         <div className="flex-1 flex items-center gap-2 min-w-0 p-2 bg-secondary rounded-2xl">
@@ -68,12 +73,16 @@ export const MobileHeader = ({ isDMView, showFriends, showExplore }: MobileHeade
 
         {/* Section 4: Members Toggle (only for server view) */}
         {!isDMView && currentServer && (
-          <button
-            onClick={toggleMemberSidebar}
-            className="p-2 rounded-2xl bg-secondary text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
-          >
-            <Users className="w-5 h-5" />
-          </button>
+          <div className="p-1 rounded-2xl bg-secondary">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-8 h-8"
+              onClick={toggleMemberSidebar}
+            >
+              <Users className="w-4 h-4" />
+            </Button>
+          </div>
         )}
       </div>
     </div>
