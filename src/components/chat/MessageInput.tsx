@@ -362,6 +362,12 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
 
     const contentToSend = convertMentionsForSend(messageContent);
 
+    // Cancel any pending draft save to prevent it from overwriting the cleared draft
+    if (draftSaveTimeoutRef.current) {
+      clearTimeout(draftSaveTimeoutRef.current);
+      draftSaveTimeoutRef.current = null;
+    }
+
     // Clear input immediately
     setContent("");
     clearDraft(channelId);
@@ -571,6 +577,12 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
         const caption = content.trim();
         const captionToSend = caption ? convertMentionsForSend(caption) : "";
         const combined = captionToSend ? `${captionToSend}\n${urlData.publicUrl}` : urlData.publicUrl;
+
+        // Cancel any pending draft save to prevent it from overwriting the cleared draft
+        if (draftSaveTimeoutRef.current) {
+          clearTimeout(draftSaveTimeoutRef.current);
+          draftSaveTimeoutRef.current = null;
+        }
 
         setContent("");
         clearDraft(channelId);
