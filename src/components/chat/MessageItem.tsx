@@ -594,7 +594,7 @@ export const MessageItem = memo(function MessageItem({
               {compactMode ? (
                 <div className="w-16 flex-shrink-0 pt-0.5">
                   <span
-                    className={`text-[10px] text-muted-foreground transition-opacity duration-150 whitespace-nowrap block ${
+                    className={`text-[11px] font-[Inter,system-ui,sans-serif] text-muted-foreground transition-opacity duration-150 whitespace-nowrap block ${
                       showTimestamps || !isGrouped ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                     }`}
                   >
@@ -611,7 +611,7 @@ export const MessageItem = memo(function MessageItem({
                       onClick={handleUsernameClick}
                     />
                   ) : (
-                    <span className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                    <span className="text-[11px] font-[Inter,system-ui,sans-serif] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                       {formattedTime}
                     </span>
                   )}
@@ -652,10 +652,10 @@ export const MessageItem = memo(function MessageItem({
               <>
             {/* Header */}
             {compactMode ? (
-              <span className="inline">
+              <span className="inline font-[Inter,system-ui,sans-serif]">
                 <span
                   onClick={handleUsernameClick}
-                  className={`text-[0.9em] sm:text-[1em] font-medium tracking-tight hover:underline cursor-pointer mr-1.5 ${usernameColorClass}`}
+                  className={`text-[14px] sm:text-[15px] font-medium leading-tight hover:underline cursor-pointer mr-1.5 ${usernameColorClass}`}
                   style={usernameColorStyle}
                 >
                   {displayName}
@@ -675,10 +675,10 @@ export const MessageItem = memo(function MessageItem({
             ) : (
               !isGrouped &&
               messageUser && (
-                <div className="flex items-baseline gap-2 mb-0.5">
+                <div className="flex items-baseline gap-2 mb-0.5 font-[Inter,system-ui,sans-serif]">
                   <span
                     onClick={handleUsernameClick}
-                    className={`text-[0.9em] sm:text-[1em] font-medium tracking-tight hover:underline cursor-pointer ${usernameColorClass}`}
+                    className={`text-[14px] sm:text-[15px] font-medium leading-tight hover:underline cursor-pointer ${usernameColorClass}`}
                     style={usernameColorStyle}
                   >
                     {displayName}
@@ -693,7 +693,7 @@ export const MessageItem = memo(function MessageItem({
                       <TooltipContent>{priorityRoleWithIcon.name}</TooltipContent>
                     </Tooltip>
                   )}
-                  {showTimestamps && <span className="text-[0.7em] sm:text-[0.8em] text-muted-foreground">{formattedTimestamp}</span>}
+                  {showTimestamps && <span className="text-[12px] sm:text-[13px] text-muted-foreground leading-none">{formattedTimestamp}</span>}
                   {message.is_pinned && <Pin className="w-3 h-3 text-muted-foreground" />}
                 </div>
               )
@@ -748,7 +748,7 @@ export const MessageItem = memo(function MessageItem({
                 </div>
               </div>
             ) : (
-              <div className="text-[0.9em] sm:text-[1em] font-normal leading-relaxed">
+              <div className="text-[14px] sm:text-[15px] font-normal leading-[1.5] font-[Inter,system-ui,sans-serif]">
                 {pollId ? (
                   <PollMessage pollId={pollId} />
                 ) : (
