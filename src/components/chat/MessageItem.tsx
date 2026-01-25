@@ -652,7 +652,7 @@ export const MessageItem = memo(function MessageItem({
               <span className="inline">
                 <span
                   onClick={handleUsernameClick}
-                  className={`text-base font-semibold tracking-tight hover:underline cursor-pointer mr-1.5 ${usernameColorClass}`}
+                  className={`text-[0.9em] sm:text-[1em] font-medium tracking-tight hover:underline cursor-pointer mr-1.5 ${usernameColorClass}`}
                   style={usernameColorStyle}
                 >
                   {displayName}
@@ -675,7 +675,7 @@ export const MessageItem = memo(function MessageItem({
                 <div className="flex items-baseline gap-2 mb-0.5">
                   <span
                     onClick={handleUsernameClick}
-                    className={`text-sm font-semibold tracking-tight hover:underline cursor-pointer ${usernameColorClass}`}
+                    className={`text-[0.9em] sm:text-[1em] font-medium tracking-tight hover:underline cursor-pointer ${usernameColorClass}`}
                     style={usernameColorStyle}
                   >
                     {displayName}
@@ -690,7 +690,7 @@ export const MessageItem = memo(function MessageItem({
                       <TooltipContent>{priorityRoleWithIcon.name}</TooltipContent>
                     </Tooltip>
                   )}
-                  {showTimestamps && <span className="text-[11px] text-muted-foreground">{formattedTimestamp}</span>}
+                  {showTimestamps && <span className="text-[0.7em] sm:text-[0.8em] text-muted-foreground">{formattedTimestamp}</span>}
                   {message.is_pinned && <Pin className="w-3 h-3 text-muted-foreground" />}
                 </div>
               )
@@ -743,7 +743,7 @@ export const MessageItem = memo(function MessageItem({
                 </div>
               </div>
             ) : (
-              <div className="text-sm leading-relaxed">
+              <div className="text-[0.9em] sm:text-[1em] font-light leading-relaxed">
                 {pollId ? (
                   <PollMessage pollId={pollId} />
                 ) : (
