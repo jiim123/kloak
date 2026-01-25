@@ -153,15 +153,15 @@ export const NotificationBell = () => {
               </span>
             )}
           </div>
-          {unreadCount > 0 && (
+          {notifications.length > 0 && (
             <Button
               variant="ghost"
               size="sm"
               className="h-8 px-3 text-xs rounded-lg hover:bg-secondary/60 transition-colors"
               onClick={handleMarkAllAsRead}
             >
-              <Check className="w-3 h-3 mr-1.5" />
-              Mark all read
+              <Trash2 className="w-3 h-3 mr-1.5" />
+              Clear all
             </Button>
           )}
         </div>
@@ -222,7 +222,7 @@ export const NotificationBell = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="w-8 h-8 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-secondary transition-all"
+                          className="w-8 h-8 rounded-lg hover:bg-secondary transition-all flex-shrink-0"
                           onClick={(e) => {
                             e.stopPropagation();
                             deleteNotification(notification.id);
