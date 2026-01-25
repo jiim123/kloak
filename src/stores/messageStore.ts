@@ -214,6 +214,54 @@ export const useMessageStore = create<MessageState>((set, get) => ({
             },
             isLoading: silent ? state.isLoading : false,
           };
+        } else if (force && existingCache && existingCache.messages.length > 0) {
+          // Force refetch (e.g., on visibility change) - merge new messages intelligently
+          // Find the latest message timestamp in existing cache
+          const latestExistingTime = new Date(existingCache.messages[existingCache.messages.length - 1].created_at).getTime();
+          
+          // Filter out messages we already have and find truly new ones
+          const existingIds = new Set(existingCache.messages.map(m => m.id));
+          const newMessages = messages.filter(m => !existingIds.has(m.id));
+          
+          // If we have new messages, merge them; otherwise keep existing and update timestamp
+          if (newMessages.length > 0) {
+            // Merge: combine existing with new, sort by created_at, remove duplicates
+            const merged = [...existingCache.messages, ...newMessages];
+            const uniqueById = new Map<string, Message>();
+            merged.forEach(msg => {
+              const existing = uniqueById.get(msg.id);
+              if (!existing || new Date(msg.created_at).getTime() > new Date(existing.created_at).getTime()) {
+                uniqueById.set(msg.id, msg);
+              }
+            });
+            const sorted = Array.from(uniqueById.values()).sort(
+              (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+            );
+            
+            return {
+              messagesByChannel: {
+                ...state.messagesByChannel,
+                [channelId]: {
+                  messages: sorted,
+                  hasMore,
+                  lastFetched: Date.now(),
+                },
+              },
+              isLoading: silent ? state.isLoading : false,
+            };
+          } else {
+            // No new messages, just update timestamp
+            return {
+              messagesByChannel: {
+                ...state.messagesByChannel,
+                [channelId]: {
+                  ...existingCache,
+                  lastFetched: Date.now(),
+                },
+              },
+              isLoading: silent ? state.isLoading : false,
+            };
+          }
         } else {
           // Fresh fetch - replace cache
           return {

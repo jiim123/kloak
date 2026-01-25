@@ -193,8 +193,30 @@ export const useRealtimeMessages = (channelId: string | null) => {
 
     setupSubscription();
 
+    // Handle visibility changes to ensure subscription stays active
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && channel) {
+        // When tab becomes visible, check if subscription is still active
+        // and re-establish if needed
+        try {
+          const channelState = (channel as any).state;
+          if (channelState === 'closed' || channelState === 'errored' || channelState === 'timed_out') {
+            console.log('[Realtime] Re-establishing subscription after visibility change');
+            setupSubscription();
+          }
+        } catch (e) {
+          // If we can't check state, try to re-establish anyway
+          console.log('[Realtime] Re-establishing subscription after visibility change (state check failed)');
+          setupSubscription();
+        }
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       isSettingUpRef.current = false;
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (retryTimeout) {
         clearTimeout(retryTimeout);
       }
