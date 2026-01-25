@@ -77,7 +77,7 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
   }
 
   // Check if Notification API exists (not available on some iOS browsers)
-  if (typeof window === 'undefined' || !('Notification' in window)) {
+  if (typeof window === 'undefined' || typeof Notification === 'undefined') {
     return false;
   }
 
@@ -153,23 +153,29 @@ const showDesktopNotification = async (notification: Notification) => {
   }
 
   // Check if browser supports Notification API before using it
-  if (!('Notification' in window)) return;
-  if (Notification.permission !== 'granted') return;
+  // Use typeof check to prevent ReferenceError on iOS Safari and other mobile browsers
+  if (typeof Notification === 'undefined') return;
+  
+  try {
+    if (Notification.permission !== 'granted') return;
 
-  const browserNotification = new window.Notification(notification.title, {
-    body: notification.body || undefined,
-    icon: '/favicon.ico',
-    tag: notification.id, // Prevents duplicate notifications
-  });
+    const browserNotification = new Notification(notification.title, {
+      body: notification.body || undefined,
+      icon: '/favicon.ico',
+      tag: notification.id, // Prevents duplicate notifications
+    });
 
-  browserNotification.onclick = () => {
-    window.focus();
-    if (notification.link) {
-      // Use history.pushState for SPA navigation instead of full page reload
-      window.history.pushState({}, '', notification.link);
-      // Dispatch a popstate event to trigger React Router navigation
-      window.dispatchEvent(new PopStateEvent('popstate'));
-    }
-    browserNotification.close();
-  };
+    browserNotification.onclick = () => {
+      window.focus();
+      if (notification.link) {
+        // Use history.pushState for SPA navigation instead of full page reload
+        window.history.pushState({}, '', notification.link);
+        // Dispatch a popstate event to trigger React Router navigation
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      }
+      browserNotification.close();
+    };
+  } catch {
+    // Silently fail if notification creation fails
+  }
 };

@@ -915,12 +915,14 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         icon={Bell}
         label="Desktop Notifications"
         description={
-          !isTauriApp && Notification.permission === "denied"
+          !isTauriApp && typeof Notification !== "undefined" && Notification.permission === "denied"
             ? "Blocked in browser settings"
-            : "Show desktop alerts for new messages"
+            : typeof Notification === "undefined" && !isTauriApp
+              ? "Not supported on this device"
+              : "Show desktop alerts for new messages"
         }
         checked={desktopNotificationsEnabled}
-        disabled={!isTauriApp && Notification.permission === "denied"}
+        disabled={!isTauriApp && (typeof Notification === "undefined" || Notification.permission === "denied")}
         onCheckedChange={async (checked) => {
           if (!checked) return setDesktopNotificationsEnabled(false);
 
@@ -947,13 +949,23 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
             return;
           }
 
+          // Check if Notification API is available (not on iOS Safari, etc.)
+          if (typeof Notification === "undefined") {
+            toast.error("Desktop notifications are not supported on this device.");
+            return;
+          }
+
           if (Notification.permission === "default") {
-            const permission = await Notification.requestPermission();
-            if (permission === "granted") {
-              setDesktopNotificationsEnabled(true);
-              toast.success("Desktop notifications enabled!");
-            } else if (permission === "denied") {
-              toast.error("Notification permission denied. Enable in browser settings.");
+            try {
+              const permission = await Notification.requestPermission();
+              if (permission === "granted") {
+                setDesktopNotificationsEnabled(true);
+                toast.success("Desktop notifications enabled!");
+              } else if (permission === "denied") {
+                toast.error("Notification permission denied. Enable in browser settings.");
+              }
+            } catch {
+              toast.error("Unable to request notification permission.");
             }
             return;
           }
