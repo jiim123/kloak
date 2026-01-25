@@ -743,7 +743,7 @@ export const MessageItem = memo(function MessageItem({
                 </div>
               </div>
             ) : (
-              <div className="text-[0.9em] sm:text-[1em] font-light leading-relaxed">
+              <div className="text-[0.9em] sm:text-[1em] font-normal leading-relaxed">
                 {pollId ? (
                   <PollMessage pollId={pollId} />
                 ) : (

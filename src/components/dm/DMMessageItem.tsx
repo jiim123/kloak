@@ -225,7 +225,7 @@ export const DMMessageItem = ({ message, isFirst, onReply }: DMMessageItemProps)
               </div>
             </div>
           ) : (
-            <p className="text-[0.9em] sm:text-[1em] font-light text-foreground whitespace-pre-wrap break-words">
+            <p className="text-[0.9em] sm:text-[1em] font-normal text-foreground whitespace-pre-wrap break-words">
               {message.content}
             </p>
           )}
