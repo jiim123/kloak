@@ -191,10 +191,12 @@ export const parseMessageContent = (
 /**
  * Strip markdown and HTML from message content for previews
  * Optionally converts <@userId> mentions to @username using a usersMap
+ * Optionally converts <#channelId> tags to #channelname using a channelsMap
  */
 export const stripMarkdown = (
   content: string,
-  usersMap?: Map<string, { username: string; display_name?: string | null; nickname?: string | null }>
+  usersMap?: Map<string, { username: string; display_name?: string | null; nickname?: string | null }>,
+  channelsMap?: Map<string, { name: string }>
 ): string => {
   let result = content
     .replace(/```[\s\S]*?```/g, '[code]')
@@ -220,6 +222,21 @@ export const stripMarkdown = (
     // Without usersMap, just remove the UUID format but keep a generic placeholder
     result = result.replace(/<@\w{8}-\w{4}-\w{4}-\w{4}-\w{12}>/g, '@user');
   }
+
+  // Convert <#channelId> tags to #channelname
+  if (channelsMap) {
+    result = result.replace(
+      /<#(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})>/g,
+      (match, channelId) => {
+        const channelInfo = channelsMap.get(channelId);
+        const channelName = channelInfo?.name || 'channel';
+        return `#${channelName}`;
+      }
+    );
+  } else {
+    // Without channelsMap, just remove the UUID format but keep a generic placeholder
+    result = result.replace(/<#\w{8}-\w{4}-\w{4}-\w{4}-\w{12}>/g, '#channel');
+  }
   
   return result.trim();
 };
@@ -239,14 +256,15 @@ export const getMessagePreview = (
 };
 
 /**
- * Convert raw message content with UUID mentions to readable format for editing
- * Converts <@userId> to @username
+ * Convert raw message content with UUID mentions and channel tags to readable format for editing
+ * Converts <@userId> to @username and <#channelId> to #channelname
  */
 export const convertMentionsToReadable = (
   content: string,
-  usersMap: Map<string, { username: string; display_name?: string | null; nickname?: string | null }>
+  usersMap: Map<string, { username: string; display_name?: string | null; nickname?: string | null }>,
+  channelsMap?: Map<string, { name: string }>
 ): string => {
-  return content.replace(
+  let result = content.replace(
     /<@(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})>/g,
     (match, userId) => {
       const userInfo = usersMap.get(userId);
@@ -254,15 +272,28 @@ export const convertMentionsToReadable = (
       return displayName ? `@${displayName}` : match;
     }
   );
+  
+  if (channelsMap) {
+    result = result.replace(
+      /<#(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})>/g,
+      (match, channelId) => {
+        const channelInfo = channelsMap.get(channelId);
+        return channelInfo ? `#${channelInfo.name}` : match;
+      }
+    );
+  }
+  
+  return result;
 };
 
 /**
- * Convert readable mentions back to UUID format for saving
- * Converts @username to <@userId>
+ * Convert readable mentions and channel tags back to UUID format for saving
+ * Converts @username to <@userId> and #channelname to <#channelId>
  */
 export const convertMentionsToRaw = (
   content: string,
-  usersMap: Map<string, { username: string; display_name?: string | null; nickname?: string | null }>
+  usersMap: Map<string, { username: string; display_name?: string | null; nickname?: string | null }>,
+  channelsMap?: Map<string, { name: string }>
 ): string => {
   // Build reverse lookup: username/display_name/nickname -> userId
   const namesToId = new Map<string, string>();
@@ -271,9 +302,17 @@ export const convertMentionsToRaw = (
     if (info.display_name) namesToId.set(info.display_name.toLowerCase(), id);
     if (info.nickname) namesToId.set(info.nickname.toLowerCase(), id);
   });
+
+  // Build reverse lookup for channels: channelname -> channelId
+  const channelNamesToId = new Map<string, string>();
+  if (channelsMap) {
+    channelsMap.forEach((info, id) => {
+      if (info.name) channelNamesToId.set(info.name.toLowerCase(), id);
+    });
+  }
   
   // Match @mentions that are not already in <@uuid> format
-  return content.replace(
+  let result = content.replace(
     /@(\w+)/g,
     (match, name) => {
       // Skip if it's @everyone or @here
@@ -284,4 +323,17 @@ export const convertMentionsToRaw = (
       return userId ? `<@${userId}>` : match;
     }
   );
+
+  // Match #channels that are not already in <#uuid> format
+  if (channelsMap) {
+    result = result.replace(
+      /#([\w-]+)/g,
+      (match, name) => {
+        const channelId = channelNamesToId.get(name.toLowerCase());
+        return channelId ? `<#${channelId}>` : match;
+      }
+    );
+  }
+
+  return result;
 };

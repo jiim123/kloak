@@ -1,4 +1,5 @@
 import { useMemo, useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { CodeBlock, InlineCode } from './CodeBlock';
 import { LinkPreview } from './LinkPreview';
 import { InviteLinkPreview } from './InviteLinkPreview';
@@ -12,6 +13,11 @@ interface UserInfo {
   username: string;
   display_name?: string | null;
   nickname?: string | null;
+}
+
+interface ChannelInfo {
+  id: string;
+  name: string;
 }
 
 interface MessageContentProps {
@@ -158,12 +164,13 @@ const escapeHtml = (text: string): string => {
   return text.replace(/[&<>"']/g, char => entities[char]);
 };
 
-// Parse text content (markdown, URLs, mentions, colors)
+// Parse text content (markdown, URLs, mentions, channels, colors)
 const parseTextContent = (
   content: string,
   currentUserId?: string,
   usersMap?: Map<string, UserInfo>,
-  customEmojiMap?: Map<string, string>
+  customEmojiMap?: Map<string, string>,
+  channelsMap?: Map<string, ChannelInfo>
 ): string => {
   let parsed = escapeHtml(content);
   
@@ -226,6 +233,16 @@ const parseTextContent = (
     }
   );
 
+  // Channel tags <#channelId> - make them clickable with cursor pointer
+  parsed = parsed.replace(
+    /&lt;#(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})&gt;/g,
+    (match, channelId) => {
+      const channelInfo = channelsMap?.get(channelId);
+      const channelName = channelInfo?.name || 'channel';
+      return `<span class="channel-tag channel-tag-clickable" data-channel-id="${channelId}" role="button" tabindex="0">#${escapeHtml(channelName)}</span>`;
+    }
+  );
+
   // Custom emojis :name: (server scope)
   if (customEmojiMap && customEmojiMap.size > 0) {
     parsed = parsed.replace(/:([a-z0-9_]{2,32}):/g, (full, name: string) => {
@@ -244,8 +261,9 @@ const parseTextContent = (
 };
 
 export const MessageContent = ({ content, currentUserId, messageId, users, messageUser }: MessageContentProps) => {
+  const navigate = useNavigate();
   const { linkPreviewsEnabled, openModal } = useUIStore();
-  const { members, currentServer } = useServerStore();
+  const { members, currentServer, channels, setCurrentChannel } = useServerStore();
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
   const segments = useMemo(() => parseMessageSegments(content), [content]);
@@ -323,6 +341,18 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
     
     return map;
   }, [users, members, messageUser]);
+
+  // Build a map of channelId -> channel info for quick lookup
+  const channelsMap = useMemo(() => {
+    const map = new Map<string, ChannelInfo>();
+    channels.forEach(channel => {
+      map.set(channel.id, {
+        id: channel.id,
+        name: channel.name,
+      });
+    });
+    return map;
+  }, [channels]);
   
   // Extract URLs for link previews (only from text segments, not code blocks)
   // Separate image URLs from regular URLs
@@ -353,7 +383,7 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
     return linkUrls.filter((url) => !/\/invite\/[A-Za-z0-9]{8}/.test(url));
   }, [inviteCodes, linkUrls]);
   
-  // Handle click on mentions using event delegation
+  // Handle click on mentions and channel tags using event delegation
   const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
     if (target.classList.contains('mention-clickable') && target.dataset.userId) {
@@ -361,7 +391,17 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
       e.stopPropagation();
       openModal('userProfile', { userId: target.dataset.userId });
     }
-  }, [openModal]);
+    if (target.classList.contains('channel-tag-clickable') && target.dataset.channelId) {
+      e.preventDefault();
+      e.stopPropagation();
+      const channelId = target.dataset.channelId;
+      const channel = channels.find(c => c.id === channelId);
+      if (channel && currentServer) {
+        setCurrentChannel(channel);
+        navigate(`/servers/${currentServer.id}/channels/${channelId}`);
+      }
+    }
+  }, [openModal, channels, currentServer, setCurrentChannel, navigate]);
 
   // Handle keyboard activation for accessibility
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -371,8 +411,17 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
         e.preventDefault();
         openModal('userProfile', { userId: target.dataset.userId });
       }
+      if (target.classList.contains('channel-tag-clickable') && target.dataset.channelId) {
+        e.preventDefault();
+        const channelId = target.dataset.channelId;
+        const channel = channels.find(c => c.id === channelId);
+        if (channel && currentServer) {
+          setCurrentChannel(channel);
+          navigate(`/servers/${currentServer.id}/channels/${channelId}`);
+        }
+      }
     }
-  }, [openModal]);
+  }, [openModal, channels, currentServer, setCurrentChannel, navigate]);
   
   return (
     <div className="break-words" onClick={handleClick} onKeyDown={handleKeyDown}>
@@ -393,7 +442,7 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
               <span
                 key={index}
                 dangerouslySetInnerHTML={{
-                  __html: parseTextContent(segment.content, currentUserId, usersMap, customEmojiMap),
+                  __html: parseTextContent(segment.content, currentUserId, usersMap, customEmojiMap, channelsMap),
                 }}
               />
             );
