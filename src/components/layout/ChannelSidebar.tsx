@@ -1,5 +1,4 @@
-import { useState, useMemo, useCallback, useRef, useEffect, useLayoutEffect, type ReactNode } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useMemo, useCallback, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   ChevronDown,
@@ -15,7 +14,6 @@ import {
   Users,
   Edit2,
   Trash2,
-  Link2,
   Copy,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -51,7 +49,7 @@ import { useUnread } from "@/hooks/useUnread";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { MotionButton } from "@/components/ui/motion-elements";
+
 import { LoggedInUserPanel } from "@/components/layout/LoggedInUserPanel";
 import { VoiceConnectedBanner } from "@/components/layout/VoiceConnectedBanner";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
@@ -70,15 +68,6 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import type { Channel, ChannelCategory, ServerRole } from "@/types";
-
-// Animation variants
-const channelVariants = {
-  hidden: { opacity: 0, x: -10 },
-  visible: { opacity: 1, x: 0 },
-  exit: { opacity: 0, x: -10 },
-};
-
-// Category variants will be created dynamically based on measured height
 
 const isAdminRole = (role: ServerRole | undefined): boolean => {
   return role === "owner" || role === "admin" || role === "moderator";
@@ -180,14 +169,9 @@ const SortableChannel = ({
   };
 
   return (
-    <motion.div
+    <div
       ref={setNodeRef}
       style={style}
-      variants={channelVariants}
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-      transition={{ type: "spring", stiffness: 500, damping: 30 }}
       className="relative"
     >
       <ContextMenu>
@@ -202,70 +186,58 @@ const SortableChannel = ({
               isUnread && !isActive && "text-foreground font-semibold",
             )}
           >
-        {/* Active indicator */}
-        <AnimatePresence>
-          {isActive && (
-            <motion.div
-              layoutId="channel-indicator"
-              className="absolute -left-2 top-0 bottom-0 w-1 bg-primary rounded-full"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+            {/* Active indicator */}
+            <div
+              className={cn(
+                "absolute -left-2 top-0 bottom-0 w-1 bg-primary rounded-full transition-opacity duration-150",
+                isActive ? "opacity-100" : "opacity-0"
+              )}
             />
-          )}
-        </AnimatePresence>
 
-        {/* Channel icon */}
-        <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">{getChannelIcon()}</div>
+            {/* Channel icon */}
+            <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">{getChannelIcon()}</div>
 
-        {/* Channel name */}
-        <span className="truncate flex-1 text-left">{channel.name}</span>
+            {/* Channel name */}
+            <span className="truncate flex-1 text-left">{channel.name}</span>
 
-        {/* NSFW badge */}
-        {channel.is_nsfw && (
-          <span className="px-1 py-0.5 text-[10px] font-semibold rounded bg-destructive/20 text-destructive uppercase tracking-wide flex-shrink-0">
-            NSFW
-          </span>
-        )}
+            {/* NSFW badge */}
+            {channel.is_nsfw && (
+              <span className="px-1 py-0.5 text-[10px] font-semibold rounded bg-destructive/20 text-destructive uppercase tracking-wide flex-shrink-0">
+                NSFW
+              </span>
+            )}
 
-        {/* Mention badge */}
-        <AnimatePresence>
-          {mentionCount > 0 && (
-            <motion.span
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0 }}
-              className="px-1.5 py-0.5 text-xs font-bold rounded-full bg-destructive text-destructive-foreground"
-            >
-              {mentionCount > 99 ? "99+" : mentionCount}
-            </motion.span>
-          )}
-        </AnimatePresence>
+            {/* Mention badge */}
+            {mentionCount > 0 && (
+              <span className="px-1.5 py-0.5 text-xs font-bold rounded-full bg-destructive text-destructive-foreground">
+                {mentionCount > 99 ? "99+" : mentionCount}
+              </span>
+            )}
 
-        {/* Admin settings */}
-        {isAdmin && (
-          <Settings
-            className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground cursor-pointer flex-shrink-0"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit();
-            }}
-          />
-        )}
+            {/* Admin settings */}
+            {isAdmin && (
+              <Settings
+                className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground cursor-pointer flex-shrink-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit();
+                }}
+              />
+            )}
 
-        {/* Drag handle for admins */}
-        {isAdmin && (
-          <div
-            {...attributes}
-            {...listeners}
-            className="opacity-0 group-hover:opacity-50 hover:!opacity-100 cursor-grab active:cursor-grabbing"
-          >
-            <div className="w-1 h-3 flex flex-col gap-0.5 justify-center">
-              <div className="w-1 h-1 rounded-full bg-muted-foreground" />
-              <div className="w-1 h-1 rounded-full bg-muted-foreground" />
-            </div>
-          </div>
-        )}
+            {/* Drag handle for admins */}
+            {isAdmin && (
+              <div
+                {...attributes}
+                {...listeners}
+                className="opacity-0 group-hover:opacity-50 hover:!opacity-100 cursor-grab active:cursor-grabbing"
+              >
+                <div className="w-1 h-3 flex flex-col gap-0.5 justify-center">
+                  <div className="w-1 h-1 rounded-full bg-muted-foreground" />
+                  <div className="w-1 h-1 rounded-full bg-muted-foreground" />
+                </div>
+              </div>
+            )}
           </button>
         </ContextMenuTrigger>
         <ContextMenuContent>
@@ -302,11 +274,11 @@ const SortableChannel = ({
           })}
         </div>
       )}
-    </motion.div>
+    </div>
   );
 };
 
-// Category Content with measured height animation
+// Category Content - simplified without height animation
 const CategoryContent = ({
   channels,
   currentChannelId,
@@ -330,83 +302,34 @@ const CategoryContent = ({
   voicePresenceByChannel: Record<string, string[]>;
   resolveUser: (userId: string) => { avatarUser?: any; label: string };
 }) => {
-  const contentRef = useRef<HTMLDivElement>(null);
-  const [height, setHeight] = useState<number>(0);
-
-  // Measure height synchronously before paint to avoid layout thrashing
-  useLayoutEffect(() => {
-    if (contentRef.current) {
-      const measuredHeight = contentRef.current.scrollHeight;
-      if (measuredHeight > 0) {
-        setHeight((prevHeight) => {
-          // Only update if height changed significantly (avoid unnecessary updates)
-          return Math.abs(measuredHeight - prevHeight) > 1 ? measuredHeight : prevHeight;
-        });
-      }
-    }
-  }, [channels.length, channels.map((c) => c.id).join(",")]);
-
-  // Fallback measurement after render if height is still 0
-  useEffect(() => {
-    if (height === 0 && contentRef.current) {
-      const measuredHeight = contentRef.current.scrollHeight;
-      if (measuredHeight > 0) {
-        setHeight(measuredHeight);
-      }
-    }
-  }, [height]);
-
   return (
-    <motion.div
-      initial={{ height: 0, opacity: 0 }}
-      animate={{
-        height: height > 0 ? height : "auto",
-        opacity: 1,
-      }}
-      exit={{ height: 0, opacity: 0 }}
-      transition={{
-        height: {
-          type: "spring",
-          stiffness: 300,
-          damping: 30,
-          mass: 0.8,
-        },
-        opacity: { duration: 0.15 },
-      }}
-      className="space-y-0.5 ml-1 overflow-hidden"
-      style={{
-        contain: "layout style",
-        willChange: height > 0 ? "height" : undefined,
-      }}
-    >
-      <div ref={contentRef}>
-        <SortableContext items={channels.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-          {channels.map((channel) => {
-            const { unreadCount, mentionCount } = getChannelUnread(channel.id);
-            return (
-              <SortableChannel
-                key={channel.id}
-                channel={channel}
-                isActive={currentChannelId === channel.id}
-                isUnread={unreadCount > 0}
-                mentionCount={mentionCount}
-                isAdmin={isAdmin}
-                voiceUserIds={voicePresenceByChannel[channel.id]}
-                resolveUser={resolveUser}
-                onSelect={() => onSelectChannel(channel)}
-                onEdit={() => onEditChannel(channel.id)}
-                onDelete={() => onDeleteChannel(channel.id)}
-                onCopyLink={() => onCopyChannelLink(channel.id)}
-              />
-            );
-          })}
-        </SortableContext>
-      </div>
-    </motion.div>
+    <div className="space-y-0.5 ml-1 animate-fade-in">
+      <SortableContext items={channels.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+        {channels.map((channel) => {
+          const { unreadCount, mentionCount } = getChannelUnread(channel.id);
+          return (
+            <SortableChannel
+              key={channel.id}
+              channel={channel}
+              isActive={currentChannelId === channel.id}
+              isUnread={unreadCount > 0}
+              mentionCount={mentionCount}
+              isAdmin={isAdmin}
+              voiceUserIds={voicePresenceByChannel[channel.id]}
+              resolveUser={resolveUser}
+              onSelect={() => onSelectChannel(channel)}
+              onEdit={() => onEditChannel(channel.id)}
+              onDelete={() => onDeleteChannel(channel.id)}
+              onCopyLink={() => onCopyChannelLink(channel.id)}
+            />
+          );
+        })}
+      </SortableContext>
+    </div>
   );
 };
 
-// Modern Sortable Category
+// Sortable Category - simplified
 const SortableCategory = ({
   category,
   channels,
@@ -461,7 +384,7 @@ const SortableCategory = ({
   };
 
   return (
-    <motion.div
+    <div
       ref={(node) => {
         setNodeRef(node);
         setDroppableRef(node);
@@ -472,7 +395,6 @@ const SortableCategory = ({
         (isOver || isDragOver) &&
           "ring-2 ring-primary/50 ring-offset-2 ring-offset-layout-sidebar-secondary rounded-md",
       )}
-      layout
     >
       {/* Category header */}
       <div className="group flex items-center gap-1 px-0.5 mb-1">
@@ -482,14 +404,14 @@ const SortableCategory = ({
               className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground uppercase tracking-wider flex-1 py-1"
               onClick={onToggle}
             >
-          <motion.div
-            animate={{ rotate: isCollapsed ? -90 : 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 20 }}
-          >
-            <ChevronDown className="w-3 h-3" />
-          </motion.div>
-          <span className="truncate">{category.name}</span>
-          {isCollapsed && <span className="ml-1 text-muted-foreground/60">({channels.length})</span>}
+              <ChevronDown 
+                className={cn(
+                  "w-3 h-3 transition-transform duration-150",
+                  isCollapsed && "-rotate-90"
+                )} 
+              />
+              <span className="truncate">{category.name}</span>
+              {isCollapsed && <span className="ml-1 text-muted-foreground/60">({channels.length})</span>}
             </button>
           </ContextMenuTrigger>
           {isAdmin && (
@@ -549,23 +471,21 @@ const SortableCategory = ({
       </div>
 
       {/* Channels */}
-      <AnimatePresence>
-        {!isCollapsed && (
-          <CategoryContent
-            channels={channels}
-            currentChannelId={currentChannelId}
-            getChannelUnread={getChannelUnread}
-            isAdmin={isAdmin}
-            onSelectChannel={onSelectChannel}
-            onEditChannel={onEditChannel}
-            onDeleteChannel={onDeleteChannel}
-            onCopyChannelLink={onCopyChannelLink}
-            voicePresenceByChannel={voicePresenceByChannel}
-            resolveUser={resolveUser}
-          />
-        )}
-      </AnimatePresence>
-    </motion.div>
+      {!isCollapsed && (
+        <CategoryContent
+          channels={channels}
+          currentChannelId={currentChannelId}
+          getChannelUnread={getChannelUnread}
+          isAdmin={isAdmin}
+          onSelectChannel={onSelectChannel}
+          onEditChannel={onEditChannel}
+          onDeleteChannel={onDeleteChannel}
+          onCopyChannelLink={onCopyChannelLink}
+          voicePresenceByChannel={voicePresenceByChannel}
+          resolveUser={resolveUser}
+        />
+      )}
+    </div>
   );
 };
 
@@ -909,12 +829,12 @@ export const ChannelSidebar = () => {
     return (
       <div className="h-full flex flex-col bg-layout-sidebar-secondary">
         <div className="flex-1 flex items-center justify-center p-4">
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center">
+          <div className="text-center animate-fade-in">
             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-secondary/50 flex items-center justify-center">
               <Hash className="w-8 h-8 text-muted-foreground/50" />
             </div>
             <p className="text-sm text-muted-foreground">Select a server</p>
-          </motion.div>
+          </div>
         </div>
       </div>
     );
@@ -945,17 +865,15 @@ export const ChannelSidebar = () => {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <MotionButton
+            <button
               className={cn(
-                "h-12 px-4 flex items-center justify-between border-b border-border/50 hover:bg-secondary/50 cursor-pointer w-full text-left transition-colors",
+                "h-12 px-4 flex items-center justify-between border-b border-border/50 hover:bg-secondary/50 cursor-pointer w-full text-left transition-colors active:scale-[0.99]",
                 currentServer.banner_url && "border-t-0",
               )}
-              whileHover={{ backgroundColor: "hsl(var(--secondary) / 0.5)" }}
-              whileTap={{ scale: 0.99 }}
             >
               <h2 className="font-normal text-lg text-foreground truncate">{currentServer.name}</h2>
               <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-            </MotionButton>
+            </button>
           </DropdownMenuTrigger>
 
           <DropdownMenuContent
@@ -1066,17 +984,13 @@ export const ChannelSidebar = () => {
                     !isOverviewActive && "text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  <AnimatePresence>
-                    {isOverviewActive && (
-                      <motion.div
-                        layoutId="channel-indicator"
-                        className="absolute -left-2 top-0 bottom-0 w-1 bg-primary rounded-full"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                      />
+                  {/* Active indicator */}
+                  <div
+                    className={cn(
+                      "absolute -left-2 top-0 bottom-0 w-1 bg-primary rounded-full transition-opacity duration-150",
+                      isOverviewActive ? "opacity-100" : "opacity-0"
                     )}
-                  </AnimatePresence>
+                  />
                   <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
                     <Info
                       className={cn(
@@ -1098,17 +1012,13 @@ export const ChannelSidebar = () => {
                       !isMembersActive && "text-muted-foreground hover:text-foreground",
                     )}
                   >
-                    <AnimatePresence>
-                      {isMembersActive && (
-                        <motion.div
-                          layoutId="channel-indicator"
-                          className="absolute -left-2 top-0 bottom-0 w-1 bg-primary rounded-full"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                        />
+                    {/* Active indicator */}
+                    <div
+                      className={cn(
+                        "absolute -left-2 top-0 bottom-0 w-1 bg-primary rounded-full transition-opacity duration-150",
+                        isMembersActive ? "opacity-100" : "opacity-0"
                       )}
-                    </AnimatePresence>
+                    />
                     <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
                       <Users
                         className={cn(
@@ -1185,11 +1095,7 @@ export const ChannelSidebar = () => {
 
               {/* Empty state */}
               {channels.length === 0 && categories.length === 0 && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex flex-col items-center justify-center py-12 text-center"
-                >
+                <div className="flex flex-col items-center justify-center py-12 text-center animate-fade-in">
                   <div className="w-12 h-12 rounded-xl bg-secondary/50 flex items-center justify-center mb-3">
                     <Hash className="w-6 h-6 text-muted-foreground/50" />
                   </div>
@@ -1203,7 +1109,7 @@ export const ChannelSidebar = () => {
                       Create a channel
                     </Button>
                   )}
-                </motion.div>
+                </div>
               )}
             </div>
           </ContextMenuTrigger>
