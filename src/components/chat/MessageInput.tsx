@@ -7,7 +7,8 @@ import { useOfflineQueueStore } from "@/stores/offlineQueueStore";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { saveDraft, getDraft, clearDraft } from "@/lib/storage";
-import { getMessagePreview, extractMentions, isImageOnlyMessage } from "@/lib/message";
+import { extractMentions, isImageOnlyMessage } from "@/lib/message";
+import { ReplyPreview } from "./MessageContent";
 import { MentionAutocomplete } from "./MentionAutocomplete";
 import { EmojiGifPicker } from "@/components/modals/EmojiGifPicker";
 import { ImageUploadDialog } from "@/components/modals/ImageUploadDialog";
@@ -813,7 +814,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
             />
           ) : (
             <span className="text-xs sm:text-sm text-muted-foreground truncate flex-1 hidden sm:inline">
-              {getMessagePreview(replyingTo.content, 50)}
+              <ReplyPreview content={replyingTo.content} maxLength={50} />
             </span>
           )}
           <button

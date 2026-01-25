@@ -458,3 +458,108 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
     </div>
   );
 };
+
+interface ReplyPreviewProps {
+  content: string;
+  maxLength?: number;
+}
+
+export const ReplyPreview = ({ content, maxLength = 50 }: ReplyPreviewProps) => {
+  const { currentServer } = useServerStore();
+  const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
+
+  // Load server emoji map for :name: rendering
+  useEffect(() => {
+    const serverId = currentServer?.id;
+    if (!serverId) {
+      setCustomEmojiMap(new Map());
+      return;
+    }
+
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const emojis = await fetchServerEmojis(serverId);
+        if (cancelled) return;
+        const map = new Map<string, string>();
+        emojis.forEach((e) => map.set(e.name, e.url));
+        setCustomEmojiMap(map);
+      } catch (e) {
+        console.error('Failed to load server emojis for reply preview:', e);
+        if (cancelled) return;
+        setCustomEmojiMap(new Map());
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentServer?.id]);
+
+  // Strip markdown and prepare content
+  const stripped = useMemo(() => {
+    let result = content
+      .replace(/```[\s\S]*?```/g, '[code]')
+      .replace(/`[^`]+`/g, '[code]')
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*]+)\*/g, '$1')
+      .replace(/~~([^~]+)~~/g, '$1')
+      .replace(/__([^_]+)__/g, '$1')
+      .replace(/\|\|([^|]+)\|\|/g, '[spoiler]')
+      .replace(/\n/g, ' ')
+      .trim();
+    
+    if (result.length > maxLength) {
+      result = result.slice(0, maxLength - 3) + '...';
+    }
+    
+    return result;
+  }, [content, maxLength]);
+
+  // Replace custom emojis
+  const rendered = useMemo(() => {
+    if (customEmojiMap.size === 0) return stripped;
+    
+    const parts: (string | JSX.Element)[] = [];
+    let lastIndex = 0;
+    const emojiRegex = /:([a-z0-9_]{2,32}):/g;
+    let match;
+    
+    while ((match = emojiRegex.exec(stripped)) !== null) {
+      // Add text before emoji
+      if (match.index > lastIndex) {
+        parts.push(stripped.slice(lastIndex, match.index));
+      }
+      
+      // Add emoji if found
+      const emojiName = match[1];
+      const emojiUrl = customEmojiMap.get(emojiName);
+      if (emojiUrl) {
+        parts.push(
+          <img
+            key={`emoji-${match.index}`}
+            src={emojiUrl}
+            alt={`:${emojiName}:`}
+            title={`:${emojiName}:`}
+            className="inline-block w-4 h-4 align-text-bottom object-contain"
+            loading="lazy"
+          />
+        );
+      } else {
+        parts.push(match[0]);
+      }
+      
+      lastIndex = match.index + match[0].length;
+    }
+    
+    // Add remaining text
+    if (lastIndex < stripped.length) {
+      parts.push(stripped.slice(lastIndex));
+    }
+    
+    return parts.length > 0 ? parts : stripped;
+  }, [stripped, customEmojiMap]);
+
+  return <>{rendered}</>;
+};

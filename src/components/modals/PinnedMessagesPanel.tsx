@@ -17,6 +17,9 @@ import { useAuthStore } from '@/stores/authStore';
 import { useRealtimePinnedMessages } from '@/hooks/useRealtimePinnedMessages';
 import { useMemberPermissions } from '@/hooks/useMemberPermissions';
 import { toast } from 'sonner';
+import { PollMessage } from '@/components/chat/PollMessage';
+import { MessageContent } from '@/components/chat/MessageContent';
+import { getPollIdFromContent } from '@/lib/poll';
 
 export const PinnedMessagesPanel = () => {
   const { activeModal, closeModal } = useUIStore();
@@ -85,7 +88,26 @@ export const PinnedMessagesPanel = () => {
                           {message.created_at && format(new Date(message.created_at), 'MMM d, h:mm a')}
                         </span>
                       </div>
-                      <p className="text-sm line-clamp-3">{message.content}</p>
+                      {(() => {
+                        const pollId = getPollIdFromContent(message.content);
+                        if (pollId) {
+                          return <PollMessage pollId={pollId} />;
+                        }
+                        return (
+                          <div className="text-sm line-clamp-3">
+                            <MessageContent 
+                              content={message.content} 
+                              currentUserId={user?.id} 
+                              messageId={message.id}
+                              messageUser={message.user ? {
+                                id: message.user.id,
+                                username: message.user.username,
+                                display_name: message.user.display_name,
+                              } : undefined}
+                            />
+                          </div>
+                        );
+                      })()}
                     </div>
                     {isAdmin && (
                       <Button

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo, memo, forwardRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Smile, Reply, Pencil, Trash2, Pin, MoreHorizontal, CornerUpLeft, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
@@ -28,7 +29,8 @@ import { useSyncStore } from "@/stores/syncStore";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { MessageContent } from "./MessageContent";
 import { PollMessage } from "./PollMessage";
-import { getMessagePreview, isImageOnlyMessage, convertMentionsToReadable, convertMentionsToRaw } from "@/lib/message";
+import { isImageOnlyMessage, convertMentionsToReadable, convertMentionsToRaw } from "@/lib/message";
+import { ReplyPreview } from "./MessageContent";
 import { formatMessageTimestamp } from "@/lib/format";
 import { DeleteMessageModal } from "@/components/modals/DeleteMessageModal";
 import { EmojiGifPicker } from "@/components/modals/EmojiGifPicker";
@@ -95,6 +97,7 @@ export const MessageItem = memo(function MessageItem({
   const showTimestamps = useUIStore((state) => state.showTimestamps);
   const { openModal } = useUIStore();
   const { getOptimisticStatus } = useSyncStore();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // State - SEPARATE states for desktop and mobile emoji pickers
   const [isEditing, setIsEditing] = useState(false);
@@ -543,6 +546,20 @@ export const MessageItem = memo(function MessageItem({
     [message.user_id, openModal],
   );
 
+  const handleReplyClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (message.reply_to?.id) {
+        // Set URL param - useScrollToMessage hook will handle scrolling and highlighting
+        const newParams = new URLSearchParams(searchParams);
+        newParams.set('message', message.reply_to.id);
+        setSearchParams(newParams, { replace: true });
+      }
+    },
+    [message.reply_to?.id, searchParams, setSearchParams],
+  );
+
   return (
     <>
       {showNewDivider && (
@@ -681,7 +698,10 @@ export const MessageItem = memo(function MessageItem({
 
             {/* Reply reference */}
             {message.reply_to && (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1 cursor-pointer hover:text-foreground">
+              <div 
+                className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1 cursor-pointer hover:text-foreground"
+                onClick={handleReplyClick}
+              >
                 <CornerUpLeft className="w-3 h-3 flex-shrink-0" />
                 <span>Replying to</span>
                 <span className="font-medium text-primary">@{message.reply_to.user?.username || "unknown"}</span>
@@ -693,7 +713,7 @@ export const MessageItem = memo(function MessageItem({
                   />
                 ) : (
                   <span className="truncate max-w-[200px]">
-                    {getMessagePreview(message.reply_to.content, 50, usersMap)}
+                    <ReplyPreview content={message.reply_to.content} maxLength={50} />
                   </span>
                 )}
               </div>
