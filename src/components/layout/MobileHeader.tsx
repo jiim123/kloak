@@ -2,6 +2,7 @@ import { Menu, Hash, Users, Volume2 } from 'lucide-react';
 import { useServerStore } from '@/stores/serverStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useDMStore } from '@/stores/dmStore';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 
 interface MobileHeaderProps {
   isDMView: boolean;
@@ -60,7 +61,12 @@ export const MobileHeader = ({ isDMView, showFriends, showExplore }: MobileHeade
           </span>
         </div>
 
-        {/* Section 3: Members Toggle (only for server view) */}
+        {/* Section 3: Notifications */}
+        <div className="p-1 rounded-2xl bg-secondary">
+          <NotificationBell />
+        </div>
+
+        {/* Section 4: Members Toggle (only for server view) */}
         {!isDMView && currentServer && (
           <button
             onClick={toggleMemberSidebar}
