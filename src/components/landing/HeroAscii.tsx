@@ -15,7 +15,7 @@ export const HeroImage = () => {
       {/* Soft gradient background */}
       <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-primary/5" />
       <div className="absolute inset-0 bg-gradient-to-t from-primary/3 via-transparent to-transparent" />
-      
+
       {/* Centered single column content */}
       <div className="relative z-10 w-full min-h-screen flex items-center justify-center px-6 py-20">
         <motion.div initial="initial" animate="animate" className="max-w-4xl text-center">
@@ -32,19 +32,19 @@ export const HeroImage = () => {
           <motion.div variants={fadeIn} transition={{ duration: 0.5, delay: 0.1 }} className="mb-8">
             <LayoutGroup>
               <motion.div
-                className="flex flex-wrap items-center justify-center text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-normal"
+                className="flex flex-col items-center justify-center text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-normal"
                 layout
               >
                 <motion.span
-                  className="text-foreground mr-2 sm:mr-3"
+                  className="text-foreground"
                   layout
                   transition={{ type: "spring", damping: 30, stiffness: 400 }}
                 >
                   YOUR
                 </motion.span>
                 <TextRotate
-                  texts={["OPINION.", "MESSAGE.", "REACTION 👋😄🤷.", "PRIVACY.", "COMMUNITY.", "FRIENDS."]}
-                  mainClassName="text-background px-2 sm:px-3 bg-white overflow-hidden py-1 sm:py-1.5 justify-center rounded-lg"
+                  texts={["OPINION", "MESSAGE", "REACTION 👋😄🤷", "PRIVACY", "COMMUNITY", "FRIENDS"]}
+                  mainClassName="text-background px-2 sm:px-3 bg-white overflow-hidden py-1 sm:py-1.5 justify-center rounded-lg my-2 sm:my-3"
                   staggerFrom="last"
                   initial={{ y: "100%" }}
                   animate={{ y: 0 }}
@@ -54,6 +54,13 @@ export const HeroImage = () => {
                   transition={{ type: "spring", damping: 30, stiffness: 400 }}
                   rotationInterval={3000}
                 />
+                <motion.span
+                  className="text-foreground"
+                  layout
+                  transition={{ type: "spring", damping: 30, stiffness: 400 }}
+                >
+                  IS PRIVATE.
+                </motion.span>
               </motion.div>
             </LayoutGroup>
           </motion.div>
@@ -70,10 +77,7 @@ export const HeroImage = () => {
           {/* CTA Button */}
           <motion.div variants={fadeIn} transition={{ duration: 0.5, delay: 0.3 }}>
             <Link to="/app">
-              <Button
-                size="lg"
-                className="h-12 px-8 text-base rounded-xl uppercase font-semibold tracking-wider group"
-              >
+              <Button size="lg" className="h-12 px-8 text-base rounded-xl uppercase font-semibold tracking-wider group">
                 Join Kloak
                 <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
