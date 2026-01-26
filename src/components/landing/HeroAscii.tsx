@@ -18,16 +18,11 @@ export const HeroImage = () => {
       {/* Two Column Layout */}
       <div className="relative z-10 w-full min-h-screen">
         <div className="grid md:grid-cols-2 min-h-screen">
-          
           {/* LEFT COLUMN - Text & CTA */}
           <div className="flex items-center justify-center px-6 sm:px-10 lg:px-16 py-20 md:py-0 order-2 md:order-1">
-            <motion.div 
-              initial="initial" 
-              animate="animate"
-              className="max-w-xl"
-            >
+            <motion.div initial="initial" animate="animate" className="max-w-xl">
               {/* Tagline */}
-              <motion.p 
+              <motion.p
                 variants={fadeIn}
                 transition={{ duration: 0.5, delay: 0 }}
                 className="landing-body text-muted-foreground mb-4 text-sm"
@@ -36,7 +31,7 @@ export const HeroImage = () => {
               </motion.p>
 
               {/* Headline */}
-              <motion.h1 
+              <motion.h1
                 variants={fadeIn}
                 transition={{ duration: 0.5, delay: 0.1 }}
                 className="landing-hero-title text-foreground mb-6"
@@ -47,7 +42,7 @@ export const HeroImage = () => {
               </motion.h1>
 
               {/* Description */}
-              <motion.p 
+              <motion.p
                 variants={fadeIn}
                 transition={{ duration: 0.5, delay: 0.2 }}
                 className="landing-body text-muted-foreground mb-8 text-base sm:text-lg"
@@ -56,13 +51,10 @@ export const HeroImage = () => {
               </motion.p>
 
               {/* CTA Button */}
-              <motion.div
-                variants={fadeIn}
-                transition={{ duration: 0.5, delay: 0.3 }}
-              >
+              <motion.div variants={fadeIn} transition={{ duration: 0.5, delay: 0.3 }}>
                 <Link to="/app">
-                  <Button 
-                    size="lg" 
+                  <Button
+                    size="lg"
                     className="h-12 px-8 text-base rounded-xl uppercase font-semibold tracking-wider group"
                   >
                     Join Kloak
@@ -70,6 +62,16 @@ export const HeroImage = () => {
                   </Button>
                 </Link>
               </motion.div>
+
+              {/* Trust line */}
+              <motion.p
+                variants={fadeIn}
+                transition={{ duration: 0.5, delay: 0.4 }}
+                className="mt-8 text-sm text-muted-foreground"
+              >
+                No credit card required • Free forever • Your data stays yours
+              </motion.p>
+            </motion.div>
           </div>
 
           {/* RIGHT COLUMN - Image */}
@@ -93,7 +95,6 @@ export const HeroImage = () => {
               </div>
             </motion.div>
           </div>
-
         </div>
       </div>
     </section>
