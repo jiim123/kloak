@@ -43,7 +43,7 @@ export const HeroImage = () => {
                     </motion.span>
                     <TextRotate
                       texts={["OPINION.", "MESSAGE.", "REACTION 👋😄🤷.", "PRIVACY.", "COMMUNITY.", "FRIENDS."]}
-                      mainClassName="text-primary-foreground px-2 sm:px-3 bg-primary overflow-hidden py-1 sm:py-1.5 justify-center rounded-lg"
+                      mainClassName="text-background px-2 sm:px-3 bg-white overflow-hidden py-1 sm:py-1.5 justify-center rounded-lg"
                       staggerFrom="last"
                       initial={{ y: "100%" }}
                       animate={{ y: 0 }}
