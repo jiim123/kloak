@@ -120,6 +120,18 @@ export const ChannelHeader = ({ channel }: ChannelHeaderProps) => {
         </div>
         <span className="font-semibold text-foreground truncate">{channel.name}</span>
 
+        {channel.is_private && (
+          <Tooltip>
+            <TooltipTrigger>
+              <Badge variant="secondary" className="flex items-center gap-1 text-xs rounded-lg">
+                <Lock className="w-3 h-3" />
+                Private
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent>Only invited members can see this channel</TooltipContent>
+          </Tooltip>
+        )}
+
         {channel.is_read_only && (
           <Tooltip>
             <TooltipTrigger>

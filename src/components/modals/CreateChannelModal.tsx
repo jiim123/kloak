@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Hash, Volume2, FolderPlus, Loader2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Hash, Volume2, FolderPlus, Loader2, Lock } from "lucide-react";
 import type { ChannelType } from "@/types";
 
 export const CreateChannelModal = () => {
@@ -20,6 +21,7 @@ export const CreateChannelModal = () => {
   const [name, setName] = useState("");
   const [channelType, setChannelType] = useState<ChannelType>("text");
   const [categoryId, setCategoryId] = useState<string>("none");
+  const [isPrivate, setIsPrivate] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -42,6 +44,7 @@ export const CreateChannelModal = () => {
     setName("");
     setChannelType("text");
     setCategoryId(presetCategoryId || "none");
+    setIsPrivate(false);
     setError("");
     setMode("channel");
     closeModal();
@@ -65,7 +68,7 @@ export const CreateChannelModal = () => {
         await createCategory(currentServer.id, name.trim(), user.id);
       } else {
         const selectedCategoryId = presetCategoryId || (categoryId === "none" ? undefined : categoryId);
-        await createChannel(currentServer.id, name.trim(), channelType, user.id, selectedCategoryId);
+        await createChannel(currentServer.id, name.trim(), channelType, user.id, selectedCategoryId, undefined, isPrivate);
       }
       handleClose();
     } catch (err) {
@@ -233,6 +236,23 @@ export const CreateChannelModal = () => {
                   </Select>
                 </div>
               )}
+
+              {/* Private Channel Toggle */}
+              <div className="space-y-3">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Privacy
+                </Label>
+                <div className="flex items-center gap-4 p-4 rounded-xl bg-secondary/30 border border-border/50">
+                  <div className="w-10 h-10 rounded-xl bg-secondary/80 flex items-center justify-center flex-shrink-0">
+                    <Lock className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">Private Channel</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Only selected members can view this channel</p>
+                  </div>
+                  <Switch checked={isPrivate} onCheckedChange={setIsPrivate} />
+                </div>
+              </div>
             </>
           )}
 

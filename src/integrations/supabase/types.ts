@@ -49,6 +49,52 @@ export type Database = {
           },
         ]
       }
+      channel_members: {
+        Row: {
+          added_by: string | null
+          channel_id: string
+          created_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          added_by?: string | null
+          channel_id: string
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          added_by?: string | null
+          channel_id?: string
+          created_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "channel_members_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "channel_members_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "channel_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       channel_permissions: {
         Row: {
           allowed: boolean
@@ -150,6 +196,7 @@ export type Database = {
           icon: string | null
           id: string
           is_nsfw: boolean | null
+          is_private: boolean
           is_read_only: boolean | null
           name: string
           position: number | null
@@ -164,6 +211,7 @@ export type Database = {
           icon?: string | null
           id?: string
           is_nsfw?: boolean | null
+          is_private?: boolean
           is_read_only?: boolean | null
           name: string
           position?: number | null
@@ -178,6 +226,7 @@ export type Database = {
           icon?: string | null
           id?: string
           is_nsfw?: boolean | null
+          is_private?: boolean
           is_read_only?: boolean | null
           name?: string
           position?: number | null
@@ -1261,6 +1310,14 @@ export type Database = {
         Args: { _friendship_id: string; _user_id: string }
         Returns: Json
       }
+      add_channel_member: {
+        Args: {
+          _added_by: string
+          _channel_id: string
+          _target_user_id: string
+        }
+        Returns: boolean
+      }
       add_dm_reaction: {
         Args: { _emoji: string; _message_id: string; _user_id: string }
         Returns: Json
@@ -1280,6 +1337,10 @@ export type Database = {
       block_user: {
         Args: { _blocked_user_id: string; _user_id: string }
         Returns: Json
+      }
+      can_access_channel: {
+        Args: { _channel_id: string; _user_id: string }
+        Returns: boolean
       }
       change_member_role: {
         Args: {
@@ -1321,18 +1382,32 @@ export type Database = {
         }
         Returns: Json
       }
-      create_channel: {
-        Args: {
-          _category_id?: string
-          _icon?: string
-          _name: string
-          _position?: number
-          _server_id: string
-          _type?: string
-          _user_id: string
-        }
-        Returns: Json
-      }
+      create_channel:
+        | {
+            Args: {
+              _category_id?: string
+              _icon?: string
+              _is_private?: boolean
+              _name: string
+              _position?: number
+              _server_id: string
+              _type?: string
+              _user_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _category_id?: string
+              _icon?: string
+              _name: string
+              _position?: number
+              _server_id: string
+              _type?: string
+              _user_id: string
+            }
+            Returns: Json
+          }
       create_notification: {
         Args: {
           _body?: string
@@ -1436,6 +1511,7 @@ export type Database = {
         Returns: Json
       }
       get_blocked_users: { Args: { _user_id: string }; Returns: Json }
+      get_channel_members: { Args: { _channel_id: string }; Returns: Json }
       get_channel_messages: {
         Args: {
           _before_id?: string
@@ -1486,7 +1562,9 @@ export type Database = {
         }[]
       }
       get_server_categories: { Args: { _server_id: string }; Returns: Json }
-      get_server_channels: { Args: { _server_id: string }; Returns: Json }
+      get_server_channels:
+        | { Args: { _server_id: string }; Returns: Json }
+        | { Args: { _server_id: string; _user_id?: string }; Returns: Json }
       get_server_members: { Args: { _server_id: string }; Returns: Json }
       get_server_roles: { Args: { _server_id: string }; Returns: Json }
       get_user_by_id: { Args: { _user_id: string }; Returns: Json }
@@ -1564,6 +1642,14 @@ export type Database = {
       register_user: {
         Args: { _banner_color?: string; _key_hash: string; _username: string }
         Returns: Json
+      }
+      remove_channel_member: {
+        Args: {
+          _channel_id: string
+          _removed_by: string
+          _target_user_id: string
+        }
+        Returns: boolean
       }
       remove_dm_reaction: {
         Args: { _emoji: string; _message_id: string; _user_id: string }

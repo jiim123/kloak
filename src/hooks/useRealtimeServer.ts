@@ -118,6 +118,7 @@ export const useRealtimeServer = (serverId: string | null) => {
                 is_nsfw: newChannel.is_nsfw || false,
                 slowmode_seconds: newChannel.slowmode_seconds || 0,
                 is_read_only: newChannel.is_read_only || false,
+                is_private: newChannel.is_private || false,
                 icon: newChannel.icon,
                 created_at: newChannel.created_at,
               }],

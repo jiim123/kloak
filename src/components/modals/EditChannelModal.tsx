@@ -19,9 +19,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Hash, Trash2, FolderOpen, Settings, Shield, Loader2, Clock, Lock, AlertTriangle, X } from "lucide-react";
+import { Hash, Trash2, FolderOpen, Settings, Shield, Loader2, Clock, Lock, AlertTriangle, X, Users } from "lucide-react";
 import { toast } from "sonner";
 import { ChannelPermissionsEditor } from "./ChannelPermissionsEditor";
+import { ChannelMembersEditor } from "./ChannelMembersEditor";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Channel } from "@/types";
@@ -77,6 +78,7 @@ export const EditChannelModal = () => {
   const navItems = [
     { id: "overview", label: "Overview", icon: Hash },
     { id: "settings", label: "Settings", icon: Settings },
+    ...(channel?.is_private ? [{ id: "members", label: "Members", icon: Users }] : []),
     { id: "permissions", label: "Permissions", icon: Shield },
   ];
 
@@ -377,6 +379,22 @@ export const EditChannelModal = () => {
     </div>
   );
 
+  // Members Tab Content (for private channels)
+  const membersContent = (
+    <div>
+      {channelId && currentServer ? (
+        <ChannelMembersEditor channelId={channelId} serverId={currentServer.id} onClose={handleClose} />
+      ) : (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="w-12 h-12 rounded-xl bg-secondary/80 flex items-center justify-center mb-4">
+            <Loader2 className="w-6 h-6 text-muted-foreground animate-spin" />
+          </div>
+          <p className="text-sm text-muted-foreground">Loading members...</p>
+        </div>
+      )}
+    </div>
+  );
+
   // Render content based on active tab
   const renderContent = () => {
     switch (activeTab) {
@@ -384,6 +402,8 @@ export const EditChannelModal = () => {
         return overviewContent;
       case "settings":
         return settingsContent;
+      case "members":
+        return membersContent;
       case "permissions":
         return permissionsContent;
       default:
