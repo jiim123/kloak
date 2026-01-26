@@ -33,7 +33,6 @@ import {
   KeyboardShortcutsModal,
   ConfirmActionModal,
   ChangeNicknameModal,
-  WelcomeModal,
   PermissionDebugPanel
 } from '@/components/modals';
 import { PersistentEmbedContainer } from '@/components/chat/PersistentEmbedContainer';
@@ -56,7 +55,7 @@ const AppLayout = () => {
   const location = useLocation();
   const params = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user, isLoading, isNewUser, setIsNewUser } = useAuthStore();
+  const { user, isLoading } = useAuthStore();
   const { isMemberSidebarOpen, isServerSettingsOpen, closeMobileSidebars, activeModal } = useUIStore();
   const { 
     currentServer, 
@@ -503,7 +502,6 @@ const AppLayout = () => {
       <KeyboardShortcutsModal />
       <ConfirmActionModal />
       <ChangeNicknameModal />
-      <WelcomeModal open={isNewUser} onClose={() => setIsNewUser(false)} />
       <PermissionDebugPanel />
 
       {/* Persistent embed container for Twitch/Kick streams */}

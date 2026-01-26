@@ -16,4 +16,5 @@ export { KeyboardShortcutsModal } from './KeyboardShortcutsModal';
 export { DeleteMessageModal } from './DeleteMessageModal';
 export { ConfirmActionModal, ChangeNicknameModal } from './ConfirmActionModal';
 export { WelcomeModal } from './WelcomeModal';
+export { OnboardingModal } from './OnboardingModal';
 export { PermissionDebugPanel } from './PermissionDebugPanel';
