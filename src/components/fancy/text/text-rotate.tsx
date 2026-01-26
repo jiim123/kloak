@@ -1,21 +1,8 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import {
-  AnimatePresence,
-  HTMLMotionProps,
-  motion,
-  TargetAndTransition,
-  Transition,
-} from "framer-motion";
-import {
-  forwardRef,
-  useCallback,
-  useEffect,
-  useImperativeHandle,
-  useMemo,
-  useState,
-} from "react";
+import { AnimatePresence, HTMLMotionProps, motion, TargetAndTransition, Transition } from "framer-motion";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from "react";
 
 type SplitType = "words" | "characters" | "lines";
 type StaggerFrom = "first" | "last" | "center" | "random" | number;
@@ -32,12 +19,7 @@ function splitText(text: string, splitBy: SplitType = "characters"): string[] {
   }
 }
 
-function getStaggerDelay(
-  index: number,
-  total: number,
-  staggerFrom: StaggerFrom,
-  staggerDuration: number
-): number {
+function getStaggerDelay(index: number, total: number, staggerFrom: StaggerFrom, staggerDuration: number): number {
   if (typeof staggerFrom === "number") {
     const distance = Math.abs(index - staggerFrom);
     return distance * staggerDuration;
@@ -87,7 +69,7 @@ const TextRotate = forwardRef<TextRotateRef, TextRotateProps>(
   (
     {
       texts,
-      rotationInterval = 3000,
+      rotationInterval = 4000,
       auto = true,
       splitBy = "characters",
       staggerFrom = "first",
@@ -101,7 +83,7 @@ const TextRotate = forwardRef<TextRotateRef, TextRotateProps>(
       elementLevelClassName,
       onNext,
     },
-    ref
+    ref,
   ) => {
     const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -123,7 +105,7 @@ const TextRotate = forwardRef<TextRotateRef, TextRotateProps>(
         setCurrentIndex(clampedIndex);
         onNext?.(clampedIndex);
       },
-      [texts.length, onNext]
+      [texts.length, onNext],
     );
 
     useImperativeHandle(
@@ -134,7 +116,7 @@ const TextRotate = forwardRef<TextRotateRef, TextRotateProps>(
         jumpTo,
         getCurrentIndex: () => currentIndex,
       }),
-      [next, previous, jumpTo, currentIndex]
+      [next, previous, jumpTo, currentIndex],
     );
 
     useEffect(() => {
@@ -144,18 +126,12 @@ const TextRotate = forwardRef<TextRotateRef, TextRotateProps>(
     }, [auto, rotationInterval, next]);
 
     const currentText = texts[currentIndex];
-    const splitParts = useMemo(
-      () => splitText(currentText, splitBy),
-      [currentText, splitBy]
-    );
+    const splitParts = useMemo(() => splitText(currentText, splitBy), [currentText, splitBy]);
 
     return (
       <div className={cn("relative inline-flex", mainClassName)}>
         <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={currentIndex}
-            className={cn("flex flex-wrap", splitLevelClassName)}
-          >
+          <motion.div key={currentIndex} className={cn("flex flex-wrap", splitLevelClassName)}>
             {splitParts.map((part, index) => (
               <motion.span
                 key={`${currentIndex}-${index}`}
@@ -164,12 +140,7 @@ const TextRotate = forwardRef<TextRotateRef, TextRotateProps>(
                 exit={exit}
                 transition={{
                   ...transition,
-                  delay: getStaggerDelay(
-                    index,
-                    splitParts.length,
-                    staggerFrom,
-                    staggerDuration
-                  ),
+                  delay: getStaggerDelay(index, splitParts.length, staggerFrom, staggerDuration),
                 }}
                 className={cn("inline-block", elementLevelClassName)}
               >
@@ -180,7 +151,7 @@ const TextRotate = forwardRef<TextRotateRef, TextRotateProps>(
         </AnimatePresence>
       </div>
     );
-  }
+  },
 );
 
 TextRotate.displayName = "TextRotate";
