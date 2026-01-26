@@ -6,28 +6,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { markWelcomeSeen } from "@/lib/storage";
 import {
   Key,
-  Copy,
-  Check,
   AlertCircle,
   Eye,
   EyeOff,
   Loader2,
   CheckCircle2,
   XCircle,
-  UserPlus,
-  Shield,
   CircleUserRound,
-  Download,
 } from "lucide-react";
-import kloakLogo from "@/assets/kloak-logo.svg";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Checkbox } from "@/components/ui/checkbox";
+
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { WelcomeModal } from "@/components/modals/WelcomeModal";
+import { OnboardingModal } from "@/components/modals/OnboardingModal";
 import { NavigationMenu } from "@/components/layout/NavigationMenu";
 import { Footer } from "@/components/ui/footer-section";
 import { isTauriWindow, resizeWindowForApp } from "@/lib/tauriRuntime";
@@ -49,7 +44,7 @@ const tabContentVariants = {
   }),
 };
 
-type AuthStep = "form" | "key-display";
+
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -76,29 +71,23 @@ const Auth = () => {
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [isUsernameAvailable, setIsUsernameAvailable] = useState<boolean | null>(null);
-  const [authStep, setAuthStep] = useState<AuthStep>("form");
   const [generatedKey, setGeneratedKey] = useState<string | null>(null);
-  const [showGeneratedKey, setShowGeneratedKey] = useState(false);
-  const [keyCopied, setKeyCopied] = useState(false);
-  const [keyConfirmed, setKeyConfirmed] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
   // Login state
   const [secretKey, setSecretKey] = useState("");
   const [showSecretKey, setShowSecretKey] = useState(false);
 
-  // Redirect if already logged in
-  // Note: On iOS, we need to ensure zustand has fully hydrated before redirecting
-  // The authStep check prevents redirect during account creation flow (key display step)
+  // Redirect if already logged in (but not during onboarding)
   useEffect(() => {
-    if (user && authStep === "form") {
+    if (user && !showWelcomeModal) {
       // Use a small delay to ensure iOS Safari has completed any pending state updates
       const timeoutId = setTimeout(() => {
         navigate(redirectTo || "/app", { replace: true });
       }, 50);
       return () => clearTimeout(timeoutId);
     }
-  }, [user, navigate, redirectTo, authStep]);
+  }, [user, navigate, redirectTo, showWelcomeModal]);
 
   // Reset state when switching tabs
   useEffect(() => {
@@ -106,10 +95,7 @@ const Auth = () => {
     setUsernameError(null);
     setUsername("");
     setSecretKey("");
-    setAuthStep("form");
     setGeneratedKey(null);
-    setKeyCopied(false);
-    setKeyConfirmed(false);
     setIsUsernameAvailable(null);
   }, [activeTab, setError]);
 
@@ -172,8 +158,7 @@ const Auth = () => {
       const result = await createAccount(username.trim().toLowerCase());
       if (result) {
         setGeneratedKey(result.secretKey);
-        setAuthStep("key-display");
-        // Show welcome modal for newly created accounts
+        // Show onboarding modal immediately (combines welcome + key display)
         setShowWelcomeModal(true);
       }
     } catch (err) {
@@ -224,61 +209,15 @@ const Auth = () => {
     setSecretKey(pastedText);
   };
 
-  // Copy key to clipboard with iOS Safari fallback
-  const copyKey = async () => {
-    if (!generatedKey) return;
-
-    try {
-      // Try modern Clipboard API first
-      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-        await navigator.clipboard.writeText(generatedKey);
-      } else {
-        // Fallback for iOS Safari and older browsers
-        const textArea = document.createElement('textarea');
-        textArea.value = generatedKey;
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-9999px';
-        textArea.style.top = '-9999px';
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        
-        try {
-          document.execCommand('copy');
-        } finally {
-          document.body.removeChild(textArea);
-        }
-      }
-      
-      setKeyCopied(true);
-      toast({
-        title: "Copied!",
-        description: "Secret key copied to clipboard.",
-      });
-    } catch (err) {
-      console.error('Copy failed:', err);
-      toast({
-        variant: "destructive",
-        title: "Copy failed",
-        description: "Please manually select and copy the key.",
-      });
-    }
-  };
-
-  // Continue to app after confirming key saved
-  const continueToApp = async () => {
-    // Resize Tauri window to app size, then navigate
-    await resizeWindowForApp();
-    // Use replace to prevent back navigation to auth page after account creation
-    navigate(redirectTo || "/app", { replace: true });
-  };
-
-  // Handle welcome modal close
-  const handleWelcomeClose = () => {
+  // Handle onboarding modal close - navigate to app
+  const handleOnboardingClose = async () => {
     if (user) {
       markWelcomeSeen(user.id);
     }
     setShowWelcomeModal(false);
+    // Resize Tauri window to app size, then navigate
+    await resizeWindowForApp();
+    navigate(redirectTo || "/app", { replace: true });
   };
 
   // Render username input status icon
@@ -300,231 +239,160 @@ const Auth = () => {
         <div className="w-full max-w-md">
           {/* Auth card */}
           <div className="bg-card border border-border rounded-xl p-6 shadow-xl">
-            {authStep === "form" ? (
-              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "create" | "login")}>
-                <TabsList className="w-full grid grid-cols-2 mb-6 h-auto p-1.5 bg-muted/50 rounded-2xl border border-border/50">
-                  <TabsTrigger
-                    value="create"
-                    className="rounded-xl py-2.5 px-4 text-sm font-medium transition-all duration-200 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
-                  >
-                    <CircleUserRound className="w-4 h-4 mr-2" />
-                    Create Account
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="login"
-                    className="rounded-xl py-2.5 px-4 text-sm font-medium transition-all duration-200 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
-                  >
-                    <Key className="w-4 h-4 mr-2" />
-                    Login with Key
-                  </TabsTrigger>
-                </TabsList>
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "create" | "login")}>
+              <TabsList className="w-full grid grid-cols-2 mb-6 h-auto p-1.5 bg-muted/50 rounded-2xl border border-border/50">
+                <TabsTrigger
+                  value="create"
+                  className="rounded-xl py-2.5 px-4 text-sm font-medium transition-all duration-200 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
+                >
+                  <CircleUserRound className="w-4 h-4 mr-2" />
+                  Create Account
+                </TabsTrigger>
+                <TabsTrigger
+                  value="login"
+                  className="rounded-xl py-2.5 px-4 text-sm font-medium transition-all duration-200 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
+                >
+                  <Key className="w-4 h-4 mr-2" />
+                  Login with Key
+                </TabsTrigger>
+              </TabsList>
 
-                {/* Error display */}
-                {error && (
-                  <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 flex items-center gap-2 text-destructive">
-                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                    <p className="text-sm">{error}</p>
-                  </div>
-                )}
-
-                {/* Animated Tab Content */}
-                <div className="relative overflow-hidden">
-                  <AnimatePresence mode="wait" initial={false} custom={activeTab === "login" ? 1 : -1}>
-                    {activeTab === "create" && (
-                      <motion.div
-                        key="create"
-                        custom={-1}
-                        variants={tabContentVariants}
-                        initial="enter"
-                        animate="center"
-                        exit="exit"
-                        transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
-                      >
-                        <form onSubmit={handleCreateAccount} className="space-y-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="username">Username</Label>
-                            <div className="relative">
-                              <Input
-                                id="username"
-                                placeholder="your_username"
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
-                                maxLength={20}
-                                disabled={isLoading}
-                                className={cn(
-                                  "pr-10",
-                                  usernameError && "border-destructive focus-visible:ring-destructive",
-                                  isUsernameAvailable === true &&
-                                    "border-[hsl(var(--kloak-success))] focus-visible:ring-[hsl(var(--kloak-success))]",
-                                )}
-                              />
-                              <div className="absolute right-3 top-1/2 -translate-y-1/2">{renderUsernameStatus()}</div>
-                            </div>
-                            {usernameError && <p className="text-xs text-destructive">{usernameError}</p>}
-                            {!usernameError && isUsernameAvailable === false && (
-                              <p className="text-xs text-destructive">Username is already taken</p>
-                            )}
-                            {!usernameError && isUsernameAvailable === true && (
-                              <p className="text-xs text-[hsl(var(--kloak-success))]">Username is available!</p>
-                            )}
-                            {!usernameError && isUsernameAvailable === null && username && !isCheckingUsername && (
-                              <p className="text-xs text-muted-foreground">
-                                3-20 characters. Letters, numbers, and underscores only.
-                              </p>
-                            )}
-                          </div>
-
-                          <Button
-                            type="submit"
-                            className="w-full"
-                            disabled={isLoading || !!usernameError || isUsernameAvailable !== true}
-                          >
-                            {isLoading ? (
-                              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                            ) : (
-                              <Key className="w-4 h-4 mr-2" />
-                            )}
-                            Create Account
-                          </Button>
-
-                          <p className="text-center text-xs text-muted-foreground mt-3">
-                            By creating an account, you agree to our{" "}
-                            <Link to="/terms" className="text-foreground hover:underline">
-                              Terms of Service
-                            </Link>{" "}
-                            and{" "}
-                            <Link to="/privacy" className="text-foreground hover:underline">
-                              Privacy Policy
-                            </Link>
-                          </p>
-                        </form>
-                      </motion.div>
-                    )}
-
-                    {activeTab === "login" && (
-                      <motion.div
-                        key="login"
-                        custom={1}
-                        variants={tabContentVariants}
-                        initial="enter"
-                        animate="center"
-                        exit="exit"
-                        transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
-                      >
-                        <form onSubmit={handleLogin} className="space-y-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="secretKey">Secret Key</Label>
-                            <div className="relative">
-                              <Input
-                                id="secretKey"
-                                type={showSecretKey ? "text" : "password"}
-                                placeholder="Paste your 64-character secret key"
-                                value={secretKey}
-                                onChange={(e) => setSecretKey(e.target.value)}
-                                onPaste={handleKeyPaste}
-                                className="font-mono text-sm pr-10"
-                                disabled={isLoading}
-                              />
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                                onClick={() => setShowSecretKey(!showSecretKey)}
-                              >
-                                {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                              </Button>
-                            </div>
-                          </div>
-
-                          <Button type="submit" className="w-full" disabled={isLoading || !secretKey}>
-                            {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                            Login
-                          </Button>
-
-                          <p className="text-xs text-muted-foreground">
-                            Forgot your key? Unfortunately, keys cannot be recovered.
-                          </p>
-                        </form>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+              {/* Error display */}
+              {error && (
+                <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 flex items-center gap-2 text-destructive">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <p className="text-sm">{error}</p>
                 </div>
-              </Tabs>
-            ) : (
-              /* Secret Key Display Screen */
-              <div className="space-y-6">
-                {/* Warning banner */}
-                <div className="p-4 rounded-lg bg-[hsl(var(--kloak-warning))/0.15] border border-[hsl(var(--kloak-warning))/0.3]">
-                  <div className="flex items-start gap-3">
-                    <Shield className="w-6 h-6 text-[hsl(var(--kloak-warning))] flex-shrink-0 mt-0.5" />
-                    <div>
-                      <h3 className="font-semibold tracking-tight text-foreground">Save Your Secret Key</h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        This is the <span className="font-medium text-foreground">only way</span> to access your
-                        account. We cannot recover it. Store it safely — in a password manager or written down securely.
-                      </p>
-                    </div>
-                  </div>
-                </div>
+              )}
 
-                {/* Key display */}
-                <div className="space-y-2">
-                  <Label>Your Secret Key</Label>
-                  <div className="relative">
-                    <div className="bg-secondary/50 rounded-lg p-4 font-mono text-sm break-all border border-border">
-                      {showGeneratedKey ? generatedKey : "•".repeat(64)}
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-2 top-2 h-7 w-7 p-0"
-                      onClick={() => setShowGeneratedKey(!showGeneratedKey)}
+              {/* Animated Tab Content */}
+              <div className="relative overflow-hidden">
+                <AnimatePresence mode="wait" initial={false} custom={activeTab === "login" ? 1 : -1}>
+                  {activeTab === "create" && (
+                    <motion.div
+                      key="create"
+                      custom={-1}
+                      variants={tabContentVariants}
+                      initial="enter"
+                      animate="center"
+                      exit="exit"
+                      transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
                     >
-                      {showGeneratedKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </Button>
-                  </div>
-                </div>
+                      <form onSubmit={handleCreateAccount} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="username">Username</Label>
+                          <div className="relative">
+                            <Input
+                              id="username"
+                              placeholder="your_username"
+                              value={username}
+                              onChange={(e) => setUsername(e.target.value)}
+                              maxLength={20}
+                              disabled={isLoading}
+                              className={cn(
+                                "pr-10",
+                                usernameError && "border-destructive focus-visible:ring-destructive",
+                                isUsernameAvailable === true &&
+                                  "border-[hsl(var(--kloak-success))] focus-visible:ring-[hsl(var(--kloak-success))]",
+                              )}
+                            />
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2">{renderUsernameStatus()}</div>
+                          </div>
+                          {usernameError && <p className="text-xs text-destructive">{usernameError}</p>}
+                          {!usernameError && isUsernameAvailable === false && (
+                            <p className="text-xs text-destructive">Username is already taken</p>
+                          )}
+                          {!usernameError && isUsernameAvailable === true && (
+                            <p className="text-xs text-[hsl(var(--kloak-success))]">Username is available!</p>
+                          )}
+                          {!usernameError && isUsernameAvailable === null && username && !isCheckingUsername && (
+                            <p className="text-xs text-muted-foreground">
+                              3-20 characters. Letters, numbers, and underscores only.
+                            </p>
+                          )}
+                        </div>
 
-                {/* Copy button */}
-                <Button variant={keyCopied ? "secondary" : "outline"} className="w-full" onClick={copyKey}>
-                  {keyCopied ? (
-                    <>
-                      <Check className="w-4 h-4 mr-2 text-[hsl(var(--kloak-success))]" />
-                      Copied to Clipboard
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-4 h-4 mr-2" />
-                      Copy to Clipboard
-                    </>
+                        <Button
+                          type="submit"
+                          className="w-full"
+                          disabled={isLoading || !!usernameError || isUsernameAvailable !== true}
+                        >
+                          {isLoading ? (
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          ) : (
+                            <Key className="w-4 h-4 mr-2" />
+                          )}
+                          Create Account
+                        </Button>
+
+                        <p className="text-center text-xs text-muted-foreground mt-3">
+                          By creating an account, you agree to our{" "}
+                          <Link to="/terms" className="text-foreground hover:underline">
+                            Terms of Service
+                          </Link>{" "}
+                          and{" "}
+                          <Link to="/privacy" className="text-foreground hover:underline">
+                            Privacy Policy
+                          </Link>
+                        </p>
+                      </form>
+                    </motion.div>
                   )}
-                </Button>
 
-                {/* Confirmation checkbox */}
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary/30">
-                  <Checkbox
-                    id="confirm-saved"
-                    checked={keyConfirmed}
-                    onCheckedChange={(checked) => setKeyConfirmed(checked === true)}
-                    className="mt-0.5"
-                  />
-                  <Label htmlFor="confirm-saved" className="text-sm cursor-pointer leading-relaxed">
-                    I have saved my secret key somewhere safe. I understand I cannot recover my account without it.
-                  </Label>
-                </div>
+                  {activeTab === "login" && (
+                    <motion.div
+                      key="login"
+                      custom={1}
+                      variants={tabContentVariants}
+                      initial="enter"
+                      animate="center"
+                      exit="exit"
+                      transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
+                    >
+                      <form onSubmit={handleLogin} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="secretKey">Secret Key</Label>
+                          <div className="relative">
+                            <Input
+                              id="secretKey"
+                              type={showSecretKey ? "text" : "password"}
+                              placeholder="Paste your 64-character secret key"
+                              value={secretKey}
+                              onChange={(e) => setSecretKey(e.target.value)}
+                              onPaste={handleKeyPaste}
+                              className="font-mono text-sm pr-10"
+                              disabled={isLoading}
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                              onClick={() => setShowSecretKey(!showSecretKey)}
+                            >
+                              {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </Button>
+                          </div>
+                        </div>
 
-                {/* Continue button */}
-                <Button className="w-full" disabled={!keyConfirmed} onClick={continueToApp}>
-                  Continue to Kloak
-                </Button>
+                        <Button type="submit" className="w-full" disabled={isLoading || !secretKey}>
+                          {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                          Login
+                        </Button>
+
+                        <p className="text-xs text-muted-foreground">
+                          Forgot your key? Unfortunately, keys cannot be recovered.
+                        </p>
+                      </form>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
-            )}
+            </Tabs>
           </div>
         </div>
-        {/* Welcome Modal for new users */}
-        <WelcomeModal open={showWelcomeModal} onClose={handleWelcomeClose} />
+        {/* Onboarding Modal for new users */}
+        <OnboardingModal open={showWelcomeModal} onClose={handleOnboardingClose} secretKey={generatedKey} />
       </div>
     );
   }
@@ -539,235 +407,164 @@ const Auth = () => {
         <div className="w-full max-w-md">
           {/* Auth card */}
           <div className="bg-card border border-border rounded-xl p-6 shadow-xl">
-            {authStep === "form" ? (
-              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "create" | "login")}>
-                <TabsList className="w-full grid grid-cols-2 mb-6 h-auto p-1.5 bg-muted/50 rounded-2xl border border-border/50">
-                  <TabsTrigger
-                    value="create"
-                    className="rounded-xl py-2.5 px-4 text-sm font-medium transition-all duration-200 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
-                  >
-                    <CircleUserRound className="w-4 h-4 mr-2" />
-                    Create Account
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="login"
-                    className="rounded-xl py-2.5 px-4 text-sm font-medium transition-all duration-200 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
-                  >
-                    <Key className="w-4 h-4 mr-2" />
-                    Login with Key
-                  </TabsTrigger>
-                </TabsList>
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "create" | "login")}>
+              <TabsList className="w-full grid grid-cols-2 mb-6 h-auto p-1.5 bg-muted/50 rounded-2xl border border-border/50">
+                <TabsTrigger
+                  value="create"
+                  className="rounded-xl py-2.5 px-4 text-sm font-medium transition-all duration-200 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
+                >
+                  <CircleUserRound className="w-4 h-4 mr-2" />
+                  Create Account
+                </TabsTrigger>
+                <TabsTrigger
+                  value="login"
+                  className="rounded-xl py-2.5 px-4 text-sm font-medium transition-all duration-200 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
+                >
+                  <Key className="w-4 h-4 mr-2" />
+                  Login with Key
+                </TabsTrigger>
+              </TabsList>
 
-                {/* Error display */}
-                {error && (
-                  <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 flex items-center gap-2 text-destructive">
-                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                    <p className="text-sm">{error}</p>
-                  </div>
-                )}
-
-                {/* Animated Tab Content */}
-                <div className="relative overflow-hidden">
-                  <AnimatePresence mode="wait" initial={false} custom={activeTab === "login" ? 1 : -1}>
-                    {activeTab === "create" && (
-                      <motion.div
-                        key="create"
-                        custom={-1}
-                        variants={tabContentVariants}
-                        initial="enter"
-                        animate="center"
-                        exit="exit"
-                        transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
-                      >
-                        <form onSubmit={handleCreateAccount} className="space-y-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="username">Username</Label>
-                            <div className="relative">
-                              <Input
-                                id="username"
-                                placeholder="your_username"
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
-                                maxLength={20}
-                                disabled={isLoading}
-                                className={cn(
-                                  "pr-10",
-                                  usernameError && "border-destructive focus-visible:ring-destructive",
-                                  isUsernameAvailable === true &&
-                                    "border-[hsl(var(--kloak-success))] focus-visible:ring-[hsl(var(--kloak-success))]",
-                                )}
-                              />
-                              <div className="absolute right-3 top-1/2 -translate-y-1/2">{renderUsernameStatus()}</div>
-                            </div>
-                            {usernameError && <p className="text-xs text-destructive">{usernameError}</p>}
-                            {!usernameError && isUsernameAvailable === false && (
-                              <p className="text-xs text-destructive">Username is already taken</p>
-                            )}
-                            {!usernameError && isUsernameAvailable === true && (
-                              <p className="text-xs text-[hsl(var(--kloak-success))]">Username is available!</p>
-                            )}
-                            {!usernameError && isUsernameAvailable === null && username && !isCheckingUsername && (
-                              <p className="text-xs text-muted-foreground">
-                                3-20 characters. Letters, numbers, and underscores only.
-                              </p>
-                            )}
-                          </div>
-
-                          <Button
-                            type="submit"
-                            className="w-full"
-                            disabled={isLoading || !!usernameError || isUsernameAvailable !== true}
-                          >
-                            {isLoading ? (
-                              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                            ) : (
-                              <Key className="w-4 h-4 mr-2" />
-                            )}
-                            Create Account
-                          </Button>
-
-                          <p className="text-center text-xs text-muted-foreground mt-3">
-                            By creating an account, you agree to our{" "}
-                            <Link to="/terms" className="text-foreground hover:underline">
-                              Terms of Service
-                            </Link>{" "}
-                            and{" "}
-                            <Link to="/privacy" className="text-foreground hover:underline">
-                              Privacy Policy
-                            </Link>
-                          </p>
-                        </form>
-                      </motion.div>
-                    )}
-
-                    {activeTab === "login" && (
-                      <motion.div
-                        key="login"
-                        custom={1}
-                        variants={tabContentVariants}
-                        initial="enter"
-                        animate="center"
-                        exit="exit"
-                        transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
-                      >
-                        <form onSubmit={handleLogin} className="space-y-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="secretKey">Secret Key</Label>
-                            <div className="relative">
-                              <Input
-                                id="secretKey"
-                                type={showSecretKey ? "text" : "password"}
-                                placeholder="Paste your 64-character secret key"
-                                value={secretKey}
-                                onChange={(e) => setSecretKey(e.target.value)}
-                                onPaste={handleKeyPaste}
-                                className="font-mono text-sm pr-10"
-                                disabled={isLoading}
-                              />
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                                onClick={() => setShowSecretKey(!showSecretKey)}
-                              >
-                                {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                              </Button>
-                            </div>
-                          </div>
-
-                          <Button type="submit" className="w-full" disabled={isLoading || !secretKey}>
-                            {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                            Login
-                          </Button>
-
-                          <p className="text-xs text-muted-foreground">
-                            Forgot your key? Unfortunately, keys cannot be recovered.
-                          </p>
-                        </form>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+              {/* Error display */}
+              {error && (
+                <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 flex items-center gap-2 text-destructive">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <p className="text-sm">{error}</p>
                 </div>
-              </Tabs>
-            ) : (
-              /* Secret Key Display Screen */
-              <div className="space-y-6">
-                {/* Warning banner */}
-                <div className="p-4 rounded-lg bg-[hsl(var(--kloak-warning))/0.15] border border-[hsl(var(--kloak-warning))/0.3]">
-                  <div className="flex items-start gap-3">
-                    <Shield className="w-6 h-6 text-[hsl(var(--kloak-warning))] flex-shrink-0 mt-0.5" />
-                    <div>
-                      <h3 className="font-semibold tracking-tight text-foreground">Save Your Secret Key</h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        This is the <span className="font-medium text-foreground">only way</span> to access your
-                        account. We cannot recover it. Store it safely — in a password manager or written down securely.
-                      </p>
-                    </div>
-                  </div>
-                </div>
+              )}
 
-                {/* Key display */}
-                <div className="space-y-2">
-                  <Label>Your Secret Key</Label>
-                  <div className="relative">
-                    <div className="bg-secondary/50 rounded-lg p-4 font-mono text-sm break-all border border-border">
-                      {showGeneratedKey ? generatedKey : "•".repeat(64)}
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-2 top-2 h-7 w-7 p-0"
-                      onClick={() => setShowGeneratedKey(!showGeneratedKey)}
+              {/* Animated Tab Content */}
+              <div className="relative overflow-hidden">
+                <AnimatePresence mode="wait" initial={false} custom={activeTab === "login" ? 1 : -1}>
+                  {activeTab === "create" && (
+                    <motion.div
+                      key="create"
+                      custom={-1}
+                      variants={tabContentVariants}
+                      initial="enter"
+                      animate="center"
+                      exit="exit"
+                      transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
                     >
-                      {showGeneratedKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </Button>
-                  </div>
-                </div>
+                      <form onSubmit={handleCreateAccount} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="username">Username</Label>
+                          <div className="relative">
+                            <Input
+                              id="username"
+                              placeholder="your_username"
+                              value={username}
+                              onChange={(e) => setUsername(e.target.value)}
+                              maxLength={20}
+                              disabled={isLoading}
+                              className={cn(
+                                "pr-10",
+                                usernameError && "border-destructive focus-visible:ring-destructive",
+                                isUsernameAvailable === true &&
+                                  "border-[hsl(var(--kloak-success))] focus-visible:ring-[hsl(var(--kloak-success))]",
+                              )}
+                            />
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2">{renderUsernameStatus()}</div>
+                          </div>
+                          {usernameError && <p className="text-xs text-destructive">{usernameError}</p>}
+                          {!usernameError && isUsernameAvailable === false && (
+                            <p className="text-xs text-destructive">Username is already taken</p>
+                          )}
+                          {!usernameError && isUsernameAvailable === true && (
+                            <p className="text-xs text-[hsl(var(--kloak-success))]">Username is available!</p>
+                          )}
+                          {!usernameError && isUsernameAvailable === null && username && !isCheckingUsername && (
+                            <p className="text-xs text-muted-foreground">
+                              3-20 characters. Letters, numbers, and underscores only.
+                            </p>
+                          )}
+                        </div>
 
-                {/* Copy button */}
-                <Button variant={keyCopied ? "secondary" : "outline"} className="w-full" onClick={copyKey}>
-                  {keyCopied ? (
-                    <>
-                      <Check className="w-4 h-4 mr-2 text-[hsl(var(--kloak-success))]" />
-                      Copied to Clipboard
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-4 h-4 mr-2" />
-                      Copy to Clipboard
-                    </>
+                        <Button
+                          type="submit"
+                          className="w-full"
+                          disabled={isLoading || !!usernameError || isUsernameAvailable !== true}
+                        >
+                          {isLoading ? (
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          ) : (
+                            <Key className="w-4 h-4 mr-2" />
+                          )}
+                          Create Account
+                        </Button>
+
+                        <p className="text-center text-xs text-muted-foreground mt-3">
+                          By creating an account, you agree to our{" "}
+                          <Link to="/terms" className="text-foreground hover:underline">
+                            Terms of Service
+                          </Link>{" "}
+                          and{" "}
+                          <Link to="/privacy" className="text-foreground hover:underline">
+                            Privacy Policy
+                          </Link>
+                        </p>
+                      </form>
+                    </motion.div>
                   )}
-                </Button>
 
-                {/* Confirmation checkbox */}
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary/30">
-                  <Checkbox
-                    id="confirm-saved"
-                    checked={keyConfirmed}
-                    onCheckedChange={(checked) => setKeyConfirmed(checked === true)}
-                    className="mt-0.5"
-                  />
-                  <Label htmlFor="confirm-saved" className="text-sm cursor-pointer leading-relaxed">
-                    I have saved my secret key somewhere safe. I understand I cannot recover my account without it.
-                  </Label>
-                </div>
+                  {activeTab === "login" && (
+                    <motion.div
+                      key="login"
+                      custom={1}
+                      variants={tabContentVariants}
+                      initial="enter"
+                      animate="center"
+                      exit="exit"
+                      transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
+                    >
+                      <form onSubmit={handleLogin} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="secretKey">Secret Key</Label>
+                          <div className="relative">
+                            <Input
+                              id="secretKey"
+                              type={showSecretKey ? "text" : "password"}
+                              placeholder="Paste your 64-character secret key"
+                              value={secretKey}
+                              onChange={(e) => setSecretKey(e.target.value)}
+                              onPaste={handleKeyPaste}
+                              className="font-mono text-sm pr-10"
+                              disabled={isLoading}
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                              onClick={() => setShowSecretKey(!showSecretKey)}
+                            >
+                              {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </Button>
+                          </div>
+                        </div>
 
-                {/* Continue button */}
-                <Button className="w-full" disabled={!keyConfirmed} onClick={continueToApp}>
-                  Continue to Kloak
-                </Button>
+                        <Button type="submit" className="w-full" disabled={isLoading || !secretKey}>
+                          {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                          Login
+                        </Button>
+
+                        <p className="text-xs text-muted-foreground">
+                          Forgot your key? Unfortunately, keys cannot be recovered.
+                        </p>
+                      </form>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
-            )}
+            </Tabs>
           </div>
         </div>
       </div>
 
       {/* Footer */}
       <Footer />
-      {/* Welcome Modal for new users */}
-      <WelcomeModal open={showWelcomeModal} onClose={handleWelcomeClose} />
+      {/* Onboarding Modal for new users */}
+      <OnboardingModal open={showWelcomeModal} onClose={handleOnboardingClose} secretKey={generatedKey} />
     </div>
   );
 };
