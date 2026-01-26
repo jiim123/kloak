@@ -31,7 +31,7 @@ export const HeroImage = () => {
               <motion.div variants={fadeIn} transition={{ duration: 0.5, delay: 0.1 }} className="mb-6">
                 <LayoutGroup>
                   <motion.div
-                    className="flex flex-wrap items-center text-3xl sm:text-4xl md:text-5xl font-semibold"
+                    className="flex flex-wrap items-center text-3xl sm:text-4xl md:text-5xl font-normal"
                     layout
                   >
                     <motion.span
@@ -51,7 +51,7 @@ export const HeroImage = () => {
                       staggerDuration={0.025}
                       splitLevelClassName="overflow-hidden pb-0.5 sm:pb-1"
                       transition={{ type: "spring", damping: 30, stiffness: 400 }}
-                      rotationInterval={2000}
+                      rotationInterval={3000}
                     />
                   </motion.div>
                 </LayoutGroup>
