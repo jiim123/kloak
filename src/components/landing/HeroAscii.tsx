@@ -28,29 +28,21 @@ export const HeroImage = () => {
               </motion.p>
 
               {/* Headline with TextRotate */}
-              <motion.div
-                variants={fadeIn}
-                transition={{ duration: 0.5, delay: 0.1 }}
-                className="mb-6"
-              >
+              <motion.div variants={fadeIn} transition={{ duration: 0.5, delay: 0.1 }} className="mb-6">
                 <LayoutGroup>
-                  <motion.div className="flex flex-wrap items-center text-3xl sm:text-4xl md:text-5xl font-semibold" layout>
+                  <motion.div
+                    className="flex flex-wrap items-center text-3xl sm:text-4xl md:text-5xl font-semibold"
+                    layout
+                  >
                     <motion.span
                       className="text-foreground mr-2 sm:mr-3"
                       layout
                       transition={{ type: "spring", damping: 30, stiffness: 400 }}
                     >
-                      Your community,
+                      Your
                     </motion.span>
                     <TextRotate
-                      texts={[
-                        "private.",
-                        "secure.",
-                        "yours.",
-                        "free.",
-                        "safe.",
-                        "anonymous.",
-                      ]}
+                      texts={["opinion.", "message.", "reactions 😄.", "key.", "community.", "friends"]}
                       mainClassName="text-primary-foreground px-2 sm:px-3 bg-primary overflow-hidden py-1 sm:py-1.5 justify-center rounded-lg"
                       staggerFrom="last"
                       initial={{ y: "100%" }}
