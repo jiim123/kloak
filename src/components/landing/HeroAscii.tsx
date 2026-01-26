@@ -93,7 +93,10 @@ export const HeroImage = () => {
           {/* CTA Button */}
           <motion.div variants={fadeIn} transition={{ duration: 0.5, delay: 0.3 }}>
             <Link to="/app">
-              <Button size="lg" className="h-12 px-8 text-base rounded-xl uppercase font-semibold tracking-wider group">
+              <Button
+                size="lg"
+                className="h-12 px-8 text-primary rounded-xl uppercase font-semibold tracking-wider group"
+              >
                 Join Kloak
                 <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
