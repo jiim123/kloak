@@ -42,7 +42,7 @@ import { cn } from "@/lib/utils";
 import { getPollIdFromContent, isPollMessageContent } from "@/lib/poll";
 
 // Static data moved outside component
-const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🎉", "🔥", "👀", "💯", "🙌", "😍", "🤔"] as const;
+const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "👋", "🔥", "👀", "💯", "🙌", "😍", "🤔"] as const;
 
 const ROLE_COLORS: Record<string, string> = {
   owner: "text-yellow-400",
