@@ -151,8 +151,18 @@ export interface Channel {
   is_nsfw: boolean;
   slowmode_seconds: number;
   is_read_only: boolean;
+  is_private: boolean;
   icon: string | null;
   created_at: string;
+}
+
+export interface ChannelMember {
+  id: string;
+  channel_id: string;
+  user_id: string;
+  added_by: string | null;
+  created_at: string;
+  user?: User;
 }
 
 export interface ChannelWithUnread extends Channel {

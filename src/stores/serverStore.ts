@@ -44,7 +44,13 @@ interface ServerState {
   // Channel actions
   fetchChannels: (serverId: string) => Promise<void>;
   createCategory: (serverId: string, name: string, userId: string) => Promise<ChannelCategory | null>;
-  createChannel: (serverId: string, name: string, type: ChannelType, userId: string, categoryId?: string, icon?: string) => Promise<Channel | null>;
+  createChannel: (serverId: string, name: string, type: ChannelType, userId: string, categoryId?: string, icon?: string, isPrivate?: boolean) => Promise<Channel | null>;
+  
+  // Channel member actions (for private channels)
+  channelMembers: { channelId: string; members: import('@/types').ChannelMember[] }[];
+  fetchChannelMembers: (channelId: string) => Promise<void>;
+  addChannelMember: (channelId: string, targetUserId: string, addedBy: string) => Promise<boolean>;
+  removeChannelMember: (channelId: string, targetUserId: string, removedBy: string) => Promise<boolean>;
   updateChannel: (channelId: string, updates: Partial<Channel>, userId: string) => Promise<void>;
   deleteChannel: (channelId: string, userId: string) => Promise<void>;
   updateCategory: (categoryId: string, updates: Partial<ChannelCategory>, userId: string) => Promise<void>;
@@ -94,6 +100,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
   roles: [],
   rolePermissions: [],
   channelPermissions: [],
+  channelMembers: [],
   isLoading: false,
   error: null,
 
@@ -563,7 +570,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }
   },
 
-  createChannel: async (serverId: string, name: string, type: ChannelType, userId: string, categoryId?: string, icon?: string) => {
+  createChannel: async (serverId: string, name: string, type: ChannelType, userId: string, categoryId?: string, icon?: string, isPrivate?: boolean) => {
     try {
       const { channels } = get();
       const categoryChannels = channels.filter((c) => c.category_id === categoryId);
@@ -578,6 +585,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         _category_id: categoryId || null,
         _position: position,
         _icon: icon || null,
+        _is_private: isPrivate || false,
       });
 
       if (error) throw error;
@@ -591,6 +599,67 @@ export const useServerStore = create<ServerState>((set, get) => ({
     } catch (error) {
       console.error('Failed to create channel:', error);
       return null;
+    }
+  },
+
+  fetchChannelMembers: async (channelId: string) => {
+    try {
+      const { data, error } = await supabase.rpc('get_channel_members', {
+        _channel_id: channelId,
+      });
+
+      if (error) throw error;
+
+      const members = (data as unknown as import('@/types').ChannelMember[]) || [];
+      
+      set((state) => {
+        const existing = state.channelMembers.filter(cm => cm.channelId !== channelId);
+        return {
+          channelMembers: [...existing, { channelId, members }],
+        };
+      });
+    } catch (error) {
+      console.error('Failed to fetch channel members:', error);
+    }
+  },
+
+  addChannelMember: async (channelId: string, targetUserId: string, addedBy: string) => {
+    try {
+      const { data, error } = await supabase.rpc('add_channel_member', {
+        _channel_id: channelId,
+        _target_user_id: targetUserId,
+        _added_by: addedBy,
+      });
+
+      if (error) throw error;
+      
+      // Refresh channel members
+      await get().fetchChannelMembers(channelId);
+      
+      return data as boolean;
+    } catch (error) {
+      console.error('Failed to add channel member:', error);
+      return false;
+    }
+  },
+
+  removeChannelMember: async (channelId: string, targetUserId: string, removedBy: string) => {
+    try {
+      const { data, error } = await supabase.rpc('remove_channel_member', {
+        _channel_id: channelId,
+        _target_user_id: targetUserId,
+        _removed_by: removedBy,
+      });
+
+      if (error) throw error;
+      
+      // Refresh channel members
+      await get().fetchChannelMembers(channelId);
+      
+      return data as boolean;
+    } catch (error) {
+      console.error('Failed to remove channel member:', error);
+      return false;
     }
   },
 

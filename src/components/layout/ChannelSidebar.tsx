@@ -15,6 +15,7 @@ import {
   Edit2,
   Trash2,
   Copy,
+  Lock,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -199,6 +200,11 @@ const SortableChannel = ({
 
             {/* Channel name */}
             <span className="truncate flex-1 text-left">{channel.name}</span>
+
+            {/* Private indicator */}
+            {channel.is_private && (
+              <Lock className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+            )}
 
             {/* NSFW badge */}
             {channel.is_nsfw && (
