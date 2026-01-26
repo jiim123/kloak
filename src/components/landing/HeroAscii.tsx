@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { LayoutGroup, motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import TextRotate from "@/components/fancy/text/text-rotate";
 
 const fadeIn = {
   initial: { opacity: 0, y: 20 },
@@ -26,16 +27,43 @@ export const HeroImage = () => {
                 For Gamers · Communities · Teams · Everyone
               </motion.p>
 
-              {/* Headline */}
-              <motion.h1
+              {/* Headline with TextRotate */}
+              <motion.div
                 variants={fadeIn}
                 transition={{ duration: 0.5, delay: 0.1 }}
-                className="landing-hero-title text-foreground mb-6"
+                className="mb-6"
               >
-                Where conversations
-                <br />
-                <span className="text-primary">belong to you.</span>
-              </motion.h1>
+                <LayoutGroup>
+                  <motion.div className="flex flex-wrap items-center text-3xl sm:text-4xl md:text-5xl font-semibold" layout>
+                    <motion.span
+                      className="text-foreground mr-2 sm:mr-3"
+                      layout
+                      transition={{ type: "spring", damping: 30, stiffness: 400 }}
+                    >
+                      Your community,
+                    </motion.span>
+                    <TextRotate
+                      texts={[
+                        "private.",
+                        "secure.",
+                        "yours.",
+                        "free.",
+                        "safe.",
+                        "anonymous.",
+                      ]}
+                      mainClassName="text-primary-foreground px-2 sm:px-3 bg-primary overflow-hidden py-1 sm:py-1.5 justify-center rounded-lg"
+                      staggerFrom="last"
+                      initial={{ y: "100%" }}
+                      animate={{ y: 0 }}
+                      exit={{ y: "-120%" }}
+                      staggerDuration={0.025}
+                      splitLevelClassName="overflow-hidden pb-0.5 sm:pb-1"
+                      transition={{ type: "spring", damping: 30, stiffness: 400 }}
+                      rotationInterval={2000}
+                    />
+                  </motion.div>
+                </LayoutGroup>
+              </motion.div>
 
               {/* Description */}
               <motion.p
