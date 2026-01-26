@@ -15,7 +15,15 @@ function splitText(text: string, splitBy: SplitType = "characters"): string[] {
       return text.split("\n");
     case "characters":
     default:
-      return text.split("");
+      // Use Intl.Segmenter for proper grapheme cluster splitting (handles emojis correctly)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const IntlAny = Intl as any;
+      if (typeof IntlAny.Segmenter !== 'undefined') {
+        const segmenter = new IntlAny.Segmenter('en', { granularity: 'grapheme' });
+        return Array.from(segmenter.segment(text), (s: { segment: string }) => s.segment);
+      }
+      // Fallback for older browsers - use spread operator which handles most emojis
+      return [...text];
   }
 }
 
