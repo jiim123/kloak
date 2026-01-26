@@ -27,7 +27,7 @@
     --brand-300: 50 6% 24%;
     --brand-400: 50 8% 28%;
     --brand-500: 53 9% 33%; /* #57564F */
-    --brand-600: 53 12% 38%; /* Primary accent */
+    --brand-600: 0 0% 94%; /* Primary accent */
     --brand-700: 53 12% 50%;
     --brand-800: 53 10% 65%;
     --brand-900: 53 8% 85%;
@@ -358,7 +358,9 @@
   }
 
   html {
-    font-family: "Stack Sans Headline", "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", system-ui, sans-serif;
+    font-family:
+      "Stack Sans Headline", "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", system-ui,
+      sans-serif;
     /* Disable pull-to-refresh and overscroll */
     overscroll-behavior: none;
   }
@@ -436,7 +438,7 @@
   /* ========================================
      LANDING PAGE TYPOGRAPHY
      ======================================== */
-  
+
   /* Landing titles - 1.375em, uppercase, semi-bold, line-height 1.2 */
   .landing-title {
     font-size: 1.375em;
