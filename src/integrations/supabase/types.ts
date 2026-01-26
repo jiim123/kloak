@@ -1382,32 +1382,6 @@ export type Database = {
         }
         Returns: Json
       }
-      create_channel:
-        | {
-            Args: {
-              _category_id?: string
-              _icon?: string
-              _is_private?: boolean
-              _name: string
-              _position?: number
-              _server_id: string
-              _type?: string
-              _user_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              _category_id?: string
-              _icon?: string
-              _name: string
-              _position?: number
-              _server_id: string
-              _type?: string
-              _user_id: string
-            }
-            Returns: Json
-          }
       create_notification: {
         Args: {
           _body?: string
