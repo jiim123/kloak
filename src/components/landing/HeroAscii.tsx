@@ -32,7 +32,7 @@ export const HeroImage = () => {
           <motion.div variants={fadeIn} transition={{ duration: 0.5, delay: 0.1 }} className="mb-8">
             <LayoutGroup>
               <motion.div
-                className="flex flex-col items-center justify-center text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-normal"
+                className="flex flex-col items-center justify-center text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light"
                 layout
               >
                 <motion.span
@@ -71,7 +71,7 @@ export const HeroImage = () => {
                   rotationInterval={3000}
                 />
                 <motion.span
-                  className="text-foreground"
+                  className="text-foreground font-light"
                   layout
                   transition={{ type: "spring", damping: 30, stiffness: 400 }}
                 >
