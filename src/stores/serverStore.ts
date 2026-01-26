@@ -496,10 +496,13 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   fetchChannels: async (serverId: string) => {
     try {
+      // Get current user ID for private channel filtering
+      const userId = useAuthStore.getState().user?.id;
+      
       // Use RPC functions to bypass RLS
       const [categoriesResult, channelsResult] = await Promise.all([
         supabase.rpc('get_server_categories', { _server_id: serverId }),
-        supabase.rpc('get_server_channels', { _server_id: serverId }),
+        supabase.rpc('get_server_channels', { _server_id: serverId, _user_id: userId }),
       ]);
 
       if (categoriesResult.error) throw categoriesResult.error;
