@@ -79,16 +79,6 @@ export const HeroImage = () => {
               </Button>
             </Link>
           </motion.div>
-
-          {/* Trust line */}
-          <motion.p
-            variants={fadeIn}
-            transition={{ duration: 0.5, delay: 0.4 }}
-            className="mt-10 text-sm text-muted-foreground"
-          >
-            No credit card required • Free forever • Your data stays yours
-          </motion.p>
-        </motion.div>
       </div>
     </section>
   );
