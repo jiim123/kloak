@@ -95,6 +95,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const [showKeyConfirm, setShowKeyConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDeletePreview, setShowDeletePreview] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [deletionPreview, setDeletionPreview] = useState<{
     message_count: number;
     dm_count: number;
@@ -282,6 +283,15 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     logout();
     closeModal();
     navigate("/auth?mode=login");
+  };
+
+  const handleLogoutClick = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = () => {
+    setShowLogoutConfirm(false);
+    handleLogout();
   };
 
   const handleDeleteAccount = async () => {
@@ -489,25 +499,33 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         )}
       </div>
 
-      {/* Log Out */}
-      <Button variant="outline" onClick={handleLogout} className="w-full h-12 rounded-xl">
-        <LogOut className="w-4 h-4 mr-2" />
-        Log Out
-      </Button>
-
       {/* Danger Zone */}
       <div className="pt-6 mt-6 border-t border-destructive/20">
         <div className="p-4 rounded-xl bg-destructive/5 border border-destructive/20 space-y-4">
           <div>
             <h4 className="text-sm font-semibold text-destructive">Danger Zone</h4>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-              Deleting your account will permanently remove all your data including messages, servers, and friendships.
+              Actions here are irreversible. Please make sure you have saved your secret key before logging out.
             </p>
           </div>
-          <Button variant="destructive" onClick={handleDeletePreview} className="w-full h-11 rounded-xl">
-            <Trash2 className="w-4 h-4 mr-2" />
-            Delete Account
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button 
+              variant="outline" 
+              onClick={handleLogoutClick} 
+              className="flex-1 h-11 rounded-xl border-border hover:bg-secondary"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Log Out
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeletePreview} 
+              className="flex-1 h-11 rounded-xl"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete Account
+            </Button>
+          </div>
         </div>
       </div>
     </div>
@@ -1258,6 +1276,42 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
               className="rounded-xl"
             >
               Reveal Key
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Logout Confirmation */}
+      <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
+        <AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Log Out?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p className="leading-relaxed">
+                  Are you sure you want to log out? You will need your secret key to sign back in.
+                </p>
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                  <p className="text-sm text-amber-600 dark:text-amber-400 font-medium flex items-center gap-2">
+                    <Key className="w-4 h-4 flex-shrink-0" />
+                    Remember to save your secret key!
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                    You can find your secret key in <span className="font-medium text-foreground">Settings → Account → View Secret Key</span>. 
+                    Without it, you cannot recover your account.
+                  </p>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel className="m-0 rounded-xl">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmLogout}
+              className="rounded-xl"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Log Out
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
