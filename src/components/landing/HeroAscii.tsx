@@ -39,10 +39,10 @@ export const HeroImage = () => {
                       layout
                       transition={{ type: "spring", damping: 30, stiffness: 400 }}
                     >
-                      Your
+                      YOUR
                     </motion.span>
                     <TextRotate
-                      texts={["opinion.", "message.", "reactions 👋😄🤷.", "privacy.", "community.", "friends."]}
+                      texts={["OPINION.", "MESSAGE.", "REACTION 👋😄🤷.", "PRIVACY.", "COMMUNITY.", "FRIENDS."]}
                       mainClassName="text-primary-foreground px-2 sm:px-3 bg-primary overflow-hidden py-1 sm:py-1.5 justify-center rounded-lg"
                       staggerFrom="last"
                       initial={{ y: "100%" }}
