@@ -22,7 +22,7 @@ const buttonVariants = cva(
 
         // Outline - Bordered button (silver-grey border)
         outline:
-          "rounded-[4px] border font-light border-neutral-400 bg-neutral-800/90 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 active:bg-neutral-200",
+          "rounded-[4px] border font-light border-neutral-500 bg-neutral-800/90 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-600 active:bg-neutral-200",
 
         // Error/Destructive - Dangerous actions
         error:
