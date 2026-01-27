@@ -12,7 +12,7 @@ const buttonVariants = cva(
       variant: {
         // Primary - Main action button (silver-grey, black text)
         primary:
-          "rounded-[4px] bg-brand-600 text-black hover:bg-brand-700 hover:shadow-[0_4px_12px_rgba(237,237,237,0.2)] active:bg-brand-800",
+          "rounded-[4px] font-light bg-brand-600 text-neutral-600 hover:bg-brand-700 text-xs active:bg-brand-800",
 
         // Secondary - Supporting action (subtle fill)
         secondary: "rounded-[4px] bg-neutral-200 text-neutral-900 hover:bg-neutral-300 active:bg-neutral-400/80",
