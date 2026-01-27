@@ -6,41 +6,50 @@ import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap text-[13px] sm:text-[15px] font-semibold tracking-[0.01em] ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-40 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:size-3.5 sm:[&_svg]:size-4 [&_svg]:shrink-0 select-none",
+  "inline-flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap text-[13px] sm:text-[15px] font-semibold tracking-[0.01em] ring-offset-background transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-40 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:size-3.5 sm:[&_svg]:size-4 [&_svg]:shrink-0 select-none",
   {
     variants: {
       variant: {
-        // Primary
+        // Primary - Main action button (silver-grey, black text)
         primary:
-          "rounded-[4px] bg-brand-600 text-black hover:bg-brand-700 hover:shadow-[0_4px_12px_rgba(237,237,237,0.2)] transition-all duration-200 ease-out",
+          "rounded-[4px] bg-brand-600 text-black hover:bg-brand-700 hover:shadow-[0_4px_12px_rgba(237,237,237,0.2)] active:bg-brand-800",
 
-        // Secondary
-        secondary:
-          "rounded-[4px] bg-neutral-200 text-neutral-900 hover:bg-neutral-300 transition-all duration-200 ease-out",
+        // Secondary - Supporting action (subtle fill)
+        secondary: "rounded-[4px] bg-neutral-200 text-neutral-900 hover:bg-neutral-300 active:bg-neutral-400/80",
 
-        // Tertiary
-        tertiary:
-          "rounded-[4px] bg-transparent text-neutral-800 hover:bg-neutral-200 transition-all duration-200 ease-out",
+        // Tertiary - Subtle/ghost action
+        tertiary: "rounded-[4px] bg-transparent text-neutral-800 hover:bg-neutral-200 active:bg-neutral-300",
 
-        // Outline
+        // Outline - Bordered button (silver-grey border)
         outline:
-          "rounded-[4px] border border-neutral-300 bg-transparent text-neutral-800 hover:bg-neutral-100 hover:border-neutral-400 transition-all duration-200 ease-out",
+          "rounded-[4px] border border-neutral-300 bg-transparent text-neutral-800 hover:bg-neutral-100 hover:border-neutral-400 active:bg-neutral-200",
 
-        // Ghost
-        ghost:
-          "rounded-[4px] bg-transparent text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 transition-all duration-200 ease-out",
-
-        // Error
+        // Error/Destructive - Dangerous actions
         error:
-          "rounded-[4px] bg-red-600 text-white hover:bg-red-700 hover:shadow-[0_4px_12px_rgba(220,38,38,0.3)] transition-all duration-200 ease-out",
+          "rounded-[4px] bg-red-600 text-white hover:bg-red-700 hover:shadow-[0_4px_12px_rgba(220,38,38,0.3)] active:bg-red-800",
 
-        // Warning
+        // Warning - Caution actions
         warning:
-          "rounded-[4px] bg-amber-500 text-black hover:bg-amber-600 hover:shadow-[0_4px_12px_rgba(245,158,11,0.3)] transition-all duration-200 ease-out",
+          "rounded-[4px] bg-amber-500 text-black hover:bg-amber-600 hover:shadow-[0_4px_12px_rgba(245,158,11,0.3)] active:bg-amber-600",
 
-        // Success
+        // Success - Positive actions
         success:
-          "rounded-[4px] bg-emerald-600 text-white hover:bg-emerald-700 hover:shadow-[0_4px_12px_rgba(5,150,105,0.3)] transition-all duration-200 ease-out",
+          "rounded-[4px] bg-emerald-600 text-white hover:bg-emerald-700 hover:shadow-[0_4px_12px_rgba(5,150,105,0.3)] active:bg-emerald-800",
+
+        // Ghost - Minimal presence
+        ghost:
+          "rounded-[4px] bg-transparent text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 active:bg-neutral-200",
+
+        // Link - Text-only button
+        link: "rounded-[4px] text-brand-600 hover:text-brand-800 underline-offset-4 hover:underline p-0 h-auto font-medium",
+
+        // Legacy default (maps to primary)
+        default:
+          "rounded-[4px] bg-brand-600 text-black hover:bg-brand-700 hover:shadow-[0_4px_12px_rgba(237,237,237,0.2)] active:bg-brand-800",
+
+        // Legacy destructive (maps to error)
+        destructive:
+          "rounded-[4px] bg-red-600 text-white hover:bg-red-700 hover:shadow-[0_4px_12px_rgba(220,38,38,0.3)] active:bg-red-800",
       },
       size: {
         default: "h-9 sm:h-10 px-3 sm:px-4 py-2",
