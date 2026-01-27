@@ -907,7 +907,7 @@ export const ServerSidebar = () => {
                         "w-12 h-12 flex items-center justify-center",
                         currentServer === null
                           ? "bg-primary text-primary-foreground ring-2 ring-primary/50"
-                          : "bg-secondary hover:bg-primary hover:text-neutral-600",
+                          : "bg-secondary hover:bg-primary/50 hover:text-neutral-600",
                       )}
                     >
                       <Home className="w-5 h-5" />
