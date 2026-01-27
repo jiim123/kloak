@@ -666,7 +666,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
             </Button>
             <Button
               type="button"
-              variant="ghost"
+              variant="outline"
               onClick={handleRemoveBanner}
               disabled={isBannerUploading || !localBannerUrl}
               className="h-10 rounded-xl"
