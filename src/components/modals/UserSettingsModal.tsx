@@ -406,7 +406,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
               <Button
                 variant="outline"
-                className="rounded-xl"
+                rounded="xl"
                 onClick={async () => {
                   if (!user?.id) return;
                   await unblockUser(user.id, u.id);
@@ -461,7 +461,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       <div className="space-y-3">
         <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Secret Key</Label>
         {!keyRevealed ? (
-          <Button variant="outline" onClick={() => setShowKeyConfirm(true)} className="w-full h-12 rounded-xl">
+          <Button variant="outline" onClick={() => setShowKeyConfirm(true)} rounded="xl" className="w-full h-12">
             <Eye className="w-4 h-4 mr-2" />
             View Secret Key
           </Button>
@@ -477,16 +477,18 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
               <Button
                 variant="outline"
                 size="icon"
+                rounded="xl"
                 onClick={() => setShowSecretKey(!showSecretKey)}
-                className="h-12 w-12 rounded-xl flex-shrink-0"
+                className="h-12 w-12 flex-shrink-0"
               >
                 {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </Button>
               <Button
                 variant="outline"
                 size="icon"
+                rounded="xl"
                 onClick={handleCopyKey}
-                className="h-12 w-12 rounded-xl flex-shrink-0"
+                className="h-12 w-12 flex-shrink-0"
               >
                 {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
               </Button>
@@ -511,16 +513,18 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           <div className="flex flex-col sm:flex-row gap-3">
             <Button 
               variant="outline" 
+              rounded="xl"
               onClick={handleLogoutClick} 
-              className="flex-1 h-11 rounded-xl border-border hover:bg-secondary"
+              className="flex-1 h-11 border-border hover:bg-secondary"
             >
               <LogOut className="w-4 h-4 mr-2" />
               Log Out
             </Button>
             <Button 
               variant="destructive" 
+              rounded="xl"
               onClick={handleDeletePreview} 
-              className="flex-1 h-11 rounded-xl"
+              className="flex-1 h-11"
             >
               <Trash2 className="w-4 h-4 mr-2" />
               Delete Account
@@ -616,9 +620,10 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           <div className="space-y-2">
             <Button
               variant="outline"
+              rounded="xl"
               onClick={() => fileInputRef.current?.click()}
               disabled={isLoading}
-              className="h-10 rounded-xl"
+              className="h-10"
             >
               <Upload className="w-4 h-4 mr-2" />
               Upload Avatar
@@ -663,9 +668,10 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
             <Button
               type="button"
               variant="outline"
+              rounded="xl"
               onClick={() => bannerInputRef.current?.click()}
               disabled={isBannerUploading}
-              className="h-10 rounded-xl"
+              className="h-10"
             >
               <Upload className="w-4 h-4 mr-2" />
               Change Banner
@@ -673,9 +679,10 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
             <Button
               type="button"
               variant="outline"
+              rounded="xl"
               onClick={handleRemoveBanner}
               disabled={isBannerUploading || !localBannerUrl}
-              className="h-10 rounded-xl"
+              className="h-10"
             >
               Remove Banner
             </Button>
@@ -723,7 +730,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         {/* Avatar Decoration */}
         <div className="space-y-3">
           <Label className="text-sm font-medium">Avatar Decoration</Label>
-          <Button variant="outline" onClick={() => setShowAvatarDecorationModal(true)} className="w-full h-12 rounded-xl">
+          <Button variant="outline" rounded="xl" onClick={() => setShowAvatarDecorationModal(true)} className="w-full h-12">
             <DecorationIcon className="w-4 h-4 mr-2" />
             {user?.avatar_decoration ? "Change Decoration" : "Add Decoration"}
           </Button>
@@ -732,7 +739,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         {/* Profile Effect */}
         <div className="space-y-3">
           <Label className="text-sm font-medium">Profile Effect</Label>
-          <Button variant="outline" onClick={() => setShowProfileEffectModal(true)} className="w-full h-12 rounded-xl">
+          <Button variant="outline" rounded="xl" onClick={() => setShowProfileEffectModal(true)} className="w-full h-12">
             <Sparkles className="w-4 h-4 mr-2" />
             {user?.profile_effect ? "Change Effect" : "Add Effect"}
           </Button>
@@ -799,7 +806,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           </div>
         </div>
 
-        <Button onClick={handleSaveProfile} disabled={isLoading} className="w-full h-12 rounded-xl">
+        <Button onClick={handleSaveProfile} disabled={isLoading} rounded="xl" className="w-full h-12">
           {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
           Save Profile
         </Button>

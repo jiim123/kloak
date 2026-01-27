@@ -341,8 +341,9 @@ export const ServerSettingsModal = () => {
           <Button
             variant="ghost"
             size="sm"
+            rounded="xl"
             onClick={() => setEditingRolePermissions(role)}
-            className="text-[10px] sm:text-xs h-8 px-2 sm:px-3 rounded-xl"
+            className="text-[10px] sm:text-xs h-8 px-2 sm:px-3"
             title="Edit Permissions"
           >
             <KeyRound className="w-3 h-3" />
@@ -350,8 +351,9 @@ export const ServerSettingsModal = () => {
           <Button
             variant="ghost"
             size="sm"
+            rounded="xl"
             onClick={() => handleEditRole(role)}
-            className="text-[10px] sm:text-xs h-8 px-2 sm:px-3 rounded-xl"
+            className="text-[10px] sm:text-xs h-8 px-2 sm:px-3"
             title="Edit Role"
           >
             <Edit2 className="w-3 h-3" />
@@ -359,8 +361,9 @@ export const ServerSettingsModal = () => {
           <Button
             variant="ghost"
             size="sm"
+            rounded="xl"
             onClick={() => handleDeleteRole(role)}
-            className="text-muted-foreground hover:text-destructive text-[10px] sm:text-xs h-8 px-2 sm:px-3 rounded-xl"
+            className="text-muted-foreground hover:text-destructive text-[10px] sm:text-xs h-8 px-2 sm:px-3"
             title="Delete Role"
           >
             <Trash2 className="w-3 h-3" />
@@ -1371,7 +1374,7 @@ export const ServerSettingsModal = () => {
                   )}
 
                   {isAdmin && (
-                    <Button type="submit" disabled={isLoading || isUploadingIcon || isUploadingBanner} className="h-10 rounded-xl w-full">
+                    <Button type="submit" disabled={isLoading || isUploadingIcon || isUploadingBanner} rounded="xl" className="h-10 w-full">
                       {(isLoading || isUploadingIcon || isUploadingBanner) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                       Save Changes
                     </Button>
@@ -1384,8 +1387,9 @@ export const ServerSettingsModal = () => {
                       <p className="text-xs text-muted-foreground">Delete server permanently.</p>
                       <Button 
                         variant="destructive" 
+                        rounded="xl"
                         onClick={() => setShowDeleteConfirm(true)}
-                        className="h-10 rounded-xl w-full"
+                        className="h-10 w-full"
                       >
                         <Trash2 className="w-4 h-4 mr-2" />
                         Delete Server
@@ -1405,7 +1409,8 @@ export const ServerSettingsModal = () => {
                       <Button
                         onClick={createInvite}
                         disabled={isCreatingInvite || isLoadingInvites}
-                        className="h-9 rounded-xl"
+                        rounded="xl"
+                        className="h-9"
                       >
                         {(isCreatingInvite || isLoadingInvites) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                         <Plus className="w-4 h-4 mr-2" />
@@ -1436,8 +1441,9 @@ export const ServerSettingsModal = () => {
                                 <Button
                                   variant="ghost"
                                   size="sm"
+                                  rounded="xl"
                                   onClick={() => copyInviteLink(invite.code, invite.id)}
-                                  className="h-8 px-2 rounded-xl"
+                                  className="h-8 px-2"
                                 >
                                   {copiedInviteId === invite.id ? (
                                     <Check className="w-4 h-4" />
@@ -1448,8 +1454,9 @@ export const ServerSettingsModal = () => {
                                 <Button
                                   variant="ghost"
                                   size="sm"
+                                  rounded="xl"
                                   onClick={() => revokeInvite(invite.id)}
-                                  className="h-8 px-2 rounded-xl text-muted-foreground hover:text-destructive"
+                                  className="h-8 px-2 text-muted-foreground hover:text-destructive"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </Button>
@@ -1902,6 +1909,7 @@ export const ServerSettingsModal = () => {
                             <Button 
                               variant="outline" 
                               size="sm"
+                              rounded="lg"
                               onClick={async () => {
                                 try {
                                   const { error } = await supabase.rpc('unban_member', {
@@ -1915,7 +1923,7 @@ export const ServerSettingsModal = () => {
                                   toast.error('Failed to unban');
                                 }
                               }}
-                              className="text-xs h-7 px-2 rounded-lg"
+                              className="text-xs h-7 px-2"
                             >
                               Unban
                             </Button>
@@ -1959,7 +1967,8 @@ export const ServerSettingsModal = () => {
                       <Button
                         onClick={uploadServerEmoji}
                         disabled={isUploadingEmoji || !emojiFile || !emojiName.trim()}
-                        className="h-10 rounded-xl w-full"
+                        rounded="xl"
+                        className="h-10 w-full"
                       >
                         {isUploadingEmoji && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                         Upload Emoji
@@ -1983,8 +1992,9 @@ export const ServerSettingsModal = () => {
                                   <Button
                                     variant="ghost"
                                     size="sm"
+                                    rounded="lg"
                                     onClick={() => deleteServerEmoji(emoji)}
-                                    className="text-muted-foreground hover:text-destructive h-7 w-7 p-0 rounded-lg"
+                                    className="text-muted-foreground hover:text-destructive h-7 w-7 p-0"
                                   >
                                     <Trash2 className="w-3 h-3" />
                                   </Button>
@@ -2186,7 +2196,7 @@ export const ServerSettingsModal = () => {
 
                     {isAdmin && (
                       <div className="flex flex-col-reverse sm:flex-row gap-2 pt-2">
-                        <Button type="submit" disabled={isLoading || isUploadingIcon || isUploadingBanner} className="h-10 rounded-xl flex-1 sm:flex-none">
+                        <Button type="submit" disabled={isLoading || isUploadingIcon || isUploadingBanner} rounded="xl" className="h-10 flex-1 sm:flex-none">
                           {(isLoading || isUploadingIcon || isUploadingBanner) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                           Save Changes
                         </Button>
@@ -2202,8 +2212,9 @@ export const ServerSettingsModal = () => {
                         </p>
                         <Button 
                           variant="destructive" 
+                          rounded="xl"
                           onClick={() => setShowDeleteConfirm(true)}
-                          className="h-10 rounded-xl"
+                          className="h-10"
                         >
                           <Trash2 className="w-4 h-4 mr-2" />
                           Delete Server
@@ -2223,7 +2234,8 @@ export const ServerSettingsModal = () => {
                         <Button
                           onClick={createInvite}
                           disabled={isCreatingInvite || isLoadingInvites}
-                          className="h-9 rounded-xl"
+                          rounded="xl"
+                          className="h-9"
                         >
                           {(isCreatingInvite || isLoadingInvites) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                           <Plus className="w-4 h-4 mr-2" />
@@ -2323,8 +2335,9 @@ export const ServerSettingsModal = () => {
                                   <Button
                                     variant="ghost"
                                     size="sm"
+                                    rounded="xl"
                                     onClick={() => copyInviteLink(invite.code, invite.id)}
-                                    className="h-8 px-2 rounded-xl"
+                                    className="h-8 px-2"
                                   >
                                     {copiedInviteId === invite.id ? (
                                       <Check className="w-4 h-4" />
@@ -2335,8 +2348,9 @@ export const ServerSettingsModal = () => {
                                   <Button
                                     variant="ghost"
                                     size="sm"
+                                    rounded="xl"
                                     onClick={() => revokeInvite(invite.id)}
-                                    className="h-8 px-2 rounded-xl text-muted-foreground hover:text-destructive"
+                                    className="h-8 px-2 text-muted-foreground hover:text-destructive"
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </Button>
@@ -2425,7 +2439,8 @@ export const ServerSettingsModal = () => {
                                       <Button 
                                         variant="ghost" 
                                         size="sm"
-                                        className="text-muted-foreground hover:text-foreground text-xs h-8 px-2 sm:px-3 rounded-xl"
+                                        rounded="xl"
+                                        className="text-muted-foreground hover:text-foreground text-xs h-8 px-2 sm:px-3"
                                       >
                                         Roles
                                       </Button>
@@ -2463,16 +2478,18 @@ export const ServerSettingsModal = () => {
                                 <Button 
                                   variant="ghost" 
                                   size="sm"
+                                  rounded="xl"
                                   onClick={() => handleKickMember(member)}
-                                  className="text-muted-foreground hover:text-destructive text-xs h-8 px-2 sm:px-3 rounded-xl"
+                                  className="text-muted-foreground hover:text-destructive text-xs h-8 px-2 sm:px-3"
                                 >
                                   Kick
                                 </Button>
                                 <Button 
                                   variant="ghost" 
                                   size="sm"
+                                  rounded="xl"
                                   onClick={() => handleBanMember(member)}
-                                  className="text-muted-foreground hover:text-destructive text-xs h-8 px-2 sm:px-3 rounded-xl"
+                                  className="text-muted-foreground hover:text-destructive text-xs h-8 px-2 sm:px-3"
                                 >
                                   Ban
                                 </Button>
@@ -2543,7 +2560,8 @@ export const ServerSettingsModal = () => {
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                className="h-10 px-3 rounded-xl flex items-center gap-2"
+                                rounded="xl"
+                                className="h-10 px-3 flex items-center gap-2"
                               >
                                 <Smile className="w-4 h-4" />
                                 <span className="text-sm">
@@ -2559,7 +2577,8 @@ export const ServerSettingsModal = () => {
                                     type="button"
                                     variant="ghost"
                                     size="icon"
-                                    className="w-8 h-8 rounded-xl"
+                                    rounded="xl"
+                                    className="w-8 h-8"
                                     onClick={() => setRoleIcon('')}
                                     title="Clear role icon"
                                   >
@@ -2578,7 +2597,8 @@ export const ServerSettingsModal = () => {
                           <Button
                             onClick={editingRole ? handleUpdateRole : handleCreateRole}
                             disabled={!roleName.trim()}
-                            className="h-10 rounded-xl flex-1"
+                            rounded="xl"
+                            className="h-10 flex-1"
                           >
                             {editingRole ? (
                               <>
@@ -2595,13 +2615,14 @@ export const ServerSettingsModal = () => {
                           {editingRole && (
                             <Button
                               variant="outline"
+                              rounded="xl"
                               onClick={() => {
                                 setEditingRole(null);
                                 setRoleName('');
                                 setRoleColor('#5865F2');
                                 setRoleIcon('');
                               }}
-                              className="h-10 rounded-xl"
+                              className="h-10"
                             >
                               Cancel
                             </Button>
@@ -2672,27 +2693,28 @@ export const ServerSettingsModal = () => {
                               </span>
                             </div>
                             {canManageRoles && (
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={async () => {
-                                  try {
-                                    const { error } = await supabase.rpc('unban_member', {
-                                      _server_id: server.id,
-                                      _user_id: user!.id,
-                                      _target_user_id: member.user_id,
-                                    });
-                                    if (error) throw error;
-                                    toast.success(`${member.user?.username} has been unbanned`);
-                                  } catch {
-                                    toast.error('Failed to unban');
-                                  }
-                                }}
-                                className="text-xs h-8 px-3 rounded-xl flex-shrink-0"
-                              >
-                                Unban
-                              </Button>
-                            )}
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              rounded="xl"
+                              onClick={async () => {
+                                try {
+                                  const { error } = await supabase.rpc('unban_member', {
+                                    _server_id: server.id,
+                                    _user_id: user!.id,
+                                    _target_user_id: member.user_id,
+                                  });
+                                  if (error) throw error;
+                                  toast.success(`${member.user?.username} has been unbanned`);
+                                } catch {
+                                  toast.error('Failed to unban');
+                                }
+                              }}
+                              className="text-xs h-8 px-3 flex-shrink-0"
+                            >
+                              Unban
+                            </Button>
+                          )}
                           </div>
                         ))}
                       </div>
@@ -2755,7 +2777,8 @@ export const ServerSettingsModal = () => {
                               type="button"
                               onClick={uploadServerEmoji}
                               disabled={isUploadingEmoji || !emojiFile || !emojiName.trim()}
-                              className="h-10 rounded-xl flex-1 sm:flex-none"
+                              rounded="xl"
+                              className="h-10 flex-1 sm:flex-none"
                             >
                               {isUploadingEmoji && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                               Upload
@@ -2763,9 +2786,10 @@ export const ServerSettingsModal = () => {
                             <Button
                               type="button"
                               variant="outline"
+                              rounded="xl"
                               onClick={clearEmoji}
                               disabled={isUploadingEmoji && !!emojiFile}
-                              className="h-10 rounded-xl"
+                              className="h-10"
                             >
                               Clear
                             </Button>
@@ -2803,8 +2827,9 @@ export const ServerSettingsModal = () => {
                                       type="button"
                                       variant="ghost"
                                       size="sm"
+                                      rounded="xl"
                                       onClick={() => deleteServerEmoji(emoji)}
-                                      className="text-muted-foreground hover:text-destructive h-8 w-8 p-0 rounded-xl"
+                                      className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
                                       title="Delete emoji"
                                     >
                                       <Trash2 className="w-3.5 h-3.5" />
