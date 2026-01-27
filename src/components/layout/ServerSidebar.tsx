@@ -1169,7 +1169,7 @@ export const ServerSidebar = () => {
                   "w-12 h-12 flex items-center justify-center",
                   activeModal === "user-settings"
                     ? "bg-primary text-primary-foreground ring-2 ring-primary/50"
-                    : "bg-secondary hover:bg-primary hover:text-primary-foreground",
+                    : "bg-secondary hover:bg-primary/20 hover:text-neutral-200",
                 )}
               >
                 <Settings className="w-5 h-5" />
