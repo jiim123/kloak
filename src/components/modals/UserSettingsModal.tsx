@@ -154,7 +154,6 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
   const handleSaveProfile = async () => {
     if (!user) return;
-
     setIsLoading(true);
     try {
       await updateUser({
@@ -231,6 +230,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       const filePath = `${user.id}/banner.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage.from("avatars").upload(filePath, file, { upsert: true });
+
       if (uploadError) throw uploadError;
 
       const {
@@ -296,15 +296,12 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
   const handleDeleteAccount = async () => {
     if (!user) return;
-
     setIsLoading(true);
     try {
       const { error } = await supabase.rpc("delete_user_account", {
         _user_id: user.id,
       });
-
       if (error) throw error;
-
       logout();
       closeModal();
       navigate("/auth?mode=signup");
@@ -403,10 +400,10 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                   <div className="text-xs text-muted-foreground truncate">@{u.username}</div>
                 </div>
               </div>
-
               <Button
-                variant="outline"
-                rounded="xl"
+                variant="secondary"
+                size="sm"
+                className="rounded-xl"
                 onClick={async () => {
                   if (!user?.id) return;
                   await unblockUser(user.id, u.id);
@@ -460,8 +457,9 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       {/* Secret Key Section */}
       <div className="space-y-3">
         <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Secret Key</Label>
+
         {!keyRevealed ? (
-          <Button variant="outline" onClick={() => setShowKeyConfirm(true)} rounded="xl" className="w-full h-12">
+          <Button variant="secondary" onClick={() => setShowKeyConfirm(true)} className="w-full h-12 rounded-xl">
             <Eye className="w-4 h-4 mr-2" />
             View Secret Key
           </Button>
@@ -475,22 +473,20 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 className="font-mono text-xs h-12 rounded-xl bg-secondary/50"
               />
               <Button
-                variant="outline"
+                variant="ghost"
                 size="icon"
-                rounded="xl"
                 onClick={() => setShowSecretKey(!showSecretKey)}
-                className="h-12 w-12 flex-shrink-0"
+                className="h-12 w-12 rounded-xl flex-shrink-0"
               >
                 {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </Button>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="icon"
-                rounded="xl"
                 onClick={handleCopyKey}
-                className="h-12 w-12 flex-shrink-0"
+                className="h-12 w-12 rounded-xl flex-shrink-0"
               >
-                {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
               </Button>
             </div>
             <p className="text-xs text-destructive flex items-center gap-2">
@@ -511,21 +507,11 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
-            <Button 
-              variant="outline" 
-              rounded="xl"
-              onClick={handleLogoutClick} 
-              className="flex-1 h-11 border-border hover:bg-secondary"
-            >
+            <Button variant="outline" onClick={handleLogoutClick} className="flex-1 h-11 rounded-xl">
               <LogOut className="w-4 h-4 mr-2" />
               Log Out
             </Button>
-            <Button 
-              variant="destructive" 
-              rounded="xl"
-              onClick={handleDeletePreview} 
-              className="flex-1 h-11"
-            >
+            <Button variant="error" onClick={handleDeletePreview} className="flex-1 h-11 rounded-xl">
               <Trash2 className="w-4 h-4 mr-2" />
               Delete Account
             </Button>
@@ -619,11 +605,10 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           </div>
           <div className="space-y-2">
             <Button
-              variant="outline"
-              rounded="xl"
+              variant="secondary"
               onClick={() => fileInputRef.current?.click()}
               disabled={isLoading}
-              className="h-10"
+              className="h-10 rounded-xl"
             >
               <Upload className="w-4 h-4 mr-2" />
               Upload Avatar
@@ -639,7 +624,11 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           <div className="relative h-24 w-full max-w-md rounded-xl overflow-hidden border border-border/50 bg-secondary/30">
             {localBannerUrl ? (
               <>
-                <img src={localBannerUrl} alt="Profile banner" className="absolute inset-0 w-full h-full object-cover" />
+                <img
+                  src={localBannerUrl}
+                  alt="Profile banner"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
                 <div className="absolute inset-0 bg-gradient-to-b from-black/0 to-black/40" />
               </>
             ) : (
@@ -667,32 +656,24 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           <div className="flex items-center gap-3">
             <Button
               type="button"
-              variant="outline"
-              rounded="xl"
+              variant="secondary"
               onClick={() => bannerInputRef.current?.click()}
               disabled={isBannerUploading}
-              className="h-10"
+              className="h-10 rounded-xl"
             >
               <Upload className="w-4 h-4 mr-2" />
               Change Banner
             </Button>
             <Button
               type="button"
-              variant="outline"
-              rounded="xl"
+              variant="ghost"
               onClick={handleRemoveBanner}
               disabled={isBannerUploading || !localBannerUrl}
-              className="h-10"
+              className="h-10 rounded-xl"
             >
               Remove Banner
             </Button>
-            <input
-              ref={bannerInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleBannerUpload}
-            />
+            <input ref={bannerInputRef} type="file" accept="image/*" className="hidden" onChange={handleBannerUpload} />
           </div>
           <p className="text-xs text-muted-foreground">Recommended wide image • Max 8MB</p>
         </div>
@@ -730,7 +711,11 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         {/* Avatar Decoration */}
         <div className="space-y-3">
           <Label className="text-sm font-medium">Avatar Decoration</Label>
-          <Button variant="outline" rounded="xl" onClick={() => setShowAvatarDecorationModal(true)} className="w-full h-12">
+          <Button
+            variant="outline"
+            onClick={() => setShowAvatarDecorationModal(true)}
+            className="w-full h-12 rounded-xl"
+          >
             <DecorationIcon className="w-4 h-4 mr-2" />
             {user?.avatar_decoration ? "Change Decoration" : "Add Decoration"}
           </Button>
@@ -739,7 +724,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         {/* Profile Effect */}
         <div className="space-y-3">
           <Label className="text-sm font-medium">Profile Effect</Label>
-          <Button variant="outline" rounded="xl" onClick={() => setShowProfileEffectModal(true)} className="w-full h-12">
+          <Button variant="outline" onClick={() => setShowProfileEffectModal(true)} className="w-full h-12 rounded-xl">
             <Sparkles className="w-4 h-4 mr-2" />
             {user?.profile_effect ? "Change Effect" : "Add Effect"}
           </Button>
@@ -750,9 +735,14 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           <div className="flex items-center justify-between gap-3">
             <div>
               <Label className="text-sm font-medium">Profile Theme</Label>
-              <p className="text-xs text-muted-foreground mt-1">Pick a primary and accent color for your profile gradient.</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Pick a primary and accent color for your profile gradient.
+              </p>
             </div>
-            {(profileThemePrimary || profileThemeAccent || user?.profile_theme_primary || user?.profile_theme_accent) && (
+            {(profileThemePrimary ||
+              profileThemeAccent ||
+              user?.profile_theme_primary ||
+              user?.profile_theme_accent) && (
               <Button
                 type="button"
                 variant="ghost"
@@ -766,7 +756,6 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
               </Button>
             )}
           </div>
-
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">Primary</Label>
@@ -785,7 +774,6 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 />
               </div>
             </div>
-
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">Accent</Label>
               <div className="flex items-center gap-3">
@@ -806,7 +794,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           </div>
         </div>
 
-        <Button onClick={handleSaveProfile} disabled={isLoading} rounded="xl" className="w-full h-12">
+        <Button variant="primary" onClick={handleSaveProfile} disabled={isLoading} className="w-full h-12 rounded-xl">
           {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
           Save Profile
         </Button>
@@ -828,98 +816,98 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           const bannerUrl = previewUser?.banner_url || user?.banner_url;
 
           return (
-        <div
-          className="relative rounded-2xl border border-border/50 overflow-hidden"
-          style={{
-            background: previewUser?.profile_theme_primary && previewUser?.profile_theme_accent
-              ? `linear-gradient(180deg, ${previewUser.profile_theme_primary} 0%, ${previewUser.profile_theme_accent} 100%)`
-              : previewUser
-                ? `linear-gradient(180deg, ${withAlpha(previewUser.banner_color, "33")} 0%, ${withAlpha(
-                    previewUser.banner_color,
-                    "14",
-                  )} 100%)`
-                : undefined,
-          }}
-        >
-          {/* Soft overlay to keep text readable while still showing the theme */}
-          <div className="absolute inset-0" style={{ backgroundColor: overlay }} />
+            <div
+              className="relative rounded-2xl border border-border/50 overflow-hidden"
+              style={{
+                background:
+                  previewUser?.profile_theme_primary && previewUser?.profile_theme_accent
+                    ? `linear-gradient(180deg, ${previewUser.profile_theme_primary} 0%, ${previewUser.profile_theme_accent} 100%)`
+                    : previewUser
+                      ? `linear-gradient(180deg, ${withAlpha(previewUser.banner_color, "33")} 0%, ${withAlpha(
+                          previewUser.banner_color,
+                          "14",
+                        )} 100%)`
+                      : undefined,
+              }}
+            >
+              {/* Soft overlay to keep text readable while still showing the theme */}
+              <div className="absolute inset-0" style={{ backgroundColor: overlay }} />
 
-          <div
-            className="relative p-5"
-            style={
-              {
-                color: fg,
-                ["--profile-muted" as any]: muted,
-              } as React.CSSProperties
-            }
-          >
-            {/* Banner image */}
-            {bannerUrl && (
-              <div className="-mx-5 -mt-5 mb-4 h-24 relative overflow-hidden">
-                <img src={bannerUrl} alt="Profile banner" className="absolute inset-0 w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-b from-black/0 to-black/35" />
-              </div>
-            )}
+              <div
+                className="relative p-5"
+                style={
+                  {
+                    color: fg,
+                    ["--profile-muted" as any]: muted,
+                  } as React.CSSProperties
+                }
+              >
+                {/* Banner image */}
+                {bannerUrl && (
+                  <div className="-mx-5 -mt-5 mb-4 h-24 relative overflow-hidden">
+                    <img src={bannerUrl} alt="Profile banner" className="absolute inset-0 w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/0 to-black/35" />
+                  </div>
+                )}
 
-            <div className="mb-3">
-              <div className={cn("inline-block", bannerUrl && "-mt-10")}>
-                <AvatarWithDecoration user={previewUser ?? user} className="w-16 h-16 shadow-lg" active={true} />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <div className="text-base font-semibold leading-tight">
-                {(previewUser?.display_name || previewUser?.username || user?.display_name || user?.username) ?? "—"}
-              </div>
-              <div className="text-xs font-medium text-[color:var(--profile-muted)]">
-                {previewUser?.username || user?.username ? `@${previewUser?.username || user?.username}` : "—"}
-              </div>
-            </div>
-
-            {(previewUser?.bio || user?.bio) && (
-              <div className="mt-4 text-sm opacity-90 whitespace-pre-wrap break-words">
-                {previewUser?.bio || user?.bio}
-              </div>
-            )}
-
-            {/* Divider */}
-            <div className="mt-5 h-px" style={{ backgroundColor: divider }} />
-
-            {/* Info rows (placeholders to feel like full profile) */}
-            <div className="mt-4 space-y-3">
-              <div className="flex items-start gap-3">
-                <div className="text-[10px] font-medium text-[color:var(--profile-muted)] uppercase tracking-wider min-w-[92px] pt-0.5">
-                  Member Since
+                <div className="mb-3">
+                  <div className={cn("inline-block", bannerUrl && "-mt-10")}>
+                    <AvatarWithDecoration user={previewUser ?? user} className="w-16 h-16 shadow-lg" active={true} />
+                  </div>
                 </div>
-                <div className="text-sm text-foreground">
-                  {formatMemberSince(previewUser?.created_at || user?.created_at)}
-                </div>
-              </div>
 
-              <div className="flex items-start gap-3">
-                <div className="text-[10px] font-medium text-[color:var(--profile-muted)] uppercase tracking-wider min-w-[92px] pt-0.5">
-                  Servers
+                <div className="space-y-1">
+                  <div className="text-base font-semibold leading-tight">
+                    {(previewUser?.display_name || previewUser?.username || user?.display_name || user?.username) ??
+                      "—"}
+                  </div>
+                  <div className="text-xs font-medium text-[color:var(--profile-muted)]">
+                    {previewUser?.username || user?.username ? `@${previewUser?.username || user?.username}` : "—"}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 flex-1">
-                  {["KL", "GK", "S3"].map((label) => (
-                    <div
-                      key={label}
-                      className="w-8 h-8 rounded-lg bg-secondary/60 border border-border/40 flex items-center justify-center text-[10px] font-semibold text-foreground/90"
-                      title="Server"
-                    >
-                      {label}
+
+                {(previewUser?.bio || user?.bio) && (
+                  <div className="mt-4 text-sm opacity-90 whitespace-pre-wrap break-words">
+                    {previewUser?.bio || user?.bio}
+                  </div>
+                )}
+
+                {/* Divider */}
+                <div className="mt-5 h-px" style={{ backgroundColor: divider }} />
+
+                {/* Info rows (placeholders to feel like full profile) */}
+                <div className="mt-4 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="text-[10px] font-medium text-[color:var(--profile-muted)] uppercase tracking-wider min-w-[92px] pt-0.5">
+                      Member Since
                     </div>
-                  ))}
-                  <div className="text-xs text-[color:var(--profile-muted)]">+ more</div>
+                    <div className="text-sm text-foreground">
+                      {formatMemberSince(previewUser?.created_at || user?.created_at)}
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <div className="text-[10px] font-medium text-[color:var(--profile-muted)] uppercase tracking-wider min-w-[92px] pt-0.5">
+                      Servers
+                    </div>
+                    <div className="flex items-center gap-2 flex-1">
+                      {["KL", "GK", "S3"].map((label) => (
+                        <div
+                          key={label}
+                          className="w-8 h-8 rounded-lg bg-secondary/60 border border-border/40 flex items-center justify-center text-[10px] font-semibold text-foreground/90"
+                          title="Server"
+                        >
+                          {label}
+                        </div>
+                      ))}
+                      <div className="text-xs text-[color:var(--profile-muted)]">+ more</div>
+                    </div>
+                  </div>
                 </div>
+
+                <div className="mt-5 text-xs text-[color:var(--profile-muted)]">Live preview</div>
               </div>
             </div>
-
-            <div className="mt-5 text-xs text-[color:var(--profile-muted)]">
-              Live preview
-            </div>
-          </div>
-        </div>
           );
         })()}
       </div>
@@ -959,7 +947,6 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 const permission = await requestPermission();
                 granted = permission === "granted";
               }
-
               if (granted) {
                 setDesktopNotificationsEnabled(true);
                 toast.success("Desktop notifications enabled!");
@@ -994,7 +981,6 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
             }
             return;
           }
-
           setDesktopNotificationsEnabled(true);
         }}
       />
@@ -1003,13 +989,12 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         <div className="flex justify-end pt-1">
           <Button
             type="button"
-            variant="secondary"
+            variant="outline"
             size="sm"
             onClick={async () => {
               try {
-                const { isPermissionGranted, requestPermission, sendNotification } = await import(
-                  "@tauri-apps/plugin-notification"
-                );
+                const { isPermissionGranted, requestPermission, sendNotification } =
+                  await import("@tauri-apps/plugin-notification");
                 let granted = await isPermissionGranted();
                 if (!granted) {
                   const permission = await requestPermission();
@@ -1082,6 +1067,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                     <div className="h-3 w-3/4 rounded" style={{ backgroundColor: preview.accent }} />
                   </div>
                 </div>
+
                 {/* Theme info */}
                 <div className="px-3 py-2.5 bg-card flex items-center justify-between">
                   <div className="text-left">
@@ -1185,6 +1171,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
+
               return (
                 <button
                   key={item.id}
@@ -1226,6 +1213,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 {navItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = activeTab === item.id;
+
                   return (
                     <button
                       key={item.id}
@@ -1257,7 +1245,6 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                   {activeTab === "blocked" && "View and unblock users"}
                 </p>
               </div>
-
               <div className="flex-1 overflow-y-auto p-8">{renderContent()}</div>
             </div>
           </div>
@@ -1280,7 +1267,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 setKeyRevealed(true);
                 setShowKeyConfirm(false);
               }}
-              className="rounded-xl"
+              className="rounded-xl bg-brand-600 text-black hover:bg-brand-700"
             >
               Reveal Key
             </AlertDialogAction>
@@ -1304,8 +1291,9 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                     Remember to save your secret key!
                   </p>
                   <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                    You can find your secret key in <span className="font-medium text-foreground">Settings → Account → View Secret Key</span>. 
-                    Without it, you cannot recover your account.
+                    You can find your secret key in{" "}
+                    <span className="font-medium text-foreground">Settings → Account → View Secret Key</span>. Without
+                    it, you cannot recover your account.
                   </p>
                 </div>
               </div>
@@ -1315,7 +1303,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
             <AlertDialogCancel className="m-0 rounded-xl">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmLogout}
-              className="rounded-xl"
+              className="rounded-xl bg-amber-500 text-black hover:bg-amber-600"
             >
               <LogOut className="w-4 h-4 mr-2" />
               Log Out
@@ -1427,7 +1415,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 setShowDeleteConfirm(true);
               }}
               disabled={isLoadingPreview}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl"
+              className="rounded-xl bg-red-600 text-white hover:bg-red-700"
             >
               Continue to Delete
             </AlertDialogAction>
@@ -1449,7 +1437,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
             <AlertDialogCancel className="m-0 rounded-xl">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteAccount}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl"
+              className="rounded-xl bg-red-600 text-white hover:bg-red-700"
             >
               {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
               Delete Forever
@@ -1466,15 +1454,10 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       />
 
       {/* Profile Effect Modal */}
-      <ProfileEffectModal
-        open={showProfileEffectModal}
-        onOpenChange={setShowProfileEffectModal}
-        onSelect={() => {}}
-      />
+      <ProfileEffectModal open={showProfileEffectModal} onOpenChange={setShowProfileEffectModal} onSelect={() => {}} />
     </>
   );
 };
 
 export const UserSettingsModal = () => <UserSettings variant="modal" />;
-
 export const UserSettingsPage = () => <UserSettings variant="page" />;
