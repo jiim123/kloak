@@ -13,14 +13,36 @@ import { useUnread } from "@/hooks/useUnread";
 import { useUnreadDMs } from "@/hooks/useUnreadDMs";
 import { useDMStore } from "@/stores/dmStore";
 import { supabase } from "@/integrations/supabase/client";
-import { DndContext, DragEndEvent, DragStartEvent, DragCancelEvent, PointerSensor, useSensor, useSensors, DragOverlay } from "@dnd-kit/core";
+import {
+  DndContext,
+  DragEndEvent,
+  DragStartEvent,
+  DragCancelEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+} from "@dnd-kit/core";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger, ContextMenuSeparator } from "@/components/ui/context-menu";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+  ContextMenuSeparator,
+} from "@/components/ui/context-menu";
 import type { ServerWithMembership } from "@/types";
 
 interface ServerChannels {
@@ -49,7 +71,9 @@ const loadServerFoldersState = (): ServerFolderState => {
     const parsed = JSON.parse(raw) as Partial<ServerFolderState>;
     const folders = Array.isArray(parsed.folders) ? parsed.folders : [];
     const serverToFolder =
-      parsed.serverToFolder && typeof parsed.serverToFolder === "object" ? (parsed.serverToFolder as Record<string, string>) : {};
+      parsed.serverToFolder && typeof parsed.serverToFolder === "object"
+        ? (parsed.serverToFolder as Record<string, string>)
+        : {};
 
     // Basic sanitize
     const sanitizedFolders: ServerFolder[] = folders
@@ -177,7 +201,11 @@ const FolderItem = ({
               >
                 <Folder className="w-5 h-5" />
                 <span className="absolute top-1 right-1 text-white/90">
-                  {folder.isCollapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                  {folder.isCollapsed ? (
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  ) : (
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  )}
                 </span>
               </motion.div>
             </MotionButton>
@@ -242,163 +270,170 @@ const DraggableServerItem = forwardRef<
     onLeaveServer?: (serverId: string) => void;
     onOpenSettings?: () => void;
   }
->(({
-  server,
-  index,
-  isActive,
-  isHovered,
-  hasUnread,
-  totalMentions,
-  tooltipsEnabled,
-  getPillState,
-  getServerColor,
-  getServerInitials,
-  onHover,
-  onLeave,
-  onClick,
-  onLeaveServer,
-  onOpenSettings,
-}, ref) => {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: getServerDragId(server.id),
-  });
+>(
+  (
+    {
+      server,
+      index,
+      isActive,
+      isHovered,
+      hasUnread,
+      totalMentions,
+      tooltipsEnabled,
+      getPillState,
+      getServerColor,
+      getServerInitials,
+      onHover,
+      onLeave,
+      onClick,
+      onLeaveServer,
+      onOpenSettings,
+    },
+    ref,
+  ) => {
+    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+      id: getServerDragId(server.id),
+    });
 
-  const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined;
+    const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined;
 
-  const isOwner = server.role === 'owner';
+    const isOwner = server.role === "owner";
 
-  return (
-    <ContextMenu>
-      <ContextMenuTrigger asChild>
-        <motion.div
-          ref={(node) => {
-            setNodeRef(node);
-            if (typeof ref === 'function') {
-              ref(node);
-            } else if (ref) {
-              ref.current = node;
-            }
-          }}
-          style={style}
-          custom={index}
-          variants={serverItemVariants}
-          initial="hidden"
-          animate="visible"
-          exit={{ opacity: 0, x: -20, transition: { duration: 0.15 } }}
-          layout
-        >
-          <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
-            <TooltipTrigger asChild>
-              <MotionButton
-                className={cn("relative group", isDragging && "opacity-40")}
-                onMouseEnter={onHover}
-                onMouseLeave={onLeave}
-                onClick={onClick}
-                whileHover="hover"
-                whileTap="tap"
-                {...attributes}
-                {...listeners}
-              >
-            {/* Indicator pill */}
-            <motion.span
-              className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 bg-foreground rounded-r-full"
-              variants={pillVariants}
-              initial="hidden"
-              animate={getPillState(server.id, hasUnread)}
-              transition={{ type: "spring", stiffness: 500, damping: 30 }}
-            />
-
-            <motion.div
-              variants={iconVariants}
-              initial="animate"
-              animate={isActive ? "active" : "animate"}
-              whileHover="hover"
-              whileTap="tap"
-              transition={{ type: "spring", stiffness: 400, damping: 25 }}
-              className={cn(
-                "w-12 h-12 overflow-hidden",
-                isActive && !server.icon_url && "ring-2 ring-primary/50",
-                !server.icon_url && getServerColor(server.name),
-                server.icon_url && "border-0",
-              )}
-            >
-              {server.icon_url ? (
-                <Avatar className="w-12 h-12 border-0">
-                  <AvatarImage src={server.icon_url} alt={server.name} className="object-cover" />
-                  <AvatarFallback className={getServerColor(server.name)}>{getServerInitials(server.name)}</AvatarFallback>
-                </Avatar>
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <span className="text-sm font-bold text-white">{getServerInitials(server.name)}</span>
-                </div>
-              )}
-            </motion.div>
-
-            {/* Unread dot */}
-            <AnimatePresence>
-              {hasUnread && !isActive && totalMentions === 0 && (
-                <motion.span
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  exit={{ scale: 0 }}
-                  className="absolute bottom-0 right-0 w-3 h-3 bg-white rounded-[3px] border-2 border-layout-sidebar"
-                />
-              )}
-            </AnimatePresence>
-
-            {/* Mention badge */}
-            <AnimatePresence>
-              {totalMentions > 0 && (
-                <motion.span
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  exit={{ scale: 0 }}
-                  className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
-                >
-                  {totalMentions > 99 ? "99+" : totalMentions}
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </MotionButton>
-        </TooltipTrigger>
-        <TooltipContent side="right" className="font-medium">
-          {server.name}
-        </TooltipContent>
-      </Tooltip>
-        </motion.div>
-      </ContextMenuTrigger>
-      <ContextMenuContent>
-        {isOwner && onOpenSettings && (
-          <ContextMenuItem
-            onSelect={(e) => {
-              e.preventDefault();
-              onOpenSettings();
-            }}
-          >
-            <Settings className="w-4 h-4 mr-2" />
-            Server Settings
-          </ContextMenuItem>
-        )}
-        {!isOwner && onLeaveServer && (
-          <ContextMenuItem
-            onSelect={(e) => {
-              e.preventDefault();
-              if (window.confirm(`Are you sure you want to leave "${server.name}"?`)) {
-                onLeaveServer(server.id);
+    return (
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <motion.div
+            ref={(node) => {
+              setNodeRef(node);
+              if (typeof ref === "function") {
+                ref(node);
+              } else if (ref) {
+                ref.current = node;
               }
             }}
-            className="text-destructive focus:text-destructive"
+            style={style}
+            custom={index}
+            variants={serverItemVariants}
+            initial="hidden"
+            animate="visible"
+            exit={{ opacity: 0, x: -20, transition: { duration: 0.15 } }}
+            layout
           >
-            <LogOut className="w-4 h-4 mr-2" />
-            Leave Server
-          </ContextMenuItem>
-        )}
-      </ContextMenuContent>
-    </ContextMenu>
-  );
-});
+            <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
+              <TooltipTrigger asChild>
+                <MotionButton
+                  className={cn("relative group", isDragging && "opacity-40")}
+                  onMouseEnter={onHover}
+                  onMouseLeave={onLeave}
+                  onClick={onClick}
+                  whileHover="hover"
+                  whileTap="tap"
+                  {...attributes}
+                  {...listeners}
+                >
+                  {/* Indicator pill */}
+                  <motion.span
+                    className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 bg-foreground rounded-r-full"
+                    variants={pillVariants}
+                    initial="hidden"
+                    animate={getPillState(server.id, hasUnread)}
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                  />
 
-DraggableServerItem.displayName = 'DraggableServerItem';
+                  <motion.div
+                    variants={iconVariants}
+                    initial="animate"
+                    animate={isActive ? "active" : "animate"}
+                    whileHover="hover"
+                    whileTap="tap"
+                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                    className={cn(
+                      "w-12 h-12 overflow-hidden",
+                      isActive && !server.icon_url && "ring-2 ring-primary/50",
+                      !server.icon_url && getServerColor(server.name),
+                      server.icon_url && "border-0",
+                    )}
+                  >
+                    {server.icon_url ? (
+                      <Avatar className="w-12 h-12 border-0">
+                        <AvatarImage src={server.icon_url} alt={server.name} className="object-cover" />
+                        <AvatarFallback className={getServerColor(server.name)}>
+                          {getServerInitials(server.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="text-sm font-bold text-white">{getServerInitials(server.name)}</span>
+                      </div>
+                    )}
+                  </motion.div>
+
+                  {/* Unread dot */}
+                  <AnimatePresence>
+                    {hasUnread && !isActive && totalMentions === 0 && (
+                      <motion.span
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        exit={{ scale: 0 }}
+                        className="absolute bottom-0 right-0 w-3 h-3 bg-white rounded-[3px] border-2 border-layout-sidebar"
+                      />
+                    )}
+                  </AnimatePresence>
+
+                  {/* Mention badge */}
+                  <AnimatePresence>
+                    {totalMentions > 0 && (
+                      <motion.span
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        exit={{ scale: 0 }}
+                        className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
+                      >
+                        {totalMentions > 99 ? "99+" : totalMentions}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </MotionButton>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="font-medium">
+                {server.name}
+              </TooltipContent>
+            </Tooltip>
+          </motion.div>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          {isOwner && onOpenSettings && (
+            <ContextMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                onOpenSettings();
+              }}
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Server Settings
+            </ContextMenuItem>
+          )}
+          {!isOwner && onLeaveServer && (
+            <ContextMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                if (window.confirm(`Are you sure you want to leave "${server.name}"?`)) {
+                  onLeaveServer(server.id);
+                }
+              }}
+              className="text-destructive focus:text-destructive"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Leave Server
+            </ContextMenuItem>
+          )}
+        </ContextMenuContent>
+      </ContextMenu>
+    );
+  },
+);
+
+DraggableServerItem.displayName = "DraggableServerItem";
 
 export const ServerSidebar = () => {
   const navigate = useNavigate();
@@ -481,7 +516,10 @@ export const ServerSidebar = () => {
           setFolderState({ folders: sanitizedFolders, serverToFolder });
           // Also update localStorage cache
           try {
-            localStorage.setItem(SERVER_FOLDERS_STORAGE_KEY, JSON.stringify({ folders: sanitizedFolders, serverToFolder }));
+            localStorage.setItem(
+              SERVER_FOLDERS_STORAGE_KEY,
+              JSON.stringify({ folders: sanitizedFolders, serverToFolder }),
+            );
           } catch {
             // ignore
           }
@@ -647,14 +685,17 @@ export const ServerSidebar = () => {
     });
   }, []);
 
-  const openRenameFolder = useCallback((folderId: string) => {
-    const folder = folderState.folders.find((f) => f.id === folderId);
-    if (folder) {
-      setRenamingFolderId(folderId);
-      setRenameFolderName(folder.name);
-      setIsRenameFolderOpen(true);
-    }
-  }, [folderState.folders]);
+  const openRenameFolder = useCallback(
+    (folderId: string) => {
+      const folder = folderState.folders.find((f) => f.id === folderId);
+      if (folder) {
+        setRenamingFolderId(folderId);
+        setRenameFolderName(folder.name);
+        setIsRenameFolderOpen(true);
+      }
+    },
+    [folderState.folders],
+  );
 
   const handleRenameFolder = useCallback(() => {
     const name = renameFolderName.trim();
@@ -668,14 +709,17 @@ export const ServerSidebar = () => {
     setRenameFolderName("");
   }, [renameFolderName, renamingFolderId]);
 
-  const openChangeColor = useCallback((folderId: string) => {
-    const folder = folderState.folders.find((f) => f.id === folderId);
-    if (folder) {
-      setChangingColorFolderId(folderId);
-      setChangeFolderColor(folder.color);
-      setIsChangeFolderColorOpen(true);
-    }
-  }, [folderState.folders]);
+  const openChangeColor = useCallback(
+    (folderId: string) => {
+      const folder = folderState.folders.find((f) => f.id === folderId);
+      if (folder) {
+        setChangingColorFolderId(folderId);
+        setChangeFolderColor(folder.color);
+        setIsChangeFolderColorOpen(true);
+      }
+    },
+    [folderState.folders],
+  );
 
   const handleChangeColor = useCallback(() => {
     if (!changingColorFolderId) return;
@@ -789,12 +833,20 @@ export const ServerSidebar = () => {
     });
   }, [folderState.folders, folderState.serverToFolder, serversById]);
 
-  const activeDragServer = useMemo(() => (activeDragServerId ? serversById.get(activeDragServerId) : undefined), [activeDragServerId, serversById]);
+  const activeDragServer = useMemo(
+    () => (activeDragServerId ? serversById.get(activeDragServerId) : undefined),
+    [activeDragServerId, serversById],
+  );
 
   return (
     <div className="h-full flex flex-col items-center py-3 gap-2 bg-layout-sidebar">
       {/* Server list */}
-      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragCancel={handleDragCancel} onDragEnd={handleDragEnd}>
+      <DndContext
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragCancel={handleDragCancel}
+        onDragEnd={handleDragEnd}
+      >
         <ContextMenu>
           <ContextMenuTrigger asChild>
             <div
@@ -804,264 +856,264 @@ export const ServerSidebar = () => {
                 isOverRoot && "outline outline-2 outline-primary/30 outline-offset-[-2px] rounded-md",
               )}
             >
-        {/* Loading skeleton */}
-        {isLoading && servers.length === 0 && (
-          <div className="space-y-2">
-            {[...Array(3)].map((_, i) => (
-              <motion.div
-                key={i}
-                className="w-12 h-12 rounded-[6px] bg-secondary/50"
-                animate={{ opacity: [0.5, 1, 0.5] }}
-                transition={{ repeat: Infinity, duration: 1.5, delay: i * 0.2 }}
-              />
-            ))}
-          </div>
-        )}
+              {/* Loading skeleton */}
+              {isLoading && servers.length === 0 && (
+                <div className="space-y-2">
+                  {[...Array(3)].map((_, i) => (
+                    <motion.div
+                      key={i}
+                      className="w-12 h-12 rounded-[6px] bg-secondary/50"
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ repeat: Infinity, duration: 1.5, delay: i * 0.2 }}
+                    />
+                  ))}
+                </div>
+              )}
 
-        {/* Home / Direct Messages button */}
-        <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
-          <TooltipTrigger asChild>
-            <MotionButton
-              className="relative group mb-2"
-              onMouseEnter={() => setHoveredServer(null)}
-              onMouseLeave={() => setHoveredServer(null)}
-              onClick={() => {
-                setCurrentServer(null);
-                setCurrentConversation(null);
-                closeServerSettings();
-                closeModal();
-                navigate('/app');
-              }}
-              whileHover="hover"
-              whileTap="tap"
-            >
-              {/* Indicator pill */}
-              <motion.span
-                className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 bg-foreground rounded-r-full"
-                variants={pillVariants}
-                initial="hidden"
-                animate={getPillState(null, hasDMUnread)}
-                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-              />
-
-              <motion.div
-                variants={iconVariants}
-                initial="animate"
-                animate={currentServer === null ? "active" : "animate"}
-                whileHover="hover"
-                whileTap="tap"
-                transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                className={cn(
-                  "w-12 h-12 flex items-center justify-center",
-                  currentServer === null
-                    ? "bg-primary text-primary-foreground ring-2 ring-primary/50"
-                    : "bg-secondary hover:bg-primary hover:text-primary-foreground",
-                )}
-              >
-                <Home className="w-5 h-5" />
-              </motion.div>
-
-              {/* Unread DM badge */}
-              <AnimatePresence>
-                {totalDMUnread > 0 && currentServer !== null && (
-                  <motion.span
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    exit={{ scale: 0 }}
-                    className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
+              {/* Home / Direct Messages button */}
+              <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
+                <TooltipTrigger asChild>
+                  <MotionButton
+                    className="relative group mb-2"
+                    onMouseEnter={() => setHoveredServer(null)}
+                    onMouseLeave={() => setHoveredServer(null)}
+                    onClick={() => {
+                      setCurrentServer(null);
+                      setCurrentConversation(null);
+                      closeServerSettings();
+                      closeModal();
+                      navigate("/app");
+                    }}
+                    whileHover="hover"
+                    whileTap="tap"
                   >
-                    {totalDMUnread > 99 ? "99+" : totalDMUnread}
-                  </motion.span>
-                )}
-              </AnimatePresence>
-            </MotionButton>
-          </TooltipTrigger>
-          <TooltipContent side="right" className="font-medium">
-            Home{totalDMUnread > 0 ? ` (${totalDMUnread} unread)` : ''}
-          </TooltipContent>
-        </Tooltip>
+                    {/* Indicator pill */}
+                    <motion.span
+                      className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 bg-foreground rounded-r-full"
+                      variants={pillVariants}
+                      initial="hidden"
+                      animate={getPillState(null, hasDMUnread)}
+                      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    />
 
-        {/* Separator */}
-        <div className="w-8 h-0.5 bg-border rounded-full mb-2 shrink-0" />
+                    <motion.div
+                      variants={iconVariants}
+                      initial="animate"
+                      animate={currentServer === null ? "active" : "animate"}
+                      whileHover="hover"
+                      whileTap="tap"
+                      transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                      className={cn(
+                        "w-12 h-12 flex items-center justify-center",
+                        currentServer === null
+                          ? "bg-primary text-primary-foreground ring-2 ring-primary/50"
+                          : "bg-secondary hover:bg-primary hover:text-neutral-600",
+                      )}
+                    >
+                      <Home className="w-5 h-5" />
+                    </motion.div>
 
-        {/* Folder items + servers */}
-        <AnimatePresence mode="popLayout">
-          {foldersWithServers.map(({ folder, servers: folderServers }) => (
-            <div key={folder.id} className="w-full flex flex-col items-center gap-2">
-              <FolderItem
-                folder={folder}
-                tooltipsEnabled={tooltipsEnabled}
-                onToggleCollapse={toggleFolderCollapse}
-                onRename={openRenameFolder}
-                onChangeColor={openChangeColor}
-                onDelete={deleteFolder}
-              />
+                    {/* Unread DM badge */}
+                    <AnimatePresence>
+                      {totalDMUnread > 0 && currentServer !== null && (
+                        <motion.span
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          exit={{ scale: 0 }}
+                          className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
+                        >
+                          {totalDMUnread > 99 ? "99+" : totalDMUnread}
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </MotionButton>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="font-medium">
+                  Home{totalDMUnread > 0 ? ` (${totalDMUnread} unread)` : ""}
+                </TooltipContent>
+              </Tooltip>
 
+              {/* Separator */}
+              <div className="w-8 h-0.5 bg-border rounded-full mb-2 shrink-0" />
+
+              {/* Folder items + servers */}
               <AnimatePresence mode="popLayout">
-                {!folder.isCollapsed &&
-                  folderServers.map((server, index) => {
-                    const isActive = currentServer?.id === server.id;
-                    const channelIds = serverChannels[server.id] || [];
-                    const { hasUnread, totalMentions } = getServerUnreadInfo(channelIds);
-                    return (
-                      <DraggableServerItem
-                        key={server.id}
-                        server={server}
-                        index={index}
-                        isActive={isActive}
-                        isHovered={hoveredServer === server.id}
-                        hasUnread={hasUnread}
-                        totalMentions={totalMentions}
-                        tooltipsEnabled={tooltipsEnabled}
-                        getPillState={getPillState}
-                        getServerColor={getServerColor}
-                        getServerInitials={getServerInitials}
-                        onHover={() => setHoveredServer(server.id)}
-                        onLeave={() => setHoveredServer(null)}
-                        onClick={() => {
-                          setCurrentServer(server);
-                          setCurrentConversation(null);
-                          closeServerSettings();
-                          closeModal();
-                          navigate(`/app/servers/${server.id}`);
-                        }}
-                        onLeaveServer={async (serverId) => {
-                          if (user?.id) {
-                            try {
-                              await leaveServer(serverId, user.id);
-                              if (currentServer?.id === serverId) {
-                                navigate('/app');
-                              }
-                            } catch (error) {
-                              console.error('Failed to leave server:', error);
+                {foldersWithServers.map(({ folder, servers: folderServers }) => (
+                  <div key={folder.id} className="w-full flex flex-col items-center gap-2">
+                    <FolderItem
+                      folder={folder}
+                      tooltipsEnabled={tooltipsEnabled}
+                      onToggleCollapse={toggleFolderCollapse}
+                      onRename={openRenameFolder}
+                      onChangeColor={openChangeColor}
+                      onDelete={deleteFolder}
+                    />
+
+                    <AnimatePresence mode="popLayout">
+                      {!folder.isCollapsed &&
+                        folderServers.map((server, index) => {
+                          const isActive = currentServer?.id === server.id;
+                          const channelIds = serverChannels[server.id] || [];
+                          const { hasUnread, totalMentions } = getServerUnreadInfo(channelIds);
+                          return (
+                            <DraggableServerItem
+                              key={server.id}
+                              server={server}
+                              index={index}
+                              isActive={isActive}
+                              isHovered={hoveredServer === server.id}
+                              hasUnread={hasUnread}
+                              totalMentions={totalMentions}
+                              tooltipsEnabled={tooltipsEnabled}
+                              getPillState={getPillState}
+                              getServerColor={getServerColor}
+                              getServerInitials={getServerInitials}
+                              onHover={() => setHoveredServer(server.id)}
+                              onLeave={() => setHoveredServer(null)}
+                              onClick={() => {
+                                setCurrentServer(server);
+                                setCurrentConversation(null);
+                                closeServerSettings();
+                                closeModal();
+                                navigate(`/app/servers/${server.id}`);
+                              }}
+                              onLeaveServer={async (serverId) => {
+                                if (user?.id) {
+                                  try {
+                                    await leaveServer(serverId, user.id);
+                                    if (currentServer?.id === serverId) {
+                                      navigate("/app");
+                                    }
+                                  } catch (error) {
+                                    console.error("Failed to leave server:", error);
+                                  }
+                                }
+                              }}
+                              onOpenSettings={() => {
+                                setCurrentServer(server);
+                                openServerSettings();
+                              }}
+                            />
+                          );
+                        })}
+                    </AnimatePresence>
+                  </div>
+                ))}
+
+                {rootServers.map((server, index) => {
+                  const isActive = currentServer?.id === server.id;
+                  const channelIds = serverChannels[server.id] || [];
+                  const { hasUnread, totalMentions } = getServerUnreadInfo(channelIds);
+
+                  return (
+                    <DraggableServerItem
+                      key={server.id}
+                      server={server}
+                      index={index}
+                      isActive={isActive}
+                      isHovered={hoveredServer === server.id}
+                      hasUnread={hasUnread}
+                      totalMentions={totalMentions}
+                      tooltipsEnabled={tooltipsEnabled}
+                      getPillState={getPillState}
+                      getServerColor={getServerColor}
+                      getServerInitials={getServerInitials}
+                      onHover={() => setHoveredServer(server.id)}
+                      onLeave={() => setHoveredServer(null)}
+                      onClick={() => {
+                        setCurrentServer(server);
+                        setCurrentConversation(null);
+                        closeServerSettings();
+                        closeModal();
+                        navigate(`/app/servers/${server.id}`);
+                      }}
+                      onLeaveServer={async (serverId) => {
+                        if (user?.id) {
+                          try {
+                            await leaveServer(serverId, user.id);
+                            if (currentServer?.id === serverId) {
+                              navigate("/app");
                             }
+                          } catch (error) {
+                            console.error("Failed to leave server:", error);
                           }
-                        }}
-                        onOpenSettings={() => {
-                          setCurrentServer(server);
-                          openServerSettings();
+                        }
+                      }}
+                      onOpenSettings={() => {
+                        setCurrentServer(server);
+                        openServerSettings();
+                      }}
+                    />
+                  );
+                })}
+              </AnimatePresence>
+
+              {/* Add Server button */}
+              <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
+                <TooltipTrigger asChild>
+                  <MotionButton
+                    whileTap={{ scale: 0.95 }}
+                    whileHover="hover"
+                    initial="default"
+                    onClick={() => openModal("create-server")}
+                    className="relative w-12 h-12 rounded-[6px] text-muted-foreground hover:text-foreground transition-colors duration-200 flex items-center justify-center overflow-hidden"
+                  >
+                    {/* Animated dashed border */}
+                    <motion.svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 48 48">
+                      <motion.rect
+                        x="1"
+                        y="1"
+                        width="46"
+                        height="46"
+                        rx="5"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeDasharray="6 4"
+                        variants={{
+                          default: {
+                            strokeDashoffset: 0,
+                            opacity: 0.5,
+                          },
+                          hover: {
+                            strokeDashoffset: -10,
+                            opacity: 0,
+                            transition: {
+                              strokeDashoffset: {
+                                duration: 0.6,
+                                ease: "linear",
+                              },
+                              opacity: {
+                                duration: 0.2,
+                                delay: 0.4,
+                              },
+                            },
+                          },
                         }}
                       />
-                    );
-                  })}
-              </AnimatePresence>
-            </div>
-          ))}
+                    </motion.svg>
 
-          {rootServers.map((server, index) => {
-            const isActive = currentServer?.id === server.id;
-            const channelIds = serverChannels[server.id] || [];
-            const { hasUnread, totalMentions } = getServerUnreadInfo(channelIds);
-
-            return (
-              <DraggableServerItem
-                key={server.id}
-                server={server}
-                index={index}
-                isActive={isActive}
-                isHovered={hoveredServer === server.id}
-                hasUnread={hasUnread}
-                totalMentions={totalMentions}
-                tooltipsEnabled={tooltipsEnabled}
-                getPillState={getPillState}
-                getServerColor={getServerColor}
-                getServerInitials={getServerInitials}
-                onHover={() => setHoveredServer(server.id)}
-                onLeave={() => setHoveredServer(null)}
-                onClick={() => {
-                  setCurrentServer(server);
-                  setCurrentConversation(null);
-                  closeServerSettings();
-                  closeModal();
-                  navigate(`/app/servers/${server.id}`);
-                }}
-                onLeaveServer={async (serverId) => {
-                  if (user?.id) {
-                    try {
-                      await leaveServer(serverId, user.id);
-                      if (currentServer?.id === serverId) {
-                        navigate('/app');
-                      }
-                    } catch (error) {
-                      console.error('Failed to leave server:', error);
-                    }
-                  }
-                }}
-                onOpenSettings={() => {
-                  setCurrentServer(server);
-                  openServerSettings();
-                }}
-              />
-            );
-          })}
-        </AnimatePresence>
-
-        {/* Add Server button */}
-        <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
-          <TooltipTrigger asChild>
-            <MotionButton
-              whileTap={{ scale: 0.95 }}
-              whileHover="hover"
-              initial="default"
-              onClick={() => openModal("create-server")}
-              className="relative w-12 h-12 rounded-[6px] text-muted-foreground hover:text-foreground transition-colors duration-200 flex items-center justify-center overflow-hidden"
-            >
-              {/* Animated dashed border */}
-              <motion.svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 48 48">
-                <motion.rect
-                  x="1"
-                  y="1"
-                  width="46"
-                  height="46"
-                  rx="5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeDasharray="6 4"
-                  variants={{
-                    default: {
-                      strokeDashoffset: 0,
-                      opacity: 0.5,
-                    },
-                    hover: {
-                      strokeDashoffset: -10,
-                      opacity: 0,
-                      transition: {
-                        strokeDashoffset: {
-                          duration: 0.6,
-                          ease: "linear",
+                    {/* Solid border on hover */}
+                    <motion.div
+                      className="absolute inset-0 rounded-[6px] border border-muted-foreground/50 pointer-events-none"
+                      variants={{
+                        default: {
+                          opacity: 0,
                         },
-                        opacity: {
-                          duration: 0.2,
-                          delay: 0.4,
+                        hover: {
+                          opacity: 1,
                         },
-                      },
-                    },
-                  }}
-                />
-              </motion.svg>
+                      }}
+                      transition={{ duration: 0.2 }}
+                    />
 
-              {/* Solid border on hover */}
-              <motion.div
-                className="absolute inset-0 rounded-[6px] border border-muted-foreground/50 pointer-events-none"
-                variants={{
-                  default: {
-                    opacity: 0,
-                  },
-                  hover: {
-                    opacity: 1,
-                  },
-                }}
-                transition={{ duration: 0.2 }}
-              />
-
-              <Plus className="w-5 h-5 relative z-10" />
-            </MotionButton>
-          </TooltipTrigger>
-          <TooltipContent side="right" className="font-medium">
-            Add or Join a Server
-          </TooltipContent>
-        </Tooltip>
+                    <Plus className="w-5 h-5 relative z-10" />
+                  </MotionButton>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="font-medium">
+                  Add or Join a Server
+                </TooltipContent>
+              </Tooltip>
             </div>
           </ContextMenuTrigger>
           <ContextMenuContent>
@@ -1083,7 +1135,11 @@ export const ServerSidebar = () => {
 
         <DragOverlay>
           {activeDragServer ? (
-            <ServerIconVisual server={activeDragServer} getServerColor={getServerColor} getServerInitials={getServerInitials} />
+            <ServerIconVisual
+              server={activeDragServer}
+              getServerColor={getServerColor}
+              getServerInitials={getServerInitials}
+            />
           ) : null}
         </DragOverlay>
       </DndContext>
@@ -1224,9 +1280,7 @@ export const ServerSidebar = () => {
             <Button variant="ghost" onClick={() => setIsChangeFolderColorOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleChangeColor}>
-              Save
-            </Button>
+            <Button onClick={handleChangeColor}>Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
