@@ -77,7 +77,7 @@ export const NavigationMenu = () => {
             <div className="flex items-center gap-3">
               {/* Desktop CTA */}
               <Link to="/app" className="hidden sm:block">
-                <Button size="sm" className="rounded-lg">
+                <Button size="sm" rounded="lg">
                   Open Kloak
                 </Button>
               </Link>

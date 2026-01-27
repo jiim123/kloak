@@ -95,7 +95,8 @@ export const HeroImage = () => {
             <Link to="/app">
               <Button
                 size="lg"
-                className="h-12 px-8 text-primary rounded-xl uppercase font-semibold tracking-wider group"
+                rounded="xl"
+                className="uppercase tracking-wider group"
               >
                 Join Kloak
                 <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
