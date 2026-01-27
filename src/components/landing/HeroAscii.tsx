@@ -85,7 +85,7 @@ export const HeroImage = () => {
           <motion.p
             variants={fadeIn}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="landing-body text-muted-foreground mb-10 text-base sm:text-lg md:text-xl max-w-xl mx-auto"
+            className="landing-body text-muted-foreground mb-10 text-sm sm:text-lg md:text-xl max-w-xl mx-auto"
           >
             A space for your community to connect, create, and grow together—without ads, tracking, or compromise.
           </motion.p>
@@ -93,11 +93,7 @@ export const HeroImage = () => {
           {/* CTA Button */}
           <motion.div variants={fadeIn} transition={{ duration: 0.5, delay: 0.3 }}>
             <Link to="/app">
-              <Button
-                size="lg"
-                rounded="xl"
-                className="uppercase tracking-wider group"
-              >
+              <Button size="lg" rounded="xl" className="uppercase tracking-wider group">
                 Join Kloak
                 <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
