@@ -85,7 +85,7 @@ export const HeroImage = () => {
           <motion.p
             variants={fadeIn}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="landing-body text-muted-foreground mb-10 text-sm sm:text-lg md:text-xl max-w-xl mx-auto"
+            className="landing-body text-muted-foreground mb-10 text-sm sm:text-sm md:text-sm max-w-sm mx-auto"
           >
             A space for your community to connect, create, and grow together—without ads, tracking, or compromise.
           </motion.p>
