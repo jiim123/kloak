@@ -10,40 +10,37 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        // Primary - Main action button (silver-grey, black text)
-        primary: "rounded-[4px] bg-brand-600 text-black hover:bg-brand-700 active:bg-brand-800 active:scale-[0.98]",
+        // Primary
+        primary:
+          "rounded-[4px] bg-brand-600 text-black hover:bg-brand-700 hover:shadow-[0_4px_12px_rgba(237,237,237,0.2)] transition-all duration-200 ease-out",
 
-        // Secondary - Supporting action (subtle fill)
-        secondary: "rounded-[4px] bg-neutral-200 text-neutral-900 hover:bg-neutral-300 active:bg-neutral-400/80",
+        // Secondary
+        secondary:
+          "rounded-[4px] bg-neutral-200 text-neutral-900 hover:bg-neutral-300 transition-all duration-200 ease-out",
 
-        // Tertiary - Subtle/ghost action
-        tertiary: "rounded-[4px] bg-transparent text-neutral-800 hover:bg-neutral-200 active:bg-neutral-300",
+        // Tertiary
+        tertiary:
+          "rounded-[4px] bg-transparent text-neutral-800 hover:bg-neutral-200 transition-all duration-200 ease-out",
 
-        // Outline - Bordered button (silver-grey border)
+        // Outline
         outline:
-          "rounded-[4px] border border-neutral-300 bg-transparent text-neutral-800 hover:bg-neutral-100 hover:border-neutral-400 active:bg-neutral-200",
+          "rounded-[4px] border border-neutral-300 bg-transparent text-neutral-800 hover:bg-neutral-100 hover:border-neutral-400 transition-all duration-200 ease-out",
 
-        // Error/Destructive - Dangerous actions
-        error: "rounded-[4px] bg-red-600 text-white hover:bg-red-700 active:bg-red-800",
-
-        // Warning - Caution actions
-        warning: "rounded-[4px] bg-amber-500 text-black hover:bg-amber-400 active:bg-amber-600",
-
-        // Success - Positive actions
-        success: "rounded-[4px] bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800",
-
-        // Ghost - Minimal presence
+        // Ghost
         ghost:
-          "rounded-[4px] bg-transparent text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 active:bg-neutral-200",
+          "rounded-[4px] bg-transparent text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 transition-all duration-200 ease-out",
 
-        // Link - Text-only button
-        link: "rounded-[4px] text-brand-600 hover:text-brand-700 underline-offset-4 hover:underline p-0 h-auto font-medium",
+        // Error
+        error:
+          "rounded-[4px] bg-red-600 text-white hover:bg-red-700 hover:shadow-[0_4px_12px_rgba(220,38,38,0.3)] transition-all duration-200 ease-out",
 
-        // Legacy default (maps to primary)
-        default: "rounded-[4px] bg-brand-600 text-black hover:bg-brand-700 active:bg-brand-800 active:scale-[0.98]",
+        // Warning
+        warning:
+          "rounded-[4px] bg-amber-500 text-black hover:bg-amber-600 hover:shadow-[0_4px_12px_rgba(245,158,11,0.3)] transition-all duration-200 ease-out",
 
-        // Legacy destructive (maps to error)
-        destructive: "rounded-[4px] bg-red-600 text-white hover:bg-red-700 active:bg-red-800",
+        // Success
+        success:
+          "rounded-[4px] bg-emerald-600 text-white hover:bg-emerald-700 hover:shadow-[0_4px_12px_rgba(5,150,105,0.3)] transition-all duration-200 ease-out",
       },
       size: {
         default: "h-9 sm:h-10 px-3 sm:px-4 py-2",
