@@ -6,47 +6,59 @@ import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap text-[15px] font-semibold tracking-[0.005em] ring-offset-background transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap text-[13px] sm:text-[15px] font-semibold tracking-[0.01em] ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-40 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:size-3.5 sm:[&_svg]:size-4 [&_svg]:shrink-0 select-none",
   {
     variants: {
       variant: {
-        // Primary - Main action button
-        primary: "rounded-[3px] bg-primary text-primary-foreground hover:bg-primary/85 active:bg-primary/75",
-        // Secondary - Supporting action
-        secondary: "rounded-[3px] bg-secondary text-secondary-foreground hover:bg-secondary/70 active:bg-secondary/60",
+        // Primary - Main action button (silver-grey, black text)
+        primary: "rounded-[4px] bg-brand-600 text-black hover:bg-brand-700 active:bg-brand-800 active:scale-[0.98]",
+
+        // Secondary - Supporting action (subtle fill)
+        secondary: "rounded-[4px] bg-neutral-200 text-neutral-900 hover:bg-neutral-300 active:bg-neutral-400/80",
+
         // Tertiary - Subtle/ghost action
-        tertiary: "rounded-[3px] bg-transparent text-foreground hover:bg-muted active:bg-muted/80",
-        // Outline - Bordered button
+        tertiary: "rounded-[4px] bg-transparent text-neutral-800 hover:bg-neutral-200 active:bg-neutral-300",
+
+        // Outline - Bordered button (silver-grey border)
         outline:
-          "rounded-[3px] border border-border bg-transparent text-foreground hover:bg-muted hover:border-foreground/20 active:bg-muted/80",
+          "rounded-[4px] border border-neutral-300 bg-transparent text-neutral-800 hover:bg-neutral-100 hover:border-neutral-400 active:bg-neutral-200",
+
         // Error/Destructive - Dangerous actions
-        error:
-          "rounded-[3px] bg-destructive text-destructive-foreground hover:bg-destructive/85 active:bg-destructive/75",
+        error: "rounded-[4px] bg-red-600 text-white hover:bg-red-700 active:bg-red-800",
+
         // Warning - Caution actions
-        warning:
-          "rounded-[3px] bg-amber-500 text-white hover:bg-amber-500/85 active:bg-amber-500/75 dark:bg-amber-600 dark:hover:bg-amber-600/85",
+        warning: "rounded-[4px] bg-amber-500 text-black hover:bg-amber-400 active:bg-amber-600",
+
+        // Success - Positive actions
+        success: "rounded-[4px] bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800",
+
         // Ghost - Minimal presence
         ghost:
-          "rounded-[3px] bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50 active:bg-muted/70",
+          "rounded-[4px] bg-transparent text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 active:bg-neutral-200",
+
         // Link - Text-only button
-        link: "rounded-[3px] text-primary underline-offset-4 hover:underline p-0 h-auto",
+        link: "rounded-[4px] text-brand-600 hover:text-brand-700 underline-offset-4 hover:underline p-0 h-auto font-medium",
+
         // Legacy default (maps to primary)
-        default: "rounded-[3px] bg-primary text-primary-foreground hover:bg-primary/85 active:bg-primary/75",
+        default: "rounded-[4px] bg-brand-600 text-black hover:bg-brand-700 active:bg-brand-800 active:scale-[0.98]",
+
         // Legacy destructive (maps to error)
-        destructive:
-          "rounded-[3px] bg-destructive text-destructive-foreground hover:bg-destructive/85 active:bg-destructive/75",
+        destructive: "rounded-[4px] bg-red-600 text-white hover:bg-red-700 active:bg-red-800",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-8 px-3 text-[13px]",
-        lg: "h-12 px-6 text-[16px]",
-        icon: "h-10 w-10 p-0",
+        default: "h-9 sm:h-10 px-3 sm:px-4 py-2",
+        sm: "h-7 sm:h-8 px-2.5 sm:px-3 text-[12px] sm:text-[13px]",
+        lg: "h-11 sm:h-12 px-5 sm:px-6 text-[14px] sm:text-[16px]",
+        xl: "h-12 sm:h-14 px-6 sm:px-8 text-[15px] sm:text-[17px]",
+        icon: "h-9 w-9 sm:h-10 sm:w-10 p-0",
+        "icon-sm": "h-7 w-7 sm:h-8 sm:w-8 p-0",
       },
       rounded: {
         default: "",
         full: "!rounded-full",
         md: "!rounded-md",
         lg: "!rounded-lg",
+        xl: "!rounded-xl",
       },
     },
     defaultVariants: {
