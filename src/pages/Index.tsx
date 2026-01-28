@@ -1,7 +1,22 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Shield, Key, MessageCircle, Users, Zap, Lock, X, Check } from "lucide-react";
+import {
+  Shield,
+  Key,
+  MessageCircle,
+  Users,
+  Zap,
+  Lock,
+  X,
+  Check,
+  Mic,
+  Headphones,
+  Palette,
+  Gamepad2,
+  Music,
+  Video,
+} from "lucide-react";
 import { Footer } from "@/components/ui/footer-section";
 import { NavigationMenu } from "@/components/layout/NavigationMenu";
 import HeroAscii from "@/components/landing/HeroAscii";
@@ -13,32 +28,30 @@ const audienceGroups = [
   {
     name: "Gaming Communities",
     description:
-      "Coordinate raids, share strategies, and build your guild—without your conversations training someone else's AI or feeding targeted ads.",
+      "Coordinate raids, share strategies, and build your guild. Your voice comms and battle plans stay between you and your squad.",
   },
   {
-    name: "Dev Teams",
+    name: "Musicians & Producers",
     description:
-      "Ship code, debug together, and vent about legacy systems. Your standups and code reviews stay between you and your team.",
+      "Share demos, collaborate on tracks, and jam together. Your unreleased work won't train someone else's AI or leak before you're ready.",
   },
   {
-    name: "Friend Groups",
+    name: "Artists & Designers",
     description:
-      "Group chats that feel like they used to—just friends talking, sharing memes, making plans. Not a data mine with a chat feature.",
+      "Share work-in-progress, get feedback, build your community. No algorithms deciding who sees your art.",
   },
   {
-    name: "Privacy Advocates",
-    description:
-      "Finally, a platform that practices what it preaches. Privacy by architecture, not by policy. No asterisks, no exceptions.",
+    name: "Streamers & Creators",
+    description: "Connect with your audience on your terms. No platform mining your community for engagement metrics.",
   },
   {
-    name: "Small Businesses",
-    description:
-      "Client conversations, team coordination, sensitive documents—none of it becomes training data or shows up in a breach.",
+    name: "Indie Dev Teams",
+    description: "Ship games, share builds, coordinate launches. Your roadmap and source code stay confidential.",
   },
   {
-    name: "Creators & Communities",
+    name: "Creative Collectives",
     description:
-      "Build your audience on your terms. No algorithm gatekeeping your reach, no platform mining your community for profit.",
+      "Your community, your culture, your rules. Build spaces that reflect your values, not a corporation's.",
   },
 ];
 
@@ -53,14 +66,14 @@ const Index = () => {
   }, []);
 
   const comparisonData = [
-    { label: "Email required", others: true, kloak: false },
-    { label: "Phone number required", others: true, kloak: false },
-    { label: "Password stored on servers", others: true, kloak: false },
-    { label: "Behavioral tracking", others: true, kloak: false },
-    { label: "Data sold to advertisers", others: true, kloak: false },
-    { label: "AI trained on your messages", others: true, kloak: false },
-    { label: "Account recovery by platform", others: true, kloak: false },
-    { label: "You control your identity", others: false, kloak: true },
+    { label: "Messages scanned for ad targeting", others: true, kloak: false },
+    { label: "Creative work used to train AI", others: true, kloak: false },
+    { label: "Algorithm decides who sees your content", others: true, kloak: false },
+    { label: "Premium tiers for basic features", others: true, kloak: false },
+    { label: "Behavioral profiling & analytics", others: true, kloak: false },
+    { label: "Platform can ban your community", others: true, kloak: false },
+    { label: "You own your community data", others: false, kloak: true },
+    { label: "Same features for everyone", others: false, kloak: true },
   ];
 
   return (
@@ -98,15 +111,15 @@ const Index = () => {
                   <div className="flex items-start gap-4">
                     <div className="hidden md:block w-px h-24 bg-gradient-to-b from-primary/50 to-transparent" />
                     <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
-                      A place to talk
+                      Create freely.
                       <br />
-                      <span className="text-primary/60">without being watched.</span>
+                      <span className="text-primary/60">Connect privately.</span>
                     </h2>
                   </div>
 
                   <p className="text-lg md:text-xl text-primary leading-relaxed max-w-xl">
-                    Kloak is a communication platform for communities, teams, and friends—built from the ground up so
-                    your conversations stay yours.
+                    Kloak is where creative communities thrive—without surveillance, without algorithms, without your
+                    work becoming someone else's training data.
                   </p>
 
                   <div className="flex flex-wrap gap-6 text-sm text-primary/50">
@@ -116,11 +129,11 @@ const Index = () => {
                     </span>
                     <span className="flex items-center gap-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                      No tracking
+                      No AI training
                     </span>
                     <span className="flex items-center gap-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                      No data harvesting
+                      No algorithm
                     </span>
                   </div>
                 </motion.div>
@@ -176,7 +189,7 @@ const Index = () => {
                               width: i === activeIndex ? "100%" : "0%",
                             }}
                             transition={{
-                              duration: i === activeIndex ? 4 : 0,
+                              duration: i === activeIndex ? 6 : 0,
                               ease: "linear",
                             }}
                           />
@@ -195,13 +208,13 @@ const Index = () => {
                 transition={{ delay: 0.4, duration: 0.8 }}
                 className="text-center text-lg md:text-xl text-primary/60 max-w-2xl mx-auto mt-24"
               >
-                Most platforms treat privacy as a setting you can toggle. We built Kloak so we{" "}
+                Other platforms promise privacy in their terms of service. We built Kloak so we{" "}
                 <span className="text-foreground italic">physically cannot</span> access your data—even if we wanted to.
               </motion.p>
             </div>
           </section>
 
-          {/* Comparison Section */}
+          {/* Problem Section - The Comparison */}
           <section className="relative py-32 px-8 lg:px-16 bg-card/50 border-y border-border/20 overflow-hidden">
             <div className="max-w-7xl mx-auto">
               <motion.div
@@ -213,15 +226,16 @@ const Index = () => {
               >
                 {/* Section header */}
                 <div className="flex items-center gap-4 mb-4">
-                  <span className="text-xs font-mono text-primary tracking-widest uppercase">The Difference</span>
+                  <span className="text-xs font-mono text-primary tracking-widest uppercase">The Problem</span>
                 </div>
                 <div className="flex items-start gap-4">
                   <div className="hidden md:block w-px h-20 bg-gradient-to-b from-primary/50 to-transparent" />
                   <h2 className="landing-section-title text-foreground max-w-3xl">
-                    What they collect. <span className="text-primary">What we don't.</span>
+                    What they take. <span className="text-primary">What we don't.</span>
                   </h2>
                 </div>
               </motion.div>
+
               <motion.div
                 className="rounded-lg border border-border/30 overflow-hidden bg-background relative"
                 initial={{ opacity: 0 }}
@@ -233,7 +247,7 @@ const Index = () => {
                   <TableHeader>
                     <TableRow className="border-border/30 hover:bg-transparent">
                       <TableHead className="text-muted-foreground font-mono text-xs tracking-wider w-[50%] uppercase">
-                        Feature
+                        Reality
                       </TableHead>
                       <TableHead className="text-center text-muted-foreground font-mono text-xs tracking-wider uppercase">
                         Others
@@ -283,32 +297,122 @@ const Index = () => {
                   </TableBody>
                 </Table>
               </motion.div>
-              <motion.div
-                className="flex flex-col md:flex-row items-center justify-center gap-4 mt-12"
+
+              <motion.p
+                className="text-center landing-body text-muted-foreground mt-12"
                 initial={{ opacity: 0 }}
                 whileInView={{ opacity: 1 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: 0.4 }}
               >
-                <p className="text-center landing-body text-muted-foreground">
-                  The less we know about you, the less anyone can take.
+                Your creativity shouldn't fund someone else's business model.
+              </motion.p>
+            </div>
+          </section>
+
+          {/* Capabilities Section */}
+          <section className="relative py-32 px-8 lg:px-16 border-b border-border/20 overflow-hidden">
+            <div className="max-w-7xl mx-auto">
+              <motion.div
+                className="mb-20"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+              >
+                {/* Section header */}
+                <div className="flex items-center gap-4 mb-4">
+                  <span className="text-xs font-mono text-primary tracking-widest uppercase">Capabilities</span>
+                </div>
+                <div className="flex items-start gap-4">
+                  <div className="hidden md:block w-px h-20 bg-gradient-to-b from-primary/50 to-transparent" />
+                  <h2 className="landing-section-title text-foreground max-w-2xl">
+                    Everything you need. <span className="text-primary">Nothing you don't.</span>
+                  </h2>
+                </div>
+              </motion.div>
+
+              {/* Feature Grid - Matching Problem Section aesthetics */}
+              <div className="grid md:grid-cols-2 gap-6">
+                {[
+                  {
+                    icon: MessageCircle,
+                    title: "Real-Time Chat",
+                    description:
+                      "Instant messaging across servers, channels, and DMs. Fast enough for raid callouts, private enough for unreleased tracks.",
+                    accent: true,
+                  },
+                  {
+                    icon: Headphones,
+                    title: "Voice Channels",
+                    description:
+                      "Crystal-clear voice for your squad, your band practice, your D&D session. No compression artifacts ruining the vibe.",
+                    accent: false,
+                  },
+                  {
+                    icon: Users,
+                    title: "Flexible Communities",
+                    description:
+                      "Servers, channels, categories, roles. Organize your community the way it makes sense for you—not the way a PM decided.",
+                    accent: false,
+                  },
+                  {
+                    icon: Lock,
+                    title: "Key-Based Identity",
+                    description:
+                      "One cryptographic key, full control. No email, no phone number, no password to leak in the next breach.",
+                    accent: true,
+                  },
+                ].map((feature, index) => (
+                  <motion.div
+                    key={feature.title}
+                    className={`relative border border-border/30 p-10 group overflow-hidden ${feature.accent ? "bg-card/50" : "bg-background"}`}
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                  >
+                    {/* Subtle corner accent matching Problem Section */}
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-primary/5 to-transparent" />
+
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 border border-primary/30 flex items-center justify-center shrink-0 group-hover:border-primary/50 transition-colors duration-300">
+                        <feature.icon className="w-6 h-6 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="landing-card-title text-foreground mb-3 text-lg">{feature.title}</h3>
+                        <p className="landing-body text-muted-foreground text-sm leading-relaxed">
+                          {feature.description}
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Coming Soon - Voice */}
+              <motion.div
+                className="mt-6 border border-dashed border-border/40 p-8 text-center"
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+              >
+                <div className="flex items-center justify-center gap-3 mb-3">
+                  <Mic className="w-5 h-5 text-primary/50" />
+                  <span className="text-xs font-mono text-primary/50 tracking-widest uppercase">Coming Soon</span>
+                </div>
+                <p className="text-muted-foreground text-sm">
+                  Studio-quality audio mode for musicians and producers. High-fidelity voice that doesn't butcher your
+                  sound.
                 </p>
               </motion.div>
             </div>
           </section>
 
           {/* Principles Section */}
-          <section className="relative py-32 px-8 lg:px-16 overflow-hidden">
-            {/* Background grid pattern */}
-            <div
-              className="absolute inset-0 opacity-[0.02]"
-              style={{
-                backgroundImage:
-                  "linear-gradient(hsl(var(--primary)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary)) 1px, transparent 1px)",
-                backgroundSize: "40px 40px",
-              }}
-            />
-            <div className="max-w-7xl mx-auto relative">
+          <section className="relative py-32 px-8 lg:px-16 bg-card/50 border-b border-border/20 overflow-hidden">
+            <div className="max-w-7xl mx-auto">
               <motion.div
                 className="mb-20"
                 initial={{ opacity: 0, y: 20 }}
@@ -327,31 +431,32 @@ const Index = () => {
                   </h2>
                 </div>
               </motion.div>
-              <div className="grid md:grid-cols-2 gap-x-16 gap-y-16">
+
+              <div className="grid md:grid-cols-2 gap-6">
                 {[
                   {
                     number: "01",
-                    title: "Zero data collection",
+                    title: "Your work stays yours",
                     description:
-                      "We don't ask for your email, phone number, or identity. We collect only what's essential for the app to function. Nothing more.",
+                      "Nothing you share on Kloak trains AI models. Your unreleased tracks, your concept art, your game designs—they're not fodder for machine learning.",
                   },
                   {
                     number: "02",
-                    title: "Cryptographic keys, not passwords",
+                    title: "No algorithmic gatekeeping",
                     description:
-                      "Your account is secured by a 64-character key that only you possess. We can't recover it. We can't reset it. We can't access it.",
+                      "When you post, your community sees it. No engagement optimization, no reach throttling, no mysterious shadowbans.",
                   },
                   {
                     number: "03",
-                    title: "No ads, no tracking, no profiling",
+                    title: "Cryptographic identity",
                     description:
-                      "We will never monetize your data. There are no analytics tracking your behavior. No pixels. No fingerprinting. No exceptions.",
+                      "Your account lives in a 64-character key that only you possess. We can't reset it, we can't access it, we can't hand it over.",
                   },
                   {
                     number: "04",
-                    title: "Open architecture",
+                    title: "One tier for everyone",
                     description:
-                      "Our approach is transparent. We tell you exactly what we do and don't do. There's no fine print designed to confuse you.",
+                      "No premium unlocks, no artificial limits, no FOMO. Every feature we build ships to everyone. Your subscription supports the platform—that's it.",
                   },
                 ].map((principle, index) => (
                   <motion.div
@@ -360,15 +465,14 @@ const Index = () => {
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 0.6, delay: index * 0.1 }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
                   >
-                    {/* Card with styling */}
-                    <div className="relative border border-border/20 p-8 bg-card/30 hover:border-primary/30 transition-colors duration-300">
+                    <div className="relative border border-border/30 p-8 bg-background hover:border-primary/30 transition-colors duration-300">
                       <div className="flex items-start gap-4">
-                        <span className="text-4xl font-mono font-semibold text-primary/40 group-hover:text-primary/60 transition-colors duration-300">
+                        <span className="text-4xl font-mono font-semibold text-primary/30 group-hover:text-primary/50 transition-colors duration-300">
                           {principle.number}
                         </span>
-                        <div className="w-px h-12 bg-gradient-to-b from-primary/30 to-transparent" />
+                        <div className="w-px h-12 bg-gradient-to-b from-primary/20 to-transparent" />
                         <div className="flex-1">
                           <h3 className="landing-card-title text-foreground mb-3">{principle.title}</h3>
                           <p className="landing-body text-muted-foreground text-sm">{principle.description}</p>
@@ -381,8 +485,8 @@ const Index = () => {
             </div>
           </section>
 
-          {/* Capabilities Section */}
-          <section className="relative py-32 px-8 lg:px-16 bg-card/50 border-y border-border/20 overflow-hidden">
+          {/* Built For Creators Section */}
+          <section className="relative py-32 px-8 lg:px-16 border-b border-border/20 overflow-hidden">
             <div className="max-w-7xl mx-auto">
               <motion.div
                 className="mb-20"
@@ -393,247 +497,77 @@ const Index = () => {
               >
                 {/* Section header */}
                 <div className="flex items-center gap-4 mb-4">
-                  <span className="text-xs font-mono text-primary tracking-widest uppercase">Capabilities</span>
+                  <span className="text-xs font-mono text-primary tracking-widest uppercase">Your Space</span>
                 </div>
                 <div className="flex items-start gap-4">
                   <div className="hidden md:block w-px h-20 bg-gradient-to-b from-primary/50 to-transparent" />
-                  <h2 className="landing-section-title text-foreground max-w-2xl">
-                    Full-featured. <span className="text-primary">Zero compromise.</span>
-                  </h2>
+                  <div>
+                    <h2 className="landing-section-title text-foreground max-w-3xl mb-4">
+                      Built for people who <span className="text-primary">make things.</span>
+                    </h2>
+                    <p className="landing-body text-muted-foreground max-w-2xl">
+                      Whether you're coordinating a raid, mixing a track, or shipping a game—Kloak is the space where
+                      your community lives without being monetized.
+                    </p>
+                  </div>
                 </div>
               </motion.div>
-              {/* Feature Grid */}
-              <div className="grid lg:grid-cols-12 gap-6">
-                {/* Main Feature - Large */}
-                <motion.div
-                  className="lg:col-span-7 relative border border-border/30 p-10 group overflow-hidden bg-background"
-                  initial={{ opacity: 0, y: 40 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6 }}
-                >
-                  <div className="flex items-center gap-4 mb-4">
-                    <MessageCircle className="w-8 h-8 text-primary shrink-0" />
-                    <h3 className="landing-card-title text-foreground text-xl sm:text-2xl">Real-Time Messaging</h3>
-                  </div>
-                  <p className="landing-body text-muted-foreground max-w-md text-sm">
-                    Instant message delivery across servers, channels, and direct conversations. Built for speed without
-                    sacrificing privacy.
-                  </p>
-                </motion.div>
-                {/* Secondary Feature */}
-                <motion.div
-                  className="lg:col-span-5 relative border border-border/30 p-10 group overflow-hidden bg-background"
-                  initial={{ opacity: 0, y: 40 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, delay: 0.1 }}
-                >
-                  <div className="flex items-center gap-3 mb-4">
-                    <Lock className="w-7 h-7 text-primary shrink-0" />
-                    <h3 className="landing-card-title text-foreground text-lg sm:text-xl">Key-Based Auth</h3>
-                  </div>
-                  <p className="landing-body text-muted-foreground text-sm">
-                    One cryptographic key. Full control. No password managers, no recovery emails, no vulnerabilities.
-                  </p>
-                </motion.div>
-                {/* Third Feature */}
-                <motion.div
-                  className="lg:col-span-5 relative border border-border/30 p-10 group overflow-hidden bg-background"
-                  initial={{ opacity: 0, y: 40 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, delay: 0.2 }}
-                >
-                  <div className="flex items-center gap-3 mb-4">
-                    <Users className="w-7 h-7 text-primary shrink-0" />
-                    <h3 className="landing-card-title text-foreground text-lg sm:text-xl">Communities</h3>
-                  </div>
-                  <p className="landing-body text-muted-foreground text-sm">
-                    Create spaces for your people. Organize with servers, channels, and categories — your way.
-                  </p>
-                </motion.div>
-                {/* Fourth Feature - Large */}
-                <motion.div
-                  className="lg:col-span-7 relative border border-border/30 p-10 group overflow-hidden bg-background"
-                  initial={{ opacity: 0, y: 40 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, delay: 0.3 }}
-                >
-                  <div className="flex items-center gap-4 mb-4">
-                    <Zap className="w-8 h-8 text-primary shrink-0" />
-                    <h3 className="landing-card-title text-foreground text-xl sm:text-2xl">Modern Infrastructure</h3>
-                  </div>
-                  <p className="landing-body text-muted-foreground max-w-md text-sm">
-                    Built on a modern tech stack for performance and reliability. Fast, responsive, and built to scale
-                    with you.
-                  </p>
-                </motion.div>
-              </div>
-            </div>
-          </section>
 
-          {/* For Everyone Section */}
-          <section className="relative py-32 px-8 lg:px-16 overflow-hidden">
-            <div className="max-w-7xl mx-auto">
-              {/* Section Header */}
-              <motion.div
-                className="text-center mb-20"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6 }}
-              >
-                {/* Section header */}
-                <div className="flex items-center justify-center gap-4 mb-6">
-                  <span className="text-xs font-mono text-primary tracking-widest uppercase">For Everyone</span>
-                </div>
-                <h2 className="landing-section-title text-foreground mb-6 max-w-4xl mx-auto">
-                  Free speech starts with <span className="text-primary">free infrastructure.</span>
-                </h2>
-                <p className="landing-body text-muted-foreground max-w-2xl mx-auto">
-                  No premium tiers that unlock privacy features. No enterprise-only security. Everyone gets everything.
-                </p>
-              </motion.div>
-              {/* Cards Grid */}
+              {/* Creator Cards Grid */}
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {[
                   {
-                    title: "Activists & Organizers",
-                    description: "Coordinate movements without surveillance. Your cause, your privacy.",
-                    icon: "megaphone",
+                    icon: Gamepad2,
+                    title: "Gamers & Guilds",
+                    description: "Voice comms, raid coordination, guild management. Your strategies stay in the squad.",
                   },
                   {
-                    title: "Creative Communities",
-                    description: "Share your art, music, and ideas in spaces you control.",
-                    icon: "palette",
+                    icon: Music,
+                    title: "Musicians & Producers",
+                    description:
+                      "Share demos, collaborate remotely, build your scene. Your unreleased work stays unreleased.",
                   },
                   {
-                    title: "Gaming Groups",
-                    description: "Voice chat, strategy sessions, and guild coordination — lag-free.",
-                    icon: "gamepad",
+                    icon: Palette,
+                    title: "Artists & Designers",
+                    description: "Feedback sessions, portfolio sharing, creative critique. No AI scraping your style.",
                   },
                   {
-                    title: "Small Businesses",
-                    description: "Team communication without Big Tech reading your roadmap.",
-                    icon: "briefcase",
+                    icon: Video,
+                    title: "Streamers & Creators",
+                    description: "Community that's actually yours. No algorithm deciding who sees your posts.",
                   },
                   {
-                    title: "Friends & Family",
-                    description: "Private group chats that stay private. Period.",
-                    icon: "heart",
+                    icon: Zap,
+                    title: "Indie Studios",
+                    description:
+                      "Ship games, share builds, coordinate across time zones. Your roadmap stays confidential.",
                   },
                   {
-                    title: "Privacy Advocates",
-                    description: "Finally, a platform that practices what it preaches.",
-                    icon: "shield",
+                    icon: Users,
+                    title: "Creative Collectives",
+                    description:
+                      "Build culture, not just content. Spaces that reflect your values, not a platform's metrics.",
                   },
                 ].map((card, index) => (
                   <motion.div
                     key={card.title}
-                    className="group relative border border-border/30 p-8 overflow-hidden hover:border-primary/40 transition-colors duration-300 bg-card/30"
+                    className="group relative border border-border/30 p-8 overflow-hidden hover:border-primary/30 transition-colors duration-300 bg-card/30"
                     initial={{ opacity: 0, y: 30 }}
                     whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, margin: "-50px" }}
-                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: index * 0.08 }}
                   >
+                    {/* Corner accent */}
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-primary/5 to-transparent" />
+
                     {/* Icon */}
                     <div className="relative mb-6">
-                      <div className="w-14 h-14 border border-primary/30 flex items-center justify-center group-hover:border-primary/50 transition-colors duration-300">
-                        {card.icon === "megaphone" && (
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="28"
-                            height="28"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-primary"
-                          >
-                            <path d="m3 11 18-5v12L3 13v-2z" />
-                            <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
-                          </svg>
-                        )}
-                        {card.icon === "palette" && (
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="28"
-                            height="28"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-primary"
-                          >
-                            <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
-                            <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
-                            <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
-                            <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
-                            <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.555C21.965 6.012 17.461 2 12 2z" />
-                          </svg>
-                        )}
-                        {card.icon === "gamepad" && (
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="28"
-                            height="28"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-primary"
-                          >
-                            <line x1="6" x2="10" y1="12" y2="12" />
-                            <line x1="8" x2="8" y1="10" y2="14" />
-                            <line x1="15" x2="15.01" y1="13" y2="13" />
-                            <line x1="18" x2="18.01" y1="11" y2="11" />
-                            <rect width="20" height="12" x="2" y="6" rx="2" />
-                          </svg>
-                        )}
-                        {card.icon === "briefcase" && (
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="28"
-                            height="28"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-primary"
-                          >
-                            <path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
-                            <rect width="20" height="14" x="2" y="6" rx="2" />
-                          </svg>
-                        )}
-                        {card.icon === "heart" && (
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="28"
-                            height="28"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-primary"
-                          >
-                            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-                          </svg>
-                        )}
-                        {card.icon === "shield" && <Shield className="w-7 h-7 text-primary" />}
+                      <div className="w-12 h-12 border border-primary/30 flex items-center justify-center group-hover:border-primary/50 transition-colors duration-300">
+                        <card.icon className="w-6 h-6 text-primary" />
                       </div>
                     </div>
+
                     {/* Content */}
                     <div className="relative">
                       <h3 className="landing-card-title text-foreground mb-2 text-base">{card.title}</h3>
@@ -645,32 +579,126 @@ const Index = () => {
             </div>
           </section>
 
+          {/* Simplicity Section - NEW */}
+          <section className="relative py-32 px-8 lg:px-16 bg-card/50 border-b border-border/20 overflow-hidden">
+            <div className="max-w-7xl mx-auto">
+              <div className="grid lg:grid-cols-2 gap-16 items-center">
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6 }}
+                >
+                  {/* Section header */}
+                  <div className="flex items-center gap-4 mb-4">
+                    <span className="text-xs font-mono text-primary tracking-widest uppercase">Philosophy</span>
+                  </div>
+                  <div className="flex items-start gap-4 mb-8">
+                    <div className="hidden md:block w-px h-20 bg-gradient-to-b from-primary/50 to-transparent" />
+                    <h2 className="landing-section-title text-foreground max-w-xl">
+                      Simplicity is a <span className="text-primary">feature.</span>
+                    </h2>
+                  </div>
+                  <p className="landing-body text-muted-foreground mb-6">
+                    Most platforms bloat over time—adding features to justify subscription tiers, complexity to create
+                    lock-in, dark patterns to maximize engagement.
+                  </p>
+                  <p className="landing-body text-muted-foreground">
+                    Kloak stays simple on purpose. Chat that works. Voice that's clear. Communities that make sense.
+                    Nothing designed to manipulate you into spending more time or money.
+                  </p>
+                </motion.div>
+
+                <motion.div
+                  className="relative"
+                  initial={{ opacity: 0, x: 20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6, delay: 0.2 }}
+                >
+                  <div className="border border-border/30 p-8 bg-background">
+                    <div className="space-y-4">
+                      {[
+                        { label: "No premium emoji packs", strike: true },
+                        { label: "No animated profile borders", strike: true },
+                        { label: "No engagement streaks", strike: true },
+                        { label: "No artificial upload limits", strike: true },
+                        { label: "No gamified rewards", strike: true },
+                      ].map((item, index) => (
+                        <motion.div
+                          key={item.label}
+                          className="flex items-center gap-3"
+                          initial={{ opacity: 0, x: 10 }}
+                          whileInView={{ opacity: 1, x: 0 }}
+                          viewport={{ once: true }}
+                          transition={{ duration: 0.4, delay: 0.3 + index * 0.1 }}
+                        >
+                          <X className="w-4 h-4 text-primary/50" />
+                          <span className="text-muted-foreground text-sm line-through decoration-primary/30">
+                            {item.label}
+                          </span>
+                        </motion.div>
+                      ))}
+
+                      <div className="pt-4 mt-4 border-t border-border/30">
+                        <motion.div
+                          className="flex items-center gap-3"
+                          initial={{ opacity: 0, x: 10 }}
+                          whileInView={{ opacity: 1, x: 0 }}
+                          viewport={{ once: true }}
+                          transition={{ duration: 0.4, delay: 0.8 }}
+                        >
+                          <Check className="w-4 h-4 text-primary" />
+                          <span className="text-foreground text-sm font-medium">Just communication that works.</span>
+                        </motion.div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+            </div>
+          </section>
+
           {/* CTA Section */}
-          <section className="relative py-32 px-8 lg:px-16 bg-card/50 border-t border-border/20 overflow-hidden">
+          <section className="relative py-32 px-8 lg:px-16 border-t border-border/20 overflow-hidden">
             <motion.div
-              className="max-w-7xl mx-auto text-center relative"
+              className="max-w-7xl mx-auto relative"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
             >
-              <div className="w-16 h-16 border border-primary/40 flex items-center justify-center mx-auto mb-8">
-                <Shield className="w-8 h-8 text-primary" />
+              <div className="text-center">
+                {/* Section header */}
+                <div className="flex items-center justify-center gap-4 mb-6">
+                  <span className="text-xs font-mono text-primary tracking-widest uppercase">Get Started</span>
+                </div>
+
+                <div className="w-16 h-16 border border-primary/30 flex items-center justify-center mx-auto mb-8">
+                  <Key className="w-8 h-8 text-primary" />
+                </div>
+
+                <h2 className="landing-section-title text-foreground mb-6 max-w-2xl mx-auto">
+                  Your key. <span className="text-primary">Your community.</span>
+                </h2>
+
+                <p className="landing-body text-muted-foreground mb-10 max-w-lg mx-auto">
+                  No signup forms. No email verification. Generate your cryptographic key and start building your space.
+                </p>
+
+                <Link to="/auth">
+                  <button className="group relative px-10 py-4 bg-primary text-primary-foreground font-semibold transition-all duration-300 hover:bg-primary/90 uppercase tracking-wider">
+                    <span className="flex items-center gap-2">
+                      <Key className="w-5 h-5" />
+                      Generate Your Key
+                    </span>
+                  </button>
+                </Link>
+
+                <p className="text-xs text-muted-foreground/50 mt-6 font-mono">
+                  No credit card required • No free trial that expires • Just Kloak
+                </p>
               </div>
-              <h2 className="landing-section-title text-foreground mb-6">
-                Take Back Your <span className="text-primary">Privacy.</span>
-              </h2>
-              <p className="landing-body text-muted-foreground mb-10 max-w-lg mx-auto">
-                No signup forms. No verification emails. Generate your key and start communicating freely.
-              </p>
-              <Link to="/auth">
-                <button className="group relative px-10 py-4 bg-primary text-primary-foreground font-semibold transition-all duration-300 hover:bg-primary/90 uppercase tracking-wider">
-                  <span className="flex items-center gap-2">
-                    <Key className="w-5 h-5" />
-                    Get Started
-                  </span>
-                </button>
-              </Link>
             </motion.div>
           </section>
 
