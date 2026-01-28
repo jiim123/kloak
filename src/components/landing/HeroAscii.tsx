@@ -124,9 +124,7 @@ export const HeroImage = () => {
             variants={fadeIn}
             transition={{ duration: 0.5, delay: 0 }}
             className="landing-body text-muted-foreground mb-6 text-sm"
-          >
-            For Gamers · Communities · Teams · Everyone
-          </motion.p>
+          ></motion.p>
 
           <motion.div variants={fadeIn} transition={{ duration: 0.5, delay: 0.1 }} className="mb-8">
             <LayoutGroup>
