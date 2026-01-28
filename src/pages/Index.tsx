@@ -29,62 +29,82 @@ const Index = () => {
           {/* Hero Section */}
           <HeroAscii />
 
-          {/* The Problem Section */}
-          <section className="relative py-48 px-8 lg:px-16 border-t border-border/20 overflow-hidden">
+          {/* What is Kloak Section */}
+          <section className="relative py-32 md:py-48 px-8 lg:px-16 border-t border-border/20 overflow-hidden">
             <div className="max-w-4xl mx-auto">
               <motion.div
                 initial="hidden"
                 whileInView="visible"
                 viewport={{ once: true, margin: "-100px" }}
-                className="flex flex-col items-center text-center space-y-12"
+                className="flex flex-col items-center text-center space-y-16"
               >
-                {/* Narrative Block 1 */}
+                {/* The Hook */}
                 <motion.p
                   variants={{
                     hidden: { opacity: 0, y: 20 },
                     visible: {
                       opacity: 1,
                       y: 0,
-                      transition: { staggerChildren: 0.08, delayChildren: 0.2 },
+                      transition: { staggerChildren: 0.06, delayChildren: 0.1 },
                     },
                   }}
                   className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-light text-foreground leading-tight tracking-tight"
                 >
-                  {"The internet used to be a place where we just talked. Now, it's a place where we are harvested."
-                    .split(" ")
-                    .map((word, i) => (
-                      <motion.span
+                  {"A place to talk without being watched.".split(" ").map((word, i) => (
+                    <motion.span
+                      key={i}
+                      variants={{
+                        hidden: { opacity: 0 },
+                        visible: { opacity: 1 },
+                      }}
+                      className="inline-block mr-2"
+                    >
+                      {word}
+                    </motion.span>
+                  ))}
+                </motion.p>
+
+                {/* What It Is */}
+                <motion.p
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.8, duration: 0.8 }}
+                  className="text-lg md:text-xl text-primary/80 max-w-2xl leading-relaxed"
+                >
+                  Kloak is a communication platform for communities, teams, and friends—built from the ground up so your
+                  conversations stay yours.{" "}
+                  <span className="text-foreground">No ads. No tracking. No data harvesting.</span>
+                </motion.p>
+
+                {/* Who It's For + What You Can Do */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 1.2, duration: 0.8 }}
+                  className="flex flex-wrap justify-center gap-3 md:gap-4"
+                >
+                  {["Gaming communities", "Dev teams", "Friend groups", "Privacy advocates", "Small businesses"].map(
+                    (item, i) => (
+                      <span
                         key={i}
-                        variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}
-                        className="inline-block mr-2"
+                        className="px-4 py-2 rounded-full border border-border/40 text-sm md:text-base text-primary/70 bg-background/50 backdrop-blur-sm"
                       >
-                        {word}
-                      </motion.span>
-                    ))}
-                </motion.p>
+                        {item}
+                      </span>
+                    ),
+                  )}
+                </motion.div>
 
-                {/* Narrative Block 2 */}
+                {/* The Differentiator */}
                 <motion.p
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1.5, duration: 1 }}
+                  transition={{ delay: 1.6, duration: 0.8 }}
                   className="text-lg md:text-xl text-primary/80 max-w-2xl leading-relaxed"
                 >
-                  From the girl sharing her day on a laptop to the dev venting in his office—most platforms treat your
-                  connections as data assets to be sold on a stock exchange.
-                </motion.p>
-
-                {/* Narrative Block 3 (The Punchline) */}
-                <motion.p
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 2.2, duration: 1 }}
-                  className="text-lg md:text-xl text-primary/80 max-w-2xl leading-relaxed"
-                >
-                  We didn't build Kloak to collect "users," we built it to protect{" "}
-                  <span className="text-foreground font-semibold">people</span>. Because your privacy isn't a feature we
-                  allow you to have;{" "}
-                  <span className="text-foreground italic">it's a human right we physically cannot take away.</span>
+                  Most platforms treat privacy as a setting you can toggle. We built Kloak so we{" "}
+                  <span className="text-foreground italic">physically cannot</span> access your data—even if we wanted
+                  to.
                 </motion.p>
               </motion.div>
             </div>
