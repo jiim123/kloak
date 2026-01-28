@@ -203,7 +203,7 @@ const Index = () => {
                 className="text-center text-lg md:text-xl text-primary/60 max-w-2xl mx-auto mt-24"
               >
                 Other platforms promise privacy in their terms of service. We built Kloak so we physically cannot access
-                your data—even if we wanted to.
+                your data - even if we wanted to.
               </motion.p>
             </div>
           </section>
