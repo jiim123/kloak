@@ -1,6 +1,24 @@
 import { Link } from "react-router-dom";
 import { LayoutGroup, motion } from "framer-motion";
-import { ArrowRight, MessageSquareQuote, MessageSquare, Smile, Users, Heart, Home, Mic2, Sparkles, Tornado, Theater, Flame, Fingerprint, Laugh, Sprout, UserPlus, ShieldCheck } from "lucide-react";
+import {
+  ArrowRight,
+  MessageSquareQuote,
+  MessageSquare,
+  Smile,
+  Users,
+  Heart,
+  Home,
+  Mic2,
+  Sparkles,
+  Tornado,
+  Theater,
+  Flame,
+  Fingerprint,
+  Laugh,
+  Sprout,
+  UserPlus,
+  ShieldCheck,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import TextRotate from "@/components/fancy/text/text-rotate";
 import { GrainGradient } from "@paper-design/shaders-react";
@@ -55,24 +73,56 @@ export const HeroImage = () => {
                   YOUR
                 </motion.span>
                 <TextRotate
-                    texts={[
-                      <span className="flex items-center gap-2">OPINION <MessageSquareQuote size={20} /></span>,
-                      <span className="flex items-center gap-2">MESSAGE <MessageSquare size={20} /></span>,
-                      <span className="flex items-center gap-2">REACTION <Smile size={20} /></span>,
-                      <span className="flex items-center gap-2">COMMUNITY <Users size={20} /></span>,
-                      <span className="flex items-center gap-2">FRIENDS <Heart size={20} /></span>,
-                      <span className="flex items-center gap-2">FAMILY <Home size={20} /></span>,
-                      <span className="flex items-center gap-2">VOICE <Mic2 size={20} /></span>,
-                      <span className="flex items-center gap-2">VIBE <Sparkles size={20} /></span>,
-                      <span className="flex items-center gap-2">CHAOS <Tornado size={20} /></span>,
-                      <span className="flex items-center gap-2">DRAMA <Theater size={20} /></span>,
-                      <span className="flex items-center gap-2">RANT <Flame size={20} /></span>,
-                      <span className="flex items-center gap-2">SECRET <Fingerprint size={20} /></span>,
-                      <span className="flex items-center gap-2">MEMES <Laugh size={20} /></span>,
-                      <span className="flex items-center gap-2">HOT TAKE <Flame size={20} /></span>
-                      <span className="flex items-center gap-2">GROUP CHAT <UserPlus size={20} /></span>,
-                      <span className="flex items-center gap-2">DATA <ShieldCheck size={20} /></span>,
-                    ]}
+                  texts={[
+                    <span className="flex items-center gap-2">
+                      OPINION <MessageSquareQuote size={20} />
+                    </span>,
+                    <span className="flex items-center gap-2">
+                      MESSAGE <MessageSquare size={20} />
+                    </span>,
+                    <span className="flex items-center gap-2">
+                      REACTION <Smile size={20} />
+                    </span>,
+                    <span className="flex items-center gap-2">
+                      COMMUNITY <Users size={20} />
+                    </span>,
+                    <span className="flex items-center gap-2">
+                      FRIENDS <Heart size={20} />
+                    </span>,
+                    <span className="flex items-center gap-2">
+                      FAMILY <Home size={20} />
+                    </span>,
+                    <span className="flex items-center gap-2">
+                      VOICE <Mic2 size={20} />
+                    </span>,
+                    <span className="flex items-center gap-2">
+                      VIBE <Sparkles size={20} />
+                    </span>,
+                    <span className="flex items-center gap-2">
+                      CHAOS <Tornado size={20} />
+                    </span>,
+                    <span className="flex items-center gap-2">
+                      DRAMA <Theater size={20} />
+                    </span>,
+                    <span className="flex items-center gap-2">
+                      RANT <Flame size={20} />
+                    </span>,
+                    <span className="flex items-center gap-2">
+                      SECRET <Fingerprint size={20} />
+                    </span>,
+                    <span className="flex items-center gap-2">
+                      MEMES <Laugh size={20} />
+                    </span>,
+                    <span className="flex items-center gap-2">
+                      HOT TAKE <Flame size={20} />
+                    </span>,
+                    <span className="flex items-center gap-2">
+                      GROUP CHAT <UserPlus size={20} />
+                    </span>,
+                    <span className="flex items-center gap-2">
+                      DATA <ShieldCheck size={20} />
+                    </span>,
+                  ]}
                   mainClassName="text-background px-2 sm:px-3 bg-primary overflow-hidden py-1 sm:py-1.5 justify-center rounded-lg my-2 sm:my-3"
                   staggerFrom="last"
                   initial={{ y: "100%" }}
