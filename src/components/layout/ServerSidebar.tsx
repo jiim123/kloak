@@ -216,7 +216,7 @@ const FolderItem = ({
         </TooltipContent>
       </Tooltip>
 
-      <ContextMenuContent>
+      <ContextMenuContent className="w-52 rounded-xl border-border/50 p-1.5">
         <ContextMenuItem
           onSelect={(e) => {
             e.preventDefault();
