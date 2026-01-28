@@ -30,38 +30,62 @@ const Index = () => {
           <HeroAscii />
 
           {/* The Problem Section */}
-          <section className="relative py-32 px-8 lg:px-16 border-t border-border/20 overflow-hidden">
-            <div className="max-w-7xl mx-auto">
+          <section className="relative py-48 px-8 lg:px-16 border-t border-border/20 overflow-hidden">
+            <div className="max-w-4xl mx-auto">
               <motion.div
-                className="grid lg:grid-cols-2 gap-16 items-start"
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.8 }}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: "-100px" }}
+                className="flex flex-col items-center text-center space-y-12"
               >
-                <div>
-                  <div className="flex items-start gap-4">
-                    <h2 className="landing-section-title font-normal text-foreground leading-tight">
-                      <span className="text-primary">Kloak exists for people.</span>
-                    </h2>
-                  </div>
-                </div>
+                {/* Narrative Block 1 */}
+                <motion.p
+                  variants={{
+                    hidden: { opacity: 0, y: 20 },
+                    visible: {
+                      opacity: 1,
+                      y: 0,
+                      transition: { staggerChildren: 0.08, delayChildren: 0.2 },
+                    },
+                  }}
+                  className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-light text-foreground leading-tight tracking-tight"
+                >
+                  {"The internet used to be a place where we just talked. Now, it's a place where we are harvested."
+                    .split(" ")
+                    .map((word, i) => (
+                      <motion.span
+                        key={i}
+                        variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}
+                        className="inline-block mr-2"
+                      >
+                        {word}
+                      </motion.span>
+                    ))}
+                </motion.p>
 
-                <div className="relative">
-                  <div className="space-y-8">
-                    <p className="landing-body text-primary text-sm/6 md:text-sm/6 max-w-xl">
-                      The internet used to be a place where we just talked. Now, it's a place where we are harvested.
-                      From the girl sharing her day on a laptop to the dev venting in his office, most platforms treat
-                      your human connections as data assets to be sold on a stock exchange.
-                    </p>
-                    <p className="landing-body text-primary text-sm/6 md:text-sm/6 max-w-xl">
-                      We didn't build Kloak to collect "users", we built it to protect{" "}
-                      <span className="text-foreground font-medium">people</span>. Because whether you're hanging out
-                      with friends, connecting, gaming or discussing internal work, your privacy isn't a feature we
-                      "allow" you to have; it's a human right we physically cannot take away.
-                    </p>
-                  </div>
-                </div>
+                {/* Narrative Block 2 */}
+                <motion.p
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 1.5, duration: 1 }}
+                  className="text-lg md:text-xl text-primary/80 max-w-2xl leading-relaxed"
+                >
+                  From the girl sharing her day on a laptop to the dev venting in his office—most platforms treat your
+                  connections as data assets to be sold on a stock exchange.
+                </motion.p>
+
+                {/* Narrative Block 3 (The Punchline) */}
+                <motion.p
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 2.2, duration: 1 }}
+                  className="text-lg md:text-xl text-primary/80 max-w-2xl leading-relaxed"
+                >
+                  We didn't build Kloak to collect "users," we built it to protect{" "}
+                  <span className="text-foreground font-semibold">people</span>. Because your privacy isn't a feature we
+                  allow you to have;{" "}
+                  <span className="text-foreground italic">it's a human right we physically cannot take away.</span>
+                </motion.p>
               </motion.div>
             </div>
           </section>
