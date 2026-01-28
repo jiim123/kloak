@@ -94,8 +94,7 @@ const UncategorizedDropZone = ({
       ref={setNodeRef}
       className={cn(
         "transition-all duration-200",
-        (isOver || isDragOver) &&
-          "ring-2 ring-primary/50 ring-offset-2 ring-offset-layout-sidebar-secondary rounded-md p-1 mb-2",
+        (isOver || isDragOver) && "ring-2 ring-primary/50 ring-offset-2 ring-offset-card/50 rounded-md p-1 mb-2",
         !hasChannels && (isOver || isDragOver) && "min-h-[60px] flex items-center justify-center",
       )}
     >
@@ -392,8 +391,7 @@ const SortableCategory = ({
       style={style}
       className={cn(
         "mb-4 transition-all duration-200",
-        (isOver || isDragOver) &&
-          "ring-2 ring-primary/50 ring-offset-2 ring-offset-layout-sidebar-secondary rounded-md",
+        (isOver || isDragOver) && "ring-2 ring-primary/50 ring-offset-2 ring-offset-card/50 rounded-md",
       )}
     >
       {/* Category header */}
@@ -825,8 +823,8 @@ export const ChannelSidebar = () => {
 
   if (!currentServer) {
     return (
-      <div className="h-full flex flex-col p-2">
-        <div className="flex-1 flex flex-col bg-card/50 rounded-2xl border border-border/50">
+      <div className="h-full flex flex-col p-2 bg-layout-sidebar">
+        <div className="flex-1 flex flex-col bg-card/50 rounded-2xl border border-border/50 items-center justify-center">
           <div className="text-center animate-fade-in">
             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-secondary/50 flex items-center justify-center">
               <Hash className="w-8 h-8 text-muted-foreground/50" />
@@ -839,300 +837,304 @@ export const ChannelSidebar = () => {
   }
 
   return (
-    <div className="h-full flex flex-col bg-layout-sidebar-secondary">
-      {/* Server header with banner */}
-      <div className="relative">
-        {/* Server banner with smooth fade out effect */}
-        {currentServer.banner_url && (
-          <div className="relative h-20 sm:h-24 overflow-hidden">
-            <img
-              src={currentServer.banner_url}
-              alt={`${currentServer.name} banner`}
-              className="w-full h-full object-cover"
-            />
-            {/* Smooth fade out gradient overlay */}
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                background:
-                  "linear-gradient(to bottom, transparent 0%, transparent 40%, hsl(var(--sidebar-secondary)) 100%)",
-              }}
-            />
-          </div>
-        )}
+    <div className="h-full flex flex-col p-2 bg-layout-sidebar">
+      <div className="flex-1 flex flex-col bg-card/50 rounded-2xl border border-border/50 overflow-hidden">
+        {/* Server header with banner */}
+        <div className="relative">
+          {/* Server banner with smooth fade out effect */}
+          {currentServer.banner_url && (
+            <div className="relative h-20 sm:h-24 overflow-hidden rounded-t-2xl">
+              <img
+                src={currentServer.banner_url}
+                alt={`${currentServer.name} banner`}
+                className="w-full h-full object-cover"
+              />
+              {/* Smooth fade out gradient overlay */}
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background:
+                    "linear-gradient(to bottom, transparent 0%, transparent 40%, hsl(var(--card) / 0.5) 100%)",
+                }}
+              />
+            </div>
+          )}
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              className={cn(
-                "h-12 px-4 flex items-center justify-between border-b border-border/50 hover:bg-secondary/50 cursor-pointer w-full text-left transition-colors active:scale-[0.99]",
-                currentServer.banner_url && "border-t-0",
-              )}
-            >
-              <h2 className="font-normal text-lg text-foreground truncate">{currentServer.name}</h2>
-              <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-            </button>
-          </DropdownMenuTrigger>
-
-          <DropdownMenuContent
-            className="w-56 p-1.5 rounded-xl border-border/50 bg-popover/95 backdrop-blur-xl shadow-xl"
-            align="start"
-            sideOffset={4}
-          >
-            {/* Invite People */}
-            <DropdownMenuItem
-              onClick={() => openModal("invite", { serverId: currentServer.id })}
-              className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-secondary/60 focus:bg-secondary/80 transition-colors"
-            >
-              <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <UserPlus className="w-3.5 h-3.5 text-primary" />
-              </div>
-              <span className="text-sm font-medium">Invite People</span>
-            </DropdownMenuItem>
-
-            {canSeeServerSettings && (
-              <>
-                <DropdownMenuSeparator className="my-1 bg-border/50" />
-
-                {/* Server Settings */}
-                <DropdownMenuItem
-                  onClick={() => {
-                    if (isMobile) {
-                      openServerSettings();
-                      closeMobileSidebars();
-                      return;
-                    }
-                    openServerSettingsPage();
-                  }}
-                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-secondary/60 focus:bg-secondary/80 transition-colors"
-                >
-                  <div className="w-6 h-6 rounded-lg bg-secondary/80 flex items-center justify-center flex-shrink-0">
-                    <Settings className="w-3.5 h-3.5 text-muted-foreground" />
-                  </div>
-                  <span className="text-sm font-medium">Server Settings</span>
-                </DropdownMenuItem>
-
-                {canManageChannels && (
-                  <>
-                    {/* Create Channel */}
-                    <DropdownMenuItem
-                      onClick={() => openModal("create-channel", { serverId: currentServer.id })}
-                      className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-secondary/60 focus:bg-secondary/80 transition-colors"
-                    >
-                      <div className="w-6 h-6 rounded-lg bg-secondary/80 flex items-center justify-center flex-shrink-0">
-                        <Hash className="w-3.5 h-3.5 text-muted-foreground" />
-                      </div>
-                      <span className="text-sm font-medium">Create Channel</span>
-                    </DropdownMenuItem>
-
-                    {/* Create Category */}
-                    <DropdownMenuItem
-                      onClick={() => openModal("create-channel", { serverId: currentServer.id, isCategory: true })}
-                      className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-secondary/60 focus:bg-secondary/80 transition-colors"
-                    >
-                      <div className="w-6 h-6 rounded-lg bg-secondary/80 flex items-center justify-center flex-shrink-0">
-                        <FolderPlus className="w-3.5 h-3.5 text-muted-foreground" />
-                      </div>
-                      <span className="text-sm font-medium">Create Category</span>
-                    </DropdownMenuItem>
-                  </>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className={cn(
+                  "h-12 px-4 flex items-center justify-between border-b border-border/50 hover:bg-secondary/50 cursor-pointer w-full text-left transition-colors active:scale-[0.99]",
+                  currentServer.banner_url && "border-t-0",
+                  !currentServer.banner_url && "rounded-t-2xl",
                 )}
-              </>
-            )}
+              >
+                <h2 className="font-normal text-lg text-foreground truncate">{currentServer.name}</h2>
+                <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              </button>
+            </DropdownMenuTrigger>
 
-            {!isOwner && (
-              <>
-                <DropdownMenuSeparator className="my-1 bg-border/50" />
+            <DropdownMenuContent
+              className="w-56 p-1.5 rounded-xl border-border/50 bg-popover/95 backdrop-blur-xl shadow-xl"
+              align="start"
+              sideOffset={4}
+            >
+              {/* Invite People */}
+              <DropdownMenuItem
+                onClick={() => openModal("invite", { serverId: currentServer.id })}
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-secondary/60 focus:bg-secondary/80 transition-colors"
+              >
+                <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <UserPlus className="w-3.5 h-3.5 text-primary" />
+                </div>
+                <span className="text-sm font-medium">Invite People</span>
+              </DropdownMenuItem>
 
-                {/* Leave Server */}
-                <DropdownMenuItem
-                  onClick={handleLeaveServer}
-                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer text-destructive hover:bg-destructive/10 focus:text-destructive focus:bg-destructive/10 transition-colors"
-                >
-                  <div className="w-6 h-6 rounded-lg bg-destructive/10 flex items-center justify-center flex-shrink-0">
-                    <LogOut className="w-3.5 h-3.5" />
-                  </div>
-                  <span className="text-sm font-medium">Leave Server</span>
-                </DropdownMenuItem>
-              </>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+              {canSeeServerSettings && (
+                <>
+                  <DropdownMenuSeparator className="my-1 bg-border/50" />
 
-      {/* Channel list */}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDragEnd={handleDragEnd}
-      >
-        <ContextMenu>
-          <ContextMenuTrigger asChild>
-            <div className="flex-1 overflow-y-auto scrollbar-overlay p-2 scrollbar-hide">
-              {/* Default sections */}
-              <div className="mb-3 space-y-0.5">
-                <button
-                  onClick={handleSelectOverview}
-                  className={cn(
-                    "group relative w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-all duration-150 select-none",
-                    "hover:bg-secondary/80",
-                    isOverviewActive && "bg-secondary text-foreground",
-                    !isOverviewActive && "text-muted-foreground hover:text-foreground",
+                  {/* Server Settings */}
+                  <DropdownMenuItem
+                    onClick={() => {
+                      if (isMobile) {
+                        openServerSettings();
+                        closeMobileSidebars();
+                        return;
+                      }
+                      openServerSettingsPage();
+                    }}
+                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-secondary/60 focus:bg-secondary/80 transition-colors"
+                  >
+                    <div className="w-6 h-6 rounded-lg bg-secondary/80 flex items-center justify-center flex-shrink-0">
+                      <Settings className="w-3.5 h-3.5 text-muted-foreground" />
+                    </div>
+                    <span className="text-sm font-medium">Server Settings</span>
+                  </DropdownMenuItem>
+
+                  {canManageChannels && (
+                    <>
+                      {/* Create Channel */}
+                      <DropdownMenuItem
+                        onClick={() => openModal("create-channel", { serverId: currentServer.id })}
+                        className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-secondary/60 focus:bg-secondary/80 transition-colors"
+                      >
+                        <div className="w-6 h-6 rounded-lg bg-secondary/80 flex items-center justify-center flex-shrink-0">
+                          <Hash className="w-3.5 h-3.5 text-muted-foreground" />
+                        </div>
+                        <span className="text-sm font-medium">Create Channel</span>
+                      </DropdownMenuItem>
+
+                      {/* Create Category */}
+                      <DropdownMenuItem
+                        onClick={() => openModal("create-channel", { serverId: currentServer.id, isCategory: true })}
+                        className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-secondary/60 focus:bg-secondary/80 transition-colors"
+                      >
+                        <div className="w-6 h-6 rounded-lg bg-secondary/80 flex items-center justify-center flex-shrink-0">
+                          <FolderPlus className="w-3.5 h-3.5 text-muted-foreground" />
+                        </div>
+                        <span className="text-sm font-medium">Create Category</span>
+                      </DropdownMenuItem>
+                    </>
                   )}
-                >
-                  {/* Active indicator */}
-                  <div
-                    className={cn(
-                      "absolute -left-2 top-0 bottom-0 w-1 bg-primary rounded-full transition-opacity duration-150",
-                      isOverviewActive ? "opacity-100" : "opacity-0",
-                    )}
-                  />
-                  <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
-                    <Info
-                      className={cn(
-                        "w-4 h-4 flex-shrink-0 transition-colors translate-y-[0.5px]",
-                        isOverviewActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground",
-                      )}
-                    />
-                  </div>
-                  <span className="truncate flex-1 text-left">Overview</span>
-                </button>
+                </>
+              )}
 
-                {(isOwner || canManageServer) && (
+              {!isOwner && (
+                <>
+                  <DropdownMenuSeparator className="my-1 bg-border/50" />
+
+                  {/* Leave Server */}
+                  <DropdownMenuItem
+                    onClick={handleLeaveServer}
+                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer text-destructive hover:bg-destructive/10 focus:text-destructive focus:bg-destructive/10 transition-colors"
+                  >
+                    <div className="w-6 h-6 rounded-lg bg-destructive/10 flex items-center justify-center flex-shrink-0">
+                      <LogOut className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="text-sm font-medium">Leave Server</span>
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Channel list */}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+        >
+          <ContextMenu>
+            <ContextMenuTrigger asChild>
+              <div className="flex-1 overflow-y-auto scrollbar-overlay p-2 scrollbar-hide">
+                {/* Default sections */}
+                <div className="mb-3 space-y-0.5">
                   <button
-                    onClick={handleSelectMembers}
+                    onClick={handleSelectOverview}
                     className={cn(
                       "group relative w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-all duration-150 select-none",
                       "hover:bg-secondary/80",
-                      isMembersActive && "bg-secondary text-foreground",
-                      !isMembersActive && "text-muted-foreground hover:text-foreground",
+                      isOverviewActive && "bg-secondary text-foreground",
+                      !isOverviewActive && "text-muted-foreground hover:text-foreground",
                     )}
                   >
                     {/* Active indicator */}
                     <div
                       className={cn(
                         "absolute -left-2 top-0 bottom-0 w-1 bg-primary rounded-full transition-opacity duration-150",
-                        isMembersActive ? "opacity-100" : "opacity-0",
+                        isOverviewActive ? "opacity-100" : "opacity-0",
                       )}
                     />
                     <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
-                      <Users
+                      <Info
                         className={cn(
                           "w-4 h-4 flex-shrink-0 transition-colors translate-y-[0.5px]",
-                          isMembersActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground",
+                          isOverviewActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground",
                         )}
                       />
                     </div>
-                    <span className="truncate flex-1 text-left">Members</span>
+                    <span className="truncate flex-1 text-left">Overview</span>
                   </button>
-                )}
-              </div>
 
-              {/* Uncategorized channels */}
-              <UncategorizedDropZone
-                isDragOver={overCategoryId === null && activeType === "channel"}
-                hasChannels={uncategorizedChannels.length > 0}
-              >
-                {uncategorizedChannels.length > 0 && (
-                  <div className="mb-4 space-y-0.5">
-                    <SortableContext
-                      items={uncategorizedChannels.map((c) => c.id)}
-                      strategy={verticalListSortingStrategy}
+                  {(isOwner || canManageServer) && (
+                    <button
+                      onClick={handleSelectMembers}
+                      className={cn(
+                        "group relative w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-all duration-150 select-none",
+                        "hover:bg-secondary/80",
+                        isMembersActive && "bg-secondary text-foreground",
+                        !isMembersActive && "text-muted-foreground hover:text-foreground",
+                      )}
                     >
-                      {uncategorizedChannels.map((channel) => {
-                        const { unreadCount, mentionCount } = getChannelUnread(channel.id);
-                        return (
-                          <SortableChannel
-                            key={channel.id}
-                            channel={channel}
-                            isActive={currentChannel?.id === channel.id}
-                            isUnread={unreadCount > 0}
-                            mentionCount={mentionCount}
-                            isAdmin={isAdmin}
-                            voiceUserIds={voicePresenceByChannel[channel.id]}
-                            resolveUser={resolveUser}
-                            onSelect={() => handleSelectChannel(channel)}
-                            onEdit={() => openModal("edit-channel", { channelId: channel.id })}
-                            onDelete={() => handleDeleteChannel(channel.id)}
-                            onCopyLink={() => handleCopyChannelLink(channel.id)}
-                          />
-                        );
-                      })}
-                    </SortableContext>
-                  </div>
-                )}
-              </UncategorizedDropZone>
-
-              {/* Categories */}
-              <SortableContext items={sortedCategories.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-                {sortedCategories.map((category) => (
-                  <SortableCategory
-                    key={category.id}
-                    category={category}
-                    channels={getChannelsForCategory(category.id)}
-                    isCollapsed={collapsedCategories.has(category.id)}
-                    isAdmin={isAdmin}
-                    currentChannelId={currentChannel?.id}
-                    getChannelUnread={getChannelUnread}
-                    onToggle={() => toggleCategory(category.id)}
-                    onSelectChannel={handleSelectChannel}
-                    onAddChannel={() => openModal("create-channel", { categoryId: category.id })}
-                    onEditChannel={(channelId) => openModal("edit-channel", { channelId })}
-                    onEditCategory={() => openModal("edit-channel", { isCategory: true, categoryId: category.id })}
-                    onDeleteCategory={() => handleDeleteCategory(category.id)}
-                    onDeleteChannel={handleDeleteChannel}
-                    onCopyChannelLink={handleCopyChannelLink}
-                    isDragOver={overCategoryId === category.id && activeType === "channel"}
-                    voicePresenceByChannel={voicePresenceByChannel}
-                    resolveUser={resolveUser}
-                  />
-                ))}
-              </SortableContext>
-
-              {/* Empty state */}
-              {channels.length === 0 && categories.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-12 text-center animate-fade-in">
-                  <div className="w-12 h-12 rounded-xl bg-secondary/50 flex items-center justify-center mb-3">
-                    <Hash className="w-6 h-6 text-muted-foreground/50" />
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-2">No channels yet</p>
-                  {isAdmin && (
-                    <Button
-                      variant="link"
-                      size="sm"
-                      onClick={() => openModal("create-channel", { serverId: currentServer.id })}
-                    >
-                      Create a channel
-                    </Button>
+                      {/* Active indicator */}
+                      <div
+                        className={cn(
+                          "absolute -left-2 top-0 bottom-0 w-1 bg-primary rounded-full transition-opacity duration-150",
+                          isMembersActive ? "opacity-100" : "opacity-0",
+                        )}
+                      />
+                      <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
+                        <Users
+                          className={cn(
+                            "w-4 h-4 flex-shrink-0 transition-colors translate-y-[0.5px]",
+                            isMembersActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground",
+                          )}
+                        />
+                      </div>
+                      <span className="truncate flex-1 text-left">Members</span>
+                    </button>
                   )}
                 </div>
-              )}
-            </div>
-          </ContextMenuTrigger>
-          {isAdmin && (
-            <ContextMenuContent>
-              <ContextMenuItem
-                onClick={() => openModal("create-channel", { serverId: currentServer.id, isCategory: true })}
-              >
-                <FolderPlus className="w-4 h-4 mr-2" />
-                Create Category
-              </ContextMenuItem>
-              <ContextMenuSeparator />
-              <ContextMenuItem onClick={() => openModal("create-channel", { serverId: currentServer.id })}>
-                <Plus className="w-4 h-4 mr-2" />
-                Create Channel
-              </ContextMenuItem>
-            </ContextMenuContent>
-          )}
-        </ContextMenu>
 
-        <DragOverlay>{getActiveItem()}</DragOverlay>
-      </DndContext>
+                {/* Uncategorized channels */}
+                <UncategorizedDropZone
+                  isDragOver={overCategoryId === null && activeType === "channel"}
+                  hasChannels={uncategorizedChannels.length > 0}
+                >
+                  {uncategorizedChannels.length > 0 && (
+                    <div className="mb-4 space-y-0.5">
+                      <SortableContext
+                        items={uncategorizedChannels.map((c) => c.id)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        {uncategorizedChannels.map((channel) => {
+                          const { unreadCount, mentionCount } = getChannelUnread(channel.id);
+                          return (
+                            <SortableChannel
+                              key={channel.id}
+                              channel={channel}
+                              isActive={currentChannel?.id === channel.id}
+                              isUnread={unreadCount > 0}
+                              mentionCount={mentionCount}
+                              isAdmin={isAdmin}
+                              voiceUserIds={voicePresenceByChannel[channel.id]}
+                              resolveUser={resolveUser}
+                              onSelect={() => handleSelectChannel(channel)}
+                              onEdit={() => openModal("edit-channel", { channelId: channel.id })}
+                              onDelete={() => handleDeleteChannel(channel.id)}
+                              onCopyLink={() => handleCopyChannelLink(channel.id)}
+                            />
+                          );
+                        })}
+                      </SortableContext>
+                    </div>
+                  )}
+                </UncategorizedDropZone>
 
-      <VoiceConnectedBanner />
-      <LoggedInUserPanel />
+                {/* Categories */}
+                <SortableContext items={sortedCategories.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+                  {sortedCategories.map((category) => (
+                    <SortableCategory
+                      key={category.id}
+                      category={category}
+                      channels={getChannelsForCategory(category.id)}
+                      isCollapsed={collapsedCategories.has(category.id)}
+                      isAdmin={isAdmin}
+                      currentChannelId={currentChannel?.id}
+                      getChannelUnread={getChannelUnread}
+                      onToggle={() => toggleCategory(category.id)}
+                      onSelectChannel={handleSelectChannel}
+                      onAddChannel={() => openModal("create-channel", { categoryId: category.id })}
+                      onEditChannel={(channelId) => openModal("edit-channel", { channelId })}
+                      onEditCategory={() => openModal("edit-channel", { isCategory: true, categoryId: category.id })}
+                      onDeleteCategory={() => handleDeleteCategory(category.id)}
+                      onDeleteChannel={handleDeleteChannel}
+                      onCopyChannelLink={handleCopyChannelLink}
+                      isDragOver={overCategoryId === category.id && activeType === "channel"}
+                      voicePresenceByChannel={voicePresenceByChannel}
+                      resolveUser={resolveUser}
+                    />
+                  ))}
+                </SortableContext>
+
+                {/* Empty state */}
+                {channels.length === 0 && categories.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-12 text-center animate-fade-in">
+                    <div className="w-12 h-12 rounded-xl bg-secondary/50 flex items-center justify-center mb-3">
+                      <Hash className="w-6 h-6 text-muted-foreground/50" />
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-2">No channels yet</p>
+                    {isAdmin && (
+                      <Button
+                        variant="link"
+                        size="sm"
+                        onClick={() => openModal("create-channel", { serverId: currentServer.id })}
+                      >
+                        Create a channel
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </ContextMenuTrigger>
+            {isAdmin && (
+              <ContextMenuContent>
+                <ContextMenuItem
+                  onClick={() => openModal("create-channel", { serverId: currentServer.id, isCategory: true })}
+                >
+                  <FolderPlus className="w-4 h-4 mr-2" />
+                  Create Category
+                </ContextMenuItem>
+                <ContextMenuSeparator />
+                <ContextMenuItem onClick={() => openModal("create-channel", { serverId: currentServer.id })}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Channel
+                </ContextMenuItem>
+              </ContextMenuContent>
+            )}
+          </ContextMenu>
+
+          <DragOverlay>{getActiveItem()}</DragOverlay>
+        </DndContext>
+
+        {/* Voice and User panels inside the floating card */}
+        <VoiceConnectedBanner />
+        <LoggedInUserPanel />
+      </div>
     </div>
   );
 };
