@@ -229,9 +229,11 @@ const Index = () => {
                   <span className="text-xs font-mono text-primary tracking-widest uppercase">The Problem</span>
                 </div>
                 <div className="flex items-start gap-4">
-                  <div className="hidden md:block w-px h-20 bg-gradient-to-b from-primary/50 to-transparent" />
-                  <h2 className="landing-section-title text-foreground max-w-3xl">
-                    What they take. <span className="text-primary">What we don't.</span>
+                  <div className="hidden md:block w-px h-24 bg-gradient-to-b from-primary/50 to-transparent" />
+                  <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
+                    What they take.
+                    <br />
+                    <span className="text-primary/60">What we don't.</span>
                   </h2>
                 </div>
               </motion.div>
@@ -325,9 +327,11 @@ const Index = () => {
                   <span className="text-xs font-mono text-primary tracking-widest uppercase">Capabilities</span>
                 </div>
                 <div className="flex items-start gap-4">
-                  <div className="hidden md:block w-px h-20 bg-gradient-to-b from-primary/50 to-transparent" />
-                  <h2 className="landing-section-title text-foreground max-w-2xl">
-                    Everything you need. <span className="text-primary">Nothing you don't.</span>
+                  <div className="hidden md:block w-px h-24 bg-gradient-to-b from-primary/50 to-transparent" />
+                  <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
+                    Everything you need.
+                    <br />
+                    <span className="text-primary/60">Nothing you don't.</span>
                   </h2>
                 </div>
               </motion.div>
@@ -425,9 +429,11 @@ const Index = () => {
                   <span className="text-xs font-mono text-primary tracking-widest uppercase">Our Principles</span>
                 </div>
                 <div className="flex items-start gap-4">
-                  <div className="hidden md:block w-px h-20 bg-gradient-to-b from-primary/50 to-transparent" />
-                  <h2 className="landing-section-title text-foreground max-w-2xl">
-                    Privacy isn't a feature. <span className="text-primary">It's the architecture.</span>
+                  <div className="hidden md:block w-px h-24 bg-gradient-to-b from-primary/50 to-transparent" />
+                  <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
+                    Privacy isn't a feature.
+                    <br />
+                    <span className="text-primary/60">It's the architecture.</span>
                   </h2>
                 </div>
               </motion.div>
@@ -500,10 +506,12 @@ const Index = () => {
                   <span className="text-xs font-mono text-primary tracking-widest uppercase">Your Space</span>
                 </div>
                 <div className="flex items-start gap-4">
-                  <div className="hidden md:block w-px h-20 bg-gradient-to-b from-primary/50 to-transparent" />
+                  <div className="hidden md:block w-px h-24 bg-gradient-to-b from-primary/50 to-transparent" />
                   <div>
-                    <h2 className="landing-section-title text-foreground max-w-3xl mb-4">
-                      Built for people who <span className="text-primary">make things.</span>
+                    <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight mb-6">
+                      Built for people who
+                      <br />
+                      <span className="text-primary/60">make things.</span>
                     </h2>
                     <p className="landing-body text-muted-foreground max-w-2xl">
                       Whether you're coordinating a raid, mixing a track, or shipping a game—Kloak is the space where
@@ -594,9 +602,11 @@ const Index = () => {
                     <span className="text-xs font-mono text-primary tracking-widest uppercase">Philosophy</span>
                   </div>
                   <div className="flex items-start gap-4 mb-8">
-                    <div className="hidden md:block w-px h-20 bg-gradient-to-b from-primary/50 to-transparent" />
-                    <h2 className="landing-section-title text-foreground max-w-xl">
-                      Simplicity is a <span className="text-primary">feature.</span>
+                    <div className="hidden md:block w-px h-24 bg-gradient-to-b from-primary/50 to-transparent" />
+                    <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
+                      Simplicity is a
+                      <br />
+                      <span className="text-primary/60">feature.</span>
                     </h2>
                   </div>
                   <p className="landing-body text-muted-foreground mb-6">
@@ -678,8 +688,10 @@ const Index = () => {
                   <Key className="w-8 h-8 text-primary" />
                 </div>
 
-                <h2 className="landing-section-title text-foreground mb-6 max-w-2xl mx-auto">
-                  Your key. <span className="text-primary">Your community.</span>
+                <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight mb-6 max-w-2xl mx-auto">
+                  Your key.
+                  <br />
+                  <span className="text-primary/60">Your community.</span>
                 </h2>
 
                 <p className="landing-body text-muted-foreground mb-10 max-w-lg mx-auto">
@@ -694,10 +706,6 @@ const Index = () => {
                     </span>
                   </button>
                 </Link>
-
-                <p className="text-xs text-muted-foreground/50 mt-6 font-mono">
-                  No credit card required • No free trial that expires • Just Kloak
-                </p>
               </div>
             </motion.div>
           </section>
