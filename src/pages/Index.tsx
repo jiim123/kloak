@@ -28,7 +28,7 @@ const audienceGroups = [
   {
     name: "Gaming Communities",
     description:
-      "Coordinate raids, share strategies, and build your guild. Your voice comms and battle plans stay between you and your squad.",
+      "Coordinate raids, share strategies, or rage at your friend screwing up that 1v1. Your voice comms and battle plans stay between you and your squad.",
   },
   {
     name: "Musicians & Producers",
