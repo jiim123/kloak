@@ -33,9 +33,9 @@ export const HeroImage = () => {
         />
       </div>
 
-      {/* Centered single column content */}
+      {/* Full width content */}
       <div className="relative z-10 w-full min-h-screen flex items-center justify-center px-6 py-20">
-        <motion.div initial="initial" animate="animate" className="max-w-4xl text-center">
+        <motion.div initial="initial" animate="animate" className="w-full max-w-7xl text-center">
           {/* Tagline */}
           <motion.p
             variants={fadeIn}
