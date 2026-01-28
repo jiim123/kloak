@@ -108,13 +108,11 @@ const Index = () => {
                   transition={{ duration: 0.8 }}
                   className="space-y-8"
                 >
-                  <div className="flex items-start gap-4">
-                    <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
-                      A place to talk
-                      <br />
-                      <span className="text-primary/60">without being watched.</span>
-                    </h2>
-                  </div>
+                  <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
+                    A place to talk
+                    <br />
+                    <span className="text-primary/60">without being watched.</span>
+                  </h2>
 
                   <p className="text-lg md:text-xl text-primary leading-relaxed max-w-xl">
                     Kloak is where creative communities thrive—without surveillance, without algorithms, without your
@@ -204,7 +202,8 @@ const Index = () => {
                 transition={{ delay: 0.4, duration: 0.8 }}
                 className="text-center text-lg md:text-xl text-primary/60 max-w-2xl mx-auto mt-24"
               >
-                Other platforms promise privacy in their terms of service. We built Kloak so we physically cannot access your data—even if we wanted to.
+                Other platforms promise privacy in their terms of service. We built Kloak so we physically cannot access
+                your data—even if we wanted to.
               </motion.p>
             </div>
           </section>
@@ -223,13 +222,11 @@ const Index = () => {
                 <div className="flex items-center gap-4 mb-4">
                   <span className="text-xs font-mono text-primary tracking-widest uppercase">The Problem</span>
                 </div>
-                <div className="flex items-start gap-4">
-                  <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
-                    What they take.
-                    <br />
-                    <span className="text-primary/60">What we don't.</span>
-                  </h2>
-                </div>
+                <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
+                  What they take.
+                  <br />
+                  <span className="text-primary/60">What we don't.</span>
+                </h2>
               </motion.div>
 
               <motion.div
@@ -320,13 +317,11 @@ const Index = () => {
                 <div className="flex items-center gap-4 mb-4">
                   <span className="text-xs font-mono text-primary tracking-widest uppercase">Capabilities</span>
                 </div>
-                <div className="flex items-start gap-4">
-                   <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
-                    Everything you need.
-                    <br />
-                    <span className="text-primary/60">Nothing you don't.</span>
-                  </h2>
-                </div>
+                <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
+                  Everything you need.
+                  <br />
+                  <span className="text-primary/60">Nothing you don't.</span>
+                </h2>
               </motion.div>
 
               {/* Feature Grid - Matching Problem Section aesthetics */}
@@ -371,7 +366,6 @@ const Index = () => {
                   >
                     {/* Subtle corner accent matching Problem Section */}
                     <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-primary/5 to-transparent" />
-
                     <div className="flex items-start gap-4">
                       <div className="w-12 h-12 border border-primary/30 flex items-center justify-center shrink-0 group-hover:border-primary/50 transition-colors duration-300">
                         <feature.icon className="w-6 h-6 text-primary" />
@@ -386,6 +380,7 @@ const Index = () => {
                   </motion.div>
                 ))}
               </div>
+            </div>
           </section>
 
           {/* Principles Section */}
@@ -402,14 +397,11 @@ const Index = () => {
                 <div className="flex items-center gap-4 mb-4">
                   <span className="text-xs font-mono text-primary tracking-widest uppercase">Our Principles</span>
                 </div>
-                <div className="flex items-start gap-4">
-                  <div className="hidden md:block w-px h-24 bg-gradient-to-b from-primary/50 to-transparent" />
-                  <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
-                    Privacy isn't a feature.
-                    <br />
-                    <span className="text-primary/60">It's the architecture.</span>
-                  </h2>
-                </div>
+                <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
+                  Privacy isn't a feature.
+                  <br />
+                  <span className="text-primary/60">It's the architecture.</span>
+                </h2>
               </motion.div>
 
               <div className="grid md:grid-cols-2 gap-6">
@@ -479,20 +471,15 @@ const Index = () => {
                 <div className="flex items-center gap-4 mb-4">
                   <span className="text-xs font-mono text-primary tracking-widest uppercase">Your Space</span>
                 </div>
-                <div className="flex items-start gap-4">
-                  <div className="hidden md:block w-px h-24 bg-gradient-to-b from-primary/50 to-transparent" />
-                  <div>
-                    <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight mb-6">
-                      Built for
-                      <br />
-                      <span className="text-primary/60">people.</span>
-                    </h2>
-                    <p className="landing-body text-muted-foreground max-w-2xl">
-                      Whether you're coordinating a raid, mixing a track, or simply just talking to friends and famly, Kloak is the space where
-                      your communication lives without being monetized.
-                    </p>
-                  </div>
-                </div>
+                <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight mb-6">
+                  Built for
+                  <br />
+                  <span className="text-primary/60">people.</span>
+                </h2>
+                <p className="landing-body text-muted-foreground max-w-2xl">
+                  Whether you're coordinating a raid, mixing a track, or simply just talking to friends and family,
+                  Kloak is the space where your communication lives without being monetized.
+                </p>
               </motion.div>
 
               {/* Creator Cards Grid */}
@@ -546,7 +533,6 @@ const Index = () => {
                         <card.icon className="w-6 h-6 text-primary" />
                       </div>
                     </div>
-
                     {/* Content */}
                     <div className="relative">
                       <h3 className="landing-card-title text-foreground mb-2 text-base">{card.title}</h3>
@@ -558,7 +544,7 @@ const Index = () => {
             </div>
           </section>
 
-          {/* Simplicity Section - NEW */}
+          {/* Simplicity Section */}
           <section className="relative py-32 px-8 lg:px-16 bg-card/50 border-b border-border/20 overflow-hidden">
             <div className="max-w-7xl mx-auto">
               <div className="grid lg:grid-cols-2 gap-16 items-center">
@@ -572,14 +558,11 @@ const Index = () => {
                   <div className="flex items-center gap-4 mb-4">
                     <span className="text-xs font-mono text-primary tracking-widest uppercase">Philosophy</span>
                   </div>
-                  <div className="flex items-start gap-4 mb-8">
-                    <div className="hidden md:block w-px h-24 bg-gradient-to-b from-primary/50 to-transparent" />
-                    <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
-                      Simplicity is a
-                      <br />
-                      <span className="text-primary/60">feature.</span>
-                    </h2>
-                  </div>
+                  <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight mb-8">
+                    Simplicity is a
+                    <br />
+                    <span className="text-primary/60">feature.</span>
+                  </h2>
                   <p className="landing-body text-muted-foreground mb-6">
                     Most platforms bloat over time—adding features to justify subscription tiers, complexity to create
                     lock-in, dark patterns to maximize engagement.
@@ -620,7 +603,6 @@ const Index = () => {
                           </span>
                         </motion.div>
                       ))}
-
                       <div className="pt-4 mt-4 border-t border-border/30">
                         <motion.div
                           className="flex items-center gap-3"
@@ -654,21 +636,17 @@ const Index = () => {
                 <div className="flex items-center justify-center gap-4 mb-6">
                   <span className="text-xs font-mono text-primary tracking-widest uppercase">Get Started</span>
                 </div>
-
                 <div className="w-16 h-16 border border-primary/30 flex items-center justify-center mx-auto mb-8">
                   <Key className="w-8 h-8 text-primary" />
                 </div>
-
                 <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight mb-6 max-w-2xl mx-auto">
                   Your key.
                   <br />
                   <span className="text-primary/60">Your community.</span>
                 </h2>
-
                 <p className="landing-body text-muted-foreground mb-10 max-w-lg mx-auto">
                   No signup forms. No email verification. Generate your cryptographic key and start building your space.
                 </p>
-
                 <Link to="/auth">
                   <button className="group relative px-10 py-4 bg-primary text-primary-foreground font-semibold transition-all duration-300 hover:bg-primary/90 uppercase tracking-wider">
                     <span className="flex items-center gap-2">
