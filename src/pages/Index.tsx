@@ -51,12 +51,12 @@ const Index = () => {
 
                 <div className="relative">
                   <div className="space-y-8">
-                    <p className="landing-body text-primary text-base md:text-lg max-w-xl">
+                    <p className="landing-body text-primary text-sm md:text-lg max-w-xl">
                       Whether you’re a girl at her laptop, a dev in his office, or just a group of friends looking for a
                       place to hang out—you’re being watched. While big platforms chase public IPOs, they aren’t selling
                       features; they’re selling your 2 AM vents and personal connections as "inventory."
                     </p>
-                    <p className="landing-body text-primary text-base md:text-lg max-w-xl">
+                    <p className="landing-body text-primary text-sm md:text-lg max-w-xl">
                       Kloak is the digital equivalent of drawing the blinds. We built this because professional venting
                       shouldn't be a career risk, and your daily life shouldn't be a data point. No logs, no leaks, and
                       no CEOs in your DMs.
