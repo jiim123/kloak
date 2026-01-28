@@ -47,7 +47,6 @@ const Index = () => {
               >
                 <div>
                   {/* Section header with ASCII style */}
-                  <div className="flex items-center gap-4 mb-4">
                   <div className="flex items-start gap-4">
                     <div className="hidden md:block w-px h-20 bg-gradient-to-b from-primary/50 to-transparent" />
                     <h2 className="landing-section-title text-foreground">
@@ -152,7 +151,9 @@ const Index = () => {
                         viewport={{ once: true }}
                         transition={{ duration: 0.4, delay: index * 0.05 }}
                       >
-                        <TableCell className="font-light text-foreground uppercase tracking-wider text-sm">{row.label}</TableCell>
+                        <TableCell className="font-light text-foreground uppercase tracking-wider text-sm">
+                          {row.label}
+                        </TableCell>
                         <TableCell className="text-center">
                           {row.others ? (
                             <div className="w-8 h-8 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
@@ -294,9 +295,7 @@ const Index = () => {
                         </span>
                         <div className="w-px h-12 bg-gradient-to-b from-primary/30 to-transparent" />
                         <div className="flex-1">
-                          <h3 className="landing-card-title text-foreground mb-3">
-                            {principle.title}
-                          </h3>
+                          <h3 className="landing-card-title text-foreground mb-3">{principle.title}</h3>
                           <p className="landing-body text-muted-foreground text-sm">{principle.description}</p>
                         </div>
                       </div>
@@ -364,9 +363,7 @@ const Index = () => {
 
                   <div className="flex items-center gap-4 mb-4">
                     <MessageCircle className="w-8 h-8 text-primary shrink-0" />
-                    <h3 className="landing-card-title text-foreground text-xl sm:text-2xl">
-                      Real-Time Messaging
-                    </h3>
+                    <h3 className="landing-card-title text-foreground text-xl sm:text-2xl">Real-Time Messaging</h3>
                   </div>
                   <p className="landing-body text-muted-foreground max-w-md text-sm">
                     Instant message delivery across servers, channels, and direct conversations. Built for speed without
@@ -390,9 +387,7 @@ const Index = () => {
 
                   <div className="flex items-center gap-3 mb-4">
                     <Lock className="w-7 h-7 text-primary shrink-0" />
-                    <h3 className="landing-card-title text-foreground text-lg sm:text-xl">
-                      Key-Based Auth
-                    </h3>
+                    <h3 className="landing-card-title text-foreground text-lg sm:text-xl">Key-Based Auth</h3>
                   </div>
                   <p className="landing-body text-muted-foreground text-sm">
                     One cryptographic key. Full control. No password managers, no recovery emails, no vulnerabilities.
@@ -438,9 +433,7 @@ const Index = () => {
 
                   <div className="flex items-center gap-4 mb-4">
                     <Zap className="w-8 h-8 text-primary shrink-0" />
-                    <h3 className="landing-card-title text-foreground text-xl sm:text-2xl">
-                      Modern Infrastructure
-                    </h3>
+                    <h3 className="landing-card-title text-foreground text-xl sm:text-2xl">Modern Infrastructure</h3>
                   </div>
                   <p className="landing-body text-muted-foreground max-w-md text-sm">
                     Built on a modern tech stack for performance and reliability. Fast, responsive, and built to scale
