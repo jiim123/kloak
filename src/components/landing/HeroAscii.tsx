@@ -17,7 +17,7 @@ export const HeroImage = () => {
       <div className="absolute inset-0">
         <Dithering
           style={{ width: "100%", height: "100%" }}
-          colorBack="#010101"
+          colorBack="#0F0F0F"
           colorFront="#a0a09c"
           shape="wave"
           type="8x8"
