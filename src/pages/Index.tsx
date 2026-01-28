@@ -48,10 +48,6 @@ const Index = () => {
                 <div>
                   {/* Section header with ASCII style */}
                   <div className="flex items-center gap-4 mb-4">
-                    <span className="text-xs font-mono text-primary/70">002</span>
-                    <div className="w-8 h-px bg-gradient-to-r from-primary/50 to-transparent" />
-                    <span className="text-xs font-mono text-primary tracking-widest uppercase">The Problem</span>
-                  </div>
                   <div className="flex items-start gap-4">
                     <div className="hidden md:block w-px h-20 bg-gradient-to-b from-primary/50 to-transparent" />
                     <h2 className="landing-section-title text-foreground">
@@ -61,12 +57,12 @@ const Index = () => {
                 </div>
                 <div className="relative">
                   <div className="space-y-6">
-                    <p className="landing-body text-muted-foreground">
+                    <p className="landing-body text-primary mb-10 text-sm sm:text-sm md:text-sm max-w-sm mx-auto">
                       Most platforms treat your conversations as inventory. Your words become data points. Your
                       relationships become ad targets. Your private moments become profit.
                     </p>
-                    <p className="landing-body text-muted-foreground">
-                      We built Kloak because we believe communication is a human right — not a business model.
+                    <p className="landing-body text-primary mb-10 text-sm sm:text-sm md:text-sm max-w-sm mx-auto">
+                      We built Kloak because we believe communication is a human right.
                     </p>
                   </div>
                   {/* Technical corner accent */}
