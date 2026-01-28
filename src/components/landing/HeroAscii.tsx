@@ -44,7 +44,7 @@ export const HeroImage = () => {
           <motion.div variants={fadeIn} transition={{ duration: 0.5, delay: 0.1 }} className="mb-8">
             <LayoutGroup>
               <motion.div
-                className="flex flex-col items-center justify-center text-6xl sm:text-4xl md:text-5xl lg:text-6xl font-light"
+                className="flex flex-col items-center justify-center text-3xl sm:text-4xl md:text-5xl lg:text-8xl font-light"
                 layout
               >
                 <motion.span
