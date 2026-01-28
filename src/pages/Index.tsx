@@ -23,7 +23,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center">
       <SEO {...SEO_CONFIG.home} />
-      <div className="w-full max-w-[1920px]">
+      <div className="w-full">
         <NavigationMenu />
         <main className="pt-10">
           {/* Hero Section */}
@@ -37,7 +37,7 @@ const Index = () => {
             <div className="absolute bottom-4 left-4 w-8 h-8 border-l border-b border-primary/20" />
             <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/20" />
 
-            <div className="max-w-6xl mx-auto">
+            <div className="w-full">
               <motion.div
                 className="grid lg:grid-cols-2 gap-16 items-start"
                 initial={{ opacity: 0 }}
@@ -97,7 +97,7 @@ const Index = () => {
             <div className="absolute bottom-4 left-4 w-8 h-8 border-l border-b border-primary/20" />
             <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/20" />
 
-            <div className="max-w-6xl mx-auto">
+            <div className="w-full">
               <motion.div
                 className="mb-16"
                 initial={{ opacity: 0, y: 20 }}
@@ -227,7 +227,7 @@ const Index = () => {
               }}
             />
 
-            <div className="max-w-6xl mx-auto relative">
+            <div className="w-full relative">
               <motion.div
                 className="mb-20"
                 initial={{ opacity: 0, y: 20 }}
@@ -328,7 +328,7 @@ const Index = () => {
             <div className="absolute bottom-4 left-4 w-8 h-8 border-l border-b border-primary/20" />
             <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/20" />
 
-            <div className="max-w-6xl mx-auto">
+            <div className="w-full">
               <motion.div
                 className="mb-20"
                 initial={{ opacity: 0, y: 20 }}
@@ -476,7 +476,7 @@ const Index = () => {
             <div className="absolute bottom-4 left-4 w-8 h-8 border-l border-b border-primary/20" />
             <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/20" />
 
-            <div className="max-w-6xl mx-auto">
+            <div className="w-full">
               {/* Section Header */}
               <motion.div
                 className="text-center mb-20"
@@ -693,7 +693,7 @@ const Index = () => {
             <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/30" />
 
             <motion.div
-              className="max-w-3xl mx-auto text-center relative"
+              className="w-full text-center relative"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
