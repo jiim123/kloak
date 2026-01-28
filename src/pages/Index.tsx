@@ -44,6 +44,7 @@ const Index = () => {
                     <h2 className="landing-section-title text-foreground leading-tight">
                       Kloak exists for <span className="text-primary font-normal">people.</span> <br />
                     </h2>
+                  </div>
                 </div>
 
                 <div className="relative">
