@@ -119,15 +119,6 @@ export const HeroImage = () => {
       </div>
 
       <div className="relative z-10 w-full min-h-screen flex items-center justify-center px-6 py-20">
-        <motion.div initial="initial" animate="animate" className="w-full text-center">
-          <motion.p
-            variants={fadeIn}
-            transition={{ duration: 0.5, delay: 0 }}
-            className="landing-body text-muted-foreground mb-6 text-sm"
-          >
-            For Gamers · Communities · Teams · Everyone
-          </motion.p>
-
           <motion.div variants={fadeIn} transition={{ duration: 0.5, delay: 0.1 }} className="mb-8">
             <LayoutGroup>
               <motion.div
