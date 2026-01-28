@@ -46,27 +46,40 @@ const Index = () => {
                 transition={{ duration: 0.8 }}
               >
                 <div>
-                  {/* Section header with ASCII style */}
+                  {/* Problem Section */}
+                <div className="space-y-12">
                   <div className="flex items-start gap-4">
-                    <div className="hidden md:block w-px h-20 bg-gradient-to-b from-primary/50 to-transparent" />
-                    <h2 className="landing-section-title text-foreground">
-                      Every message you send is <span className="text-primary">monetized.</span>
+                    <div className="hidden md:block w-px h-24 bg-gradient-to-b from-primary/50 to-transparent" />
+                    <h2 className="landing-section-title text-foreground leading-tight">
+                      Your private rants shouldn't be <br />
+                      <span className="text-primary font-semibold">company assets.</span>
                     </h2>
                   </div>
-                </div>
-                <div className="relative">
-                  <div className="space-y-6">
-                    <p className="landing-body text-primary mb-10 text-sm sm:text-sm md:text-sm max-w-sm mx-auto">
-                      Most platforms treat your conversations as inventory. Your words become data points. Your
-                      relationships become ad targets. Your private moments become profit.
-                    </p>
-                    <p className="landing-body text-primary mb-10 text-sm sm:text-sm md:text-sm max-w-sm mx-auto">
-                      We built Kloak because we believe communication is a human right.
-                    </p>
-                  </div>
-                  {/* Technical corner accent */}
-                  <div className="hidden md:block absolute -right-4 bottom-0 text-[8px] font-mono text-primary/40">
-                    <div className="border-l border-primary/20 pl-2">◇ DATA.EXPLOITATION</div>
+                
+                  <div className="relative">
+                    <div className="space-y-8">
+                      <p className="landing-body text-primary/80 text-sm sm:text-base md:text-md max-w-xl">
+                        Whether it's a 2 AM group chat or a work-related vent session, your words are being 
+                        harvested. While other platforms prepare for IPOs and data audits, they aren't 
+                        selling "features"—they're selling <span className="text-primary">you</span>.
+                      </p>
+                      
+                      <p className="landing-body text-primary/80 text-sm sm:text-base md:text-md max-w-xl">
+                        From the girl at her laptop to the dev in the server room, we all deserve a space 
+                        without a CEO at the door. We built <span className="font-bold text-primary">Kloak</span> to be 
+                        the digital equivalent of a whisper in a crowded room: 
+                        <span className="italic"> felt by friends, but invisible to the system.</span>
+                      </p>
+                    </div>
+                
+                    {/* Technical corner accent */}
+                    <div className="hidden md:block absolute -right-4 bottom-0 text-[8px] font-mono text-primary/40">
+                      <div className="border-l border-primary/20 pl-2 uppercase">
+                        ◇ SYSTEM.BLINDNESS
+                        <br />
+                        ◇ ZERO.KNOWLEDGE.AUTH
+                      </div>
+                    </div>
                   </div>
                 </div>
               </motion.div>
