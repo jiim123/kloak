@@ -49,12 +49,12 @@ const Index = () => {
 
                 <div className="relative">
                   <div className="space-y-8">
-                    <p className="landing-body text-primary text-sm md:text-sm max-w-xl">
+                    <p className="landing-body text-primary text-sm/6 md:text-sm/6 max-w-xl">
                       The internet used to be a place where we just talked. Now, it's a place where we are harvested.
                       From the girl sharing her day on a laptop to the dev venting in his office, most platforms treat
                       your human connections as data assets to be sold on a stock exchange.
                     </p>
-                    <p className="landing-body text-primary text-sm md:text-sm max-w-xl">
+                    <p className="landing-body text-primary text-sm/6 md:text-sm/6 max-w-xl">
                       We didn't build Kloak to collect "users"—we built it to protect{" "}
                       <span className="text-foreground font-medium">people</span>. Because whether you're hanging out
                       with friends or discussing internal work, your privacy isn't a feature we "allow" you to have;
