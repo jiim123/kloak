@@ -12,3 +12,27 @@ Allow: /
 
 User-agent: *
 Allow: /
+
+# Block OpenAI (ChatGPT)
+User-agent: GPTBot
+Disallow: /
+
+# Block OpenAI's User-browsing tool
+User-agent: ChatGPT-User
+Disallow: /
+
+# Block Google's AI (Gemini/Vertex AI)
+User-agent: Google-Extended
+Disallow: /
+
+# Block Anthropic (Claude)
+User-agent: anthropic-ai
+Disallow: /
+
+# Block Common Crawl (Used by many LLMs for training)
+User-agent: CCBot
+Disallow: /
+
+# Block Perplexity AI
+User-agent: PerplexityBot
+Disallow: /
