@@ -204,8 +204,7 @@ const Index = () => {
                 transition={{ delay: 0.4, duration: 0.8 }}
                 className="text-center text-lg md:text-xl text-primary/60 max-w-2xl mx-auto mt-24"
               >
-                Other platforms promise privacy in their terms of service. We built Kloak so we{" "}
-                <span className="text-foreground italic">physically cannot</span> access your data—even if we wanted to.
+                Other platforms promise privacy in their terms of service. We built Kloak so we physically cannot access your data—even if we wanted to.
               </motion.p>
             </div>
           </section>
@@ -225,7 +224,6 @@ const Index = () => {
                   <span className="text-xs font-mono text-primary tracking-widest uppercase">The Problem</span>
                 </div>
                 <div className="flex items-start gap-4">
-                  <div className="hidden md:block w-px h-24 bg-gradient-to-b from-primary/50 to-transparent" />
                   <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
                     What they take.
                     <br />
@@ -323,8 +321,7 @@ const Index = () => {
                   <span className="text-xs font-mono text-primary tracking-widest uppercase">Capabilities</span>
                 </div>
                 <div className="flex items-start gap-4">
-                  <div className="hidden md:block w-px h-24 bg-gradient-to-b from-primary/50 to-transparent" />
-                  <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
+                   <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
                     Everything you need.
                     <br />
                     <span className="text-primary/60">Nothing you don't.</span>
@@ -389,25 +386,6 @@ const Index = () => {
                   </motion.div>
                 ))}
               </div>
-
-              {/* Coming Soon - Voice */}
-              <motion.div
-                className="mt-6 border border-dashed border-border/40 p-8 text-center"
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: 0.4 }}
-              >
-                <div className="flex items-center justify-center gap-3 mb-3">
-                  <Mic className="w-5 h-5 text-primary/50" />
-                  <span className="text-xs font-mono text-primary/50 tracking-widest uppercase">Coming Soon</span>
-                </div>
-                <p className="text-muted-foreground text-sm">
-                  Studio-quality audio mode for musicians and producers. High-fidelity voice that doesn't butcher your
-                  sound.
-                </p>
-              </motion.div>
-            </div>
           </section>
 
           {/* Principles Section */}
