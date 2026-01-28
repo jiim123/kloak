@@ -1,13 +1,13 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { 
-  Loader2, 
-  Upload, 
-  Trash2, 
-  Users, 
-  Settings, 
+import { useState, useEffect, useMemo, useRef } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import {
+  Loader2,
+  Upload,
+  Trash2,
+  Users,
+  Settings,
   Ban,
   Crown,
   Shield,
@@ -22,15 +22,9 @@ import {
   GripVertical,
   Link2,
   Check,
-  type LucideIcon
-} from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  type LucideIcon,
+} from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,35 +34,35 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Checkbox } from '@/components/ui/checkbox';
-import { useUIStore } from '@/stores/uiStore';
-import { useServerStore } from '@/stores/serverStore';
-import { useAuthStore } from '@/stores/authStore';
-import { useRealtimeMembers } from '@/hooks';
-import { useMemberPermissions } from '@/hooks/useMemberPermissions';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
-import { invalidateServerEmojis } from '@/lib/serverEmojis';
-import type { ServerRole, ServerMember, CustomServerRole } from '@/types';
-import { Badge } from '@/components/ui/badge';
-import { RolePermissionsEditor } from './RolePermissionsEditor';
-import { EmojiGifPicker } from './EmojiGifPicker';
+} from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useUIStore } from "@/stores/uiStore";
+import { useServerStore } from "@/stores/serverStore";
+import { useAuthStore } from "@/stores/authStore";
+import { useRealtimeMembers } from "@/hooks";
+import { useMemberPermissions } from "@/hooks/useMemberPermissions";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { invalidateServerEmojis } from "@/lib/serverEmojis";
+import type { ServerRole, ServerMember, CustomServerRole } from "@/types";
+import { Badge } from "@/components/ui/badge";
+import { RolePermissionsEditor } from "./RolePermissionsEditor";
+import { EmojiGifPicker } from "./EmojiGifPicker";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 import {
   DndContext,
   closestCenter,
@@ -89,34 +83,31 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-const MAX_ICON_SIZE = 5 * 1024 * 1024; // 5MB
-const ALLOWED_ICON_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_ICON_SIZE = 2 * 1024 * 1024; // 2MB
+const ALLOWED_ICON_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 const MAX_EMOJI_SIZE = 1 * 1024 * 1024; // 1MB
-const ALLOWED_EMOJI_TYPES = ['image/png', 'image/gif', 'image/webp', 'image/jpeg'];
+const ALLOWED_EMOJI_TYPES = ["image/png", "image/gif", "image/webp", "image/jpeg"];
 const EMOJI_NAME_REGEX = /^[a-z0-9_]{2,32}$/;
 const MAX_SERVER_EMOJIS = 30;
 
 const serverSettingsSchema = z.object({
-  name: z.string()
-    .trim()
-    .min(1, 'Server name is required')
-    .max(100, 'Server name must be less than 100 characters'),
-  about: z.string()
-    .trim()
-    .max(500, 'About server must be less than 500 characters')
-    .optional()
-    .nullable(),
+  name: z.string().trim().min(1, "Server name is required").max(100, "Server name must be less than 100 characters"),
+  about: z.string().trim().max(500, "About server must be less than 500 characters").optional().nullable(),
 });
 
 type ServerSettingsForm = z.infer<typeof serverSettingsSchema>;
 
 const getRoleIcon = (role: ServerRole) => {
   switch (role) {
-    case 'owner': return <Crown className="w-4 h-4 text-yellow-500" />;
-    case 'admin': return <ShieldCheck className="w-4 h-4 text-red-500" />;
-    case 'moderator': return <Shield className="w-4 h-4 text-blue-500" />;
-    default: return <User className="w-4 h-4 text-muted-foreground" />;
+    case "owner":
+      return <Crown className="w-4 h-4 text-yellow-500" />;
+    case "admin":
+      return <ShieldCheck className="w-4 h-4 text-red-500" />;
+    case "moderator":
+      return <Shield className="w-4 h-4 text-blue-500" />;
+    default:
+      return <User className="w-4 h-4 text-muted-foreground" />;
   }
 };
 
@@ -126,51 +117,53 @@ const getRoleLabel = (role: ServerRole) => {
 
 // Gradient presets
 const gradientPresets = [
-  { name: 'Ocean', colors: ['#667eea', '#764ba2'], angle: 135 },
-  { name: 'Sunset', colors: ['#ff6b6b', '#feca57'], angle: 135 },
-  { name: 'Forest', colors: ['#11998e', '#38ef7d'], angle: 135 },
-  { name: 'Fire', colors: ['#f12711', '#f5af19'], angle: 135 },
-  { name: 'Purple Dream', colors: ['#c471f5', '#fa71cd'], angle: 135 },
-  { name: 'Cool Blues', colors: ['#2193b0', '#6dd5ed'], angle: 135 },
-  { name: 'Peach', colors: ['#ed4264', '#ffedbc'], angle: 135 },
-  { name: 'Mint', colors: ['#00b4db', '#0083b0'], angle: 135 },
-  { name: 'Cosmic', colors: ['#4e54c8', '#8f94fb'], angle: 135 },
-  { name: 'Rose', colors: ['#f093fb', '#f5576c'], angle: 135 },
-  { name: 'Rainbow', colors: ['#ff0080', '#ff8c00', '#40e0d0'], angle: 90 },
-  { name: 'Neon', colors: ['#00f260', '#0575e6'], angle: 135 },
-  { name: 'Lavender', colors: ['#834d9b', '#d04ed6'], angle: 135 },
-  { name: 'Cyber', colors: ['#08aeea', '#2af598'], angle: 135 },
-  { name: 'Aurora', colors: ['#a8edea', '#fed6e3'], angle: 135 },
-  { name: 'Sunset Wave', colors: ['#ff9a56', '#ff6a88', '#ffd364'], angle: 120 },
-  { name: 'Deep Space', colors: ['#000428', '#004e92'], angle: 135 },
-  { name: 'Candy', colors: ['#fc6c8f', '#ffb88c', '#ffd98a'], angle: 90 },
-  { name: 'Electric', colors: ['#8e2de2', '#4a00e0'], angle: 135 },
-  { name: 'Tropical', colors: ['#f2994a', '#f2c94c'], angle: 135 },
+  { name: "Ocean", colors: ["#667eea", "#764ba2"], angle: 135 },
+  { name: "Sunset", colors: ["#ff6b6b", "#feca57"], angle: 135 },
+  { name: "Forest", colors: ["#11998e", "#38ef7d"], angle: 135 },
+  { name: "Fire", colors: ["#f12711", "#f5af19"], angle: 135 },
+  { name: "Purple Dream", colors: ["#c471f5", "#fa71cd"], angle: 135 },
+  { name: "Cool Blues", colors: ["#2193b0", "#6dd5ed"], angle: 135 },
+  { name: "Peach", colors: ["#ed4264", "#ffedbc"], angle: 135 },
+  { name: "Mint", colors: ["#00b4db", "#0083b0"], angle: 135 },
+  { name: "Cosmic", colors: ["#4e54c8", "#8f94fb"], angle: 135 },
+  { name: "Rose", colors: ["#f093fb", "#f5576c"], angle: 135 },
+  { name: "Rainbow", colors: ["#ff0080", "#ff8c00", "#40e0d0"], angle: 90 },
+  { name: "Neon", colors: ["#00f260", "#0575e6"], angle: 135 },
+  { name: "Lavender", colors: ["#834d9b", "#d04ed6"], angle: 135 },
+  { name: "Cyber", colors: ["#08aeea", "#2af598"], angle: 135 },
+  { name: "Aurora", colors: ["#a8edea", "#fed6e3"], angle: 135 },
+  { name: "Sunset Wave", colors: ["#ff9a56", "#ff6a88", "#ffd364"], angle: 120 },
+  { name: "Deep Space", colors: ["#000428", "#004e92"], angle: 135 },
+  { name: "Candy", colors: ["#fc6c8f", "#ffb88c", "#ffd98a"], angle: 90 },
+  { name: "Electric", colors: ["#8e2de2", "#4a00e0"], angle: 135 },
+  { name: "Tropical", colors: ["#f2994a", "#f2c94c"], angle: 135 },
 ];
 
 const createGradientString = (colors: string[], angle: number = 135) => {
-  return `linear-gradient(${angle}deg, ${colors.join(', ')})`;
+  return `linear-gradient(${angle}deg, ${colors.join(", ")})`;
 };
 
-const parseColorValue = (colorValue: string): { type: 'solid' | 'gradient'; color?: string; colors?: string[]; angle?: number } => {
-  if (colorValue.startsWith('linear-gradient')) {
+const parseColorValue = (
+  colorValue: string,
+): { type: "solid" | "gradient"; color?: string; colors?: string[]; angle?: number } => {
+  if (colorValue.startsWith("linear-gradient")) {
     // Parse gradient string
     const match = colorValue.match(/linear-gradient\((\d+)deg,\s*(.+)\)/);
     if (match) {
       const angle = parseInt(match[1]);
-      const colors = match[2].split(',').map(c => c.trim());
-      return { type: 'gradient', colors, angle };
+      const colors = match[2].split(",").map((c) => c.trim());
+      return { type: "gradient", colors, angle };
     }
   }
-  return { type: 'solid', color: colorValue };
+  return { type: "solid", color: colorValue };
 };
 
 export const ServerSettingsModal = () => {
   const { activeModal, modalData, closeModal } = useUIStore();
-  const { 
-    currentServer, 
-    servers, 
-    members, 
+  const {
+    currentServer,
+    servers,
+    members,
     roles,
     fetchMembers,
     fetchRoles,
@@ -184,33 +177,33 @@ export const ServerSettingsModal = () => {
     deleteServer,
     kickMember,
     banMember,
-    updateMember
+    updateMember,
   } = useServerStore();
   const { user } = useAuthStore();
   const isMobile = useIsMobile();
-  
-  type SettingsTabId = 'overview' | 'members' | 'roles' | 'bans' | 'invites' | 'emojis';
+
+  type SettingsTabId = "overview" | "members" | "roles" | "bans" | "invites" | "emojis";
 
   const [isLoading, setIsLoading] = useState(false);
   const [pendingIsPublished, setPendingIsPublished] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [activeTab, setActiveTab] = useState<SettingsTabId>('overview');
+  const [activeTab, setActiveTab] = useState<SettingsTabId>("overview");
   const [editingRole, setEditingRole] = useState<CustomServerRole | null>(null);
   const [editingRolePermissions, setEditingRolePermissions] = useState<CustomServerRole | null>(null);
-  const [roleName, setRoleName] = useState('');
-  const [roleColor, setRoleColor] = useState('#5865F2');
-  const [roleIcon, setRoleIcon] = useState<string>('');
+  const [roleName, setRoleName] = useState("");
+  const [roleColor, setRoleColor] = useState("#5865F2");
+  const [roleIcon, setRoleIcon] = useState<string>("");
   const [activeRoleId, setActiveRoleId] = useState<string | null>(null);
-  const [colorType, setColorType] = useState<'solid' | 'gradient'>('solid');
-  const [gradientColors, setGradientColors] = useState<string[]>(['#5865F2', '#7289DA']);
+  const [colorType, setColorType] = useState<"solid" | "gradient">("solid");
+  const [gradientColors, setGradientColors] = useState<string[]>(["#5865F2", "#7289DA"]);
   const [gradientAngle, setGradientAngle] = useState(135);
-  
+
   // Icon upload state
   const [iconFile, setIconFile] = useState<File | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [isUploadingIcon, setIsUploadingIcon] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   // Banner upload state
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
@@ -220,7 +213,7 @@ export const ServerSettingsModal = () => {
   // Custom emoji state (owner-only)
   const [emojiFile, setEmojiFile] = useState<File | null>(null);
   const [emojiPreview, setEmojiPreview] = useState<string | null>(null);
-  const [emojiName, setEmojiName] = useState('');
+  const [emojiName, setEmojiName] = useState("");
   const [isUploadingEmoji, setIsUploadingEmoji] = useState(false);
   const [serverEmojis, setServerEmojis] = useState<Array<{ id: string; name: string; file_path: string }>>([]);
   const emojiInputRef = useRef<HTMLInputElement>(null);
@@ -231,7 +224,13 @@ export const ServerSettingsModal = () => {
       id: string;
       user_id: string;
       joined_at?: string | null;
-      user: { id: string; username: string; display_name?: string | null; avatar_url?: string | null; banner_color?: string };
+      user: {
+        id: string;
+        username: string;
+        display_name?: string | null;
+        avatar_url?: string | null;
+        banner_color?: string;
+      };
     }>
   >([]);
 
@@ -253,16 +252,14 @@ export const ServerSettingsModal = () => {
   const [isLoadingInvites, setIsLoadingInvites] = useState(false);
   const [isCreatingInvite, setIsCreatingInvite] = useState(false);
   const [copiedInviteId, setCopiedInviteId] = useState<string | null>(null);
-  const [inviteExpiresIn, setInviteExpiresIn] = useState<string>('never');
-  const [inviteMaxUses, setInviteMaxUses] = useState<string>('unlimited');
+  const [inviteExpiresIn, setInviteExpiresIn] = useState<string>("never");
+  const [inviteMaxUses, setInviteMaxUses] = useState<string>("unlimited");
 
-  const isOpen = isMobile && activeModal === 'server-settings';
-  
+  const isOpen = isMobile && activeModal === "server-settings";
+
   // Get server from modal data or use current server
   const serverId = modalData?.serverId as string | undefined;
-  const server = serverId 
-    ? servers.find(s => s.id === serverId) || currentServer
-    : currentServer;
+  const server = serverId ? servers.find((s) => s.id === serverId) || currentServer : currentServer;
 
   const roleSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -292,7 +289,11 @@ export const ServerSettingsModal = () => {
 
     const newOrder = arrayMove(roles, oldIndex, newIndex);
     try {
-      await reorderRoles(server.id, user.id, newOrder.map((r) => r.id));
+      await reorderRoles(
+        server.id,
+        user.id,
+        newOrder.map((r) => r.id),
+      );
     } catch {
       toast.error("Failed to reorder roles");
     }
@@ -326,13 +327,11 @@ export const ServerSettingsModal = () => {
         >
           <GripVertical className="w-4 h-4" />
         </div>
-        <div 
-          className="w-4 h-4 rounded-full flex-shrink-0" 
+        <div
+          className="w-4 h-4 rounded-full flex-shrink-0"
           style={
-            role.color.startsWith('linear-gradient')
-              ? { background: role.color }
-              : { backgroundColor: role.color }
-          } 
+            role.color.startsWith("linear-gradient") ? { background: role.color } : { backgroundColor: role.color }
+          }
         />
         <div className="flex-1 min-w-0">
           <span className="text-xs sm:text-sm font-medium">{role.name}</span>
@@ -376,35 +375,35 @@ export const ServerSettingsModal = () => {
   // Get current user's role
   const currentMembership = useMemo(() => {
     if (!server) return null;
-    return servers.find(s => s.id === server.id);
+    return servers.find((s) => s.id === server.id);
   }, [servers, server]);
 
   const userRole = currentMembership?.role;
   // Use permission system instead of hardcoded role checks
   const { hasPermission } = useMemberPermissions();
-  const canManageServer = hasPermission('manage_server');
-  const canManageRoles = hasPermission('manage_roles');
-  const canManageChannels = hasPermission('manage_channels');
-  const canManageInvites = hasPermission('manage_invites');
-  const canManageEmojis = hasPermission('manage_emojis');
-  
+  const canManageServer = hasPermission("manage_server");
+  const canManageRoles = hasPermission("manage_roles");
+  const canManageChannels = hasPermission("manage_channels");
+  const canManageInvites = hasPermission("manage_invites");
+  const canManageEmojis = hasPermission("manage_emojis");
+
   // For backward compatibility and specific checks
-  const isOwner = userRole === 'owner';
+  const isOwner = userRole === "owner";
   const isAdmin = canManageServer || canManageRoles || canManageChannels;
 
   // Navigation items for tabs
   const navItems = useMemo(() => {
     const items: Array<{ id: SettingsTabId; label: string; icon: LucideIcon }> = [
-      { id: 'overview', label: 'Overview', icon: Settings },
-      { id: 'members', label: 'Members', icon: Users },
-      { id: 'roles', label: 'Roles', icon: Palette },
-      { id: 'bans', label: 'Bans', icon: Ban },
+      { id: "overview", label: "Overview", icon: Settings },
+      { id: "members", label: "Members", icon: Users },
+      { id: "roles", label: "Roles", icon: Palette },
+      { id: "bans", label: "Bans", icon: Ban },
     ];
     if (canManageInvites) {
-      items.push({ id: 'invites', label: 'Invites', icon: Link2 });
+      items.push({ id: "invites", label: "Invites", icon: Link2 });
     }
     if (canManageEmojis) {
-      items.push({ id: 'emojis', label: 'Emojis', icon: Smile });
+      items.push({ id: "emojis", label: "Emojis", icon: Smile });
     }
     return items;
   }, [canManageEmojis, canManageInvites]);
@@ -417,7 +416,7 @@ export const ServerSettingsModal = () => {
     reset,
   } = useForm<ServerSettingsForm>({
     resolver: zodResolver(serverSettingsSchema),
-    defaultValues: { name: server?.name || '', about: server?.about || '' },
+    defaultValues: { name: server?.name || "", about: server?.about || "" },
   });
 
   // Real-time members updates
@@ -432,7 +431,7 @@ export const ServerSettingsModal = () => {
 
     const loadBannedMembers = async () => {
       try {
-        const { data, error } = await supabase.rpc('get_banned_members', {
+        const { data, error } = await supabase.rpc("get_banned_members", {
           _server_id: server.id,
           _user_id: user.id,
         });
@@ -443,7 +442,7 @@ export const ServerSettingsModal = () => {
         let rows: any[] = [];
         if (!data) {
           rows = [];
-        } else if (typeof data === 'string') {
+        } else if (typeof data === "string") {
           rows = JSON.parse(data);
         } else if (Array.isArray(data)) {
           rows = data;
@@ -462,11 +461,11 @@ export const ServerSettingsModal = () => {
     const channel = supabase
       .channel(`bans:${server.id}`)
       .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'server_members', filter: `server_id=eq.${server.id}` },
+        "postgres_changes",
+        { event: "*", schema: "public", table: "server_members", filter: `server_id=eq.${server.id}` },
         () => {
           loadBannedMembers();
-        }
+        },
       )
       .subscribe();
 
@@ -481,7 +480,7 @@ export const ServerSettingsModal = () => {
     if (isOpen && server) {
       fetchMembers(server.id);
       fetchRoles(server.id);
-      reset({ name: server.name, about: server.about || '' });
+      reset({ name: server.name, about: server.about || "" });
       setPendingIsPublished(!!server.is_published);
       // Reset icon state
       setIconFile(null);
@@ -491,7 +490,7 @@ export const ServerSettingsModal = () => {
       setBannerPreview(null);
       // Reset emoji state
       setEmojiFile(null);
-      setEmojiName('');
+      setEmojiName("");
       if (emojiPreview) {
         URL.revokeObjectURL(emojiPreview);
       }
@@ -499,11 +498,11 @@ export const ServerSettingsModal = () => {
       setServerEmojis([]);
       // Reset role form
       setEditingRole(null);
-      setRoleName('');
-      setRoleColor('#5865F2');
-      setRoleIcon('');
-      setColorType('solid');
-      setGradientColors(['#5865F2', '#7289DA']);
+      setRoleName("");
+      setRoleColor("#5865F2");
+      setRoleIcon("");
+      setColorType("solid");
+      setGradientColors(["#5865F2", "#7289DA"]);
       setGradientAngle(135);
     }
   }, [isOpen, server, fetchMembers, fetchRoles, reset]);
@@ -515,14 +514,14 @@ export const ServerSettingsModal = () => {
 
     (async () => {
       const { data, error } = await supabase
-        .from('server_emojis')
-        .select('id,name,file_path')
-        .eq('server_id', server.id)
-        .order('created_at', { ascending: true });
+        .from("server_emojis")
+        .select("id,name,file_path")
+        .eq("server_id", server.id)
+        .order("created_at", { ascending: true });
 
       if (cancelled) return;
       if (error) {
-        console.error('Failed to load server emojis:', error);
+        console.error("Failed to load server emojis:", error);
         setServerEmojis([]);
         return;
       }
@@ -540,7 +539,7 @@ export const ServerSettingsModal = () => {
 
     setIsLoadingInvites(true);
     try {
-      const { data, error } = await supabase.rpc('list_server_invites', {
+      const { data, error } = await supabase.rpc("list_server_invites", {
         _server_id: server.id,
         _user_id: user.id,
       });
@@ -563,7 +562,7 @@ export const ServerSettingsModal = () => {
     (async () => {
       setIsLoadingInvites(true);
       try {
-        const { data, error } = await supabase.rpc('list_server_invites', {
+        const { data, error } = await supabase.rpc("list_server_invites", {
           _server_id: server.id,
           _user_id: user.id,
         });
@@ -588,25 +587,25 @@ export const ServerSettingsModal = () => {
     if (!canManageInvites) return;
 
     const expiresInSeconds =
-      inviteExpiresIn === 'never'
+      inviteExpiresIn === "never"
         ? null
-        : inviteExpiresIn === '30m'
+        : inviteExpiresIn === "30m"
           ? 30 * 60
-          : inviteExpiresIn === '1h'
+          : inviteExpiresIn === "1h"
             ? 60 * 60
-            : inviteExpiresIn === '6h'
+            : inviteExpiresIn === "6h"
               ? 6 * 60 * 60
-              : inviteExpiresIn === '12h'
+              : inviteExpiresIn === "12h"
                 ? 12 * 60 * 60
-                : inviteExpiresIn === '1d'
+                : inviteExpiresIn === "1d"
                   ? 24 * 60 * 60
                   : 7 * 24 * 60 * 60;
 
-    const maxUsesValue = inviteMaxUses === 'unlimited' ? null : parseInt(inviteMaxUses, 10);
+    const maxUsesValue = inviteMaxUses === "unlimited" ? null : parseInt(inviteMaxUses, 10);
 
     setIsCreatingInvite(true);
     try {
-      const { error } = await supabase.rpc('create_server_invite', {
+      const { error } = await supabase.rpc("create_server_invite", {
         _server_id: server.id,
         _user_id: user.id,
         _expires_in_seconds: expiresInSeconds,
@@ -615,9 +614,9 @@ export const ServerSettingsModal = () => {
 
       if (error) throw error;
       await loadInvites();
-      toast.success('Invite created');
+      toast.success("Invite created");
     } catch {
-      toast.error('Failed to create invite');
+      toast.error("Failed to create invite");
     } finally {
       setIsCreatingInvite(false);
     }
@@ -626,19 +625,19 @@ export const ServerSettingsModal = () => {
   const revokeInvite = async (inviteId: string) => {
     if (!server?.id || !user?.id) return;
     if (!canManageInvites) return;
-    if (!confirm('Revoke this invite?')) return;
+    if (!confirm("Revoke this invite?")) return;
 
     try {
-      const { error } = await supabase.rpc('revoke_server_invite', {
+      const { error } = await supabase.rpc("revoke_server_invite", {
         _invite_id: inviteId,
         _user_id: user.id,
       });
 
       if (error) throw error;
       await loadInvites();
-      toast.success('Invite revoked');
+      toast.success("Invite revoked");
     } catch {
-      toast.error('Failed to revoke invite');
+      toast.error("Failed to revoke invite");
     }
   };
 
@@ -648,39 +647,39 @@ export const ServerSettingsModal = () => {
       await navigator.clipboard.writeText(link);
       setCopiedInviteId(inviteId);
       setTimeout(() => setCopiedInviteId(null), 2000);
-      toast.success('Invite link copied!');
+      toast.success("Invite link copied!");
     } catch {
-      toast.error('Failed to copy');
+      toast.error("Failed to copy");
     }
   };
 
   const clearEmoji = () => {
     setEmojiFile(null);
-    setEmojiName('');
+    setEmojiName("");
     if (emojiPreview) {
       URL.revokeObjectURL(emojiPreview);
       setEmojiPreview(null);
     }
     if (emojiInputRef.current) {
-      emojiInputRef.current.value = '';
+      emojiInputRef.current.value = "";
     }
   };
 
   const handleEmojiSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!canManageEmojis) {
-      toast.error('You do not have permission to manage emojis');
+      toast.error("You do not have permission to manage emojis");
       return;
     }
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (!ALLOWED_EMOJI_TYPES.includes(file.type)) {
-      toast.error('Please select a PNG, GIF, WebP, or JPEG image');
+      toast.error("Please select a PNG, GIF, WebP, or JPEG image");
       return;
     }
 
     if (file.size > MAX_EMOJI_SIZE) {
-      toast.error('Emoji must be less than 1MB');
+      toast.error("Emoji must be less than 1MB");
       return;
     }
 
@@ -691,20 +690,20 @@ export const ServerSettingsModal = () => {
   const uploadServerEmoji = async () => {
     if (!server || !user) return;
     if (!canManageEmojis) {
-      toast.error('You do not have permission to manage emojis');
+      toast.error("You do not have permission to manage emojis");
       return;
     }
     if (!emojiFile) {
-      toast.error('Please select an emoji image');
+      toast.error("Please select an emoji image");
       return;
     }
 
     // Enforce 30 emoji cap (also enforced in DB via trigger)
     try {
       const { count, error } = await supabase
-        .from('server_emojis')
-        .select('*', { count: 'exact', head: true })
-        .eq('server_id', server.id);
+        .from("server_emojis")
+        .select("*", { count: "exact", head: true })
+        .eq("server_id", server.id);
 
       if (error) throw error;
       if ((count ?? 0) >= MAX_SERVER_EMOJIS) {
@@ -712,29 +711,29 @@ export const ServerSettingsModal = () => {
         return;
       }
     } catch (e) {
-      console.error('Failed to check emoji limit:', e);
-      toast.error('Unable to verify emoji limit. Please try again.');
+      console.error("Failed to check emoji limit:", e);
+      toast.error("Unable to verify emoji limit. Please try again.");
       return;
     }
 
     const normalized = emojiName.trim().toLowerCase();
     if (!EMOJI_NAME_REGEX.test(normalized)) {
-      toast.error('Emoji name must be 2-32 characters (a-z, 0-9, underscore)');
+      toast.error("Emoji name must be 2-32 characters (a-z, 0-9, underscore)");
       return;
     }
 
     setIsUploadingEmoji(true);
     try {
-      const ext = (emojiFile.name.split('.').pop() || 'png').toLowerCase();
+      const ext = (emojiFile.name.split(".").pop() || "png").toLowerCase();
       const filePath = `${server.id}/${normalized}-${crypto.randomUUID()}.${ext}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('server-emojis')
-        .upload(filePath, emojiFile, { upsert: false, cacheControl: '3600' });
+        .from("server-emojis")
+        .upload(filePath, emojiFile, { upsert: false, cacheControl: "3600" });
 
       if (uploadError) throw uploadError;
 
-      const { error: insertError } = await supabase.from('server_emojis').insert({
+      const { error: insertError } = await supabase.from("server_emojis").insert({
         server_id: server.id,
         name: normalized,
         file_path: filePath,
@@ -745,21 +744,21 @@ export const ServerSettingsModal = () => {
 
       // Refresh list
       const { data, error } = await supabase
-        .from('server_emojis')
-        .select('id,name,file_path')
-        .eq('server_id', server.id)
-        .order('created_at', { ascending: true });
+        .from("server_emojis")
+        .select("id,name,file_path")
+        .eq("server_id", server.id)
+        .order("created_at", { ascending: true });
 
       if (error) throw error;
       setServerEmojis((data ?? []) as Array<{ id: string; name: string; file_path: string }>);
-      toast.success('Emoji uploaded');
+      toast.success("Emoji uploaded");
       invalidateServerEmojis(server.id);
       clearEmoji();
     } catch (err: any) {
-      const msg = err?.message || 'Failed to upload emoji';
-      if (msg.includes('server_emojis_server_id_name_key')) {
-        toast.error('That emoji name is already taken');
-      } else if (msg.toLowerCase().includes('server emoji limit reached')) {
+      const msg = err?.message || "Failed to upload emoji";
+      if (msg.includes("server_emojis_server_id_name_key")) {
+        toast.error("That emoji name is already taken");
+      } else if (msg.toLowerCase().includes("server emoji limit reached")) {
         toast.error(`This server already has ${MAX_SERVER_EMOJIS} custom emojis`);
       } else {
         toast.error(msg);
@@ -772,21 +771,21 @@ export const ServerSettingsModal = () => {
   const deleteServerEmoji = async (emoji: { id: string; name: string; file_path: string }) => {
     if (!server) return;
     if (!canManageEmojis) {
-      toast.error('You do not have permission to manage emojis');
+      toast.error("You do not have permission to manage emojis");
       return;
     }
     if (!confirm(`Delete emoji "${emoji.name}"?`)) return;
 
     try {
-      await supabase.from('server_emojis').delete().eq('id', emoji.id);
-      await supabase.storage.from('server-emojis').remove([emoji.file_path]);
+      await supabase.from("server_emojis").delete().eq("id", emoji.id);
+      await supabase.storage.from("server-emojis").remove([emoji.file_path]);
 
       setServerEmojis((prev) => prev.filter((e) => e.id !== emoji.id));
       invalidateServerEmojis(server.id);
-      toast.success('Emoji deleted');
+      toast.success("Emoji deleted");
     } catch (error) {
-      console.error('Failed to delete emoji:', error);
-      toast.error('Failed to delete emoji');
+      console.error("Failed to delete emoji:", error);
+      toast.error("Failed to delete emoji");
     }
   };
 
@@ -795,12 +794,12 @@ export const ServerSettingsModal = () => {
     if (!file) return;
 
     if (!ALLOWED_ICON_TYPES.includes(file.type)) {
-      toast.error('Please select a JPEG, PNG, or WebP image');
+      toast.error("Please select a JPEG, PNG, or WebP image");
       return;
     }
 
     if (file.size > MAX_ICON_SIZE) {
-      toast.error('Image must be less than 5MB');
+      toast.error("Image must be less than 2MB");
       return;
     }
 
@@ -815,26 +814,24 @@ export const ServerSettingsModal = () => {
       setIconPreview(null);
     }
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
   const uploadIcon = async (serverId: string, file: File): Promise<string | null> => {
-    const ext = file.name.split('.').pop() || 'png';
+    const ext = file.name.split(".").pop() || "png";
     const filePath = `${serverId}/icon.${ext}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from('server-icons')
-      .upload(filePath, file, { upsert: true });
+    const { error: uploadError } = await supabase.storage.from("server-icons").upload(filePath, file, { upsert: true });
 
     if (uploadError) {
-      console.error('Failed to upload icon:', uploadError);
+      console.error("Failed to upload icon:", uploadError);
       return null;
     }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from('server-icons')
-      .getPublicUrl(filePath);
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("server-icons").getPublicUrl(filePath);
 
     return `${publicUrl}?t=${Date.now()}`;
   };
@@ -844,12 +841,12 @@ export const ServerSettingsModal = () => {
     if (!file) return;
 
     if (!ALLOWED_ICON_TYPES.includes(file.type)) {
-      toast.error('Please select a JPEG, PNG, or WebP image');
+      toast.error("Please select a JPEG, PNG, or WebP image");
       return;
     }
 
     if (file.size > MAX_ICON_SIZE) {
-      toast.error('Image must be less than 5MB');
+      toast.error("Image must be less than 2MB");
       return;
     }
 
@@ -864,39 +861,37 @@ export const ServerSettingsModal = () => {
       setBannerPreview(null);
     }
     if (bannerInputRef.current) {
-      bannerInputRef.current.value = '';
+      bannerInputRef.current.value = "";
     }
   };
 
   const uploadBanner = async (serverId: string, file: File): Promise<string | null> => {
-    const ext = file.name.split('.').pop() || 'png';
+    const ext = file.name.split(".").pop() || "png";
     const filePath = `${serverId}/banner.${ext}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from('server-icons')
-      .upload(filePath, file, { upsert: true });
+    const { error: uploadError } = await supabase.storage.from("server-icons").upload(filePath, file, { upsert: true });
 
     if (uploadError) {
-      console.error('Failed to upload banner:', uploadError);
+      console.error("Failed to upload banner:", uploadError);
       return null;
     }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from('server-icons')
-      .getPublicUrl(filePath);
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("server-icons").getPublicUrl(filePath);
 
     return `${publicUrl}?t=${Date.now()}`;
   };
 
   const handleRemoveBanner = async () => {
     if (!server || !user) return;
-    
+
     setIsUploadingBanner(true);
     try {
       await updateServer(server.id, user.id, { banner_url: null });
-      toast.success('Server banner removed');
+      toast.success("Server banner removed");
     } catch (error) {
-      toast.error('Failed to remove banner');
+      toast.error("Failed to remove banner");
     } finally {
       setIsUploadingBanner(false);
     }
@@ -904,13 +899,13 @@ export const ServerSettingsModal = () => {
 
   const handleRemoveIcon = async () => {
     if (!server || !user) return;
-    
+
     setIsUploadingIcon(true);
     try {
       await updateServer(server.id, user.id, { icon_url: null });
-      toast.success('Server icon removed');
+      toast.success("Server icon removed");
     } catch (error) {
-      toast.error('Failed to remove icon');
+      toast.error("Failed to remove icon");
     } finally {
       setIsUploadingIcon(false);
     }
@@ -918,12 +913,12 @@ export const ServerSettingsModal = () => {
 
   const onSubmit = async (data: ServerSettingsForm) => {
     if (!server || !user) return;
-    
+
     setIsLoading(true);
     try {
       let iconUrl = server.icon_url;
       let bannerUrl = server.banner_url;
-      
+
       if (iconFile) {
         setIsUploadingIcon(true);
         const uploadedUrl = await uploadIcon(server.id, iconFile);
@@ -932,7 +927,7 @@ export const ServerSettingsModal = () => {
         }
         setIsUploadingIcon(false);
       }
-      
+
       if (bannerFile) {
         setIsUploadingBanner(true);
         const uploadedUrl = await uploadBanner(server.id, bannerFile);
@@ -941,8 +936,8 @@ export const ServerSettingsModal = () => {
         }
         setIsUploadingBanner(false);
       }
-      
-      const aboutValue = (data.about || '').trim();
+
+      const aboutValue = (data.about || "").trim();
 
       // Publishing prerequisites: require icon, banner, and description
       let publishToSend = pendingIsPublished;
@@ -954,24 +949,24 @@ export const ServerSettingsModal = () => {
         if (!hasIcon || !hasBanner || !hasAbout) {
           publishToSend = false;
           setPendingIsPublished(false);
-          toast.error('Add a server icon, banner, and description before making this server public.');
+          toast.error("Add a server icon, banner, and description before making this server public.");
         }
       }
-      
-      await updateServer(server.id, user.id, { 
+
+      await updateServer(server.id, user.id, {
         name: data.name,
         icon_url: iconUrl,
         banner_url: bannerUrl,
         about: aboutValue || null,
         ...(isOwner ? { is_published: publishToSend } : {}),
       });
-      
-      toast.success('Server settings updated!');
+
+      toast.success("Server settings updated!");
       clearIcon();
       clearBanner();
       closeModal();
     } catch (error) {
-      toast.error('Failed to update server');
+      toast.error("Failed to update server");
     } finally {
       setIsLoading(false);
     }
@@ -983,18 +978,18 @@ export const ServerSettingsModal = () => {
 
     // If trying to publish, require icon, banner, and description (or pending changes that will be saved)
     if (checked) {
-      const aboutValue = (getValues('about') ?? '').trim();
+      const aboutValue = (getValues("about") ?? "").trim();
       const hasIcon = !!(iconFile || iconPreview || server.icon_url);
       const hasBanner = !!(bannerFile || bannerPreview || server.banner_url);
-      const hasAbout = !!(aboutValue || (server.about ?? '').trim());
+      const hasAbout = !!(aboutValue || (server.about ?? "").trim());
 
       const missing: string[] = [];
-      if (!hasIcon) missing.push('server icon');
-      if (!hasBanner) missing.push('server banner');
-      if (!hasAbout) missing.push('server description');
+      if (!hasIcon) missing.push("server icon");
+      if (!hasBanner) missing.push("server banner");
+      if (!hasAbout) missing.push("server description");
 
       if (missing.length > 0) {
-        toast.error(`Please add a ${missing.join(', ')} before making this server public.`);
+        toast.error(`Please add a ${missing.join(", ")} before making this server public.`);
         return;
       }
     }
@@ -1005,15 +1000,15 @@ export const ServerSettingsModal = () => {
 
   const handleDeleteServer = async () => {
     if (!server) return;
-    
+
     setIsLoading(true);
     try {
       await deleteServer(server.id);
-      toast.success('Server deleted');
+      toast.success("Server deleted");
       setShowDeleteConfirm(false);
       closeModal();
     } catch (error) {
-      toast.error('Failed to delete server');
+      toast.error("Failed to delete server");
     } finally {
       setIsLoading(false);
     }
@@ -1021,63 +1016,61 @@ export const ServerSettingsModal = () => {
 
   const handleKickMember = async (member: ServerMember) => {
     if (!server) return;
-    
+
     try {
       await kickMember(server.id, member.user_id);
-      toast.success(`${member.user?.username || 'User'} has been kicked`);
+      toast.success(`${member.user?.username || "User"} has been kicked`);
     } catch (error) {
-      toast.error('Failed to kick member');
+      toast.error("Failed to kick member");
     }
   };
 
   const handleBanMember = async (member: ServerMember) => {
     if (!server) return;
-    
+
     try {
       await banMember(server.id, member.user_id);
-      toast.success(`${member.user?.username || 'User'} has been banned`);
+      toast.success(`${member.user?.username || "User"} has been banned`);
     } catch (error) {
-      toast.error('Failed to ban member');
+      toast.error("Failed to ban member");
     }
   };
 
   const handleClose = () => {
     reset();
-    setActiveTab('overview');
+    setActiveTab("overview");
     clearIcon();
     clearBanner();
     setEditingRole(null);
-    setRoleName('');
-    setRoleColor('#5865F2');
-    setRoleIcon('');
-    setColorType('solid');
-    setGradientColors(['#5865F2', '#7289DA']);
+    setRoleName("");
+    setRoleColor("#5865F2");
+    setRoleIcon("");
+    setColorType("solid");
+    setGradientColors(["#5865F2", "#7289DA"]);
     setGradientAngle(135);
     closeModal();
   };
 
   const handleCreateRole = async () => {
     if (!server || !user || !roleName.trim()) return;
-    
-    const finalColor = colorType === 'gradient' 
-      ? createGradientString(gradientColors, gradientAngle)
-      : roleColor;
-    
+
+    const finalColor = colorType === "gradient" ? createGradientString(gradientColors, gradientAngle) : roleColor;
+
     try {
       await createRole(server.id, user.id, roleName.trim(), finalColor, roleIcon.trim() ? roleIcon.trim() : null);
       await fetchRoles(server.id);
-      toast.success('Role created');
-      setRoleName('');
-      setRoleColor('#5865F2');
-      setRoleIcon('');
-      setColorType('solid');
-      setGradientColors(['#5865F2', '#7289DA']);
+      toast.success("Role created");
+      setRoleName("");
+      setRoleColor("#5865F2");
+      setRoleIcon("");
+      setColorType("solid");
+      setGradientColors(["#5865F2", "#7289DA"]);
       setGradientAngle(135);
     } catch (error: any) {
-      console.error('Failed to create role:', error);
-      const errorMessage = error?.message || 'Failed to create role';
-      if (errorMessage.includes('migration')) {
-        toast.error('Database migration required. Please apply the migration file first.', {
+      console.error("Failed to create role:", error);
+      const errorMessage = error?.message || "Failed to create role";
+      if (errorMessage.includes("migration")) {
+        toast.error("Database migration required. Please apply the migration file first.", {
           duration: 10000,
         });
       } else {
@@ -1088,40 +1081,42 @@ export const ServerSettingsModal = () => {
 
   const handleUpdateRole = async () => {
     if (!server || !user || !editingRole || !roleName.trim()) return;
-    
-    const finalColor = colorType === 'gradient' 
-      ? createGradientString(gradientColors, gradientAngle)
-      : roleColor;
-    
+
+    const finalColor = colorType === "gradient" ? createGradientString(gradientColors, gradientAngle) : roleColor;
+
     try {
-      await updateRole(editingRole.id, user.id, { name: roleName.trim(), color: finalColor, icon: roleIcon.trim() ? roleIcon.trim() : null });
+      await updateRole(editingRole.id, user.id, {
+        name: roleName.trim(),
+        color: finalColor,
+        icon: roleIcon.trim() ? roleIcon.trim() : null,
+      });
       await fetchRoles(server.id);
-      toast.success('Role updated');
+      toast.success("Role updated");
       setEditingRole(null);
-      setRoleName('');
-      setRoleColor('#5865F2');
-      setRoleIcon('');
-      setColorType('solid');
-      setGradientColors(['#5865F2', '#7289DA']);
+      setRoleName("");
+      setRoleColor("#5865F2");
+      setRoleIcon("");
+      setColorType("solid");
+      setGradientColors(["#5865F2", "#7289DA"]);
       setGradientAngle(135);
     } catch (error) {
-      console.error('Failed to update role:', error);
-      toast.error('Failed to update role');
+      console.error("Failed to update role:", error);
+      toast.error("Failed to update role");
     }
   };
 
   const handleDeleteRole = async (role: CustomServerRole) => {
     if (!server || !user) return;
-    
+
     if (!confirm(`Are you sure you want to delete the role "${role.name}"?`)) return;
-    
+
     try {
       await deleteRole(role.id, user.id);
       await fetchRoles(server.id);
-      toast.success('Role deleted');
+      toast.success("Role deleted");
     } catch (error) {
-      console.error('Failed to delete role:', error);
-      toast.error('Failed to delete role');
+      console.error("Failed to delete role:", error);
+      toast.error("Failed to delete role");
     }
   };
 
@@ -1129,36 +1124,36 @@ export const ServerSettingsModal = () => {
     setEditingRole(role);
     setRoleName(role.name);
     const parsed = parseColorValue(role.color);
-    if (parsed.type === 'gradient') {
-      setColorType('gradient');
-      setGradientColors(parsed.colors || ['#5865F2', '#7289DA']);
+    if (parsed.type === "gradient") {
+      setColorType("gradient");
+      setGradientColors(parsed.colors || ["#5865F2", "#7289DA"]);
       setGradientAngle(parsed.angle || 135);
     } else {
-      setColorType('solid');
-      setRoleColor(parsed.color || '#5865F2');
+      setColorType("solid");
+      setRoleColor(parsed.color || "#5865F2");
     }
-    setRoleIcon(role.icon || '');
+    setRoleIcon(role.icon || "");
   };
 
   const handleAssignRole = async (member: ServerMember, role: CustomServerRole) => {
     if (!server || !user) return;
-    
+
     try {
       await assignRoleToMember(member.id, role.id, user.id);
       toast.success(`Role "${role.name}" assigned`);
     } catch (error) {
-      toast.error('Failed to assign role');
+      toast.error("Failed to assign role");
     }
   };
 
   const handleRemoveRole = async (member: ServerMember, role: CustomServerRole) => {
     if (!server || !user) return;
-    
+
     try {
       await removeRoleFromMember(member.id, role.id, user.id);
       toast.success(`Role "${role.name}" removed`);
     } catch (error) {
-      toast.error('Failed to remove role');
+      toast.error("Failed to remove role");
     }
   };
 
@@ -1217,15 +1212,15 @@ export const ServerSettingsModal = () => {
             <div className="px-5 py-4 border-b border-border flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold">
-                  {navItems.find((n) => n.id === activeTab)?.label || 'Server Settings'}
+                  {navItems.find((n) => n.id === activeTab)?.label || "Server Settings"}
                 </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {activeTab === 'overview' && 'Manage server details'}
-                  {activeTab === 'members' && 'View and manage members'}
-                  {activeTab === 'roles' && 'Manage server roles'}
-                  {activeTab === 'bans' && 'Manage banned users'}
-                  {activeTab === 'invites' && 'Manage invite links'}
-                  {activeTab === 'emojis' && 'Manage custom emojis'}
+                  {activeTab === "overview" && "Manage server details"}
+                  {activeTab === "members" && "View and manage members"}
+                  {activeTab === "roles" && "Manage server roles"}
+                  {activeTab === "bans" && "Manage banned users"}
+                  {activeTab === "invites" && "Manage invite links"}
+                  {activeTab === "emojis" && "Manage custom emojis"}
                 </p>
               </div>
               <Button variant="ghost" size="icon" onClick={handleClose} className="rounded-full">
@@ -1235,17 +1230,17 @@ export const ServerSettingsModal = () => {
 
             {/* Content */}
             <div className="overflow-y-auto p-5" style={{ maxHeight: "calc(100vh - 240px)" }}>
-              {activeTab === 'overview' && (
+              {activeTab === "overview" && (
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                   {/* Server Icon Section */}
                   <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3">
                     <div className="flex items-center gap-3">
                       <div className="relative">
-                        <div 
+                        <div
                           onClick={() => canManageServer && fileInputRef.current?.click()}
                           className={cn(
                             "w-14 h-14 rounded-xl bg-secondary/50 flex items-center justify-center border border-border/30 transition-colors flex-shrink-0 overflow-hidden",
-                            canManageServer && "cursor-pointer hover:border-primary/50"
+                            canManageServer && "cursor-pointer hover:border-primary/50",
                           )}
                         >
                           {displayIconUrl ? (
@@ -1283,11 +1278,11 @@ export const ServerSettingsModal = () => {
                   <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 space-y-3">
                     <Label className="text-sm font-medium">Server Banner</Label>
                     <div className="relative">
-                      <div 
+                      <div
                         onClick={() => canManageServer && bannerInputRef.current?.click()}
                         className={cn(
                           "w-full h-24 rounded-xl bg-secondary/50 flex items-center justify-center border border-border/30 transition-colors overflow-hidden",
-                          canManageServer && "cursor-pointer hover:border-primary/50"
+                          canManageServer && "cursor-pointer hover:border-primary/50",
                         )}
                       >
                         {displayBannerUrl ? (
@@ -1321,32 +1316,38 @@ export const ServerSettingsModal = () => {
 
                   {/* Server Name Section */}
                   <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 space-y-3">
-                    <Label htmlFor="serverNameMobile" className="text-sm font-medium">Server Name</Label>
+                    <Label htmlFor="serverNameMobile" className="text-sm font-medium">
+                      Server Name
+                    </Label>
                     <Input
                       id="serverNameMobile"
-                      {...register('name')}
-                      className={cn("h-10 rounded-xl bg-secondary/50 border-border/30", errors.name && 'border-destructive')}
+                      {...register("name")}
+                      className={cn(
+                        "h-10 rounded-xl bg-secondary/50 border-border/30",
+                        errors.name && "border-destructive",
+                      )}
                       disabled={!canManageServer}
                     />
-                    {errors.name && (
-                      <p className="text-xs text-destructive">{errors.name.message}</p>
-                    )}
+                    {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
                   </div>
 
                   {/* About Server Section */}
                   <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 space-y-3">
-                    <Label htmlFor="serverAboutMobile" className="text-sm font-medium">About Server</Label>
+                    <Label htmlFor="serverAboutMobile" className="text-sm font-medium">
+                      About Server
+                    </Label>
                     <Textarea
                       id="serverAboutMobile"
-                      {...register('about')}
-                      className={cn("min-h-[100px] rounded-xl bg-secondary/50 border-border/30 resize-none text-sm", errors.about && 'border-destructive')}
+                      {...register("about")}
+                      className={cn(
+                        "min-h-[100px] rounded-xl bg-secondary/50 border-border/30 resize-none text-sm",
+                        errors.about && "border-destructive",
+                      )}
                       disabled={!canManageServer}
                       placeholder="Tell people what your server is about..."
                       maxLength={500}
                     />
-                    {errors.about && (
-                      <p className="text-xs text-destructive">{errors.about.message}</p>
-                    )}
+                    {errors.about && <p className="text-xs text-destructive">{errors.about.message}</p>}
                     <p className="text-xs text-muted-foreground">
                       This description will be shown in the Explore page (if public) and server overview.
                     </p>
@@ -1374,8 +1375,15 @@ export const ServerSettingsModal = () => {
                   )}
 
                   {isAdmin && (
-                    <Button type="submit" disabled={isLoading || isUploadingIcon || isUploadingBanner} rounded="xl" className="h-10 w-full">
-                      {(isLoading || isUploadingIcon || isUploadingBanner) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    <Button
+                      type="submit"
+                      disabled={isLoading || isUploadingIcon || isUploadingBanner}
+                      rounded="xl"
+                      className="h-10 w-full"
+                    >
+                      {(isLoading || isUploadingIcon || isUploadingBanner) && (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      )}
                       Save Changes
                     </Button>
                   )}
@@ -1385,8 +1393,8 @@ export const ServerSettingsModal = () => {
                     <div className="bg-destructive/10 backdrop-blur-sm rounded-xl border border-destructive/30 p-3 mt-4 space-y-3">
                       <h4 className="text-sm font-semibold text-destructive">Danger Zone</h4>
                       <p className="text-xs text-muted-foreground">Delete server permanently.</p>
-                      <Button 
-                        variant="destructive" 
+                      <Button
+                        variant="destructive"
                         rounded="xl"
                         onClick={() => setShowDeleteConfirm(true)}
                         className="h-10 w-full"
@@ -1399,12 +1407,12 @@ export const ServerSettingsModal = () => {
                 </form>
               )}
 
-              {activeTab === 'invites' && (
-                canManageInvites ? (
+              {activeTab === "invites" &&
+                (canManageInvites ? (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <p className="text-sm text-muted-foreground">
-                        {invites.length} active invite{invites.length !== 1 ? 's' : ''}
+                        {invites.length} active invite{invites.length !== 1 ? "s" : ""}
                       </p>
                       <Button
                         onClick={createInvite}
@@ -1433,7 +1441,8 @@ export const ServerSettingsModal = () => {
                               <div className="min-w-0 flex-1">
                                 <div className="text-sm font-medium truncate">{invite.code}</div>
                                 <div className="text-xs text-muted-foreground truncate">
-                                  Created by {invite.created_by_username} • {new Date(invite.created_at).toLocaleString()}
+                                  Created by {invite.created_by_username} •{" "}
+                                  {new Date(invite.created_at).toLocaleString()}
                                 </div>
                               </div>
 
@@ -1477,24 +1486,26 @@ export const ServerSettingsModal = () => {
                     <Shield className="w-10 h-10 text-muted-foreground mb-3" />
                     <p className="text-sm text-muted-foreground">You don't have permission to manage invites</p>
                   </div>
-                )
-              )}
+                ))}
 
-              {activeTab === 'members' && (
+              {activeTab === "members" && (
                 <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3">
                   <p className="text-sm text-muted-foreground mb-3">
-                    {members.length} member{members.length !== 1 ? 's' : ''}
+                    {members.length} member{members.length !== 1 ? "s" : ""}
                   </p>
                   <div className="max-h-[400px] overflow-y-auto overscroll-contain touch-pan-y space-y-2">
                     {members.map((member) => {
                       const memberRoles = member.roles || [];
                       const hasRoles = memberRoles.length > 0;
                       return (
-                        <div key={member.id} className="flex items-center gap-2 p-2 rounded-xl bg-background/50 border border-border/30">
+                        <div
+                          key={member.id}
+                          className="flex items-center gap-2 p-2 rounded-xl bg-background/50 border border-border/30"
+                        >
                           <Avatar className="w-8 h-8 flex-shrink-0">
                             <AvatarImage src={member.user?.avatar_url || undefined} />
-                            <AvatarFallback style={{ backgroundColor: member.user?.banner_color || '#5865F2' }}>
-                              {member.user?.username?.[0]?.toUpperCase() || '?'}
+                            <AvatarFallback style={{ backgroundColor: member.user?.banner_color || "#5865F2" }}>
+                              {member.user?.username?.[0]?.toUpperCase() || "?"}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
@@ -1506,7 +1517,7 @@ export const ServerSettingsModal = () => {
                               {hasRoles && (
                                 <div className="flex items-center gap-1 flex-wrap">
                                   {memberRoles.map((role) => {
-                                    const isGradient = role.color.startsWith('linear-gradient');
+                                    const isGradient = role.color.startsWith("linear-gradient");
                                     return (
                                       <Badge
                                         key={role.id}
@@ -1514,8 +1525,8 @@ export const ServerSettingsModal = () => {
                                         className="text-[10px] px-1.5 py-0 h-4 font-medium border-0 rounded-md"
                                         style={
                                           isGradient
-                                            ? { background: role.color, color: '#fff' }
-                                            : { backgroundColor: role.color + '20', color: role.color }
+                                            ? { background: role.color, color: "#fff" }
+                                            : { backgroundColor: role.color + "20", color: role.color }
                                         }
                                       >
                                         {role.name}
@@ -1529,13 +1540,13 @@ export const ServerSettingsModal = () => {
                               {member.user?.username} • {getRoleLabel(member.role)}
                             </p>
                           </div>
-                          {canManageRoles && member.user_id !== user?.id && member.role !== 'owner' && (
+                          {canManageRoles && member.user_id !== user?.id && member.role !== "owner" && (
                             <div className="flex items-center gap-1 flex-shrink-0">
                               {roles.length > 0 && (
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
-                                    <Button 
-                                      variant="ghost" 
+                                    <Button
+                                      variant="ghost"
                                       size="sm"
                                       className="text-muted-foreground hover:text-foreground text-xs h-7 px-2 rounded-lg"
                                     >
@@ -1544,21 +1555,20 @@ export const ServerSettingsModal = () => {
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end" className="w-48 rounded-xl">
                                     {roles.map((role) => {
-                                      const hasRole = memberRoles.some(r => r.id === role.id);
+                                      const hasRole = memberRoles.some((r) => r.id === role.id);
                                       return (
                                         <DropdownMenuItem
                                           key={role.id}
-                                          onClick={() => hasRole 
-                                            ? handleRemoveRole(member, role)
-                                            : handleAssignRole(member, role)
+                                          onClick={() =>
+                                            hasRole ? handleRemoveRole(member, role) : handleAssignRole(member, role)
                                           }
                                           className="rounded-lg"
                                         >
                                           <div className="flex items-center gap-2 w-full">
-                                            <div 
+                                            <div
                                               className="w-3 h-3 rounded-full flex-shrink-0"
                                               style={
-                                                role.color.startsWith('linear-gradient')
+                                                role.color.startsWith("linear-gradient")
                                                   ? { background: role.color }
                                                   : { backgroundColor: role.color }
                                               }
@@ -1572,16 +1582,16 @@ export const ServerSettingsModal = () => {
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                               )}
-                              <Button 
-                                variant="ghost" 
+                              <Button
+                                variant="ghost"
                                 size="sm"
                                 onClick={() => handleKickMember(member)}
                                 className="text-muted-foreground hover:text-destructive text-xs h-7 px-2 rounded-lg"
                               >
                                 Kick
                               </Button>
-                              <Button 
-                                variant="ghost" 
+                              <Button
+                                variant="ghost"
                                 size="sm"
                                 onClick={() => handleBanMember(member)}
                                 className="text-muted-foreground hover:text-destructive text-xs h-7 px-2 rounded-lg"
@@ -1597,11 +1607,11 @@ export const ServerSettingsModal = () => {
                 </div>
               )}
 
-              {activeTab === 'roles' && (
-                canManageRoles ? (
+              {activeTab === "roles" &&
+                (canManageRoles ? (
                   <div className="space-y-4">
                     <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 space-y-4">
-                      <h4 className="text-sm font-semibold">{editingRole ? 'Edit Role' : 'Create Role'}</h4>
+                      <h4 className="text-sm font-semibold">{editingRole ? "Edit Role" : "Create Role"}</h4>
                       <div className="space-y-3">
                         <Label className="text-sm">Role Name</Label>
                         <Input
@@ -1618,25 +1628,25 @@ export const ServerSettingsModal = () => {
                         <div className="flex gap-2">
                           <Button
                             type="button"
-                            variant={colorType === 'solid' ? 'default' : 'outline'}
+                            variant={colorType === "solid" ? "default" : "outline"}
                             size="sm"
-                            onClick={() => setColorType('solid')}
+                            onClick={() => setColorType("solid")}
                             className="flex-1 h-9 text-xs"
                           >
                             Solid
                           </Button>
                           <Button
                             type="button"
-                            variant={colorType === 'gradient' ? 'default' : 'outline'}
+                            variant={colorType === "gradient" ? "default" : "outline"}
                             size="sm"
-                            onClick={() => setColorType('gradient')}
+                            onClick={() => setColorType("gradient")}
                             className="flex-1 h-9 text-xs"
                           >
                             Gradient
                           </Button>
                         </div>
                         {/* Solid Color Picker */}
-                        {colorType === 'solid' && (
+                        {colorType === "solid" && (
                           <div className="flex items-center gap-2">
                             <label
                               className="relative w-10 h-10 rounded-xl border border-border/30 cursor-pointer overflow-hidden flex-shrink-0 hover:border-primary/50 transition-colors"
@@ -1659,7 +1669,7 @@ export const ServerSettingsModal = () => {
                           </div>
                         )}
                         {/* Gradient Options */}
-                        {colorType === 'gradient' && (
+                        {colorType === "gradient" && (
                           <div className="space-y-3">
                             {/* Gradient Presets */}
                             <div className="space-y-2">
@@ -1681,7 +1691,7 @@ export const ServerSettingsModal = () => {
                               </div>
                             </div>
                             {/* Custom Gradient Preview */}
-                            <div 
+                            <div
                               className="h-12 rounded-lg border-2 border-border"
                               style={{ background: createGradientString(gradientColors, gradientAngle) }}
                             />
@@ -1751,7 +1761,7 @@ export const ServerSettingsModal = () => {
                                   type="button"
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => setGradientColors([...gradientColors, '#5865F2'])}
+                                  onClick={() => setGradientColors([...gradientColors, "#5865F2"])}
                                   className="h-8 w-full text-xs"
                                 >
                                   <Plus className="w-3 h-3 mr-1" />
@@ -1780,9 +1790,7 @@ export const ServerSettingsModal = () => {
                               className="h-10 px-3 rounded-xl flex items-center gap-2"
                             >
                               <Smile className="w-4 h-4" />
-                              <span className="text-sm">
-                                {roleIcon ? 'Change' : 'Select'}
-                              </span>
+                              <span className="text-sm">{roleIcon ? "Change" : "Select"}</span>
                             </Button>
                           </EmojiGifPicker>
                           <div className="flex-1 min-w-0">
@@ -1794,16 +1802,14 @@ export const ServerSettingsModal = () => {
                                   variant="ghost"
                                   size="icon"
                                   className="w-8 h-8 rounded-xl"
-                                  onClick={() => setRoleIcon('')}
+                                  onClick={() => setRoleIcon("")}
                                   title="Clear role icon"
                                 >
                                   <X className="w-3.5 h-3.5" />
                                 </Button>
                               </div>
                             ) : (
-                              <p className="text-xs text-muted-foreground truncate">
-                                Emoji or server emoji
-                              </p>
+                              <p className="text-xs text-muted-foreground truncate">Emoji or server emoji</p>
                             )}
                           </div>
                         </div>
@@ -1813,18 +1819,18 @@ export const ServerSettingsModal = () => {
                         disabled={!roleName.trim()}
                         className="h-10 rounded-xl w-full"
                       >
-                        {editingRole ? 'Update Role' : 'Create Role'}
+                        {editingRole ? "Update Role" : "Create Role"}
                       </Button>
                       {editingRole && (
                         <Button
                           variant="outline"
                           onClick={() => {
                             setEditingRole(null);
-                            setRoleName('');
-                            setRoleColor('#5865F2');
-                            setRoleIcon('');
-                            setColorType('solid');
-                            setGradientColors(['#5865F2', '#7289DA']);
+                            setRoleName("");
+                            setRoleColor("#5865F2");
+                            setRoleIcon("");
+                            setColorType("solid");
+                            setGradientColors(["#5865F2", "#7289DA"]);
                             setGradientAngle(135);
                           }}
                           className="h-10 rounded-xl w-full"
@@ -1843,17 +1849,15 @@ export const ServerSettingsModal = () => {
                               key={role.id}
                               className="flex items-center gap-2 p-2 rounded-xl bg-background/50 border border-border/30"
                             >
-                              <div 
-                                className="w-4 h-4 rounded-full flex-shrink-0" 
+                              <div
+                                className="w-4 h-4 rounded-full flex-shrink-0"
                                 style={
-                                  role.color.startsWith('linear-gradient')
+                                  role.color.startsWith("linear-gradient")
                                     ? { background: role.color }
                                     : { backgroundColor: role.color }
-                                } 
+                                }
                               />
-                              {role.icon && (
-                                <span className="text-sm font-emoji leading-none">{role.icon}</span>
-                              )}
+                              {role.icon && <span className="text-sm font-emoji leading-none">{role.icon}</span>}
                               <span className="text-sm font-medium flex-1">{role.name}</span>
                               <Button
                                 variant="ghost"
@@ -1889,30 +1893,34 @@ export const ServerSettingsModal = () => {
                     <Shield className="w-10 h-10 text-muted-foreground mb-3" />
                     <p className="text-sm text-muted-foreground">Only admins can manage roles</p>
                   </div>
-                )
-              )}
+                ))}
 
-              {activeTab === 'bans' && (
+              {activeTab === "bans" && (
                 <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3">
                   {bannedMembers.length > 0 ? (
                     <div className="max-h-[400px] overflow-y-auto overscroll-contain touch-pan-y space-y-2">
                       {bannedMembers.map((member) => (
-                        <div key={member.id} className="flex items-center gap-2 p-2 rounded-xl bg-background/50 border border-border/30">
+                        <div
+                          key={member.id}
+                          className="flex items-center gap-2 p-2 rounded-xl bg-background/50 border border-border/30"
+                        >
                           <Avatar className="w-8 h-8 flex-shrink-0">
                             <AvatarImage src={member.user?.avatar_url || undefined} />
-                            <AvatarFallback style={{ backgroundColor: (member.user as any)?.banner_color || '#5865F2' }}>
-                              {member.user?.username?.[0]?.toUpperCase() || '?'}
+                            <AvatarFallback
+                              style={{ backgroundColor: (member.user as any)?.banner_color || "#5865F2" }}
+                            >
+                              {member.user?.username?.[0]?.toUpperCase() || "?"}
                             </AvatarFallback>
                           </Avatar>
                           <span className="text-sm font-medium flex-1 truncate">{member.user?.username}</span>
                           {canManageRoles && (
-                            <Button 
-                              variant="outline" 
+                            <Button
+                              variant="outline"
                               size="sm"
                               rounded="lg"
                               onClick={async () => {
                                 try {
-                                  const { error } = await supabase.rpc('unban_member', {
+                                  const { error } = await supabase.rpc("unban_member", {
                                     _server_id: server.id,
                                     _user_id: user!.id,
                                     _target_user_id: member.user_id,
@@ -1920,7 +1928,7 @@ export const ServerSettingsModal = () => {
                                   if (error) throw error;
                                   toast.success(`${member.user?.username} has been unbanned`);
                                 } catch {
-                                  toast.error('Failed to unban');
+                                  toast.error("Failed to unban");
                                 }
                               }}
                               className="text-xs h-7 px-2"
@@ -1940,8 +1948,8 @@ export const ServerSettingsModal = () => {
                 </div>
               )}
 
-              {activeTab === 'emojis' && (
-                canManageEmojis ? (
+              {activeTab === "emojis" &&
+                (canManageEmojis ? (
                   <div className="space-y-4">
                     <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 space-y-3">
                       <h4 className="text-sm font-semibold">Upload Emoji</h4>
@@ -1981,11 +1989,21 @@ export const ServerSettingsModal = () => {
                         <div className="max-h-[300px] overflow-y-auto overscroll-contain touch-pan-y">
                           <div className="grid grid-cols-2 gap-2">
                             {serverEmojis.map((emoji) => {
-                              const { data: urlData } = supabase.storage.from('server-emojis').getPublicUrl(emoji.file_path);
+                              const { data: urlData } = supabase.storage
+                                .from("server-emojis")
+                                .getPublicUrl(emoji.file_path);
                               const url = urlData.publicUrl;
                               return (
-                                <div key={emoji.id} className="flex items-center gap-2 p-2 rounded-xl bg-background/50 border border-border/30">
-                                  <img src={url} alt={emoji.name} className="w-8 h-8 rounded-lg object-cover bg-secondary" loading="lazy" />
+                                <div
+                                  key={emoji.id}
+                                  className="flex items-center gap-2 p-2 rounded-xl bg-background/50 border border-border/30"
+                                >
+                                  <img
+                                    src={url}
+                                    alt={emoji.name}
+                                    className="w-8 h-8 rounded-lg object-cover bg-secondary"
+                                    loading="lazy"
+                                  />
                                   <div className="min-w-0 flex-1">
                                     <div className="text-xs font-medium truncate">:{emoji.name}:</div>
                                   </div>
@@ -2016,8 +2034,7 @@ export const ServerSettingsModal = () => {
                     <Shield className="w-10 h-10 text-muted-foreground mb-3" />
                     <p className="text-sm text-muted-foreground">You don't have permission to manage emojis</p>
                   </div>
-                )
-              )}
+                ))}
             </div>
           </div>
 
@@ -2088,20 +2105,20 @@ export const ServerSettingsModal = () => {
                   );
                 })}
               </div>
-              
+
               {/* Content Area */}
               <div className="flex-1 overflow-y-auto overscroll-contain touch-pan-y min-h-0">
-                {activeTab === 'overview' && (
+                {activeTab === "overview" && (
                   <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                     {/* Server Icon Section */}
                     <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4">
                       <div className="flex items-center gap-3 sm:gap-4">
                         <div className="relative">
-                          <div 
+                          <div
                             onClick={() => canManageServer && fileInputRef.current?.click()}
                             className={cn(
                               "w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-secondary/50 flex items-center justify-center border border-border/30 transition-colors flex-shrink-0 overflow-hidden",
-                              canManageServer && "cursor-pointer hover:border-primary/50"
+                              canManageServer && "cursor-pointer hover:border-primary/50",
                             )}
                           >
                             {displayIconUrl ? (
@@ -2131,7 +2148,7 @@ export const ServerSettingsModal = () => {
                         <div className="min-w-0">
                           <p className="text-sm font-medium">Server Icon</p>
                           <p className="text-xs text-muted-foreground">
-                            {canManageServer ? 'Click to upload • 512x512 recommended' : '512x512 recommended'}
+                            {canManageServer ? "Click to upload • 512x512 recommended" : "512x512 recommended"}
                           </p>
                         </div>
                       </div>
@@ -2141,11 +2158,11 @@ export const ServerSettingsModal = () => {
                     <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4 space-y-3">
                       <Label className="text-sm font-medium">Server Banner</Label>
                       <div className="relative">
-                        <div 
+                        <div
                           onClick={() => canManageServer && bannerInputRef.current?.click()}
                           className={cn(
                             "w-full h-24 sm:h-32 rounded-xl bg-secondary/50 flex items-center justify-center border border-border/30 transition-colors overflow-hidden",
-                            canManageServer && "cursor-pointer hover:border-primary/50"
+                            canManageServer && "cursor-pointer hover:border-primary/50",
                           )}
                         >
                           {displayBannerUrl ? (
@@ -2176,28 +2193,38 @@ export const ServerSettingsModal = () => {
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {canManageServer ? '960x540 recommended • Shown in server list' : 'Shown in server list'}
+                        {canManageServer ? "960x540 recommended • Shown in server list" : "Shown in server list"}
                       </p>
                     </div>
 
                     {/* Server Name Section */}
                     <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4 space-y-3">
-                      <Label htmlFor="serverName" className="text-sm font-medium">Server Name</Label>
+                      <Label htmlFor="serverName" className="text-sm font-medium">
+                        Server Name
+                      </Label>
                       <Input
                         id="serverName"
-                        {...register('name')}
-                        className={cn("h-10 rounded-xl bg-secondary/50 border-border/30", errors.name && 'border-destructive')}
+                        {...register("name")}
+                        className={cn(
+                          "h-10 rounded-xl bg-secondary/50 border-border/30",
+                          errors.name && "border-destructive",
+                        )}
                         disabled={!canManageServer}
                       />
-                      {errors.name && (
-                        <p className="text-xs text-destructive">{errors.name.message}</p>
-                      )}
+                      {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
                     </div>
 
                     {isAdmin && (
                       <div className="flex flex-col-reverse sm:flex-row gap-2 pt-2">
-                        <Button type="submit" disabled={isLoading || isUploadingIcon || isUploadingBanner} rounded="xl" className="h-10 flex-1 sm:flex-none">
-                          {(isLoading || isUploadingIcon || isUploadingBanner) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                        <Button
+                          type="submit"
+                          disabled={isLoading || isUploadingIcon || isUploadingBanner}
+                          rounded="xl"
+                          className="h-10 flex-1 sm:flex-none"
+                        >
+                          {(isLoading || isUploadingIcon || isUploadingBanner) && (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          )}
                           Save Changes
                         </Button>
                       </div>
@@ -2210,8 +2237,8 @@ export const ServerSettingsModal = () => {
                         <p className="text-xs text-muted-foreground">
                           Deleting this server will permanently remove all channels, messages, and members.
                         </p>
-                        <Button 
-                          variant="destructive" 
+                        <Button
+                          variant="destructive"
                           rounded="xl"
                           onClick={() => setShowDeleteConfirm(true)}
                           className="h-10"
@@ -2224,12 +2251,12 @@ export const ServerSettingsModal = () => {
                   </form>
                 )}
 
-                {activeTab === 'invites' && (
-                  canManageInvites ? (
+                {activeTab === "invites" &&
+                  (canManageInvites ? (
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <p className="text-sm text-muted-foreground">
-                          {invites.length} active invite{invites.length !== 1 ? 's' : ''}
+                          {invites.length} active invite{invites.length !== 1 ? "s" : ""}
                         </p>
                         <Button
                           onClick={createInvite}
@@ -2283,79 +2310,87 @@ export const ServerSettingsModal = () => {
                           <div className="space-y-2">
                             {invites.map((invite) => {
                               const isRevoked = !!invite.revoked_at;
-                              const isExpired = !!invite.expires_at && new Date(invite.expires_at).getTime() <= Date.now();
+                              const isExpired =
+                                !!invite.expires_at && new Date(invite.expires_at).getTime() <= Date.now();
                               const isMaxed = invite.max_uses !== null && invite.uses_count >= invite.max_uses;
                               const expiresLabel = (() => {
-                                if (!invite.expires_at) return 'Never';
+                                if (!invite.expires_at) return "Never";
                                 const diffMs = new Date(invite.expires_at).getTime() - Date.now();
-                                if (diffMs <= 0) return 'Expired';
+                                if (diffMs <= 0) return "Expired";
                                 const minute = 60 * 1000;
                                 const hour = 60 * minute;
                                 const day = 24 * hour;
                                 if (diffMs >= day) {
                                   const d = Math.ceil(diffMs / day);
-                                  return `in ${d} day${d === 1 ? '' : 's'}`;
+                                  return `in ${d} day${d === 1 ? "" : "s"}`;
                                 }
                                 if (diffMs >= hour) {
                                   const h = Math.ceil(diffMs / hour);
-                                  return `in ${h} hour${h === 1 ? '' : 's'}`;
+                                  return `in ${h} hour${h === 1 ? "" : "s"}`;
                                 }
                                 const m = Math.ceil(diffMs / minute);
-                                return `in ${m} minute${m === 1 ? '' : 's'}`;
+                                return `in ${m} minute${m === 1 ? "" : "s"}`;
                               })();
-                              const maxUsesLabel = invite.max_uses !== null ? String(invite.max_uses) : '∞';
+                              const maxUsesLabel = invite.max_uses !== null ? String(invite.max_uses) : "∞";
 
                               return (
                                 <div
-                                key={invite.id}
-                                className="flex items-center justify-between gap-2 p-3 rounded-xl bg-background/50 border border-border/30"
-                              >
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <div className="text-sm font-medium truncate">{invite.code}</div>
-                                    {isRevoked && (
-                                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">Revoked</Badge>
-                                    )}
-                                    {!isRevoked && isExpired && (
-                                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">Expired</Badge>
-                                    )}
-                                    {!isRevoked && !isExpired && isMaxed && (
-                                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">Max uses reached</Badge>
-                                    )}
+                                  key={invite.id}
+                                  className="flex items-center justify-between gap-2 p-3 rounded-xl bg-background/50 border border-border/30"
+                                >
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <div className="text-sm font-medium truncate">{invite.code}</div>
+                                      {isRevoked && (
+                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
+                                          Revoked
+                                        </Badge>
+                                      )}
+                                      {!isRevoked && isExpired && (
+                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
+                                          Expired
+                                        </Badge>
+                                      )}
+                                      {!isRevoked && !isExpired && isMaxed && (
+                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
+                                          Max uses reached
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground truncate">
+                                      Created by {invite.created_by_username} •{" "}
+                                      {new Date(invite.created_at).toLocaleString()}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground truncate">
+                                      Expires: {expiresLabel} • Uses: {invite.uses_count}/{maxUsesLabel}
+                                    </div>
                                   </div>
-                                  <div className="text-xs text-muted-foreground truncate">
-                                    Created by {invite.created_by_username} • {new Date(invite.created_at).toLocaleString()}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground truncate">
-                                    Expires: {expiresLabel} • Uses: {invite.uses_count}/{maxUsesLabel}
-                                  </div>
-                                </div>
 
-                                <div className="flex items-center gap-1 flex-shrink-0">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    rounded="xl"
-                                    onClick={() => copyInviteLink(invite.code, invite.id)}
-                                    className="h-8 px-2"
-                                  >
-                                    {copiedInviteId === invite.id ? (
-                                      <Check className="w-4 h-4" />
-                                    ) : (
-                                      <Link2 className="w-4 h-4" />
-                                    )}
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    rounded="xl"
-                                    onClick={() => revokeInvite(invite.id)}
-                                    className="h-8 px-2 text-muted-foreground hover:text-destructive"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
+                                  <div className="flex items-center gap-1 flex-shrink-0">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      rounded="xl"
+                                      onClick={() => copyInviteLink(invite.code, invite.id)}
+                                      className="h-8 px-2"
+                                    >
+                                      {copiedInviteId === invite.id ? (
+                                        <Check className="w-4 h-4" />
+                                      ) : (
+                                        <Link2 className="w-4 h-4" />
+                                      )}
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      rounded="xl"
+                                      onClick={() => revokeInvite(invite.id)}
+                                      className="h-8 px-2 text-muted-foreground hover:text-destructive"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </div>
                                 </div>
-                              </div>
                               );
                             })}
                           </div>
@@ -2372,30 +2407,29 @@ export const ServerSettingsModal = () => {
                       <Shield className="w-10 h-10 text-muted-foreground mb-3" />
                       <p className="text-sm text-muted-foreground">You don't have permission to manage invites</p>
                     </div>
-                  )
-                )}
+                  ))}
 
-                {activeTab === 'members' && (
+                {activeTab === "members" && (
                   <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4">
                     <div className="flex items-center justify-between mb-3">
                       <p className="text-sm text-muted-foreground">
-                        {members.length} member{members.length !== 1 ? 's' : ''}
+                        {members.length} member{members.length !== 1 ? "s" : ""}
                       </p>
                     </div>
                     <div className="max-h-[400px] sm:max-h-[500px] overflow-y-auto overscroll-contain touch-pan-y space-y-2">
                       {members.map((member) => {
                         const memberRoles = member.roles || [];
                         const hasRoles = memberRoles.length > 0;
-                        
+
                         return (
-                          <div 
+                          <div
                             key={member.id}
                             className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-xl bg-background/50 border border-border/30"
                           >
                             <Avatar className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
                               <AvatarImage src={member.user?.avatar_url || undefined} />
-                              <AvatarFallback style={{ backgroundColor: member.user?.banner_color || '#5865F2' }}>
-                                {member.user?.username?.[0]?.toUpperCase() || '?'}
+                              <AvatarFallback style={{ backgroundColor: member.user?.banner_color || "#5865F2" }}>
+                                {member.user?.username?.[0]?.toUpperCase() || "?"}
                               </AvatarFallback>
                             </Avatar>
                             <div className="flex-1 min-w-0">
@@ -2407,7 +2441,7 @@ export const ServerSettingsModal = () => {
                                 {hasRoles && (
                                   <div className="flex items-center gap-1 flex-wrap">
                                     {memberRoles.map((role) => {
-                                      const isGradient = role.color.startsWith('linear-gradient');
+                                      const isGradient = role.color.startsWith("linear-gradient");
                                       return (
                                         <Badge
                                           key={role.id}
@@ -2415,8 +2449,8 @@ export const ServerSettingsModal = () => {
                                           className="text-[10px] px-1.5 py-0 h-4 font-medium border-0 rounded-md"
                                           style={
                                             isGradient
-                                              ? { background: role.color, color: '#fff' }
-                                              : { backgroundColor: role.color + '20', color: role.color }
+                                              ? { background: role.color, color: "#fff" }
+                                              : { backgroundColor: role.color + "20", color: role.color }
                                           }
                                         >
                                           {role.name}
@@ -2430,14 +2464,14 @@ export const ServerSettingsModal = () => {
                                 {member.user?.username} • {getRoleLabel(member.role)}
                               </p>
                             </div>
-                            
-                            {canManageRoles && member.user_id !== user?.id && member.role !== 'owner' && (
+
+                            {canManageRoles && member.user_id !== user?.id && member.role !== "owner" && (
                               <div className="flex items-center gap-1 flex-shrink-0">
                                 {roles.length > 0 && (
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                      <Button 
-                                        variant="ghost" 
+                                      <Button
+                                        variant="ghost"
                                         size="sm"
                                         rounded="xl"
                                         className="text-muted-foreground hover:text-foreground text-xs h-8 px-2 sm:px-3"
@@ -2447,21 +2481,20 @@ export const ServerSettingsModal = () => {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end" className="w-48 rounded-xl">
                                       {roles.map((role) => {
-                                        const hasRole = memberRoles.some(r => r.id === role.id);
+                                        const hasRole = memberRoles.some((r) => r.id === role.id);
                                         return (
                                           <DropdownMenuItem
                                             key={role.id}
-                                            onClick={() => hasRole 
-                                              ? handleRemoveRole(member, role)
-                                              : handleAssignRole(member, role)
+                                            onClick={() =>
+                                              hasRole ? handleRemoveRole(member, role) : handleAssignRole(member, role)
                                             }
                                             className="rounded-lg"
                                           >
                                             <div className="flex items-center gap-2 w-full">
-                                              <div 
+                                              <div
                                                 className="w-3 h-3 rounded-full flex-shrink-0"
                                                 style={
-                                                  role.color.startsWith('linear-gradient')
+                                                  role.color.startsWith("linear-gradient")
                                                     ? { background: role.color }
                                                     : { backgroundColor: role.color }
                                                 }
@@ -2475,8 +2508,8 @@ export const ServerSettingsModal = () => {
                                     </DropdownMenuContent>
                                   </DropdownMenu>
                                 )}
-                                <Button 
-                                  variant="ghost" 
+                                <Button
+                                  variant="ghost"
                                   size="sm"
                                   rounded="xl"
                                   onClick={() => handleKickMember(member)}
@@ -2484,8 +2517,8 @@ export const ServerSettingsModal = () => {
                                 >
                                   Kick
                                 </Button>
-                                <Button 
-                                  variant="ghost" 
+                                <Button
+                                  variant="ghost"
                                   size="sm"
                                   rounded="xl"
                                   onClick={() => handleBanMember(member)}
@@ -2502,14 +2535,12 @@ export const ServerSettingsModal = () => {
                   </div>
                 )}
 
-                {activeTab === 'roles' && (
-                  canManageRoles ? (
+                {activeTab === "roles" &&
+                  (canManageRoles ? (
                     <div className="space-y-4">
                       {/* Create/Edit Role Form */}
                       <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4 space-y-4">
-                        <h4 className="text-sm font-semibold">
-                          {editingRole ? 'Edit Role' : 'Create Role'}
-                        </h4>
+                        <h4 className="text-sm font-semibold">{editingRole ? "Edit Role" : "Create Role"}</h4>
                         <div className="space-y-3">
                           <Label className="text-sm">Role Name & Color</Label>
                           <div className="flex items-center gap-2">
@@ -2564,9 +2595,7 @@ export const ServerSettingsModal = () => {
                                 className="h-10 px-3 flex items-center gap-2"
                               >
                                 <Smile className="w-4 h-4" />
-                                <span className="text-sm">
-                                  {roleIcon ? 'Change' : 'Select'}
-                                </span>
+                                <span className="text-sm">{roleIcon ? "Change" : "Select"}</span>
                               </Button>
                             </EmojiGifPicker>
                             <div className="flex-1 min-w-0">
@@ -2579,16 +2608,14 @@ export const ServerSettingsModal = () => {
                                     size="icon"
                                     rounded="xl"
                                     className="w-8 h-8"
-                                    onClick={() => setRoleIcon('')}
+                                    onClick={() => setRoleIcon("")}
                                     title="Clear role icon"
                                   >
                                     <X className="w-3.5 h-3.5" />
                                   </Button>
                                 </div>
                               ) : (
-                                <p className="text-xs text-muted-foreground truncate">
-                                  Emoji or existing server emoji
-                                </p>
+                                <p className="text-xs text-muted-foreground truncate">Emoji or existing server emoji</p>
                               )}
                             </div>
                           </div>
@@ -2618,9 +2645,9 @@ export const ServerSettingsModal = () => {
                               rounded="xl"
                               onClick={() => {
                                 setEditingRole(null);
-                                setRoleName('');
-                                setRoleColor('#5865F2');
-                                setRoleIcon('');
+                                setRoleName("");
+                                setRoleColor("#5865F2");
+                                setRoleIcon("");
                               }}
                               className="h-10"
                             >
@@ -2655,9 +2682,7 @@ export const ServerSettingsModal = () => {
                               <Palette className="w-5 h-5 text-muted-foreground" />
                             </div>
                             <p className="text-sm text-muted-foreground">No custom roles yet</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Create your first role above
-                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">Create your first role above</p>
                           </div>
                         )}
                       </div>
@@ -2669,52 +2694,51 @@ export const ServerSettingsModal = () => {
                       </div>
                       <p className="text-sm text-muted-foreground">Only admins can manage roles</p>
                     </div>
-                  )
-                )}
+                  ))}
 
-                {activeTab === 'bans' && (
+                {activeTab === "bans" && (
                   <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4">
                     {bannedMembers.length > 0 ? (
                       <div className="max-h-[400px] sm:max-h-[500px] overflow-y-auto overscroll-contain touch-pan-y space-y-2">
                         {bannedMembers.map((member) => (
-                          <div 
+                          <div
                             key={member.id}
                             className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-xl bg-background/50 border border-border/30"
                           >
                             <Avatar className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
                               <AvatarImage src={member.user?.avatar_url || undefined} />
-                              <AvatarFallback style={{ backgroundColor: (member.user as any)?.banner_color || '#5865F2' }}>
-                                {member.user?.username?.[0]?.toUpperCase() || '?'}
+                              <AvatarFallback
+                                style={{ backgroundColor: (member.user as any)?.banner_color || "#5865F2" }}
+                              >
+                                {member.user?.username?.[0]?.toUpperCase() || "?"}
                               </AvatarFallback>
                             </Avatar>
                             <div className="flex-1 min-w-0">
-                              <span className="text-sm font-medium truncate">
-                                {member.user?.username}
-                              </span>
+                              <span className="text-sm font-medium truncate">{member.user?.username}</span>
                             </div>
                             {canManageRoles && (
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              rounded="xl"
-                              onClick={async () => {
-                                try {
-                                  const { error } = await supabase.rpc('unban_member', {
-                                    _server_id: server.id,
-                                    _user_id: user!.id,
-                                    _target_user_id: member.user_id,
-                                  });
-                                  if (error) throw error;
-                                  toast.success(`${member.user?.username} has been unbanned`);
-                                } catch {
-                                  toast.error('Failed to unban');
-                                }
-                              }}
-                              className="text-xs h-8 px-3 flex-shrink-0"
-                            >
-                              Unban
-                            </Button>
-                          )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                rounded="xl"
+                                onClick={async () => {
+                                  try {
+                                    const { error } = await supabase.rpc("unban_member", {
+                                      _server_id: server.id,
+                                      _user_id: user!.id,
+                                      _target_user_id: member.user_id,
+                                    });
+                                    if (error) throw error;
+                                    toast.success(`${member.user?.username} has been unbanned`);
+                                  } catch {
+                                    toast.error("Failed to unban");
+                                  }
+                                }}
+                                className="text-xs h-8 px-3 flex-shrink-0"
+                              >
+                                Unban
+                              </Button>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -2724,21 +2748,20 @@ export const ServerSettingsModal = () => {
                           <Ban className="w-5 h-5 text-muted-foreground" />
                         </div>
                         <p className="text-sm text-muted-foreground">No banned users</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Users you ban will appear here
-                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">Users you ban will appear here</p>
                       </div>
                     )}
                   </div>
                 )}
 
-                {activeTab === 'emojis' && (
-                  canManageEmojis ? (
+                {activeTab === "emojis" &&
+                  (canManageEmojis ? (
                     <div className="space-y-4">
                       <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4 space-y-3">
                         <h4 className="text-sm font-semibold">Custom Emojis</h4>
                         <p className="text-xs text-muted-foreground">
-                          Upload an emoji and set a name (2-32 chars: a-z, 0-9, underscore). Use it in chat as <span className="font-mono">:name:</span>
+                          Upload an emoji and set a name (2-32 chars: a-z, 0-9, underscore). Use it in chat as{" "}
+                          <span className="font-mono">:name:</span>
                         </p>
 
                         {/* Upload row */}
@@ -2761,7 +2784,9 @@ export const ServerSettingsModal = () => {
                           </div>
 
                           <div className="flex-1 space-y-2">
-                            <Label className="text-sm" htmlFor="emojiName">Emoji Name</Label>
+                            <Label className="text-sm" htmlFor="emojiName">
+                              Emoji Name
+                            </Label>
                             <Input
                               id="emojiName"
                               value={emojiName}
@@ -2805,7 +2830,7 @@ export const ServerSettingsModal = () => {
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                               {serverEmojis.map((emoji) => {
                                 const { data: urlData } = supabase.storage
-                                  .from('server-emojis')
+                                  .from("server-emojis")
                                   .getPublicUrl(emoji.file_path);
                                 const url = urlData.publicUrl;
 
@@ -2845,9 +2870,7 @@ export const ServerSettingsModal = () => {
                               <Smile className="w-5 h-5 text-muted-foreground" />
                             </div>
                             <p className="text-sm text-muted-foreground">No custom emojis yet</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Upload your first emoji above
-                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">Upload your first emoji above</p>
                           </div>
                         )}
                       </div>
@@ -2859,8 +2882,7 @@ export const ServerSettingsModal = () => {
                       </div>
                       <p className="text-sm text-muted-foreground">You do not have permission to manage emojis</p>
                     </div>
-                  )
-                )}
+                  ))}
               </div>
             </div>
           </DialogContent>
@@ -2886,8 +2908,8 @@ export const ServerSettingsModal = () => {
           <AlertDialogHeader>
             <AlertDialogTitle className="text-lg">Delete Server</AlertDialogTitle>
             <AlertDialogDescription className="text-sm">
-              Are you sure you want to delete <strong>{server.name}</strong>? 
-              This action cannot be undone. All channels, messages, and members will be permanently removed.
+              Are you sure you want to delete <strong>{server.name}</strong>? This action cannot be undone. All
+              channels, messages, and members will be permanently removed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex flex-col-reverse sm:flex-row gap-2">
@@ -2896,11 +2918,7 @@ export const ServerSettingsModal = () => {
               onClick={handleDeleteServer}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90 h-10 rounded-xl"
             >
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Trash2 className="w-4 h-4 mr-2" />
-              )}
+              {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
               Delete Server
             </AlertDialogAction>
           </AlertDialogFooter>
