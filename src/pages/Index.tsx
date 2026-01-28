@@ -41,28 +41,29 @@ const Index = () => {
               >
                 <div>
                   <div className="flex items-start gap-4">
-                    <div className="hidden md:block w-px h-20 bg-gradient-to-b from-primary/50 to-transparent" />
+                    <div className="hidden md:block w-px h-24 bg-gradient-to-b from-primary/50 to-transparent" />
                     <h2 className="landing-section-title text-foreground leading-tight">
-                      Your private rants shouldn't be <br />
-                      <span className="text-primary font-semibold">company assets.</span>
+                      Kloak exists for <span className="text-primary font-semibold">people.</span> <br />
+                      Not for shareholders.
                     </h2>
                   </div>
                 </div>
 
                 <div className="relative">
                   <div className="space-y-8">
-                    <p className="landing-body text-primary text-sm md:text-lg max-w-xl">
-                      Whether you’re a girl at her laptop, a dev in his office, or just a group of friends looking for a
-                      place to hang out—you’re being watched. While big platforms chase public IPOs, they aren’t selling
-                      features; they’re selling your 2 AM vents and personal connections as "inventory."
+                    <p className="landing-body text-primary text-sm md:text-sm max-w-xl">
+                      The internet used to be a place where we just talked. Now, it's a place where we are harvested.
+                      From the girl sharing her day on a laptop to the dev venting in his office, most platforms treat
+                      your human connections as data assets to be sold on a stock exchange.
                     </p>
-                    <p className="landing-body text-primary text-sm md:text-lg max-w-xl">
-                      Kloak is the digital equivalent of drawing the blinds. We built this because professional venting
-                      shouldn't be a career risk, and your daily life shouldn't be a data point. No logs, no leaks, and
-                      no CEOs in your DMs.
-                      <span className="block mt-4 font-medium text-foreground">
-                        Finally, a space that's actually yours.
-                      </span>
+                    <p className="landing-body text-primary text-sm md:text-sm max-w-xl">
+                      We didn't build Kloak to collect "users"—we built it to protect{" "}
+                      <span className="text-foreground font-medium">people</span>. Because whether you're hanging out
+                      with friends or discussing internal work, your privacy isn't a feature we "allow" you to have;
+                      it's a human right we physically cannot take away.
+                    </p>
+                    <p className="landing-body text-primary font-normal text-sm md:text-sm border-l-2 border-primary/30 pl-6">
+                      No logs for HR. No data for CEOs. Just a space that belongs to you again.
                     </p>
                   </div>
                 </div>
