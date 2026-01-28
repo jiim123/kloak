@@ -633,7 +633,7 @@ export const MessageItem = memo(function MessageItem({
                           active={isRowHovered}
                           onClick={handleUsernameClick}
                         />
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-sm text-muted-foreground tracking-tight">
                           <MessageContent
                             content={message.content}
                             currentUserId={user?.id}
