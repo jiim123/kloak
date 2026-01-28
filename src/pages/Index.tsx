@@ -410,7 +410,7 @@ const Index = () => {
                     number: "01",
                     title: "Your work stays yours",
                     description:
-                      "Nothing you share on Kloak trains AI models. Your unreleased tracks, your concept art, your game designs—they're not fodder for machine learning.",
+                      "Nothing you share on Kloak trains AI models. Your unreleased tracks, your concept art, your game designs.",
                   },
                   {
                     number: "02",
@@ -426,9 +426,9 @@ const Index = () => {
                   },
                   {
                     number: "04",
-                    title: "One tier for everyone",
+                    title: "No paywalling",
                     description:
-                      "No premium unlocks, no artificial limits, no FOMO. Every feature we build ships to everyone. Your subscription supports the platform—that's it.",
+                      "No premium unlocks for basic features, no profile customization limits, no micro-transactions.",
                   },
                 ].map((principle, index) => (
                   <motion.div
