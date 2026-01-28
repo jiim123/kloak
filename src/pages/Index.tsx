@@ -41,8 +41,8 @@ const Index = () => {
               >
                 <div>
                   <div className="flex items-start gap-4">
-                    <h2 className="landing-section-title text-foreground leading-tight">
-                      Kloak exists for <span className="text-primary font-normal">people.</span> <br />
+                    <h2 className="landing-section-title font-normal text-foreground leading-tight">
+                      Kloak exists for people.</span> <br />
                     </h2>
                   </div>
                 </div>
