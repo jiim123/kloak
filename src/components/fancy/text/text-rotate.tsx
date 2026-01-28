@@ -18,8 +18,8 @@ function splitText(text: string, splitBy: SplitType = "characters"): string[] {
       // Use Intl.Segmenter for proper grapheme cluster splitting (handles emojis correctly)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const IntlAny = Intl as any;
-      if (typeof IntlAny.Segmenter !== 'undefined') {
-        const segmenter = new IntlAny.Segmenter('en', { granularity: 'grapheme' });
+      if (typeof IntlAny.Segmenter !== "undefined") {
+        const segmenter = new IntlAny.Segmenter("en", { granularity: "grapheme" });
         return Array.from(segmenter.segment(text), (s: { segment: string }) => s.segment);
       }
       // Fallback for older browsers - use spread operator which handles most emojis
@@ -134,7 +134,10 @@ const TextRotate = forwardRef<TextRotateRef, TextRotateProps>(
     }, [auto, rotationInterval, next]);
 
     const currentText = texts[currentIndex];
-    const splitParts = useMemo(() => splitText(currentText, splitBy), [currentText, splitBy]);
+    const splitParts = useMemo(() => {
+      if (typeof currentText !== "string") return [currentText];
+      return splitText(currentText, splitBy);
+    }, [currentText, splitBy]);
 
     return (
       <div className={cn("relative inline-flex", mainClassName)}>
@@ -152,7 +155,8 @@ const TextRotate = forwardRef<TextRotateRef, TextRotateProps>(
                 }}
                 className={cn("inline-block", elementLevelClassName)}
               >
-                {part === " " ? "\u00A0" : part}
+                {/* Logic to handle space vs JSX vs String */}
+                {typeof part === "string" ? (part === " " ? "\u00A0" : part) : part}
               </motion.span>
             ))}
           </motion.div>
