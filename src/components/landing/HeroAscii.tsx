@@ -74,56 +74,56 @@ export const HeroImage = () => {
                 </motion.span>
                 <TextRotate
                   texts={[
-                    <span className="flex items-center gap-2">
-                      OPINION <MessageSquareQuote size={20} />
+                    <span className="flex items-center gap-4">
+                      OPINION <MessageSquareQuote size="1em" className="shrink-0" />
                     </span>,
-                    <span className="flex items-center gap-2">
-                      MESSAGE <MessageSquare size={20} />
+                    <span className="flex items-center gap-4">
+                      MESSAGE <MessageSquare size="1em" className="shrink-0" />
                     </span>,
-                    <span className="flex items-center gap-2">
-                      REACTION <Smile size={20} />
+                    <span className="flex items-center gap-4">
+                      REACTION <Smile size="1em" className="shrink-0" />
                     </span>,
-                    <span className="flex items-center gap-2">
-                      COMMUNITY <Users size={20} />
+                    <span className="flex items-center gap-4">
+                      COMMUNITY <Users size="1em" className="shrink-0" />
                     </span>,
-                    <span className="flex items-center gap-2">
-                      FRIENDS <Heart size={20} />
+                    <span className="flex items-center gap-4">
+                      FRIENDS <Heart size="1em" className="shrink-0" />
                     </span>,
-                    <span className="flex items-center gap-2">
-                      FAMILY <Home size={20} />
+                    <span className="flex items-center gap-4">
+                      FAMILY <Home size="1em" className="shrink-0" />
                     </span>,
-                    <span className="flex items-center gap-2">
-                      VOICE <Mic2 size={20} />
+                    <span className="flex items-center gap-4">
+                      VOICE <Mic2 size="1em" className="shrink-0" />
                     </span>,
-                    <span className="flex items-center gap-2">
-                      VIBE <Sparkles size={20} />
+                    <span className="flex items-center gap-4">
+                      VIBE <Sparkles size="1em" className="shrink-0" />
                     </span>,
-                    <span className="flex items-center gap-2">
-                      CHAOS <Tornado size={20} />
+                    <span className="flex items-center gap-4">
+                      CHAOS <Tornado size="1em" className="shrink-0" />
                     </span>,
-                    <span className="flex items-center gap-2">
-                      DRAMA <Theater size={20} />
+                    <span className="flex items-center gap-4">
+                      DRAMA <Theater size="1em" className="shrink-0" />
                     </span>,
-                    <span className="flex items-center gap-2">
-                      RANT <Flame size={20} />
+                    <span className="flex items-center gap-4">
+                      RANT <Flame size="1em" className="shrink-0" />
                     </span>,
-                    <span className="flex items-center gap-2">
-                      SECRET <Fingerprint size={20} />
+                    <span className="flex items-center gap-4">
+                      SECRET <Fingerprint size="1em" className="shrink-0" />
                     </span>,
-                    <span className="flex items-center gap-2">
-                      MEMES <Laugh size={20} />
+                    <span className="flex items-center gap-4">
+                      MEMES <Laugh size="1em" className="shrink-0" />
                     </span>,
-                    <span className="flex items-center gap-2">
-                      HOT TAKE <Flame size={20} />
+                    <span className="flex items-center gap-4">
+                      HOT TAKE <Flame size="1em" className="shrink-0" />
                     </span>,
-                    <span className="flex items-center gap-2">
-                      GROUP CHAT <UserPlus size={20} />
+                    <span className="flex items-center gap-4">
+                      GROUP CHAT <UserPlus size="1em" className="shrink-0" />
                     </span>,
-                    <span className="flex items-center gap-2">
-                      DATA <ShieldCheck size={20} />
+                    <span className="flex items-center gap-4">
+                      DATA <ShieldCheck size="1em" className="shrink-0" />
                     </span>,
                   ]}
-                  mainClassName="text-background px-2 sm:px-3 bg-primary overflow-hidden py-1 sm:py-1.5 justify-center rounded-lg my-2 sm:my-3"
+                  mainClassName="text-background px-2 sm:px-4 bg-primary overflow-hidden py-1 sm:py-2 justify-center rounded-lg my-2 sm:my-3"
                   staggerFrom="last"
                   initial={{ y: "100%" }}
                   animate={{ y: 0 }}
