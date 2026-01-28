@@ -41,12 +41,9 @@ const Index = () => {
               >
                 <div>
                   <div className="flex items-start gap-4">
-                    <div className="hidden md:block w-px h-24 bg-gradient-to-b from-primary/50 to-transparent" />
                     <h2 className="landing-section-title text-foreground leading-tight">
-                      Kloak exists for <span className="text-primary font-semibold">people.</span> <br />
-                      Not for shareholders.
+                      Kloak exists for <span className="text-primary font-normal">people.</span> <br />
                     </h2>
-                  </div>
                 </div>
 
                 <div className="relative">
