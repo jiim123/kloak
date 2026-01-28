@@ -74,14 +74,8 @@ const Index = () => {
 
           {/* What is Kloak Section */}
           <section className="relative py-32 md:py-48 px-8 lg:px-16 border-t border-border/20 overflow-hidden">
-            {/* Corner Frame Accents */}
-            <div className="absolute top-4 left-4 w-8 h-8 border-l border-t border-primary/20" />
-            <div className="absolute top-4 right-4 w-8 h-8 border-r border-t border-primary/20" />
-            <div className="absolute bottom-4 left-4 w-8 h-8 border-l border-b border-primary/20" />
-            <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/20" />
-
             <div className="max-w-7xl mx-auto">
-              {/* Section header with ASCII style */}
+              {/* Section header */}
               <motion.div
                 className="flex items-center gap-4 mb-12"
                 initial={{ opacity: 0 }}
@@ -89,8 +83,6 @@ const Index = () => {
                 viewport={{ once: true }}
                 transition={{ duration: 0.6 }}
               >
-                <span className="text-xs font-mono text-primary/70">002</span>
-                <div className="w-8 h-px bg-gradient-to-r from-primary/50 to-transparent" />
                 <span className="text-xs font-mono text-primary tracking-widest uppercase">What is Kloak</span>
               </motion.div>
 
@@ -142,12 +134,6 @@ const Index = () => {
                   className="relative"
                 >
                   <div className="relative rounded-none border border-border/30 bg-background/50 backdrop-blur-sm p-8 md:p-10 min-h-[320px] overflow-hidden">
-                    {/* Corner accents */}
-                    <div className="absolute top-0 left-0 w-4 h-4 border-l-2 border-t-2 border-primary/40" />
-                    <div className="absolute top-0 right-0 w-4 h-4 border-r-2 border-t-2 border-primary/40" />
-                    <div className="absolute bottom-0 left-0 w-4 h-4 border-l-2 border-b-2 border-primary/40" />
-                    <div className="absolute bottom-0 right-0 w-4 h-4 border-r-2 border-b-2 border-primary/40" />
-
                     {/* Subtle gradient accent */}
                     <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-primary/10 to-transparent" />
 
@@ -197,9 +183,6 @@ const Index = () => {
                         </button>
                       ))}
                     </div>
-
-                    {/* Code notation */}
-                    <div className="absolute top-4 right-4 text-[8px] font-mono text-primary/40">AUDIENCE.LOOP</div>
                   </div>
                 </motion.div>
               </div>
@@ -215,25 +198,11 @@ const Index = () => {
                 Most platforms treat privacy as a setting you can toggle. We built Kloak so we{" "}
                 <span className="text-foreground italic">physically cannot</span> access your data—even if we wanted to.
               </motion.p>
-
-              {/* Bottom technical notation */}
-              <div className="hidden md:flex items-center justify-center gap-4 mt-12 text-xs font-mono text-muted-foreground/50">
-                <span>◇</span>
-                <div className="w-16 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-                <span>INTRO.COMPLETE</span>
-                <div className="w-16 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-                <span>◇</span>
-              </div>
             </div>
           </section>
 
           {/* Comparison Section */}
           <section className="relative py-32 px-8 lg:px-16 bg-card/50 border-y border-border/20 overflow-hidden">
-            {/* Corner Frame Accents */}
-            <div className="absolute top-4 left-4 w-8 h-8 border-l border-t border-primary/20" />
-            <div className="absolute top-4 right-4 w-8 h-8 border-r border-t border-primary/20" />
-            <div className="absolute bottom-4 left-4 w-8 h-8 border-l border-b border-primary/20" />
-            <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/20" />
             <div className="max-w-7xl mx-auto">
               <motion.div
                 className="mb-16"
@@ -242,10 +211,8 @@ const Index = () => {
                 viewport={{ once: true }}
                 transition={{ duration: 0.6 }}
               >
-                {/* Section header with ASCII style */}
+                {/* Section header */}
                 <div className="flex items-center gap-4 mb-4">
-                  <span className="text-xs font-mono text-primary/70">003</span>
-                  <div className="w-8 h-px bg-gradient-to-r from-primary/50 to-transparent" />
                   <span className="text-xs font-mono text-primary tracking-widest uppercase">The Difference</span>
                 </div>
                 <div className="flex items-start gap-4">
@@ -262,11 +229,6 @@ const Index = () => {
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: 0.2 }}
               >
-                {/* Table corner accents */}
-                <div className="absolute top-0 left-0 w-4 h-4 border-l-2 border-t-2 border-primary/30" />
-                <div className="absolute top-0 right-0 w-4 h-4 border-r-2 border-t-2 border-primary/30" />
-                <div className="absolute bottom-0 left-0 w-4 h-4 border-l-2 border-b-2 border-primary/30" />
-                <div className="absolute bottom-0 right-0 w-4 h-4 border-r-2 border-b-2 border-primary/30" />
                 <Table>
                   <TableHeader>
                     <TableRow className="border-border/30 hover:bg-transparent">
@@ -328,30 +290,15 @@ const Index = () => {
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: 0.4 }}
               >
-                <div className="hidden md:flex gap-0.5">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="w-1 h-2 bg-primary/30" />
-                  ))}
-                </div>
                 <p className="text-center landing-body text-muted-foreground">
                   The less we know about you, the less anyone can take.
                 </p>
-                <div className="hidden md:flex gap-0.5">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="w-1 h-2 bg-primary/30" />
-                  ))}
-                </div>
               </motion.div>
             </div>
           </section>
 
           {/* Principles Section */}
           <section className="relative py-32 px-8 lg:px-16 overflow-hidden">
-            {/* Corner Frame Accents */}
-            <div className="absolute top-4 left-4 w-8 h-8 border-l border-t border-primary/20" />
-            <div className="absolute top-4 right-4 w-8 h-8 border-r border-t border-primary/20" />
-            <div className="absolute bottom-4 left-4 w-8 h-8 border-l border-b border-primary/20" />
-            <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/20" />
             {/* Background grid pattern */}
             <div
               className="absolute inset-0 opacity-[0.02]"
@@ -369,10 +316,8 @@ const Index = () => {
                 viewport={{ once: true }}
                 transition={{ duration: 0.6 }}
               >
-                {/* Section header with ASCII style */}
+                {/* Section header */}
                 <div className="flex items-center gap-4 mb-4">
-                  <span className="text-xs font-mono text-primary/70">004</span>
-                  <div className="w-8 h-px bg-gradient-to-r from-primary/50 to-transparent" />
                   <span className="text-xs font-mono text-primary tracking-widest uppercase">Our Principles</span>
                 </div>
                 <div className="flex items-start gap-4">
@@ -417,13 +362,8 @@ const Index = () => {
                     viewport={{ once: true }}
                     transition={{ duration: 0.6, delay: index * 0.1 }}
                   >
-                    {/* Card with ASCII styling */}
+                    {/* Card with styling */}
                     <div className="relative border border-border/20 p-8 bg-card/30 hover:border-primary/30 transition-colors duration-300">
-                      {/* Corner accents */}
-                      <div className="absolute top-0 left-0 w-3 h-3 border-l border-t border-primary/40" />
-                      <div className="absolute top-0 right-0 w-3 h-3 border-r border-t border-primary/40" />
-                      <div className="absolute bottom-0 left-0 w-3 h-3 border-l border-b border-primary/40" />
-                      <div className="absolute bottom-0 right-0 w-3 h-3 border-r border-b border-primary/40" />
                       <div className="flex items-start gap-4">
                         <span className="text-4xl font-mono font-semibold text-primary/40 group-hover:text-primary/60 transition-colors duration-300">
                           {principle.number}
@@ -438,24 +378,11 @@ const Index = () => {
                   </motion.div>
                 ))}
               </div>
-              {/* Bottom technical notation */}
-              <div className="hidden md:flex items-center justify-center gap-4 mt-16 text-xs font-mono text-muted-foreground/50">
-                <span>◇</span>
-                <div className="w-16 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-                <span>CORE.VALUES</span>
-                <div className="w-16 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-                <span>◇</span>
-              </div>
             </div>
           </section>
 
           {/* Capabilities Section */}
           <section className="relative py-32 px-8 lg:px-16 bg-card/50 border-y border-border/20 overflow-hidden">
-            {/* Corner Frame Accents */}
-            <div className="absolute top-4 left-4 w-8 h-8 border-l border-t border-primary/20" />
-            <div className="absolute top-4 right-4 w-8 h-8 border-r border-t border-primary/20" />
-            <div className="absolute bottom-4 left-4 w-8 h-8 border-l border-b border-primary/20" />
-            <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/20" />
             <div className="max-w-7xl mx-auto">
               <motion.div
                 className="mb-20"
@@ -464,10 +391,8 @@ const Index = () => {
                 viewport={{ once: true }}
                 transition={{ duration: 0.6 }}
               >
-                {/* Section header with ASCII style */}
+                {/* Section header */}
                 <div className="flex items-center gap-4 mb-4">
-                  <span className="text-xs font-mono text-primary/70">005</span>
-                  <div className="w-8 h-px bg-gradient-to-r from-primary/50 to-transparent" />
                   <span className="text-xs font-mono text-primary tracking-widest uppercase">Capabilities</span>
                 </div>
                 <div className="flex items-start gap-4">
@@ -477,7 +402,7 @@ const Index = () => {
                   </h2>
                 </div>
               </motion.div>
-              {/* Feature Grid with ASCII styling */}
+              {/* Feature Grid */}
               <div className="grid lg:grid-cols-12 gap-6">
                 {/* Main Feature - Large */}
                 <motion.div
@@ -487,11 +412,6 @@ const Index = () => {
                   viewport={{ once: true }}
                   transition={{ duration: 0.6 }}
                 >
-                  {/* Corner accents */}
-                  <div className="absolute top-0 left-0 w-4 h-4 border-l-2 border-t-2 border-primary/40" />
-                  <div className="absolute top-0 right-0 w-4 h-4 border-r-2 border-t-2 border-primary/40" />
-                  <div className="absolute bottom-0 left-0 w-4 h-4 border-l-2 border-b-2 border-primary/40" />
-                  <div className="absolute bottom-0 right-0 w-4 h-4 border-r-2 border-b-2 border-primary/40" />
                   <div className="flex items-center gap-4 mb-4">
                     <MessageCircle className="w-8 h-8 text-primary shrink-0" />
                     <h3 className="landing-card-title text-foreground text-xl sm:text-2xl">Real-Time Messaging</h3>
@@ -500,7 +420,6 @@ const Index = () => {
                     Instant message delivery across servers, channels, and direct conversations. Built for speed without
                     sacrificing privacy.
                   </p>
-                  <div className="absolute bottom-4 right-4 text-[8px] font-mono text-primary/40">MSG.001</div>
                 </motion.div>
                 {/* Secondary Feature */}
                 <motion.div
@@ -510,10 +429,6 @@ const Index = () => {
                   viewport={{ once: true }}
                   transition={{ duration: 0.6, delay: 0.1 }}
                 >
-                  <div className="absolute top-0 left-0 w-4 h-4 border-l-2 border-t-2 border-primary/40" />
-                  <div className="absolute top-0 right-0 w-4 h-4 border-r-2 border-t-2 border-primary/40" />
-                  <div className="absolute bottom-0 left-0 w-4 h-4 border-l-2 border-b-2 border-primary/40" />
-                  <div className="absolute bottom-0 right-0 w-4 h-4 border-r-2 border-b-2 border-primary/40" />
                   <div className="flex items-center gap-3 mb-4">
                     <Lock className="w-7 h-7 text-primary shrink-0" />
                     <h3 className="landing-card-title text-foreground text-lg sm:text-xl">Key-Based Auth</h3>
@@ -521,7 +436,6 @@ const Index = () => {
                   <p className="landing-body text-muted-foreground text-sm">
                     One cryptographic key. Full control. No password managers, no recovery emails, no vulnerabilities.
                   </p>
-                  <div className="absolute bottom-4 right-4 text-[8px] font-mono text-primary/40">AUTH.002</div>
                 </motion.div>
                 {/* Third Feature */}
                 <motion.div
@@ -531,10 +445,6 @@ const Index = () => {
                   viewport={{ once: true }}
                   transition={{ duration: 0.6, delay: 0.2 }}
                 >
-                  <div className="absolute top-0 left-0 w-4 h-4 border-l-2 border-t-2 border-primary/40" />
-                  <div className="absolute top-0 right-0 w-4 h-4 border-r-2 border-t-2 border-primary/40" />
-                  <div className="absolute bottom-0 left-0 w-4 h-4 border-l-2 border-b-2 border-primary/40" />
-                  <div className="absolute bottom-0 right-0 w-4 h-4 border-r-2 border-b-2 border-primary/40" />
                   <div className="flex items-center gap-3 mb-4">
                     <Users className="w-7 h-7 text-primary shrink-0" />
                     <h3 className="landing-card-title text-foreground text-lg sm:text-xl">Communities</h3>
@@ -542,7 +452,6 @@ const Index = () => {
                   <p className="landing-body text-muted-foreground text-sm">
                     Create spaces for your people. Organize with servers, channels, and categories — your way.
                   </p>
-                  <div className="absolute bottom-4 right-4 text-[8px] font-mono text-primary/40">COMM.003</div>
                 </motion.div>
                 {/* Fourth Feature - Large */}
                 <motion.div
@@ -552,10 +461,6 @@ const Index = () => {
                   viewport={{ once: true }}
                   transition={{ duration: 0.6, delay: 0.3 }}
                 >
-                  <div className="absolute top-0 left-0 w-4 h-4 border-l-2 border-t-2 border-primary/40" />
-                  <div className="absolute top-0 right-0 w-4 h-4 border-r-2 border-t-2 border-primary/40" />
-                  <div className="absolute bottom-0 left-0 w-4 h-4 border-l-2 border-b-2 border-primary/40" />
-                  <div className="absolute bottom-0 right-0 w-4 h-4 border-r-2 border-b-2 border-primary/40" />
                   <div className="flex items-center gap-4 mb-4">
                     <Zap className="w-8 h-8 text-primary shrink-0" />
                     <h3 className="landing-card-title text-foreground text-xl sm:text-2xl">Modern Infrastructure</h3>
@@ -564,30 +469,13 @@ const Index = () => {
                     Built on a modern tech stack for performance and reliability. Fast, responsive, and built to scale
                     with you.
                   </p>
-                  <div className="absolute bottom-4 right-4 text-[8px] font-mono text-primary/40">INFRA.004</div>
                 </motion.div>
-              </div>
-              {/* Bottom technical notation */}
-              <div className="hidden md:flex items-center gap-4 mt-12 text-xs font-mono text-muted-foreground/50">
-                <div className="flex gap-0.5">
-                  {Array.from({ length: 8 }).map((_, i) => (
-                    <div key={i} className="w-1 h-3 bg-primary/20" style={{ opacity: 0.2 + i * 0.1 }} />
-                  ))}
-                </div>
-                <span>FEATURES.LOADED</span>
-                <div className="w-16 h-px bg-gradient-to-r from-primary/30 to-transparent" />
-                <span>∞</span>
               </div>
             </div>
           </section>
 
           {/* For Everyone Section */}
           <section className="relative py-32 px-8 lg:px-16 overflow-hidden">
-            {/* Corner Frame Accents */}
-            <div className="absolute top-4 left-4 w-8 h-8 border-l border-t border-primary/20" />
-            <div className="absolute top-4 right-4 w-8 h-8 border-r border-t border-primary/20" />
-            <div className="absolute bottom-4 left-4 w-8 h-8 border-l border-b border-primary/20" />
-            <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/20" />
             <div className="max-w-7xl mx-auto">
               {/* Section Header */}
               <motion.div
@@ -597,15 +485,9 @@ const Index = () => {
                 viewport={{ once: true }}
                 transition={{ duration: 0.6 }}
               >
-                {/* Section header with ASCII style */}
+                {/* Section header */}
                 <div className="flex items-center justify-center gap-4 mb-6">
-                  <div className="w-12 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-                  <span className="text-xs font-mono text-primary/70">006</span>
-                  <div className="w-8 h-px bg-gradient-to-r from-primary/50 to-transparent" />
                   <span className="text-xs font-mono text-primary tracking-widest uppercase">For Everyone</span>
-                  <div className="w-8 h-px bg-gradient-to-l from-primary/50 to-transparent" />
-                  <span className="text-xs font-mono text-primary/70">◇</span>
-                  <div className="w-12 h-px bg-gradient-to-l from-transparent via-primary/50 to-transparent" />
                 </div>
                 <h2 className="landing-section-title text-foreground mb-6 max-w-4xl mx-auto">
                   Free speech starts with <span className="text-primary">free infrastructure.</span>
@@ -614,44 +496,38 @@ const Index = () => {
                   No premium tiers that unlock privacy features. No enterprise-only security. Everyone gets everything.
                 </p>
               </motion.div>
-              {/* Cards Grid with ASCII styling */}
+              {/* Cards Grid */}
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {[
                   {
                     title: "Activists & Organizers",
                     description: "Coordinate movements without surveillance. Your cause, your privacy.",
                     icon: "megaphone",
-                    code: "ACT.001",
                   },
                   {
                     title: "Creative Communities",
                     description: "Share your art, music, and ideas in spaces you control.",
                     icon: "palette",
-                    code: "CRT.002",
                   },
                   {
                     title: "Gaming Groups",
                     description: "Voice chat, strategy sessions, and guild coordination — lag-free.",
                     icon: "gamepad",
-                    code: "GMR.003",
                   },
                   {
                     title: "Small Businesses",
                     description: "Team communication without Big Tech reading your roadmap.",
                     icon: "briefcase",
-                    code: "BIZ.004",
                   },
                   {
                     title: "Friends & Family",
                     description: "Private group chats that stay private. Period.",
                     icon: "heart",
-                    code: "FAM.005",
                   },
                   {
                     title: "Privacy Advocates",
                     description: "Finally, a platform that practices what it preaches.",
                     icon: "shield",
-                    code: "PRV.006",
                   },
                 ].map((card, index) => (
                   <motion.div
@@ -662,11 +538,6 @@ const Index = () => {
                     viewport={{ once: true, margin: "-50px" }}
                     transition={{ duration: 0.5, delay: index * 0.1 }}
                   >
-                    {/* Corner accents */}
-                    <div className="absolute top-0 left-0 w-3 h-3 border-l border-t border-primary/30 group-hover:border-primary/50 transition-colors" />
-                    <div className="absolute top-0 right-0 w-3 h-3 border-r border-t border-primary/30 group-hover:border-primary/50 transition-colors" />
-                    <div className="absolute bottom-0 left-0 w-3 h-3 border-l border-b border-primary/30 group-hover:border-primary/50 transition-colors" />
-                    <div className="absolute bottom-0 right-0 w-3 h-3 border-r border-b border-primary/30 group-hover:border-primary/50 transition-colors" />
                     {/* Icon */}
                     <div className="relative mb-6">
                       <div className="w-14 h-14 border border-primary/30 flex items-center justify-center group-hover:border-primary/50 transition-colors duration-300">
@@ -768,35 +639,14 @@ const Index = () => {
                       <h3 className="landing-card-title text-foreground mb-2 text-base">{card.title}</h3>
                       <p className="landing-body text-muted-foreground text-sm">{card.description}</p>
                     </div>
-                    {/* Code notation */}
-                    <div className="absolute bottom-3 right-3 text-[8px] font-mono text-primary/40">{card.code}</div>
                   </motion.div>
                 ))}
-              </div>
-              {/* Bottom technical notation */}
-              <div className="hidden md:flex items-center justify-center gap-4 mt-16 text-xs font-mono text-muted-foreground/50">
-                <div className="flex gap-1">
-                  <div className="w-2 h-2 rounded-full bg-primary/30" />
-                  <div className="w-2 h-2 rounded-full bg-primary/20" />
-                  <div className="w-2 h-2 rounded-full bg-primary/10" />
-                </div>
-                <span>ALL.USERS.WELCOME</span>
-                <div className="flex gap-1">
-                  <div className="w-2 h-2 rounded-full bg-primary/10" />
-                  <div className="w-2 h-2 rounded-full bg-primary/20" />
-                  <div className="w-2 h-2 rounded-full bg-primary/30" />
-                </div>
               </div>
             </div>
           </section>
 
           {/* CTA Section */}
           <section className="relative py-32 px-8 lg:px-16 bg-card/50 border-t border-border/20 overflow-hidden">
-            {/* Corner Frame Accents */}
-            <div className="absolute top-4 left-4 w-8 h-8 border-l border-t border-primary/30" />
-            <div className="absolute top-4 right-4 w-8 h-8 border-r border-t border-primary/30" />
-            <div className="absolute bottom-4 left-4 w-8 h-8 border-l border-b border-primary/30" />
-            <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/30" />
             <motion.div
               className="max-w-7xl mx-auto text-center relative"
               initial={{ opacity: 0, y: 20 }}
@@ -804,12 +654,6 @@ const Index = () => {
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
             >
-              {/* Section code */}
-              <div className="flex items-center justify-center gap-4 mb-8">
-                <div className="w-12 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-                <span className="text-xs font-mono text-primary/70">007</span>
-                <div className="w-12 h-px bg-gradient-to-l from-transparent via-primary/50 to-transparent" />
-              </div>
               <div className="w-16 h-16 border border-primary/40 flex items-center justify-center mx-auto mb-8">
                 <Shield className="w-8 h-8 text-primary" />
               </div>
@@ -821,30 +665,12 @@ const Index = () => {
               </p>
               <Link to="/auth">
                 <button className="group relative px-10 py-4 bg-primary text-primary-foreground font-semibold transition-all duration-300 hover:bg-primary/90 uppercase tracking-wider">
-                  <span className="absolute -top-px -left-px w-3 h-3 border-l border-t border-primary-foreground/30" />
-                  <span className="absolute -top-px -right-px w-3 h-3 border-r border-t border-primary-foreground/30" />
-                  <span className="absolute -bottom-px -left-px w-3 h-3 border-l border-b border-primary-foreground/30" />
-                  <span className="absolute -bottom-px -right-px w-3 h-3 border-r border-b border-primary-foreground/30" />
                   <span className="flex items-center gap-2">
                     <Key className="w-5 h-5" />
                     Get Started
                   </span>
                 </button>
               </Link>
-              {/* Bottom technical notation */}
-              <div className="flex items-center justify-center gap-4 mt-12 text-xs font-mono text-muted-foreground/50">
-                <span>◐ READY</span>
-                <div className="flex gap-0.5">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="w-1 h-3 bg-primary/30 animate-pulse"
-                      style={{ animationDelay: `${i * 0.1}s` }}
-                    />
-                  ))}
-                </div>
-                <span>AWAITING.INPUT</span>
-              </div>
             </motion.div>
           </section>
 
