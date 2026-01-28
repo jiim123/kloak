@@ -483,13 +483,13 @@ const Index = () => {
                   <div className="hidden md:block w-px h-24 bg-gradient-to-b from-primary/50 to-transparent" />
                   <div>
                     <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight mb-6">
-                      Built for people who
+                      Built for
                       <br />
-                      <span className="text-primary/60">make things.</span>
+                      <span className="text-primary/60">people.</span>
                     </h2>
                     <p className="landing-body text-muted-foreground max-w-2xl">
-                      Whether you're coordinating a raid, mixing a track, or shipping a game—Kloak is the space where
-                      your community lives without being monetized.
+                      Whether you're coordinating a raid, mixing a track, or simply just talking to friends and famly, Kloak is the space where
+                      your communication lives without being monetized.
                     </p>
                   </div>
                 </div>
@@ -540,9 +540,6 @@ const Index = () => {
                     viewport={{ once: true }}
                     transition={{ duration: 0.5, delay: index * 0.08 }}
                   >
-                    {/* Corner accent */}
-                    <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-primary/5 to-transparent" />
-
                     {/* Icon */}
                     <div className="relative mb-6">
                       <div className="w-12 h-12 border border-primary/30 flex items-center justify-center group-hover:border-primary/50 transition-colors duration-300">
