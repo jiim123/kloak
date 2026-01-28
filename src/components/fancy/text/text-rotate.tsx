@@ -50,7 +50,7 @@ function getStaggerDelay(index: number, total: number, staggerFrom: StaggerFrom,
 }
 
 export interface TextRotateProps {
-  texts: string[];
+  texts: React.ReactNode[];
   rotationInterval?: number;
   auto?: boolean;
   splitBy?: SplitType;
@@ -134,7 +134,11 @@ const TextRotate = forwardRef<TextRotateRef, TextRotateProps>(
     }, [auto, rotationInterval, next]);
 
     const currentText = texts[currentIndex];
-    const splitParts = useMemo(() => splitText(currentText, splitBy), [currentText, splitBy]);
+    // Determine if we should split (only if it's a string)
+    const splitParts = useMemo(() => {
+      if (typeof currentText !== "string") return [currentText];
+      return splitText(currentText, splitBy);
+    }, [currentText, splitBy]);
 
     return (
       <div className={cn("relative inline-flex", mainClassName)}>
@@ -152,7 +156,8 @@ const TextRotate = forwardRef<TextRotateRef, TextRotateProps>(
                 }}
                 className={cn("inline-block", elementLevelClassName)}
               >
-                {part === " " ? "\u00A0" : part}
+                {/* Logic to handle space vs JSX vs String */}
+                {typeof part === "string" ? (part === " " ? "\u00A0" : part) : part}
               </motion.span>
             ))}
           </motion.div>
