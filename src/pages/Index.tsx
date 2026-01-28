@@ -104,7 +104,7 @@ const Index = () => {
                     </h2>
                   </div>
 
-                  <p className="text-lg md:text-xl text-primary/70 leading-relaxed max-w-xl">
+                  <p className="text-lg md:text-xl text-primary leading-relaxed max-w-xl">
                     Kloak is a communication platform for communities, teams, and friends—built from the ground up so
                     your conversations stay yours.
                   </p>
