@@ -31,12 +31,6 @@ const Index = () => {
 
           {/* The Problem Section */}
           <section className="relative py-32 px-8 lg:px-16 border-t border-border/20 overflow-hidden">
-            {/* Corner Frame Accents */}
-            <div className="absolute top-4 left-4 w-8 h-8 border-l border-t border-primary/20" />
-            <div className="absolute top-4 right-4 w-8 h-8 border-r border-t border-primary/20" />
-            <div className="absolute bottom-4 left-4 w-8 h-8 border-l border-b border-primary/20" />
-            <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/20" />
-
             <div className="max-w-7xl mx-auto">
               <motion.div
                 className="grid lg:grid-cols-2 gap-16 items-start"
@@ -46,54 +40,33 @@ const Index = () => {
                 transition={{ duration: 0.8 }}
               >
                 <div>
-                  {/* Problem Section */}
-                <div className="space-y-12">
                   <div className="flex items-start gap-4">
-                    <div className="hidden md:block w-px h-24 bg-gradient-to-b from-primary/50 to-transparent" />
+                    <div className="hidden md:block w-px h-20 bg-gradient-to-b from-primary/50 to-transparent" />
                     <h2 className="landing-section-title text-foreground leading-tight">
                       Your private rants shouldn't be <br />
                       <span className="text-primary font-semibold">company assets.</span>
                     </h2>
                   </div>
-                
-                  <div className="relative">
-                    <div className="space-y-8">
-                      <p className="landing-body text-primary/80 text-sm sm:text-base md:text-md max-w-xl">
-                        Whether it's a 2 AM group chat or a work-related vent session, your words are being 
-                        harvested. While other platforms prepare for IPOs and data audits, they aren't 
-                        selling "features"—they're selling <span className="text-primary">you</span>.
-                      </p>
-                      
-                      <p className="landing-body text-primary/80 text-sm sm:text-base md:text-md max-w-xl">
-                        From the girl at her laptop to the dev in the server room, we all deserve a space 
-                        without a CEO at the door. We built <span className="font-bold text-primary">Kloak</span> to be 
-                        the digital equivalent of a whisper in a crowded room: 
-                        <span className="italic"> felt by friends, but invisible to the system.</span>
-                      </p>
-                    </div>
-                
-                    {/* Technical corner accent */}
-                    <div className="hidden md:block absolute -right-4 bottom-0 text-[8px] font-mono text-primary/40">
-                      <div className="border-l border-primary/20 pl-2 uppercase">
-                        ◇ SYSTEM.BLINDNESS
-                        <br />
-                        ◇ ZERO.KNOWLEDGE.AUTH
-                      </div>
-                    </div>
+                </div>
+
+                <div className="relative">
+                  <div className="space-y-8">
+                    <p className="landing-body text-primary text-base md:text-lg max-w-xl">
+                      Whether you’re a girl at her laptop, a dev in his office, or just a group of friends looking for a
+                      place to hang out—you’re being watched. While big platforms chase public IPOs, they aren’t selling
+                      features; they’re selling your 2 AM vents and personal connections as "inventory."
+                    </p>
+                    <p className="landing-body text-primary text-base md:text-lg max-w-xl">
+                      Kloak is the digital equivalent of drawing the blinds. We built this because professional venting
+                      shouldn't be a career risk, and your daily life shouldn't be a data point. No logs, no leaks, and
+                      no CEOs in your DMs.
+                      <span className="block mt-4 font-medium text-foreground">
+                        Finally, a space that's actually yours.
+                      </span>
+                    </p>
                   </div>
                 </div>
               </motion.div>
-
-              {/* Bottom technical notation */}
-              <div className="hidden md:flex items-center gap-4 mt-12 text-xs font-mono text-muted-foreground/50">
-                <div className="flex gap-0.5">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="w-1 h-2 bg-primary/20" />
-                  ))}
-                </div>
-                <span>PRIVACY.VIOLATED</span>
-                <div className="w-16 h-px bg-gradient-to-r from-primary/20 to-transparent" />
-              </div>
             </div>
           </section>
 
