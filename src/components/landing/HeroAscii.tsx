@@ -3,7 +3,7 @@ import { LayoutGroup, motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import TextRotate from "@/components/fancy/text/text-rotate";
-import { StaticRadialGradient } from '@paper-design/shaders-react';
+import { StaticRadialGradient } from "@paper-design/shaders-react";
 
 const fadeIn = {
   initial: { opacity: 0, y: 20 },
@@ -16,9 +16,9 @@ export const HeroImage = () => {
       {/* Shader background */}
       <div className="absolute inset-0">
         <StaticRadialGradient
-          style={{ width: '100%', height: '100%' }}
+          style={{ width: "100%", height: "100%" }}
           colors={["#151c9d", "#4654be", "#9edceb", "#33cc33"]}
-          colorBack="#000000"
+          colorBack="#0F0F0F"
           radius={2.03}
           focalDistance={1.68}
           focalAngle={0}
