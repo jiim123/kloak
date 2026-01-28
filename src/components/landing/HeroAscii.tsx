@@ -15,7 +15,6 @@ import {
   Flame,
   Fingerprint,
   Laugh,
-  Sprout,
   UserPlus,
   ShieldCheck,
 } from "lucide-react";
@@ -27,6 +26,26 @@ const fadeIn = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
 };
+
+// 1. Define the rotation data outside the component to prevent re-renders
+const ROTATING_TEXTS = [
+  { label: "OPINION", icon: MessageSquareQuote },
+  { label: "MESSAGE", icon: MessageSquare },
+  { label: "REACTION", icon: Smile },
+  { label: "COMMUNITY", icon: Users },
+  { label: "FRIENDS", icon: Heart },
+  { label: "FAMILY", icon: Home },
+  { label: "VOICE", icon: Mic2 },
+  { label: "VIBE", icon: Sparkles },
+  { label: "CHAOS", icon: Tornado },
+  { label: "DRAMA", icon: Theater },
+  { label: "RANT", icon: Flame },
+  { label: "SECRET", icon: Fingerprint },
+  { label: "MEMES", icon: Laugh },
+  { label: "HOT TAKE", icon: Flame },
+  { label: "GROUP CHAT", icon: UserPlus },
+  { label: "DATA", icon: ShieldCheck },
+];
 
 export const HeroImage = () => {
   return (
@@ -46,10 +65,8 @@ export const HeroImage = () => {
         />
       </div>
 
-      {/* Full width content */}
       <div className="relative z-10 w-full min-h-screen flex items-center justify-center px-6 py-20">
         <motion.div initial="initial" animate="animate" className="w-full text-center">
-          {/* Tagline */}
           <motion.p
             variants={fadeIn}
             transition={{ duration: 0.5, delay: 0 }}
@@ -58,7 +75,6 @@ export const HeroImage = () => {
             For Gamers · Communities · Teams · Everyone
           </motion.p>
 
-          {/* Headline with TextRotate */}
           <motion.div variants={fadeIn} transition={{ duration: 0.5, delay: 0.1 }} className="mb-8">
             <LayoutGroup>
               <motion.div
@@ -72,58 +88,16 @@ export const HeroImage = () => {
                 >
                   YOUR
                 </motion.span>
+
+                {/* 2. Map through the objects */}
                 <TextRotate
-                  texts={[
-                    <span className="flex items-center gap-4">
-                      OPINION <MessageSquareQuote size="1em" className="shrink-0" />
-                    </span>,
-                    <span className="flex items-center gap-4">
-                      MESSAGE <MessageSquare size="1em" className="shrink-0" />
-                    </span>,
-                    <span className="flex items-center gap-4">
-                      REACTION <Smile size="1em" className="shrink-0" />
-                    </span>,
-                    <span className="flex items-center gap-4">
-                      COMMUNITY <Users size="1em" className="shrink-0" />
-                    </span>,
-                    <span className="flex items-center gap-4">
-                      FRIENDS <Heart size="1em" className="shrink-0" />
-                    </span>,
-                    <span className="flex items-center gap-4">
-                      FAMILY <Home size="1em" className="shrink-0" />
-                    </span>,
-                    <span className="flex items-center gap-4">
-                      VOICE <Mic2 size="1em" className="shrink-0" />
-                    </span>,
-                    <span className="flex items-center gap-4">
-                      VIBE <Sparkles size="1em" className="shrink-0" />
-                    </span>,
-                    <span className="flex items-center gap-4">
-                      CHAOS <Tornado size="1em" className="shrink-0" />
-                    </span>,
-                    <span className="flex items-center gap-4">
-                      DRAMA <Theater size="1em" className="shrink-0" />
-                    </span>,
-                    <span className="flex items-center gap-4">
-                      RANT <Flame size="1em" className="shrink-0" />
-                    </span>,
-                    <span className="flex items-center gap-4">
-                      SECRET <Fingerprint size="1em" className="shrink-0" />
-                    </span>,
-                    <span className="flex items-center gap-4">
-                      MEMES <Laugh size="1em" className="shrink-0" />
-                    </span>,
-                    <span className="flex items-center gap-4">
-                      HOT TAKE <Flame size="1em" className="shrink-0" />
-                    </span>,
-                    <span className="flex items-center gap-4">
-                      GROUP CHAT <UserPlus size="1em" className="shrink-0" />
-                    </span>,
-                    <span className="flex items-center gap-4">
-                      DATA <ShieldCheck size="1em" className="shrink-0" />
-                    </span>,
-                  ]}
-                  mainClassName="text-background px-2 sm:px-4 bg-primary overflow-hidden py-1 sm:py-2 justify-center rounded-lg my-2 sm:my-3"
+                  texts={ROTATING_TEXTS.map(({ label, icon: Icon }) => (
+                    <span key={label} className="flex items-center gap-3 sm:gap-4">
+                      {label}
+                      <Icon size="1em" className="shrink-0 translate-y-[0.05em] stroke-[1.5px]" />
+                    </span>
+                  ))}
+                  mainClassName="text-background px-3 sm:px-6 bg-primary overflow-hidden py-1 sm:py-2 justify-center rounded-lg my-2 sm:my-4"
                   staggerFrom="last"
                   initial={{ y: "100%" }}
                   animate={{ y: 0 }}
@@ -133,6 +107,7 @@ export const HeroImage = () => {
                   transition={{ type: "spring", damping: 30, stiffness: 400 }}
                   rotationInterval={3000}
                 />
+
                 <motion.span
                   className="text-foreground font-light"
                   layout
@@ -144,20 +119,18 @@ export const HeroImage = () => {
             </LayoutGroup>
           </motion.div>
 
-          {/* Description */}
           <motion.p
             variants={fadeIn}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="landing-body text-primary mb-10 text-sm sm:text-sm md:text-sm max-w-sm mx-auto"
+            className="landing-body text-primary mb-10 text-sm max-w-sm mx-auto"
           >
             A space for your community to connect, create, and grow together—without ads, tracking, or compromise.
           </motion.p>
 
-          {/* CTA Button */}
           <motion.div variants={fadeIn} transition={{ duration: 0.5, delay: 0.3 }}>
             <Link to="/app">
-              <Button size="lg" rounded="xl" className="uppercase tracking-wider group">
-                Join Kloak
+              <Button size="lg" className="rounded-xl uppercase tracking-wider group">
+                Download Kloak
                 <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
