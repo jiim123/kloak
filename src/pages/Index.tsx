@@ -146,9 +146,6 @@ const Index = () => {
                   className="relative"
                 >
                   <div className="relative rounded-none border border-border/30 bg-background/50 backdrop-blur-sm p-8 md:p-10 min-h-[320px] overflow-hidden">
-                    {/* Subtle gradient accent */}
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-primary/10 to-transparent" />
-
                     {/* Label */}
                     <span className="text-xs font-mono uppercase tracking-widest text-primary/40 mb-6 block">
                       Built for
