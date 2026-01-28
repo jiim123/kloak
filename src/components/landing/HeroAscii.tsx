@@ -17,16 +17,14 @@ export const HeroImage = () => {
       <div className="absolute inset-0">
         <GrainGradient
           style={{ width: "100%", height: "100%" }}
-          colors={["#d1d1d1", "#b0b0b0", "#bfbfbf"]}
+          colors={["#424242"]}
           colorBack="#0f0f0f"
           softness={1}
           intensity={0.16}
-          noise={0.5}
-          shape="wave"
-          speed={0.3}
-          scale={1.56}
-          rotation={180}
-          offsetY={-0.34}
+          noise={0}
+          shape="ripple"
+          speed={0.9}
+          scale={0.8}
         />
       </div>
 
