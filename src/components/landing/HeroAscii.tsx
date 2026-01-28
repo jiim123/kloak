@@ -3,6 +3,7 @@ import { LayoutGroup, motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import TextRotate from "@/components/fancy/text/text-rotate";
+import { StaticRadialGradient } from '@paper-design/shaders-react';
 
 const fadeIn = {
   initial: { opacity: 0, y: 20 },
@@ -12,9 +13,25 @@ const fadeIn = {
 export const HeroImage = () => {
   return (
     <section className="relative min-h-screen overflow-hidden">
-      {/* Soft gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-primary/5" />
-      <div className="absolute inset-0 bg-gradient-to-t from-primary/3 via-transparent to-transparent" />
+      {/* Shader background */}
+      <div className="absolute inset-0">
+        <StaticRadialGradient
+          style={{ width: '100%', height: '100%' }}
+          colors={["#151c9d", "#4654be", "#9edceb", "#33cc33"]}
+          colorBack="#000000"
+          radius={2.03}
+          focalDistance={1.68}
+          focalAngle={0}
+          falloff={0.56}
+          mixing={1}
+          distortion={0}
+          distortionShift={0.28}
+          distortionFreq={11}
+          grainMixer={0.37}
+          grainOverlay={0.2}
+          offsetY={0.74}
+        />
+      </div>
 
       {/* Centered single column content */}
       <div className="relative z-10 w-full min-h-screen flex items-center justify-center px-6 py-20">
