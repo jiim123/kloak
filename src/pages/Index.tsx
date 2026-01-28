@@ -60,9 +60,6 @@ const Index = () => {
                       with friends or discussing internal work, your privacy isn't a feature we "allow" you to have;
                       it's a human right we physically cannot take away.
                     </p>
-                    <p className="landing-body text-primary font-normal text-sm md:text-sm border-l-2 border-primary/30 pl-6">
-                      No logs for HR. No data for CEOs. Just a space that belongs to you again.
-                    </p>
                   </div>
                 </div>
               </motion.div>
