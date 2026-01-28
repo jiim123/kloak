@@ -70,19 +70,6 @@ const Index = () => {
                   </div>
                 </div>
               </motion.div>
-
-              {/* Bottom technical notation */}
-              <div className="hidden md:flex items-center gap-4 mt-12 text-xs font-mono text-muted-foreground/50">
-                <div className="flex gap-0.5">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="w-1 h-2 bg-primary/20" />
-                  ))}
-                </div>
-                <span>PRIVACY.VIOLATED</span>
-                <div className="w-16 h-px bg-gradient-to-r from-primary/20 to-transparent" />
-              </div>
-            </div>
-          </div>
           </section>
 
           {/* Comparison Section */}
