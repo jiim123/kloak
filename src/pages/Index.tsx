@@ -111,9 +111,9 @@ const Index = () => {
                   <div className="flex items-start gap-4">
                     <div className="hidden md:block w-px h-24 bg-gradient-to-b from-primary/50 to-transparent" />
                     <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
-                      Create freely.
+                      A place to talk
                       <br />
-                      <span className="text-primary/60">Connect privately.</span>
+                      <span className="text-primary/60">without being watched.</span>
                     </h2>
                   </div>
 
