@@ -170,11 +170,7 @@ const SortableChannel = ({
   };
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="relative"
-    >
+    <div ref={setNodeRef} style={style} className="relative">
       <ContextMenu>
         <ContextMenuTrigger asChild>
           <button
@@ -191,7 +187,7 @@ const SortableChannel = ({
             <div
               className={cn(
                 "absolute -left-2 top-0 bottom-0 w-1 bg-primary rounded-full transition-opacity duration-150",
-                isActive ? "opacity-100" : "opacity-0"
+                isActive ? "opacity-100" : "opacity-0",
               )}
             />
 
@@ -202,9 +198,7 @@ const SortableChannel = ({
             <span className="truncate flex-1 text-left">{channel.name}</span>
 
             {/* Private indicator */}
-            {channel.is_private && (
-              <Lock className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-            )}
+            {channel.is_private && <Lock className="w-3 h-3 text-muted-foreground flex-shrink-0" />}
 
             {/* NSFW badge */}
             {channel.is_nsfw && (
@@ -410,12 +404,7 @@ const SortableCategory = ({
               className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground uppercase tracking-wider flex-1 py-1"
               onClick={onToggle}
             >
-              <ChevronDown 
-                className={cn(
-                  "w-3 h-3 transition-transform duration-150",
-                  isCollapsed && "-rotate-90"
-                )} 
-              />
+              <ChevronDown className={cn("w-3 h-3 transition-transform duration-150", isCollapsed && "-rotate-90")} />
               <span className="truncate">{category.name}</span>
               {isCollapsed && <span className="ml-1 text-muted-foreground/60">({channels.length})</span>}
             </button>
@@ -647,11 +636,14 @@ export const ChannelSidebar = () => {
     (channelId: string) => {
       if (!currentServer) return;
       const channelLink = `${window.location.origin}/app/servers/${currentServer.id}/channels/${channelId}`;
-      navigator.clipboard.writeText(channelLink).then(() => {
-        toast.success("Channel link copied!");
-      }).catch(() => {
-        toast.error("Failed to copy channel link");
-      });
+      navigator.clipboard
+        .writeText(channelLink)
+        .then(() => {
+          toast.success("Channel link copied!");
+        })
+        .catch(() => {
+          toast.error("Failed to copy channel link");
+        });
     },
     [currentServer],
   );
@@ -833,8 +825,8 @@ export const ChannelSidebar = () => {
 
   if (!currentServer) {
     return (
-      <div className="h-full flex flex-col bg-layout-sidebar-secondary">
-        <div className="flex-1 flex items-center justify-center p-4">
+      <div className="h-full flex flex-col p-2">
+        <div className="flex-1 flex flex-col bg-card/50 rounded-2xl border border-border/50">
           <div className="text-center animate-fade-in">
             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-secondary/50 flex items-center justify-center">
               <Hash className="w-8 h-8 text-muted-foreground/50" />
@@ -994,7 +986,7 @@ export const ChannelSidebar = () => {
                   <div
                     className={cn(
                       "absolute -left-2 top-0 bottom-0 w-1 bg-primary rounded-full transition-opacity duration-150",
-                      isOverviewActive ? "opacity-100" : "opacity-0"
+                      isOverviewActive ? "opacity-100" : "opacity-0",
                     )}
                   />
                   <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
@@ -1022,7 +1014,7 @@ export const ChannelSidebar = () => {
                     <div
                       className={cn(
                         "absolute -left-2 top-0 bottom-0 w-1 bg-primary rounded-full transition-opacity duration-150",
-                        isMembersActive ? "opacity-100" : "opacity-0"
+                        isMembersActive ? "opacity-100" : "opacity-0",
                       )}
                     />
                     <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
