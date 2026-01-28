@@ -184,7 +184,7 @@ const FolderItem = ({
           <TooltipTrigger asChild>
             <MotionButton
               ref={setNodeRef}
-              className={cn("relative group", isOver && "ring-2 ring-primary/50 rounded-[6px]")}
+              className={cn("relative group", isOver && "ring-1 ring-primary/50 rounded-[6px]")}
               onClick={() => onToggleCollapse(folder.id)}
               whileHover="hover"
               whileTap="tap"
