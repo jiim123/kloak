@@ -823,10 +823,9 @@ export const ChannelSidebar = () => {
     return null;
   };
 
-  if (!currentServer) {
     return (
-      <div className="h-full flex flex-col p-2">
-        <div className="flex-1 flex flex-col bg-card/50 rounded-2xl border border-border/50">
+      <div className="h-full flex flex-col p-2 bg-layout-sidebar">
+        <div className="flex-1 flex flex-col bg-card/50 rounded-2xl border border-border/50 overflow-hidden">
           <div className="text-center animate-fade-in">
             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-secondary/50 flex items-center justify-center">
               <Hash className="w-8 h-8 text-muted-foreground/50" />
