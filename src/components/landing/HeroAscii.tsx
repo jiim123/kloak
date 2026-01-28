@@ -3,7 +3,7 @@ import { LayoutGroup, motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import TextRotate from "@/components/fancy/text/text-rotate";
-import { StaticRadialGradient } from "@paper-design/shaders-react";
+import { Dithering } from "@paper-design/shaders-react";
 
 const fadeIn = {
   initial: { opacity: 0, y: 20 },
@@ -15,21 +15,16 @@ export const HeroImage = () => {
     <section className="relative min-h-screen overflow-hidden">
       {/* Shader background */}
       <div className="absolute inset-0">
-        <StaticRadialGradient
+        <Dithering
           style={{ width: "100%", height: "100%" }}
-          colors={["#151c9d", "#4654be", "#9edceb", "#33cc33"]}
-          colorBack="#0F0F0F"
-          radius={2.03}
-          focalDistance={1.68}
-          focalAngle={0}
-          falloff={0.56}
-          mixing={1}
-          distortion={0}
-          distortionShift={0.28}
-          distortionFreq={11}
-          grainMixer={0.37}
-          grainOverlay={0.2}
-          offsetY={0.74}
+          colorBack="#141414"
+          colorFront="#333333"
+          shape="wave"
+          type="8x8"
+          size={5.6}
+          speed={0.06}
+          scale={1.2}
+          rotation={44}
         />
       </div>
 
