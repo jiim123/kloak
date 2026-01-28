@@ -30,14 +30,14 @@ const Index = () => {
           <HeroAscii />
 
           {/* The Problem Section */}
-          <section className="relative py-32 px-6 border-t border-border/20 overflow-hidden">
+          <section className="relative py-32 px-8 lg:px-16 border-t border-border/20 overflow-hidden">
             {/* Corner Frame Accents */}
             <div className="absolute top-4 left-4 w-8 h-8 border-l border-t border-primary/20" />
             <div className="absolute top-4 right-4 w-8 h-8 border-r border-t border-primary/20" />
             <div className="absolute bottom-4 left-4 w-8 h-8 border-l border-b border-primary/20" />
             <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/20" />
 
-            <div className="w-full">
+            <div className="max-w-7xl mx-auto">
               <motion.div
                 className="grid lg:grid-cols-2 gap-16 items-start"
                 initial={{ opacity: 0 }}
@@ -90,14 +90,14 @@ const Index = () => {
           </section>
 
           {/* Comparison Section */}
-          <section className="relative py-32 px-6 bg-card/50 border-y border-border/20 overflow-hidden">
+          <section className="relative py-32 px-8 lg:px-16 bg-card/50 border-y border-border/20 overflow-hidden">
             {/* Corner Frame Accents */}
             <div className="absolute top-4 left-4 w-8 h-8 border-l border-t border-primary/20" />
             <div className="absolute top-4 right-4 w-8 h-8 border-r border-t border-primary/20" />
             <div className="absolute bottom-4 left-4 w-8 h-8 border-l border-b border-primary/20" />
             <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/20" />
 
-            <div className="w-full">
+            <div className="max-w-7xl mx-auto">
               <motion.div
                 className="mb-16"
                 initial={{ opacity: 0, y: 20 }}
@@ -210,7 +210,7 @@ const Index = () => {
           </section>
 
           {/* Principles Section */}
-          <section className="relative py-32 px-6 overflow-hidden">
+          <section className="relative py-32 px-8 lg:px-16 overflow-hidden">
             {/* Corner Frame Accents */}
             <div className="absolute top-4 left-4 w-8 h-8 border-l border-t border-primary/20" />
             <div className="absolute top-4 right-4 w-8 h-8 border-r border-t border-primary/20" />
@@ -227,7 +227,7 @@ const Index = () => {
               }}
             />
 
-            <div className="w-full relative">
+            <div className="max-w-7xl mx-auto relative">
               <motion.div
                 className="mb-20"
                 initial={{ opacity: 0, y: 20 }}
@@ -321,14 +321,14 @@ const Index = () => {
           </section>
 
           {/* Capabilities Section */}
-          <section className="relative py-32 px-6 bg-card/50 border-y border-border/20 overflow-hidden">
+          <section className="relative py-32 px-8 lg:px-16 bg-card/50 border-y border-border/20 overflow-hidden">
             {/* Corner Frame Accents */}
             <div className="absolute top-4 left-4 w-8 h-8 border-l border-t border-primary/20" />
             <div className="absolute top-4 right-4 w-8 h-8 border-r border-t border-primary/20" />
             <div className="absolute bottom-4 left-4 w-8 h-8 border-l border-b border-primary/20" />
             <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/20" />
 
-            <div className="w-full">
+            <div className="max-w-7xl mx-auto">
               <motion.div
                 className="mb-20"
                 initial={{ opacity: 0, y: 20 }}
@@ -469,14 +469,14 @@ const Index = () => {
           </section>
 
           {/* For Everyone Section */}
-          <section className="relative py-32 px-6 overflow-hidden">
+          <section className="relative py-32 px-8 lg:px-16 overflow-hidden">
             {/* Corner Frame Accents */}
             <div className="absolute top-4 left-4 w-8 h-8 border-l border-t border-primary/20" />
             <div className="absolute top-4 right-4 w-8 h-8 border-r border-t border-primary/20" />
             <div className="absolute bottom-4 left-4 w-8 h-8 border-l border-b border-primary/20" />
             <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/20" />
 
-            <div className="w-full">
+            <div className="max-w-7xl mx-auto">
               {/* Section Header */}
               <motion.div
                 className="text-center mb-20"
@@ -685,7 +685,7 @@ const Index = () => {
           </section>
 
           {/* CTA Section */}
-          <section className="relative py-32 px-6 bg-card/50 border-t border-border/20 overflow-hidden">
+          <section className="relative py-32 px-8 lg:px-16 bg-card/50 border-t border-border/20 overflow-hidden">
             {/* Corner Frame Accents */}
             <div className="absolute top-4 left-4 w-8 h-8 border-l border-t border-primary/30" />
             <div className="absolute top-4 right-4 w-8 h-8 border-r border-t border-primary/30" />
@@ -693,7 +693,7 @@ const Index = () => {
             <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/30" />
 
             <motion.div
-              className="w-full text-center relative"
+              className="max-w-7xl mx-auto text-center relative"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
