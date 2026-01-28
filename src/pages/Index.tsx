@@ -48,7 +48,7 @@ const Index = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       setActiveIndex((prev) => (prev + 1) % audienceGroups.length);
-    }, 4000);
+    }, 6000);
     return () => clearInterval(interval);
   }, []);
 
