@@ -50,7 +50,7 @@ function getStaggerDelay(index: number, total: number, staggerFrom: StaggerFrom,
 }
 
 export interface TextRotateProps {
-  texts: React.ReactNode[];
+  texts: string[];
   rotationInterval?: number;
   auto?: boolean;
   splitBy?: SplitType;
