@@ -1,5 +1,6 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Shield, Key, MessageCircle, Users, Zap, Lock, X, Check } from "lucide-react";
 import { Footer } from "@/components/ui/footer-section";
 import { NavigationMenu } from "@/components/layout/NavigationMenu";
@@ -8,7 +9,49 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { SEO } from "@/components/seo";
 import { SEO_CONFIG } from "@/lib/seo";
 
+const audienceGroups = [
+  {
+    name: "Gaming Communities",
+    description:
+      "Coordinate raids, share strategies, and build your guild—without your conversations training someone else's AI or feeding targeted ads.",
+  },
+  {
+    name: "Dev Teams",
+    description:
+      "Ship code, debug together, and vent about legacy systems. Your standups and code reviews stay between you and your team.",
+  },
+  {
+    name: "Friend Groups",
+    description:
+      "Group chats that feel like they used to—just friends talking, sharing memes, making plans. Not a data mine with a chat feature.",
+  },
+  {
+    name: "Privacy Advocates",
+    description:
+      "Finally, a platform that practices what it preaches. Privacy by architecture, not by policy. No asterisks, no exceptions.",
+  },
+  {
+    name: "Small Businesses",
+    description:
+      "Client conversations, team coordination, sensitive documents—none of it becomes training data or shows up in a breach.",
+  },
+  {
+    name: "Creators & Communities",
+    description:
+      "Build your audience on your terms. No algorithm gatekeeping your reach, no platform mining your community for profit.",
+  },
+];
+
 const Index = () => {
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveIndex((prev) => (prev + 1) % audienceGroups.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
   const comparisonData = [
     { label: "Email required", others: true, kloak: false },
     { label: "Phone number required", others: true, kloak: false },
@@ -31,82 +74,156 @@ const Index = () => {
 
           {/* What is Kloak Section */}
           <section className="relative py-32 md:py-48 px-8 lg:px-16 border-t border-border/20 overflow-hidden">
-            <div className="max-w-4xl mx-auto">
+            {/* Corner Frame Accents */}
+            <div className="absolute top-4 left-4 w-8 h-8 border-l border-t border-primary/20" />
+            <div className="absolute top-4 right-4 w-8 h-8 border-r border-t border-primary/20" />
+            <div className="absolute bottom-4 left-4 w-8 h-8 border-l border-b border-primary/20" />
+            <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/20" />
+
+            <div className="max-w-7xl mx-auto">
+              {/* Section header with ASCII style */}
               <motion.div
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, margin: "-100px" }}
-                className="flex flex-col items-center text-center space-y-16"
+                className="flex items-center gap-4 mb-12"
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
               >
-                {/* The Hook */}
-                <motion.p
-                  variants={{
-                    hidden: { opacity: 0, y: 20 },
-                    visible: {
-                      opacity: 1,
-                      y: 0,
-                      transition: { staggerChildren: 0.06, delayChildren: 0.1 },
-                    },
-                  }}
-                  className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-light text-foreground leading-tight tracking-tight"
-                >
-                  {"A place to talk without being watched.".split(" ").map((word, i) => (
-                    <motion.span
-                      key={i}
-                      variants={{
-                        hidden: { opacity: 0 },
-                        visible: { opacity: 1 },
-                      }}
-                      className="inline-block mr-2"
-                    >
-                      {word}
-                    </motion.span>
-                  ))}
-                </motion.p>
+                <span className="text-xs font-mono text-primary/70">002</span>
+                <div className="w-8 h-px bg-gradient-to-r from-primary/50 to-transparent" />
+                <span className="text-xs font-mono text-primary tracking-widest uppercase">What is Kloak</span>
+              </motion.div>
 
-                {/* What It Is */}
-                <motion.p
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.8, duration: 0.8 }}
-                  className="text-lg md:text-xl text-primary/80 max-w-2xl leading-relaxed"
-                >
-                  Kloak is a communication platform for communities, teams, and friends—built from the ground up so your
-                  conversations stay yours.{" "}
-                  <span className="text-foreground">No ads. No tracking. No data harvesting.</span>
-                </motion.p>
-
-                {/* Who It's For + What You Can Do */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
+                {/* Left Column - Hook & What It Is */}
                 <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1.2, duration: 0.8 }}
-                  className="flex flex-wrap justify-center gap-3 md:gap-4"
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true, margin: "-100px" }}
+                  transition={{ duration: 0.8 }}
+                  className="space-y-8"
                 >
-                  {["Gaming communities", "Dev teams", "Friend groups", "Privacy advocates", "Small businesses"].map(
-                    (item, i) => (
-                      <span
-                        key={i}
-                        className="px-4 py-2 rounded-full border border-border/40 text-sm md:text-base text-primary/70 bg-background/50 backdrop-blur-sm"
-                      >
-                        {item}
-                      </span>
-                    ),
-                  )}
+                  <div className="flex items-start gap-4">
+                    <div className="hidden md:block w-px h-24 bg-gradient-to-b from-primary/50 to-transparent" />
+                    <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
+                      A place to talk
+                      <br />
+                      <span className="text-primary/60">without being watched.</span>
+                    </h2>
+                  </div>
+
+                  <p className="text-lg md:text-xl text-primary/70 leading-relaxed max-w-xl">
+                    Kloak is a communication platform for communities, teams, and friends—built from the ground up so
+                    your conversations stay yours.
+                  </p>
+
+                  <div className="flex flex-wrap gap-6 text-sm text-primary/50">
+                    <span className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                      No ads
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                      No tracking
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                      No data harvesting
+                    </span>
+                  </div>
                 </motion.div>
 
-                {/* The Differentiator */}
-                <motion.p
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1.6, duration: 0.8 }}
-                  className="text-lg md:text-xl text-primary/80 max-w-2xl leading-relaxed"
+                {/* Right Column - Rotating Audience Box */}
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true, margin: "-100px" }}
+                  transition={{ duration: 0.8, delay: 0.2 }}
+                  className="relative"
                 >
-                  Most platforms treat privacy as a setting you can toggle. We built Kloak so we{" "}
-                  <span className="text-foreground italic">physically cannot</span> access your data—even if we wanted
-                  to.
-                </motion.p>
-              </motion.div>
+                  <div className="relative rounded-none border border-border/30 bg-background/50 backdrop-blur-sm p-8 md:p-10 min-h-[320px] overflow-hidden">
+                    {/* Corner accents */}
+                    <div className="absolute top-0 left-0 w-4 h-4 border-l-2 border-t-2 border-primary/40" />
+                    <div className="absolute top-0 right-0 w-4 h-4 border-r-2 border-t-2 border-primary/40" />
+                    <div className="absolute bottom-0 left-0 w-4 h-4 border-l-2 border-b-2 border-primary/40" />
+                    <div className="absolute bottom-0 right-0 w-4 h-4 border-r-2 border-b-2 border-primary/40" />
+
+                    {/* Subtle gradient accent */}
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-primary/10 to-transparent" />
+
+                    {/* Label */}
+                    <span className="text-xs font-mono uppercase tracking-widest text-primary/40 mb-6 block">
+                      Built for
+                    </span>
+
+                    {/* Rotating Content */}
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={activeIndex}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.5 }}
+                        className="space-y-4"
+                      >
+                        <h3 className="text-2xl md:text-3xl font-medium text-foreground">
+                          {audienceGroups[activeIndex].name}
+                        </h3>
+                        <p className="text-primary/70 text-lg leading-relaxed">
+                          {audienceGroups[activeIndex].description}
+                        </p>
+                      </motion.div>
+                    </AnimatePresence>
+
+                    {/* Progress Indicators */}
+                    <div className="absolute bottom-8 left-8 right-8 flex gap-2">
+                      {audienceGroups.map((_, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setActiveIndex(i)}
+                          className="flex-1 h-1 rounded-full overflow-hidden bg-border/30 cursor-pointer"
+                        >
+                          <motion.div
+                            className="h-full bg-primary/60 rounded-full"
+                            initial={{ width: "0%" }}
+                            animate={{
+                              width: i === activeIndex ? "100%" : "0%",
+                            }}
+                            transition={{
+                              duration: i === activeIndex ? 4 : 0,
+                              ease: "linear",
+                            }}
+                          />
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Code notation */}
+                    <div className="absolute top-4 right-4 text-[8px] font-mono text-primary/40">AUDIENCE.LOOP</div>
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* The Differentiator - Full Width Below */}
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.4, duration: 0.8 }}
+                className="text-center text-lg md:text-xl text-primary/60 max-w-2xl mx-auto mt-24"
+              >
+                Most platforms treat privacy as a setting you can toggle. We built Kloak so we{" "}
+                <span className="text-foreground italic">physically cannot</span> access your data—even if we wanted to.
+              </motion.p>
+
+              {/* Bottom technical notation */}
+              <div className="hidden md:flex items-center justify-center gap-4 mt-12 text-xs font-mono text-muted-foreground/50">
+                <span>◇</span>
+                <div className="w-16 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+                <span>INTRO.COMPLETE</span>
+                <div className="w-16 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+                <span>◇</span>
+              </div>
             </div>
           </section>
 
@@ -117,7 +234,6 @@ const Index = () => {
             <div className="absolute top-4 right-4 w-8 h-8 border-r border-t border-primary/20" />
             <div className="absolute bottom-4 left-4 w-8 h-8 border-l border-b border-primary/20" />
             <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/20" />
-
             <div className="max-w-7xl mx-auto">
               <motion.div
                 className="mb-16"
@@ -139,7 +255,6 @@ const Index = () => {
                   </h2>
                 </div>
               </motion.div>
-
               <motion.div
                 className="rounded-lg border border-border/30 overflow-hidden bg-background relative"
                 initial={{ opacity: 0 }}
@@ -152,7 +267,6 @@ const Index = () => {
                 <div className="absolute top-0 right-0 w-4 h-4 border-r-2 border-t-2 border-primary/30" />
                 <div className="absolute bottom-0 left-0 w-4 h-4 border-l-2 border-b-2 border-primary/30" />
                 <div className="absolute bottom-0 right-0 w-4 h-4 border-r-2 border-b-2 border-primary/30" />
-
                 <Table>
                   <TableHeader>
                     <TableRow className="border-border/30 hover:bg-transparent">
@@ -207,7 +321,6 @@ const Index = () => {
                   </TableBody>
                 </Table>
               </motion.div>
-
               <motion.div
                 className="flex flex-col md:flex-row items-center justify-center gap-4 mt-12"
                 initial={{ opacity: 0 }}
@@ -239,7 +352,6 @@ const Index = () => {
             <div className="absolute top-4 right-4 w-8 h-8 border-r border-t border-primary/20" />
             <div className="absolute bottom-4 left-4 w-8 h-8 border-l border-b border-primary/20" />
             <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/20" />
-
             {/* Background grid pattern */}
             <div
               className="absolute inset-0 opacity-[0.02]"
@@ -249,7 +361,6 @@ const Index = () => {
                 backgroundSize: "40px 40px",
               }}
             />
-
             <div className="max-w-7xl mx-auto relative">
               <motion.div
                 className="mb-20"
@@ -271,7 +382,6 @@ const Index = () => {
                   </h2>
                 </div>
               </motion.div>
-
               <div className="grid md:grid-cols-2 gap-x-16 gap-y-16">
                 {[
                   {
@@ -314,7 +424,6 @@ const Index = () => {
                       <div className="absolute top-0 right-0 w-3 h-3 border-r border-t border-primary/40" />
                       <div className="absolute bottom-0 left-0 w-3 h-3 border-l border-b border-primary/40" />
                       <div className="absolute bottom-0 right-0 w-3 h-3 border-r border-b border-primary/40" />
-
                       <div className="flex items-start gap-4">
                         <span className="text-4xl font-mono font-semibold text-primary/40 group-hover:text-primary/60 transition-colors duration-300">
                           {principle.number}
@@ -329,7 +438,6 @@ const Index = () => {
                   </motion.div>
                 ))}
               </div>
-
               {/* Bottom technical notation */}
               <div className="hidden md:flex items-center justify-center gap-4 mt-16 text-xs font-mono text-muted-foreground/50">
                 <span>◇</span>
@@ -348,7 +456,6 @@ const Index = () => {
             <div className="absolute top-4 right-4 w-8 h-8 border-r border-t border-primary/20" />
             <div className="absolute bottom-4 left-4 w-8 h-8 border-l border-b border-primary/20" />
             <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/20" />
-
             <div className="max-w-7xl mx-auto">
               <motion.div
                 className="mb-20"
@@ -370,7 +477,6 @@ const Index = () => {
                   </h2>
                 </div>
               </motion.div>
-
               {/* Feature Grid with ASCII styling */}
               <div className="grid lg:grid-cols-12 gap-6">
                 {/* Main Feature - Large */}
@@ -386,7 +492,6 @@ const Index = () => {
                   <div className="absolute top-0 right-0 w-4 h-4 border-r-2 border-t-2 border-primary/40" />
                   <div className="absolute bottom-0 left-0 w-4 h-4 border-l-2 border-b-2 border-primary/40" />
                   <div className="absolute bottom-0 right-0 w-4 h-4 border-r-2 border-b-2 border-primary/40" />
-
                   <div className="flex items-center gap-4 mb-4">
                     <MessageCircle className="w-8 h-8 text-primary shrink-0" />
                     <h3 className="landing-card-title text-foreground text-xl sm:text-2xl">Real-Time Messaging</h3>
@@ -397,7 +502,6 @@ const Index = () => {
                   </p>
                   <div className="absolute bottom-4 right-4 text-[8px] font-mono text-primary/40">MSG.001</div>
                 </motion.div>
-
                 {/* Secondary Feature */}
                 <motion.div
                   className="lg:col-span-5 relative border border-border/30 p-10 group overflow-hidden bg-background"
@@ -410,7 +514,6 @@ const Index = () => {
                   <div className="absolute top-0 right-0 w-4 h-4 border-r-2 border-t-2 border-primary/40" />
                   <div className="absolute bottom-0 left-0 w-4 h-4 border-l-2 border-b-2 border-primary/40" />
                   <div className="absolute bottom-0 right-0 w-4 h-4 border-r-2 border-b-2 border-primary/40" />
-
                   <div className="flex items-center gap-3 mb-4">
                     <Lock className="w-7 h-7 text-primary shrink-0" />
                     <h3 className="landing-card-title text-foreground text-lg sm:text-xl">Key-Based Auth</h3>
@@ -420,7 +523,6 @@ const Index = () => {
                   </p>
                   <div className="absolute bottom-4 right-4 text-[8px] font-mono text-primary/40">AUTH.002</div>
                 </motion.div>
-
                 {/* Third Feature */}
                 <motion.div
                   className="lg:col-span-5 relative border border-border/30 p-10 group overflow-hidden bg-background"
@@ -433,7 +535,6 @@ const Index = () => {
                   <div className="absolute top-0 right-0 w-4 h-4 border-r-2 border-t-2 border-primary/40" />
                   <div className="absolute bottom-0 left-0 w-4 h-4 border-l-2 border-b-2 border-primary/40" />
                   <div className="absolute bottom-0 right-0 w-4 h-4 border-r-2 border-b-2 border-primary/40" />
-
                   <div className="flex items-center gap-3 mb-4">
                     <Users className="w-7 h-7 text-primary shrink-0" />
                     <h3 className="landing-card-title text-foreground text-lg sm:text-xl">Communities</h3>
@@ -443,7 +544,6 @@ const Index = () => {
                   </p>
                   <div className="absolute bottom-4 right-4 text-[8px] font-mono text-primary/40">COMM.003</div>
                 </motion.div>
-
                 {/* Fourth Feature - Large */}
                 <motion.div
                   className="lg:col-span-7 relative border border-border/30 p-10 group overflow-hidden bg-background"
@@ -456,7 +556,6 @@ const Index = () => {
                   <div className="absolute top-0 right-0 w-4 h-4 border-r-2 border-t-2 border-primary/40" />
                   <div className="absolute bottom-0 left-0 w-4 h-4 border-l-2 border-b-2 border-primary/40" />
                   <div className="absolute bottom-0 right-0 w-4 h-4 border-r-2 border-b-2 border-primary/40" />
-
                   <div className="flex items-center gap-4 mb-4">
                     <Zap className="w-8 h-8 text-primary shrink-0" />
                     <h3 className="landing-card-title text-foreground text-xl sm:text-2xl">Modern Infrastructure</h3>
@@ -468,7 +567,6 @@ const Index = () => {
                   <div className="absolute bottom-4 right-4 text-[8px] font-mono text-primary/40">INFRA.004</div>
                 </motion.div>
               </div>
-
               {/* Bottom technical notation */}
               <div className="hidden md:flex items-center gap-4 mt-12 text-xs font-mono text-muted-foreground/50">
                 <div className="flex gap-0.5">
@@ -490,7 +588,6 @@ const Index = () => {
             <div className="absolute top-4 right-4 w-8 h-8 border-r border-t border-primary/20" />
             <div className="absolute bottom-4 left-4 w-8 h-8 border-l border-b border-primary/20" />
             <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/20" />
-
             <div className="max-w-7xl mx-auto">
               {/* Section Header */}
               <motion.div
@@ -510,7 +607,6 @@ const Index = () => {
                   <span className="text-xs font-mono text-primary/70">◇</span>
                   <div className="w-12 h-px bg-gradient-to-l from-transparent via-primary/50 to-transparent" />
                 </div>
-
                 <h2 className="landing-section-title text-foreground mb-6 max-w-4xl mx-auto">
                   Free speech starts with <span className="text-primary">free infrastructure.</span>
                 </h2>
@@ -518,7 +614,6 @@ const Index = () => {
                   No premium tiers that unlock privacy features. No enterprise-only security. Everyone gets everything.
                 </p>
               </motion.div>
-
               {/* Cards Grid with ASCII styling */}
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {[
@@ -572,7 +667,6 @@ const Index = () => {
                     <div className="absolute top-0 right-0 w-3 h-3 border-r border-t border-primary/30 group-hover:border-primary/50 transition-colors" />
                     <div className="absolute bottom-0 left-0 w-3 h-3 border-l border-b border-primary/30 group-hover:border-primary/50 transition-colors" />
                     <div className="absolute bottom-0 right-0 w-3 h-3 border-r border-b border-primary/30 group-hover:border-primary/50 transition-colors" />
-
                     {/* Icon */}
                     <div className="relative mb-6">
                       <div className="w-14 h-14 border border-primary/30 flex items-center justify-center group-hover:border-primary/50 transition-colors duration-300">
@@ -669,19 +763,16 @@ const Index = () => {
                         {card.icon === "shield" && <Shield className="w-7 h-7 text-primary" />}
                       </div>
                     </div>
-
                     {/* Content */}
                     <div className="relative">
                       <h3 className="landing-card-title text-foreground mb-2 text-base">{card.title}</h3>
                       <p className="landing-body text-muted-foreground text-sm">{card.description}</p>
                     </div>
-
                     {/* Code notation */}
                     <div className="absolute bottom-3 right-3 text-[8px] font-mono text-primary/40">{card.code}</div>
                   </motion.div>
                 ))}
               </div>
-
               {/* Bottom technical notation */}
               <div className="hidden md:flex items-center justify-center gap-4 mt-16 text-xs font-mono text-muted-foreground/50">
                 <div className="flex gap-1">
@@ -706,7 +797,6 @@ const Index = () => {
             <div className="absolute top-4 right-4 w-8 h-8 border-r border-t border-primary/30" />
             <div className="absolute bottom-4 left-4 w-8 h-8 border-l border-b border-primary/30" />
             <div className="absolute bottom-4 right-4 w-8 h-8 border-r border-b border-primary/30" />
-
             <motion.div
               className="max-w-7xl mx-auto text-center relative"
               initial={{ opacity: 0, y: 20 }}
@@ -720,18 +810,15 @@ const Index = () => {
                 <span className="text-xs font-mono text-primary/70">007</span>
                 <div className="w-12 h-px bg-gradient-to-l from-transparent via-primary/50 to-transparent" />
               </div>
-
               <div className="w-16 h-16 border border-primary/40 flex items-center justify-center mx-auto mb-8">
                 <Shield className="w-8 h-8 text-primary" />
               </div>
-
               <h2 className="landing-section-title text-foreground mb-6">
                 Take Back Your <span className="text-primary">Privacy.</span>
               </h2>
               <p className="landing-body text-muted-foreground mb-10 max-w-lg mx-auto">
                 No signup forms. No verification emails. Generate your key and start communicating freely.
               </p>
-
               <Link to="/auth">
                 <button className="group relative px-10 py-4 bg-primary text-primary-foreground font-semibold transition-all duration-300 hover:bg-primary/90 uppercase tracking-wider">
                   <span className="absolute -top-px -left-px w-3 h-3 border-l border-t border-primary-foreground/30" />
@@ -744,7 +831,6 @@ const Index = () => {
                   </span>
                 </button>
               </Link>
-
               {/* Bottom technical notation */}
               <div className="flex items-center justify-center gap-4 mt-12 text-xs font-mono text-muted-foreground/50">
                 <span>◐ READY</span>
