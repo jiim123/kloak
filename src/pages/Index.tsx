@@ -329,30 +329,30 @@ const Index = () => {
                 {[
                   {
                     icon: MessageCircle,
-                    title: "Real-Time Chat",
+                    title: "Fast Chat",
                     description:
-                      "Instant messaging across servers, channels, and DMs. Fast enough for raid callouts, private enough for unreleased tracks.",
+                      "Zero-lag messaging for raids, DMs, and group chats. No ads, no trackers, just your conversations—exactly where you left them.",
                     accent: true,
                   },
                   {
                     icon: Headphones,
-                    title: "Voice Channels",
+                    title: "Crystal Voice",
                     description:
-                      "Crystal-clear voice for your squad, your band practice, your D&D session. No compression artifacts ruining the vibe.",
+                      "Low-latency audio for your squad. No heavy background processes or compressed audio ruining the session.",
                     accent: false,
                   },
                   {
                     icon: Users,
-                    title: "Flexible Communities",
+                    title: "Pure Community",
                     description:
-                      "Servers, channels, categories, roles. Organize your community the way it makes sense for you—not the way a PM decided.",
+                      "Full control over roles and channels. Build your space without the bloat, distractions, or forced updates.",
                     accent: false,
                   },
                   {
                     icon: Lock,
-                    title: "Key-Based Identity",
+                    title: "No Personal Data",
                     description:
-                      "One cryptographic key, full control. No email, no phone number, no password to leak in the next breach.",
+                      "No email, no phone number, no trackers. Use a secure key to own your identity—if we don't have it, we can't leak it.",
                     accent: true,
                   },
                 ].map((feature, index) => (
