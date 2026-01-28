@@ -472,9 +472,9 @@ const Index = () => {
                   <span className="text-xs font-mono text-primary tracking-widest uppercase">Your Space</span>
                 </div>
                 <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight mb-6">
-                  Built for
+                  Built for people
                   <br />
-                  <span className="text-primary/60">people.</span>
+                  <span className="text-primary/60">Built to have fun.</span>
                 </h2>
                 <p className="landing-body text-muted-foreground max-w-2xl">
                   Whether you're coordinating a raid, mixing a track, or simply just talking to friends and family,
