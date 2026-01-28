@@ -27,29 +27,82 @@ const fadeIn = {
   animate: { opacity: 1, y: 0 },
 };
 
-// 1. Define the rotation data outside the component to prevent re-renders
 const ROTATING_TEXTS = [
-  { label: "OPINION", icon: MessageSquareQuote },
-  { label: "MESSAGE", icon: MessageSquare },
-  { label: "REACTION", icon: Smile },
-  { label: "COMMUNITY", icon: Users },
-  { label: "FRIENDS", icon: Heart },
-  { label: "FAMILY", icon: Home },
-  { label: "VOICE", icon: Mic2 },
-  { label: "VIBE", icon: Sparkles },
-  { label: "CHAOS", icon: Tornado },
-  { label: "DRAMA", icon: Theater },
-  { label: "RANT", icon: Flame },
-  { label: "SECRET", icon: Fingerprint },
-  { label: "MEMES", icon: Laugh },
-  { label: "HOT TAKE", icon: Flame },
-  { label: "GROUP CHAT", icon: UserPlus },
-  { label: "DATA", icon: ShieldCheck },
+  { label: "OPINION", icon: MessageSquareQuote, gradient: "gradient-purple" },
+  { label: "MESSAGE", icon: MessageSquare, gradient: "gradient-blue" },
+  { label: "REACTION", icon: Smile, gradient: "gradient-yellow" },
+  { label: "COMMUNITY", icon: Users, gradient: "gradient-teal" },
+  { label: "FRIENDS", icon: Heart, gradient: "gradient-pink" },
+  { label: "FAMILY", icon: Home, gradient: "gradient-orange" },
+  { label: "VOICE", icon: Mic2, gradient: "gradient-green" },
+  { label: "VIBE", icon: Sparkles, gradient: "gradient-rainbow" },
+  { label: "CHAOS", icon: Tornado, gradient: "gradient-red" },
+  { label: "DRAMA", icon: Theater, gradient: "gradient-purple" },
+  { label: "RANT", icon: Flame, gradient: "gradient-fire" },
+  { label: "SECRET", icon: Fingerprint, gradient: "gradient-cyan" },
+  { label: "MEMES", icon: Laugh, gradient: "gradient-yellow" },
+  { label: "HOT TAKE", icon: Flame, gradient: "gradient-fire" },
+  { label: "GROUP CHAT", icon: UserPlus, gradient: "gradient-blue" },
+  { label: "DATA", icon: ShieldCheck, gradient: "gradient-green" },
 ];
 
 export const HeroImage = () => {
   return (
     <section className="relative min-h-screen overflow-hidden">
+      {/* Hidden SVG with gradient definitions */}
+      <svg width="0" height="0" className="absolute">
+        <defs>
+          <linearGradient id="gradient-purple" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#a855f7" />
+            <stop offset="100%" stopColor="#6366f1" />
+          </linearGradient>
+          <linearGradient id="gradient-blue" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#3b82f6" />
+            <stop offset="100%" stopColor="#06b6d4" />
+          </linearGradient>
+          <linearGradient id="gradient-yellow" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#fbbf24" />
+            <stop offset="100%" stopColor="#f97316" />
+          </linearGradient>
+          <linearGradient id="gradient-teal" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#14b8a6" />
+            <stop offset="100%" stopColor="#22d3ee" />
+          </linearGradient>
+          <linearGradient id="gradient-pink" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ec4899" />
+            <stop offset="100%" stopColor="#f43f5e" />
+          </linearGradient>
+          <linearGradient id="gradient-orange" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#f97316" />
+            <stop offset="100%" stopColor="#eab308" />
+          </linearGradient>
+          <linearGradient id="gradient-green" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#22c55e" />
+            <stop offset="100%" stopColor="#10b981" />
+          </linearGradient>
+          <linearGradient id="gradient-rainbow" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#f43f5e" />
+            <stop offset="25%" stopColor="#f97316" />
+            <stop offset="50%" stopColor="#eab308" />
+            <stop offset="75%" stopColor="#22c55e" />
+            <stop offset="100%" stopColor="#3b82f6" />
+          </linearGradient>
+          <linearGradient id="gradient-red" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ef4444" />
+            <stop offset="100%" stopColor="#dc2626" />
+          </linearGradient>
+          <linearGradient id="gradient-fire" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stopColor="#dc2626" />
+            <stop offset="50%" stopColor="#f97316" />
+            <stop offset="100%" stopColor="#fbbf24" />
+          </linearGradient>
+          <linearGradient id="gradient-cyan" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#06b6d4" />
+            <stop offset="100%" stopColor="#0ea5e9" />
+          </linearGradient>
+        </defs>
+      </svg>
+
       {/* Shader background */}
       <div className="absolute inset-0">
         <GrainGradient
@@ -89,12 +142,16 @@ export const HeroImage = () => {
                   YOUR
                 </motion.span>
 
-                {/* 2. Map through the objects */}
                 <TextRotate
-                  texts={ROTATING_TEXTS.map(({ label, icon: Icon }) => (
+                  texts={ROTATING_TEXTS.map(({ label, icon: Icon, gradient }) => (
                     <span key={label} className="flex items-center gap-3 sm:gap-4">
                       {label}
-                      <Icon size="1em" className="shrink-0 translate-y-[0.05em] stroke-[1.5px]" />
+                      <Icon
+                        size="1em"
+                        className="shrink-0 translate-y-[0.05em]"
+                        style={{ stroke: `url(#${gradient})` }}
+                        strokeWidth={1.5}
+                      />
                     </span>
                   ))}
                   mainClassName="text-background px-3 sm:px-6 bg-primary overflow-hidden py-1 sm:py-2 justify-center rounded-lg my-2 sm:my-4"
