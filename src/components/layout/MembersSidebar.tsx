@@ -379,7 +379,7 @@ export const MembersSidebar = () => {
         <ContextMenuTrigger asChild>{content}</ContextMenuTrigger>
         <ContextMenuContent className="w-52 rounded-xl border-border/50 p-1.5">
           {/* Basic actions */}
-          <ContextMenuItem onClick={() => handleMessage(member)} className="rounded-lg gap-3">
+          <ContextMenuItem onClick={() => handleMessage(member)} className="rounded-lg gap-3 hover:bg-primary/80">
             <MessageSquare className="w-4 h-4" />
             Message
           </ContextMenuItem>
