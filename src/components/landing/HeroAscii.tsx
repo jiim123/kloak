@@ -112,7 +112,7 @@ export const HeroImage = () => {
           shape="wave"
           type="4x4"
           size={2}
-          speed={0.72}
+          speed={0.7}
           scale={0.6}
           offsetX={0.06}
           offsetY={-0.12}
