@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import TextRotate from "@/components/fancy/text/text-rotate";
-import { GrainGradient } from "@paper-design/shaders-react";
+import { Dithering } from "@paper-design/shaders-react";
 
 const fadeIn = {
   initial: { opacity: 0, y: 20 },
@@ -105,16 +105,17 @@ export const HeroImage = () => {
 
       {/* Shader background */}
       <div className="absolute inset-0">
-        <GrainGradient
+        <Dithering
           style={{ width: "100%", height: "100%" }}
-          colors={["#424242"]}
-          colorBack="#0f0f0f"
-          softness={1}
-          intensity={0.16}
-          noise={0}
-          shape="ripple"
-          speed={0.9}
-          scale={0.8}
+          colorBack="#878787"
+          colorFront="#000000"
+          shape="wave"
+          type="4x4"
+          size={2}
+          speed={0.72}
+          scale={0.6}
+          offsetX={0.06}
+          offsetY={-0.12}
         />
       </div>
 
