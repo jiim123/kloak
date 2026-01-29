@@ -108,7 +108,7 @@ export const HeroImage = () => {
         <Dithering
           style={{ width: "100%", height: "100%" }}
           colorBack="#878787"
-          colorFront="#000000"
+          colorFront="#0f0f0f"
           shape="wave"
           type="4x4"
           size={2}
