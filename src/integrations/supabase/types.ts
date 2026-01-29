@@ -1557,6 +1557,10 @@ export type Database = {
       get_user_by_id: { Args: { _user_id: string }; Returns: Json }
       get_user_dm_conversations: { Args: { _user_id: string }; Returns: Json }
       get_user_friends: { Args: { _user_id: string }; Returns: Json }
+      get_user_poll_votes: {
+        Args: { _poll_id: string; _user_id: string }
+        Returns: number[]
+      }
       get_user_server_folders: { Args: { _user_id: string }; Returns: Json }
       get_user_servers: { Args: { _user_id: string }; Returns: Json }
       is_dm_participant: {

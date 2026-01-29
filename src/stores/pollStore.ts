@@ -4,7 +4,11 @@ import type { Poll } from "@/types";
 
 type PollRow = any;
 
-const normalizePoll = (row: PollRow): Poll => {
+interface PollWithVotes extends Poll {
+  userVotes: number[];
+}
+
+const normalizePoll = (row: PollRow, userVotes: number[] = []): PollWithVotes => {
   const resultsRaw = row?.results;
   const results: number[] = Array.isArray(resultsRaw)
     ? resultsRaw.map((v: any) => (typeof v === "number" ? v : Number(v) || 0))
@@ -23,18 +27,19 @@ const normalizePoll = (row: PollRow): Poll => {
     results,
     total_votes: typeof row.total_votes === "number" ? row.total_votes : Number(row.total_votes) || 0,
     created_at: row.created_at,
+    userVotes,
   };
 };
 
 interface PollState {
-  pollsById: Record<string, Poll>;
+  pollsById: Record<string, PollWithVotes>;
 
-  getPoll: (pollId: string) => Poll | undefined;
-  upsertPoll: (poll: Poll) => void;
+  getPoll: (pollId: string) => PollWithVotes | undefined;
+  upsertPoll: (poll: PollWithVotes) => void;
   removePoll: (pollId: string) => void;
 
-  fetchPoll: (pollId: string) => Promise<Poll | null>;
-  votePoll: (pollId: string, userId: string, optionIndexes: number[]) => Promise<Poll | null>;
+  fetchPoll: (pollId: string, userId?: string) => Promise<PollWithVotes | null>;
+  votePoll: (pollId: string, userId: string, optionIndexes: number[]) => Promise<PollWithVotes | null>;
   closePoll: (pollId: string) => Promise<boolean>;
   closeExpiredPolls: (channelId: string) => Promise<number>;
 }
@@ -58,15 +63,28 @@ export const usePollStore = create<PollState>((set, get) => ({
       return { pollsById: rest };
     }),
 
-  fetchPoll: async (pollId) => {
+  fetchPoll: async (pollId, userId) => {
     try {
+      // Check if we have a cached poll with user votes already
       const existing = get().pollsById[pollId];
-      if (existing) return existing;
+      if (existing && existing.userVotes.length > 0) return existing;
 
       const { data, error } = await (supabase.from("polls") as any).select("*").eq("id", pollId).maybeSingle();
       if (error || !data) return null;
 
-      const poll = normalizePoll(data);
+      // Fetch user's votes if userId is provided
+      let userVotes: number[] = [];
+      if (userId) {
+        const { data: votesData } = await supabase.rpc("get_user_poll_votes" as any, {
+          _poll_id: pollId,
+          _user_id: userId,
+        });
+        if (Array.isArray(votesData)) {
+          userVotes = votesData;
+        }
+      }
+
+      const poll = normalizePoll(data, userVotes);
       get().upsertPoll(poll);
       return poll;
     } catch (e) {
@@ -87,7 +105,8 @@ export const usePollStore = create<PollState>((set, get) => ({
       });
       if (error || !data) return null;
 
-      const poll = normalizePoll(data);
+      // After voting, the user's votes are the ones they just submitted
+      const poll = normalizePoll(data, sanitized);
       get().upsertPoll(poll);
       return poll;
     } catch (e) {

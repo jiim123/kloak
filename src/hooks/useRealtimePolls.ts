@@ -1,9 +1,24 @@
 import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePollStore } from "@/stores/pollStore";
-import type { Poll } from "@/types";
 
-const normalizePoll = (row: any): Poll => {
+interface PollWithVotes {
+  id: string;
+  message_id: string;
+  channel_id: string;
+  created_by: string;
+  question: string;
+  options: string[];
+  allow_multiple: boolean;
+  ends_at: string;
+  is_closed: boolean;
+  results: number[];
+  total_votes: number;
+  created_at: string;
+  userVotes: number[];
+}
+
+const normalizePollRow = (row: any, existingUserVotes: number[] = []): PollWithVotes => {
   const resultsRaw = row?.results;
   const results: number[] = Array.isArray(resultsRaw)
     ? resultsRaw.map((v: any) => (typeof v === "number" ? v : Number(v) || 0))
@@ -22,6 +37,7 @@ const normalizePoll = (row: any): Poll => {
     results,
     total_votes: typeof row.total_votes === "number" ? row.total_votes : Number(row.total_votes) || 0,
     created_at: row.created_at,
+    userVotes: existingUserVotes,
   };
 };
 
@@ -71,7 +87,11 @@ export const useRealtimePolls = (channelId: string | null) => {
 
               const row = payload.new as any;
               if (!row?.id) return;
-              usePollStore.getState().upsertPoll(normalizePoll(row));
+              
+              // Preserve existing user votes when updating from realtime
+              const existingPoll = usePollStore.getState().pollsById[row.id];
+              const existingUserVotes = existingPoll?.userVotes || [];
+              usePollStore.getState().upsertPoll(normalizePollRow(row, existingUserVotes));
             } catch {
               // ignore
             }
