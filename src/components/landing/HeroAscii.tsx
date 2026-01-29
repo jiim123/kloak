@@ -137,7 +137,7 @@ export const HeroImage = () => {
                   layout
                   transition={{ type: "spring", damping: 30, stiffness: 400 }}
                 >
-                  YOUR
+                  Your
                 </motion.span>
 
                 <TextRotate
@@ -168,7 +168,7 @@ export const HeroImage = () => {
                   layout
                   transition={{ type: "spring", damping: 30, stiffness: 400 }}
                 >
-                  IS PRIVATE.
+                  is Private.
                 </motion.span>
               </motion.div>
             </LayoutGroup>
