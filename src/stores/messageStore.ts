@@ -184,6 +184,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         }
       }
 
+      const currentUserId = useAuthStore.getState().user?.id;
       const messages: Message[] = (data || []).reverse().map((msg: any) => ({
         ...msg,
         user: msg.user,
@@ -193,6 +194,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
           blockedUserIds.length > 0
             ? (msg.reactions || []).filter((r: any) => !blockedUserIds.includes(r.user_id))
             : (msg.reactions || []),
+          currentUserId,
         ),
       }));
 
