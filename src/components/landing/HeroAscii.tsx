@@ -28,22 +28,22 @@ const fadeIn = {
 };
 
 const ROTATING_TEXTS = [
-  { label: "OPINION", icon: MessageSquareQuote, gradient: "gradient-purple" },
-  { label: "MESSAGE", icon: MessageSquare, gradient: "gradient-blue" },
-  { label: "REACTION", icon: Smile, gradient: "gradient-yellow" },
-  { label: "COMMUNITY", icon: Users, gradient: "gradient-teal" },
-  { label: "FRIENDS", icon: Heart, gradient: "gradient-pink" },
-  { label: "FAMILY", icon: Home, gradient: "gradient-orange" },
-  { label: "VOICE", icon: Mic2, gradient: "gradient-green" },
-  { label: "VIBE", icon: Sparkles, gradient: "gradient-rainbow" },
-  { label: "GAMING SESSION", icon: Gamepad2, gradient: "gradient-red" },
-  { label: "DRAMA", icon: Theater, gradient: "gradient-purple" },
-  { label: "RANT", icon: Flame, gradient: "gradient-fire" },
-  { label: "SECRET", icon: Fingerprint, gradient: "gradient-cyan" },
-  { label: "MEMES", icon: Laugh, gradient: "gradient-yellow" },
-  { label: "HOT TAKE", icon: Flame, gradient: "gradient-fire" },
-  { label: "GROUP CHAT", icon: UserPlus, gradient: "gradient-blue" },
-  { label: "DATA", icon: ShieldCheck, gradient: "gradient-green" },
+  { label: "Opinion", icon: MessageSquareQuote, gradient: "gradient-purple" },
+  { label: "Message", icon: MessageSquare, gradient: "gradient-blue" },
+  { label: "Reaction", icon: Smile, gradient: "gradient-yellow" },
+  { label: "Community", icon: Users, gradient: "gradient-teal" },
+  { label: "Friends", icon: Heart, gradient: "gradient-pink" },
+  { label: "Family", icon: Home, gradient: "gradient-orange" },
+  { label: "Voice", icon: Mic2, gradient: "gradient-green" },
+  { label: "Vibe", icon: Sparkles, gradient: "gradient-rainbow" },
+  { label: "Gaming Session", icon: Gamepad2, gradient: "gradient-red" },
+  { label: "Drama", icon: Theater, gradient: "gradient-purple" },
+  { label: "Rant", icon: Flame, gradient: "gradient-fire" },
+  { label: "Secret", icon: Fingerprint, gradient: "gradient-cyan" },
+  { label: "Memes", icon: Laugh, gradient: "gradient-yellow" },
+  { label: "Hot Take", icon: Flame, gradient: "gradient-fire" },
+  { label: "Group Chat", icon: UserPlus, gradient: "gradient-blue" },
+  { label: "Data", icon: ShieldCheck, gradient: "gradient-green" },
 ];
 
 export const HeroImage = () => {
