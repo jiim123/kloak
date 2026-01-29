@@ -18,12 +18,27 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
   const [selected, setSelected] = useState<number[]>([]);
   const [isVoting, setIsVoting] = useState(false);
   const [fetchError, setFetchError] = useState(false);
+  const [hasFetched, setHasFetched] = useState(false);
 
+  // Fetch poll with user votes on mount
   useEffect(() => {
-    if (!poll && !fetchError) {
-      fetchPoll(pollId).catch(() => setFetchError(true));
+    if (!hasFetched && !fetchError) {
+      setHasFetched(true);
+      fetchPoll(pollId, user?.id).catch(() => setFetchError(true));
     }
-  }, [pollId, poll, fetchPoll, fetchError]);
+  }, [pollId, user?.id, fetchPoll, fetchError, hasFetched]);
+
+  // Initialize selected state from user's previous votes
+  useEffect(() => {
+    if (poll?.userVotes && poll.userVotes.length > 0 && selected.length === 0) {
+      setSelected(poll.userVotes);
+    }
+  }, [poll?.userVotes, selected.length]);
+
+  // Check if user has already voted (from stored userVotes)
+  const hasVoted = useMemo(() => {
+    return poll?.userVotes && poll.userVotes.length > 0;
+  }, [poll?.userVotes]);
 
   // Auto-close exactly at end time (best effort) so the UI updates to results via realtime.
   useEffect(() => {
@@ -57,14 +72,17 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
     }
   }, [poll, isClosed]);
 
+  // Show results if poll is closed OR if user has already voted
+  const showResults = isClosed || hasVoted;
+
   const canVote = useMemo(() => {
-    return !!poll && !!user && !isClosed && poll.options.length > 0 && selected.length > 0 && !isVoting;
-  }, [poll, user, isClosed, selected.length, isVoting]);
+    return !!poll && !!user && !isClosed && !hasVoted && poll.options.length > 0 && selected.length > 0 && !isVoting;
+  }, [poll, user, isClosed, hasVoted, selected.length, isVoting]);
 
   const totalVotes = poll?.total_votes ?? 0;
 
   const toggle = (idx: number) => {
-    if (!poll || isClosed) return;
+    if (!poll || isClosed || hasVoted) return;
     if (poll.allow_multiple) {
       setSelected((prev) => (prev.includes(idx) ? prev.filter((x) => x !== idx) : [...prev, idx].sort((a, b) => a - b)));
     } else {
@@ -108,14 +126,17 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
       <div className="text-sm font-semibold mb-3">{poll.question}</div>
 
       <div className="space-y-2">
-        {isClosed ? (
+        {showResults ? (
           poll.options.map((opt, idx) => {
             const count = poll.results?.[idx] ?? 0;
             const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+            const isUserVote = poll.userVotes?.includes(idx);
             return (
               <div 
                 key={idx} 
-                className="relative rounded-lg border border-border overflow-hidden p-3"
+                className={`relative rounded-lg border overflow-hidden p-3 ${
+                  isUserVote ? "border-primary" : "border-border"
+                }`}
                 style={{
                   background: pct > 0 
                     ? `linear-gradient(90deg, hsl(var(--primary) / 0.25) ${pct}%, hsl(var(--background) / 0.4) ${pct}%)`
@@ -123,7 +144,12 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
                 }}
               >
                 <div className="flex items-center justify-between gap-2 relative z-10">
-                  <div className="text-sm font-medium">{opt}</div>
+                  <div className="flex items-center gap-2">
+                    {isUserVote && (
+                      <span className="text-primary text-xs font-medium">✓</span>
+                    )}
+                    <div className="text-sm font-medium">{opt}</div>
+                  </div>
                   <div className="text-xs text-muted-foreground font-semibold">
                     {count} ({pct}%)
                   </div>
@@ -172,7 +198,7 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
 
       <div className="mt-3 flex items-center justify-between gap-2">
         <div className="text-xs text-muted-foreground">{totalVotes} vote{totalVotes === 1 ? "" : "s"}</div>
-        {!isClosed && (
+        {!showResults && (
           <Button size="sm" onClick={submitVote} disabled={!canVote}>
             Vote
           </Button>
