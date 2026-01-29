@@ -118,71 +118,78 @@ export const HeroImage = () => {
         />
       </div>
 
-      <div className="relative z-10 w-full min-h-screen flex items-center justify-center px-6 py-20">
-        <motion.div initial="initial" animate="animate" className="w-full text-center">
-          <motion.p
-            variants={fadeIn}
-            transition={{ duration: 0.5, delay: 0 }}
-            className="landing-body text-muted-foreground mb-6 text-sm"
-          ></motion.p>
+      <div className="relative z-10 w-full min-h-screen flex flex-col justify-end px-8 pb-12 md:px-12 md:pb-16 lg:px-16 lg:pb-20">
+        <div className="flex items-end justify-between w-full">
+          <motion.div initial="initial" animate="animate" className="text-left">
+            <motion.p
+              variants={fadeIn}
+              transition={{ duration: 0.5, delay: 0 }}
+              className="landing-body text-muted-foreground mb-6 text-sm"
+            ></motion.p>
 
-          <motion.div variants={fadeIn} transition={{ duration: 0.5, delay: 0.1 }} className="mb-8">
-            <LayoutGroup>
-              <motion.div
-                className="flex flex-col items-center justify-center text-3xl sm:text-4xl md:text-5xl lg:text-8xl font-light"
-                layout
-              >
-                <motion.span
-                  className="text-foreground"
+            <motion.div variants={fadeIn} transition={{ duration: 0.5, delay: 0.1 }} className="mb-8">
+              <LayoutGroup>
+                <motion.div
+                  className="flex flex-col items-start text-3xl sm:text-4xl md:text-5xl lg:text-8xl font-light"
                   layout
-                  transition={{ type: "spring", damping: 30, stiffness: 400 }}
                 >
-                  Your
-                </motion.span>
+                  <motion.span
+                    className="text-foreground"
+                    layout
+                    transition={{ type: "spring", damping: 30, stiffness: 400 }}
+                  >
+                    Your
+                  </motion.span>
 
-                <TextRotate
-                  texts={ROTATING_TEXTS.map(({ label, icon: Icon, gradient }) => (
-                    <span key={label} className="flex items-center gap-3 sm:gap-4">
-                      {label}
-                      <Icon
-                        size="1em"
-                        className="shrink-0 translate-y-[0.05em]"
-                        style={{ stroke: `url(#${gradient})` }}
-                        strokeWidth={1.5}
-                      />
-                    </span>
-                  ))}
-                  mainClassName="text-background px-3 sm:px-6 bg-primary overflow-hidden py-1 sm:py-2 justify-center rounded-lg my-2 sm:my-4"
-                  staggerFrom="last"
-                  initial={{ y: "100%" }}
-                  animate={{ y: 0 }}
-                  exit={{ y: "-120%" }}
-                  staggerDuration={0.025}
-                  splitLevelClassName="overflow-hidden pb-0.5 sm:pb-1"
-                  transition={{ type: "spring", damping: 30, stiffness: 400 }}
-                  rotationInterval={3000}
-                />
+                  <TextRotate
+                    texts={ROTATING_TEXTS.map(({ label, icon: Icon, gradient }) => (
+                      <span key={label} className="flex items-center gap-3 sm:gap-4">
+                        {label}
+                        <Icon
+                          size="1em"
+                          className="shrink-0 translate-y-[0.05em]"
+                          style={{ stroke: `url(#${gradient})` }}
+                          strokeWidth={1.5}
+                        />
+                      </span>
+                    ))}
+                    mainClassName="text-background px-3 sm:px-6 bg-primary overflow-hidden py-1 sm:py-2 justify-start rounded-lg my-2 sm:my-4"
+                    staggerFrom="last"
+                    initial={{ y: "100%" }}
+                    animate={{ y: 0 }}
+                    exit={{ y: "-120%" }}
+                    staggerDuration={0.025}
+                    splitLevelClassName="overflow-hidden pb-0.5 sm:pb-1"
+                    transition={{ type: "spring", damping: 30, stiffness: 400 }}
+                    rotationInterval={3000}
+                  />
 
-                <motion.span
-                  className="text-foreground font-light"
-                  layout
-                  transition={{ type: "spring", damping: 30, stiffness: 400 }}
-                >
-                  is Private.
-                </motion.span>
-              </motion.div>
-            </LayoutGroup>
+                  <motion.span
+                    className="text-foreground font-light"
+                    layout
+                    transition={{ type: "spring", damping: 30, stiffness: 400 }}
+                  >
+                    is Private.
+                  </motion.span>
+                </motion.div>
+              </LayoutGroup>
+            </motion.div>
+
+            <motion.p
+              variants={fadeIn}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="landing-body text-primary mb-0 text-sm max-w-sm"
+            >
+              A space for your community to connect, create, and grow together—without ads, tracking, or compromise.
+            </motion.p>
           </motion.div>
 
-          <motion.p
-            variants={fadeIn}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="landing-body text-primary mb-10 text-sm max-w-sm mx-auto"
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="hidden sm:block"
           >
-            A space for your community to connect, create, and grow together—without ads, tracking, or compromise.
-          </motion.p>
-
-          <motion.div variants={fadeIn} transition={{ duration: 0.5, delay: 0.3 }}>
             <Link to="/app">
               <Button size="lg" className="rounded-xl uppercase tracking-wider group">
                 Download Kloak
@@ -190,6 +197,21 @@ export const HeroImage = () => {
               </Button>
             </Link>
           </motion.div>
+        </div>
+
+        {/* Mobile button - full width below content */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="sm:hidden mt-8"
+        >
+          <Link to="/app">
+            <Button size="lg" className="rounded-xl uppercase tracking-wider group w-full">
+              Download Kloak
+              <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+            </Button>
+          </Link>
         </motion.div>
       </div>
     </section>
