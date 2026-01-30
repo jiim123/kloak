@@ -1,5 +1,16 @@
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
-import { Paperclip, Smile, Send, X, Loader2, WifiOff, Type, Lock, SquareChartGantt, MoreHorizontal } from "lucide-react";
+import {
+  Paperclip,
+  Smile,
+  Send,
+  X,
+  Loader2,
+  WifiOff,
+  Type,
+  Lock,
+  SquareChartGantt,
+  MoreHorizontal,
+} from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   DropdownMenu,
@@ -112,7 +123,7 @@ const ActionButtons = memo(
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
+                  className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-150"
                   onMouseDown={(e) => e.preventDefault()}
                 >
                   <MoreHorizontal className="w-5 h-5" />
@@ -147,7 +158,7 @@ const ActionButtons = memo(
             >
               <button
                 type="button"
-                className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
+                className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-150"
                 onMouseDown={(e) => e.preventDefault()}
               >
                 <Smile className="w-5 h-5" />
@@ -163,7 +174,7 @@ const ActionButtons = memo(
               className={`p-2 rounded-xl transition-colors duration-150 ${
                 showFormatToolbar
                   ? "text-primary bg-primary/10"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
               }`}
               onMouseDown={(e) => e.preventDefault()}
               title="Format text"
@@ -178,7 +189,7 @@ const ActionButtons = memo(
               disabled={!canSendMessage}
               className={`p-2 rounded-xl transition-colors duration-150 ${
                 canSendMessage
-                  ? "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  ? "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                   : "text-muted-foreground/50 cursor-not-allowed"
               }`}
               onMouseDown={(e) => e.preventDefault()}
@@ -198,7 +209,7 @@ const ActionButtons = memo(
             >
               <button
                 type="button"
-                className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
+                className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-150"
                 onMouseDown={(e) => e.preventDefault()}
               >
                 <Smile className="w-5 h-5" />
@@ -214,7 +225,7 @@ const ActionButtons = memo(
           className={`p-2 rounded-xl transition-all duration-150 ${
             content.trim() && !isSending
               ? "bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95"
-              : "bg-muted text-muted-foreground cursor-not-allowed"
+              : "bg-muted/50 text-muted-foreground/50 cursor-not-allowed"
           }`}
         >
           {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
@@ -223,7 +234,6 @@ const ActionButtons = memo(
     );
   },
 );
-
 ActionButtons.displayName = "ActionButtons";
 
 export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }: MessageInputProps) => {
@@ -270,7 +280,6 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const currentMember = useMemo(() => members.find((m) => m.user_id === user?.id), [members, user?.id]);
   const isMuted = currentMember?.is_muted || false;
   const isReadOnlyChannel = currentChannel?.is_read_only || false;
-
   const { hasPermission } = useMemberPermissions(channelId);
   const canSendMessagesPermission = hasPermission("send_messages");
   const canSendInReadOnly = isReadOnlyChannel ? hasPermission("manage_messages") : true;
@@ -285,7 +294,6 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     setContent(draft);
     mentionMappingsRef.current = [];
     channelMappingsRef.current = [];
-
     // Reset textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
@@ -336,7 +344,6 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     }
 
     const textAfterAt = textBeforeCursor.slice(atIndex + 1);
-
     if (textAfterAt.includes(" ") || textAfterAt.includes("\n")) {
       setShowMentions(false);
       return;
@@ -359,7 +366,6 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     }
 
     const textAfterHash = textBeforeCursor.slice(hashIndex + 1);
-
     if (textAfterHash.includes(" ") || textAfterHash.includes("\n")) {
       setShowChannels(false);
       return;
@@ -407,6 +413,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       const afterMention = content.slice(mentionStartIndex + mentionQuery.length + 1);
 
       let mentionText: string;
+
       if (option.type === "user" && option.id) {
         mentionText = `@${option.label} `;
         const existingMapping = mentionMappingsRef.current.find(
@@ -439,6 +446,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       const afterChannel = content.slice(channelStartIndex + channelQuery.length + 1);
 
       const channelText = `#${option.name} `;
+
       const existingMapping = channelMappingsRef.current.find(
         (m) => m.channelName === option.name && m.channelId === option.id,
       );
@@ -465,18 +473,22 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
 
   const convertMentionsForSend = useCallback((text: string): string => {
     let result = text;
+
     // Convert user mentions
     for (const mapping of mentionMappingsRef.current) {
       const regex = new RegExp(`@${escapeRegex(mapping.username)}(?=\\s|$|[.,!?;:])`, "g");
       result = result.replace(regex, `<@${mapping.userId}>`);
     }
+
     // Convert channel tags
     for (const mapping of channelMappingsRef.current) {
       const regex = new RegExp(`#${escapeRegex(mapping.channelName)}(?=\\s|$|[.,!?;:])`, "g");
       result = result.replace(regex, `<#${mapping.channelId}>`);
     }
+
     result = result.replace(/@everyone(?=\s|$)/g, "@everyone");
     result = result.replace(/@here(?=\s|$)/g, "@here");
+
     return result;
   }, []);
 
@@ -553,6 +565,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
                     mention.type === "here"
                       ? members.filter((m) => m.user?.status === "online" && m.user_id !== user.id)
                       : members.filter((m) => m.user_id !== user.id);
+
                   for (const member of targetMembers.slice(0, 50)) {
                     await supabase.from("mentions").insert({
                       message_id: message.id,
@@ -595,10 +608,12 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
       const selectedText = content.slice(start, end);
+
       const syntax = FORMAT_SYNTAX[formatType];
       if (!syntax) return;
 
       const { prefix, suffix } = syntax;
+
       if (selectedText) {
         const newContent = content.slice(0, start) + prefix + selectedText + suffix + content.slice(end);
         if (newContent.length <= MAX_LENGTH) {
@@ -697,6 +712,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       e.stopPropagation();
 
       setIsSending(true);
+
       const currentReplyTo = replyingTo;
 
       try {
@@ -804,6 +820,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       const selectedText = content.slice(start, end);
 
       let syntax: { prefix: string; suffix: string };
+
       if (formatType === "color" && value) {
         syntax = getColorSyntax(value);
       } else if (formatType === "codeblock") {
@@ -884,8 +901,10 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   if (isMuted) {
     return (
       <div className="px-4 pb-6">
-        <div className="flex items-center justify-center py-4 px-4 bg-secondary rounded-2xl">
-          <span className="text-[14px] sm:text-[15px] leading-[1.5] font-[Inter,system-ui,sans-serif] text-muted-foreground">You are muted in this server</span>
+        <div className="flex items-center justify-center py-4 px-4 bg-muted/30 rounded-2xl border border-border/50">
+          <span className="text-[14px] sm:text-[15px] leading-[1.5] font-[Inter,system-ui,sans-serif] text-muted-foreground">
+            You are muted in this server
+          </span>
         </div>
       </div>
     );
@@ -895,9 +914,11 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   if (isReadOnlyChannel && !hasPermission("manage_messages")) {
     return (
       <div className="px-4 pb-6">
-        <div className="flex items-center justify-center gap-2 py-4 px-4 bg-secondary rounded-2xl border border-border">
+        <div className="flex items-center justify-center gap-2 py-4 px-4 bg-muted/30 rounded-2xl border border-border/50">
           <Lock className="w-4 h-4 text-muted-foreground" />
-          <span className="text-[14px] sm:text-[15px] leading-[1.5] font-[Inter,system-ui,sans-serif] text-muted-foreground">Read-only channel</span>
+          <span className="text-[14px] sm:text-[15px] leading-[1.5] font-[Inter,system-ui,sans-serif] text-muted-foreground">
+            Read-only channel
+          </span>
         </div>
       </div>
     );
@@ -907,9 +928,11 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   if (!canSendMessagesPermission) {
     return (
       <div className="px-4 pb-6">
-        <div className="flex items-center justify-center gap-2 py-4 px-4 bg-secondary rounded-2xl border border-border">
+        <div className="flex items-center justify-center gap-2 py-4 px-4 bg-muted/30 rounded-2xl border border-border/50">
           <Lock className="w-4 h-4 text-muted-foreground" />
-          <span className="text-[14px] sm:text-[15px] leading-[1.5] font-[Inter,system-ui,sans-serif] text-muted-foreground">You do not have permission to send messages in this channel</span>
+          <span className="text-[14px] sm:text-[15px] leading-[1.5] font-[Inter,system-ui,sans-serif] text-muted-foreground">
+            You do not have permission to send messages in this channel
+          </span>
         </div>
       </div>
     );
@@ -950,14 +973,14 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
 
       {/* Reply preview */}
       {replyingTo && (
-        <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-secondary rounded-t-2xl border-b border-border font-[Inter,system-ui,sans-serif]">
+        <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-muted/40 rounded-t-2xl border-b border-border/50 font-[Inter,system-ui,sans-serif]">
           <span className="text-[12px] sm:text-[13px] leading-[1.5] text-muted-foreground">
             Replying to <span className="font-medium text-primary">@{replyingTo.user?.username}</span>
           </span>
           {isImageOnlyMessage(replyingTo.content) ? (
-            <img 
-              src={replyingTo.content.trim()} 
-              alt="Image attachment" 
+            <img
+              src={replyingTo.content.trim()}
+              alt="Image attachment"
               className="w-8 h-8 rounded object-cover flex-shrink-0"
             />
           ) : (
@@ -967,7 +990,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
           )}
           <button
             onClick={cancelReply}
-            className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150 ml-auto"
+            className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-150 ml-auto"
           >
             <X className="w-4 h-4" />
           </button>
@@ -1009,122 +1032,123 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
 };
 
 // Mobile-optimized input component
-const MobileOptimizedInput = memo(({
-  content,
-  isFocused,
-  replyingTo,
-  canSendMessage,
-  channelName,
-  textareaRef,
-  handleChange,
-  setIsFocused,
-  handleKeyDown,
-  handlePaste,
-  showFormatToolbar,
-  setShowFormatToolbar,
-  showCreatePoll,
-  setShowCreatePoll,
-  showEmojiPicker,
-  setShowEmojiPicker,
-  isSending,
-  handleSubmit,
-  handleEmojiSelect,
-  currentServer,
-  setShowImageUpload,
-}: {
-  content: string;
-  isFocused: boolean;
-  replyingTo: any;
-  canSendMessage: boolean;
-  channelName: string;
-  textareaRef: React.RefObject<HTMLTextAreaElement>;
-  handleChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
-  setIsFocused: (focused: boolean) => void;
-  handleKeyDown: (e: React.KeyboardEvent) => void;
-  handlePaste: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
-  showFormatToolbar: boolean;
-  setShowFormatToolbar: (show: boolean) => void;
-  showCreatePoll: boolean;
-  setShowCreatePoll: (show: boolean) => void;
-  showEmojiPicker: boolean;
-  setShowEmojiPicker: (show: boolean) => void;
-  isSending: boolean;
-  handleSubmit: () => void;
-  handleEmojiSelect: (emoji: string) => void;
-  currentServer: any;
-  setShowImageUpload: (show: boolean) => void;
-}) => {
-  const isMobile = useIsMobile();
-  const shouldCollapse = isMobile && content.length > 10;
+const MobileOptimizedInput = memo(
+  ({
+    content,
+    isFocused,
+    replyingTo,
+    canSendMessage,
+    channelName,
+    textareaRef,
+    handleChange,
+    setIsFocused,
+    handleKeyDown,
+    handlePaste,
+    showFormatToolbar,
+    setShowFormatToolbar,
+    showCreatePoll,
+    setShowCreatePoll,
+    showEmojiPicker,
+    setShowEmojiPicker,
+    isSending,
+    handleSubmit,
+    handleEmojiSelect,
+    currentServer,
+    setShowImageUpload,
+  }: {
+    content: string;
+    isFocused: boolean;
+    replyingTo: any;
+    canSendMessage: boolean;
+    channelName: string;
+    textareaRef: React.RefObject<HTMLTextAreaElement>;
+    handleChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+    setIsFocused: (focused: boolean) => void;
+    handleKeyDown: (e: React.KeyboardEvent) => void;
+    handlePaste: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
+    showFormatToolbar: boolean;
+    setShowFormatToolbar: (show: boolean) => void;
+    showCreatePoll: boolean;
+    setShowCreatePoll: (show: boolean) => void;
+    showEmojiPicker: boolean;
+    setShowEmojiPicker: (show: boolean) => void;
+    isSending: boolean;
+    handleSubmit: () => void;
+    handleEmojiSelect: (emoji: string) => void;
+    currentServer: any;
+    setShowImageUpload: (show: boolean) => void;
+  }) => {
+    const isMobile = useIsMobile();
+    const shouldCollapse = isMobile && content.length > 10;
 
-  return (
-    <div
-      className={`
-        rounded-2xl bg-secondary border transition-all duration-200 ease-out
-        ${isFocused ? "border-border shadow-lg" : "border-transparent"}
-        ${replyingTo ? "rounded-t-none" : ""}
-      `}
-    >
-      <div className="flex items-end gap-1 sm:gap-2 p-2 sm:p-3">
-        {/* Attachment button - hidden when collapsed on mobile */}
-        {!shouldCollapse && (
-          <button
-            onClick={() => setShowImageUpload(true)}
+    return (
+      <div
+        className={`
+          rounded-2xl bg-card/80 border transition-all duration-200 ease-out
+          ${isFocused ? "border-primary/30 shadow-lg shadow-primary/5 bg-card" : "border-border/50 hover:border-border"}
+          ${replyingTo ? "rounded-t-none" : ""}
+        `}
+      >
+        <div className="flex items-end gap-1 sm:gap-2 p-2 sm:p-3">
+          {/* Attachment button - hidden when collapsed on mobile */}
+          {!shouldCollapse && (
+            <button
+              onClick={() => setShowImageUpload(true)}
+              disabled={!canSendMessage}
+              className={`p-2 rounded-xl transition-colors duration-150 mb-0.5 flex-shrink-0 ${
+                canSendMessage
+                  ? "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  : "text-muted-foreground/50 cursor-not-allowed"
+              }`}
+              title="Upload image"
+            >
+              <Paperclip className="w-5 h-5" />
+            </button>
+          )}
+
+          {/* Textarea - with improved mobile styles */}
+          <textarea
+            ref={textareaRef}
+            value={content}
+            onChange={handleChange}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+            placeholder={canSendMessage ? `Message #${channelName}` : "You cannot send messages here"}
             disabled={!canSendMessage}
-            className={`p-2 rounded-xl transition-colors duration-150 mb-0.5 flex-shrink-0 ${
-              canSendMessage
-                ? "text-muted-foreground hover:text-foreground hover:bg-muted"
-                : "text-muted-foreground/50 cursor-not-allowed"
+            rows={1}
+            className={`flex-1 bg-transparent resize-none outline-none text-foreground placeholder:text-muted-foreground/60 py-2 px-1 min-w-0 font-[Inter,system-ui,sans-serif] ${
+              !canSendMessage ? "cursor-not-allowed opacity-50" : ""
             }`}
-            title="Upload image"
-          >
-            <Paperclip className="w-5 h-5" />
-          </button>
-        )}
+            style={{
+              // Prevent iOS zoom on focus by using 16px minimum
+              fontSize: isMobile ? "16px" : "15px",
+              lineHeight: "1.5",
+              fontWeight: 400,
+            }}
+          />
 
-        {/* Textarea - with improved mobile styles */}
-        <textarea
-          ref={textareaRef}
-          value={content}
-          onChange={handleChange}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          placeholder={canSendMessage ? `Message #${channelName}` : "You do not have permission to send messages in this channel"}
-          disabled={!canSendMessage}
-          rows={1}
-          className={`flex-1 bg-transparent resize-none outline-none text-foreground placeholder:text-muted-foreground py-2 px-1 min-w-0 font-[Inter,system-ui,sans-serif] ${
-            !canSendMessage ? "cursor-not-allowed opacity-50" : ""
-          }`}
-          style={{ 
-            // Prevent iOS zoom on focus by using 16px minimum
-            fontSize: isMobile ? '16px' : '15px',
-            lineHeight: '1.5',
-            fontWeight: 400,
-          }}
-        />
-
-        {/* Action buttons - memoized */}
-        <ActionButtons
-          showFormatToolbar={showFormatToolbar}
-          setShowFormatToolbar={setShowFormatToolbar}
-          showCreatePoll={showCreatePoll}
-          setShowCreatePoll={setShowCreatePoll}
-          showEmojiPicker={showEmojiPicker}
-          setShowEmojiPicker={setShowEmojiPicker}
-          canSendMessage={canSendMessage}
-          content={content}
-          isSending={isSending}
-          onSubmit={handleSubmit}
-          onEmojiSelect={handleEmojiSelect}
-          currentServer={currentServer}
-          showAttachButton={shouldCollapse}
-          onAttachClick={() => setShowImageUpload(true)}
-        />
+          {/* Action buttons - memoized */}
+          <ActionButtons
+            showFormatToolbar={showFormatToolbar}
+            setShowFormatToolbar={setShowFormatToolbar}
+            showCreatePoll={showCreatePoll}
+            setShowCreatePoll={setShowCreatePoll}
+            showEmojiPicker={showEmojiPicker}
+            setShowEmojiPicker={setShowEmojiPicker}
+            canSendMessage={canSendMessage}
+            content={content}
+            isSending={isSending}
+            onSubmit={handleSubmit}
+            onEmojiSelect={handleEmojiSelect}
+            currentServer={currentServer}
+            showAttachButton={shouldCollapse}
+            onAttachClick={() => setShowImageUpload(true)}
+          />
+        </div>
       </div>
-    </div>
-  );
-});
-
+    );
+  },
+);
 MobileOptimizedInput.displayName = "MobileOptimizedInput";
