@@ -111,6 +111,9 @@ export interface ServerWithMembership extends Server {
   mention_count?: number;
 }
 
+/** How the member joined the server: discover (Explore), invite_link (server default code), invite (custom invite code) */
+export type JoinSource = "discover" | "invite_link" | "invite";
+
 export interface ServerMember {
   id: string;
   server_id: string;
@@ -120,6 +123,10 @@ export interface ServerMember {
   is_banned: boolean;
   is_muted: boolean;
   joined_at: string;
+  /** How they joined: discover, invite_link, or invite (custom code) */
+  join_source?: JoinSource | null;
+  /** When join_source is 'invite', the invite code that was used */
+  join_invite_code?: string | null;
   user?: User;
   roles?: CustomServerRole[];
 }

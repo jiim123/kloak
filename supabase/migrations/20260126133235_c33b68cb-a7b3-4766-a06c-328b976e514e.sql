@@ -1,9 +1,9 @@
--- Add is_private column to channels table
+-- Add is_private column to channels table (IF NOT EXISTS so migration is safe if column already exists)
 ALTER TABLE public.channels 
-ADD COLUMN is_private boolean NOT NULL DEFAULT false;
+ADD COLUMN IF NOT EXISTS is_private boolean NOT NULL DEFAULT false;
 
--- Create channel_members table for private channel access
-CREATE TABLE public.channel_members (
+-- Create channel_members table for private channel access (IF NOT EXISTS so migration is safe if table already exists)
+CREATE TABLE IF NOT EXISTS public.channel_members (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   channel_id uuid NOT NULL REFERENCES public.channels(id) ON DELETE CASCADE,
   user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
@@ -12,25 +12,33 @@ CREATE TABLE public.channel_members (
   UNIQUE(channel_id, user_id)
 );
 
--- Enable RLS on channel_members
-ALTER TABLE public.channel_members ENABLE ROW LEVEL SECURITY;
+-- Enable RLS on channel_members (only if not already enabled, so migration is safe if already applied)
+DO $$
+BEGIN
+  IF NOT (SELECT relrowsecurity FROM pg_class WHERE oid = 'public.channel_members'::regclass) THEN
+    ALTER TABLE public.channel_members ENABLE ROW LEVEL SECURITY;
+  END IF;
+END $$;
 
--- RLS policies for channel_members (permissive for custom auth system)
+-- RLS policies for channel_members (permissive for custom auth system). Drop first so migration is safe if already applied.
+DROP POLICY IF EXISTS "Channel members are viewable" ON public.channel_members;
 CREATE POLICY "Channel members are viewable" ON public.channel_members
 FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Channel members can be inserted" ON public.channel_members;
 CREATE POLICY "Channel members can be inserted" ON public.channel_members
 FOR INSERT WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Channel members can be deleted" ON public.channel_members;
 CREATE POLICY "Channel members can be deleted" ON public.channel_members
 FOR DELETE USING (true);
 
 -- Enable realtime for channel_members
 ALTER TABLE public.channel_members REPLICA IDENTITY FULL;
 
--- Create index for performance
-CREATE INDEX idx_channel_members_channel_id ON public.channel_members(channel_id);
-CREATE INDEX idx_channel_members_user_id ON public.channel_members(user_id);
+-- Create index for performance (IF NOT EXISTS so migration is safe if already applied)
+CREATE INDEX IF NOT EXISTS idx_channel_members_channel_id ON public.channel_members(channel_id);
+CREATE INDEX IF NOT EXISTS idx_channel_members_user_id ON public.channel_members(user_id);
 
 -- Function to check if user can access a channel
 CREATE OR REPLACE FUNCTION public.can_access_channel(_channel_id uuid, _user_id uuid)

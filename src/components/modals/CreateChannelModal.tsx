@@ -29,7 +29,7 @@ export const CreateChannelModal = () => {
   const presetCategoryId = modalData?.categoryId as string | undefined;
   const isCategory = modalData?.isCategory as boolean | undefined;
 
-  // Set mode based on modalData when modal opens
+  // Set mode based on modalData when modal opens; reset form when closed to avoid flash when reopening
   useEffect(() => {
     if (isOpen) {
       if (isCategory === true) {
@@ -37,6 +37,8 @@ export const CreateChannelModal = () => {
       } else {
         setMode("channel");
       }
+    } else {
+      setMode("channel");
     }
   }, [isOpen, isCategory]);
 
@@ -46,7 +48,6 @@ export const CreateChannelModal = () => {
     setCategoryId(presetCategoryId || "none");
     setIsPrivate(false);
     setError("");
-    setMode("channel");
     closeModal();
   };
 
@@ -110,40 +111,9 @@ export const CreateChannelModal = () => {
 
         {/* Content */}
         <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-6">
-          {/* Mode toggle */}
-          <div className="space-y-3">
-            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Type</Label>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setMode("channel")}
-                className={`flex-1 flex items-center justify-center gap-2 h-11 rounded-xl text-sm font-medium transition-colors ${
-                  mode === "channel"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary/50 text-muted-foreground hover:bg-secondary/80"
-                }`}
-              >
-                <Hash className="w-4 h-4" />
-                Channel
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode("category")}
-                className={`flex-1 flex items-center justify-center gap-2 h-11 rounded-xl text-sm font-medium transition-colors ${
-                  mode === "category"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary/50 text-muted-foreground hover:bg-secondary/80"
-                }`}
-              >
-                <FolderPlus className="w-4 h-4" />
-                Category
-              </button>
-            </div>
-          </div>
-
           {mode === "channel" && (
             <>
-              {/* Channel Type */}
+              {/* Channel Type - icon + label, compact row */}
               <div className="space-y-3">
                 <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Channel Type
@@ -151,70 +121,50 @@ export const CreateChannelModal = () => {
                 <RadioGroup
                   value={channelType}
                   onValueChange={(value) => setChannelType(value as ChannelType)}
-                  className="space-y-2"
+                  className="grid grid-cols-2 gap-2"
                 >
                   <Label
                     htmlFor="text"
-                    className={`flex items-center gap-4 p-3 rounded-xl cursor-pointer border transition-colors ${
+                    className={`flex items-center gap-3 py-2 px-3 rounded-xl cursor-pointer border transition-colors ${
                       channelType === "text"
                         ? "bg-primary/5 border-primary/50"
                         : "bg-secondary/50 border-border/50 hover:bg-secondary/80"
                     }`}
                   >
                     <div
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                      className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
                         channelType === "text" ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground"
                       }`}
                     >
-                      <Hash className="h-5 w-5" />
+                      <Hash className="h-4 w-4" />
                     </div>
-                    <div className="flex-1">
-                      <span className="font-medium text-sm">Text Channel</span>
-                      <p className="text-xs text-muted-foreground mt-0.5">Send messages, images, and files</p>
-                    </div>
+                    <span className="text-sm font-medium">Text Channel</span>
                     <RadioGroupItem value="text" id="text" className="sr-only" />
-                    <div
-                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                        channelType === "text" ? "border-primary bg-primary" : "border-muted-foreground/30"
-                      }`}
-                    >
-                      {channelType === "text" && <div className="w-2 h-2 rounded-full bg-primary-foreground" />}
-                    </div>
                   </Label>
 
                   <Label
                     htmlFor="voice"
-                    className={`flex items-center gap-4 p-3 rounded-xl cursor-pointer border transition-colors ${
+                    className={`flex items-center gap-3 py-2 px-3 rounded-xl cursor-pointer border transition-colors ${
                       channelType === "voice"
                         ? "bg-primary/5 border-primary/50"
                         : "bg-secondary/50 border-border/50 hover:bg-secondary/80"
                     }`}
                   >
                     <div
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                      className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
                         channelType === "voice" ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground"
                       }`}
                     >
-                      <Volume2 className="h-5 w-5" />
+                      <Volume2 className="h-4 w-4" />
                     </div>
-                    <div className="flex-1">
-                      <span className="font-medium text-sm">Voice Channel</span>
-                      <p className="text-xs text-muted-foreground mt-0.5">Talk with voice, video, and screen share</p>
-                    </div>
+                    <span className="text-sm font-medium">Voice Channel</span>
                     <RadioGroupItem value="voice" id="voice" className="sr-only" />
-                    <div
-                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                        channelType === "voice" ? "border-primary bg-primary" : "border-muted-foreground/30"
-                      }`}
-                    >
-                      {channelType === "voice" && <div className="w-2 h-2 rounded-full bg-primary-foreground" />}
-                    </div>
                   </Label>
                 </RadioGroup>
               </div>
 
-              {/* Category selector */}
-              {!presetCategoryId && categories.length > 0 && (
+              {/* Category selector - only when this server has categories */}
+              {!presetCategoryId && currentServer && categories.length > 0 && (
                 <div className="space-y-3">
                   <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Category
@@ -224,11 +174,11 @@ export const CreateChannelModal = () => {
                       <SelectValue placeholder="No category" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl border-border/50">
-                      <SelectItem value="none" className="rounded-lg">
+                      <SelectItem value="none" className="rounded-lg focus:bg-muted focus:text-foreground hover:bg-muted hover:text-foreground">
                         No category
                       </SelectItem>
                       {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id} className="rounded-lg">
+                        <SelectItem key={cat.id} value={cat.id} className="rounded-lg focus:bg-muted focus:text-foreground hover:bg-muted hover:text-foreground">
                           {cat.name}
                         </SelectItem>
                       ))}
@@ -236,23 +186,6 @@ export const CreateChannelModal = () => {
                   </Select>
                 </div>
               )}
-
-              {/* Private Channel Toggle */}
-              <div className="space-y-3">
-                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Privacy
-                </Label>
-                <div className="flex items-center gap-4 p-4 rounded-xl bg-secondary/30 border border-border/50">
-                  <div className="w-10 h-10 rounded-xl bg-secondary/80 flex items-center justify-center flex-shrink-0">
-                    <Lock className="w-5 h-5 text-muted-foreground" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">Private Channel</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Only selected members can view this channel</p>
-                  </div>
-                  <Switch checked={isPrivate} onCheckedChange={setIsPrivate} />
-                </div>
-              </div>
             </>
           )}
 
@@ -282,6 +215,25 @@ export const CreateChannelModal = () => {
               </p>
             )}
           </div>
+
+          {/* Private Channel Toggle - after channel name */}
+          {mode === "channel" && (
+            <div className="space-y-3">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Privacy
+              </Label>
+              <div className="flex items-center gap-4 p-4 rounded-xl bg-secondary/30 border border-border/50">
+                <div className="w-10 h-10 rounded-xl bg-secondary/80 flex items-center justify-center flex-shrink-0">
+                  <Lock className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">Private Channel</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Only selected members can view this channel</p>
+                </div>
+                <Switch checked={isPrivate} onCheckedChange={setIsPrivate} />
+              </div>
+            </div>
+          )}
 
           {/* Error message */}
           {error && (

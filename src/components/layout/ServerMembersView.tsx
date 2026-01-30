@@ -36,6 +36,16 @@ type SortMode = "joined_desc" | "joined_asc";
 const getDisplayName = (m: ServerMember) =>
   m.nickname || m.user?.display_name || m.user?.username || "Unknown";
 
+/** Label for the members table JOIN METHOD column from join_source + join_invite_code */
+function getJoinMethodLabel(member: ServerMember): string {
+  const source = member.join_source;
+  if (source === "discover") return "Discover";
+  if (source === "invite_link") return "Invite link";
+  if (source === "invite" && member.join_invite_code) return member.join_invite_code;
+  if (source === "invite") return "Invite";
+  return "—";
+}
+
 export const ServerMembersView = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
@@ -188,12 +198,12 @@ export const ServerMembersView = () => {
           <Table>
             <TableHeader className="bg-secondary/20">
               <TableRow className="hover:bg-secondary/20">
-                <TableHead>NAME</TableHead>
+                <TableHead>MEMBER</TableHead>
                 <TableHead className="w-40">MEMBER SINCE</TableHead>
                 <TableHead className="w-40">JOINED KLOAK</TableHead>
                 <TableHead className="w-40">JOIN METHOD</TableHead>
                 <TableHead className="w-56">ROLES</TableHead>
-                <TableHead className="w-24 text-right">SIGNALS</TableHead>
+                <TableHead className="w-24 text-right">ACTIONS</TableHead>
               </TableRow>
             </TableHeader>
 
@@ -240,8 +250,8 @@ export const ServerMembersView = () => {
                     </TableCell>
 
                     <TableCell>
-                      <Badge variant="secondary" className="text-xs">
-                        invite
+                      <Badge variant="secondary" className="text-xs font-normal">
+                        {getJoinMethodLabel(member)}
                       </Badge>
                     </TableCell>
 

@@ -1576,7 +1576,7 @@ export type Database = {
         Returns: boolean
       }
       join_server_by_invite: {
-        Args: { _invite_code: string; _user_id: string }
+        Args: { _invite_code: string; _user_id: string; _join_source?: string }
         Returns: Json
       }
       kick_member: {

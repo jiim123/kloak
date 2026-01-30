@@ -106,7 +106,7 @@ export const ExploreServers = () => {
     if (!user?.id) return;
     if (myServerIds.has(server.id)) return;
 
-    const joined = await joinServer(server.invite_code, user.id);
+    const joined = await joinServer(server.invite_code, user.id, 'discover');
     if (!joined) {
       const err = useServerStore.getState().error;
       toast.error(err || 'Failed to join server');

@@ -41,4 +41,5 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.create_channel TO anon, authenticated;
+-- Use full signature so GRANT works when multiple create_channel overloads exist
+GRANT EXECUTE ON FUNCTION public.create_channel(uuid, text, text, uuid, uuid, integer, text, boolean) TO anon, authenticated;

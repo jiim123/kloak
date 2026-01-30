@@ -35,7 +35,7 @@ interface ServerState {
     userId: string,
     updates: { name?: string; icon_url?: string | null; banner_url?: string | null; is_published?: boolean; about?: string | null }
   ) => Promise<void>;
-  joinServer: (inviteCode: string, userId: string) => Promise<Server | null>;
+  joinServer: (inviteCode: string, userId: string, joinSource?: 'discover' | 'invite_link') => Promise<Server | null>;
   leaveServer: (serverId: string, userId: string) => Promise<void>;
   deleteServer: (serverId: string) => Promise<void>;
   setCurrentServer: (server: Server | null) => void;
@@ -310,7 +310,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }
   },
 
-  joinServer: async (inviteCode: string, userId: string) => {
+  joinServer: async (inviteCode: string, userId: string, joinSource?: 'discover' | 'invite_link') => {
     try {
       // Rate limit invite code lookups to prevent abuse
       if (!inviteCodeRateLimiter.isAllowed(userId)) {
@@ -319,10 +319,11 @@ export const useServerStore = create<ServerState>((set, get) => ({
         return null;
       }
 
-      // Use RPC function to join server (bypasses RLS)
+      // Use RPC function to join server (bypasses RLS). joinSource: 'discover' when joining from Explore.
       const { data, error } = await supabase.rpc('join_server_by_invite', {
         _invite_code: inviteCode.toUpperCase(),
         _user_id: userId,
+        _join_source: joinSource ?? 'invite_link',
       });
 
       if (error) {
@@ -903,6 +904,8 @@ export const useServerStore = create<ServerState>((set, get) => ({
         is_banned: boolean;
         is_muted: boolean;
         joined_at: string;
+        join_source?: string | null;
+        join_invite_code?: string | null;
         roles?: Array<{
           id: string;
           name: string;
@@ -938,6 +941,8 @@ export const useServerStore = create<ServerState>((set, get) => ({
           is_banned: item.is_banned,
           is_muted: item.is_muted,
           joined_at: item.joined_at,
+          join_source: item.join_source as ServerMember['join_source'],
+          join_invite_code: item.join_invite_code ?? undefined,
           user: item.user as any,
           roles: item.roles as any,
         }));
