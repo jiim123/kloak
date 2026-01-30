@@ -147,9 +147,10 @@ const SortableChannel = ({
     zIndex: isDragging ? 50 : undefined,
   };
 
-  // On mobile + admin, entire item is draggable via long-press (handled by TouchSensor)
-  // We DON'T add touch-none here - let the TouchSensor handle the delay
-  const mobileDragProps = isMobile && isAdmin ? { ...attributes, ...listeners } : {};
+  // On mobile + admin, we only attach attributes (for accessibility)
+  // TouchSensor handles drag activation via its delay constraint - no listeners needed
+  // This prevents touch event interference that blocks scrolling
+  const mobileDragProps = isMobile && isAdmin ? { ...attributes } : {};
 
   // Determine the icon to display
   const getChannelIcon = () => {
@@ -412,9 +413,9 @@ const SortableCategory = ({
     zIndex: isDragging ? 50 : undefined,
   };
 
-  // On mobile + admin, entire category header is draggable via long-press
-  // No touch-none - let TouchSensor handle it
-  const mobileDragProps = isMobile && isAdmin ? { ...attributes, ...listeners } : {};
+  // On mobile + admin, only attach attributes (for accessibility)
+  // TouchSensor handles drag activation via delay - no listeners needed
+  const mobileDragProps = isMobile && isAdmin ? { ...attributes } : {};
 
   const categoryButton = (
     <button
@@ -627,17 +628,17 @@ export const ChannelSidebar = () => {
   );
 
   // Configure sensors:
-  // - TouchSensor: 800ms delay for long-press drag on mobile (increased from 500ms)
-  // - Higher tolerance (15px) allows scrolling during the delay period
+  // - TouchSensor: 1000ms (1 second) delay for long-press drag on mobile
+  // - High tolerance (50px) ensures scrolling works - any movement cancels drag activation
   const sensors = useSensors(
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 800, // 800ms hold required before drag starts
-        tolerance: 15, // Allow 15px of movement during delay (enables scrolling)
+        delay: 1000, // 1 second hold required before drag starts
+        tolerance: 50, // Allow 50px of movement during delay (enables scrolling)
       },
     }),
     useSensor(PointerSensor, {
-      activationConstraint: { distance: 8 },
+      activationConstraint: { distance: 10 },
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
