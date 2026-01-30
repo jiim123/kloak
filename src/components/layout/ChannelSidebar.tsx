@@ -143,7 +143,7 @@ const SortableChannel = ({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: channel.id,
     data: { type: "channel", channel },
-    disabled: isMobile && !isSortingMode && !isAdmin, // Disable sorting on mobile when not in sort mode
+    disabled: isMobile && !isSortingMode, // Disable sorting on mobile when not in sort mode
   });
 
   const style = {
