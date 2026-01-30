@@ -594,7 +594,7 @@ export const MessageItem = memo(function MessageItem({
                   {compactMode ? (
                     <div className="w-16 flex-shrink-0 pt-0.5">
                       <span
-                        className={`text-[11px] font-[Inter,system-ui,sans-serif] text-muted-foreground transition-opacity duration-150 whitespace-nowrap block ${
+                        className={`text-[11px] font-[Inter,system-ui,sans-serif] text-muted-foreground/70 transition-opacity duration-150 whitespace-nowrap block ${
                           showTimestamps || !isGrouped ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                         }`}
                       >

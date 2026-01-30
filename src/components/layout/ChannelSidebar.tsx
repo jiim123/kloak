@@ -23,6 +23,7 @@ import {
   closestCenter,
   KeyboardSensor,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragOverlay,
@@ -93,7 +94,7 @@ const UncategorizedDropZone = ({
     <div
       ref={setNodeRef}
       className={cn(
-        "transition-all duration-200",
+        "transition-all duration-800",
         (isOver || isDragOver) && "ring-2 ring-primary/50 ring-offset-2 ring-offset-card/50 rounded-md p-1 mb-2",
         !hasChannels && (isOver || isDragOver) && "min-h-[60px] flex items-center justify-center",
       )}
@@ -119,6 +120,8 @@ const SortableChannel = ({
   onEdit,
   onDelete,
   onCopyLink,
+  isMobile,
+  isDraggingAny,
 }: {
   channel: Channel;
   isActive: boolean;
@@ -131,6 +134,8 @@ const SortableChannel = ({
   onEdit: () => void;
   onDelete: () => void;
   onCopyLink: () => void;
+  isMobile?: boolean;
+  isDraggingAny?: boolean;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: channel.id,
@@ -140,8 +145,11 @@ const SortableChannel = ({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : undefined,
   };
+
+  // On mobile + admin, entire item is draggable
+  const mobileDragProps = isMobile && isAdmin ? { ...attributes, ...listeners } : {};
 
   // Determine the icon to display
   const getChannelIcon = () => {
@@ -168,97 +176,109 @@ const SortableChannel = ({
     );
   };
 
+  const buttonContent = (
+    <button
+      {...mobileDragProps}
+      onClick={onSelect}
+      className={cn(
+        "group relative w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-all duration-150 select-none",
+        "hover:bg-secondary/80",
+        isActive && "bg-secondary text-foreground",
+        !isActive && "text-muted-foreground hover:text-foreground",
+        isUnread && !isActive && "text-foreground font-semibold",
+        isDragging && "opacity-50 shadow-lg ring-2 ring-primary/30 bg-secondary",
+        isMobile && isAdmin && "touch-none",
+      )}
+    >
+      {/* Active indicator */}
+      <div
+        className={cn(
+          "absolute -left-2 top-0 bottom-0 w-1 bg-primary rounded-full transition-opacity duration-150",
+          isActive ? "opacity-100" : "opacity-0",
+        )}
+      />
+
+      {/* Channel icon */}
+      <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">{getChannelIcon()}</div>
+
+      {/* Channel name */}
+      <span className="truncate flex-1 text-left">{channel.name}</span>
+
+      {/* Private indicator */}
+      {channel.is_private && <Lock className="w-3 h-3 text-muted-foreground flex-shrink-0" />}
+
+      {/* NSFW badge */}
+      {channel.is_nsfw && (
+        <span className="px-1 py-0.5 text-[10px] font-semibold rounded bg-destructive/20 text-destructive uppercase tracking-wide flex-shrink-0">
+          NSFW
+        </span>
+      )}
+
+      {/* Mention badge */}
+      {mentionCount > 0 && (
+        <span className="px-1.5 py-0.5 text-xs font-bold rounded-full bg-destructive text-destructive-foreground">
+          {mentionCount > 99 ? "99+" : mentionCount}
+        </span>
+      )}
+
+      {/* Admin settings - desktop only */}
+      {isAdmin && !isMobile && (
+        <Settings
+          className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground cursor-pointer flex-shrink-0"
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit();
+          }}
+        />
+      )}
+
+      {/* Drag handle for admins - desktop only */}
+      {isAdmin && !isMobile && (
+        <div
+          {...attributes}
+          {...listeners}
+          className="p-1 -mr-1 opacity-0 group-hover:opacity-50 hover:!opacity-100 cursor-grab active:cursor-grabbing"
+        >
+          <div className="w-1 h-3 flex flex-col gap-0.5 justify-center">
+            <div className="w-1 h-1 rounded-full bg-muted-foreground" />
+            <div className="w-1 h-1 rounded-full bg-muted-foreground" />
+          </div>
+        </div>
+      )}
+    </button>
+  );
+
   return (
     <div ref={setNodeRef} style={style} className="relative">
-      <ContextMenu>
-        <ContextMenuTrigger asChild>
-          <button
-            onClick={onSelect}
-            className={cn(
-              "group relative w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-all duration-150 select-none",
-              "hover:bg-secondary/80",
-              isActive && "bg-secondary text-foreground",
-              !isActive && "text-muted-foreground hover:text-foreground",
-              isUnread && !isActive && "text-foreground font-semibold",
-            )}
-          >
-            {/* Active indicator */}
-            <div
-              className={cn(
-                "absolute -left-2 top-0 bottom-0 w-1 bg-primary rounded-full transition-opacity duration-150",
-                isActive ? "opacity-100" : "opacity-0",
-              )}
-            />
-
-            {/* Channel icon */}
-            <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">{getChannelIcon()}</div>
-
-            {/* Channel name */}
-            <span className="truncate flex-1 text-left">{channel.name}</span>
-
-            {/* Private indicator */}
-            {channel.is_private && <Lock className="w-3 h-3 text-muted-foreground flex-shrink-0" />}
-
-            {/* NSFW badge */}
-            {channel.is_nsfw && (
-              <span className="px-1 py-0.5 text-[10px] font-semibold rounded bg-destructive/20 text-destructive uppercase tracking-wide flex-shrink-0">
-                NSFW
-              </span>
-            )}
-
-            {/* Mention badge */}
-            {mentionCount > 0 && (
-              <span className="px-1.5 py-0.5 text-xs font-bold rounded-full bg-destructive text-destructive-foreground">
-                {mentionCount > 99 ? "99+" : mentionCount}
-              </span>
-            )}
-
-            {/* Admin settings */}
+      {/* Disable context menu during drag on mobile */}
+      {isMobile && isDraggingAny ? (
+        buttonContent
+      ) : (
+        <ContextMenu>
+          <ContextMenuTrigger asChild disabled={isDraggingAny}>
+            {buttonContent}
+          </ContextMenuTrigger>
+          <ContextMenuContent>
             {isAdmin && (
-              <Settings
-                className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground cursor-pointer flex-shrink-0"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit();
-                }}
-              />
+              <>
+                <ContextMenuItem onClick={onEdit}>
+                  <Edit2 className="w-4 h-4 mr-2" />
+                  Edit Channel
+                </ContextMenuItem>
+                <ContextMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Channel
+                </ContextMenuItem>
+                <ContextMenuSeparator />
+              </>
             )}
-
-            {/* Drag handle for admins */}
-            {isAdmin && (
-              <div
-                {...attributes}
-                {...listeners}
-                className="opacity-0 group-hover:opacity-50 hover:!opacity-100 cursor-grab active:cursor-grabbing"
-              >
-                <div className="w-1 h-3 flex flex-col gap-0.5 justify-center">
-                  <div className="w-1 h-1 rounded-full bg-muted-foreground" />
-                  <div className="w-1 h-1 rounded-full bg-muted-foreground" />
-                </div>
-              </div>
-            )}
-          </button>
-        </ContextMenuTrigger>
-        <ContextMenuContent>
-          {isAdmin && (
-            <>
-              <ContextMenuItem onClick={onEdit}>
-                <Edit2 className="w-4 h-4 mr-2" />
-                Edit Channel
-              </ContextMenuItem>
-              <ContextMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete Channel
-              </ContextMenuItem>
-              <ContextMenuSeparator />
-            </>
-          )}
-          <ContextMenuItem onClick={onCopyLink}>
-            <Copy className="w-4 h-4 mr-2" />
-            Copy Channel Link
-          </ContextMenuItem>
-        </ContextMenuContent>
-      </ContextMenu>
+            <ContextMenuItem onClick={onCopyLink}>
+              <Copy className="w-4 h-4 mr-2" />
+              Copy Channel Link
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
+      )}
 
       {channel.type === "voice" && voiceUserIds && voiceUserIds.length > 0 && resolveUser && (
         <div className="ml-7 mt-1 space-y-1">
@@ -289,6 +309,8 @@ const CategoryContent = ({
   onCopyChannelLink,
   voicePresenceByChannel,
   resolveUser,
+  isMobile,
+  isDraggingAny,
 }: {
   channels: Channel[];
   currentChannelId: string | undefined;
@@ -300,6 +322,8 @@ const CategoryContent = ({
   onCopyChannelLink: (channelId: string) => void;
   voicePresenceByChannel: Record<string, string[]>;
   resolveUser: (userId: string) => { avatarUser?: any; label: string };
+  isMobile?: boolean;
+  isDraggingAny?: boolean;
 }) => {
   return (
     <div className="space-y-0.5 ml-1 animate-fade-in">
@@ -320,6 +344,8 @@ const CategoryContent = ({
               onEdit={() => onEditChannel(channel.id)}
               onDelete={() => onDeleteChannel(channel.id)}
               onCopyLink={() => onCopyChannelLink(channel.id)}
+              isMobile={isMobile}
+              isDraggingAny={isDraggingAny}
             />
           );
         })}
@@ -347,6 +373,8 @@ const SortableCategory = ({
   isDragOver,
   voicePresenceByChannel,
   resolveUser,
+  isMobile,
+  isDraggingAny,
 }: {
   category: ChannelCategory;
   channels: Channel[];
@@ -365,6 +393,8 @@ const SortableCategory = ({
   isDragOver?: boolean;
   voicePresenceByChannel: Record<string, string[]>;
   resolveUser: (userId: string) => { avatarUser?: any; label: string };
+  isMobile?: boolean;
+  isDraggingAny?: boolean;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: category.id,
@@ -379,8 +409,27 @@ const SortableCategory = ({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : undefined,
   };
+
+  // On mobile + admin, entire category header is draggable
+  const mobileDragProps = isMobile && isAdmin ? { ...attributes, ...listeners } : {};
+
+  const categoryButton = (
+    <button
+      {...mobileDragProps}
+      className={cn(
+        "flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground uppercase tracking-wider flex-1 py-1",
+        isMobile && isAdmin && "touch-none",
+        isDragging && "opacity-50",
+      )}
+      onClick={onToggle}
+    >
+      <ChevronDown className={cn("w-3 h-3 transition-transform duration-150", isCollapsed && "-rotate-90")} />
+      <span className="truncate">{category.name}</span>
+      {isCollapsed && <span className="ml-1 text-muted-foreground/60">({channels.length})</span>}
+    </button>
+  );
 
   return (
     <div
@@ -392,36 +441,35 @@ const SortableCategory = ({
       className={cn(
         "mb-4 transition-all duration-200",
         (isOver || isDragOver) && "ring-2 ring-primary/50 ring-offset-2 ring-offset-card/50 rounded-md",
+        isDragging && "shadow-lg ring-2 ring-primary/30 bg-card rounded-md",
       )}
     >
       {/* Category header */}
       <div className="group flex items-center gap-1 px-0.5 mb-1">
-        <ContextMenu>
-          <ContextMenuTrigger asChild>
-            <button
-              className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground uppercase tracking-wider flex-1 py-1"
-              onClick={onToggle}
-            >
-              <ChevronDown className={cn("w-3 h-3 transition-transform duration-150", isCollapsed && "-rotate-90")} />
-              <span className="truncate">{category.name}</span>
-              {isCollapsed && <span className="ml-1 text-muted-foreground/60">({channels.length})</span>}
-            </button>
-          </ContextMenuTrigger>
-          {isAdmin && (
-            <ContextMenuContent>
-              <ContextMenuItem onClick={onEditCategory}>
-                <Edit2 className="w-4 h-4 mr-2" />
-                Edit Category
-              </ContextMenuItem>
-              <ContextMenuItem onClick={onDeleteCategory} className="text-destructive focus:text-destructive">
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete Category
-              </ContextMenuItem>
-            </ContextMenuContent>
-          )}
-        </ContextMenu>
+        {isMobile && isDraggingAny ? (
+          categoryButton
+        ) : (
+          <ContextMenu>
+            <ContextMenuTrigger asChild disabled={isDraggingAny}>
+              {categoryButton}
+            </ContextMenuTrigger>
+            {isAdmin && (
+              <ContextMenuContent>
+                <ContextMenuItem onClick={onEditCategory}>
+                  <Edit2 className="w-4 h-4 mr-2" />
+                  Edit Category
+                </ContextMenuItem>
+                <ContextMenuItem onClick={onDeleteCategory} className="text-destructive focus:text-destructive">
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Category
+                </ContextMenuItem>
+              </ContextMenuContent>
+            )}
+          </ContextMenu>
+        )}
 
-        {isAdmin && (
+        {/* Desktop-only controls */}
+        {isAdmin && !isMobile && (
           <Settings
             className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground cursor-pointer flex-shrink-0"
             onClick={(e) => {
@@ -448,8 +496,8 @@ const SortableCategory = ({
           </Tooltip>
         )}
 
-        {/* Drag handle */}
-        {isAdmin && (
+        {/* Drag handle - desktop only */}
+        {isAdmin && !isMobile && (
           <div
             {...attributes}
             {...listeners}
@@ -476,6 +524,8 @@ const SortableCategory = ({
           onCopyChannelLink={onCopyChannelLink}
           voicePresenceByChannel={voicePresenceByChannel}
           resolveUser={resolveUser}
+          isMobile={isMobile}
+          isDraggingAny={isDraggingAny}
         />
       )}
     </div>
@@ -572,14 +622,21 @@ export const ChannelSidebar = () => {
     [channels],
   );
 
+  // Configure sensors: TouchSensor for mobile long-press (500ms delay to avoid accidental drags while scrolling)
   const sensors = useSensors(
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 500, tolerance: 8 },
+    }),
     useSensor(PointerSensor, {
-      activationConstraint: { distance: 8 },
+      activationConstraint: { distance: 5 },
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
+
+  // Track if any drag is happening (for disabling context menus)
+  const isDraggingAny = activeId !== null;
 
   const toggleCategory = (categoryId: string) => {
     setCollapsedCategories((prev) => {
@@ -798,8 +855,8 @@ export const ChannelSidebar = () => {
       const category = categories.find((c) => c.id === activeId);
       if (category) {
         return (
-          <div className="flex items-center gap-1 px-2 py-1 bg-secondary rounded-md text-sm">
-            <ChevronRight className="w-3 h-3" />
+          <div className="flex items-center gap-1 px-3 py-1.5 bg-card border border-border shadow-lg rounded-md text-sm ring-2 ring-primary/30">
+            <ChevronRight className="w-3 h-3 text-muted-foreground" />
             <span className="uppercase text-xs font-semibold">{category.name}</span>
           </div>
         );
@@ -810,8 +867,12 @@ export const ChannelSidebar = () => {
       const channel = channels.find((c) => c.id === activeId);
       if (channel) {
         return (
-          <div className="flex items-center gap-2 px-2 py-1.5 bg-secondary rounded-md text-sm">
-            {channel.icon ? <span className="text-base font-emoji">{channel.icon}</span> : <Hash className="w-4 h-4" />}
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-card border border-border shadow-lg rounded-md text-sm ring-2 ring-primary/30">
+            {channel.icon ? (
+              <span className="text-base font-emoji">{channel.icon}</span>
+            ) : (
+              <Hash className="w-4 h-4 text-muted-foreground" />
+            )}
             <span>{channel.name}</span>
           </div>
         );
@@ -1057,6 +1118,8 @@ export const ChannelSidebar = () => {
                               onEdit={() => openModal("edit-channel", { channelId: channel.id })}
                               onDelete={() => handleDeleteChannel(channel.id)}
                               onCopyLink={() => handleCopyChannelLink(channel.id)}
+                              isMobile={isMobile}
+                              isDraggingAny={isDraggingAny}
                             />
                           );
                         })}
@@ -1087,6 +1150,8 @@ export const ChannelSidebar = () => {
                       isDragOver={overCategoryId === category.id && activeType === "channel"}
                       voicePresenceByChannel={voicePresenceByChannel}
                       resolveUser={resolveUser}
+                      isMobile={isMobile}
+                      isDraggingAny={isDraggingAny}
                     />
                   ))}
                 </SortableContext>
