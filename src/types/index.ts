@@ -161,6 +161,12 @@ export interface Channel {
   is_private: boolean;
   icon: string | null;
   created_at: string;
+  /** When true, only admins/owners can post links */
+  block_links: boolean;
+  /** Whitelisted domains when block_links is true (e.g. github.com) */
+  allowed_link_domains: string[];
+  /** When true, hides user avatars and usernames (except for admins/owners) */
+  ghost_mode: boolean;
 }
 
 export interface ChannelMember {

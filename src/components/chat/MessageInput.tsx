@@ -280,10 +280,47 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const currentMember = useMemo(() => members.find((m) => m.user_id === user?.id), [members, user?.id]);
   const isMuted = currentMember?.is_muted || false;
   const isReadOnlyChannel = currentChannel?.is_read_only || false;
+  const blockLinks = currentChannel?.block_links || false;
+  const allowedLinkDomains = currentChannel?.allowed_link_domains || [];
   const { hasPermission } = useMemberPermissions(channelId);
   const canSendMessagesPermission = hasPermission("send_messages");
   const canSendInReadOnly = isReadOnlyChannel ? hasPermission("manage_messages") : true;
   const canSendMessage = !isMuted && canSendMessagesPermission && canSendInReadOnly;
+  const isAdmin = hasPermission("manage_messages");
+
+  // URL detection regex for link blocking
+  const URL_REGEX = /https?:\/\/[^\s<]+/gi;
+
+  // Check if message contains blocked links
+  const containsBlockedLinks = useCallback((text: string): boolean => {
+    if (!blockLinks || isAdmin) return false;
+    
+    const urls = text.match(URL_REGEX);
+    if (!urls || urls.length === 0) return false;
+
+    // Check each URL against whitelist
+    for (const url of urls) {
+      try {
+        const urlObj = new URL(url);
+        const domain = urlObj.hostname.replace(/^www\./, '');
+        
+        // Check if domain is in whitelist
+        const isWhitelisted = allowedLinkDomains.some(allowed => {
+          const normalizedAllowed = allowed.replace(/^www\./, '');
+          return domain === normalizedAllowed || domain.endsWith('.' + normalizedAllowed);
+        });
+
+        if (!isWhitelisted) {
+          return true; // Found a blocked link
+        }
+      } catch {
+        // Invalid URL, consider it blocked
+        return true;
+      }
+    }
+
+    return false;
+  }, [blockLinks, isAdmin, allowedLinkDomains]);
 
   // Memoized queued messages
   const queuedMessages = useMemo(() => getQueuedForChannel(channelId), [getQueuedForChannel, channelId]);
@@ -503,6 +540,15 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       return;
     }
 
+    // Check for blocked links
+    if (containsBlockedLinks(messageContent)) {
+      const whitelistMsg = allowedLinkDomains.length > 0 
+        ? ` Allowed domains: ${allowedLinkDomains.join(', ')}`
+        : '';
+      showWarning("Links not allowed", `This channel doesn't allow posting links.${whitelistMsg}`);
+      return;
+    }
+
     if (!messageRateLimiter.isAllowed(user.id)) {
       const remaining = messageRateLimiter.getRemainingTime(user.id);
       showWarning("Slow down cowboy!", `Try again in ${remaining} seconds`);
@@ -598,6 +644,8 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     onStopTyping,
     currentServer,
     members,
+    containsBlockedLinks,
+    allowedLinkDomains,
   ]);
 
   const applyFormatShortcut = useCallback(

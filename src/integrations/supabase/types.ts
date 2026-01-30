@@ -191,8 +191,11 @@ export type Database = {
       }
       channels: {
         Row: {
+          allowed_link_domains: string[] | null
+          block_links: boolean
           category_id: string | null
           created_at: string | null
+          ghost_mode: boolean
           icon: string | null
           id: string
           is_nsfw: boolean | null
@@ -206,8 +209,11 @@ export type Database = {
           type: Database["public"]["Enums"]["channel_type"] | null
         }
         Insert: {
+          allowed_link_domains?: string[] | null
+          block_links?: boolean
           category_id?: string | null
           created_at?: string | null
+          ghost_mode?: boolean
           icon?: string | null
           id?: string
           is_nsfw?: boolean | null
@@ -221,8 +227,11 @@ export type Database = {
           type?: Database["public"]["Enums"]["channel_type"] | null
         }
         Update: {
+          allowed_link_domains?: string[] | null
+          block_links?: boolean
           category_id?: string | null
           created_at?: string | null
+          ghost_mode?: boolean
           icon?: string | null
           id?: string
           is_nsfw?: boolean | null

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo, memo, forwardRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Smile, Reply, Pencil, Trash2, Pin, MoreHorizontal, CornerUpLeft, Copy } from "lucide-react";
+import { Smile, Reply, Pencil, Trash2, Pin, MoreHorizontal, CornerUpLeft, Copy, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -94,6 +94,7 @@ export const MessageItem = memo(function MessageItem({
   const members = useServerStore((state) => state.members);
   const roles = useServerStore((state) => state.roles);
   const currentServer = useServerStore((state) => state.currentServer);
+  const currentChannel = useServerStore((state) => state.currentChannel);
   const compactMode = useUIStore((state) => state.compactMode);
   const showTimestamps = useUIStore((state) => state.showTimestamps);
   const { openModal } = useUIStore();
@@ -335,6 +336,15 @@ export const MessageItem = memo(function MessageItem({
 
   const pollId = useMemo(() => getPollIdFromContent(message.content), [message.content]);
 
+  // Ghost mode - hide avatar/username for non-admin message authors
+  const isGhostMode = currentChannel?.ghost_mode || false;
+  const messageAuthorIsAdmin = useMemo(() => {
+    if (!messageMember) return false;
+    const role = messageMember.role;
+    return role === 'owner' || role === 'admin';
+  }, [messageMember]);
+  const showGhostIdentity = isGhostMode && !messageAuthorIsAdmin;
+
   // Memoize formatted timestamps
   const formattedTime = useMemo(() => {
     const timeStr = format(new Date(message.created_at), "h:mm a");
@@ -535,17 +545,21 @@ export const MessageItem = memo(function MessageItem({
       : ({ color: topCustomRoleColor } as React.CSSProperties);
   }, [topCustomRoleColor]);
 
-  const displayName = messageMember?.nickname || messageUser?.display_name || messageUser?.username;
+  const displayName = showGhostIdentity 
+    ? "Anonymous" 
+    : (messageMember?.nickname || messageUser?.display_name || messageUser?.username);
 
   const handleUsernameClick = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
+      // Don't show profile in ghost mode for non-admins
+      if (showGhostIdentity) return;
       if (message.user_id) {
         openModal("userProfile", { userId: message.user_id });
       }
     },
-    [message.user_id, openModal],
+    [message.user_id, openModal, showGhostIdentity],
   );
 
   const handleReplyClick = useCallback(
@@ -604,12 +618,22 @@ export const MessageItem = memo(function MessageItem({
                   ) : (
                     <div className="w-10 flex-shrink-0">
                       {!isGrouped && messageUser ? (
-                        <AvatarWithDecoration
-                          user={messageUser}
-                          className="w-10 h-10 cursor-pointer"
-                          active={isRowHovered}
-                          onClick={handleUsernameClick}
-                        />
+                        showGhostIdentity ? (
+                          // Ghost avatar for anonymous users
+                          <div 
+                            className="w-10 h-10 rounded-full bg-muted flex items-center justify-center cursor-default"
+                            title="Anonymous"
+                          >
+                            <Eye className="w-5 h-5 text-muted-foreground" />
+                          </div>
+                        ) : (
+                          <AvatarWithDecoration
+                            user={messageUser}
+                            className="w-10 h-10 cursor-pointer"
+                            active={isRowHovered}
+                            onClick={handleUsernameClick}
+                          />
+                        )
                       ) : (
                         <span className="text-[11px] font-[Inter,system-ui,sans-serif] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                           {formattedTime}
