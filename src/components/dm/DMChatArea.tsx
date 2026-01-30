@@ -184,7 +184,7 @@ export const DMChatArea = () => {
           <Button
             variant="primary"
             size="sm"
-            className="gap-2 shadow-lg bg-primary text-primary-foreground hover:bg-primary-hover"
+            className="gap-2 shadow-lg"
             onClick={scrollToBottom}
           >
             <ArrowDown className="w-4 h-4" />
