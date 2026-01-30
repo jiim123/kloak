@@ -1285,7 +1285,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 <p className="leading-relaxed">
                   Are you sure you want to log out? You will need your secret key to sign back in.
                 </p>
-                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20">
                   <p className="text-sm text-red-600 dark:text-red-400 font-medium flex items-center gap-2">
                     <Key className="w-4 h-4 flex-shrink-0" />
                     Remember to save your secret key!
@@ -1301,7 +1301,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col sm:flex-row gap-2">
             <AlertDialogCancel className="m-0 rounded-xl">Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmLogout} className="rounded-xl bg-amber-500 text-white hover:bg-red-600">
+            <AlertDialogAction onClick={confirmLogout} className="rounded-xl bg-red-500 text-black hover:bg-amber-600">
               <LogOut className="w-4 h-4 mr-2" />
               Log Out
             </AlertDialogAction>
