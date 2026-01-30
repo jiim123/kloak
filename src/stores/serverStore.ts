@@ -594,10 +594,57 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
       if (error) throw error;
 
-      const channel = data as unknown as Channel;
-      set((state) => ({
-        channels: [...state.channels, channel],
-      }));
+      // Check if RPC returned an error object
+      const result = data as unknown as { error?: string } | Channel;
+      if (result && 'error' in result && result.error) {
+        throw new Error(result.error);
+      }
+
+      // Parse the channel data ensuring all required fields
+      const channelData = result as {
+        id: string;
+        server_id: string;
+        category_id: string | null;
+        name: string;
+        topic: string | null;
+        type: ChannelType;
+        position: number;
+        is_nsfw: boolean;
+        slowmode_seconds: number;
+        is_read_only: boolean;
+        is_private: boolean;
+        icon: string | null;
+        created_at: string;
+      };
+
+      const channel: Channel = {
+        id: channelData.id,
+        server_id: channelData.server_id,
+        category_id: channelData.category_id,
+        name: channelData.name,
+        topic: channelData.topic,
+        type: channelData.type || 'text',
+        position: channelData.position ?? 0,
+        is_nsfw: channelData.is_nsfw ?? false,
+        slowmode_seconds: channelData.slowmode_seconds ?? 0,
+        is_read_only: channelData.is_read_only ?? false,
+        is_private: channelData.is_private ?? false,
+        icon: channelData.icon,
+        created_at: channelData.created_at,
+      };
+
+      console.log('[createChannel] Adding channel to store:', channel.id, channel.name);
+
+      set((state) => {
+        // Prevent duplicates in case realtime already added it
+        if (state.channels.some(c => c.id === channel.id)) {
+          console.log('[createChannel] Channel already exists, skipping:', channel.id);
+          return state;
+        }
+        return {
+          channels: [...state.channels, channel],
+        };
+      });
 
       return channel;
     } catch (error) {
