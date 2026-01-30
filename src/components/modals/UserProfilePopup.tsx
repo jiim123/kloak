@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { getProfileEffectSrc } from "@/lib/profileEffects";
+import { getEffectivePresence } from "@/lib/presence";
 import type { User, UserStatus } from "@/types";
 
 const statusColors: Record<UserStatus, string> = {
@@ -474,13 +475,21 @@ export const UserProfilePopup = () => {
                     <div className="relative flex-shrink-0">
                       <AvatarWithDecoration user={profileUser} className="w-20 h-20 sm:w-24 sm:h-24" active={true} />
                       {/* Status indicator */}
-                      <div
-                        className={cn(
-                          "absolute bottom-1 right-1 w-5 h-5 rounded-full border-[3px] shadow-lg z-10 border-background",
-                          statusColors[profileUser.status],
-                        )}
-                        title={statusLabels[profileUser.status]}
-                      />
+                      {(() => {
+                        const presence = getEffectivePresence(
+                          profileUser.status || 'offline',
+                          profileUser.last_seen
+                        );
+                        return (
+                          <div
+                            className={cn(
+                              "absolute bottom-1 right-1 w-5 h-5 rounded-full border-[3px] shadow-lg z-10 border-background",
+                              statusColors[presence.status],
+                            )}
+                            title={statusLabels[presence.status]}
+                          />
+                        );
+                      })()}
                     </div>
 
                     {/* Name and username - shown next to avatar on larger screens */}

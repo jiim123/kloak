@@ -11,8 +11,9 @@ import { useDMStore } from "@/stores/dmStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useUnreadDMs } from "@/hooks/useUnreadDMs";
 import { formatCompactTime } from "@/lib/format";
+import { getEffectivePresence } from "@/lib/presence";
 import { ConversationItemSkeleton } from "@/components/ui/skeletons";
-import type { DMConversation } from "@/types";
+import type { DMConversation, UserStatus } from "@/types";
 
 interface DMSidebarProps {
   showFriends: boolean;
@@ -168,12 +169,20 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
               {/* Avatar with status */}
               <div className="relative flex-shrink-0">
                 <AvatarWithDecoration user={conversation.other_user} className="w-8 h-8" />
-                <div
-                  className={cn(
-                    "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-layout-sidebar-secondary",
-                    getStatusClass(conversation.other_user?.status),
-                  )}
-                />
+                {(() => {
+                  const presence = getEffectivePresence(
+                    (conversation.other_user?.status as UserStatus) || 'offline',
+                    conversation.other_user?.last_seen
+                  );
+                  return (
+                    <div
+                      className={cn(
+                        "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-layout-sidebar-secondary",
+                        getStatusClass(presence.status),
+                      )}
+                    />
+                  );
+                })()}
               </div>
 
               {/* Name and last message */}
