@@ -126,6 +126,9 @@ export const useRealtimeServer = (serverId: string | null) => {
                   is_private: newChannel.is_private || false,
                   icon: newChannel.icon,
                   created_at: newChannel.created_at,
+                  block_links: newChannel.block_links || false,
+                  allowed_link_domains: newChannel.allowed_link_domains || [],
+                  ghost_mode: newChannel.ghost_mode || false,
                 }],
               };
             });

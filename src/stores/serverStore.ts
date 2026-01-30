@@ -624,6 +624,9 @@ export const useServerStore = create<ServerState>((set, get) => ({
         is_private: Boolean(channelData.is_private),
         icon: channelData.icon ? String(channelData.icon) : null,
         created_at: String(channelData.created_at),
+        block_links: Boolean(channelData.block_links),
+        allowed_link_domains: Array.isArray(channelData.allowed_link_domains) ? channelData.allowed_link_domains as string[] : [],
+        ghost_mode: Boolean(channelData.ghost_mode),
       };
 
       // Update store with new channel

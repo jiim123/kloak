@@ -19,7 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Hash, Trash2, FolderOpen, Settings, Shield, Loader2, Clock, Lock, AlertTriangle, X, Users } from "lucide-react";
+import { Hash, Trash2, FolderOpen, Settings, Shield, Loader2, Clock, Lock, AlertTriangle, X, Users, Link2, Eye, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { ChannelPermissionsEditor } from "./ChannelPermissionsEditor";
 import { ChannelMembersEditor } from "./ChannelMembersEditor";
@@ -58,6 +58,10 @@ export const EditChannelModal = () => {
   const [isNsfw, setIsNsfw] = useState(false);
   const [slowmodeSeconds, setSlowmodeSeconds] = useState("0");
   const [isReadOnly, setIsReadOnly] = useState(false);
+  const [blockLinks, setBlockLinks] = useState(false);
+  const [allowedLinkDomains, setAllowedLinkDomains] = useState<string[]>([]);
+  const [newDomain, setNewDomain] = useState("");
+  const [ghostMode, setGhostMode] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState("");
@@ -89,12 +93,18 @@ export const EditChannelModal = () => {
       setIsNsfw(false);
       setSlowmodeSeconds("0");
       setIsReadOnly(false);
+      setBlockLinks(false);
+      setAllowedLinkDomains([]);
+      setGhostMode(false);
     } else if (channel) {
       setName(channel.name);
       setTopic(channel.topic || "");
       setIsNsfw(channel.is_nsfw);
       setSlowmodeSeconds(String(channel.slowmode_seconds));
       setIsReadOnly(channel.is_read_only || false);
+      setBlockLinks(channel.block_links || false);
+      setAllowedLinkDomains(channel.allowed_link_domains || []);
+      setGhostMode(channel.ghost_mode || false);
 
       if (channel.id) {
         fetchChannelPermissions(channel.id).catch((error) => {
@@ -151,6 +161,9 @@ export const EditChannelModal = () => {
           is_nsfw: isNsfw,
           slowmode_seconds: parseInt(slowmodeSeconds, 10) || 0,
           is_read_only: isReadOnly,
+          block_links: blockLinks,
+          allowed_link_domains: allowedLinkDomains,
+          ghost_mode: ghostMode,
         };
 
         const trimmedTopic = topic.trim();
@@ -318,6 +331,99 @@ export const EditChannelModal = () => {
           checked={isNsfw}
           onCheckedChange={setIsNsfw}
         />
+
+        <ToggleCard
+          icon={Eye}
+          label="Ghost Mode"
+          description="Hide usernames and avatars (admins/owners still visible)"
+          checked={ghostMode}
+          onCheckedChange={setGhostMode}
+        />
+      </div>
+
+      {/* Link Restrictions */}
+      <div className="space-y-3">
+        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Link Restrictions</Label>
+
+        <ToggleCard
+          icon={Link2}
+          label="Block Links"
+          description="Only admins can post URLs in this channel"
+          checked={blockLinks}
+          onCheckedChange={(checked) => {
+            setBlockLinks(checked);
+            if (!checked) {
+              setAllowedLinkDomains([]);
+            }
+          }}
+        />
+
+        {blockLinks && (
+          <div className="ml-14 space-y-3 p-4 rounded-xl bg-secondary/20 border border-border/50">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Whitelisted Domains</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Allow links from these domains for all users
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex gap-2">
+              <Input
+                value={newDomain}
+                onChange={(e) => setNewDomain(e.target.value.toLowerCase().trim())}
+                placeholder="e.g. github.com"
+                className="h-9 rounded-lg border-border/50 bg-secondary/30 text-sm"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const domain = newDomain.toLowerCase().replace(/^(https?:\/\/)?(www\.)?/, "").replace(/\/.*$/, "");
+                    if (domain && !allowedLinkDomains.includes(domain)) {
+                      setAllowedLinkDomains([...allowedLinkDomains, domain]);
+                      setNewDomain("");
+                    }
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="h-9 px-3 rounded-lg"
+                onClick={() => {
+                  const domain = newDomain.toLowerCase().replace(/^(https?:\/\/)?(www\.)?/, "").replace(/\/.*$/, "");
+                  if (domain && !allowedLinkDomains.includes(domain)) {
+                    setAllowedLinkDomains([...allowedLinkDomains, domain]);
+                    setNewDomain("");
+                  }
+                }}
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+
+            {allowedLinkDomains.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {allowedLinkDomains.map((domain) => (
+                  <span
+                    key={domain}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary text-xs font-medium"
+                  >
+                    {domain}
+                    <button
+                      type="button"
+                      onClick={() => setAllowedLinkDomains(allowedLinkDomains.filter((d) => d !== domain))}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Danger Zone */}
