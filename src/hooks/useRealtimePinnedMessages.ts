@@ -22,7 +22,8 @@ export const useRealtimePinnedMessages = (channelId: string | null) => {
         .from('messages')
         .select(`
           *,
-          user:users (*)
+          user:users (*),
+          attachments:message_attachments (*)
         `)
         .eq('channel_id', channelId)
         .eq('is_pinned', true)
@@ -34,6 +35,7 @@ export const useRealtimePinnedMessages = (channelId: string | null) => {
       const messages: Message[] = (data || []).map((msg: any) => ({
         ...msg,
         user: msg.user,
+        attachments: msg.attachments || [],
       }));
 
       setPinnedMessages(messages);

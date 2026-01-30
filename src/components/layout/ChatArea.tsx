@@ -8,9 +8,12 @@ import { useAuthStore } from "@/stores/authStore";
 import { useMessageStore } from "@/stores/messageStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useTyping } from "@/hooks/useTyping";
+import { useRealtimePinnedMessages } from "@/hooks/useRealtimePinnedMessages";
 import { useSwipeGestureRef } from "@/hooks/useSwipeGesture";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { MessageSquare, Hash, ImageIcon } from "lucide-react";
+import { MessageSquare, Hash, ImageIcon, Pin } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, handleError } from "@/lib/errorHandler";
@@ -22,8 +25,9 @@ export const ChatArea = () => {
   const { currentChannel } = useServerStore();
   const { user } = useAuthStore();
   const { sendMessage, replyingTo, setReplyingTo } = useMessageStore();
-  const { setMobileSidebarOpen, setMemberSidebarOpen } = useUIStore();
+  const { setMobileSidebarOpen, setMemberSidebarOpen, openModal } = useUIStore();
   const { typingUsers, startTyping, stopTyping } = useTyping(currentChannel?.id || null);
+  const { pinnedMessages } = useRealtimePinnedMessages(currentChannel?.id ?? null);
   const isMobile = useIsMobile();
   
   const [isDragging, setIsDragging] = useState(false);
@@ -228,6 +232,48 @@ export const ChatArea = () => {
     >
       {/* Channel header */}
       <ChannelHeader channel={currentChannel} />
+
+      {/* Pinned message bar - most recent pin in one line with See All Pins */}
+      {pinnedMessages.length > 0 && (() => {
+        const latest = pinnedMessages[0];
+        const snippet = (latest.content || "")
+          .replace(/<[^>]+>/g, " ")
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 60);
+        const hasAttachments = (latest.attachments?.length ?? 0) > 0;
+        const isNew = latest.created_at && (Date.now() - new Date(latest.created_at).getTime() < 24 * 60 * 60 * 1000);
+        return (
+          <div className="flex items-center gap-2 px-4 py-2 bg-muted/50 border-b border-border/50 flex-shrink-0 min-w-0">
+            <Pin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+            <Avatar className="w-5 h-5 flex-shrink-0">
+              <AvatarImage src={latest.user?.avatar_url} />
+              <AvatarFallback style={{ backgroundColor: latest.user?.banner_color || "#5865F2" }} className="text-[10px]">
+                {latest.user?.username?.[0]?.toUpperCase() || "?"}
+              </AvatarFallback>
+            </Avatar>
+            {isNew && (
+              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-primary/20 text-primary flex-shrink-0">new</span>
+            )}
+            <span className="text-sm text-muted-foreground truncate min-w-0 flex-1">
+              {snippet || "Pinned message"}
+              {hasAttachments && (
+                <span className="text-muted-foreground/80 ml-1">
+                  {latest.attachments!.length === 1 ? "1 attachment" : `${latest.attachments!.length} attachments`}
+                </span>
+              )}
+            </span>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="rounded-full flex-shrink-0 text-xs"
+              onClick={() => openModal("pinned-messages", { channelId: currentChannel.id })}
+            >
+              See All Pins
+            </Button>
+          </div>
+        );
+      })()}
 
       {/* Messages */}
       <MessageList channelId={currentChannel.id} channelName={currentChannel.name} />
