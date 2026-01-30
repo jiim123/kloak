@@ -189,6 +189,9 @@ export const useUIStore = create<UIState>()(
         // Close server settings and mobile sidebars when opening user-settings to prevent stacking
         if (modal === 'user-settings') {
           set({ activeModal: modal, modalData: data, isServerSettingsOpen: false, isSettingsOpen: true, isMobileSidebarOpen: false, isMobileChannelSidebarOpen: false });
+        } else if (modal === 'edit-channel' || modal === 'create-channel') {
+          // Close mobile sidebars when opening channel modals so they appear on top
+          set({ activeModal: modal, modalData: data, isMobileSidebarOpen: false, isMobileChannelSidebarOpen: false });
         } else {
           set({ activeModal: modal, modalData: data });
         }
