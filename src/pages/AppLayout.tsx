@@ -49,6 +49,7 @@ import { useBackgroundSync } from '@/hooks/useBackgroundSync';
 import { usePreferencesSync } from '@/hooks/usePreferencesSync';
 import type { User } from '@/types';
 import { PresenceDebugOverlay } from '@/components/debug/PresenceDebugOverlay';
+import { SEO } from '@/components/seo';
 
 const AppLayout = () => {
   const navigate = useNavigate();
@@ -352,6 +353,7 @@ const AppLayout = () => {
 
   return (
     <>
+      <SEO title={desktopTitle} noIndex />
       <div className="h-screen flex flex-col overflow-hidden">
         <DesktopTitleBar title={desktopTitle} />
 

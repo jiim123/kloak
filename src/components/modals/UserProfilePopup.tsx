@@ -615,80 +615,104 @@ export const UserProfilePopup = () => {
                   {/* Action Buttons */}
                   {!isSelf && (
                     <div className="flex flex-col gap-2 pt-4 border-t relative z-10" style={{ borderColor: divider }}>
-                      {/* Primary row - Message + Friend actions */}
+                      {/* All buttons inline */}
                       {!isBlocked && (
-                        <div className="flex flex-col sm:flex-row gap-2">
-                          <Button onClick={handleMessage} className="flex-1 rounded-xl h-10" variant="default">
-                            <MessageCircle className="w-4 h-4 mr-2" />
+                        <div className="flex gap-2">
+                          <Button onClick={handleMessage} className="flex-1 rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent" variant="outline" style={{ backgroundColor: '#232629', color: '#fff' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2a2f33'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#232629'}>
+                            <MessageCircle className="w-3.5 h-3.5 mr-1.5" />
                             Message
                           </Button>
 
                           {hasPendingRequest ? (
-                            <div className="flex gap-2">
+                            <>
                               <Button
-                                variant="default"
+                                variant="outline"
                                 onClick={handleAcceptRequest}
-                                className="flex-1 sm:flex-none rounded-xl h-10 bg-[hsl(var(--kloak-success))] hover:bg-[hsl(var(--kloak-success))]/90"
+                                className="flex-1 rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent"
+                                style={{ backgroundColor: '#232629', color: '#fff' }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2a2f33'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#232629'}
                               >
-                                <Check className="w-4 h-4 sm:mr-0 mr-2" />
-                                <span className="sm:hidden">Accept</span>
+                                <Check className="w-3.5 h-3.5 mr-1.5" />
+                                Accept
                               </Button>
                               <Button
                                 variant="outline"
                                 onClick={handleDeclineRequest}
-                                className="flex-1 sm:flex-none rounded-xl h-10"
+                                className="flex-1 rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent"
+                                style={{ backgroundColor: '#232629', color: '#fff' }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2a2f33'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#232629'}
                               >
-                                <X className="w-4 h-4 sm:mr-0 mr-2" />
-                                <span className="sm:hidden">Decline</span>
+                                <X className="w-3.5 h-3.5 mr-1.5" />
+                                Decline
                               </Button>
-                            </div>
+                            </>
                           ) : (
                             <Button
-                              variant={isFriend ? "destructive" : isInCooldown ? "secondary" : "outline"}
+                              variant="outline"
                               onClick={handleFriendAction}
                               disabled={hasSentRequest || isInCooldown || isSendingRequest}
-                              className={cn("flex-1 rounded-xl h-10", isInCooldown && "opacity-80")}
+                              className={cn("flex-1 rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent", isInCooldown && "opacity-80")}
+                              style={{ backgroundColor: '#232629', color: '#fff' }}
+                              onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.backgroundColor = '#2a2f33')}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#232629'}
                             >
                               {isSendingRequest ? (
                                 <>
-                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
                                   Sending...
                                 </>
                               ) : isFriend ? (
                                 <>
-                                  <UserMinus className="w-4 h-4 mr-2" />
-                                  Remove Friend
+                                  <UserMinus className="w-3.5 h-3.5 mr-1.5" />
+                                  Remove
                                 </>
                               ) : hasSentRequest ? (
                                 "Request Sent"
                               ) : isInCooldown ? (
                                 <>
-                                  <Clock className="w-4 h-4 mr-2" />
-                                  Retry in {formatCooldown(cooldownSeconds)}
+                                  <Clock className="w-3.5 h-3.5 mr-1.5" />
+                                  Retry {formatCooldown(cooldownSeconds)}
                                 </>
                               ) : (
                                 <>
-                                  <UserPlus className="w-4 h-4 mr-2" />
+                                  <UserPlus className="w-3.5 h-3.5 mr-1.5" />
                                   Add Friend
                                 </>
                               )}
                             </Button>
                           )}
+
+                          {/* Block button */}
+                          <Button
+                            variant="outline"
+                            onClick={handleBlockUser}
+                            className="flex-1 rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent"
+                            style={{ backgroundColor: '#232629', color: '#fff' }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2a2f33'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#232629'}
+                          >
+                            <Ban className="w-3.5 h-3.5 mr-1.5" />
+                            Block
+                          </Button>
                         </div>
                       )}
 
-                      {/* Block/Unblock button */}
-                      <Button
-                        variant={isBlocked ? "outline" : "ghost"}
-                        onClick={isBlocked ? handleUnblockUser : handleBlockUser}
-                        className={cn(
-                          "rounded-xl h-10",
-                          !isBlocked && "text-destructive hover:text-destructive hover:bg-destructive/10"
-                        )}
-                      >
-                        <Ban className="w-4 h-4 mr-2" />
-                        {isBlocked ? "Unblock User" : "Block User"}
-                      </Button>
+                      {/* Unblock button (when blocked) */}
+                      {isBlocked && (
+                        <Button
+                          variant="outline"
+                          onClick={handleUnblockUser}
+                          className="rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent"
+                          style={{ backgroundColor: '#232629', color: '#fff' }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2a2f33'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#232629'}
+                        >
+                          <Ban className="w-3.5 h-3.5 mr-1.5" />
+                          Unblock User
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>
