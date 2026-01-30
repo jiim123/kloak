@@ -337,7 +337,8 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
           >
             <Button
               onClick={scrollToBottom}
-              className="relative overflow-hidden rounded-full shadow-xl backdrop-blur-md bg-background/80 border-2 border-primary/30 hover:bg-background/90 hover:border-primary/50 transition-all px-4 py-2 h-auto"
+              variant="primary"
+              className="relative overflow-hidden rounded-full shadow-xl backdrop-blur-md bg-primary/95 border-2 border-primary hover:bg-primary hover:border-primary transition-all px-4 py-2 h-auto text-primary-foreground"
             >
               {/* Animated border pulse */}
               <span className="absolute inset-0 rounded-full border-1 border-primary/50 animate-pulse-border pointer-events-none" />

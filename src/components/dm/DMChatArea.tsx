@@ -182,8 +182,9 @@ export const DMChatArea = () => {
       {!isAtBottom && (
         <div className="absolute bottom-24 left-1/2 -translate-x-1/2">
           <Button
+            variant="primary"
             size="sm"
-            className="gap-2 shadow-lg"
+            className="gap-2 shadow-lg bg-primary text-primary-foreground hover:bg-primary-hover"
             onClick={scrollToBottom}
           >
             <ArrowDown className="w-4 h-4" />
