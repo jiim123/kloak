@@ -51,7 +51,6 @@ import { useUnread } from "@/hooks/useUnread";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-
 import { LoggedInUserPanel } from "@/components/layout/LoggedInUserPanel";
 import { VoiceConnectedBanner } from "@/components/layout/VoiceConnectedBanner";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
@@ -148,7 +147,8 @@ const SortableChannel = ({
     zIndex: isDragging ? 50 : undefined,
   };
 
-  // On mobile + admin, entire item is draggable
+  // On mobile + admin, entire item is draggable via long-press (handled by TouchSensor)
+  // We DON'T add touch-none here - let the TouchSensor handle the delay
   const mobileDragProps = isMobile && isAdmin ? { ...attributes, ...listeners } : {};
 
   // Determine the icon to display
@@ -187,7 +187,7 @@ const SortableChannel = ({
         !isActive && "text-muted-foreground hover:text-foreground",
         isUnread && !isActive && "text-foreground font-semibold",
         isDragging && "opacity-50 shadow-lg ring-2 ring-primary/30 bg-secondary",
-        isMobile && isAdmin && "touch-none",
+        // Remove touch-none - let TouchSensor handle drag activation via delay
       )}
     >
       {/* Active indicator */}
@@ -412,7 +412,8 @@ const SortableCategory = ({
     zIndex: isDragging ? 50 : undefined,
   };
 
-  // On mobile + admin, entire category header is draggable
+  // On mobile + admin, entire category header is draggable via long-press
+  // No touch-none - let TouchSensor handle it
   const mobileDragProps = isMobile && isAdmin ? { ...attributes, ...listeners } : {};
 
   const categoryButton = (
@@ -420,7 +421,7 @@ const SortableCategory = ({
       {...mobileDragProps}
       className={cn(
         "flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground uppercase tracking-wider flex-1 py-1",
-        isMobile && isAdmin && "touch-none",
+        // Remove touch-none - let TouchSensor handle drag activation
         isDragging && "opacity-50",
       )}
       onClick={onToggle}
@@ -550,6 +551,7 @@ export const ChannelSidebar = () => {
     deleteChannel,
     deleteCategory,
   } = useServerStore();
+
   const voicePresenceByChannel = useVoiceStore((s) => s.presenceByChannel);
   const joinedVoiceChannelId = useVoiceStore((s) => s.joinedChannelId);
   const { openModal, openServerSettings, openServerSettingsPage, closeMobileSidebars } = useUIStore();
@@ -564,6 +566,7 @@ export const ChannelSidebar = () => {
   const { getChannelUnread, markAsRead } = useUnread(channelIds);
 
   const voiceChannelIds = useMemo(() => channels.filter((c) => c.type === "voice").map((c) => c.id), [channels]);
+
   // IMPORTANT: don't watch the voice channel topic we are actively joined to, otherwise we can end up with
   // duplicate Realtime subscriptions to `voice:${channelId}` (watcher + voice join), which can cause
   // "Voice signaling connection failed" (CHANNEL_ERROR / TIMED_OUT).
@@ -596,6 +599,7 @@ export const ChannelSidebar = () => {
   );
 
   const userRole = currentMembership?.role;
+
   // Use permission system instead of hardcoded role checks
   const { hasPermission } = useMemberPermissions();
   const canManageChannels = hasPermission("manage_channels");
@@ -622,13 +626,18 @@ export const ChannelSidebar = () => {
     [channels],
   );
 
-  // Configure sensors: TouchSensor for mobile long-press (500ms delay to avoid accidental drags while scrolling)
+  // Configure sensors:
+  // - TouchSensor: 800ms delay for long-press drag on mobile (increased from 500ms)
+  // - Higher tolerance (15px) allows scrolling during the delay period
   const sensors = useSensors(
     useSensor(TouchSensor, {
-      activationConstraint: { delay: 500, tolerance: 8 },
+      activationConstraint: {
+        delay: 800, // 800ms hold required before drag starts
+        tolerance: 15, // Allow 15px of movement during delay (enables scrolling)
+      },
     }),
     useSensor(PointerSensor, {
-      activationConstraint: { distance: 5 },
+      activationConstraint: { distance: 8 },
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
@@ -732,6 +741,7 @@ export const ChannelSidebar = () => {
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
     const data = active.data.current;
+
     setActiveId(active.id as string);
     setActiveType(data?.type || null);
   };
@@ -772,6 +782,7 @@ export const ChannelSidebar = () => {
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
+
     setActiveId(null);
     setActiveType(null);
     setOverCategoryId(null);
@@ -934,7 +945,6 @@ export const ChannelSidebar = () => {
                 <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
               </button>
             </DropdownMenuTrigger>
-
             <DropdownMenuContent
               className="w-56 p-1.5 rounded-xl border-border/50 bg-popover/95 backdrop-blur-xl shadow-xl"
               align="start"
@@ -1192,7 +1202,6 @@ export const ChannelSidebar = () => {
               </ContextMenuContent>
             )}
           </ContextMenu>
-
           <DragOverlay>{getActiveItem()}</DragOverlay>
         </DndContext>
 
