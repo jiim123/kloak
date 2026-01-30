@@ -1014,6 +1014,8 @@ export type Database = {
           id: string
           is_banned: boolean | null
           is_muted: boolean | null
+          join_invite_code: string | null
+          join_source: string | null
           joined_at: string | null
           nickname: string | null
           role: Database["public"]["Enums"]["server_role"] | null
@@ -1024,6 +1026,8 @@ export type Database = {
           id?: string
           is_banned?: boolean | null
           is_muted?: boolean | null
+          join_invite_code?: string | null
+          join_source?: string | null
           joined_at?: string | null
           nickname?: string | null
           role?: Database["public"]["Enums"]["server_role"] | null
@@ -1034,6 +1038,8 @@ export type Database = {
           id?: string
           is_banned?: boolean | null
           is_muted?: boolean | null
+          join_invite_code?: string | null
+          join_source?: string | null
           joined_at?: string | null
           nickname?: string | null
           role?: Database["public"]["Enums"]["server_role"] | null
@@ -1382,19 +1388,33 @@ export type Database = {
         }
         Returns: Json
       }
-      create_channel: {
-        Args: {
-          _category_id?: string
-          _icon?: string
-          _is_private?: boolean
-          _name: string
-          _position?: number
-          _server_id: string
-          _type?: string
-          _user_id?: string
-        }
-        Returns: Json
-      }
+      create_channel:
+        | {
+            Args: {
+              _category_id?: string
+              _icon?: string
+              _is_private?: boolean
+              _name: string
+              _position?: number
+              _server_id: string
+              _type?: string
+              _user_id?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _category_id?: string
+              _icon?: string
+              _is_private?: boolean
+              _name: string
+              _position?: number
+              _server_id: string
+              _type?: string
+              _user_id: string
+            }
+            Returns: Json
+          }
       create_notification: {
         Args: {
           _body?: string
@@ -1575,10 +1595,16 @@ export type Database = {
         Args: { _server_id: string; _user_id: string }
         Returns: boolean
       }
-      join_server_by_invite: {
-        Args: { _invite_code: string; _user_id: string; _join_source?: string }
-        Returns: Json
-      }
+      join_server_by_invite:
+        | { Args: { _invite_code: string; _user_id: string }; Returns: Json }
+        | {
+            Args: {
+              _invite_code: string
+              _join_source?: string
+              _user_id: string
+            }
+            Returns: Json
+          }
       kick_member: {
         Args: { _server_id: string; _target_user_id: string; _user_id: string }
         Returns: boolean
