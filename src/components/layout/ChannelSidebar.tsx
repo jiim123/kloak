@@ -622,10 +622,10 @@ export const ChannelSidebar = () => {
     [channels],
   );
 
-  // Configure sensors: TouchSensor for mobile long-press, PointerSensor for desktop
+  // Configure sensors: TouchSensor for mobile long-press (500ms delay to avoid accidental drags while scrolling)
   const sensors = useSensors(
     useSensor(TouchSensor, {
-      activationConstraint: { delay: 200, tolerance: 5 },
+      activationConstraint: { delay: 500, tolerance: 8 },
     }),
     useSensor(PointerSensor, {
       activationConstraint: { distance: 5 },
