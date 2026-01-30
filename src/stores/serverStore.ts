@@ -592,53 +592,44 @@ export const useServerStore = create<ServerState>((set, get) => ({
         _is_private: isPrivate || false,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[createChannel] RPC error:', error);
+        throw error;
+      }
+
+      if (!data) {
+        throw new Error('No data returned from create_channel RPC');
+      }
 
       // Check if RPC returned an error object
-      const result = data as unknown as { error?: string } | Channel;
-      if (result && 'error' in result && result.error) {
-        throw new Error(result.error);
+      const result = data as unknown as { error?: string } | Record<string, unknown>;
+      if (result && typeof result === 'object' && 'error' in result && result.error) {
+        throw new Error(String(result.error));
       }
 
       // Parse the channel data ensuring all required fields
-      const channelData = result as {
-        id: string;
-        server_id: string;
-        category_id: string | null;
-        name: string;
-        topic: string | null;
-        type: ChannelType;
-        position: number;
-        is_nsfw: boolean;
-        slowmode_seconds: number;
-        is_read_only: boolean;
-        is_private: boolean;
-        icon: string | null;
-        created_at: string;
-      };
+      const channelData = result as Record<string, unknown>;
 
       const channel: Channel = {
-        id: channelData.id,
-        server_id: channelData.server_id,
-        category_id: channelData.category_id,
-        name: channelData.name,
-        topic: channelData.topic,
-        type: channelData.type || 'text',
-        position: channelData.position ?? 0,
-        is_nsfw: channelData.is_nsfw ?? false,
-        slowmode_seconds: channelData.slowmode_seconds ?? 0,
-        is_read_only: channelData.is_read_only ?? false,
-        is_private: channelData.is_private ?? false,
-        icon: channelData.icon,
-        created_at: channelData.created_at,
+        id: String(channelData.id),
+        server_id: String(channelData.server_id),
+        category_id: channelData.category_id ? String(channelData.category_id) : null,
+        name: String(channelData.name),
+        topic: channelData.topic ? String(channelData.topic) : null,
+        type: (String(channelData.type) as ChannelType) || 'text',
+        position: Number(channelData.position) || 0,
+        is_nsfw: Boolean(channelData.is_nsfw),
+        slowmode_seconds: Number(channelData.slowmode_seconds) || 0,
+        is_read_only: Boolean(channelData.is_read_only),
+        is_private: Boolean(channelData.is_private),
+        icon: channelData.icon ? String(channelData.icon) : null,
+        created_at: String(channelData.created_at),
       };
 
-      console.log('[createChannel] Adding channel to store:', channel.id, channel.name);
-
+      // Update store with new channel
       set((state) => {
         // Prevent duplicates in case realtime already added it
         if (state.channels.some(c => c.id === channel.id)) {
-          console.log('[createChannel] Channel already exists, skipping:', channel.id);
           return state;
         }
         return {
@@ -648,7 +639,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
       return channel;
     } catch (error) {
-      console.error('Failed to create channel:', error);
+      console.error('[createChannel] Failed:', error);
       return null;
     }
   },
