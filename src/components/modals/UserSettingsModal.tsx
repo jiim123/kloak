@@ -1301,9 +1301,9 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col sm:flex-row gap-2">
             <AlertDialogCancel className="m-0 rounded-xl">Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmLogout} className="rounded-xl bg-red-500 text-black hover:bg-amber-600">
+            <AlertDialogAction onClick={confirmLogout} className="rounded-xl bg-red-500 text-black hover:bg-red-600">
               <LogOut className="w-4 h-4 mr-2" />
-              Log Out
+              Yes, Log Out
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
