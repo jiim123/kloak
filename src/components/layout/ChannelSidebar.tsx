@@ -147,10 +147,9 @@ const SortableChannel = ({
     zIndex: isDragging ? 50 : undefined,
   };
 
-  // On mobile + admin, we only attach attributes (for accessibility)
-  // TouchSensor handles drag activation via its delay constraint - no listeners needed
-  // This prevents touch event interference that blocks scrolling
-  const mobileDragProps = isMobile && isAdmin ? { ...attributes } : {};
+  // On mobile + admin, attach both attributes and listeners for drag-and-drop
+  // TouchSensor's delay (1000ms) and tolerance (50px) handle scroll vs drag detection
+  const mobileDragProps = isMobile && isAdmin ? { ...attributes, ...listeners } : {};
 
   // Determine the icon to display
   const getChannelIcon = () => {
@@ -188,8 +187,8 @@ const SortableChannel = ({
         !isActive && "text-muted-foreground hover:text-foreground",
         isUnread && !isActive && "text-foreground font-semibold",
         isDragging && "opacity-50 shadow-lg ring-2 ring-primary/30 bg-secondary",
-        // Remove touch-none - let TouchSensor handle drag activation via delay
       )}
+      style={isMobile && isAdmin ? { touchAction: "pan-y" } : undefined}
     >
       {/* Active indicator */}
       <div
@@ -413,18 +412,18 @@ const SortableCategory = ({
     zIndex: isDragging ? 50 : undefined,
   };
 
-  // On mobile + admin, only attach attributes (for accessibility)
-  // TouchSensor handles drag activation via delay - no listeners needed
-  const mobileDragProps = isMobile && isAdmin ? { ...attributes } : {};
+  // On mobile + admin, attach both attributes and listeners for drag-and-drop
+  // TouchSensor's delay and tolerance handle scroll vs drag detection
+  const mobileDragProps = isMobile && isAdmin ? { ...attributes, ...listeners } : {};
 
   const categoryButton = (
     <button
       {...mobileDragProps}
       className={cn(
         "flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground uppercase tracking-wider flex-1 py-1",
-        // Remove touch-none - let TouchSensor handle drag activation
         isDragging && "opacity-50",
       )}
+      style={isMobile && isAdmin ? { touchAction: "pan-y" } : undefined}
       onClick={onToggle}
     >
       <ChevronDown className={cn("w-3 h-3 transition-transform duration-150", isCollapsed && "-rotate-90")} />
@@ -1042,7 +1041,10 @@ export const ChannelSidebar = () => {
         >
           <ContextMenu>
             <ContextMenuTrigger asChild>
-              <div className="flex-1 overflow-y-auto scrollbar-overlay p-2 scrollbar-hide">
+              <div
+                className="flex-1 overflow-y-auto scrollbar-overlay p-2 scrollbar-hide"
+                style={{ touchAction: "pan-y" }}
+              >
                 {/* Default sections */}
                 <div className="mb-3 space-y-0.5">
                   <button
