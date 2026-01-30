@@ -1171,6 +1171,181 @@ export type Database = {
           },
         ]
       }
+      thread_attachments: {
+        Row: {
+          file_name: string
+          file_size: number | null
+          file_type: string | null
+          file_url: string
+          height: number | null
+          id: string
+          message_id: string
+          width: number | null
+        }
+        Insert: {
+          file_name: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url: string
+          height?: number | null
+          id?: string
+          message_id: string
+          width?: number | null
+        }
+        Update: {
+          file_name?: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string
+          height?: number | null
+          id?: string
+          message_id?: string
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "thread_attachments_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "thread_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      thread_messages: {
+        Row: {
+          content: string
+          created_at: string
+          edited_at: string | null
+          id: string
+          reply_to_id: string | null
+          thread_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          reply_to_id?: string | null
+          thread_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          reply_to_id?: string | null
+          thread_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "thread_messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "thread_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "thread_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "threads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "thread_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      thread_reactions: {
+        Row: {
+          emoji: string
+          id: string
+          message_id: string
+          user_id: string
+        }
+        Insert: {
+          emoji: string
+          id?: string
+          message_id: string
+          user_id: string
+        }
+        Update: {
+          emoji?: string
+          id?: string
+          message_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "thread_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "thread_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "thread_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      threads: {
+        Row: {
+          channel_id: string
+          created_at: string
+          created_by: string
+          id: string
+          message_id: string
+        }
+        Insert: {
+          channel_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          message_id: string
+        }
+        Update: {
+          channel_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          message_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "threads_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "threads_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "threads_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: true
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_preferences: {
         Row: {
           animate_emojis: boolean
@@ -1433,6 +1608,10 @@ export type Database = {
         Args: { _name: string; _owner_id: string }
         Returns: Json
       }
+      create_thread: {
+        Args: { _message_id: string; _user_id: string }
+        Returns: string
+      }
       debug_channel_permissions: {
         Args: { _channel_id: string; _user_id: string }
         Returns: Json
@@ -1485,12 +1664,20 @@ export type Database = {
         Args: { _role_id: string; _user_id: string }
         Returns: boolean
       }
+      delete_thread_message: {
+        Args: { _message_id: string; _user_id: string }
+        Returns: boolean
+      }
       delete_user_account: { Args: { _user_id: string }; Returns: boolean }
       edit_dm: {
         Args: { _content: string; _message_id: string; _sender_id: string }
         Returns: Json
       }
       edit_message: {
+        Args: { _content: string; _message_id: string; _user_id: string }
+        Returns: Json
+      }
+      edit_thread_message: {
         Args: { _content: string; _message_id: string; _user_id: string }
         Returns: Json
       }
@@ -1560,6 +1747,16 @@ export type Database = {
         | { Args: { _server_id: string; _user_id?: string }; Returns: Json }
       get_server_members: { Args: { _server_id: string }; Returns: Json }
       get_server_roles: { Args: { _server_id: string }; Returns: Json }
+      get_thread_by_message_id: { Args: { _message_id: string }; Returns: Json }
+      get_thread_info: { Args: { _message_id: string }; Returns: Json }
+      get_thread_message_count: {
+        Args: { _message_id: string }
+        Returns: number
+      }
+      get_thread_messages: {
+        Args: { _before?: string; _limit?: number; _thread_id: string }
+        Returns: Json
+      }
       get_user_by_id: { Args: { _user_id: string }; Returns: Json }
       get_user_dm_conversations: { Args: { _user_id: string }; Returns: Json }
       get_user_friends: { Args: { _user_id: string }; Returns: Json }
@@ -1725,6 +1922,15 @@ export type Database = {
           _options: string[]
           _question: string
           _reply_to_id?: string
+          _user_id: string
+        }
+        Returns: Json
+      }
+      send_thread_message: {
+        Args: {
+          _content: string
+          _reply_to_id?: string
+          _thread_id: string
           _user_id: string
         }
         Returns: Json
