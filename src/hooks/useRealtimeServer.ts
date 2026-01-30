@@ -106,23 +106,29 @@ export const useRealtimeServer = (serverId: string | null) => {
         (payload) => {
           try {
             const newChannel = payload.new as any;
-            useServerStore.setState((state) => ({
-              channels: [...state.channels, {
-                id: newChannel.id,
-                server_id: newChannel.server_id,
-                category_id: newChannel.category_id,
-                name: newChannel.name,
-                topic: newChannel.topic,
-                type: newChannel.type || 'text',
-                position: newChannel.position || 0,
-                is_nsfw: newChannel.is_nsfw || false,
-                slowmode_seconds: newChannel.slowmode_seconds || 0,
-                is_read_only: newChannel.is_read_only || false,
-                is_private: newChannel.is_private || false,
-                icon: newChannel.icon,
-                created_at: newChannel.created_at,
-              }],
-            }));
+            useServerStore.setState((state) => {
+              // Prevent duplicate if already added optimistically by createChannel
+              if (state.channels.some(c => c.id === newChannel.id)) {
+                return state;
+              }
+              return {
+                channels: [...state.channels, {
+                  id: newChannel.id,
+                  server_id: newChannel.server_id,
+                  category_id: newChannel.category_id,
+                  name: newChannel.name,
+                  topic: newChannel.topic,
+                  type: newChannel.type || 'text',
+                  position: newChannel.position || 0,
+                  is_nsfw: newChannel.is_nsfw || false,
+                  slowmode_seconds: newChannel.slowmode_seconds || 0,
+                  is_read_only: newChannel.is_read_only || false,
+                  is_private: newChannel.is_private || false,
+                  icon: newChannel.icon,
+                  created_at: newChannel.created_at,
+                }],
+              };
+            });
           } catch (error) {
             console.error('[Realtime] Error processing channel insert:', error);
           }

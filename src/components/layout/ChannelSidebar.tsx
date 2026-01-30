@@ -16,6 +16,8 @@ import {
   Trash2,
   Copy,
   Lock,
+  GripVertical,
+  ArrowUpDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -121,6 +123,7 @@ const SortableChannel = ({
   onCopyLink,
   isMobile,
   isDraggingAny,
+  isSortingMode,
 }: {
   channel: Channel;
   isActive: boolean;
@@ -135,10 +138,12 @@ const SortableChannel = ({
   onCopyLink: () => void;
   isMobile?: boolean;
   isDraggingAny?: boolean;
+  isSortingMode?: boolean;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: channel.id,
     data: { type: "channel", channel },
+    disabled: isMobile && !isSortingMode && !isAdmin, // Disable sorting on mobile when not in sort mode
   });
 
   const style = {
@@ -146,10 +151,6 @@ const SortableChannel = ({
     transition,
     zIndex: isDragging ? 50 : undefined,
   };
-
-  // On mobile + admin, attach both attributes and listeners for drag-and-drop
-  // TouchSensor's delay (1000ms) and tolerance (50px) handle scroll vs drag detection
-  const mobileDragProps = isMobile && isAdmin ? { ...attributes, ...listeners } : {};
 
   // Determine the icon to display
   const getChannelIcon = () => {
@@ -177,81 +178,92 @@ const SortableChannel = ({
   };
 
   const buttonContent = (
-    <button
-      {...mobileDragProps}
-      onClick={onSelect}
-      className={cn(
-        "group relative w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-all duration-150 select-none",
-        "hover:bg-secondary/80",
-        isActive && "bg-secondary text-foreground",
-        !isActive && "text-muted-foreground hover:text-foreground",
-        isUnread && !isActive && "text-foreground font-semibold",
-        isDragging && "opacity-50 shadow-lg ring-2 ring-primary/30 bg-secondary",
-      )}
-      style={isMobile && isAdmin ? { touchAction: "pan-y" } : undefined}
-    >
-      {/* Active indicator */}
-      <div
-        className={cn(
-          "absolute -left-2 top-0 bottom-0 w-1 bg-primary rounded-full transition-opacity duration-150",
-          isActive ? "opacity-100" : "opacity-0",
-        )}
-      />
-
-      {/* Channel icon */}
-      <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">{getChannelIcon()}</div>
-
-      {/* Channel name */}
-      <span className="truncate flex-1 text-left">{channel.name}</span>
-
-      {/* Private indicator */}
-      {channel.is_private && <Lock className="w-3 h-3 text-muted-foreground flex-shrink-0" />}
-
-      {/* NSFW badge */}
-      {channel.is_nsfw && (
-        <span className="px-1 py-0.5 text-[10px] font-semibold rounded bg-destructive/20 text-destructive uppercase tracking-wide flex-shrink-0">
-          NSFW
-        </span>
-      )}
-
-      {/* Mention badge */}
-      {mentionCount > 0 && (
-        <span className="px-1.5 py-0.5 text-xs font-bold rounded-full bg-destructive text-destructive-foreground">
-          {mentionCount > 99 ? "99+" : mentionCount}
-        </span>
-      )}
-
-      {/* Admin settings - desktop only */}
-      {isAdmin && !isMobile && (
-        <Settings
-          className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground cursor-pointer flex-shrink-0"
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit();
-          }}
-        />
-      )}
-
-      {/* Drag handle for admins - desktop only */}
-      {isAdmin && !isMobile && (
+    <div className="flex items-center w-full">
+      {/* Visible drag handle in sort mode on mobile */}
+      {isMobile && isSortingMode && isAdmin && (
         <div
           {...attributes}
           {...listeners}
-          className="p-1 -mr-1 opacity-0 group-hover:opacity-50 hover:!opacity-100 cursor-grab active:cursor-grabbing"
+          className="p-1.5 mr-1 cursor-grab active:cursor-grabbing touch-none"
         >
-          <div className="w-1 h-3 flex flex-col gap-0.5 justify-center">
-            <div className="w-1 h-1 rounded-full bg-muted-foreground" />
-            <div className="w-1 h-1 rounded-full bg-muted-foreground" />
-          </div>
+          <GripVertical className="w-4 h-4 text-muted-foreground" />
         </div>
       )}
-    </button>
+      <button
+        onClick={isSortingMode ? undefined : onSelect}
+        className={cn(
+          "group relative flex-1 flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-all duration-150 select-none",
+          "hover:bg-secondary/80",
+          isActive && !isSortingMode && "bg-secondary text-foreground",
+          !isActive && "text-muted-foreground hover:text-foreground",
+          isUnread && !isActive && "text-foreground font-semibold",
+          isDragging && "opacity-50 shadow-lg ring-2 ring-primary/30 bg-secondary",
+          isSortingMode && "cursor-default",
+        )}
+      >
+        {/* Active indicator */}
+        <div
+          className={cn(
+            "absolute -left-2 top-0 bottom-0 w-1 bg-primary rounded-full transition-opacity duration-150",
+            isActive && !isSortingMode ? "opacity-100" : "opacity-0",
+          )}
+        />
+
+        {/* Channel icon */}
+        <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">{getChannelIcon()}</div>
+
+        {/* Channel name */}
+        <span className="truncate flex-1 text-left">{channel.name}</span>
+
+        {/* Private indicator */}
+        {channel.is_private && <Lock className="w-3 h-3 text-muted-foreground flex-shrink-0" />}
+
+        {/* NSFW badge */}
+        {channel.is_nsfw && (
+          <span className="px-1 py-0.5 text-[10px] font-semibold rounded bg-destructive/20 text-destructive uppercase tracking-wide flex-shrink-0">
+            NSFW
+          </span>
+        )}
+
+        {/* Mention badge */}
+        {mentionCount > 0 && !isSortingMode && (
+          <span className="px-1.5 py-0.5 text-xs font-bold rounded-full bg-destructive text-destructive-foreground">
+            {mentionCount > 99 ? "99+" : mentionCount}
+          </span>
+        )}
+
+        {/* Admin settings - desktop only, not in sort mode */}
+        {isAdmin && !isMobile && !isSortingMode && (
+          <Settings
+            className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground cursor-pointer flex-shrink-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+          />
+        )}
+
+        {/* Drag handle for admins - desktop only */}
+        {isAdmin && !isMobile && (
+          <div
+            {...attributes}
+            {...listeners}
+            className="p-1 -mr-1 opacity-0 group-hover:opacity-50 hover:!opacity-100 cursor-grab active:cursor-grabbing"
+          >
+            <div className="w-1 h-3 flex flex-col gap-0.5 justify-center">
+              <div className="w-1 h-1 rounded-full bg-muted-foreground" />
+              <div className="w-1 h-1 rounded-full bg-muted-foreground" />
+            </div>
+          </div>
+        )}
+      </button>
+    </div>
   );
 
   return (
     <div ref={setNodeRef} style={style} className="relative">
-      {/* Disable context menu during drag on mobile */}
-      {isMobile && isDraggingAny ? (
+      {/* In sort mode or during drag on mobile - disable context menu */}
+      {isMobile && (isSortingMode || isDraggingAny) ? (
         buttonContent
       ) : (
         <ContextMenu>
@@ -311,6 +323,7 @@ const CategoryContent = ({
   resolveUser,
   isMobile,
   isDraggingAny,
+  isSortingMode,
 }: {
   channels: Channel[];
   currentChannelId: string | undefined;
@@ -324,6 +337,7 @@ const CategoryContent = ({
   resolveUser: (userId: string) => { avatarUser?: any; label: string };
   isMobile?: boolean;
   isDraggingAny?: boolean;
+  isSortingMode?: boolean;
 }) => {
   return (
     <div className="space-y-0.5 ml-1 animate-fade-in">
@@ -346,6 +360,7 @@ const CategoryContent = ({
               onCopyLink={() => onCopyChannelLink(channel.id)}
               isMobile={isMobile}
               isDraggingAny={isDraggingAny}
+              isSortingMode={isSortingMode}
             />
           );
         })}
@@ -375,6 +390,7 @@ const SortableCategory = ({
   resolveUser,
   isMobile,
   isDraggingAny,
+  isSortingMode,
 }: {
   category: ChannelCategory;
   channels: Channel[];
@@ -395,10 +411,12 @@ const SortableCategory = ({
   resolveUser: (userId: string) => { avatarUser?: any; label: string };
   isMobile?: boolean;
   isDraggingAny?: boolean;
+  isSortingMode?: boolean;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: category.id,
     data: { type: "category", category },
+    disabled: isMobile && !isSortingMode, // Disable sorting on mobile when not in sort mode
   });
 
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({
@@ -412,24 +430,31 @@ const SortableCategory = ({
     zIndex: isDragging ? 50 : undefined,
   };
 
-  // On mobile + admin, attach both attributes and listeners for drag-and-drop
-  // TouchSensor's delay and tolerance handle scroll vs drag detection
-  const mobileDragProps = isMobile && isAdmin ? { ...attributes, ...listeners } : {};
-
   const categoryButton = (
-    <button
-      {...mobileDragProps}
-      className={cn(
-        "flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground uppercase tracking-wider flex-1 py-1",
-        isDragging && "opacity-50",
+    <div className="flex items-center flex-1">
+      {/* Visible drag handle in sort mode on mobile */}
+      {isMobile && isSortingMode && isAdmin && (
+        <div
+          {...attributes}
+          {...listeners}
+          className="p-1 mr-1 cursor-grab active:cursor-grabbing touch-none"
+        >
+          <GripVertical className="w-4 h-4 text-muted-foreground" />
+        </div>
       )}
-      style={isMobile && isAdmin ? { touchAction: "pan-y" } : undefined}
-      onClick={onToggle}
-    >
-      <ChevronDown className={cn("w-3 h-3 transition-transform duration-150", isCollapsed && "-rotate-90")} />
-      <span className="truncate">{category.name}</span>
-      {isCollapsed && <span className="ml-1 text-muted-foreground/60">({channels.length})</span>}
-    </button>
+      <button
+        className={cn(
+          "flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground uppercase tracking-wider flex-1 py-1",
+          isDragging && "opacity-50",
+          isSortingMode && "cursor-default",
+        )}
+        onClick={isSortingMode ? undefined : onToggle}
+      >
+        <ChevronDown className={cn("w-3 h-3 transition-transform duration-150", isCollapsed && "-rotate-90")} />
+        <span className="truncate">{category.name}</span>
+        {isCollapsed && <span className="ml-1 text-muted-foreground/60">({channels.length})</span>}
+      </button>
+    </div>
   );
 
   return (
@@ -447,7 +472,7 @@ const SortableCategory = ({
     >
       {/* Category header */}
       <div className="group flex items-center gap-1 px-0.5 mb-1">
-        {isMobile && isDraggingAny ? (
+        {isMobile && (isSortingMode || isDraggingAny) ? (
           categoryButton
         ) : (
           <ContextMenu>
@@ -469,8 +494,8 @@ const SortableCategory = ({
           </ContextMenu>
         )}
 
-        {/* Desktop-only controls */}
-        {isAdmin && !isMobile && (
+        {/* Desktop-only controls - hide in sort mode */}
+        {isAdmin && !isMobile && !isSortingMode && (
           <Settings
             className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground cursor-pointer flex-shrink-0"
             onClick={(e) => {
@@ -480,8 +505,8 @@ const SortableCategory = ({
           />
         )}
 
-        {/* Add channel button */}
-        {isAdmin && (
+        {/* Add channel button - hide in sort mode */}
+        {isAdmin && !isSortingMode && (
           <Tooltip>
             <TooltipTrigger asChild>
               <button
@@ -527,6 +552,7 @@ const SortableCategory = ({
           resolveUser={resolveUser}
           isMobile={isMobile}
           isDraggingAny={isDraggingAny}
+          isSortingMode={isSortingMode}
         />
       )}
     </div>
@@ -561,6 +587,7 @@ export const ChannelSidebar = () => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeType, setActiveType] = useState<"channel" | "category" | null>(null);
   const [overCategoryId, setOverCategoryId] = useState<string | null>(null);
+  const [isSortingMode, setIsSortingMode] = useState(false);
 
   const channelIds = useMemo(() => channels.map((c) => c.id), [channels]);
   const { getChannelUnread, markAsRead } = useUnread(channelIds);
@@ -626,18 +653,13 @@ export const ChannelSidebar = () => {
     [channels],
   );
 
-  // Configure sensors:
-  // - TouchSensor: 1000ms (1 second) delay for long-press drag on mobile
-  // - High tolerance (50px) ensures scrolling works - any movement cancels drag activation
+  // Configure sensors dynamically based on sort mode:
+  // - On mobile in sort mode: PointerSensor with minimal distance for immediate drag
+  // - On mobile not in sort mode: No touch sensor (scrolling works perfectly)
+  // - On desktop: PointerSensor with 10px distance
   const sensors = useSensors(
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 1000, // 1 second hold required before drag starts
-        tolerance: 50, // Allow 50px of movement during delay (enables scrolling)
-      },
-    }),
     useSensor(PointerSensor, {
-      activationConstraint: { distance: 10 },
+      activationConstraint: { distance: isMobile && isSortingMode ? 5 : 10 },
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
@@ -1031,6 +1053,24 @@ export const ChannelSidebar = () => {
           </DropdownMenu>
         </div>
 
+        {/* Sorting Mode Header */}
+        {isSortingMode && (
+          <div className="flex items-center justify-between px-3 py-2 bg-primary/10 border-b border-primary/20">
+            <div className="flex items-center gap-2">
+              <GripVertical className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium text-primary">Sorting Mode</span>
+            </div>
+            <Button 
+              size="sm" 
+              variant="ghost" 
+              onClick={() => setIsSortingMode(false)}
+              className="h-7 px-2 text-xs"
+            >
+              Done
+            </Button>
+          </div>
+        )}
+
         {/* Channel list */}
         <DndContext
           sensors={sensors}
@@ -1040,9 +1080,12 @@ export const ChannelSidebar = () => {
           onDragEnd={handleDragEnd}
         >
           <ContextMenu>
-            <ContextMenuTrigger asChild>
+            <ContextMenuTrigger asChild disabled={isSortingMode}>
               <div
-                className="flex-1 overflow-y-auto scrollbar-overlay p-2 scrollbar-hide"
+                className={cn(
+                  "flex-1 overflow-y-auto scrollbar-overlay p-2 scrollbar-hide",
+                  isSortingMode && "bg-primary/5 border-2 border-dashed border-primary/20 rounded-lg mx-1 my-1"
+                )}
                 style={{ touchAction: "pan-y" }}
               >
                 {/* Default sections */}
@@ -1133,6 +1176,7 @@ export const ChannelSidebar = () => {
                               onCopyLink={() => handleCopyChannelLink(channel.id)}
                               isMobile={isMobile}
                               isDraggingAny={isDraggingAny}
+                              isSortingMode={isSortingMode}
                             />
                           );
                         })}
@@ -1165,6 +1209,7 @@ export const ChannelSidebar = () => {
                       resolveUser={resolveUser}
                       isMobile={isMobile}
                       isDraggingAny={isDraggingAny}
+                      isSortingMode={isSortingMode}
                     />
                   ))}
                 </SortableContext>
@@ -1202,6 +1247,16 @@ export const ChannelSidebar = () => {
                   <Plus className="w-4 h-4 mr-2" />
                   Create Channel
                 </ContextMenuItem>
+                {/* Sort Channels - mobile only */}
+                {isMobile && (
+                  <>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem onClick={() => setIsSortingMode(true)}>
+                      <ArrowUpDown className="w-4 h-4 mr-2" />
+                      Sort Channels
+                    </ContextMenuItem>
+                  </>
+                )}
               </ContextMenuContent>
             )}
           </ContextMenu>
