@@ -368,18 +368,6 @@ const DraggableServerItem = forwardRef<
                     )}
                   </motion.div>
 
-                  {/* Unread dot */}
-                  <AnimatePresence>
-                    {hasUnread && !isActive && totalMentions === 0 && (
-                      <motion.span
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        exit={{ scale: 0 }}
-                        className="absolute bottom-0 right-0 w-3 h-3 bg-white rounded-[3px] border-2 border-layout-sidebar"
-                      />
-                    )}
-                  </AnimatePresence>
-
                   {/* Mention badge */}
                   <AnimatePresence>
                     {totalMentions > 0 && (
