@@ -485,7 +485,7 @@ export const MembersSidebar = () => {
       <div className="px-4 py-3 border-b border-border/50">
         <h3 className="text-sm font-semibold">Members</h3>
         <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
-          <span>{totalCount}</span>
+          <span>Members: {totalCount}</span>
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
           <span>Online: {onlineCount}</span>
         </p>
