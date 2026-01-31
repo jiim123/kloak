@@ -1265,6 +1265,15 @@ export const ServerSettingsPage = () => {
                 <span>Emojis</span>
               </TabsTrigger>
             )}
+            {isOwner && (
+              <TabsTrigger
+                value="danger-zone"
+                className="w-full justify-start gap-2 text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm text-destructive"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Danger Zone</span>
+              </TabsTrigger>
+            )}
           </TabsList>
           
           <div className="flex-1 overflow-y-auto">
@@ -1470,25 +1479,6 @@ export const ServerSettingsPage = () => {
                   </div>
                 )}
               </form>
-
-              {/* Danger Zone */}
-              {isOwner && (
-                <div className="border-t border-destructive/20 pt-4 mt-6 max-w-3xl">
-                  <h4 className="text-sm font-semibold text-destructive mb-2">Danger Zone</h4>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    Deleting this server will permanently remove all channels, messages, and members.
-                  </p>
-                  <Button 
-                    variant="destructive" 
-                    size="sm"
-                    onClick={() => setShowDeleteConfirm(true)}
-                    className="text-sm h-9"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete Server
-                  </Button>
-                </div>
-              )}
             </TabsContent>
 
             {/* Members Tab */}
@@ -2389,6 +2379,36 @@ export const ServerSettingsPage = () => {
                 </div>
               )}
             </TabsContent>
+
+            {/* Danger Zone Tab */}
+            {isOwner && (
+              <TabsContent value="danger-zone" className="m-0 p-6">
+                <div className="space-y-5 max-w-3xl">
+                  <div>
+                    <h3 className="text-lg font-semibold text-destructive mb-2">Danger Zone</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Irreversible and destructive actions for this server.
+                    </p>
+                  </div>
+                  
+                  <div className="border border-destructive/30 rounded-lg p-6 bg-destructive/5">
+                    <h4 className="text-sm font-semibold text-destructive mb-2">Delete Server</h4>
+                    <p className="text-xs text-muted-foreground mb-4">
+                      Deleting this server will permanently remove all channels, messages, and members. This action cannot be undone.
+                    </p>
+                    <Button 
+                      variant="destructive" 
+                      size="sm"
+                      onClick={() => setShowDeleteConfirm(true)}
+                      className="text-sm h-9"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete Server
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
+            )}
             
           </div>
         </Tabs>
