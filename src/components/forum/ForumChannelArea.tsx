@@ -9,7 +9,7 @@ import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { useTyping } from "@/hooks/useTyping";
 import { useSwipeGestureRef } from "@/hooks/useSwipeGesture";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { MessageSquare, Hash, ArrowRight, Clock, Send, Loader2, Plus, X, ArrowUp, Paperclip, Reply, Smile, Pencil, Trash2, CornerUpLeft } from "lucide-react";
+import { MessageSquare, Hash, ArrowRight, Clock, Send, Loader2, Plus, X, ArrowUp, Paperclip, Reply, Smile, Pencil, Trash2, CornerUpLeft, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -1075,9 +1075,9 @@ export const ForumChannelArea = () => {
     <div ref={swipeRef} className="h-full flex flex-col min-w-0 bg-background">
       <ChannelHeader channel={currentChannel} />
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
         {/* Threads List */}
-        <div className={`${selectedThreadId ? 'w-full md:w-1/2 border-r border-border' : 'w-full'} overflow-y-auto transition-all`}>
+        <div className={`${selectedThreadId ? 'w-full md:w-1/2 border-r border-border' : 'w-full'} ${selectedThreadId && isMobile ? 'hidden' : ''} overflow-y-auto transition-all`}>
           {/* Create Topic Editor */}
           {isCreateTopicFocused ? (
             <div className="p-4 border-b border-border bg-card/50">
@@ -1221,8 +1221,8 @@ export const ForumChannelArea = () => {
                     )}
                     
                     <div className="p-4 pl-6">
-                      {/* Single line: title OP replies-count last-post-user last-post-time */}
-                      <div className="flex items-center gap-8 text-sm">
+                      {/* Desktop: Single line layout */}
+                      <div className="hidden md:flex items-center gap-8 text-sm">
                         {/* Title */}
                         <span className="font-semibold text-foreground flex-1 min-w-0 truncate">
                           {threadTitle}
@@ -1250,8 +1250,7 @@ export const ForumChannelArea = () => {
                           <div className="flex flex-col items-end gap-0.5 text-xs text-muted-foreground flex-shrink-0 ml-auto">
                             <div className="flex items-center gap-1">
                               <Clock className="w-3.5 h-3.5" />
-                              <span className="hidden md:inline">{formatDistanceToNow(new Date(thread.last_activity), { addSuffix: true })}</span>
-                              <span className="md:hidden">{formatDistanceToNow(new Date(thread.last_activity), { addSuffix: false })}</span>
+                              <span>{formatDistanceToNow(new Date(thread.last_activity), { addSuffix: true })}</span>
                             </div>
                             {/* Last Post User */}
                             {lastAuthor && thread.message_count && thread.message_count > 0 && (
@@ -1265,6 +1264,56 @@ export const ForumChannelArea = () => {
                                 <span className="hidden sm:inline">{lastAuthor.display_name || lastAuthor.username || "Unknown"}</span>
                               </div>
                             )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Mobile: Stacked layout */}
+                      <div className="md:hidden space-y-2">
+                        {/* Title */}
+                        <div className="font-semibold text-foreground text-sm">
+                          {threadTitle}
+                        </div>
+                        
+                        {/* Metadata row */}
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          {/* Original Poster */}
+                          <div className="flex items-center gap-1.5">
+                            <Avatar className="w-4 h-4">
+                              <AvatarImage src={opUser?.avatar_url} />
+                              <AvatarFallback className="text-[8px]">
+                                {opUser?.username?.[0]?.toUpperCase() || "?"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span>{opUser?.display_name || opUser?.username || "Unknown"}</span>
+                          </div>
+                          
+                          {/* Reply Count */}
+                          <div className="flex items-center gap-1">
+                            <MessageSquare className={`w-3.5 h-3.5 ${(thread.message_count || 0) > 0 ? 'text-primary' : ''}`} />
+                            <span>{thread.message_count || 0}</span>
+                          </div>
+                          
+                          {/* Last Post Time */}
+                          {thread.last_activity && (
+                            <div className="flex items-center gap-1 ml-auto">
+                              <Clock className="w-3.5 h-3.5" />
+                              <span>{formatDistanceToNow(new Date(thread.last_activity), { addSuffix: true })}</span>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Last Post User on mobile */}
+                        {lastAuthor && thread.message_count && thread.message_count > 0 && (
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <span>Last reply by</span>
+                            <Avatar className="w-4 h-4">
+                              <AvatarImage src={lastAuthor.avatar_url} />
+                              <AvatarFallback className="text-[8px]">
+                                {lastAuthor.username?.[0]?.toUpperCase() || "?"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span>{lastAuthor.display_name || lastAuthor.username || "Unknown"}</span>
                           </div>
                         )}
                       </div>
@@ -1290,22 +1339,24 @@ export const ForumChannelArea = () => {
           const opUser = selectedThread?.message?.user;
           
           return (
-            <div className="hidden md:flex md:w-1/2 flex-col border-l border-border">
-              <div className="flex-1 overflow-y-auto p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">{threadTitle}</h3>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedThreadId(null);
-                      setReplyContent("");
-                    }}
-                    className="h-8 w-8 p-0"
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
+            <>
+              {/* Desktop: Side-by-side view */}
+              <div className="hidden md:flex md:w-1/2 flex-col border-l border-border">
+                <div className="flex-1 overflow-y-auto p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold">{threadTitle}</h3>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedThreadId(null);
+                        setReplyContent("");
+                      }}
+                      className="h-8 w-8 p-0"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
                 
                 {/* Thread Description */}
                 {threadDescription && (
@@ -1653,6 +1704,359 @@ export const ForumChannelArea = () => {
                 </div>
               </div>
             </div>
+
+            {/* Mobile: Full-screen overlay */}
+              {isMobile && (
+                <div className="md:hidden fixed inset-0 z-50 bg-background flex flex-col">
+                  {/* Header with back button */}
+                  <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedThreadId(null);
+                        setReplyContent("");
+                        setReplyingToThread(null);
+                      }}
+                      className="h-9 w-9 p-0"
+                    >
+                      <ArrowLeft className="w-5 h-5" />
+                    </Button>
+                    <h3 className="text-lg font-semibold flex-1 truncate">{threadTitle}</h3>
+                  </div>
+
+                  {/* Thread content */}
+                  <div className="flex-1 overflow-y-auto p-4">
+                    {/* Thread Description */}
+                    {threadDescription && (
+                      <div className="mb-6 pb-6 border-b border-border">
+                        <div className="flex gap-3">
+                          <Avatar className="w-8 h-8 flex-shrink-0">
+                            <AvatarImage src={opUser?.avatar_url} />
+                            <AvatarFallback>
+                              {opUser?.username?.[0]?.toUpperCase() || "?"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="font-medium text-sm">
+                                {opUser?.display_name || opUser?.username || "Unknown"}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {selectedThread?.created_at && formatDistanceToNow(new Date(selectedThread.created_at), { addSuffix: true })}
+                              </span>
+                            </div>
+                            <p className="text-sm text-foreground whitespace-pre-wrap">{threadDescription}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Thread Replies */}
+                    <div className="mb-4">
+                      <h4 className="text-sm font-semibold text-muted-foreground mb-3">
+                        Replies ({threadMessages[selectedThreadId]?.length || 0})
+                      </h4>
+                    </div>
+                    
+                    {threadMessages[selectedThreadId] ? (
+                      <div className="space-y-4">
+                        {threadMessages[selectedThreadId].map((msg) => {
+                          const isOwnMessage = user?.id === msg.user_id;
+                          const isHovered = hoveredMessageId === msg.id;
+                          const isEditing = editingMessageId === msg.id;
+                          const canDeleteMessage = isOwnMessage || canManageMessages;
+                          
+                          return (
+                            <div
+                              key={msg.id}
+                              className="group relative flex gap-3"
+                              onTouchStart={() => setHoveredMessageId(msg.id)}
+                              onTouchEnd={() => setTimeout(() => setHoveredMessageId(null), 2000)}
+                            >
+                              <Avatar className="w-8 h-8 flex-shrink-0">
+                                <AvatarImage src={msg.user?.avatar_url} />
+                                <AvatarFallback>
+                                  {msg.user?.username?.[0]?.toUpperCase() || "?"}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="font-medium text-sm">
+                                    {msg.user?.display_name || msg.user?.username || "Unknown"}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {formatMessageTimestamp(msg.created_at)}
+                                  </span>
+                                  {msg.edited_at && (
+                                    <span className="text-[10px] text-muted-foreground">(edited)</span>
+                                  )}
+                                </div>
+                                
+                                {/* Reply reference */}
+                                {msg.reply_to && (
+                                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+                                    <CornerUpLeft className="w-3 h-3 flex-shrink-0" />
+                                    <span>Replying to</span>
+                                    <span className="font-medium text-primary">
+                                      @{msg.reply_to.user?.username || "unknown"}
+                                    </span>
+                                    {isPollMessageContent(msg.reply_to.content) ? (
+                                      <span className="italic">poll</span>
+                                    ) : isImageOnlyMessage(msg.reply_to.content) ? (
+                                      <img
+                                        src={msg.reply_to.content.trim()}
+                                        alt="Image"
+                                        className="w-6 h-6 rounded object-cover flex-shrink-0"
+                                      />
+                                    ) : (
+                                      <span className="truncate max-w-[200px]">
+                                        <ReplyPreview content={msg.reply_to.content} maxLength={50} />
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                                
+                                {isEditing ? (
+                                  <div className="space-y-2">
+                                    <Textarea
+                                      ref={editTextareaRef}
+                                      value={editContent}
+                                      onChange={(e) => setEditContent(e.target.value)}
+                                      className="min-h-[60px] resize-none text-sm"
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Escape") {
+                                          setEditingMessageId(null);
+                                          setEditContent("");
+                                        } else if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                                          handleEditMessage(msg.id);
+                                        }
+                                      }}
+                                    />
+                                    <div className="flex gap-2 text-xs">
+                                      <button
+                                        className="text-primary hover:underline"
+                                        onClick={() => handleEditMessage(msg.id)}
+                                      >
+                                        Save
+                                      </button>
+                                      <button
+                                        className="text-muted-foreground hover:underline"
+                                        onClick={() => {
+                                          setEditingMessageId(null);
+                                          setEditContent("");
+                                        }}
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                                    
+                                    {/* Reactions */}
+                                    {msg.reactions && msg.reactions.length > 0 && (
+                                      <div className="flex flex-wrap gap-1 mt-2">
+                                        {msg.reactions.map((reaction) => (
+                                          <button
+                                            key={reaction.emoji}
+                                            onClick={() => handleAddReaction(msg.id, reaction.emoji)}
+                                            className={`flex items-center gap-1.5 px-2.5 py-1 text-sm rounded-md border transition-colors duration-200 ${
+                                              reaction.hasReacted
+                                                ? "bg-primary/20 border-primary text-primary"
+                                                : "bg-secondary border-transparent hover:border-border"
+                                            }`}
+                                          >
+                                            {reactionEmojiNode(reaction.emoji)}
+                                            <span className="text-xs">{reaction.count}</span>
+                                          </button>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                              
+                              {/* Mobile actions menu */}
+                              {(isHovered || showEmojiPicker === msg.id) && !isEditing && (
+                                <div 
+                                  className="hover-actions-menu absolute right-2 -top-4 z-50 flex items-center gap-1 bg-background/95 backdrop-blur-sm border border-border rounded-xl shadow-xl p-1 transition-opacity duration-200"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {/* Add Reaction */}
+                                  <EmojiGifPicker
+                                    open={showEmojiPicker === msg.id}
+                                    onOpenChange={(open) => {
+                                      setShowEmojiPicker(open ? msg.id : null);
+                                      if (open) {
+                                        setHoveredMessageId(msg.id);
+                                      }
+                                    }}
+                                    onEmojiSelect={(emoji) => {
+                                      handleAddReaction(msg.id, emoji);
+                                    }}
+                                    disableGif
+                                    serverId={currentServer?.id}
+                                    serverName={currentServer?.name}
+                                  >
+                                    <button
+                                      type="button"
+                                      className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                                      aria-label="Add reaction"
+                                      title="Add reaction"
+                                    >
+                                      <Smile className="w-4 h-4" />
+                                    </button>
+                                  </EmojiGifPicker>
+
+                                  {/* Reply */}
+                                  <button
+                                    type="button"
+                                    className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setReplyingToThread(msg.id);
+                                    }}
+                                    aria-label="Reply"
+                                    title="Reply"
+                                  >
+                                    <Reply className="w-4 h-4" />
+                                  </button>
+
+                                  {/* Edit (own messages) */}
+                                  {isOwnMessage && (
+                                    <button
+                                      type="button"
+                                      className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setEditingMessageId(msg.id);
+                                        setEditContent(msg.content);
+                                        setTimeout(() => editTextareaRef.current?.focus(), 0);
+                                      }}
+                                      aria-label="Edit"
+                                      title="Edit"
+                                    >
+                                      <Pencil className="w-4 h-4" />
+                                    </button>
+                                  )}
+
+                                  <div className="w-px h-5 bg-border mx-0.5" />
+
+                                  {/* Delete (own messages or admins) */}
+                                  {canDeleteMessage && (
+                                    <button
+                                      type="button"
+                                      className="p-2 rounded-lg bg-transparent hover:bg-destructive/10 transition-colors text-destructive"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setMessageToDelete(msg);
+                                        setShowDeleteModal(true);
+                                      }}
+                                      aria-label="Delete"
+                                      title="Delete"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-center text-muted-foreground py-8">Loading messages...</div>
+                    )}
+                  </div>
+
+                  {/* Reply Input */}
+                  <div className="border-t border-border p-4">
+                    <div className="space-y-2">
+                      {/* Reply Preview */}
+                      {replyingToThread && (() => {
+                        const replyToMsg = threadMessages[selectedThreadId]?.find(m => m.id === replyingToThread);
+                        if (!replyToMsg) return null;
+                        return (
+                          <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 rounded-lg border border-border/50 text-xs">
+                            <span className="text-muted-foreground">Replying to</span>
+                            <span className="font-medium text-primary">
+                              {replyToMsg.user?.display_name || replyToMsg.user?.username || "Unknown"}
+                            </span>
+                            <span className="text-muted-foreground truncate flex-1">
+                              {replyToMsg.content.substring(0, 50)}
+                              {replyToMsg.content.length > 50 ? "..." : ""}
+                            </span>
+                            <button
+                              onClick={() => setReplyingToThread(null)}
+                              className="p-1 rounded hover:bg-muted"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        );
+                      })()}
+                      <Textarea
+                        value={replyContent}
+                        onChange={(e) => setReplyContent(e.target.value)}
+                        placeholder={replyingToThread ? "Write a reply..." : "Reply to thread..."}
+                        className="min-h-[80px] resize-none"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                            handleReplyToThread(selectedThreadId);
+                          }
+                        }}
+                      />
+                      <div className="flex justify-end gap-2">
+                        {replyingToThread && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setReplyingToThread(null);
+                            }}
+                          >
+                            Cancel Reply
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedThreadId(null);
+                            setReplyContent("");
+                            setReplyingToThread(null);
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => handleReplyToThread(selectedThreadId)}
+                          disabled={!replyContent.trim() || isSendingReply}
+                        >
+                          {isSendingReply ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Sending...
+                            </>
+                          ) : (
+                            <>
+                              <Send className="w-4 h-4 mr-2" />
+                              Reply
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           );
         })()}
       </div>
