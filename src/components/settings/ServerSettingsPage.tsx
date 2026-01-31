@@ -24,7 +24,8 @@ import {
   Smile,
   GripVertical,
   ArrowLeft,
-  Download
+  Download,
+  Plug
 } from 'lucide-react';
 
 import {
@@ -1266,6 +1267,15 @@ export const ServerSettingsPage = () => {
                 <span>Emojis</span>
               </TabsTrigger>
             )}
+            {canManageChannels && (
+              <TabsTrigger
+                value="integrations"
+                className="w-full justify-start gap-2 text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+              >
+                <Plug className="w-4 h-4" />
+                <span>Integrations</span>
+              </TabsTrigger>
+            )}
             {isOwner && (
               <TabsTrigger
                 value="danger-zone"
@@ -1398,31 +1408,6 @@ export const ServerSettingsPage = () => {
                     This description will be shown in the Explore page (if public) and server overview.
                   </p>
                 </div>
-
-                {/* Import Discord Template */}
-                {canManageChannels && (
-                  <div className="space-y-2 border-t border-border pt-4">
-                    <Label className="text-sm font-medium">Import Discord Template</Label>
-                    <div className="flex items-start gap-3 p-4 rounded-lg border bg-secondary/30">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-foreground">Import from Discord</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Import categories, channels, and roles from a Discord server template.
-                        </p>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openModal('import-discord-template')}
-                        className="flex-shrink-0"
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        Import
-                      </Button>
-                    </div>
-                  </div>
-                )}
 
                 {/* Publish Server (owner-only) */}
                 {isOwner && (
@@ -2405,6 +2390,43 @@ export const ServerSettingsPage = () => {
                 </div>
               )}
             </TabsContent>
+
+            {/* Integrations Tab */}
+            {canManageChannels && (
+              <TabsContent value="integrations" className="m-0 p-6">
+                <div className="space-y-5 max-w-3xl">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Integrations</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Connect external services and import data from other platforms.
+                    </p>
+                  </div>
+
+                  {/* Discord Import */}
+                  <div className="space-y-2 border border-border rounded-lg p-4 bg-secondary/30">
+                    <Label className="text-sm font-medium">Discord Server Template</Label>
+                    <div className="flex items-start gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-foreground">Import from Discord</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Import categories, channels, and roles from a Discord server template. This will add the imported items to your server.
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openModal('import-discord-template')}
+                        className="flex-shrink-0"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Import
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+            )}
 
             {/* Danger Zone Tab */}
             {isOwner && (
