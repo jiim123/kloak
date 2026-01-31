@@ -284,7 +284,7 @@ export const AnnouncementChannelArea = () => {
           table: "announcement_comments",
         },
         async (payload) => {
-          const comment = payload.new || payload.old;
+          const comment = (payload.new || payload.old) as { id?: string; message_id?: string } | null;
           if (!comment || !comment.message_id) return;
 
           // Update comment count
@@ -295,7 +295,7 @@ export const AnnouncementChannelArea = () => {
 
           setCommentCounts((prev) => ({
             ...prev,
-            [comment.message_id]: count || 0,
+            [comment.message_id!]: count || 0,
           }));
 
           // Update last activity
@@ -307,13 +307,13 @@ export const AnnouncementChannelArea = () => {
                 user_id,
                 user:users (id, username, display_name, avatar_url)
               `)
-              .eq("id", comment.id)
+              .eq("id", comment.id!)
               .single();
 
             if (newComment) {
               setLastCommentActivity((prev) => ({
                 ...prev,
-                [comment.message_id]: {
+                [comment.message_id!]: {
                   time: newComment.created_at,
                   user: newComment.user as User,
                 },
