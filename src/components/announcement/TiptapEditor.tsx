@@ -79,7 +79,6 @@ export const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
         }).configure({
           inline: false,
           allowBase64: false,
-          selectable: true,
           HTMLAttributes: {
             class: 'rounded-lg my-2 cursor-pointer hover:opacity-90 max-w-full image-resizable',
             loading: 'lazy',
@@ -127,7 +126,7 @@ export const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
       // Only update if value actually changed from outside
       if (currentMarkdown !== value && value !== undefined) {
         const htmlContent = markdownToHtml(value);
-        editor.commands.setContent(htmlContent, false);
+        editor.commands.setContent(htmlContent, { emitUpdate: false });
       }
     }, [value, editor]);
 
@@ -347,9 +346,9 @@ export const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
       const handleSelectionUpdate = () => {
         const { selection } = editor.state;
         
-        // Check if an image node is selected
-        if (selection.node && selection.node.type.name === 'image') {
-          const node = selection.node;
+        // Check if an image node is selected (NodeSelection has a node property)
+        const nodeSelection = selection as { node?: { type: { name: string } } };
+        if (nodeSelection.node && nodeSelection.node.type.name === 'image') {
           // Find the image element in the DOM
           try {
             const pos = selection.$anchor.pos;
@@ -368,8 +367,9 @@ export const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
           
           // Alternative: find all images and match by src
           const allImages = editor.view.dom.querySelectorAll('img');
+          const imgNode = nodeSelection.node as { attrs?: { src?: string } };
           for (const img of Array.from(allImages)) {
-            if (img.getAttribute('src') === node.attrs.src) {
+            if (img.getAttribute('src') === imgNode.attrs?.src) {
               showImageControls(img as HTMLImageElement);
               return;
             }
