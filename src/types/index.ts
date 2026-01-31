@@ -135,7 +135,7 @@ export interface ServerMember {
 // Channel Types
 // ============================================
 
-export type ChannelType = 'text' | 'voice' | 'announcement';
+export type ChannelType = 'text' | 'voice' | 'announcement' | 'forum';
 
 export interface ChannelCategory {
   id: string;

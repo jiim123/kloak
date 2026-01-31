@@ -5,6 +5,7 @@ import {
   ChevronRight,
   Hash,
   Volume2,
+  MessageSquare,
   Settings,
   Plus,
   LogOut,
@@ -173,6 +174,16 @@ const SortableChannel = ({
     if (channel.type === "voice") {
       return (
         <Volume2
+          className={cn(
+            "w-4 h-4 flex-shrink-0 transition-colors",
+            isUnread && !isActive ? "text-foreground" : "text-muted-foreground",
+          )}
+        />
+      );
+    }
+    if (channel.type === "forum") {
+      return (
+        <MessageSquare
           className={cn(
             "w-4 h-4 flex-shrink-0 transition-colors",
             isUnread && !isActive ? "text-foreground" : "text-muted-foreground",

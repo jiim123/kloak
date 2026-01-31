@@ -3,6 +3,7 @@ import { ChannelHeader } from "@/components/chat/ChannelHeader";
 import { MessageList } from "@/components/chat/MessageList";
 import { MessageInput } from "@/components/chat/MessageInput";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
+import { ForumChannelArea } from "@/components/forum/ForumChannelArea";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useMessageStore } from "@/stores/messageStore";
@@ -220,6 +221,11 @@ export const ChatArea = () => {
   if (currentChannel.type === "voice") {
     // Voice UI is rendered by `VoicePersistentHost` so the connection can persist while navigating.
     return null;
+  }
+
+  if (currentChannel.type === "forum") {
+    // Forum channels use a different UI
+    return <ForumChannelArea />;
   }
 
   return (

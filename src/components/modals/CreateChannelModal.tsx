@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Hash, Volume2, FolderPlus, Loader2, Lock } from "lucide-react";
+import { Hash, Volume2, FolderPlus, Loader2, Lock, MessageSquare } from "lucide-react";
 import type { ChannelType } from "@/types";
 
 // Ghost Icon Component
@@ -32,7 +32,7 @@ export const CreateChannelModal = () => {
 
   const [mode, setMode] = useState<"channel" | "category">("channel");
   const [name, setName] = useState("");
-  const [selectedChannelType, setSelectedChannelType] = useState<"text" | "voice" | "ghost">("text");
+  const [selectedChannelType, setSelectedChannelType] = useState<"text" | "voice" | "ghost" | "forum">("text");
   const [categoryId, setCategoryId] = useState<string>("none");
   const [isPrivate, setIsPrivate] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -87,7 +87,7 @@ export const CreateChannelModal = () => {
       } else {
         const selectedCategoryId = presetCategoryId || (categoryId === "none" ? undefined : categoryId);
         // Ghost mode is a UI-only "channel type" but stored as a setting with text channel type
-        const actualChannelType: ChannelType = selectedChannelType === "ghost" ? "text" : selectedChannelType;
+        const actualChannelType: ChannelType = selectedChannelType === "ghost" ? "text" : (selectedChannelType === "forum" ? "forum" : selectedChannelType);
         const ghostMode = selectedChannelType === "ghost";
         const result = await createChannel(currentServer.id, name.trim(), actualChannelType, user.id, selectedCategoryId, undefined, isPrivate, ghostMode);
         if (!result) {
@@ -144,8 +144,8 @@ export const CreateChannelModal = () => {
                 </Label>
                 <RadioGroup
                   value={selectedChannelType}
-                  onValueChange={(value) => setSelectedChannelType(value as "text" | "voice" | "ghost")}
-                  className="grid grid-cols-3 gap-2"
+                  onValueChange={(value) => setSelectedChannelType(value as "text" | "voice" | "ghost" | "forum")}
+                  className="grid grid-cols-4 gap-2"
                 >
                   <Label
                     htmlFor="text"
@@ -203,6 +203,25 @@ export const CreateChannelModal = () => {
                     <span className="text-sm font-medium">Ghost</span>
                     <RadioGroupItem value="ghost" id="ghost" className="sr-only" />
                   </Label>
+
+                  <Label
+                    htmlFor="forum"
+                    className={`flex items-center gap-3 py-2 px-3 rounded-xl cursor-pointer border transition-colors ${
+                      selectedChannelType === "forum"
+                        ? "bg-primary/5 border-primary/50"
+                        : "bg-secondary/50 border-border/50 hover:bg-secondary/80"
+                    }`}
+                  >
+                    <div
+                      className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                        selectedChannelType === "forum" ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground"
+                      }`}
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                    </div>
+                    <span className="text-sm font-medium">Forum</span>
+                    <RadioGroupItem value="forum" id="forum" className="sr-only" />
+                  </Label>
                 </RadioGroup>
                 
                 {/* Channel Type Description */}
@@ -220,6 +239,11 @@ export const CreateChannelModal = () => {
                   {selectedChannelType === "ghost" && (
                     <p className="text-xs text-muted-foreground">
                       <span className="font-medium text-foreground">Ghost Mode:</span> A text channel where usernames and avatars are hidden for privacy. Admins and owners remain visible to maintain moderation.
+                    </p>
+                  )}
+                  {selectedChannelType === "forum" && (
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-medium text-foreground">Forum Channel:</span> A traditional forum where users can create threads and reply to them. Perfect for organized discussions and topic-based conversations.
                     </p>
                   )}
                 </div>
