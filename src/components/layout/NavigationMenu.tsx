@@ -96,67 +96,69 @@ export const NavigationMenu = () => {
         </nav>
       </header>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu Backdrop */}
       {menuOpen && (
-        <>
-          {/* Backdrop */}
-          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40" onClick={() => setMenuOpen(false)} />
+        <div 
+          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40" 
+          onClick={() => setMenuOpen(false)} 
+        />
+      )}
 
-          {/* Sidebar */}
-          <div className="fixed top-0 right-0 h-full w-full max-w-sm bg-background border-l border-border/30 z-50 flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between h-16 px-4 border-b border-border/30">
-              <Link to="/" onClick={() => setMenuOpen(false)}>
-                <img src={kloakLogo} alt="Kloak" className="h-5" />
+      {/* Mobile Menu Sidebar */}
+      {menuOpen && (
+        <div className="fixed top-0 right-0 h-full w-full max-w-sm bg-background border-l border-border/30 z-50 flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between h-16 px-4 border-b border-border/30">
+            <Link to="/" onClick={() => setMenuOpen(false)}>
+              <img src={kloakLogo} alt="Kloak" className="h-5" />
+            </Link>
+            <button
+              onClick={() => setMenuOpen(false)}
+              className="p-2 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Close menu"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-4">
+            {/* CTA Buttons */}
+            <div className="flex flex-col mb-6">
+              <Link to="/app" onClick={() => setMenuOpen(false)} className="block">
+                <Button variant="outline" className="w-full h-16 text-lg font-semibold justify-center rounded-none rounded-t-xl">
+                  Create Account
+                </Button>
               </Link>
-              <button
-                onClick={() => setMenuOpen(false)}
-                className="p-2 text-muted-foreground hover:text-foreground transition-colors"
-                aria-label="Close menu"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <Link to="/app" onClick={() => setMenuOpen(false)} className="block">
+                <Button className="w-full h-16 text-lg font-semibold justify-center rounded-none rounded-b-xl">
+                  Open Kloak
+                </Button>
+              </Link>
             </div>
 
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-4">
-              {/* CTA Buttons */}
-              <div className="flex flex-col mb-6">
-                <Link to="/app" onClick={() => setMenuOpen(false)} className="block">
-                  <Button variant="outline" className="w-full h-16 text-lg font-semibold justify-center rounded-none rounded-t-xl">
-                    Create Account
-                  </Button>
-                </Link>
-                <Link to="/app" onClick={() => setMenuOpen(false)} className="block">
-                  <Button className="w-full h-16 text-lg font-semibold justify-center rounded-none rounded-b-xl">
-                    Open Kloak
-                  </Button>
-                </Link>
-              </div>
+            <div className="h-px bg-border/30 mb-6" />
 
-              <div className="h-px bg-border/30 mb-6" />
-
-              {/* Links */}
-              <div className="space-y-2">
-                {[...mainLinks, ...legalLinks].map((link) => (
-                  <Link
-                    key={link.href}
-                    to={link.href}
-                    onClick={() => setMenuOpen(false)}
-                    className={cn(
-                      "flex items-center w-full h-14 px-4 text-base font-medium rounded-xl transition-colors",
-                      location.pathname === link.href
-                        ? "bg-muted text-foreground"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
-                    )}
-                  >
-                    {link.title}
-                  </Link>
-                ))}
-              </div>
+            {/* Links */}
+            <div className="space-y-2">
+              {[...mainLinks, ...legalLinks].map((link) => (
+                <Link
+                  key={link.href}
+                  to={link.href}
+                  onClick={() => setMenuOpen(false)}
+                  className={cn(
+                    "flex items-center w-full h-14 px-4 text-base font-medium rounded-xl transition-colors",
+                    location.pathname === link.href
+                      ? "bg-muted text-foreground"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+                  )}
+                >
+                  {link.title}
+                </Link>
+              ))}
             </div>
           </div>
-        </>
+        </div>
       )}
     </>
   );
