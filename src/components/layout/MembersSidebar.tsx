@@ -483,14 +483,12 @@ export const MembersSidebar = () => {
     <div className="h-full flex flex-col bg-background/50 border-l border-border/50 w-60">
       {/* Header */}
       <div className="px-4 py-3 border-b border-border/50">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold">Members</h3>
-          <p className="text-[11px] text-muted-foreground">
-            <span className="text-emerald-500">{onlineCount}</span>
-            <span className="mx-1">/</span>
-            <span>{totalCount}</span>
-          </p>
-        </div>
+        <h3 className="text-sm font-semibold">Members</h3>
+        <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
+          <span>{totalCount}</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          <span>Online: {onlineCount}</span>
+        </p>
       </div>
 
       {/* Members List */}
