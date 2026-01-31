@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import type React from "react";
 import { ChannelHeader } from "@/components/chat/ChannelHeader";
-import { MessageList } from "@/components/chat/MessageList";
+import { MessageContent } from "@/components/chat/MessageContent";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useMessageStore } from "@/stores/messageStore";
@@ -8,28 +9,56 @@ import { useUIStore } from "@/stores/uiStore";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { useSwipeGestureRef } from "@/hooks/useSwipeGesture";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Loader2, Paperclip, Smile, Send } from "lucide-react";
+import { useRealtimeReactions } from "@/hooks/useRealtimeReactions";
+import { Loader2, MessageSquare, Clock, MoreVertical, Smile, Reply, Pencil, Trash2, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { FormatToolbar, FORMAT_SYNTAX } from "@/components/chat/FormatToolbar";
 import { ImageUploadDialog } from "@/components/modals/ImageUploadDialog";
 import { EmojiGifPicker } from "@/components/modals/EmojiGifPicker";
+import { DeleteMessageModal } from "@/components/modals/DeleteMessageModal";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { handleError, showSuccess } from "@/lib/errorHandler";
-import type { Message } from "@/types";
+import { formatDistanceToNow } from "date-fns";
+import type { Message, User, ServerMember, CustomServerRole } from "@/types";
 import { TiptapEditor } from "./TiptapEditor";
+import { AnnouncementView } from "./AnnouncementView";
+import { cn } from "@/lib/utils";
+
+const ROLE_COLORS: Record<string, string> = {
+  owner: "text-yellow-400",
+  admin: "text-red-400",
+  moderator: "text-blue-400",
+};
+
+const getRoleColor = (role?: string): string => {
+  return role ? ROLE_COLORS[role] || "text-foreground" : "text-foreground";
+};
+
+const getRoleLabel = (role?: string): string => {
+  if (!role) return "Member";
+  return role.charAt(0).toUpperCase() + role.slice(1);
+};
+
+const isGradientColor = (value?: string | null) => !!value && value.startsWith("linear-gradient");
 
 export const AnnouncementChannelArea = () => {
-  const { currentChannel, currentServer } = useServerStore();
+  const { currentChannel, currentServer, members, roles } = useServerStore();
   const { user } = useAuthStore();
-  const { sendMessage, editMessage } = useMessageStore();
+  const { sendMessage, editMessage, deleteMessage, addReaction, removeReaction } = useMessageStore();
   const { setMobileSidebarOpen, setMemberSidebarOpen } = useUIStore();
   const isMobile = useIsMobile();
   const { hasPermission } = useMemberPermissions(currentChannel?.id);
   const canManageMessages = hasPermission("manage_messages");
 
+  const [announcements, setAnnouncements] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
+  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
+  const [lastCommentActivity, setLastCommentActivity] = useState<Record<string, { time: string; user?: User }>>({});
   const [isCreatingAnnouncement, setIsCreatingAnnouncement] = useState(false);
   const [announcementTitle, setAnnouncementTitle] = useState("");
   const [announcementContent, setAnnouncementContent] = useState("");
@@ -39,10 +68,58 @@ export const AnnouncementChannelArea = () => {
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState("");
+  const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
+  const [hoveredAnnouncementId, setHoveredAnnouncementId] = useState<string | null>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [announcementToDelete, setAnnouncementToDelete] = useState<Message | null>(null);
   const createTitleRef = useRef<HTMLInputElement>(null);
   const createTextareaRef = useRef<{ editor: any; dom: HTMLDivElement | null } | null>(null);
   const editTitleRef = useRef<HTMLInputElement>(null);
   const editTextareaRef = useRef<{ editor: any; dom: HTMLDivElement | null } | null>(null);
+  
+  // Load server emojis
+  useEffect(() => {
+    if (!currentServer?.id) return;
+    
+    let cancelled = false;
+    (async () => {
+      try {
+        const { fetchServerEmojis } = await import("@/lib/serverEmojis");
+        const emojis = await fetchServerEmojis(currentServer.id);
+        if (!cancelled) {
+          const map = new Map<string, string>();
+          emojis.forEach((emoji) => {
+            map.set(emoji.name, emoji.url);
+          });
+          setCustomEmojiMap(map);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setCustomEmojiMap(new Map());
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentServer?.id]);
+  
+  // Helper to render emoji
+  const reactionEmojiNode = useCallback(
+    (emoji: string) => {
+      const match = emoji.match(/^:([a-z0-9_]{2,32}):$/i);
+      if (match) {
+        const url = customEmojiMap.get(match[1]);
+        if (url) {
+          return <img src={url} alt={emoji} className="w-5 h-5 object-contain" loading="lazy" />;
+        }
+      }
+      return <span className="text-base leading-none font-emoji">{emoji}</span>;
+    },
+    [customEmojiMap],
+  );
 
   const swipeRef = useSwipeGestureRef({
     onSwipeRight: () => setMobileSidebarOpen(true),
@@ -50,6 +127,208 @@ export const AnnouncementChannelArea = () => {
     threshold: 50,
     enabled: isMobile,
   });
+
+  // Group reactions helper function
+  const groupReactions = useCallback((reactions: any[], currentUserId?: string) => {
+    const groups: Record<string, { emoji: string; count: number; users: string[]; hasReacted: boolean }> = {};
+    
+    reactions.forEach((reaction) => {
+      if (!groups[reaction.emoji]) {
+        groups[reaction.emoji] = {
+          emoji: reaction.emoji,
+          count: 0,
+          users: [],
+          hasReacted: false,
+        };
+      }
+      groups[reaction.emoji].count++;
+      groups[reaction.emoji].users.push(reaction.user_id);
+      if (reaction.user_id === currentUserId) {
+        groups[reaction.emoji].hasReacted = true;
+      }
+    });
+    
+    return Object.values(groups);
+  }, []);
+
+  // Subscribe to real-time reactions for this channel
+  useRealtimeReactions(currentChannel?.id || null);
+
+  // Sync reactions from messageStore to announcements state
+  const messagesByChannel = useMessageStore((state) => state.messagesByChannel);
+  
+  useEffect(() => {
+    if (!currentChannel?.id) return;
+    
+    const channelData = messagesByChannel[currentChannel.id];
+    if (!channelData) return;
+
+    // Update announcements with reactions from messageStore
+    setAnnouncements((prev) => {
+      return prev.map((announcement) => {
+        const messageInStore = channelData.messages.find(m => m.id === announcement.id);
+        if (messageInStore && messageInStore.reactions) {
+          return { ...announcement, reactions: messageInStore.reactions };
+        }
+        return announcement;
+      });
+    });
+  }, [currentChannel?.id, messagesByChannel]);
+
+  // Fetch announcements
+  const fetchAnnouncements = useCallback(async () => {
+    if (!currentChannel) return;
+
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("messages")
+        .select(`
+          *,
+          user:users (*),
+          attachments:message_attachments (*),
+          reactions (*)
+        `)
+        .eq("channel_id", currentChannel.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      // Group reactions for each announcement
+      const currentUserId = user?.id;
+      const announcementsWithReactions = (data || []).map((announcement: any) => ({
+        ...announcement,
+        reactions: groupReactions(announcement.reactions || [], currentUserId),
+      }));
+
+      setAnnouncements(announcementsWithReactions);
+
+      // Fetch comment counts and last activity for each announcement
+      const counts: Record<string, number> = {};
+      const activities: Record<string, { time: string; user?: User }> = {};
+
+      for (const announcement of data || []) {
+        // Get comment count
+        const { count } = await supabase
+          .from("announcement_comments")
+          .select("*", { count: "exact", head: true })
+          .eq("message_id", announcement.id);
+
+        counts[announcement.id] = count || 0;
+
+        // Get last comment activity
+        const { data: lastComment } = await supabase
+          .from("announcement_comments")
+          .select(`
+            created_at,
+            user_id,
+            user:users (id, username, display_name, avatar_url)
+          `)
+          .eq("message_id", announcement.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+
+        if (lastComment) {
+          activities[announcement.id] = {
+            time: lastComment.created_at,
+            user: lastComment.user as User,
+          };
+        } else {
+          activities[announcement.id] = {
+            time: announcement.created_at,
+            user: announcement.user as User,
+          };
+        }
+      }
+
+      setCommentCounts(counts);
+      setLastCommentActivity(activities);
+    } catch (error) {
+      handleError(error, "Failed to fetch announcements");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentChannel, user?.id, groupReactions]);
+
+  useEffect(() => {
+    fetchAnnouncements();
+
+    // Subscribe to new announcements
+    if (!currentChannel) return;
+
+    const channel = supabase
+      .channel(`announcements:${currentChannel.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "messages",
+          filter: `channel_id=eq.${currentChannel.id}`,
+        },
+        () => {
+          fetchAnnouncements();
+        }
+      )
+      .subscribe();
+
+    // Subscribe to comment changes for comment counts
+    const commentChannel = supabase
+      .channel(`announcement-comment-counts:${currentChannel.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "announcement_comments",
+        },
+        async (payload) => {
+          const comment = payload.new || payload.old;
+          if (!comment || !comment.message_id) return;
+
+          // Update comment count
+          const { count } = await supabase
+            .from("announcement_comments")
+            .select("*", { count: "exact", head: true })
+            .eq("message_id", comment.message_id);
+
+          setCommentCounts((prev) => ({
+            ...prev,
+            [comment.message_id]: count || 0,
+          }));
+
+          // Update last activity
+          if (payload.eventType === "INSERT") {
+            const { data: newComment } = await supabase
+              .from("announcement_comments")
+              .select(`
+                created_at,
+                user_id,
+                user:users (id, username, display_name, avatar_url)
+              `)
+              .eq("id", comment.id)
+              .single();
+
+            if (newComment) {
+              setLastCommentActivity((prev) => ({
+                ...prev,
+                [comment.message_id]: {
+                  time: newComment.created_at,
+                  user: newComment.user as User,
+                },
+              }));
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+      supabase.removeChannel(commentChannel);
+    };
+  }, [currentChannel, fetchAnnouncements]);
 
   const handleCreateAnnouncement = useCallback(
     async () => {
@@ -83,6 +362,7 @@ export const AnnouncementChannelArea = () => {
         setAnnouncementContent("");
         setIsCreateFocused(false);
         setShowFormatToolbar(false);
+        await fetchAnnouncements();
         showSuccess("Announcement created successfully");
       } catch (error) {
         handleError(error, "Failed to create announcement");
@@ -187,6 +467,7 @@ export const AnnouncementChannelArea = () => {
     setIsCreatingAnnouncement(true);
     try {
       await editMessage(editingMessage.id, fullContent, user.id);
+      await fetchAnnouncements();
       showSuccess("Announcement updated successfully");
       handleCancelCreate();
     } catch (error) {
@@ -412,9 +693,385 @@ export const AnnouncementChannelArea = () => {
           </>
         )}
 
-        {/* Messages List */}
-        <div className="flex-1 overflow-y-auto min-h-0">
-          <MessageList channelId={currentChannel.id} channelName={currentChannel.name} />
+        {/* Announcements List or View */}
+        <div className="flex-1 flex overflow-hidden relative">
+          {/* Announcements List */}
+          <div className={`${selectedMessageId ? 'w-full md:w-1/2 border-r border-border' : 'w-full'} ${selectedMessageId && isMobile ? 'hidden' : ''} overflow-y-auto transition-all`}>
+            {isLoading ? (
+              <div className="p-4 text-center text-muted-foreground">Loading announcements...</div>
+            ) : announcements.length === 0 ? (
+              <div className="p-8 text-center">
+                <MessageSquare className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <p className="text-muted-foreground">No announcements yet. Create one to get started!</p>
+              </div>
+            ) : (
+              <div className="p-4 space-y-6">
+                {announcements.map((announcement) => {
+                  const isSelected = selectedMessageId === announcement.id;
+                  const messageContent = announcement.content || "";
+                  const parts = messageContent.split('\n\n');
+                  const announcementTitle = parts.length > 1 
+                    ? parts[0].trim() 
+                    : messageContent.split('\n')[0].trim() || "No title";
+                  const announcementDescription = parts.length > 1 
+                    ? parts.slice(1).join('\n\n').trim() 
+                    : messageContent.split('\n').slice(1).join('\n').trim();
+                  const commentCount = commentCounts[announcement.id] || 0;
+                  
+                  // Get member info for role display
+                  const announcementMember = members.find((m) => m.user_id === announcement.user_id);
+                  
+                  // Get top custom role
+                  const memberRoles = announcementMember?.roles ?? [];
+                  let topCustomRole: CustomServerRole | null = null;
+                  if (memberRoles.length > 0) {
+                    const resolved = memberRoles.map((mr) => roles.find((r) => r.id === mr.id) ?? mr).filter(Boolean) as CustomServerRole[];
+                    for (const r of resolved) {
+                      if (!topCustomRole) {
+                        topCustomRole = r;
+                        continue;
+                      }
+                      const aPos = typeof r.position === "number" ? r.position : Number.POSITIVE_INFINITY;
+                      const bPos = typeof topCustomRole.position === "number" ? topCustomRole.position : Number.POSITIVE_INFINITY;
+                      if (aPos < bPos) topCustomRole = r;
+                    }
+                  }
+                  
+                  const roleColorClass = topCustomRole 
+                    ? (isGradientColor(topCustomRole.color) ? "text-transparent" : "text-foreground")
+                    : getRoleColor(announcementMember?.role);
+                  
+                  const roleColorStyle = topCustomRole && isGradientColor(topCustomRole.color)
+                    ? { background: topCustomRole.color, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" } as React.CSSProperties
+                    : undefined;
+                  
+                  const isOwnAnnouncement = user?.id === announcement.user_id;
+                  const isHovered = hoveredAnnouncementId === announcement.id;
+                  const isAdmin = canManageMessages;
+                  
+                  return (
+                    <div
+                      key={announcement.id}
+                      className="relative group cursor-pointer"
+                      onMouseEnter={() => setHoveredAnnouncementId(announcement.id)}
+                      onMouseLeave={() => setHoveredAnnouncementId(null)}
+                      onClick={() => setSelectedMessageId(isSelected ? null : announcement.id)}
+                    >
+                      {/* Header */}
+                      <div className="flex items-start justify-between pb-3" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          <AvatarWithDecoration
+                            user={announcement.user}
+                            className="w-10 h-10 flex-shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={cn("font-semibold text-sm", roleColorClass)} style={roleColorStyle}>
+                                {announcementMember?.nickname || announcement.user?.display_name || announcement.user?.username || "Unknown"}
+                              </span>
+                              {topCustomRole && (
+                                <span 
+                                  className="text-xs font-medium px-2 py-0.5 rounded"
+                                  style={
+                                    isGradientColor(topCustomRole.color)
+                                      ? { background: topCustomRole.color, color: "#fff" }
+                                      : { backgroundColor: `${topCustomRole.color}20`, color: topCustomRole.color }
+                                  }
+                                >
+                                  {topCustomRole.name}
+                                </span>
+                              )}
+                              {!topCustomRole && announcementMember?.role && (
+                                <span className={cn("text-xs text-muted-foreground")}>
+                                  {getRoleLabel(announcementMember.role)}
+                                </span>
+                              )}
+                            </div>
+                            {/* Metadata under user details */}
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                              <span>{formatDistanceToNow(new Date(announcement.created_at), { addSuffix: true })}</span>
+                              <span>•</span>
+                              <span className="flex items-center gap-1">
+                                <MessageSquare className="w-3.5 h-3.5" />
+                                <span>{commentCount} {commentCount === 1 ? 'comment' : 'comments'}</span>
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Content */}
+                      <div className="pb-4">
+                        {/* Title */}
+                        <h2 className="text-2xl font-bold text-foreground mb-3">
+                          {announcementTitle}
+                        </h2>
+                        
+                        {/* Description - Full content */}
+                        {announcementDescription && (
+                          <div className="text-sm text-foreground mb-4">
+                            <MessageContent
+                              content={announcementDescription}
+                              currentUserId={user?.id}
+                              messageUser={announcement.user}
+                            />
+                          </div>
+                        )}
+                        
+                        {/* Reactions */}
+                        {announcement.reactions && announcement.reactions.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mb-4">
+                            {announcement.reactions.map((reaction) => (
+                              <button
+                                key={reaction.emoji}
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  if (!user?.id) return;
+                                  
+                                  // Optimistic update
+                                  setAnnouncements((prev) => {
+                                    return prev.map((a) => {
+                                      if (a.id !== announcement.id) return a;
+                                      
+                                      const reactions = [...(a.reactions || [])];
+                                      const existingGroup = reactions.find(r => r.emoji === reaction.emoji);
+                                      
+                                      if (reaction.hasReacted) {
+                                        // Remove reaction
+                                        if (existingGroup) {
+                                          existingGroup.count--;
+                                          existingGroup.users = existingGroup.users.filter(u => u !== user.id);
+                                          existingGroup.hasReacted = false;
+                                          if (existingGroup.count === 0) {
+                                            return { ...a, reactions: reactions.filter(r => r.emoji !== reaction.emoji) };
+                                          }
+                                        }
+                                      } else {
+                                        // Add reaction
+                                        if (existingGroup) {
+                                          if (!existingGroup.users.includes(user.id)) {
+                                            existingGroup.count++;
+                                            existingGroup.users.push(user.id);
+                                            existingGroup.hasReacted = true;
+                                          }
+                                        } else {
+                                          reactions.push({
+                                            emoji: reaction.emoji,
+                                            count: 1,
+                                            users: [user.id],
+                                            hasReacted: true,
+                                          });
+                                        }
+                                      }
+                                      
+                                      return { ...a, reactions };
+                                    });
+                                  });
+                                  
+                                  // Then call the actual function
+                                  if (reaction.hasReacted) {
+                                    await removeReaction(announcement.id, user.id, reaction.emoji);
+                                  } else {
+                                    await addReaction(announcement.id, user.id, reaction.emoji);
+                                  }
+                                }}
+                                className={cn(
+                                  "flex items-center gap-1.5 px-2.5 py-1 text-sm rounded-md border transition-colors duration-200",
+                                  reaction.hasReacted
+                                    ? "bg-primary/20 border-primary text-primary"
+                                    : "bg-secondary border-transparent hover:border-border"
+                                )}
+                              >
+                                {reactionEmojiNode(reaction.emoji)}
+                                <span className="text-xs">{reaction.count}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Hover actions menu - Desktop only */}
+                      {(isHovered || showEmojiPicker === announcement.id) && (
+                        <div 
+                          className="absolute right-2 -top-4 z-50 hidden md:flex items-center gap-1 bg-background/95 backdrop-blur-sm border border-border rounded-xl shadow-xl p-1 transition-opacity duration-200 opacity-0 group-hover:opacity-100 focus-within:opacity-100"
+                          onMouseEnter={() => setHoveredAnnouncementId(announcement.id)}
+                          onMouseLeave={(e) => {
+                            const relatedTarget = e.relatedTarget as HTMLElement;
+                            if (!relatedTarget || !relatedTarget.closest('[role="dialog"]')) {
+                              setHoveredAnnouncementId(null);
+                            }
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {/* Add Reaction */}
+                          <EmojiGifPicker
+                            open={showEmojiPicker === announcement.id}
+                            onOpenChange={(open) => {
+                              setShowEmojiPicker(open ? announcement.id : null);
+                              if (open) {
+                                setHoveredAnnouncementId(announcement.id);
+                              }
+                            }}
+                            onEmojiSelect={async (emoji) => {
+                              if (!user?.id) return;
+                              
+                              const hasReacted = announcement.reactions?.some(r => r.emoji === emoji && r.hasReacted);
+                              
+                              // Optimistic update
+                              setAnnouncements((prev) => {
+                                return prev.map((a) => {
+                                  if (a.id !== announcement.id) return a;
+                                  
+                                  const reactions = [...(a.reactions || [])];
+                                  const existingGroup = reactions.find(r => r.emoji === emoji);
+                                  
+                                  if (hasReacted) {
+                                    // Remove reaction
+                                    if (existingGroup) {
+                                      existingGroup.count--;
+                                      existingGroup.users = existingGroup.users.filter(u => u !== user.id);
+                                      existingGroup.hasReacted = false;
+                                      if (existingGroup.count === 0) {
+                                        return { ...a, reactions: reactions.filter(r => r.emoji !== emoji) };
+                                      }
+                                    }
+                                  } else {
+                                    // Add reaction
+                                    if (existingGroup) {
+                                      if (!existingGroup.users.includes(user.id)) {
+                                        existingGroup.count++;
+                                        existingGroup.users.push(user.id);
+                                        existingGroup.hasReacted = true;
+                                      }
+                                    } else {
+                                      reactions.push({
+                                        emoji,
+                                        count: 1,
+                                        users: [user.id],
+                                        hasReacted: true,
+                                      });
+                                    }
+                                  }
+                                  
+                                  return { ...a, reactions };
+                                });
+                              });
+                              
+                              // Then call the actual function
+                              if (hasReacted) {
+                                await removeReaction(announcement.id, user.id, emoji);
+                              } else {
+                                await addReaction(announcement.id, user.id, emoji);
+                              }
+                            }}
+                            disableGif
+                            serverId={currentServer?.id}
+                            serverName={currentServer?.name}
+                          >
+                            <button
+                              type="button"
+                              className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                              aria-label="Add reaction"
+                              title="Add reaction"
+                              onMouseDown={(e) => e.preventDefault()}
+                            >
+                              <Smile className="w-4 h-4" />
+                            </button>
+                          </EmojiGifPicker>
+
+                          {/* Edit (own announcements) */}
+                          {isOwnAnnouncement && (
+                            <button
+                              type="button"
+                              className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                window.dispatchEvent(new CustomEvent("startEditAnnouncement", { detail: { message: announcement } }));
+                              }}
+                              onMouseDown={(e) => e.preventDefault()}
+                              aria-label="Edit"
+                              title="Edit"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                          )}
+
+                          {/* Copy */}
+                          <button
+                            type="button"
+                            className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              navigator.clipboard.writeText(announcement.content);
+                              showSuccess("Content copied to clipboard");
+                            }}
+                            onMouseDown={(e) => e.preventDefault()}
+                            aria-label="Copy text"
+                            title="Copy text"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </button>
+
+                          <div className="w-px h-5 bg-border mx-0.5" />
+
+                          {/* Delete (own announcements or admins) */}
+                          {(isOwnAnnouncement || isAdmin) && (
+                            <button
+                              type="button"
+                              className="p-2 rounded-lg bg-transparent hover:bg-destructive/10 transition-colors text-destructive"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setAnnouncementToDelete(announcement);
+                                setShowDeleteModal(true);
+                              }}
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }}
+                              aria-label="Delete"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Announcement View - Only shown when an announcement is selected */}
+          {selectedMessageId && (() => {
+            const selectedMessage = announcements.find(m => m.id === selectedMessageId);
+            if (!selectedMessage) return null;
+            return (
+              <>
+                {/* Desktop: Side-by-side view */}
+                <div className="hidden md:flex md:w-1/2 flex-col border-l border-border">
+                  <AnnouncementView
+                    message={selectedMessage}
+                    onClose={() => setSelectedMessageId(null)}
+                  />
+                </div>
+
+                {/* Mobile: Full-screen overlay */}
+                {isMobile && (
+                  <div className="md:hidden fixed inset-0 z-50 bg-background flex flex-col">
+                    <AnnouncementView
+                      message={selectedMessage}
+                      onClose={() => setSelectedMessageId(null)}
+                    />
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
       </div>
 
@@ -434,6 +1091,26 @@ export const AnnouncementChannelArea = () => {
         }} 
         onUpload={handleImageUpload} 
       />
+
+      {/* Delete Announcement Modal */}
+      {announcementToDelete && (
+        <DeleteMessageModal
+          open={showDeleteModal}
+          onOpenChange={setShowDeleteModal}
+          onConfirm={async () => {
+            if (!user || !announcementToDelete) return;
+            try {
+              await deleteMessage(announcementToDelete.id, user.id);
+              setShowDeleteModal(false);
+              setAnnouncementToDelete(null);
+              await fetchAnnouncements();
+            } catch (error) {
+              handleError(error, "Failed to delete announcement");
+            }
+          }}
+          messageContent={announcementToDelete.content}
+        />
+      )}
     </div>
   );
 };
