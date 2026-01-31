@@ -473,19 +473,23 @@ export const MembersSidebar = () => {
   MemberItem.displayName = "MemberItem";
 
   const totalCount = members.length;
+  
+  // Calculate online count (all members not offline)
+  const onlineCount = useMemo(() => {
+    return members.filter((m) => !getMemberPresence(m).isOffline).length;
+  }, [members]);
 
   return (
     <div className="h-full flex flex-col bg-background/50 border-l border-border/50 w-60">
       {/* Header */}
       <div className="px-4 py-3 border-b border-border/50">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Users className="w-3.5 h-3.5 text-primary" />
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold">Members</h3>
-            <p className="text-[10px] text-muted-foreground">{totalCount} total</p>
-          </div>
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold">Members</h3>
+          <p className="text-[11px] text-muted-foreground">
+            <span className="text-emerald-500">{onlineCount}</span>
+            <span className="mx-1">/</span>
+            <span>{totalCount}</span>
+          </p>
         </div>
       </div>
 
