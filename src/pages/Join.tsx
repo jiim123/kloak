@@ -182,16 +182,12 @@ const Join = () => {
                   If you're passionate about privacy and want to contribute to something meaningful, 
                   we'd love to hear from you. Tell us about yourself, what excites you, and how you'd like to help.
                 </p>
-                <Button
-                  asChild
-                  size="lg"
-                  className="h-14 px-8 text-lg"
-                >
-                  <a href="mailto:join@kloak.app">
+                <a href="mailto:join@kloak.app">
+                  <Button size="lg" className="h-14 px-8 text-lg">
                     <Mail className="w-5 h-5 mr-2" />
                     join@kloak.app
-                  </a>
-                </Button>
+                  </Button>
+                </a>
               </motion.div>
             </div>
           </section>
