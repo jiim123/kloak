@@ -119,7 +119,13 @@ export const MembersSidebar = () => {
   const currentUserRole = currentUserMember?.role;
 
   // Use database-backed permission checking
+  // Note: channelId is not needed for members sidebar permissions
   const { hasPermission: checkPermission } = useMemberPermissions();
+
+  // Calculate online count (all members not offline) - must be before early return
+  const onlineCount = useMemo(() => {
+    return members.filter((m) => !getMemberPresence(m).isOffline).length;
+  }, [members]);
 
   // Group members: roles first (only online members with roles), then online/offline (only no-role members)
   const { roleGroups, onlineNoRoleMembers, offlineNoRoleMembers } = useMemo(() => {
@@ -287,7 +293,7 @@ export const MembersSidebar = () => {
         if (aPos < bPos) best = r;
       }
       return best?.color ?? null;
-    }, [member.roles]);
+    }, [member.roles, roles]);
 
     const isGradientName = !!priorityCustomRoleColor && priorityCustomRoleColor.startsWith("linear-gradient");
 
@@ -473,11 +479,6 @@ export const MembersSidebar = () => {
   MemberItem.displayName = "MemberItem";
 
   const totalCount = members.length;
-  
-  // Calculate online count (all members not offline)
-  const onlineCount = useMemo(() => {
-    return members.filter((m) => !getMemberPresence(m).isOffline).length;
-  }, [members]);
 
   return (
     <div className="h-full flex flex-col bg-background/50 border-l border-border/50 w-60">

@@ -34,16 +34,17 @@ export const FormatToolbar = ({ onFormat, onClose, onImageClick, expanded = fals
   
   return (
     <TooltipProvider>
-      <div className="flex items-center gap-1 px-2 py-1.5 bg-popover border border-border rounded-lg shadow-lg">
-        {visibleOptions.map((option) => {
-          if (option.isAction && option.id === 'image' && onImageClick) {
+      <div className="flex items-center gap-1 px-2 py-1.5 bg-popover border border-border rounded-lg shadow-lg overflow-x-auto scrollbar-hide">
+        <div className="flex items-center gap-1 min-w-max">
+          {visibleOptions.map((option) => {
+            if (option.isAction && option.id === 'image' && onImageClick) {
             return (
               <Tooltip key={option.id}>
                 <TooltipTrigger asChild>
                   <button
                     onClick={onImageClick}
                     onMouseDown={(e) => e.preventDefault()}
-                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150 flex-shrink-0"
                   >
                     <option.icon className="w-4 h-4" />
                   </button>
@@ -53,14 +54,14 @@ export const FormatToolbar = ({ onFormat, onClose, onImageClick, expanded = fals
                 </TooltipContent>
               </Tooltip>
             );
-          }
-          return (
-            <Tooltip key={option.id}>
+            }
+            return (
+              <Tooltip key={option.id}>
               <TooltipTrigger asChild>
                 <button
                   onClick={() => onFormat(option.id)}
                   onMouseDown={(e) => e.preventDefault()}
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150 flex-shrink-0"
                 >
                   <option.icon className="w-4 h-4" />
                 </button>
@@ -68,21 +69,21 @@ export const FormatToolbar = ({ onFormat, onClose, onImageClick, expanded = fals
               <TooltipContent>
                 <p>{option.label}</p>
               </TooltipContent>
-            </Tooltip>
-          );
-        })}
+              </Tooltip>
+            );
+          })}
 
         {!expanded && (
           <>
             {/* Divider */}
-            <div className="w-px h-5 bg-border mx-1" />
+            <div className="w-px h-5 bg-border mx-1 flex-shrink-0" />
             {/* More options indicator */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   onClick={() => {/* Could expand or show dropdown */}}
                   onMouseDown={(e) => e.preventDefault()}
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150 flex-shrink-0"
                 >
                   <MoreVertical className="w-4 h-4" />
                 </button>
@@ -95,7 +96,7 @@ export const FormatToolbar = ({ onFormat, onClose, onImageClick, expanded = fals
         )}
 
         {/* Divider */}
-        <div className="w-px h-5 bg-border mx-1" />
+        <div className="w-px h-5 bg-border mx-1 flex-shrink-0" />
 
         {/* Close button */}
         <Tooltip>
@@ -103,7 +104,7 @@ export const FormatToolbar = ({ onFormat, onClose, onImageClick, expanded = fals
             <button
               onClick={onClose}
               onMouseDown={(e) => e.preventDefault()}
-              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150 flex-shrink-0"
             >
               <X className="w-4 h-4" />
             </button>
@@ -112,6 +113,7 @@ export const FormatToolbar = ({ onFormat, onClose, onImageClick, expanded = fals
             <p>Close</p>
           </TooltipContent>
         </Tooltip>
+        </div>
       </div>
     </TooltipProvider>
   );
