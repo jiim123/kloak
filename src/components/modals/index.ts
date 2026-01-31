@@ -18,3 +18,4 @@ export { ConfirmActionModal, ChangeNicknameModal } from './ConfirmActionModal';
 export { WelcomeModal } from './WelcomeModal';
 export { OnboardingModal } from './OnboardingModal';
 export { PermissionDebugPanel } from './PermissionDebugPanel';
+export { ImportDiscordTemplateModal } from './ImportDiscordTemplateModal';

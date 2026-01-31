@@ -86,6 +86,9 @@ interface ServerState {
   deleteRolePermission: (permissionId: string, userId: string) => Promise<void>;
   deleteChannelPermission: (permissionId: string, userId: string) => Promise<void>;
 
+  // Discord Template Import
+  importDiscordTemplate: (serverId: string, userId: string, templateUrl: string) => Promise<{ success: boolean; error?: string; imported?: { categories: number; channels: number; roles: number } }>;
+
   // Utility
   clearServerState: () => void;
 }
@@ -1516,6 +1519,129 @@ export const useServerStore = create<ServerState>((set, get) => ({
     } catch (error) {
       console.error('Failed to delete channel permission:', error);
       throw error;
+    }
+  },
+
+  importDiscordTemplate: async (serverId: string, userId: string, templateUrl: string) => {
+    try {
+      // Fetch template data from Edge Function
+      const { data, error } = await supabase.functions.invoke('fetch-discord-template', {
+        body: { templateUrl },
+      });
+
+      if (error) {
+        return { success: false, error: error.message || 'Failed to fetch template' };
+      }
+
+      if (data?.error) {
+        return { success: false, error: data.error };
+      }
+
+      const template = data as {
+        name: string;
+        description: string | null;
+        categories: Array<{ name: string; position: number; channels: Array<{ name: string; type: string; topic?: string | null; position: number; is_nsfw: boolean; slowmode_seconds: number }> }>;
+        channels: Array<{ name: string; type: string; topic?: string | null; position: number; is_nsfw: boolean; slowmode_seconds: number }>;
+        roles: Array<{ name: string; color: string; position: number; icon: string | null }>;
+      };
+
+      let importedCategories = 0;
+      let importedChannels = 0;
+      let importedRoles = 0;
+
+      // Import roles first (they might be referenced by channels)
+      for (const role of template.roles) {
+        try {
+          await get().createRole(serverId, userId, role.name, role.color, role.icon);
+          importedRoles++;
+        } catch (err) {
+          console.error(`Failed to import role ${role.name}:`, err);
+        }
+      }
+
+      // Import categories
+      const categoryMap = new Map<string, string>(); // Discord category name -> our category ID
+      for (const category of template.categories) {
+        try {
+          const createdCategory = await get().createCategory(serverId, category.name, userId);
+          if (createdCategory) {
+            categoryMap.set(category.name, createdCategory.id);
+            importedCategories++;
+
+            // Import channels in this category
+            for (const channel of category.channels) {
+              try {
+                const createdChannel = await get().createChannel(
+                  serverId,
+                  channel.name,
+                  channel.type as ChannelType,
+                  userId,
+                  createdCategory.id,
+                  undefined,
+                  false,
+                  false
+                );
+                // Update channel with topic, NSFW, and slowmode if needed
+                if (createdChannel && (channel.topic || channel.is_nsfw || channel.slowmode_seconds > 0)) {
+                  await get().updateChannel(createdChannel.id, {
+                    topic: channel.topic || null,
+                    is_nsfw: channel.is_nsfw,
+                    slowmode_seconds: channel.slowmode_seconds,
+                  }, userId);
+                }
+                importedChannels++;
+              } catch (err) {
+                console.error(`Failed to import channel ${channel.name}:`, err);
+              }
+            }
+          }
+        } catch (err) {
+          console.error(`Failed to import category ${category.name}:`, err);
+        }
+      }
+
+      // Import uncategorized channels
+      for (const channel of template.channels) {
+        try {
+          const createdChannel = await get().createChannel(
+            serverId,
+            channel.name,
+            channel.type as ChannelType,
+            userId,
+            undefined,
+            undefined,
+            false,
+            false
+          );
+          // Update channel with topic, NSFW, and slowmode if needed
+          if (createdChannel && (channel.topic || channel.is_nsfw || channel.slowmode_seconds > 0)) {
+            await get().updateChannel(createdChannel.id, {
+              topic: channel.topic || null,
+              is_nsfw: channel.is_nsfw,
+              slowmode_seconds: channel.slowmode_seconds,
+            }, userId);
+          }
+          importedChannels++;
+        } catch (err) {
+          console.error(`Failed to import channel ${channel.name}:`, err);
+        }
+      }
+
+      // Refresh channels and roles to show imported items
+      await get().fetchChannels(serverId);
+      await get().fetchRoles(serverId);
+
+      return {
+        success: true,
+        imported: {
+          categories: importedCategories,
+          channels: importedChannels,
+          roles: importedRoles,
+        },
+      };
+    } catch (error: any) {
+      console.error('Failed to import Discord template:', error);
+      return { success: false, error: error.message || 'Failed to import template' };
     }
   },
 

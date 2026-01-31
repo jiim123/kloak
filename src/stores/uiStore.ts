@@ -32,6 +32,7 @@ export type ModalType =
   | 'changeNickname'
   | 'confirmAction'
   | 'permission-debug'
+  | 'import-discord-template'
   | null;
 
 interface ModalData {

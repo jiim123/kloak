@@ -23,7 +23,8 @@ import {
   Check,
   Smile,
   GripVertical,
-  ArrowLeft
+  ArrowLeft,
+  Download
 } from 'lucide-react';
 
 import {
@@ -167,7 +168,7 @@ const parseColorValue = (colorValue: string): { type: 'solid' | 'gradient'; colo
 };
 
 export const ServerSettingsPage = () => {
-  const { closeServerSettings, isServerSettingsOpen } = useUIStore();
+  const { closeServerSettings, isServerSettingsOpen, openModal } = useUIStore();
   const { 
     currentServer, 
     servers, 
@@ -1397,6 +1398,31 @@ export const ServerSettingsPage = () => {
                     This description will be shown in the Explore page (if public) and server overview.
                   </p>
                 </div>
+
+                {/* Import Discord Template */}
+                {canManageChannels && (
+                  <div className="space-y-2 border-t border-border pt-4">
+                    <Label className="text-sm font-medium">Import Discord Template</Label>
+                    <div className="flex items-start gap-3 p-4 rounded-lg border bg-secondary/30">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-foreground">Import from Discord</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Import categories, channels, and roles from a Discord server template.
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openModal('import-discord-template')}
+                        className="flex-shrink-0"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Import
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Publish Server (owner-only) */}
                 {isOwner && (
