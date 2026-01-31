@@ -1020,11 +1020,22 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       )}
 
       {/* Reply preview */}
-      {replyingTo && (
-        <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-muted/40 rounded-t-2xl border-b border-border/50 font-[Inter,system-ui,sans-serif]">
-          <span className="text-[12px] sm:text-[13px] leading-[1.5] text-muted-foreground">
-            Replying to <span className="font-medium text-primary">@{replyingTo.user?.username}</span>
-          </span>
+      {replyingTo && (() => {
+        // Check if ghost mode is enabled and reply author is not admin
+        const isGhostMode = currentChannel?.ghost_mode || false;
+        const replyAuthorMember = replyingTo.user?.id ? members.find(m => m.user_id === replyingTo.user?.id) : null;
+        const replyAuthorIsAdmin = replyAuthorMember ? (replyAuthorMember.role === 'owner' || replyAuthorMember.role === 'admin') : false;
+        const showReplyAuthorIdentity = !isGhostMode || replyAuthorIsAdmin;
+        
+        return (
+          <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-muted/40 rounded-t-2xl border-b border-border/50 font-[Inter,system-ui,sans-serif]">
+            <span className="text-[12px] sm:text-[13px] leading-[1.5] text-muted-foreground">
+              Replying to {showReplyAuthorIdentity ? (
+                <span className="font-medium text-primary">@{replyingTo.user?.username}</span>
+              ) : (
+                <span className="font-medium text-primary italic">Anonymous</span>
+              )}
+            </span>
           {isImageOnlyMessage(replyingTo.content) ? (
             <img
               src={replyingTo.content.trim()}
@@ -1036,14 +1047,15 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
               <ReplyPreview content={replyingTo.content} maxLength={50} />
             </span>
           )}
-          <button
-            onClick={cancelReply}
-            className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-150 ml-auto"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
+            <button
+              onClick={cancelReply}
+              className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-150 ml-auto"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        );
+      })()}
 
       {/* Floating input container */}
       <MobileOptimizedInput

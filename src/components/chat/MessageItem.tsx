@@ -345,6 +345,16 @@ export const MessageItem = memo(function MessageItem({
   }, [messageMember]);
   const showGhostIdentity = isGhostMode && !messageAuthorIsAdmin;
 
+  // Check if reply author is admin (for ghost mode)
+  const replyAuthorIsAdmin = useMemo(() => {
+    if (!message.reply_to?.user?.id || !isGhostMode) return false;
+    const replyMember = members.find(m => m.user_id === message.reply_to?.user?.id);
+    if (!replyMember) return false;
+    const role = replyMember.role;
+    return role === 'owner' || role === 'admin';
+  }, [message.reply_to?.user?.id, members, isGhostMode]);
+  const showReplyAuthorIdentity = !isGhostMode || replyAuthorIsAdmin;
+
   // Memoize formatted timestamps
   const formattedTime = useMemo(() => {
     const timeStr = format(new Date(message.created_at), "h:mm a");
@@ -739,9 +749,13 @@ export const MessageItem = memo(function MessageItem({
                       >
                         <CornerUpLeft className="w-3 h-3 flex-shrink-0" />
                         <span>Replying to</span>
-                        <span className="font-medium text-primary">
-                          @{message.reply_to.user?.username || "unknown"}
-                        </span>
+                        {showReplyAuthorIdentity ? (
+                          <span className="font-medium text-primary">
+                            @{message.reply_to.user?.username || "unknown"}
+                          </span>
+                        ) : (
+                          <span className="font-medium text-primary italic">Anonymous</span>
+                        )}
                         {isPollMessageContent(message.reply_to.content) ? (
                           <span className="italic">poll</span>
                         ) : isImageOnlyMessage(message.reply_to.content) ? (

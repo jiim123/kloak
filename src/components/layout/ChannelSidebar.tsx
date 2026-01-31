@@ -72,6 +72,19 @@ import {
 } from "@/components/ui/context-menu";
 import type { Channel, ChannelCategory, ServerRole } from "@/types";
 
+// Ghost Icon Component
+const GhostIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
+    <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g>
+    <g id="SVGRepo_iconCarrier">
+      <path d="M16 10.5C16 11.3284 15.5523 12 15 12C14.4477 12 14 11.3284 14 10.5C14 9.67157 14.4477 9 15 9C15.5523 9 16 9.67157 16 10.5Z" fill="currentColor"></path>
+      <ellipse cx="9" cy="10.5" rx="1" ry="1.5" fill="currentColor"></ellipse>
+      <path d="M22 19.723V12.3006C22 6.61173 17.5228 2 12 2C6.47715 2 2 6.61173 2 12.3006V19.723C2 21.0453 3.35098 21.9054 4.4992 21.314C5.42726 20.836 6.5328 20.9069 7.39614 21.4998C8.36736 22.1667 9.63264 22.1667 10.6039 21.4998L10.9565 21.2576C11.5884 20.8237 12.4116 20.8237 13.0435 21.2576L13.3961 21.4998C14.3674 22.1667 15.6326 22.1667 16.6039 21.4998C17.4672 20.9069 18.5727 20.836 19.5008 21.314C20.649 21.9054 22 21.0453 22 19.723Z" stroke="currentColor" strokeWidth="1.5"></path>
+    </g>
+  </svg>
+);
+
 const isAdminRole = (role: ServerRole | undefined): boolean => {
   return role === "owner" || role === "admin" || role === "moderator";
 };
@@ -160,6 +173,17 @@ const SortableChannel = ({
     if (channel.type === "voice") {
       return (
         <Volume2
+          className={cn(
+            "w-4 h-4 flex-shrink-0 transition-colors",
+            isUnread && !isActive ? "text-foreground" : "text-muted-foreground",
+          )}
+        />
+      );
+    }
+    // Show ghost icon if ghost mode is enabled
+    if (channel.ghost_mode) {
+      return (
+        <GhostIcon
           className={cn(
             "w-4 h-4 flex-shrink-0 transition-colors",
             isUnread && !isActive ? "text-foreground" : "text-muted-foreground",
@@ -899,13 +923,22 @@ export const ChannelSidebar = () => {
     if (activeType === "channel") {
       const channel = channels.find((c) => c.id === activeId);
       if (channel) {
+        const getIcon = () => {
+          if (channel.icon) {
+            return <span className="text-base font-emoji">{channel.icon}</span>;
+          }
+          if (channel.type === "voice") {
+            return <Volume2 className="w-4 h-4 text-muted-foreground" />;
+          }
+          if (channel.ghost_mode) {
+            return <GhostIcon className="w-4 h-4 text-muted-foreground" />;
+          }
+          return <Hash className="w-4 h-4 text-muted-foreground" />;
+        };
+        
         return (
           <div className="flex items-center gap-2 px-3 py-1.5 bg-card border border-border shadow-lg rounded-md text-sm ring-2 ring-primary/30">
-            {channel.icon ? (
-              <span className="text-base font-emoji">{channel.icon}</span>
-            ) : (
-              <Hash className="w-4 h-4 text-muted-foreground" />
-            )}
+            {getIcon()}
             <span>{channel.name}</span>
           </div>
         );

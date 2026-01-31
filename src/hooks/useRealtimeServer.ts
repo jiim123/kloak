@@ -148,12 +148,32 @@ export const useRealtimeServer = (serverId: string | null) => {
         (payload) => {
           try {
             const updated = payload.new as any;
+            // Normalize the updated channel data to ensure proper types
+            const normalizedChannel = {
+              id: String(updated.id),
+              server_id: String(updated.server_id),
+              category_id: updated.category_id ? String(updated.category_id) : null,
+              name: String(updated.name),
+              topic: updated.topic ? String(updated.topic) : null,
+              type: (String(updated.type) as any) || 'text',
+              position: Number(updated.position) || 0,
+              is_nsfw: Boolean(updated.is_nsfw),
+              slowmode_seconds: Number(updated.slowmode_seconds) || 0,
+              is_read_only: Boolean(updated.is_read_only),
+              is_private: Boolean(updated.is_private),
+              icon: updated.icon ? String(updated.icon) : null,
+              created_at: String(updated.created_at),
+              block_links: Boolean(updated.block_links),
+              allowed_link_domains: Array.isArray(updated.allowed_link_domains) ? updated.allowed_link_domains as string[] : [],
+              ghost_mode: Boolean(updated.ghost_mode),
+            };
+            
             useServerStore.setState((state) => ({
               channels: state.channels.map((ch) =>
-                ch.id === updated.id ? { ...ch, ...updated } : ch
+                ch.id === normalizedChannel.id ? { ...ch, ...normalizedChannel } : ch
               ),
-              currentChannel: state.currentChannel?.id === updated.id
-                ? { ...state.currentChannel, ...updated }
+              currentChannel: state.currentChannel?.id === normalizedChannel.id
+                ? { ...state.currentChannel, ...normalizedChannel }
                 : state.currentChannel,
             }));
           } catch (error) {

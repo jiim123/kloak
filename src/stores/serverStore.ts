@@ -44,7 +44,7 @@ interface ServerState {
   // Channel actions
   fetchChannels: (serverId: string) => Promise<void>;
   createCategory: (serverId: string, name: string, userId: string) => Promise<ChannelCategory | null>;
-  createChannel: (serverId: string, name: string, type: ChannelType, userId: string, categoryId?: string, icon?: string, isPrivate?: boolean) => Promise<Channel | null>;
+  createChannel: (serverId: string, name: string, type: ChannelType, userId: string, categoryId?: string, icon?: string, isPrivate?: boolean, ghostMode?: boolean) => Promise<Channel | null>;
   
   // Channel member actions (for private channels)
   channelMembers: { channelId: string; members: import('@/types').ChannelMember[] }[];
@@ -574,23 +574,32 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }
   },
 
-  createChannel: async (serverId: string, name: string, type: ChannelType, userId: string, categoryId?: string, icon?: string, isPrivate?: boolean) => {
+  createChannel: async (serverId: string, name: string, type: ChannelType, userId: string, categoryId?: string, icon?: string, isPrivate?: boolean, ghostMode?: boolean) => {
     try {
       const { channels } = get();
       const categoryChannels = channels.filter((c) => c.category_id === categoryId);
       const position = categoryChannels.length;
 
       // Use RPC function to bypass RLS
-      const { data, error } = await supabase.rpc('create_channel', {
+      const rpcParams: Record<string, unknown> = {
         _server_id: serverId,
         _user_id: userId,
         _name: name,
         _type: type,
-        _category_id: categoryId || null,
         _position: position,
-        _icon: icon || null,
         _is_private: isPrivate || false,
-      });
+        _ghost_mode: ghostMode || false,
+      };
+      
+      // Only include optional parameters if they have values
+      if (categoryId) {
+        rpcParams._category_id = categoryId;
+      }
+      if (icon) {
+        rpcParams._icon = icon;
+      }
+      
+      const { data, error } = await supabase.rpc('create_channel', rpcParams);
 
       if (error) {
         console.error('[createChannel] RPC error:', error);
@@ -730,14 +739,41 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
     // Use the returned data from the RPC call to ensure we have the actual database values
     if (data && typeof data === 'object') {
-      const channelData = data as unknown as Partial<Channel>;
+      const channelData = data as Record<string, unknown>;
+      // Normalize the channel data to ensure proper types
+      const normalizedChannel: Partial<Channel> = {
+        id: channelData.id ? String(channelData.id) : undefined,
+        server_id: channelData.server_id ? String(channelData.server_id) : undefined,
+        category_id: channelData.category_id ? String(channelData.category_id) : null,
+        name: channelData.name ? String(channelData.name) : undefined,
+        topic: channelData.topic ? String(channelData.topic) : null,
+        type: channelData.type ? (String(channelData.type) as ChannelType) : undefined,
+        position: channelData.position !== undefined ? Number(channelData.position) : undefined,
+        is_nsfw: channelData.is_nsfw !== undefined ? Boolean(channelData.is_nsfw) : undefined,
+        slowmode_seconds: channelData.slowmode_seconds !== undefined ? Number(channelData.slowmode_seconds) : undefined,
+        is_read_only: channelData.is_read_only !== undefined ? Boolean(channelData.is_read_only) : undefined,
+        is_private: channelData.is_private !== undefined ? Boolean(channelData.is_private) : undefined,
+        icon: channelData.icon ? String(channelData.icon) : null,
+        created_at: channelData.created_at ? String(channelData.created_at) : undefined,
+        block_links: channelData.block_links !== undefined ? Boolean(channelData.block_links) : undefined,
+        allowed_link_domains: Array.isArray(channelData.allowed_link_domains) ? channelData.allowed_link_domains as string[] : undefined,
+        ghost_mode: channelData.ghost_mode !== undefined ? Boolean(channelData.ghost_mode) : undefined,
+      };
+      
+      // Remove undefined values
+      Object.keys(normalizedChannel).forEach(key => {
+        if (normalizedChannel[key as keyof Channel] === undefined) {
+          delete normalizedChannel[key as keyof Channel];
+        }
+      });
+      
       set((state) => ({
         channels: state.channels.map((c) =>
-          c.id === channelId ? { ...c, ...channelData } : c
+          c.id === channelId ? { ...c, ...normalizedChannel } : c
         ),
         currentChannel:
           state.currentChannel?.id === channelId
-            ? { ...state.currentChannel, ...channelData }
+            ? { ...state.currentChannel, ...normalizedChannel }
             : state.currentChannel,
       }));
     }
