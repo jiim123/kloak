@@ -74,6 +74,7 @@ const ActionButtons = memo(
     isSending,
     onSubmit,
     onEmojiSelect,
+    onFormat,
     currentServer,
     showAttachButton,
     onAttachClick,
@@ -89,6 +90,7 @@ const ActionButtons = memo(
     isSending: boolean;
     onSubmit: () => void;
     onEmojiSelect: (emoji: string) => void;
+    onFormat: (formatType: string, value?: string) => void;
     currentServer: any;
     showAttachButton?: boolean;
     onAttachClick?: () => void;
@@ -102,7 +104,7 @@ const ActionButtons = memo(
         {/* Format toolbar */}
         {showFormatToolbar && (
           <div className="absolute bottom-full right-0 mb-2 z-50">
-            <FormatToolbar onFormat={() => {}} onClose={() => setShowFormatToolbar(false)} />
+            <FormatToolbar onFormat={onFormat} onClose={() => setShowFormatToolbar(false)} />
           </div>
         )}
 
@@ -1078,6 +1080,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
         isSending={isSending}
         handleSubmit={handleSubmit}
         handleEmojiSelect={handleEmojiSelect}
+        handleFormat={handleFormat}
         currentServer={currentServer}
         setShowImageUpload={setShowImageUpload}
       />
@@ -1113,6 +1116,7 @@ const MobileOptimizedInput = memo(
     isSending,
     handleSubmit,
     handleEmojiSelect,
+    handleFormat,
     currentServer,
     setShowImageUpload,
   }: {
@@ -1135,6 +1139,7 @@ const MobileOptimizedInput = memo(
     isSending: boolean;
     handleSubmit: () => void;
     handleEmojiSelect: (emoji: string) => void;
+    handleFormat: (formatType: string, value?: string) => void;
     currentServer: any;
     setShowImageUpload: (show: boolean) => void;
   }) => {
@@ -1202,6 +1207,7 @@ const MobileOptimizedInput = memo(
             isSending={isSending}
             onSubmit={handleSubmit}
             onEmojiSelect={handleEmojiSelect}
+            onFormat={handleFormat}
             currentServer={currentServer}
             showAttachButton={shouldCollapse}
             onAttachClick={() => setShowImageUpload(true)}
