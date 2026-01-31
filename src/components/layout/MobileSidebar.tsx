@@ -1,8 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { X } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
 import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
 import { ServerSidebar } from './ServerSidebar';
@@ -21,21 +19,35 @@ export const MobileSidebar = ({ isDMView, showFriends, onShowFriendsChange, show
   const location = useLocation();
   const { isMobileSidebarOpen, setMobileSidebarOpen, closeMobileSidebars } = useUIStore();
   const { currentChannel } = useServerStore();
+  
+  // Track previous pathname to detect actual navigation changes
+  const prevPathnameRef = useRef(location.pathname);
+  const wasOpenRef = useRef(false);
 
   // Close sidebar when a channel is selected
   useEffect(() => {
-    if (currentChannel) {
+    if (currentChannel && isMobileSidebarOpen) {
       closeMobileSidebars();
     }
-  }, [currentChannel, closeMobileSidebars]);
+  }, [currentChannel?.id]); // Only react to channel ID changes
 
   // Close sidebar when route changes (for Friends/Explore navigation)
-  // Only close if sidebar is actually open to avoid unnecessary updates
   useEffect(() => {
-    if (isMobileSidebarOpen) {
+    const currentPathname = location.pathname;
+    const prevPathname = prevPathnameRef.current;
+    
+    // Only close if pathname actually changed AND sidebar was open
+    if (currentPathname !== prevPathname && wasOpenRef.current) {
       closeMobileSidebars();
     }
-  }, [location.pathname]); // Intentionally not including closeMobileSidebars or isMobileSidebarOpen to avoid loops
+    
+    prevPathnameRef.current = currentPathname;
+  }, [location.pathname, closeMobileSidebars]);
+
+  // Track open state for the pathname effect
+  useEffect(() => {
+    wasOpenRef.current = isMobileSidebarOpen;
+  }, [isMobileSidebarOpen]);
 
   // Handle friends change with sidebar close
   const handleShowFriendsChange = (show: boolean) => {
@@ -56,7 +68,7 @@ export const MobileSidebar = ({ isDMView, showFriends, onShowFriendsChange, show
     <Sheet open={isMobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
       <SheetContent
         side="left"
-        className="p-0 gap-0 bg-transparent shadow-none border-r-0 w-[calc(72px+240px)] max-w-[85vw] flex"
+        className="p-0 gap-0 bg-layout-sidebar shadow-lg border-r border-border/30 w-[calc(72px+240px)] max-w-[85vw] flex"
         hideCloseButton
         onInteractOutside={(event) => {
           const target = event.target as HTMLElement | null;
