@@ -799,6 +799,42 @@ export const MessageItem = memo(function MessageItem({
                       <div className="text-[14px] sm:text-[14px] font-normal leading-[1.5] font-[Inter,system-ui,sans-serif]">
                         {pollId ? (
                           <PollMessage pollId={pollId} />
+                        ) : currentChannel?.type === "announcement" ? (
+                          (() => {
+                            // Extract title and content for announcement channels
+                            const content = message.content || "";
+                            const parts = content.split('\n\n');
+                            const title = parts.length > 1 
+                              ? parts[0].trim() 
+                              : content.split('\n')[0].trim() || "";
+                            const announcementContent = parts.length > 1 
+                              ? parts.slice(1).join('\n\n').trim() 
+                              : content.split('\n').slice(1).join('\n').trim();
+                            
+                            return (
+                              <div className="space-y-2">
+                                {title && (
+                                  <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+                                )}
+                                {announcementContent && (
+                                  <MessageContent
+                                    content={announcementContent}
+                                    currentUserId={user?.id}
+                                    messageId={message.id}
+                                    messageUser={
+                                      messageUser
+                                        ? {
+                                            id: messageUser.id,
+                                            username: messageUser.username,
+                                            display_name: messageUser.display_name,
+                                          }
+                                        : undefined
+                                    }
+                                  />
+                                )}
+                              </div>
+                            );
+                          })()
                         ) : (
                           <MessageContent
                             content={message.content}
@@ -951,21 +987,30 @@ export const MessageItem = memo(function MessageItem({
                     </EmojiGifPicker>
                   )}
 
-                  {/* Reply */}
-                  <button
-                    className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                    onClick={() => setReplyingTo(message)}
-                    aria-label="Reply"
-                    title="Reply"
-                  >
-                    <Reply className="w-4 h-4" />
-                  </button>
+                  {/* Reply - Hide for announcement channels */}
+                  {currentChannel?.type !== "announcement" && (
+                    <button
+                      className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                      onClick={() => setReplyingTo(message)}
+                      aria-label="Reply"
+                      title="Reply"
+                    >
+                      <Reply className="w-4 h-4" />
+                    </button>
+                  )}
 
-                  {/* Edit (own messages) */}
+                  {/* Edit (own messages) - For announcements, trigger full edit box */}
                   {isOwnMessage && (
                     <button
                       className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                      onClick={handleStartEditing}
+                      onClick={() => {
+                        if (currentChannel?.type === "announcement") {
+                          // Trigger edit in AnnouncementChannelArea
+                          window.dispatchEvent(new CustomEvent("startEditAnnouncement", { detail: { message } }));
+                        } else {
+                          handleStartEditing();
+                        }
+                      }}
                       aria-label="Edit"
                       title="Edit"
                     >
@@ -975,8 +1020,8 @@ export const MessageItem = memo(function MessageItem({
 
                   <div className="w-px h-5 bg-border mx-0.5" />
 
-                  {/* Pin */}
-                  {canPinMessages && (
+                  {/* Pin - Hide for announcement channels */}
+                  {canPinMessages && currentChannel?.type !== "announcement" && (
                     <button
                       className={cn(
                         "p-2 rounded-lg bg-transparent hover:bg-muted transition-colors",

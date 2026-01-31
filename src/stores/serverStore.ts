@@ -632,6 +632,23 @@ export const useServerStore = create<ServerState>((set, get) => ({
         ghost_mode: Boolean(channelData.ghost_mode),
       };
 
+      // For announcement channels, set is_read_only to true
+      if (type === 'announcement' && !channel.is_read_only) {
+        try {
+          const { error: updateError } = await supabase.rpc('update_channel', {
+            _channel_id: channel.id,
+            _user_id: userId,
+            _updates: JSON.stringify({ is_read_only: true }),
+          });
+          
+          if (!updateError) {
+            channel.is_read_only = true;
+          }
+        } catch (err) {
+          console.error('Failed to set announcement channel as read-only:', err);
+        }
+      }
+
       // Update store with new channel
       set((state) => {
         // Prevent duplicates in case realtime already added it

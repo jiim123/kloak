@@ -1,4 +1,4 @@
-import { Bold, Italic, Underline, Code, Eye, X, FileCode, Strikethrough, Link, Image, List, ListOrdered, Heading1, Heading2, Quote, MoreVertical } from 'lucide-react';
+import { Bold, Italic, Underline, Code, Eye, X, FileCode, Strikethrough, Link, Image, List, ListOrdered, Heading1, Heading2, Quote, MoreVertical, AlignLeft, AlignCenter, AlignRight, Minus } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface FormatToolbarProps {
@@ -23,6 +23,10 @@ const FORMAT_OPTIONS = [
   { id: 'heading2', icon: Heading2, label: 'Heading 2' },
   { id: 'quote', icon: Quote, label: 'Quote' },
   { id: 'spoiler', icon: Eye, label: 'Spoiler' },
+  { id: 'alignLeft', icon: AlignLeft, label: 'Align Left' },
+  { id: 'alignCenter', icon: AlignCenter, label: 'Align Center' },
+  { id: 'alignRight', icon: AlignRight, label: 'Align Right' },
+  { id: 'separator', icon: Minus, label: 'Separator' },
 ];
 
 export const FormatToolbar = ({ onFormat, onClose, onImageClick, expanded = false }: FormatToolbarProps) => {

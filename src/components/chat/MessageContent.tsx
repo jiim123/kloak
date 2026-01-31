@@ -49,6 +49,7 @@ const isImageUrl = (url: string): boolean => {
     /pbs\.twimg\.com/i,
     /media\.discordapp\.net/i,
     /cdn\.discordapp\.com/i,
+    /supabase\.co.*\/storage/i, // Supabase storage URLs
   ];
   
   return imageHosts.some(pattern => pattern.test(url));
@@ -165,14 +166,38 @@ const escapeHtml = (text: string): string => {
 };
 
 // Parse text content (markdown, URLs, mentions, channels, colors)
-const parseTextContent = (
+export const parseTextContent = (
   content: string,
   currentUserId?: string,
   usersMap?: Map<string, UserInfo>,
   customEmojiMap?: Map<string, string>,
   channelsMap?: Map<string, ChannelInfo>
 ): string => {
-  let parsed = escapeHtml(content);
+  // Process separator - use a unique placeholder that won't be escaped
+  const SEPARATOR_PLACEHOLDER = '___SEPARATOR_DOTS_PLACEHOLDER___';
+  const lines = content.split('\n');
+  const processedLines = lines.map(line => {
+    // Check if this line is a separator (--- with optional whitespace)
+    if (/^\s*---\s*$/.test(line)) {
+      return SEPARATOR_PLACEHOLDER;
+    }
+    return line;
+  });
+  
+  // Rejoin and escape HTML
+  let parsed = escapeHtml(processedLines.join('\n'));
+  
+  // Replace placeholder with actual separator HTML (after escaping, so it won't be escaped again)
+  parsed = parsed.replace(new RegExp(escapeHtml(SEPARATOR_PLACEHOLDER), 'g'), '<div class="separator-dots my-4 text-center text-muted-foreground" style="font-size: 1.5rem; letter-spacing: 0.5rem;">•••</div>');
+  
+  // Headings - must be at start of line or after newline
+  // Process in reverse order (h3, h2, h1) to avoid conflicts
+  // ### Heading 3
+  parsed = parsed.replace(/^###\s+(.+?)$/gm, '<h3 class="text-lg font-semibold mt-2 mb-1">$1</h3>');
+  // ## Heading 2
+  parsed = parsed.replace(/^##\s+(.+?)$/gm, '<h2 class="text-xl font-semibold mt-3 mb-1">$1</h2>');
+  // # Heading 1
+  parsed = parsed.replace(/^#\s+(.+?)$/gm, '<h1 class="text-2xl font-bold mt-4 mb-2">$1</h1>');
   
   // Bold **text**
   parsed = parsed.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
@@ -198,7 +223,14 @@ const parseTextContent = (
     (_, color, text) => `<span class="text-color-${color.toLowerCase()}">${text}</span>`
   );
   
-  // URLs - render image URLs as placeholders, others as links (only safe URLs)
+  // Images with custom format [img:align:width:url]
+  parsed = parsed.replace(/\[img:(\w+):([^:]+):([^\]]+)\]/g, (match, align, width, url) => {
+    const widthStyle = width !== 'auto' ? `width="${width}"` : '';
+    const alignClass = align === 'center' ? 'mx-auto block' : align === 'right' ? 'ml-auto block' : 'mr-auto block';
+    return `<img src="${escapeHtml(url)}" alt="Image" ${widthStyle} class="${alignClass} max-w-full rounded-lg my-2 cursor-pointer hover:opacity-90" loading="lazy" data-image-url="${escapeHtml(url)}" data-align="${align}" />`;
+  });
+  
+  // URLs - render image URLs inline, others as links (only safe URLs)
   const urlPattern = /https?:\/\/[^\s<]+/g;
   parsed = parsed.replace(
     urlPattern,
@@ -208,8 +240,8 @@ const parseTextContent = (
         return escapeHtml(url); // Don't linkify unsafe URLs
       }
       if (isImageUrl(url)) {
-        // Return a placeholder that we'll replace with actual image rendering
-        return `<span class="inline-image-placeholder" data-image-url="${escapeHtml(url)}"></span>`;
+        // Render image inline where it appears
+        return `<img src="${escapeHtml(url)}" alt="Image" class="inline-block max-w-md max-h-80 rounded-lg my-2 cursor-pointer hover:opacity-90" loading="lazy" data-image-url="${escapeHtml(url)}" />`;
       }
       return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="message-link">${escapeHtml(url)}</a>`;
     }
@@ -386,6 +418,15 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
   // Handle click on mentions and channel tags using event delegation
   const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
+    
+    // Handle inline image clicks
+    if (target.tagName === 'IMG' && target.dataset.imageUrl) {
+      e.preventDefault();
+      e.stopPropagation();
+      setLightboxImage(target.dataset.imageUrl);
+      return;
+    }
+    
     if (target.classList.contains('mention-clickable') && target.dataset.userId) {
       e.preventDefault();
       e.stopPropagation();
@@ -401,7 +442,7 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
         navigate(`/app/servers/${currentServer.id}/channels/${channelId}`);
       }
     }
-  }, [openModal, channels, currentServer, setCurrentChannel, navigate]);
+  }, [openModal, channels, currentServer, setCurrentChannel, navigate, setLightboxImage]);
 
   // Handle keyboard activation for accessibility
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -424,7 +465,7 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
   }, [openModal, channels, currentServer, setCurrentChannel, navigate]);
   
   return (
-    <div className="break-words" onClick={handleClick} onKeyDown={handleKeyDown}>
+    <div className="break-words" onClick={handleClick} onKeyDown={handleKeyDown} data-message-id={messageId}>
       {segments.map((segment, index) => {
         switch (segment.type) {
           case 'code-block':
@@ -451,29 +492,6 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
         }
       })}
       
-      {/* Inline images (GIFs, etc.) */}
-      {imageUrls.length > 0 && (
-        <div className="flex flex-wrap gap-2 mt-1">
-          {imageUrls.map((url, index) => (
-            <button
-              key={`img-${index}`}
-              onClick={() => setLightboxImage(url)}
-              className="inline-block max-w-md rounded-lg overflow-hidden cursor-zoom-in text-left"
-            >
-              <img
-                src={url}
-                alt="Shared image"
-                className="max-w-full max-h-80 object-contain rounded-lg"
-                loading="lazy"
-                onError={(e) => {
-                  // Hide broken images
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
-              />
-            </button>
-          ))}
-        </div>
-      )}
 
       {/* Invite link previews */}
       {inviteCodes.length > 0 && (

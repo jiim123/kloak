@@ -4,6 +4,7 @@ import { MessageList } from "@/components/chat/MessageList";
 import { MessageInput } from "@/components/chat/MessageInput";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { ForumChannelArea } from "@/components/forum/ForumChannelArea";
+import { AnnouncementChannelArea } from "@/components/announcement/AnnouncementChannelArea";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useMessageStore } from "@/stores/messageStore";
@@ -226,6 +227,11 @@ export const ChatArea = () => {
   if (currentChannel.type === "forum") {
     // Forum channels use a different UI
     return <ForumChannelArea />;
+  }
+
+  if (currentChannel.type === "announcement") {
+    // Announcement channels use a different UI
+    return <AnnouncementChannelArea />;
   }
 
   return (

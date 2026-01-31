@@ -19,6 +19,7 @@ import {
   Lock,
   GripVertical,
   ArrowUpDown,
+  Megaphone,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -184,6 +185,16 @@ const SortableChannel = ({
     if (channel.type === "forum") {
       return (
         <MessageSquare
+          className={cn(
+            "w-4 h-4 flex-shrink-0 transition-colors",
+            isUnread && !isActive ? "text-foreground" : "text-muted-foreground",
+          )}
+        />
+      );
+    }
+    if (channel.type === "announcement") {
+      return (
+        <Megaphone
           className={cn(
             "w-4 h-4 flex-shrink-0 transition-colors",
             isUnread && !isActive ? "text-foreground" : "text-muted-foreground",
