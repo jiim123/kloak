@@ -104,16 +104,16 @@ export const OnboardingModal = ({
   return (
     <Dialog open={open} onOpenChange={() => {}}>
       <DialogContent
-        className="max-w-lg max-w-[calc(100vw-2rem)] max-h-[90vh] p-0 bg-background/95 backdrop-blur-xl border-border/50 rounded-2xl shadow-xl overflow-hidden"
+        className="w-[calc(100vw-1rem)] sm:w-auto sm:max-w-xl md:max-w-2xl max-h-[90vh] p-0 bg-background/95 backdrop-blur-xl border-border/50 rounded-2xl shadow-xl overflow-hidden"
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
         hideCloseButton
       >
         <div
-          className="overflow-y-auto overscroll-contain touch-pan-y max-h-[90vh]"
+          className="overflow-y-auto overscroll-contain touch-pan-y max-h-[90vh] w-full"
           style={{ WebkitOverflowScrolling: "touch" }}
         >
-          <div className="p-4 sm:p-6">
+          <div className="p-4 sm:p-6 w-full">
             {/* Progress indicator */}
             <div className="mb-6">
               <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
