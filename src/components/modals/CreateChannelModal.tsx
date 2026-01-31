@@ -37,6 +37,7 @@ export const CreateChannelModal = () => {
   const [isPrivate, setIsPrivate] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [hoveredChannelType, setHoveredChannelType] = useState<string | null>(null);
 
   const isOpen = activeModal === "create-channel";
   const presetCategoryId = modalData?.categoryId as string | undefined;
@@ -137,7 +138,7 @@ export const CreateChannelModal = () => {
         <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-6">
           {mode === "channel" && (
             <>
-              {/* Channel Type - icon + label, compact row */}
+              {/* Channel Type - icon only with dynamic description */}
               <div className="space-y-3">
                 <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Channel Type
@@ -149,11 +150,13 @@ export const CreateChannelModal = () => {
                 >
                   <Label
                     htmlFor="text"
-                    className={`flex items-center gap-3 py-2 px-3 rounded-xl cursor-pointer border transition-colors ${
+                    className={`flex items-center justify-center py-2 px-3 rounded-xl cursor-pointer border transition-colors ${
                       selectedChannelType === "text"
                         ? "bg-primary/5 border-primary/50"
                         : "bg-secondary/50 border-border/50 hover:bg-secondary/80"
                     }`}
+                    onMouseEnter={() => setHoveredChannelType("text")}
+                    onMouseLeave={() => setHoveredChannelType(null)}
                   >
                     <div
                       className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
@@ -162,17 +165,18 @@ export const CreateChannelModal = () => {
                     >
                       <Hash className="h-4 w-4" />
                     </div>
-                    <span className="text-sm font-medium">Text</span>
                     <RadioGroupItem value="text" id="text" className="sr-only" />
                   </Label>
 
                   <Label
                     htmlFor="voice"
-                    className={`flex items-center gap-3 py-2 px-3 rounded-xl cursor-pointer border transition-colors ${
+                    className={`flex items-center justify-center py-2 px-3 rounded-xl cursor-pointer border transition-colors ${
                       selectedChannelType === "voice"
                         ? "bg-primary/5 border-primary/50"
                         : "bg-secondary/50 border-border/50 hover:bg-secondary/80"
                     }`}
+                    onMouseEnter={() => setHoveredChannelType("voice")}
+                    onMouseLeave={() => setHoveredChannelType(null)}
                   >
                     <div
                       className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
@@ -181,17 +185,18 @@ export const CreateChannelModal = () => {
                     >
                       <Volume2 className="h-4 w-4" />
                     </div>
-                    <span className="text-sm font-medium">Voice</span>
                     <RadioGroupItem value="voice" id="voice" className="sr-only" />
                   </Label>
 
                   <Label
                     htmlFor="ghost"
-                    className={`flex items-center gap-3 py-2 px-3 rounded-xl cursor-pointer border transition-colors ${
+                    className={`flex items-center justify-center py-2 px-3 rounded-xl cursor-pointer border transition-colors ${
                       selectedChannelType === "ghost"
                         ? "bg-primary/5 border-primary/50"
                         : "bg-secondary/50 border-border/50 hover:bg-secondary/80"
                     }`}
+                    onMouseEnter={() => setHoveredChannelType("ghost")}
+                    onMouseLeave={() => setHoveredChannelType(null)}
                   >
                     <div
                       className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
@@ -200,17 +205,18 @@ export const CreateChannelModal = () => {
                     >
                       <GhostIcon className="h-4 w-4" />
                     </div>
-                    <span className="text-sm font-medium">Ghost</span>
                     <RadioGroupItem value="ghost" id="ghost" className="sr-only" />
                   </Label>
 
                   <Label
                     htmlFor="forum"
-                    className={`flex items-center gap-3 py-2 px-3 rounded-xl cursor-pointer border transition-colors ${
+                    className={`flex items-center justify-center py-2 px-3 rounded-xl cursor-pointer border transition-colors ${
                       selectedChannelType === "forum"
                         ? "bg-primary/5 border-primary/50"
                         : "bg-secondary/50 border-border/50 hover:bg-secondary/80"
                     }`}
+                    onMouseEnter={() => setHoveredChannelType("forum")}
+                    onMouseLeave={() => setHoveredChannelType(null)}
                   >
                     <div
                       className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
@@ -219,29 +225,28 @@ export const CreateChannelModal = () => {
                     >
                       <MessageSquare className="h-4 w-4" />
                     </div>
-                    <span className="text-sm font-medium">Forum</span>
                     <RadioGroupItem value="forum" id="forum" className="sr-only" />
                   </Label>
                 </RadioGroup>
                 
-                {/* Channel Type Description */}
+                {/* Channel Type Description - updates on hover */}
                 <div className="mt-2 p-3 rounded-xl bg-muted/50 border border-border/50">
-                  {selectedChannelType === "text" && (
+                  {(hoveredChannelType || selectedChannelType) === "text" && (
                     <p className="text-xs text-muted-foreground">
                       <span className="font-medium text-foreground">Text Channel:</span> Perfect for conversations, sharing messages, and collaboration. Members can send text messages, images, and files.
                     </p>
                   )}
-                  {selectedChannelType === "voice" && (
+                  {(hoveredChannelType || selectedChannelType) === "voice" && (
                     <p className="text-xs text-muted-foreground">
                       <span className="font-medium text-foreground">Voice Channel:</span> For voice and video calls. Members can join to talk in real-time with others in the channel.
                     </p>
                   )}
-                  {selectedChannelType === "ghost" && (
+                  {(hoveredChannelType || selectedChannelType) === "ghost" && (
                     <p className="text-xs text-muted-foreground">
                       <span className="font-medium text-foreground">Ghost Mode:</span> A text channel where usernames and avatars are hidden for privacy. Admins and owners remain visible to maintain moderation.
                     </p>
                   )}
-                  {selectedChannelType === "forum" && (
+                  {(hoveredChannelType || selectedChannelType) === "forum" && (
                     <p className="text-xs text-muted-foreground">
                       <span className="font-medium text-foreground">Forum Channel:</span> A traditional forum where users can create threads and reply to them. Perfect for organized discussions and topic-based conversations.
                     </p>
