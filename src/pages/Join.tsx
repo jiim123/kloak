@@ -30,7 +30,7 @@ const roles = [
 
 const Join = () => {
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center">
+    <div className="min-h-screen bg-background flex flex-col items-center w-full">
       <SEO
         title="Join Us | Kloak"
         description="Join the Kloak team. We're a small indie team looking for passionate designers, engineers, and security enthusiasts."
