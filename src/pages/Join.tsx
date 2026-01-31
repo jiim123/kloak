@@ -1,30 +1,15 @@
-import { useState } from "react";
 import { motion } from "framer-motion";
-import { Heart, Code, Shield, Palette, Sparkles, Send, CheckCircle, Loader2 } from "lucide-react";
+import { Heart, Code, Shield, Palette, Sparkles, Mail } from "lucide-react";
 import { Footer } from "@/components/ui/footer-section";
 import { NavigationMenu } from "@/components/layout/NavigationMenu";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { SEO } from "@/components/seo";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { z } from "zod";
-
-const applicationSchema = z.object({
-  name: z.string().trim().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
-  email: z.string().trim().email("Invalid email address").max(255, "Email must be less than 255 characters"),
-  role: z.string().trim().min(1, "Please tell us what role interests you").max(100, "Role must be less than 100 characters"),
-  message: z.string().trim().min(10, "Please tell us a bit more about yourself").max(2000, "Message must be less than 2000 characters"),
-  portfolio: z.string().trim().max(500, "Portfolio link must be less than 500 characters").optional(),
-});
 
 const roles = [
   {
     icon: Palette,
     title: "Designers",
-    description: "Craft intuitive interfaces that respect user privacy while delivering exceptional experiences.",
+    description: "Design for potentially thousands of users. Create emojis, avatar decorations, motion designs, and visual experiences that make Kloak unique.",
   },
   {
     icon: Code,
@@ -44,62 +29,6 @@ const roles = [
 ];
 
 const Join = () => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    role: "",
-    message: "",
-    portfolio: "",
-  });
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: "" }));
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrors({});
-
-    // Validate form data
-    const result = applicationSchema.safeParse(formData);
-    if (!result.success) {
-      const fieldErrors: Record<string, string> = {};
-      result.error.errors.forEach((err) => {
-        if (err.path[0]) {
-          fieldErrors[err.path[0] as string] = err.message;
-        }
-      });
-      setErrors(fieldErrors);
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      const { error } = await supabase.functions.invoke("send-join-application", {
-        body: formData,
-      });
-
-      if (error) throw error;
-
-      setIsSubmitted(true);
-      toast.success("Application sent successfully!");
-    } catch (error) {
-      console.error("Error sending application:", error);
-      toast.error("Failed to send application. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background flex flex-col items-center">
       <SEO
@@ -118,7 +47,7 @@ const Join = () => {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.6 }}
               >
-                <span className="text-xs font-mono text-primary tracking-widest uppercase">Join Our Team</span>
+                <span className="text-xs font-mono text-primary tracking-widest uppercase">Volunteer With Us</span>
               </motion.div>
 
               <motion.h1
@@ -139,7 +68,7 @@ const Join = () => {
                 transition={{ duration: 0.8, delay: 0.2 }}
               >
                 We're a tiny indie team on a mission to give people back their privacy. No investors pushing growth
-                metrics. No corporate roadmap. Just passionate people building tools that respect users.
+                metrics. No corporate roadmap. Just passionate volunteers building tools that respect users.
               </motion.p>
             </div>
           </section>
@@ -155,7 +84,7 @@ const Join = () => {
                 transition={{ duration: 0.6 }}
               >
                 <span className="text-xs font-mono text-primary tracking-widest uppercase mb-4 block">
-                  Who We're Looking For
+                  Volunteer Positions
                 </span>
                 <h2 className="text-3xl sm:text-4xl md:text-5xl font-light text-foreground leading-tight tracking-tight">
                   Passion over pedigree.
@@ -214,7 +143,7 @@ const Join = () => {
                   <Sparkles className="w-8 h-8 text-primary" />
                   <h3 className="text-xl font-medium text-foreground">Remote First</h3>
                   <p className="text-muted-foreground text-sm leading-relaxed">
-                    Work from anywhere. We care about what you build, not where you sit.
+                    Contribute from anywhere. We care about what you build, not where you sit.
                   </p>
                 </div>
                 <div className="space-y-4">
@@ -235,128 +164,35 @@ const Join = () => {
             </div>
           </section>
 
-          {/* Application Form */}
+          {/* Contact CTA */}
           <section className="relative py-24 px-8 lg:px-16 bg-card/50 border-b border-border/20">
             <div className="max-w-2xl mx-auto">
               <motion.div
-                className="mb-12 text-center"
+                className="text-center border border-border/30 bg-background p-10 md:p-14 rounded-lg"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6 }}
               >
-                <span className="text-xs font-mono text-primary tracking-widest uppercase mb-4 block">Apply Now</span>
+                <Mail className="w-12 h-12 text-primary mx-auto mb-6" />
                 <h2 className="text-3xl sm:text-4xl font-light text-foreground leading-tight tracking-tight mb-4">
                   Ready to join?
                 </h2>
-                <p className="text-muted-foreground">Tell us about yourself and what excites you about Kloak.</p>
+                <p className="text-muted-foreground mb-8 max-w-lg mx-auto leading-relaxed">
+                  If you're passionate about privacy and want to contribute to something meaningful, 
+                  we'd love to hear from you. Tell us about yourself, what excites you, and how you'd like to help.
+                </p>
+                <Button
+                  asChild
+                  size="lg"
+                  className="h-14 px-8 text-lg"
+                >
+                  <a href="mailto:join@kloak.app">
+                    <Mail className="w-5 h-5 mr-2" />
+                    join@kloak.app
+                  </a>
+                </Button>
               </motion.div>
-
-              {isSubmitted ? (
-                <motion.div
-                  className="text-center py-16 border border-border/30 bg-background rounded-lg"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.4 }}
-                >
-                  <CheckCircle className="w-16 h-16 text-primary mx-auto mb-6" />
-                  <h3 className="text-2xl font-medium text-foreground mb-3">Application Sent!</h3>
-                  <p className="text-muted-foreground max-w-md mx-auto">
-                    Thanks for your interest in joining Kloak. We'll review your application and get back to you soon.
-                  </p>
-                </motion.div>
-              ) : (
-                <motion.form
-                  onSubmit={handleSubmit}
-                  className="space-y-6 border border-border/30 bg-background p-8 md:p-10 rounded-lg"
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, delay: 0.2 }}
-                >
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Name *</Label>
-                      <Input
-                        id="name"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleChange}
-                        placeholder="Your name"
-                        className={errors.name ? "border-destructive" : ""}
-                      />
-                      {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email *</Label>
-                      <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        placeholder="you@example.com"
-                        className={errors.email ? "border-destructive" : ""}
-                      />
-                      {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="role">What role interests you? *</Label>
-                    <Input
-                      id="role"
-                      name="role"
-                      value={formData.role}
-                      onChange={handleChange}
-                      placeholder="e.g., Frontend Engineer, UI Designer, Security Researcher..."
-                      className={errors.role ? "border-destructive" : ""}
-                    />
-                    {errors.role && <p className="text-sm text-destructive">{errors.role}</p>}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="portfolio">Portfolio / GitHub / LinkedIn (optional)</Label>
-                    <Input
-                      id="portfolio"
-                      name="portfolio"
-                      value={formData.portfolio}
-                      onChange={handleChange}
-                      placeholder="https://..."
-                      className={errors.portfolio ? "border-destructive" : ""}
-                    />
-                    {errors.portfolio && <p className="text-sm text-destructive">{errors.portfolio}</p>}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="message">Tell us about yourself *</Label>
-                    <Textarea
-                      id="message"
-                      name="message"
-                      value={formData.message}
-                      onChange={handleChange}
-                      placeholder="What excites you about privacy-focused products? What would you bring to the team?"
-                      rows={6}
-                      className={errors.message ? "border-destructive" : ""}
-                    />
-                    {errors.message && <p className="text-sm text-destructive">{errors.message}</p>}
-                  </div>
-
-                  <Button type="submit" className="w-full h-14 text-lg" disabled={isSubmitting}>
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Sending...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="w-5 h-5 mr-2" />
-                        Send Application
-                      </>
-                    )}
-                  </Button>
-                </motion.form>
-              )}
             </div>
           </section>
         </main>
