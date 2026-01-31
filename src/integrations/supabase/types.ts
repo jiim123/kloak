@@ -1224,7 +1224,7 @@ export type Database = {
       thread_messages: {
         Row: {
           content: string
-          created_at: string
+          created_at: string | null
           edited_at: string | null
           id: string
           reply_to_id: string | null
@@ -1233,7 +1233,7 @@ export type Database = {
         }
         Insert: {
           content: string
-          created_at?: string
+          created_at?: string | null
           edited_at?: string | null
           id?: string
           reply_to_id?: string | null
@@ -1242,7 +1242,7 @@ export type Database = {
         }
         Update: {
           content?: string
-          created_at?: string
+          created_at?: string | null
           edited_at?: string | null
           id?: string
           reply_to_id?: string | null
@@ -1312,21 +1312,21 @@ export type Database = {
       threads: {
         Row: {
           channel_id: string
-          created_at: string
+          created_at: string | null
           created_by: string
           id: string
           message_id: string
         }
         Insert: {
           channel_id: string
-          created_at?: string
+          created_at?: string | null
           created_by: string
           id?: string
           message_id: string
         }
         Update: {
           channel_id?: string
-          created_at?: string
+          created_at?: string | null
           created_by?: string
           id?: string
           message_id?: string
@@ -1575,6 +1575,7 @@ export type Database = {
       create_channel: {
         Args: {
           _category_id?: string
+          _ghost_mode?: boolean
           _icon?: string
           _is_private?: boolean
           _name: string
@@ -1683,10 +1684,6 @@ export type Database = {
         Returns: Json
       }
       edit_message: {
-        Args: { _content: string; _message_id: string; _user_id: string }
-        Returns: Json
-      }
-      edit_thread_message: {
         Args: { _content: string; _message_id: string; _user_id: string }
         Returns: Json
       }
@@ -2055,7 +2052,7 @@ export type Database = {
       }
     }
     Enums: {
-      channel_type: "text" | "voice" | "announcement"
+      channel_type: "text" | "voice" | "announcement" | "forum"
       friendship_status: "pending" | "accepted" | "blocked"
       mention_type: "user" | "everyone" | "here" | "role"
       notification_type: "mention" | "dm" | "friend_request" | "server_invite"
@@ -2204,7 +2201,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      channel_type: ["text", "voice", "announcement"],
+      channel_type: ["text", "voice", "announcement", "forum"],
       friendship_status: ["pending", "accepted", "blocked"],
       mention_type: ["user", "everyone", "here", "role"],
       notification_type: ["mention", "dm", "friend_request", "server_invite"],

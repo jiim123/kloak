@@ -581,7 +581,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
       const position = categoryChannels.length;
 
       // Use RPC function to bypass RLS
-      const rpcParams: Record<string, unknown> = {
+      const rpcParams = {
         _server_id: serverId,
         _user_id: userId,
         _name: name,
@@ -589,15 +589,9 @@ export const useServerStore = create<ServerState>((set, get) => ({
         _position: position,
         _is_private: isPrivate || false,
         _ghost_mode: ghostMode || false,
+        _category_id: categoryId,
+        _icon: icon,
       };
-      
-      // Only include optional parameters if they have values
-      if (categoryId) {
-        rpcParams._category_id = categoryId;
-      }
-      if (icon) {
-        rpcParams._icon = icon;
-      }
       
       const { data, error } = await supabase.rpc('create_channel', rpcParams);
 

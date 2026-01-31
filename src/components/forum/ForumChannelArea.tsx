@@ -26,7 +26,7 @@ import { isImageOnlyMessage } from "@/lib/message";
 import { isPollMessageContent } from "@/lib/poll";
 import { ReplyPreview } from "@/components/chat/MessageContent";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
-import type { Message, User } from "@/types";
+import type { Message, User, ReactionGroup } from "@/types";
 
 interface Thread {
   id: string;
@@ -173,7 +173,7 @@ export const ForumChannelArea = () => {
       // Get message counts and last activity for each thread
       const threadsWithInfo: Thread[] = await Promise.all(
         (threadsData || []).map(async (thread) => {
-          const message = (messagesData || []).find((m) => m.id === thread.message_id);
+          const rawMessage = (messagesData || []).find((m) => m.id === thread.message_id);
           
           // Get thread message count
           const { data: countData } = await supabase.rpc("get_thread_message_count", {
@@ -201,6 +201,34 @@ export const ForumChannelArea = () => {
               }
             }
           }
+
+          // Transform raw reactions to ReactionGroup format
+          let reactions: ReactionGroup[] = [];
+          if (rawMessage?.reactions && Array.isArray(rawMessage.reactions)) {
+            const reactionMap = new Map<string, { count: number; users: string[] }>();
+            for (const r of rawMessage.reactions) {
+              const existing = reactionMap.get(r.emoji);
+              if (existing) {
+                existing.count++;
+                existing.users.push(r.user_id);
+              } else {
+                reactionMap.set(r.emoji, { count: 1, users: [r.user_id] });
+              }
+            }
+            reactions = Array.from(reactionMap.entries()).map(([emoji, data]) => ({
+              emoji,
+              count: data.count,
+              users: data.users,
+              hasReacted: user ? data.users.includes(user.id) : false,
+            }));
+          }
+
+          // Build the message with properly typed reactions
+          const message: Message | undefined = rawMessage ? {
+            ...rawMessage,
+            is_pinned: rawMessage.is_pinned ?? false,
+            reactions,
+          } as Message : undefined;
 
           return {
             ...thread,
