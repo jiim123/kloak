@@ -1,128 +1,161 @@
 import { Link } from "react-router-dom";
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { ArrowRight, Shield, Zap, Lock, Users } from "lucide-react";
+import { motion, useMotionValue, useTransform } from "framer-motion";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
-// Floating orbs component - monochromatic silver glows
-const FloatingOrb = ({
-  className,
+// Typing animation component
+const TypeWriter = ({
+  text,
   delay = 0,
-  duration = 20,
-  size = "w-96 h-96",
+  speed = 40,
+  className = "",
+  onComplete,
 }: {
-  className?: string;
+  text: string;
   delay?: number;
-  duration?: number;
-  size?: string;
-}) => (
-  <motion.div
-    className={`absolute rounded-full blur-3xl ${size} ${className}`}
-    animate={{
-      y: [0, -50, 0],
-      x: [0, 30, 0],
-      scale: [1, 1.1, 1],
-    }}
-    transition={{
-      duration,
-      delay,
-      repeat: Infinity,
-      ease: "easeInOut",
-    }}
-  />
-);
+  speed?: number;
+  className?: string;
+  onComplete?: () => void;
+}) => {
+  const [displayedText, setDisplayedText] = useState("");
+  const [showCursor, setShowCursor] = useState(true);
+  const [isComplete, setIsComplete] = useState(false);
 
-// Animated grid lines for tech feel
-const GridLines = () => (
-  <div className="absolute inset-0 overflow-hidden opacity-[0.04]">
+  useEffect(() => {
+    const startTimeout = setTimeout(() => {
+      let currentIndex = 0;
+      const interval = setInterval(() => {
+        if (currentIndex <= text.length) {
+          setDisplayedText(text.slice(0, currentIndex));
+          currentIndex++;
+        } else {
+          clearInterval(interval);
+          setIsComplete(true);
+          onComplete?.();
+        }
+      }, speed);
+
+      return () => clearInterval(interval);
+    }, delay);
+
+    return () => clearTimeout(startTimeout);
+  }, [text, delay, speed, onComplete]);
+
+  useEffect(() => {
+    if (isComplete) {
+      const cursorTimeout = setTimeout(() => setShowCursor(false), 1500);
+      return () => clearTimeout(cursorTimeout);
+    }
+  }, [isComplete]);
+
+  return (
+    <span className={className}>
+      {displayedText}
+      <motion.span
+        animate={{ opacity: showCursor ? [1, 0] : 0 }}
+        transition={{ duration: 0.5, repeat: showCursor ? Infinity : 0, repeatType: "reverse" }}
+        className="inline-block w-[2px] h-[0.9em] bg-[hsl(var(--brand-600))] ml-1 translate-y-[0.1em]"
+      />
+    </span>
+  );
+};
+
+// Radial grid background for depth
+const RadialGrid = () => (
+  <div className="absolute inset-0 overflow-hidden">
+    {/* Perspective grid */}
     <div
-      className="absolute inset-0"
+      className="absolute inset-0 opacity-[0.03]"
       style={{
         backgroundImage: `
           linear-gradient(to right, hsl(var(--brand-600)) 1px, transparent 1px),
           linear-gradient(to bottom, hsl(var(--brand-600)) 1px, transparent 1px)
         `,
-        backgroundSize: "80px 80px",
+        backgroundSize: "60px 60px",
+        transform: "perspective(500px) rotateX(60deg)",
+        transformOrigin: "center top",
+        maskImage: "linear-gradient(to bottom, black 0%, transparent 80%)",
+        WebkitMaskImage: "linear-gradient(to bottom, black 0%, transparent 80%)",
+      }}
+    />
+
+    {/* Concentric rings */}
+    <div className="absolute inset-0 flex items-center justify-center">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <motion.div
+          key={i}
+          className="absolute rounded-full border border-[hsl(var(--neutral-300))]"
+          style={{
+            width: `${i * 20}%`,
+            height: `${i * 20}%`,
+            opacity: 0.04 - i * 0.005,
+          }}
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 0.04 - i * 0.005 }}
+          transition={{ duration: 1.5, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }}
+        />
+      ))}
+    </div>
+
+    {/* Radial gradient glow */}
+    <div
+      className="absolute inset-0"
+      style={{
+        background: "radial-gradient(ellipse at 50% 50%, hsl(var(--neutral-200) / 0.15) 0%, transparent 50%)",
       }}
     />
   </div>
 );
 
-// Floating glass card component
-const GlassCard = ({
-  children,
-  className = "",
-  delay = 0,
-}: {
-  children: React.ReactNode;
-  className?: string;
-  delay?: number;
-}) => (
-  <motion.div
-    initial={{ opacity: 0, y: 40 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.8, delay, ease: [0.16, 1, 0.3, 1] }}
-    className={`absolute backdrop-blur-xl bg-[hsl(var(--neutral-100))]/60 border border-[hsl(var(--neutral-300))]/30 rounded-2xl p-4 shadow-2xl shadow-black/20 ${className}`}
-  >
-    <motion.div animate={{ y: [0, -8, 0] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay }}>
-      {children}
-    </motion.div>
-  </motion.div>
-);
+// Subtle particle field
+const ParticleField = () => {
+  const particles = Array.from({ length: 30 }, (_, i) => ({
+    id: i,
+    x: Math.random() * 100,
+    y: Math.random() * 100,
+    size: Math.random() * 2 + 1,
+    duration: Math.random() * 20 + 20,
+    delay: Math.random() * 5,
+  }));
 
-// Animated word component with letter stagger
-const AnimatedWord = ({ word, delay = 0, className = "" }: { word: string; delay?: number; className?: string }) => (
-  <motion.span className={`inline-flex ${className}`}>
-    {word.split("").map((letter, i) => (
-      <motion.span
-        key={i}
-        initial={{ opacity: 0, y: 50, rotateX: -90 }}
-        animate={{ opacity: 1, y: 0, rotateX: 0 }}
-        transition={{
-          duration: 0.6,
-          delay: delay + i * 0.04,
-          ease: [0.16, 1, 0.3, 1],
-        }}
-        className="inline-block"
-      >
-        {letter}
-      </motion.span>
-    ))}
-  </motion.span>
-);
-
-// Pill badge component
-const PillBadge = ({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20, scale: 0.9 }}
-    animate={{ opacity: 1, y: 0, scale: 1 }}
-    transition={{ duration: 0.5, delay, ease: [0.16, 1, 0.3, 1] }}
-    className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[hsl(var(--neutral-100))] border border-[hsl(var(--neutral-300))]/40 backdrop-blur-sm"
-  >
-    {children}
-  </motion.div>
-);
-
-// Animated line accent
-const AnimatedLine = ({ className = "", delay = 0 }: { className?: string; delay?: number }) => (
-  <motion.div
-    initial={{ scaleX: 0 }}
-    animate={{ scaleX: 1 }}
-    transition={{ duration: 1.2, delay, ease: [0.16, 1, 0.3, 1] }}
-    className={`h-px bg-gradient-to-r from-transparent via-[hsl(var(--brand-600))] to-transparent origin-center ${className}`}
-  />
-);
+  return (
+    <div className="absolute inset-0 overflow-hidden">
+      {particles.map((particle) => (
+        <motion.div
+          key={particle.id}
+          className="absolute rounded-full bg-[hsl(var(--neutral-500))]"
+          style={{
+            left: `${particle.x}%`,
+            top: `${particle.y}%`,
+            width: particle.size,
+            height: particle.size,
+          }}
+          animate={{
+            y: [0, -30, 0],
+            opacity: [0.1, 0.3, 0.1],
+          }}
+          transition={{
+            duration: particle.duration,
+            delay: particle.delay,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
+      ))}
+    </div>
+  );
+};
 
 export const HeroImage = () => {
+  const [line1Complete, setLine1Complete] = useState(false);
+  const [line2Complete, setLine2Complete] = useState(false);
+
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
 
-  const springConfig = { damping: 25, stiffness: 150 };
-  const x = useSpring(mouseX, springConfig);
-  const y = useSpring(mouseY, springConfig);
-
-  const rotateX = useTransform(y, [-0.5, 0.5], [3, -3]);
-  const rotateY = useTransform(x, [-0.5, 0.5], [-3, 3]);
+  const backgroundX = useTransform(mouseX, [-0.5, 0.5], [-10, 10]);
+  const backgroundY = useTransform(mouseY, [-0.5, 0.5], [-10, 10]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -136,197 +169,116 @@ export const HeroImage = () => {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, [mouseX, mouseY]);
 
-  const titleWords = ["Connect.", "Create.", "Control.", "Yours."];
-
   return (
     <section className="relative min-h-screen overflow-hidden bg-[hsl(var(--neutral-0))]">
-      {/* Subtle gradient orbs - monochromatic */}
-      <div className="absolute inset-0">
-        <FloatingOrb
-          className="bg-[hsl(var(--neutral-400))] opacity-[0.08] -top-48 -left-48"
-          delay={0}
-          size="w-[700px] h-[700px]"
-        />
-        <FloatingOrb
-          className="bg-[hsl(var(--brand-600))] opacity-[0.04] top-1/4 -right-32"
-          delay={2}
-          duration={25}
-          size="w-[600px] h-[600px]"
-        />
-        <FloatingOrb
-          className="bg-[hsl(var(--neutral-500))] opacity-[0.06] -bottom-32 left-1/4"
-          delay={4}
-          duration={22}
-          size="w-[500px] h-[500px]"
-        />
-      </div>
+      {/* Layered background for depth */}
+      <motion.div className="absolute inset-0" style={{ x: backgroundX, y: backgroundY }}>
+        <RadialGrid />
+        <ParticleField />
+      </motion.div>
 
-      {/* Grid overlay */}
-      <GridLines />
-
-      {/* Noise texture overlay */}
+      {/* Noise texture */}
       <div
-        className="absolute inset-0 opacity-[0.02]"
+        className="absolute inset-0 opacity-[0.015]"
         style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
         }}
       />
 
-      {/* Radial gradient overlay for depth */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,hsl(var(--neutral-0))_70%)]" />
-
-      {/* Floating UI elements for depth - hidden on mobile */}
-      <div className="hidden lg:block">
-        <GlassCard className="top-32 right-[15%] z-20" delay={1}>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[hsl(var(--brand-600))] flex items-center justify-center">
-              <Shield className="w-5 h-5 text-[hsl(var(--neutral-0))]" />
-            </div>
-            <div>
-              <p className="text-xs text-[hsl(var(--neutral-500))]">End-to-End</p>
-              <p className="text-sm font-medium text-[hsl(var(--neutral-900))]">Encrypted</p>
-            </div>
-          </div>
-        </GlassCard>
-
-        <GlassCard className="top-48 left-[10%] z-20" delay={1.2}>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[hsl(var(--neutral-800))] flex items-center justify-center">
-              <Zap className="w-5 h-5 text-[hsl(var(--neutral-0))]" />
-            </div>
-            <div>
-              <p className="text-xs text-[hsl(var(--neutral-500))]">Crystal Clear</p>
-              <p className="text-sm font-medium text-[hsl(var(--neutral-900))]">Voice Chat</p>
-            </div>
-          </div>
-        </GlassCard>
-
-        <GlassCard className="bottom-48 right-[20%] z-20" delay={1.4}>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[hsl(var(--neutral-700))] flex items-center justify-center">
-              <Users className="w-5 h-5 text-[hsl(var(--neutral-0))]" />
-            </div>
-            <div>
-              <p className="text-xs text-[hsl(var(--neutral-500))]">Built for</p>
-              <p className="text-sm font-medium text-[hsl(var(--neutral-900))]">Communities</p>
-            </div>
-          </div>
-        </GlassCard>
-
-        <GlassCard className="bottom-64 left-[8%] z-20" delay={1.6}>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[hsl(var(--brand-600))] flex items-center justify-center">
-              <Lock className="w-5 h-5 text-[hsl(var(--neutral-0))]" />
-            </div>
-            <div>
-              <p className="text-xs text-[hsl(var(--neutral-500))]">Zero</p>
-              <p className="text-sm font-medium text-[hsl(var(--neutral-900))]">Data Collection</p>
-            </div>
-          </div>
-        </GlassCard>
-      </div>
+      {/* Vignette */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,hsl(var(--neutral-0))_80%)]" />
 
       {/* Main content */}
-      <div className="relative z-10 w-full min-h-screen flex flex-col items-center justify-center px-6 md:px-12">
-        <div className="max-w-5xl mx-auto text-center">
-          {/* Top badge */}
-          <PillBadge delay={0.2}>
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[hsl(var(--brand-600))] opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[hsl(var(--brand-600))]"></span>
-            </span>
-            <span className="text-sm text-[hsl(var(--neutral-600))]">Privacy-first communication</span>
-          </PillBadge>
+      <div className="relative z-10 w-full min-h-screen flex flex-col items-center justify-center px-6">
+        <div className="max-w-4xl mx-auto text-center">
+          {/* Pre-title */}
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="text-xs uppercase tracking-[0.3em] text-[hsl(var(--neutral-500))] mb-12"
+          >
+            Privacy-first communication
+          </motion.p>
 
-          {/* Decorative line */}
-          <AnimatedLine className="w-24 mx-auto mt-8" delay={0.3} />
-
-          {/* Main title */}
-          <motion.div className="mt-8 mb-6" style={{ rotateX, rotateY, transformPerspective: 1000 }}>
-            <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-normal tracking-tight">
-              <div className="flex flex-wrap justify-center gap-x-4 md:gap-x-6">
-                {titleWords.map((word, index) => (
-                  <AnimatedWord
-                    key={word}
-                    word={word}
-                    delay={0.4 + index * 0.15}
-                    className={
-                      index === titleWords.length - 1
-                        ? "text-[hsl(var(--brand-600))]"
-                        : "text-[hsl(var(--neutral-900))]"
-                    }
-                  />
-                ))}
-              </div>
+          {/* Main title - typing effect */}
+          <div className="space-y-2 md:space-y-4 mb-12">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tight text-[hsl(var(--neutral-900))]">
+              <TypeWriter
+                text="Communication without"
+                delay={600}
+                speed={35}
+                onComplete={() => setLine1Complete(true)}
+              />
             </h1>
-          </motion.div>
-
-          {/* Decorative line */}
-          <AnimatedLine className="w-32 mx-auto mb-8" delay={1} />
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tight text-[hsl(var(--brand-600))]">
+              {line1Complete && (
+                <TypeWriter text="compromise." delay={200} speed={50} onComplete={() => setLine2Complete(true)} />
+              )}
+            </h1>
+          </div>
 
           {/* Subtitle */}
           <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 1.2, ease: [0.16, 1, 0.3, 1] }}
-            className="text-lg md:text-xl text-[hsl(var(--neutral-500))] max-w-2xl mx-auto leading-relaxed"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: line2Complete ? 1 : 0 }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+            className="text-base md:text-lg text-[hsl(var(--neutral-500))] max-w-xl mx-auto leading-relaxed font-light"
           >
-            A space for your community to chat, stream, and grow together—
-            <span className="text-[hsl(var(--neutral-800))] font-medium">without ads, tracking, or compromise.</span>
+            End-to-end encrypted messaging, voice, and community spaces. Built on infrastructure designed for privacy,
+            not profit.
           </motion.p>
 
-          {/* CTA Buttons */}
+          {/* CTA */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 1.4, ease: [0.16, 1, 0.3, 1] }}
-            className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
+            animate={{ opacity: line2Complete ? 1 : 0, y: line2Complete ? 0 : 20 }}
+            transition={{ duration: 0.6, delay: 0.6 }}
+            className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4"
           >
             <Link to="/app">
               <Button
                 size="lg"
-                className="rounded-full px-8 h-14 text-base font-medium bg-[hsl(var(--brand-600))] hover:bg-[hsl(var(--brand-700))] text-[hsl(var(--neutral-0))] border-0 shadow-lg shadow-white/10 group"
+                className="rounded-full px-8 h-12 text-sm font-normal tracking-wide bg-[hsl(var(--brand-600))] hover:bg-[hsl(var(--brand-700))] text-[hsl(var(--neutral-0))] border-0 group"
               >
-                Get Started Free
-                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                Get started
+                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
             <Link to="/features">
               <Button
-                variant="outline"
+                variant="ghost"
                 size="lg"
-                className="rounded-full px-8 h-14 text-base font-medium border-[hsl(var(--neutral-300))] bg-[hsl(var(--neutral-100))]/50 text-[hsl(var(--neutral-800))] hover:bg-[hsl(var(--neutral-200))]/50 hover:border-[hsl(var(--neutral-400))] backdrop-blur-sm"
+                className="rounded-full px-8 h-12 text-sm font-normal tracking-wide text-[hsl(var(--neutral-600))] hover:text-[hsl(var(--neutral-800))] hover:bg-[hsl(var(--neutral-100))]"
               >
-                See How It Works
+                Learn more
               </Button>
             </Link>
           </motion.div>
 
-          {/* Trust indicators */}
+          {/* Bottom info */}
           <motion.div
             initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 1.8 }}
-            className="mt-16 flex flex-wrap items-center justify-center gap-6 md:gap-8 text-sm text-[hsl(var(--neutral-500))]"
+            animate={{ opacity: line2Complete ? 1 : 0 }}
+            transition={{ duration: 0.6, delay: 1 }}
+            className="mt-20 flex items-center justify-center gap-8 text-xs text-[hsl(var(--neutral-400))] tracking-wide"
           >
-            <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--brand-600))]" />
-              <span>No credit card required</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--neutral-700))]" />
-              <span>Swedish servers</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--neutral-800))]" />
-              <span>GDPR compliant</span>
-            </div>
+            <span>No data collection</span>
+            <span className="w-1 h-1 rounded-full bg-[hsl(var(--neutral-400))]" />
+            <span>Swedish infrastructure</span>
+            <span className="w-1 h-1 rounded-full bg-[hsl(var(--neutral-400))]" />
+            <span>Open architecture</span>
           </motion.div>
         </div>
       </div>
 
-      {/* Bottom gradient fade */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[hsl(var(--neutral-0))] to-transparent z-10 pointer-events-none" />
+      {/* Subtle bottom line */}
+      <motion.div
+        initial={{ scaleX: 0 }}
+        animate={{ scaleX: line2Complete ? 1 : 0 }}
+        transition={{ duration: 1.5, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[hsl(var(--neutral-300))] to-transparent"
+      />
     </section>
   );
 };
