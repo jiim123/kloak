@@ -67,6 +67,7 @@ const ROLE_PERMISSIONS: Record<ServerRole, Permission[]> = {
   ],
   moderator: [
     'kick_members',
+    'ban_members',
     'mute_members',
     'manage_nicknames',
     'manage_messages',
