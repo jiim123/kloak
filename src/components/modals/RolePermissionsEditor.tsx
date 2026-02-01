@@ -49,6 +49,10 @@ const PERMISSION_GROUPS: Array<{
       label: 'Advanced Permissions',
       permissions: ['use_application_commands'],
     },
+    {
+      label: 'Task Permissions',
+      permissions: ['view_tasks', 'create_tasks', 'edit_own_tasks', 'edit_all_tasks', 'assign_tasks', 'change_task_status', 'delete_tasks'],
+    },
   ];
 
 const PERMISSION_LABELS: Record<Permission, string> = {
@@ -83,6 +87,13 @@ const PERMISSION_LABELS: Record<Permission, string> = {
   speak: 'Speak (Voice)',
   use_voice_activation: 'Use Voice Activation',
   use_application_commands: 'Use Application Commands',
+  view_tasks: 'View Tasks',
+  create_tasks: 'Create Tasks',
+  edit_own_tasks: 'Edit Own Tasks',
+  edit_all_tasks: 'Edit All Tasks',
+  assign_tasks: 'Assign Tasks',
+  change_task_status: 'Change Task Status',
+  delete_tasks: 'Delete Tasks',
 };
 
 export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissionsEditorProps) => {
@@ -130,7 +141,8 @@ export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissio
       'kick_members', 'ban_members', 'mute_members', 'deafen_members', 'move_members',
       'manage_nicknames', 'change_nickname', 'manage_roles', 'manage_server', 'manage_emojis',
       'manage_webhooks', 'manage_invites', 'create_instant_invite', 'transfer_ownership',
-      'connect', 'speak', 'use_voice_activation', 'use_application_commands'
+      'connect', 'speak', 'use_voice_activation', 'use_application_commands',
+      'view_tasks', 'create_tasks', 'edit_own_tasks', 'edit_all_tasks', 'assign_tasks', 'change_task_status', 'delete_tasks'
     ];
 
     // Initialize all permissions as null (not set)
