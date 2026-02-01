@@ -243,7 +243,7 @@ export const HeroImage = () => {
 
           {/* Main title */}
           <motion.div className="mt-8 mb-6" style={{ rotateX, rotateY, transformPerspective: 1000 }}>
-            <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-bold tracking-tight">
+            <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-normal tracking-tight">
               <div className="flex flex-wrap justify-center gap-x-4 md:gap-x-6">
                 {titleWords.map((word, index) => (
                   <AnimatedWord
