@@ -1235,17 +1235,19 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
             {/* Content Area */}
             <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-              <div className="px-8 py-5 border-b border-border shrink-0">
-                <h3 className="text-xl font-semibold">{navItems.find((n) => n.id === activeTab)?.label}</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {activeTab === "account" && "Manage your account credentials and security"}
-                  {activeTab === "profile" && "Customize how others see you"}
-                  {activeTab === "notifications" && "Control how you receive notifications"}
-                  {activeTab === "appearance" && "Personalize your app experience"}
-                  {activeTab === "blocked" && "View and unblock users"}
-                </p>
+              <div className="flex-1 overflow-y-auto p-8">
+                <div className="mb-6 pb-5 border-b border-border">
+                  <h3 className="text-xl font-semibold">{navItems.find((n) => n.id === activeTab)?.label}</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {activeTab === "account" && "Manage your account credentials and security"}
+                    {activeTab === "profile" && "Customize how others see you"}
+                    {activeTab === "notifications" && "Control how you receive notifications"}
+                    {activeTab === "appearance" && "Personalize your app experience"}
+                    {activeTab === "blocked" && "View and unblock users"}
+                  </p>
+                </div>
+                {renderContent()}
               </div>
-              <div className="flex-1 overflow-y-auto p-8">{renderContent()}</div>
             </div>
           </div>
         </div>

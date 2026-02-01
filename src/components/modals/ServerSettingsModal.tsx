@@ -190,6 +190,7 @@ export const ServerSettingsModal = () => {
   const [activeTab, setActiveTab] = useState<SettingsTabId>("overview");
   const [editingRole, setEditingRole] = useState<CustomServerRole | null>(null);
   const [editingRolePermissions, setEditingRolePermissions] = useState<CustomServerRole | null>(null);
+  const [roleTab, setRoleTab] = useState<'details' | 'permissions'>('details');
   const [roleName, setRoleName] = useState("");
   const [roleColor, setRoleColor] = useState("#5865F2");
   const [roleIcon, setRoleIcon] = useState<string>("");
@@ -341,7 +342,14 @@ export const ServerSettingsModal = () => {
             variant="ghost"
             size="sm"
             rounded="xl"
-            onClick={() => setEditingRolePermissions(role)}
+            onClick={() => {
+              if (isMobile) {
+                handleEditRole(role);
+                setRoleTab('permissions');
+              } else {
+                setEditingRolePermissions(role);
+              }
+            }}
             className="text-[10px] sm:text-xs h-8 px-2 sm:px-3"
             title="Edit Permissions"
           >
@@ -351,7 +359,12 @@ export const ServerSettingsModal = () => {
             variant="ghost"
             size="sm"
             rounded="xl"
-            onClick={() => handleEditRole(role)}
+            onClick={() => {
+              handleEditRole(role);
+              if (isMobile) {
+                setRoleTab('details');
+              }
+            }}
             className="text-[10px] sm:text-xs h-8 px-2 sm:px-3"
             title="Edit Role"
           >
@@ -391,22 +404,55 @@ export const ServerSettingsModal = () => {
   const isOwner = userRole === "owner";
   const isAdmin = canManageServer || canManageRoles || canManageChannels;
 
-  // Navigation items for tabs
-  const navItems = useMemo(() => {
-    const items: Array<{ id: SettingsTabId; label: string; icon: LucideIcon }> = [
-      { id: "overview", label: "Overview", icon: Settings },
-      { id: "members", label: "Members", icon: Users },
-      { id: "roles", label: "Roles", icon: Palette },
-      { id: "bans", label: "Bans", icon: Ban },
+  // Navigation items for tabs with categories
+  const navCategories = useMemo(() => {
+    const categories: Array<{ 
+      label: string; 
+      items: Array<{ id: SettingsTabId; label: string; icon: LucideIcon }> 
+    }> = [
+      {
+        label: "Server",
+        items: [
+          { id: "overview", label: "Overview", icon: Settings },
+        ],
+      },
+      {
+        label: "People",
+        items: [
+          { id: "members", label: "Members", icon: Users },
+          { id: "roles", label: "Roles", icon: Palette },
+          { id: "bans", label: "Bans", icon: Ban },
+        ],
+      },
     ];
-    if (canManageInvites) {
-      items.push({ id: "invites", label: "Invites", icon: Link2 });
-    }
+
+    // Content category
     if (canManageEmojis) {
-      items.push({ id: "emojis", label: "Emojis", icon: Smile });
+      categories.push({
+        label: "Content",
+        items: [
+          { id: "emojis", label: "Emojis", icon: Smile },
+        ],
+      });
     }
-    return items;
+
+    // Integrations category
+    if (canManageInvites) {
+      categories.push({
+        label: "Integrations",
+        items: [
+          { id: "invites", label: "Invites", icon: Link2 },
+        ],
+      });
+    }
+
+    return categories;
   }, [canManageEmojis, canManageInvites]);
+
+  // Flattened navItems for backward compatibility (used in mobile view)
+  const navItems = useMemo(() => {
+    return navCategories.flatMap(category => category.items);
+  }, [navCategories]);
 
   const {
     register,
@@ -1610,8 +1656,31 @@ export const ServerSettingsModal = () => {
               {activeTab === "roles" &&
                 (canManageRoles ? (
                   <div className="space-y-4">
-                    <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 space-y-4">
-                      <h4 className="text-sm font-semibold">{editingRole ? "Edit Role" : "Create Role"}</h4>
+                    {editingRole ? (
+                      <Tabs value={roleTab} onValueChange={(v) => setRoleTab(v as 'details' | 'permissions')} className="space-y-4">
+                        <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3">
+                          <div className="mb-3">
+                            <h4 className="text-sm font-semibold mb-1">Edit Role</h4>
+                            <p className="text-xs text-muted-foreground">Modify role settings and permissions</p>
+                          </div>
+                          <TabsList className="inline-flex h-auto p-1 bg-secondary/50 rounded-xl border border-border/50 w-full">
+                            <TabsTrigger 
+                              value="details"
+                              className="flex-1 rounded-lg py-2 px-3 text-xs font-medium transition-all data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                            >
+                              Details
+                            </TabsTrigger>
+                            <TabsTrigger 
+                              value="permissions"
+                              className="flex-1 rounded-lg py-2 px-3 text-xs font-medium transition-all data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                            >
+                              Permissions
+                            </TabsTrigger>
+                          </TabsList>
+                        </div>
+
+                        <TabsContent value="details" className="m-0 space-y-4">
+                          <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 space-y-4">
                       <div className="space-y-3">
                         <Label className="text-sm">Role Name</Label>
                         <Input
@@ -1814,31 +1883,249 @@ export const ServerSettingsModal = () => {
                           </div>
                         </div>
                       </div>
-                      <Button
-                        onClick={editingRole ? handleUpdateRole : handleCreateRole}
-                        disabled={!roleName.trim()}
-                        className="h-10 rounded-xl w-full"
-                      >
-                        {editingRole ? "Update Role" : "Create Role"}
-                      </Button>
-                      {editingRole && (
+                            <Button
+                              onClick={handleUpdateRole}
+                              disabled={!roleName.trim()}
+                              className="h-10 rounded-xl w-full"
+                            >
+                              Update Role
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                setEditingRole(null);
+                                setRoleName("");
+                                setRoleColor("#5865F2");
+                                setRoleIcon("");
+                                setColorType("solid");
+                                setGradientColors(["#5865F2", "#7289DA"]);
+                                setGradientAngle(135);
+                                setRoleTab('details');
+                              }}
+                              className="h-10 rounded-xl w-full"
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </TabsContent>
+
+                        <TabsContent value="permissions" className="m-0">
+                          {server && (
+                            <RolePermissionsEditor
+                              role={editingRole}
+                              serverId={server.id}
+                              onClose={() => {}}
+                            />
+                          )}
+                        </TabsContent>
+                      </Tabs>
+                    ) : (
+                      <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 space-y-4">
+                        <h4 className="text-sm font-semibold">Create Role</h4>
+                        <div className="space-y-3">
+                          <Label className="text-sm">Role Name</Label>
+                          <Input
+                            value={roleName}
+                            onChange={(e) => setRoleName(e.target.value)}
+                            placeholder="Role name"
+                            className="h-10 rounded-xl bg-secondary/50 border-border/30"
+                            maxLength={100}
+                          />
+                        </div>
+                        <div className="space-y-3">
+                          <Label className="text-sm">Role Color</Label>
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              variant={colorType === "solid" ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setColorType("solid")}
+                              className="flex-1 h-9 text-xs"
+                            >
+                              Solid
+                            </Button>
+                            <Button
+                              type="button"
+                              variant={colorType === "gradient" ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setColorType("gradient")}
+                              className="flex-1 h-9 text-xs"
+                            >
+                              Gradient
+                            </Button>
+                          </div>
+                          {colorType === "solid" && (
+                            <div className="flex items-center gap-2">
+                              <label
+                                className="relative w-10 h-10 rounded-xl border border-border/30 cursor-pointer overflow-hidden flex-shrink-0 hover:border-primary/50 transition-colors"
+                                style={{ backgroundColor: roleColor }}
+                              >
+                                <input
+                                  type="color"
+                                  value={roleColor}
+                                  onChange={(e) => setRoleColor(e.target.value)}
+                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                />
+                              </label>
+                              <Input
+                                value={roleColor}
+                                onChange={(e) => setRoleColor(e.target.value)}
+                                placeholder="#5865F2"
+                                className="h-10 rounded-xl bg-secondary/50 border-border/30 flex-1"
+                                maxLength={7}
+                              />
+                            </div>
+                          )}
+                          {colorType === "gradient" && (
+                            <div className="space-y-3">
+                              <div className="space-y-2">
+                                <p className="text-xs text-muted-foreground">Presets</p>
+                                <div className="grid grid-cols-4 gap-2 max-h-32 overflow-y-auto">
+                                  {gradientPresets.map((preset, idx) => (
+                                    <button
+                                      key={idx}
+                                      type="button"
+                                      onClick={() => {
+                                        setGradientColors(preset.colors);
+                                        setGradientAngle(preset.angle);
+                                      }}
+                                      className="relative h-10 rounded-lg border-2 border-border hover:border-primary transition-colors overflow-hidden"
+                                      style={{ background: createGradientString(preset.colors, preset.angle) }}
+                                      title={preset.name}
+                                    />
+                                  ))}
+                                </div>
+                              </div>
+                              <div
+                                className="h-12 rounded-lg border-2 border-border"
+                                style={{ background: createGradientString(gradientColors, gradientAngle) }}
+                              />
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <Label className="text-xs">Angle</Label>
+                                  <span className="text-xs text-muted-foreground">{gradientAngle}°</span>
+                                </div>
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max="360"
+                                  value={gradientAngle}
+                                  onChange={(e) => setGradientAngle(parseInt(e.target.value))}
+                                  className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-xs">Colors ({gradientColors.length})</Label>
+                                {gradientColors.map((color, idx) => (
+                                  <div key={idx} className="flex items-center gap-2">
+                                    <label
+                                      className="relative w-8 h-8 rounded-lg border border-border cursor-pointer overflow-hidden flex-shrink-0"
+                                      style={{ backgroundColor: color }}
+                                    >
+                                      <input
+                                        type="color"
+                                        value={color}
+                                        onChange={(e) => {
+                                          const newColors = [...gradientColors];
+                                          newColors[idx] = e.target.value;
+                                          setGradientColors(newColors);
+                                        }}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                      />
+                                    </label>
+                                    <Input
+                                      value={color}
+                                      onChange={(e) => {
+                                        const newColors = [...gradientColors];
+                                        newColors[idx] = e.target.value;
+                                        setGradientColors(newColors);
+                                      }}
+                                      placeholder="#5865F2"
+                                      className="h-8 rounded-lg bg-secondary/50 border-border/30 flex-1 text-xs"
+                                      maxLength={7}
+                                    />
+                                    {gradientColors.length > 2 && (
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => {
+                                          setGradientColors(gradientColors.filter((_, i) => i !== idx));
+                                        }}
+                                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                ))}
+                                {gradientColors.length < 4 && (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setGradientColors([...gradientColors, "#5865F2"])}
+                                    className="h-8 w-full text-xs"
+                                  >
+                                    <Plus className="w-3 h-3 mr-1" />
+                                    Add Color
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm">Role Icon (optional)</Label>
+                          <div className="flex items-center gap-2">
+                            <EmojiGifPicker
+                              disableGif
+                              serverId={server.id}
+                              serverName={server.name}
+                              open={undefined}
+                              onOpenChange={undefined}
+                              onEmojiSelect={(emoji) => setRoleIcon(emoji)}
+                            >
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-10 px-3 rounded-xl flex items-center gap-2"
+                              >
+                                <Smile className="w-4 h-4" />
+                                <span className="text-sm">{roleIcon ? "Change" : "Select"}</span>
+                              </Button>
+                            </EmojiGifPicker>
+                            <div className="flex-1 min-w-0">
+                              {roleIcon ? (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-emoji leading-none">{roleIcon}</span>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="w-8 h-8 rounded-xl"
+                                    onClick={() => setRoleIcon("")}
+                                    title="Clear role icon"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                <p className="text-xs text-muted-foreground truncate">Emoji or server emoji</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                         <Button
-                          variant="outline"
-                          onClick={() => {
-                            setEditingRole(null);
-                            setRoleName("");
-                            setRoleColor("#5865F2");
-                            setRoleIcon("");
-                            setColorType("solid");
-                            setGradientColors(["#5865F2", "#7289DA"]);
-                            setGradientAngle(135);
-                          }}
+                          onClick={handleCreateRole}
+                          disabled={!roleName.trim()}
                           className="h-10 rounded-xl w-full"
                         >
-                          Cancel
+                          Create Role
                         </Button>
-                      )}
-                    </div>
+                      </div>
+                    )}
 
                     <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 space-y-3">
                       <h4 className="text-sm font-semibold">Server Roles</h4>
@@ -2084,26 +2371,33 @@ export const ServerSettingsModal = () => {
 
             <div className="flex-1 flex overflow-hidden p-4 sm:p-6 pt-4 gap-4">
               {/* Sidebar Navigation */}
-              <div className="flex flex-col items-start justify-start h-full w-48 bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-1.5 gap-1 flex-shrink-0">
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = activeTab === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => setActiveTab(item.id)}
-                      className={cn(
-                        "w-full flex items-center justify-start gap-2 text-sm px-3 py-2.5 rounded-xl transition-colors",
-                        isActive
-                          ? "bg-background shadow-sm"
-                          : "text-muted-foreground hover:text-foreground hover:bg-secondary/80",
-                      )}
-                    >
-                      <Icon className="w-4 h-4 flex-shrink-0" />
-                      <span>{item.label}</span>
-                    </button>
-                  );
-                })}
+              <div className="flex flex-col items-start justify-start h-full w-48 bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-1.5 gap-1 flex-shrink-0 overflow-y-auto">
+                {navCategories.map((category, categoryIndex) => (
+                  <div key={category.label} className={cn("w-full", categoryIndex > 0 && "mt-2")}>
+                    <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                      {category.label}
+                    </div>
+                    {category.items.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = activeTab === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => setActiveTab(item.id)}
+                          className={cn(
+                            "w-full flex items-center justify-start gap-2 text-sm px-3 py-2.5 rounded-xl transition-colors",
+                            isActive
+                              ? "bg-background shadow-sm"
+                              : "text-muted-foreground hover:text-foreground hover:bg-secondary/80",
+                          )}
+                        >
+                          <Icon className="w-4 h-4 flex-shrink-0" />
+                          <span>{item.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
               </div>
 
               {/* Content Area */}

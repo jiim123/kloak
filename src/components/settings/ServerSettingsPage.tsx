@@ -58,10 +58,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { invalidateServerEmojis } from '@/lib/serverEmojis';
-import type { ServerRole, ServerMember, CustomServerRole } from '@/types';
+import type { ServerRole, ServerMember, CustomServerRole, Permission } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RolePermissionsEditor } from '../modals/RolePermissionsEditor';
+import { Separator } from '@/components/ui/separator';
+import { Save } from 'lucide-react';
 import { EmojiGifPicker } from '../modals/EmojiGifPicker';
 import {
   DropdownMenu,
@@ -155,6 +157,289 @@ const createGradientString = (colors: string[], angle: number = 135) => {
   return `linear-gradient(${angle}deg, ${colors.join(', ')})`;
 };
 
+// Permission groups and labels for inline editor
+const PERMISSION_GROUPS: Array<{
+  label: string;
+  permissions: Permission[];
+}> = [
+  {
+    label: 'General Permissions',
+    permissions: ['view_channels', 'read_message_history', 'send_messages', 'add_reactions'],
+  },
+  {
+    label: 'Text Permissions',
+    permissions: ['attach_files', 'embed_links', 'mention_everyone', 'mention_roles', 'use_external_emojis'],
+  },
+  {
+    label: 'Member Permissions',
+    permissions: ['kick_members', 'ban_members', 'mute_members', 'deafen_members', 'move_members', 'manage_nicknames', 'change_nickname'],
+  },
+  {
+    label: 'Channel Permissions',
+    permissions: ['manage_channels', 'manage_messages', 'pin_messages', 'manage_threads'],
+  },
+  {
+    label: 'Administrative Permissions',
+    permissions: ['manage_server', 'manage_roles', 'manage_emojis', 'manage_webhooks', 'manage_invites', 'create_instant_invite', 'transfer_ownership'],
+  },
+  {
+    label: 'Voice Permissions',
+    permissions: ['connect', 'speak', 'use_voice_activation'],
+  },
+  {
+    label: 'Advanced Permissions',
+    permissions: ['use_application_commands'],
+  },
+];
+
+const PERMISSION_LABELS: Record<Permission, string> = {
+  view_channels: 'View Channels',
+  read_message_history: 'Read Message History',
+  send_messages: 'Send Messages',
+  add_reactions: 'Add Reactions',
+  attach_files: 'Attach Files',
+  embed_links: 'Embed Links',
+  mention_everyone: 'Mention @everyone',
+  mention_roles: 'Mention Roles',
+  use_external_emojis: 'Use External Emojis',
+  kick_members: 'Kick Members',
+  ban_members: 'Ban Members',
+  mute_members: 'Mute Members',
+  deafen_members: 'Deafen Members',
+  move_members: 'Move Members',
+  manage_nicknames: 'Manage Nicknames',
+  change_nickname: 'Change Nickname',
+  manage_channels: 'Manage Channels',
+  manage_messages: 'Manage Messages',
+  pin_messages: 'Pin Messages',
+  manage_threads: 'Manage Threads',
+  manage_server: 'Manage Server',
+  manage_roles: 'Manage Roles',
+  manage_emojis: 'Manage Emojis',
+  manage_webhooks: 'Manage Webhooks',
+  manage_invites: 'Manage Invites',
+  create_instant_invite: 'Create Instant Invite',
+  transfer_ownership: 'Transfer Ownership',
+  connect: 'Connect (Voice)',
+  speak: 'Speak (Voice)',
+  use_voice_activation: 'Use Voice Activation',
+  use_application_commands: 'Use Application Commands',
+};
+
+// Inline permissions editor component (without modal wrapper)
+const RolePermissionsEditorInline = ({ role, serverId }: { role: CustomServerRole; serverId: string }) => {
+  const { user } = useAuthStore();
+  const {
+    rolePermissions,
+    fetchRolePermissions,
+    setRolePermission,
+    deleteRolePermission,
+  } = useServerStore();
+
+  const [permissionStates, setPermissionStates] = useState<Map<Permission, boolean | null>>(new Map());
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    const loadPermissions = async () => {
+      if (!user) return;
+
+      setIsLoading(true);
+      try {
+        await fetchRolePermissions(serverId);
+      } catch (error) {
+        console.error('Failed to load permissions:', error);
+        toast.error('Failed to load permissions');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadPermissions();
+  }, [serverId, user, fetchRolePermissions]);
+
+  useEffect(() => {
+    const states = new Map<Permission, boolean | null>();
+
+    const allPermissions: Permission[] = [
+      'view_channels', 'read_message_history', 'send_messages', 'add_reactions',
+      'attach_files', 'embed_links', 'mention_everyone', 'mention_roles', 'use_external_emojis',
+      'manage_messages', 'pin_messages', 'manage_channels', 'manage_threads',
+      'kick_members', 'ban_members', 'mute_members', 'deafen_members', 'move_members',
+      'manage_nicknames', 'change_nickname', 'manage_roles', 'manage_server', 'manage_emojis',
+      'manage_webhooks', 'manage_invites', 'create_instant_invite', 'transfer_ownership',
+      'connect', 'speak', 'use_voice_activation', 'use_application_commands'
+    ];
+
+    for (const perm of allPermissions) {
+      states.set(perm, null);
+    }
+
+    const relevantPermissions = rolePermissions.filter(
+      (rp) => rp.role_id === role.id
+    );
+
+    for (const rp of relevantPermissions) {
+      states.set(rp.permission, rp.allowed);
+    }
+
+    setPermissionStates(states);
+  }, [rolePermissions, role]);
+
+  const handlePermissionChange = (permission: Permission, value: boolean | null) => {
+    setPermissionStates((prev) => {
+      const next = new Map(prev);
+      next.set(permission, value);
+      return next;
+    });
+  };
+
+  const handleSave = async () => {
+    if (!user) return;
+
+    setIsSaving(true);
+    try {
+      const currentDbPermissions = rolePermissions.filter(
+        (rp) => rp.role_id === role.id
+      );
+
+      const currentDbPermMap = new Map(
+        currentDbPermissions.map((rp) => [rp.permission, rp])
+      );
+
+      const savePromises: Promise<void>[] = [];
+
+      for (const [permission, state] of permissionStates.entries()) {
+        const currentDb = currentDbPermMap.get(permission);
+
+        if (state !== null) {
+          if (currentDb) {
+            if (currentDb.allowed !== state) {
+              savePromises.push(
+                setRolePermission(serverId, user.id, permission, role.id, undefined, state)
+              );
+            }
+          } else {
+            savePromises.push(
+              setRolePermission(serverId, user.id, permission, role.id, undefined, state)
+            );
+          }
+        } else if (currentDb) {
+          savePromises.push(deleteRolePermission(currentDb.id, user.id));
+        }
+      }
+
+      await Promise.all(savePromises);
+      await fetchRolePermissions(serverId);
+      toast.success('Permissions saved successfully');
+    } catch (error) {
+      console.error('Failed to save permissions:', error);
+      toast.error('Failed to save permissions');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="w-6 h-6 animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 max-w-2xl">
+      <div>
+        <h3 className="text-sm font-semibold">Role Permissions</h3>
+        <p className="text-xs text-muted-foreground mt-1">
+          Configure permissions for {role.name}
+        </p>
+      </div>
+
+      <ScrollArea className="h-[calc(100vh-20rem)] pr-4">
+        <div className="space-y-6">
+          {PERMISSION_GROUPS.map((group) => (
+            <div key={group.label} className="space-y-3">
+              <Label className="text-xs font-semibold text-muted-foreground uppercase">
+                {group.label}
+              </Label>
+              <div className="space-y-2 pl-1">
+                {group.permissions.map((permission) => {
+                  const state = permissionStates.get(permission);
+
+                  return (
+                    <div key={permission} className="flex items-center justify-between p-2 rounded-md hover:bg-secondary/50 group/item">
+                      <Label
+                        htmlFor={permission}
+                        className="text-sm font-normal cursor-pointer flex-1"
+                      >
+                        {PERMISSION_LABELS[permission]}
+                      </Label>
+                      <div className="flex bg-secondary/80 rounded-lg p-0.5 border border-border/50">
+                        <button
+                          onClick={() => handlePermissionChange(permission, false)}
+                          className={cn(
+                            "px-3 py-1 text-[10px] font-bold rounded-md transition-all",
+                            state === false
+                              ? "bg-destructive text-destructive-foreground shadow-sm"
+                              : "text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          DENY
+                        </button>
+                        <button
+                          onClick={() => handlePermissionChange(permission, null)}
+                          className={cn(
+                            "px-3 py-1 text-[10px] font-bold rounded-md transition-all",
+                            state === null
+                              ? "bg-background text-foreground shadow-sm border border-border"
+                              : "text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          INHERIT
+                        </button>
+                        <button
+                          onClick={() => handlePermissionChange(permission, true)}
+                          className={cn(
+                            "px-3 py-1 text-[10px] font-bold rounded-md transition-all",
+                            state === true
+                              ? "bg-emerald-500 text-white shadow-sm"
+                              : "text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          ALLOW
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <Separator />
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
+
+      <div className="flex items-center justify-end gap-2 pt-4 border-t">
+        <Button onClick={handleSave} disabled={isSaving}>
+          {isSaving ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <Save className="w-4 h-4 mr-2" />
+              Save Changes
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 const parseColorValue = (colorValue: string): { type: 'solid' | 'gradient'; color?: string; colors?: string[]; angle?: number } => {
   if (colorValue.startsWith('linear-gradient')) {
     // Parse gradient string
@@ -218,12 +503,12 @@ export const ServerSettingsPage = () => {
   const [inviteExpiresIn, setInviteExpiresIn] = useState<string>('never');
   const [inviteMaxUses, setInviteMaxUses] = useState<string>('unlimited');
   const [editingRole, setEditingRole] = useState<CustomServerRole | null>(null);
-  const [editingRolePermissions, setEditingRolePermissions] = useState<CustomServerRole | null>(null);
   const [roleName, setRoleName] = useState('');
   const [roleColor, setRoleColor] = useState('#5865F2');
   const [roleIcon, setRoleIcon] = useState<string>('');
   const [activeRoleId, setActiveRoleId] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<CustomServerRole | null>(null);
+  const [roleTab, setRoleTab] = useState<'details' | 'permissions'>('details');
   const [colorType, setColorType] = useState<'solid' | 'gradient'>('solid');
   const [gradientColors, setGradientColors] = useState<string[]>(['#5865F2', '#7289DA']);
   const [gradientAngle, setGradientAngle] = useState(135);
@@ -324,6 +609,7 @@ export const ServerSettingsPage = () => {
           setSelectedRole(role);
           setEditingRole(role);
           setRoleName(role.name);
+          setRoleTab('details');
           const parsed = parseColorValue(role.color);
           if (parsed.type === 'gradient') {
             setColorType('gradient');
@@ -1220,70 +1506,106 @@ export const ServerSettingsPage = () => {
 
         {/* Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex overflow-hidden">
-          <TabsList className="flex flex-col items-start justify-start h-full w-56 border-r border-border bg-secondary/30 p-2 gap-1 rounded-none inline-flex">
-            <TabsTrigger 
-              value="overview" 
-              className="w-full justify-start gap-2 text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
-            >
-              <Settings className="w-4 h-4" />
-              <span>Overview</span>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="members" 
-              className="w-full justify-start gap-2 text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
-            >
-              <Users className="w-4 h-4" />
-              <span>Members</span>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="roles" 
-              className="w-full justify-start gap-2 text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
-            >
-              <Palette className="w-4 h-4" />
-              <span>Roles</span>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="bans" 
-              className="w-full justify-start gap-2 text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
-            >
-              <Ban className="w-4 h-4" />
-              <span>Bans</span>
-            </TabsTrigger>
-            {canManageInvites && (
-              <TabsTrigger
-                value="invites"
+          <TabsList className="flex flex-col items-start justify-start h-full w-56 border-r border-border bg-secondary/30 p-2 gap-1 rounded-none inline-flex overflow-y-auto">
+            {/* Server Category */}
+            <div className="w-full">
+              <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                Server
+              </div>
+              <TabsTrigger 
+                value="overview" 
                 className="w-full justify-start gap-2 text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
               >
-                <Link2 className="w-4 h-4" />
-                <span>Invites</span>
+                <Settings className="w-4 h-4" />
+                <span>Overview</span>
               </TabsTrigger>
-            )}
+            </div>
+
+            {/* People Category */}
+            <div className="w-full mt-2">
+              <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                People
+              </div>
+              <TabsTrigger 
+                value="members" 
+                className="w-full justify-start gap-2 text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+              >
+                <Users className="w-4 h-4" />
+                <span>Members</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="roles" 
+                className="w-full justify-start gap-2 text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+              >
+                <Palette className="w-4 h-4" />
+                <span>Roles</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="bans" 
+                className="w-full justify-start gap-2 text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+              >
+                <Ban className="w-4 h-4" />
+                <span>Bans</span>
+              </TabsTrigger>
+            </div>
+
+            {/* Content Category */}
             {canManageEmojis && (
-              <TabsTrigger
-                value="emojis"
-                className="w-full justify-start gap-2 text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
-              >
-                <Smile className="w-4 h-4" />
-                <span>Emojis</span>
-              </TabsTrigger>
+              <div className="w-full mt-2">
+                <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Content
+                </div>
+                <TabsTrigger
+                  value="emojis"
+                  className="w-full justify-start gap-2 text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                >
+                  <Smile className="w-4 h-4" />
+                  <span>Emojis</span>
+                </TabsTrigger>
+              </div>
             )}
-            {canManageChannels && (
-              <TabsTrigger
-                value="integrations"
-                className="w-full justify-start gap-2 text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
-              >
-                <Plug className="w-4 h-4" />
-                <span>Integrations</span>
-              </TabsTrigger>
+
+            {/* Integrations Category */}
+            {(canManageInvites || canManageChannels) && (
+              <div className="w-full mt-2">
+                <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Integrations
+                </div>
+                {canManageInvites && (
+                  <TabsTrigger
+                    value="invites"
+                    className="w-full justify-start gap-2 text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                  >
+                    <Link2 className="w-4 h-4" />
+                    <span>Invites</span>
+                  </TabsTrigger>
+                )}
+                {canManageChannels && (
+                  <TabsTrigger
+                    value="integrations"
+                    className="w-full justify-start gap-2 text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                  >
+                    <Plug className="w-4 h-4" />
+                    <span>Integrations</span>
+                  </TabsTrigger>
+                )}
+              </div>
             )}
+
+            {/* Danger Zone Category */}
             {isOwner && (
-              <TabsTrigger
-                value="danger-zone"
-                className="w-full justify-start gap-2 text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm text-destructive"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span>Danger Zone</span>
-              </TabsTrigger>
+              <div className="w-full mt-2">
+                <div className="px-3 py-1.5 text-[10px] font-semibold text-destructive/70 uppercase tracking-wider">
+                  Danger Zone
+                </div>
+                <TabsTrigger
+                  value="danger-zone"
+                  className="w-full justify-start gap-2 text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm text-destructive"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Danger Zone</span>
+                </TabsTrigger>
+              </div>
             )}
           </TabsList>
           
@@ -1679,20 +2001,36 @@ export const ServerSettingsPage = () => {
 
                   {/* Right Side - Role Settings */}
                   <div className="flex-1 overflow-y-auto">
-                    {selectedRole || (!selectedRole && !editingRole) ? (
-                      <div className="p-6 max-w-2xl">
-                        <div className="space-y-5">
-                          <div>
-                            <h3 className="text-lg font-semibold mb-1">
-                              {selectedRole ? 'Edit Role' : 'Create New Role'}
-                            </h3>
-                            <p className="text-sm text-muted-foreground">
-                              {selectedRole ? 'Modify role settings and permissions' : 'Create a new role for your server'}
-                            </p>
+                    {selectedRole ? (
+                      <div className="h-full overflow-y-auto">
+                        <Tabs value={roleTab} onValueChange={(v) => setRoleTab(v as 'details' | 'permissions')} className="flex flex-col">
+                          <div className="px-6 pt-6 pb-4 border-b border-border">
+                            <div className="mb-4">
+                              <h3 className="text-lg font-semibold mb-1">Edit Role</h3>
+                              <p className="text-sm text-muted-foreground">
+                                Modify role settings and permissions
+                              </p>
+                            </div>
+                            <TabsList className="inline-flex h-auto p-1 bg-secondary/30 rounded-xl border border-border/50 w-full max-w-md">
+                              <TabsTrigger 
+                                value="details"
+                                className="flex-1 rounded-lg py-2.5 px-4 text-sm font-medium transition-all duration-200 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
+                              >
+                                Details
+                              </TabsTrigger>
+                              <TabsTrigger 
+                                value="permissions"
+                                className="flex-1 rounded-lg py-2.5 px-4 text-sm font-medium transition-all duration-200 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
+                              >
+                                Permissions
+                              </TabsTrigger>
+                            </TabsList>
                           </div>
 
-                          {/* Role Form */}
-                          <div className="space-y-4 p-4 border rounded-lg bg-secondary/30">
+                          <TabsContent value="details" className="m-0 p-6">
+                            <div className="space-y-5 max-w-2xl">
+                              {/* Role Form */}
+                              <div className="space-y-4 p-4 border rounded-lg bg-secondary/30">
                             <div className="space-y-2">
                               <Label className="text-sm">Role Name</Label>
                               <Input
@@ -1969,45 +2307,292 @@ export const ServerSettingsPage = () => {
                             </div>
                           </div>
 
-                          {/* Permissions Section */}
-                          {selectedRole && (
+                          {/* Delete Role */}
+                          <div className="border-t border-destructive/20 pt-4">
+                            <h4 className="text-sm font-semibold text-destructive mb-2">Danger Zone</h4>
+                            <p className="text-xs text-muted-foreground mb-3">
+                              Deleting this role will remove it from all members.
+                            </p>
+                            <Button 
+                              variant="destructive" 
+                              size="sm"
+                              onClick={() => handleDeleteRole(selectedRole)}
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete Role
+                            </Button>
+                          </div>
+                            </div>
+                          </TabsContent>
+
+                          <TabsContent value="permissions" className="m-0 p-6">
+                            <RolePermissionsEditorInline 
+                              role={selectedRole}
+                              serverId={server.id}
+                            />
+                          </TabsContent>
+                        </Tabs>
+                      </div>
+                    ) : (!selectedRole && !editingRole) ? (
+                      <div className="p-6 max-w-2xl">
+                        <div className="space-y-5">
+                          <div>
+                            <h3 className="text-lg font-semibold mb-1">Create New Role</h3>
+                            <p className="text-sm text-muted-foreground">
+                              Create a new role for your server
+                            </p>
+                          </div>
+
+                          {/* Role Form */}
+                          <div className="space-y-4 p-4 border rounded-lg bg-secondary/30">
+                            <div className="space-y-2">
+                              <Label className="text-sm">Role Name</Label>
+                              <Input
+                                id="roleName"
+                                value={roleName}
+                                onChange={(e) => setRoleName(e.target.value)}
+                                placeholder="Enter role name"
+                                className="h-10 text-sm"
+                                maxLength={100}
+                              />
+                            </div>
+
+                            {/* Role Color Section */}
                             <div className="space-y-3">
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <h4 className="text-sm font-semibold">Permissions</h4>
-                                  <p className="text-xs text-muted-foreground">
-                                    Manage what members with this role can do
-                                  </p>
-                                </div>
+                              <Label className="text-sm">Role Color</Label>
+                              
+                              {/* Color Type Selector */}
+                              <div className="flex gap-2">
                                 <Button
-                                  variant="outline"
+                                  type="button"
+                                  variant={colorType === 'solid' ? 'default' : 'outline'}
                                   size="sm"
-                                  onClick={() => setEditingRolePermissions(selectedRole)}
+                                  onClick={() => setColorType('solid')}
+                                  className="flex-1"
                                 >
-                                  <KeyRound className="w-4 h-4 mr-2" />
-                                  Edit Permissions
+                                  Solid Color
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant={colorType === 'gradient' ? 'default' : 'outline'}
+                                  size="sm"
+                                  onClick={() => setColorType('gradient')}
+                                  className="flex-1"
+                                >
+                                  Gradient
                                 </Button>
                               </div>
-                            </div>
-                          )}
 
-                          {/* Delete Role */}
-                          {selectedRole && (
-                            <div className="border-t border-destructive/20 pt-4">
-                              <h4 className="text-sm font-semibold text-destructive mb-2">Danger Zone</h4>
-                              <p className="text-xs text-muted-foreground mb-3">
-                                Deleting this role will remove it from all members.
-                              </p>
-                              <Button 
-                                variant="destructive" 
+                              {/* Solid Color Picker */}
+                              {colorType === 'solid' && (
+                                <div className="flex items-center gap-2">
+                                  <label
+                                    htmlFor="roleColor"
+                                    className="relative w-12 h-12 rounded-lg border-2 border-border cursor-pointer overflow-hidden flex-shrink-0 hover:border-primary transition-colors"
+                                    style={{ backgroundColor: roleColor }}
+                                  >
+                                    <input
+                                      type="color"
+                                      id="roleColor"
+                                      value={roleColor}
+                                      onChange={(e) => setRoleColor(e.target.value)}
+                                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    />
+                                  </label>
+                                  <Input
+                                    value={roleColor}
+                                    onChange={(e) => setRoleColor(e.target.value)}
+                                    placeholder="#5865F2"
+                                    className="h-10 text-sm flex-1"
+                                    maxLength={7}
+                                  />
+                                </div>
+                              )}
+
+                              {/* Gradient Options */}
+                              {colorType === 'gradient' && (
+                                <div className="space-y-3">
+                                  {/* Gradient Presets */}
+                                  <div className="space-y-2">
+                                    <p className="text-xs text-muted-foreground">Gradient Presets</p>
+                                    <ScrollArea className="h-32">
+                                      <div className="grid grid-cols-4 gap-2 pr-3">
+                                        {gradientPresets.map((preset, idx) => (
+                                          <button
+                                            key={idx}
+                                            type="button"
+                                            onClick={() => {
+                                              setGradientColors(preset.colors);
+                                              setGradientAngle(preset.angle);
+                                            }}
+                                            className="relative h-12 rounded-lg border-2 border-border hover:border-primary transition-colors overflow-hidden group"
+                                            style={{ background: createGradientString(preset.colors, preset.angle) }}
+                                            title={preset.name}
+                                          >
+                                            <span className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                              <span className="text-[10px] font-medium text-white opacity-0 group-hover:opacity-100 transition-opacity text-center px-1">
+                                                {preset.name}
+                                              </span>
+                                            </span>
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </ScrollArea>
+                                  </div>
+
+                                  {/* Custom Gradient Editor */}
+                                  <div className="space-y-2">
+                                    <p className="text-xs text-muted-foreground">Custom Gradient</p>
+                                    <div 
+                                      className="h-16 rounded-lg border-2 border-border"
+                                      style={{ background: createGradientString(gradientColors, gradientAngle) }}
+                                    />
+                                    
+                                    {/* Gradient Angle Slider */}
+                                    <div className="space-y-1">
+                                      <div className="flex items-center justify-between">
+                                        <Label className="text-xs">Angle</Label>
+                                        <span className="text-xs text-muted-foreground">{gradientAngle}°</span>
+                                      </div>
+                                      <input
+                                        type="range"
+                                        min="0"
+                                        max="360"
+                                        value={gradientAngle}
+                                        onChange={(e) => setGradientAngle(parseInt(e.target.value))}
+                                        className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer"
+                                        style={{
+                                          background: `linear-gradient(to right, ${gradientColors[0]}, ${gradientColors[gradientColors.length - 1]})`
+                                        }}
+                                      />
+                                    </div>
+
+                                    {/* Gradient Color Stops */}
+                                    <div className="space-y-2">
+                                      <div className="flex items-center justify-between">
+                                        <Label className="text-xs">Colors ({gradientColors.length})</Label>
+                                        <div className="flex gap-1">
+                                          {gradientColors.length < 4 && (
+                                            <Button
+                                              type="button"
+                                              variant="ghost"
+                                              size="sm"
+                                              onClick={() => setGradientColors([...gradientColors, '#5865F2'])}
+                                              className="h-6 px-2 text-xs"
+                                            >
+                                              <Plus className="w-3 h-3" />
+                                            </Button>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="space-y-2">
+                                        {gradientColors.map((color, idx) => (
+                                          <div key={idx} className="flex items-center gap-2">
+                                            <label
+                                              className="relative w-10 h-10 rounded-lg border-2 border-border cursor-pointer overflow-hidden flex-shrink-0 hover:border-primary transition-colors"
+                                              style={{ backgroundColor: color }}
+                                            >
+                                              <input
+                                                type="color"
+                                                value={color}
+                                                onChange={(e) => {
+                                                  const newColors = [...gradientColors];
+                                                  newColors[idx] = e.target.value;
+                                                  setGradientColors(newColors);
+                                                }}
+                                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                              />
+                                            </label>
+                                            <Input
+                                              value={color}
+                                              onChange={(e) => {
+                                                const newColors = [...gradientColors];
+                                                newColors[idx] = e.target.value;
+                                                setGradientColors(newColors);
+                                              }}
+                                              placeholder="#5865F2"
+                                              className="h-10 text-sm flex-1"
+                                              maxLength={7}
+                                            />
+                                            {gradientColors.length > 2 && (
+                                              <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => {
+                                                  setGradientColors(gradientColors.filter((_, i) => i !== idx));
+                                                }}
+                                                className="h-10 w-10 text-muted-foreground hover:text-destructive"
+                                              >
+                                                <Trash2 className="w-4 h-4" />
+                                              </Button>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-sm">Role Icon (optional)</Label>
+                              <div className="flex items-center gap-2">
+                                <EmojiGifPicker
+                                  disableGif
+                                  serverId={server.id}
+                                  serverName={server.name}
+                                  open={undefined}
+                                  onOpenChange={undefined}
+                                  onEmojiSelect={(emoji) => setRoleIcon(emoji)}
+                                >
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-10 px-3 flex items-center gap-2"
+                                  >
+                                    <Smile className="w-4 h-4" />
+                                    <span className="text-sm">
+                                      {roleIcon ? 'Change' : 'Select'}
+                                    </span>
+                                  </Button>
+                                </EmojiGifPicker>
+                                <div className="flex-1 min-w-0">
+                                  {roleIcon ? (
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm font-emoji leading-none">{roleIcon}</span>
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="w-7 h-7"
+                                        onClick={() => setRoleIcon('')}
+                                        title="Clear role icon"
+                                      >
+                                        <X className="w-3.5 h-3.5" />
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <p className="text-xs text-muted-foreground truncate">
+                                      Emoji or server emoji (e.g. <span className="font-mono">:cat:</span>)
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 pt-2">
+                              <Button
+                                onClick={handleCreateRole}
+                                disabled={!roleName.trim()}
                                 size="sm"
-                                onClick={() => handleDeleteRole(selectedRole)}
+                                className="flex-1"
                               >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Delete Role
+                                <Plus className="w-4 h-4 mr-2" />
+                                Create Role
                               </Button>
                             </div>
-                          )}
+                          </div>
                         </div>
                       </div>
                     ) : (
@@ -2463,18 +3048,6 @@ export const ServerSettingsPage = () => {
       </div>
 
       {/* Role Permissions Editor */}
-      {editingRolePermissions && server && (
-        <Dialog open={!!editingRolePermissions} onOpenChange={(open) => !open && setEditingRolePermissions(null)}>
-          <DialogContent className="max-w-2xl max-h-[90vh]">
-            <RolePermissionsEditor
-              role={editingRolePermissions}
-              serverId={server.id}
-              onClose={() => setEditingRolePermissions(null)}
-            />
-          </DialogContent>
-        </Dialog>
-      )}
-
       {/* Delete Confirmation */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent className="max-w-lg">
