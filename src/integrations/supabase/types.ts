@@ -1925,7 +1925,7 @@ export type Database = {
         Returns: Json
       }
       pin_message: {
-        Args: { _message_id: string; _pin: boolean; _user_id: string }
+        Args: { _message_id: string; _pinned: boolean; _user_id: string }
         Returns: boolean
       }
       post_system_message: {

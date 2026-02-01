@@ -34,6 +34,10 @@ const PERMISSION_GROUPS: Array<{
       label: 'Channel Permissions',
       permissions: ['manage_channels', 'manage_messages', 'pin_messages'],
     },
+    {
+      label: 'Administrative Permissions',
+      permissions: ['manage_server', 'manage_roles', 'manage_emojis', 'manage_invites'],
+    },
   ];
 
 const PERMISSION_LABELS: Record<Permission, string> = {
@@ -132,7 +136,8 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
       'view_channels', 'send_messages', 'add_reactions',
       'manage_messages', 'pin_messages', 'manage_channels',
       'kick_members', 'ban_members', 'mute_members',
-      'manage_nicknames'
+      'manage_nicknames', 'manage_server', 'manage_roles',
+      'manage_emojis', 'manage_invites'
     ];
 
     // Initialize all roles with null (inherit) permissions

@@ -532,9 +532,10 @@ export const useMessageStore = create<MessageState>((set, get) => ({
 
   pinMessage: async (messageId: string, isPinned: boolean, userId: string) => {
     try {
-      const { error } = await supabase.rpc('toggle_pin_message', {
+      const { error } = await supabase.rpc('pin_message', {
         _message_id: messageId,
         _user_id: userId,
+        _pinned: isPinned,
       });
 
       if (error) throw error;
