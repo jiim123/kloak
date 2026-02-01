@@ -42,14 +42,30 @@ const ROLE_PERMISSIONS: Record<ServerRole, Permission[]> = {
     'kick_members',
     'ban_members',
     'mute_members',
+    'deafen_members',
+    'move_members',
     'manage_nicknames',
+    'change_nickname',
     'manage_messages',
     'pin_messages',
     'send_messages',
     'add_reactions',
     'view_channels',
+    'read_message_history',
+    'attach_files',
+    'embed_links',
+    'mention_everyone',
+    'mention_roles',
+    'use_external_emojis',
+    'manage_webhooks',
+    'manage_threads',
+    'create_instant_invite',
     'transfer_ownership',
     'manage_invites',
+    'connect',
+    'speak',
+    'use_voice_activation',
+    'use_application_commands',
   ],
   admin: [
     'manage_channels',
@@ -57,29 +73,69 @@ const ROLE_PERMISSIONS: Record<ServerRole, Permission[]> = {
     'kick_members',
     'ban_members',
     'mute_members',
+    'deafen_members',
+    'move_members',
     'manage_nicknames',
+    'change_nickname',
     'manage_messages',
     'pin_messages',
     'send_messages',
     'add_reactions',
     'view_channels',
+    'read_message_history',
+    'attach_files',
+    'embed_links',
+    'mention_everyone',
+    'mention_roles',
+    'use_external_emojis',
+    'manage_webhooks',
+    'manage_threads',
+    'create_instant_invite',
     'manage_invites',
+    'connect',
+    'speak',
+    'use_voice_activation',
+    'use_application_commands',
   ],
   moderator: [
     'kick_members',
-    'ban_members',
     'mute_members',
+    'deafen_members',
+    'move_members',
     'manage_nicknames',
+    'change_nickname',
     'manage_messages',
     'pin_messages',
     'send_messages',
     'add_reactions',
     'view_channels',
+    'read_message_history',
+    'attach_files',
+    'embed_links',
+    'mention_roles',
+    'use_external_emojis',
+    'manage_threads',
+    'create_instant_invite',
+    'connect',
+    'speak',
+    'use_voice_activation',
+    'use_application_commands',
   ],
   member: [
     'send_messages',
     'add_reactions',
     'view_channels',
+    'read_message_history',
+    'attach_files',
+    'embed_links',
+    'mention_roles',
+    'use_external_emojis',
+    'change_nickname',
+    'create_instant_invite',
+    'connect',
+    'speak',
+    'use_voice_activation',
+    'use_application_commands',
   ],
 };
 
@@ -233,7 +289,8 @@ export const hasBasePermission = (role: ServerRole | undefined, permission: Perm
  * Evaluate permission with full hierarchy consideration
  * 
  * Evaluation Order:
- * 1. Channel-specific overrides (role_name or role_id match)
+ * 0. User-specific channel overrides (highest priority)
+ * 1. Channel-specific role overrides
  *    - Explicit DENY always blocks
  *    - Explicit ALLOW overrides server-level restrictions
  * 2. Server-wide role permissions (from role_permissions table)
@@ -245,6 +302,7 @@ export const hasBasePermission = (role: ServerRole | undefined, permission: Perm
  * @param rolePermissions - Server-wide role permission overrides
  * @param channelPermissions - Channel-specific permission overrides
  * @param channelId - Optional channel ID for channel-specific checks
+ * @param userId - Optional user ID for user-specific overrides
  * @returns boolean - Whether the permission is allowed
  */
 export const evaluatePermission = (
@@ -253,7 +311,8 @@ export const evaluatePermission = (
   customRoles?: CustomServerRole[],
   rolePermissions?: RolePermission[],
   channelPermissions?: ChannelPermission[],
-  channelId?: string
+  channelId?: string,
+  userId?: string
 ): boolean => {
   // Owner always has all permissions
   if (baseRole === 'owner') return true;
@@ -262,10 +321,27 @@ export const evaluatePermission = (
 
   const customRoleIds = new Set(customRoles?.map(r => r.id) ?? []);
 
-  // Step 1: Check channel-specific overrides (highest priority)
+  // Step 0: Check user-specific channel overrides (highest priority)
+  if (channelId && userId && channelPermissions && channelPermissions.length > 0) {
+    const userOverride = channelPermissions.find(
+      cp => cp.channel_id === channelId && 
+            cp.permission === permission && 
+            cp.user_id === userId &&
+            !cp.role_id &&
+            !cp.role_name
+    );
+
+    if (userOverride) {
+      return userOverride.allowed;
+    }
+  }
+
+  // Step 1: Check channel-specific role overrides
   if (channelId && channelPermissions && channelPermissions.length > 0) {
     const relevantChannelPerms = channelPermissions.filter(
-      cp => cp.channel_id === channelId && cp.permission === permission
+      cp => cp.channel_id === channelId && 
+            cp.permission === permission &&
+            !cp.user_id // Only role-based overrides here
     );
 
     if (relevantChannelPerms.length > 0) {
@@ -338,7 +414,8 @@ export const getMemberPermissions = (
   customRoles: CustomServerRole[] | undefined,
   rolePermissions: RolePermission[] | undefined,
   channelPermissions: ChannelPermission[] | undefined,
-  channelId?: string
+  channelId?: string,
+  userId?: string
 ): Map<Permission, boolean> => {
   const permissions = new Map<Permission, boolean>();
 
@@ -351,20 +428,36 @@ export const getMemberPermissions = (
     'kick_members',
     'ban_members',
     'mute_members',
+    'deafen_members',
+    'move_members',
     'manage_nicknames',
+    'change_nickname',
     'manage_messages',
     'pin_messages',
     'send_messages',
     'add_reactions',
     'view_channels',
+    'read_message_history',
+    'attach_files',
+    'embed_links',
+    'mention_everyone',
+    'mention_roles',
+    'use_external_emojis',
+    'manage_webhooks',
+    'manage_threads',
+    'create_instant_invite',
     'transfer_ownership',
     'manage_invites',
+    'connect',
+    'speak',
+    'use_voice_activation',
+    'use_application_commands',
   ];
 
   for (const permission of allPermissions) {
     permissions.set(
       permission,
-      evaluatePermission(permission, baseRole, customRoles, rolePermissions, channelPermissions, channelId)
+      evaluatePermission(permission, baseRole, customRoles, rolePermissions, channelPermissions, channelId, userId)
     );
   }
 
@@ -381,7 +474,8 @@ export const hasMemberPermission = (
   customRoles?: CustomServerRole[],
   rolePermissions?: RolePermission[],
   channelPermissions?: ChannelPermission[],
-  channelId?: string
+  channelId?: string,
+  userId?: string
 ): boolean => {
   return evaluatePermission(
     permission,
@@ -389,7 +483,8 @@ export const hasMemberPermission = (
     customRoles,
     rolePermissions,
     channelPermissions,
-    channelId
+    channelId,
+    userId
   );
 };
 
@@ -403,7 +498,8 @@ export const canPerformInChannel = (
   channelId: string,
   customRoles?: CustomServerRole[],
   rolePermissions?: RolePermission[],
-  channelPermissions?: ChannelPermission[]
+  channelPermissions?: ChannelPermission[],
+  userId?: string
 ): boolean => {
   return evaluatePermission(
     permission,
@@ -411,7 +507,8 @@ export const canPerformInChannel = (
     customRoles,
     rolePermissions,
     channelPermissions,
-    channelId
+    channelId,
+    userId
   );
 };
 
@@ -423,14 +520,16 @@ export const getAllowedPermissions = (
   customRoles?: CustomServerRole[],
   rolePermissions?: RolePermission[],
   channelPermissions?: ChannelPermission[],
-  channelId?: string
+  channelId?: string,
+  userId?: string
 ): Permission[] => {
   const permissions = getMemberPermissions(
     baseRole,
     customRoles,
     rolePermissions,
     channelPermissions,
-    channelId
+    channelId,
+    userId
   );
 
   const allowed: Permission[] = [];

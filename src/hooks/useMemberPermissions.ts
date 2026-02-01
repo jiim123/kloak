@@ -26,7 +26,7 @@ export const useMemberPermissions = (channelId?: string) => {
   }, [members, user, currentServer]);
 
   const checkPermission = (permission: Permission): boolean => {
-    if (!currentMember || !currentServer) return false;
+    if (!currentMember || !currentServer || !user) return false;
 
     // Use the centralized permission evaluation function
     return evaluatePermission(
@@ -35,7 +35,8 @@ export const useMemberPermissions = (channelId?: string) => {
       currentMember.roles,
       rolePermissions,
       channelPermissions,
-      channelId
+      channelId,
+      user.id
     );
   };
 
@@ -43,7 +44,7 @@ export const useMemberPermissions = (channelId?: string) => {
     currentMember,
     hasPermission: checkPermission,
     canPerformInChannel: (permission: Permission, targetChannelId?: string) => {
-      if (!currentMember || !currentServer) return false;
+      if (!currentMember || !currentServer || !user) return false;
       const effectiveChannelId = targetChannelId || channelId;
       if (!effectiveChannelId) return checkPermission(permission);
       
@@ -53,7 +54,8 @@ export const useMemberPermissions = (channelId?: string) => {
         currentMember.roles,
         rolePermissions,
         channelPermissions,
-        effectiveChannelId
+        effectiveChannelId,
+        user.id
       );
     },
   };

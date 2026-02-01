@@ -82,7 +82,7 @@ interface ServerState {
   fetchRolePermissions: (serverId: string) => Promise<void>;
   fetchChannelPermissions: (channelId: string) => Promise<void>;
   setRolePermission: (serverId: string, userId: string, permission: Permission, roleId?: string, roleName?: ServerRole, allowed?: boolean) => Promise<void>;
-  setChannelPermission: (channelId: string, userId: string, permission: Permission, allowed: boolean, roleId?: string, roleName?: ServerRole) => Promise<void>;
+  setChannelPermission: (channelId: string, userId: string, permission: Permission, allowed: boolean, roleId?: string, roleName?: ServerRole, targetUserId?: string) => Promise<void>;
   deleteRolePermission: (permissionId: string, userId: string) => Promise<void>;
   deleteChannelPermission: (permissionId: string, userId: string) => Promise<void>;
 
@@ -1403,6 +1403,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         channel_id: row.channel_id,
         role_id: row.role_id,
         role_name: row.role_name as ServerRole | null,
+        user_id: row.user_id || null,
         permission: row.permission as Permission,
         allowed: row.allowed,
         created_at: row.created_at ?? '',
@@ -1450,7 +1451,8 @@ export const useServerStore = create<ServerState>((set, get) => ({
     permission: Permission,
     allowed: boolean,
     roleId?: string,
-    roleName?: ServerRole
+    roleName?: ServerRole,
+    targetUserId?: string
   ) => {
     try {
       // Use RPC function instead of direct upsert to handle partial indexes correctly
@@ -1461,6 +1463,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         _allowed: allowed,
         _role_id: roleId || null,
         _role_name: roleName || null,
+        _target_user_id: targetUserId || null,
       });
 
       if (error) throw error;

@@ -58,14 +58,30 @@ export type Permission =
   | 'kick_members'
   | 'ban_members'
   | 'mute_members'
+  | 'deafen_members'
+  | 'move_members'
   | 'manage_nicknames'
+  | 'change_nickname'
   | 'manage_messages'
   | 'pin_messages'
   | 'send_messages'
   | 'add_reactions'
   | 'view_channels'
+  | 'read_message_history'
+  | 'attach_files'
+  | 'embed_links'
+  | 'mention_everyone'
+  | 'mention_roles'
+  | 'use_external_emojis'
+  | 'manage_webhooks'
+  | 'manage_threads'
+  | 'create_instant_invite'
   | 'transfer_ownership'
-  | 'manage_invites';
+  | 'manage_invites'
+  | 'connect'
+  | 'speak'
+  | 'use_voice_activation'
+  | 'use_application_commands';
 
 export interface RolePermission {
   id: string;
@@ -82,6 +98,7 @@ export interface ChannelPermission {
   channel_id: string;
   role_id: string | null;
   role_name: ServerRole | null;
+  user_id: string | null;
   permission: Permission;
   allowed: boolean;
   created_at: string;

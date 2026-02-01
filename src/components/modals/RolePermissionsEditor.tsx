@@ -23,38 +23,66 @@ const PERMISSION_GROUPS: Array<{
 }> = [
     {
       label: 'General Permissions',
-      permissions: ['view_channels', 'send_messages', 'add_reactions'],
+      permissions: ['view_channels', 'read_message_history', 'send_messages', 'add_reactions'],
+    },
+    {
+      label: 'Text Permissions',
+      permissions: ['attach_files', 'embed_links', 'mention_everyone', 'mention_roles', 'use_external_emojis'],
     },
     {
       label: 'Member Permissions',
-      permissions: ['kick_members', 'ban_members', 'mute_members', 'manage_nicknames'],
+      permissions: ['kick_members', 'ban_members', 'mute_members', 'deafen_members', 'move_members', 'manage_nicknames', 'change_nickname'],
     },
     {
       label: 'Channel Permissions',
-      permissions: ['manage_channels', 'manage_messages', 'pin_messages'],
+      permissions: ['manage_channels', 'manage_messages', 'pin_messages', 'manage_threads'],
     },
     {
       label: 'Administrative Permissions',
-      permissions: ['manage_server', 'manage_roles', 'manage_emojis', 'manage_invites', 'transfer_ownership'],
+      permissions: ['manage_server', 'manage_roles', 'manage_emojis', 'manage_webhooks', 'manage_invites', 'create_instant_invite', 'transfer_ownership'],
+    },
+    {
+      label: 'Voice Permissions',
+      permissions: ['connect', 'speak', 'use_voice_activation'],
+    },
+    {
+      label: 'Advanced Permissions',
+      permissions: ['use_application_commands'],
     },
   ];
 
 const PERMISSION_LABELS: Record<Permission, string> = {
   view_channels: 'View Channels',
+  read_message_history: 'Read Message History',
   send_messages: 'Send Messages',
   add_reactions: 'Add Reactions',
+  attach_files: 'Attach Files',
+  embed_links: 'Embed Links',
+  mention_everyone: 'Mention @everyone',
+  mention_roles: 'Mention Roles',
+  use_external_emojis: 'Use External Emojis',
   kick_members: 'Kick Members',
   ban_members: 'Ban Members',
   mute_members: 'Mute Members',
+  deafen_members: 'Deafen Members',
+  move_members: 'Move Members',
   manage_nicknames: 'Manage Nicknames',
+  change_nickname: 'Change Nickname',
   manage_channels: 'Manage Channels',
   manage_messages: 'Manage Messages',
   pin_messages: 'Pin Messages',
+  manage_threads: 'Manage Threads',
   manage_server: 'Manage Server',
   manage_roles: 'Manage Roles',
   manage_emojis: 'Manage Emojis',
+  manage_webhooks: 'Manage Webhooks',
   manage_invites: 'Manage Invites',
+  create_instant_invite: 'Create Instant Invite',
   transfer_ownership: 'Transfer Ownership',
+  connect: 'Connect (Voice)',
+  speak: 'Speak (Voice)',
+  use_voice_activation: 'Use Voice Activation',
+  use_application_commands: 'Use Application Commands',
 };
 
 export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissionsEditorProps) => {
@@ -96,11 +124,13 @@ export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissio
 
     // Get all possible permissions
     const allPermissions: Permission[] = [
-      'view_channels', 'send_messages', 'add_reactions',
-      'manage_messages', 'pin_messages', 'manage_channels',
-      'kick_members', 'ban_members', 'mute_members',
-      'manage_nicknames', 'manage_roles', 'manage_server', 'manage_emojis',
-      'manage_invites', 'transfer_ownership'
+      'view_channels', 'read_message_history', 'send_messages', 'add_reactions',
+      'attach_files', 'embed_links', 'mention_everyone', 'mention_roles', 'use_external_emojis',
+      'manage_messages', 'pin_messages', 'manage_channels', 'manage_threads',
+      'kick_members', 'ban_members', 'mute_members', 'deafen_members', 'move_members',
+      'manage_nicknames', 'change_nickname', 'manage_roles', 'manage_server', 'manage_emojis',
+      'manage_webhooks', 'manage_invites', 'create_instant_invite', 'transfer_ownership',
+      'connect', 'speak', 'use_voice_activation', 'use_application_commands'
     ];
 
     // Initialize all permissions as null (not set)
