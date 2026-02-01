@@ -2,64 +2,7 @@ import { Link } from "react-router-dom";
 import { motion, useMotionValue, useTransform } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
-
-// Typing animation component
-const TypeWriter = ({
-  text,
-  delay = 0,
-  speed = 40,
-  className = "",
-  onComplete,
-}: {
-  text: string;
-  delay?: number;
-  speed?: number;
-  className?: string;
-  onComplete?: () => void;
-}) => {
-  const [displayedText, setDisplayedText] = useState("");
-  const [showCursor, setShowCursor] = useState(true);
-  const [isComplete, setIsComplete] = useState(false);
-
-  useEffect(() => {
-    const startTimeout = setTimeout(() => {
-      let currentIndex = 0;
-      const interval = setInterval(() => {
-        if (currentIndex <= text.length) {
-          setDisplayedText(text.slice(0, currentIndex));
-          currentIndex++;
-        } else {
-          clearInterval(interval);
-          setIsComplete(true);
-          onComplete?.();
-        }
-      }, speed);
-
-      return () => clearInterval(interval);
-    }, delay);
-
-    return () => clearTimeout(startTimeout);
-  }, [text, delay, speed, onComplete]);
-
-  useEffect(() => {
-    if (isComplete) {
-      const cursorTimeout = setTimeout(() => setShowCursor(false), 1500);
-      return () => clearTimeout(cursorTimeout);
-    }
-  }, [isComplete]);
-
-  return (
-    <span className={className}>
-      {displayedText}
-      <motion.span
-        animate={{ opacity: showCursor ? [1, 0] : 0 }}
-        transition={{ duration: 0.5, repeat: showCursor ? Infinity : 0, repeatType: "reverse" }}
-        className="inline-block w-[2px] h-[0.9em] bg-[hsl(var(--brand-600))] ml-1 translate-y-[0.1em]"
-      />
-    </span>
-  );
-};
+import { useEffect } from "react";
 
 // Radial grid background for depth
 const RadialGrid = () => (
@@ -148,9 +91,6 @@ const ParticleField = () => {
 };
 
 export const HeroImage = () => {
-  const [line1Complete, setLine1Complete] = useState(false);
-  const [line2Complete, setLine2Complete] = useState(false);
-
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
 
@@ -201,28 +141,31 @@ export const HeroImage = () => {
             Privacy-first communication
           </motion.p>
 
-          {/* Main title - typing effect */}
+          {/* Main title */}
           <div className="space-y-2 md:space-y-4 mb-12">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tight text-[hsl(var(--neutral-900))]">
-              <TypeWriter
-                text="Communication without"
-                delay={600}
-                speed={35}
-                onComplete={() => setLine1Complete(true)}
-              />
-            </h1>
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tight text-[hsl(var(--brand-600))]">
-              {line1Complete && (
-                <TypeWriter text="compromise." delay={200} speed={50} onComplete={() => setLine2Complete(true)} />
-              )}
-            </h1>
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tight text-[hsl(var(--neutral-900))]"
+            >
+              Communication without
+            </motion.h1>
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tight text-[hsl(var(--brand-600))]"
+            >
+              compromise.
+            </motion.h1>
           </div>
 
           {/* Subtitle */}
           <motion.p
             initial={{ opacity: 0 }}
-            animate={{ opacity: line2Complete ? 1 : 0 }}
-            transition={{ duration: 0.8, delay: 0.3 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.8 }}
             className="text-base md:text-lg text-[hsl(var(--neutral-500))] max-w-xl mx-auto leading-relaxed font-light"
           >
             End-to-end encrypted messaging, voice, and community spaces. Built on infrastructure designed for privacy,
@@ -232,8 +175,8 @@ export const HeroImage = () => {
           {/* CTA */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: line2Complete ? 1 : 0, y: line2Complete ? 0 : 20 }}
-            transition={{ duration: 0.6, delay: 0.6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 1 }}
             className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4"
           >
             <Link to="/app">
@@ -255,30 +198,8 @@ export const HeroImage = () => {
               </Button>
             </Link>
           </motion.div>
-
-          {/* Bottom info */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: line2Complete ? 1 : 0 }}
-            transition={{ duration: 0.6, delay: 1 }}
-            className="mt-20 flex items-center justify-center gap-8 text-xs text-[hsl(var(--neutral-400))] tracking-wide"
-          >
-            <span>No data collection</span>
-            <span className="w-1 h-1 rounded-full bg-[hsl(var(--neutral-400))]" />
-            <span>Swedish infrastructure</span>
-            <span className="w-1 h-1 rounded-full bg-[hsl(var(--neutral-400))]" />
-            <span>Open architecture</span>
-          </motion.div>
         </div>
       </div>
-
-      {/* Subtle bottom line */}
-      <motion.div
-        initial={{ scaleX: 0 }}
-        animate={{ scaleX: line2Complete ? 1 : 0 }}
-        transition={{ duration: 1.5, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[hsl(var(--neutral-300))] to-transparent"
-      />
     </section>
   );
 };
