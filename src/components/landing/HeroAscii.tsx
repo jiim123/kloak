@@ -1,221 +1,315 @@
 import { Link } from "react-router-dom";
-import { LayoutGroup, motion } from "framer-motion";
-import {
-  ArrowRight,
-  MessageSquareQuote,
-  MessageSquare,
-  Smile,
-  Users,
-  Heart,
-  Home,
-  Mic2,
-  Sparkles,
-  Gamepad2,
-  Theater,
-  Flame,
-  Fingerprint,
-  Laugh,
-  UserPlus,
-  ShieldCheck,
-} from "lucide-react";
+import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { ArrowRight, Shield, Zap, Lock, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import TextRotate from "@/components/fancy/text/text-rotate";
-import { Warp } from "@paper-design/shaders-react";
+import { useEffect, useState } from "react";
 
-const fadeIn = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-};
+// Floating orbs component for depth
+const FloatingOrb = ({
+  className,
+  delay = 0,
+  duration = 20,
+  size = "w-96 h-96",
+}: {
+  className?: string;
+  delay?: number;
+  duration?: number;
+  size?: string;
+}) => (
+  <motion.div
+    className={`absolute rounded-full blur-3xl opacity-30 ${size} ${className}`}
+    animate={{
+      y: [0, -50, 0],
+      x: [0, 30, 0],
+      scale: [1, 1.1, 1],
+    }}
+    transition={{
+      duration,
+      delay,
+      repeat: Infinity,
+      ease: "easeInOut",
+    }}
+  />
+);
 
-const ROTATING_TEXTS = [
-  { label: "Opinion", icon: MessageSquareQuote, gradient: "gradient-purple" },
-  { label: "Message", icon: MessageSquare, gradient: "gradient-blue" },
-  { label: "Reaction", icon: Smile, gradient: "gradient-yellow" },
-  { label: "Community", icon: Users, gradient: "gradient-teal" },
-  { label: "Friends", icon: Heart, gradient: "gradient-pink" },
-  { label: "Family", icon: Home, gradient: "gradient-orange" },
-  { label: "Voice", icon: Mic2, gradient: "gradient-green" },
-  { label: "Vibe", icon: Sparkles, gradient: "gradient-rainbow" },
-  { label: "Gaming Session", icon: Gamepad2, gradient: "gradient-red" },
-  { label: "Drama", icon: Theater, gradient: "gradient-purple" },
-  { label: "Rant", icon: Flame, gradient: "gradient-fire" },
-  { label: "Secret", icon: Fingerprint, gradient: "gradient-cyan" },
-  { label: "Memes", icon: Laugh, gradient: "gradient-yellow" },
-  { label: "Hot Take", icon: Flame, gradient: "gradient-fire" },
-  { label: "Group Chat", icon: UserPlus, gradient: "gradient-blue" },
-  { label: "Data", icon: ShieldCheck, gradient: "gradient-green" },
-];
+// Animated grid lines for tech feel
+const GridLines = () => (
+  <div className="absolute inset-0 overflow-hidden opacity-[0.03]">
+    <div
+      className="absolute inset-0"
+      style={{
+        backgroundImage: `
+          linear-gradient(to right, currentColor 1px, transparent 1px),
+          linear-gradient(to bottom, currentColor 1px, transparent 1px)
+        `,
+        backgroundSize: "60px 60px",
+      }}
+    />
+  </div>
+);
+
+// Floating glass card component
+const GlassCard = ({
+  children,
+  className = "",
+  delay = 0,
+  x = 0,
+  y = 0,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  delay?: number;
+  x?: number;
+  y?: number;
+}) => (
+  <motion.div
+    initial={{ opacity: 0, y: 40, x }}
+    animate={{ opacity: 1, y, x }}
+    transition={{ duration: 0.8, delay, ease: [0.16, 1, 0.3, 1] }}
+    className={`absolute backdrop-blur-xl bg-white/[0.03] border border-white/[0.08] rounded-2xl p-4 shadow-2xl ${className}`}
+  >
+    <motion.div animate={{ y: [0, -8, 0] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay }}>
+      {children}
+    </motion.div>
+  </motion.div>
+);
+
+// Animated word component with letter stagger
+const AnimatedWord = ({ word, delay = 0, className = "" }: { word: string; delay?: number; className?: string }) => (
+  <motion.span className={`inline-flex ${className}`}>
+    {word.split("").map((letter, i) => (
+      <motion.span
+        key={i}
+        initial={{ opacity: 0, y: 50, rotateX: -90 }}
+        animate={{ opacity: 1, y: 0, rotateX: 0 }}
+        transition={{
+          duration: 0.6,
+          delay: delay + i * 0.04,
+          ease: [0.16, 1, 0.3, 1],
+        }}
+        className="inline-block"
+      >
+        {letter}
+      </motion.span>
+    ))}
+  </motion.span>
+);
+
+// Pill badge component
+const PillBadge = ({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20, scale: 0.9 }}
+    animate={{ opacity: 1, y: 0, scale: 1 }}
+    transition={{ duration: 0.5, delay, ease: [0.16, 1, 0.3, 1] }}
+    className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.05] border border-white/[0.1] backdrop-blur-sm"
+  >
+    {children}
+  </motion.div>
+);
 
 export const HeroImage = () => {
-  return (
-    <section className="relative min-h-screen overflow-hidden">
-      {/* Hidden SVG with gradient definitions */}
-      <svg width="0" height="0" className="absolute">
-        <defs>
-          <linearGradient id="gradient-purple" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#a855f7" />
-            <stop offset="100%" stopColor="#6366f1" />
-          </linearGradient>
-          <linearGradient id="gradient-blue" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#3b82f6" />
-            <stop offset="100%" stopColor="#06b6d4" />
-          </linearGradient>
-          <linearGradient id="gradient-yellow" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#fbbf24" />
-            <stop offset="100%" stopColor="#f97316" />
-          </linearGradient>
-          <linearGradient id="gradient-teal" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#14b8a6" />
-            <stop offset="100%" stopColor="#22d3ee" />
-          </linearGradient>
-          <linearGradient id="gradient-pink" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#ec4899" />
-            <stop offset="100%" stopColor="#f43f5e" />
-          </linearGradient>
-          <linearGradient id="gradient-orange" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#f97316" />
-            <stop offset="100%" stopColor="#eab308" />
-          </linearGradient>
-          <linearGradient id="gradient-green" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#22c55e" />
-            <stop offset="100%" stopColor="#10b981" />
-          </linearGradient>
-          <linearGradient id="gradient-rainbow" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#f43f5e" />
-            <stop offset="25%" stopColor="#f97316" />
-            <stop offset="50%" stopColor="#eab308" />
-            <stop offset="75%" stopColor="#22c55e" />
-            <stop offset="100%" stopColor="#3b82f6" />
-          </linearGradient>
-          <linearGradient id="gradient-red" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#ef4444" />
-            <stop offset="100%" stopColor="#dc2626" />
-          </linearGradient>
-          <linearGradient id="gradient-fire" x1="0%" y1="100%" x2="0%" y2="0%">
-            <stop offset="0%" stopColor="#dc2626" />
-            <stop offset="50%" stopColor="#f97316" />
-            <stop offset="100%" stopColor="#fbbf24" />
-          </linearGradient>
-          <linearGradient id="gradient-cyan" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#06b6d4" />
-            <stop offset="100%" stopColor="#0ea5e9" />
-          </linearGradient>
-        </defs>
-      </svg>
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
-      {/* Shader background */}
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+
+  const springConfig = { damping: 25, stiffness: 150 };
+  const x = useSpring(mouseX, springConfig);
+  const y = useSpring(mouseY, springConfig);
+
+  const rotateX = useTransform(y, [-0.5, 0.5], [5, -5]);
+  const rotateY = useTransform(x, [-0.5, 0.5], [-5, 5]);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      const { clientX, clientY } = e;
+      const { innerWidth, innerHeight } = window;
+      mouseX.set(clientX / innerWidth - 0.5);
+      mouseY.set(clientY / innerHeight - 0.5);
+      setMousePosition({ x: clientX, y: clientY });
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, [mouseX, mouseY]);
+
+  const titleWords = ["Connect.", "Create.", "Control.", "Yours."];
+
+  return (
+    <section className="relative min-h-screen overflow-hidden bg-background">
+      {/* Aurora gradient background */}
       <div className="absolute inset-0">
-        <Warp
-          style={{ width: "100%", height: "100%" }}
-          colors={["#616161", "#545454", "#0f0f0f"]}
-          proportion={1}
-          softness={1}
-          distortion={0.2}
-          swirl={0}
-          swirlIterations={3.2}
-          shape="edge"
-          shapeScale={0.83}
-          speed={2.6}
-          scale={2.35}
+        <FloatingOrb className="bg-violet-500 -top-48 -left-48" delay={0} size="w-[600px] h-[600px]" />
+        <FloatingOrb className="bg-cyan-500 top-1/4 right-0" delay={2} duration={25} size="w-[500px] h-[500px]" />
+        <FloatingOrb className="bg-fuchsia-500 bottom-0 left-1/3" delay={4} duration={22} size="w-[400px] h-[400px]" />
+        <FloatingOrb
+          className="bg-emerald-500/50 top-1/2 left-1/4"
+          delay={1}
+          duration={18}
+          size="w-[300px] h-[300px]"
         />
       </div>
 
-      <div className="relative z-10 w-full min-h-screen flex flex-col justify-end px-8 pb-12 md:px-12 md:pb-16 lg:px-16 lg:pb-20">
-        <div className="flex items-end justify-between w-full">
-          <motion.div initial="initial" animate="animate" className="text-left">
-            <motion.p
-              variants={fadeIn}
-              transition={{ duration: 0.5, delay: 0 }}
-              className="landing-body text-muted-foreground mb-6 text-sm"
-            ></motion.p>
+      {/* Grid overlay */}
+      <GridLines />
 
-            <motion.div variants={fadeIn} transition={{ duration: 0.5, delay: 0.1 }} className="mb-8">
-              <LayoutGroup>
-                <motion.div
-                  className="flex flex-col items-start text-3xl sm:text-4xl md:text-5xl lg:text-8xl font-light"
-                  layout
-                >
-                  <motion.span
-                    className="text-foreground"
-                    layout
-                    transition={{ type: "spring", damping: 30, stiffness: 400 }}
-                  >
-                    Your
-                  </motion.span>
+      {/* Noise texture overlay */}
+      <div
+        className="absolute inset-0 opacity-[0.015]"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+        }}
+      />
 
-                  <TextRotate
-                    texts={ROTATING_TEXTS.map(({ label, icon: Icon, gradient }) => (
-                      <span key={label} className="flex items-center gap-3 sm:gap-4">
-                        {label}
-                        <Icon
-                          size="1em"
-                          className="shrink-0 translate-y-[0.05em]"
-                          style={{ stroke: `url(#${gradient})` }}
-                          strokeWidth={1.5}
-                        />
-                      </span>
-                    ))}
-                    mainClassName="text-background px-3 sm:px-6 bg-primary overflow-hidden py-1 sm:py-2 justify-start rounded-lg my-2 sm:my-4"
-                    staggerFrom="last"
-                    initial={{ y: "100%" }}
-                    animate={{ y: 0 }}
-                    exit={{ y: "-120%" }}
-                    staggerDuration={0.025}
-                    splitLevelClassName="overflow-hidden pb-0.5 sm:pb-1"
-                    transition={{ type: "spring", damping: 30, stiffness: 400 }}
-                    rotationInterval={3000}
+      {/* Radial gradient overlay for depth */}
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/50 to-background" />
+
+      {/* Floating UI elements for depth - hidden on mobile */}
+      <div className="hidden lg:block">
+        <GlassCard className="top-32 right-[15%] z-20" delay={1}>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-cyan-400 flex items-center justify-center">
+              <Shield className="w-5 h-5 text-background" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">End-to-End</p>
+              <p className="text-sm font-medium text-foreground">Encrypted</p>
+            </div>
+          </div>
+        </GlassCard>
+
+        <GlassCard className="top-48 left-[10%] z-20" delay={1.2}>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-400 to-fuchsia-400 flex items-center justify-center">
+              <Zap className="w-5 h-5 text-background" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Crystal Clear</p>
+              <p className="text-sm font-medium text-foreground">Voice Chat</p>
+            </div>
+          </div>
+        </GlassCard>
+
+        <GlassCard className="bottom-48 right-[20%] z-20" delay={1.4}>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-400 flex items-center justify-center">
+              <Users className="w-5 h-5 text-background" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Built for</p>
+              <p className="text-sm font-medium text-foreground">Communities</p>
+            </div>
+          </div>
+        </GlassCard>
+
+        <GlassCard className="bottom-64 left-[8%] z-20" delay={1.6}>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-400 to-pink-400 flex items-center justify-center">
+              <Lock className="w-5 h-5 text-background" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Zero</p>
+              <p className="text-sm font-medium text-foreground">Data Collection</p>
+            </div>
+          </div>
+        </GlassCard>
+      </div>
+
+      {/* Main content */}
+      <div className="relative z-10 w-full min-h-screen flex flex-col items-center justify-center px-6 md:px-12">
+        <div className="max-w-5xl mx-auto text-center">
+          {/* Top badge */}
+          <PillBadge delay={0.2}>
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span className="text-sm text-muted-foreground">Privacy-first communication</span>
+          </PillBadge>
+
+          {/* Main title */}
+          <motion.div className="mt-8 mb-6" style={{ rotateX, rotateY, transformPerspective: 1000 }}>
+            <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-bold tracking-tight">
+              <div className="flex flex-wrap justify-center gap-x-4 md:gap-x-6">
+                {titleWords.map((word, index) => (
+                  <AnimatedWord
+                    key={word}
+                    word={word}
+                    delay={0.4 + index * 0.15}
+                    className={
+                      index === titleWords.length - 1
+                        ? "bg-gradient-to-r from-violet-400 via-fuchsia-400 to-cyan-400 bg-clip-text text-transparent"
+                        : "text-foreground"
+                    }
                   />
-
-                  <motion.span
-                    className="text-foreground font-light"
-                    layout
-                    transition={{ type: "spring", damping: 30, stiffness: 400 }}
-                  >
-                    is Private.
-                  </motion.span>
-                </motion.div>
-              </LayoutGroup>
-            </motion.div>
-
-            <motion.p
-              variants={fadeIn}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="landing-body text-primary mb-0 text-sm max-w-sm"
-            >
-              A space for your community to connect, create, and grow together—without ads, tracking, or compromise.
-            </motion.p>
+                ))}
+              </div>
+            </h1>
           </motion.div>
 
+          {/* Subtitle */}
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 1.2, ease: [0.16, 1, 0.3, 1] }}
+            className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed"
+          >
+            A space for your community to chat, stream, and grow together—
+            <span className="text-foreground font-medium">without ads, tracking, or compromise.</span>
+          </motion.p>
+
+          {/* CTA Buttons */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="hidden sm:block"
+            transition={{ duration: 0.6, delay: 1.4, ease: [0.16, 1, 0.3, 1] }}
+            className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
           >
             <Link to="/app">
-              <Button size="lg" className="rounded-xl uppercase tracking-wider group">
-                Download Kloak
+              <Button
+                size="lg"
+                className="rounded-full px-8 h-14 text-base font-medium bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 border-0 shadow-lg shadow-violet-500/25 group"
+              >
+                Get Started Free
                 <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
+            <Link to="/features">
+              <Button
+                variant="outline"
+                size="lg"
+                className="rounded-full px-8 h-14 text-base font-medium border-white/10 bg-white/[0.03] backdrop-blur-sm hover:bg-white/[0.08]"
+              >
+                See How It Works
+              </Button>
+            </Link>
+          </motion.div>
+
+          {/* Trust indicators */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 1.8 }}
+            className="mt-16 flex flex-wrap items-center justify-center gap-6 md:gap-8 text-sm text-muted-foreground"
+          >
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span>No credit card required</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-cyan-500" />
+              <span>Swedish servers</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-violet-500" />
+              <span>GDPR compliant</span>
+            </div>
           </motion.div>
         </div>
-
-        {/* Mobile button - full width below content */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          className="sm:hidden mt-8"
-        >
-          <Link to="/app">
-            <Button size="lg" className="rounded-xl uppercase tracking-wider group w-full">
-              Download Kloak
-              <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-            </Button>
-          </Link>
-        </motion.div>
       </div>
+
+      {/* Bottom gradient fade */}
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent z-10 pointer-events-none" />
     </section>
   );
 };
