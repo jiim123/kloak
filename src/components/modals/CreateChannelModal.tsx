@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Hash, Volume2, FolderPlus, Loader2, Lock, MessageSquare, Megaphone, CheckSquare } from "lucide-react";
+import { Hash, Volume2, FolderPlus, Loader2, Lock, MessageSquare, Megaphone } from "lucide-react";
 import type { ChannelType } from "@/types";
 
 // Ghost Icon Component
@@ -32,7 +32,7 @@ export const CreateChannelModal = () => {
 
   const [mode, setMode] = useState<"channel" | "category">("channel");
   const [name, setName] = useState("");
-  const [selectedChannelType, setSelectedChannelType] = useState<"text" | "voice" | "ghost" | "forum" | "announcement" | "tasks">("text");
+  const [selectedChannelType, setSelectedChannelType] = useState<"text" | "voice" | "ghost" | "forum" | "announcement">("text");
   const [categoryId, setCategoryId] = useState<string>("none");
   const [isPrivate, setIsPrivate] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -88,7 +88,7 @@ export const CreateChannelModal = () => {
       } else {
         const selectedCategoryId = presetCategoryId || (categoryId === "none" ? undefined : categoryId);
         // Ghost mode is a UI-only "channel type" but stored as a setting with text channel type
-        const actualChannelType: ChannelType = selectedChannelType === "ghost" ? "text" : (selectedChannelType === "forum" ? "forum" : selectedChannelType === "announcement" ? "announcement" : selectedChannelType === "tasks" ? "tasks" : selectedChannelType);
+        const actualChannelType: ChannelType = selectedChannelType === "ghost" ? "text" : (selectedChannelType === "forum" ? "forum" : selectedChannelType === "announcement" ? "announcement" : selectedChannelType);
         const ghostMode = selectedChannelType === "ghost";
         const result = await createChannel(currentServer.id, name.trim(), actualChannelType, user.id, selectedCategoryId, undefined, isPrivate, ghostMode);
         if (!result) {
@@ -145,8 +145,8 @@ export const CreateChannelModal = () => {
                 </Label>
                 <RadioGroup
                   value={selectedChannelType}
-                  onValueChange={(value) => setSelectedChannelType(value as "text" | "voice" | "ghost" | "forum" | "announcement" | "tasks")}
-                  className="grid grid-cols-6 gap-2"
+                  onValueChange={(value) => setSelectedChannelType(value as "text" | "voice" | "ghost" | "forum" | "announcement")}
+                  className="grid grid-cols-5 gap-2"
                 >
                   <Label
                     htmlFor="text"
@@ -247,26 +247,6 @@ export const CreateChannelModal = () => {
                     </div>
                     <RadioGroupItem value="announcement" id="announcement" className="sr-only" />
                   </Label>
-
-                  <Label
-                    htmlFor="tasks"
-                    className={`flex items-center justify-center py-2 px-3 rounded-xl cursor-pointer border transition-colors ${
-                      selectedChannelType === "tasks"
-                        ? "bg-primary/5 border-primary/50"
-                        : "bg-secondary/50 border-border/50 hover:bg-secondary/80"
-                    }`}
-                    onMouseEnter={() => setHoveredChannelType("tasks")}
-                    onMouseLeave={() => setHoveredChannelType(null)}
-                  >
-                    <div
-                      className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                        selectedChannelType === "tasks" ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground"
-                      }`}
-                    >
-                      <CheckSquare className="h-4 w-4" />
-                    </div>
-                    <RadioGroupItem value="tasks" id="tasks" className="sr-only" />
-                  </Label>
                 </RadioGroup>
                 
                 {/* Channel Type Description - updates on hover */}
@@ -294,11 +274,6 @@ export const CreateChannelModal = () => {
                   {(hoveredChannelType || selectedChannelType) === "announcement" && (
                     <p className="text-xs text-muted-foreground">
                       <span className="font-medium text-foreground">Announcement Channel:</span> A read-only channel where admins can post announcements. Members can view and react to announcements but cannot send messages.
-                    </p>
-                  )}
-                  {(hoveredChannelType || selectedChannelType) === "tasks" && (
-                    <p className="text-xs text-muted-foreground">
-                      <span className="font-medium text-foreground">Tasks Channel:</span> A structured channel for managing tasks and to-dos. Create tasks, assign them to members, track progress, and collaborate on projects.
                     </p>
                   )}
                 </div>

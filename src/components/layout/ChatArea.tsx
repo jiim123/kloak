@@ -5,7 +5,6 @@ import { MessageInput } from "@/components/chat/MessageInput";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { ForumChannelArea } from "@/components/forum/ForumChannelArea";
 import { AnnouncementChannelArea } from "@/components/announcement/AnnouncementChannelArea";
-import { TasksChannelArea } from "@/components/tasks/TasksChannelArea";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useMessageStore } from "@/stores/messageStore";
@@ -233,11 +232,6 @@ export const ChatArea = () => {
   if (currentChannel.type === "announcement") {
     // Announcement channels use a different UI
     return <AnnouncementChannelArea />;
-  }
-
-  if (currentChannel.type === "tasks") {
-    // Tasks channels use a different UI
-    return <TasksChannelArea />;
   }
 
   return (

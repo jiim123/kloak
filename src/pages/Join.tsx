@@ -41,19 +41,6 @@ const Join = () => {
           {/* Hero Section */}
           <section className="relative py-32 md:py-40 px-8 lg:px-16 overflow-hidden">
             <div className="max-w-7xl mx-auto">
-               <Dithering
-                  style={{ width: "100%", height: "100%" }}
-                  colorBack="#878787"
-                  colorFront="#0f0f0f"
-                  shape="wave"
-                  type="4x4"
-                  size={2}
-                  speed={0.7}
-                  scale={0.6}
-                  offsetX={0.06}
-                  offsetY={-0.12}
-                />
-              </div>
               <motion.div
                 className="flex items-center gap-4 mb-8"
                 initial={{ opacity: 0 }}
