@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import TextRotate from "@/components/fancy/text/text-rotate";
-import { Dithering } from "@paper-design/shaders-react";
+import { Warp } from "@paper-design/shaders-react";
 
 const fadeIn = {
   initial: { opacity: 0, y: 20 },
@@ -105,17 +105,18 @@ export const HeroImage = () => {
 
       {/* Shader background */}
       <div className="absolute inset-0">
-        <Dithering
+        <Warp
           style={{ width: "100%", height: "100%" }}
-          colorBack="#878787"
-          colorFront="#0f0f0f"
-          shape="wave"
-          type="4x4"
-          size={2}
-          speed={0.7}
-          scale={0.6}
-          offsetX={0.06}
-          offsetY={-0.12}
+          colors={["#616161", "#545454", "#0f0f0f"]}
+          proportion={1}
+          softness={1}
+          distortion={0.2}
+          swirl={0}
+          swirlIterations={3.2}
+          shape="edge"
+          shapeScale={0.83}
+          speed={2.6}
+          scale={2.35}
         />
       </div>
 
