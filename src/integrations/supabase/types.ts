@@ -1924,6 +1924,10 @@ export type Database = {
         Args: { _other_user_id: string; _user_id: string }
         Returns: Json
       }
+      pin_message: {
+        Args: { _message_id: string; _pin: boolean; _user_id: string }
+        Returns: boolean
+      }
       post_system_message: {
         Args: { _channel_id: string; _content: string; _user_id: string }
         Returns: string
