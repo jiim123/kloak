@@ -1,204 +1,219 @@
 import { Link } from "react-router-dom";
-import { motion, useMotionValue, useTransform } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { LayoutGroup, motion } from "framer-motion";
+import {
+  ArrowRight,
+  MessageSquareQuote,
+  MessageSquare,
+  Smile,
+  Users,
+  Heart,
+  Home,
+  Mic2,
+  Sparkles,
+  Gamepad2,
+  Theater,
+  Flame,
+  Fingerprint,
+  Laugh,
+  UserPlus,
+  ShieldCheck,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useEffect } from "react";
+import TextRotate from "@/components/fancy/text/text-rotate";
+import { Dithering } from "@paper-design/shaders-react";
 
-// Radial grid background for depth
-const RadialGrid = () => (
-  <div className="absolute inset-0 overflow-hidden">
-    {/* Perspective grid */}
-    <div
-      className="absolute inset-0 opacity-[0.03]"
-      style={{
-        backgroundImage: `
-          linear-gradient(to right, hsl(var(--brand-600)) 1px, transparent 1px),
-          linear-gradient(to bottom, hsl(var(--brand-600)) 1px, transparent 1px)
-        `,
-        backgroundSize: "60px 60px",
-        transform: "perspective(500px) rotateX(60deg)",
-        transformOrigin: "center top",
-        maskImage: "linear-gradient(to bottom, black 0%, transparent 80%)",
-        WebkitMaskImage: "linear-gradient(to bottom, black 0%, transparent 80%)",
-      }}
-    />
-
-    {/* Concentric rings */}
-    <div className="absolute inset-0 flex items-center justify-center">
-      {[1, 2, 3, 4, 5].map((i) => (
-        <motion.div
-          key={i}
-          className="absolute rounded-full border border-[hsl(var(--neutral-300))]"
-          style={{
-            width: `${i * 20}%`,
-            height: `${i * 20}%`,
-            opacity: 0.04 - i * 0.005,
-          }}
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 0.04 - i * 0.005 }}
-          transition={{ duration: 1.5, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }}
-        />
-      ))}
-    </div>
-
-    {/* Radial gradient glow */}
-    <div
-      className="absolute inset-0"
-      style={{
-        background: "radial-gradient(ellipse at 50% 50%, hsl(var(--neutral-200) / 0.15) 0%, transparent 50%)",
-      }}
-    />
-  </div>
-);
-
-// Subtle particle field
-const ParticleField = () => {
-  const particles = Array.from({ length: 30 }, (_, i) => ({
-    id: i,
-    x: Math.random() * 100,
-    y: Math.random() * 100,
-    size: Math.random() * 2 + 1,
-    duration: Math.random() * 20 + 20,
-    delay: Math.random() * 5,
-  }));
-
-  return (
-    <div className="absolute inset-0 overflow-hidden">
-      {particles.map((particle) => (
-        <motion.div
-          key={particle.id}
-          className="absolute rounded-full bg-[hsl(var(--neutral-500))]"
-          style={{
-            left: `${particle.x}%`,
-            top: `${particle.y}%`,
-            width: particle.size,
-            height: particle.size,
-          }}
-          animate={{
-            y: [0, -30, 0],
-            opacity: [0.1, 0.3, 0.1],
-          }}
-          transition={{
-            duration: particle.duration,
-            delay: particle.delay,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-        />
-      ))}
-    </div>
-  );
+const fadeIn = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
 };
 
+const ROTATING_TEXTS = [
+  { label: "Opinion", icon: MessageSquareQuote, gradient: "gradient-purple" },
+  { label: "Message", icon: MessageSquare, gradient: "gradient-blue" },
+  { label: "Reaction", icon: Smile, gradient: "gradient-yellow" },
+  { label: "Community", icon: Users, gradient: "gradient-teal" },
+  { label: "Friends", icon: Heart, gradient: "gradient-pink" },
+  { label: "Family", icon: Home, gradient: "gradient-orange" },
+  { label: "Voice", icon: Mic2, gradient: "gradient-green" },
+  { label: "Vibe", icon: Sparkles, gradient: "gradient-rainbow" },
+  { label: "Gaming Session", icon: Gamepad2, gradient: "gradient-red" },
+  { label: "Drama", icon: Theater, gradient: "gradient-purple" },
+  { label: "Rant", icon: Flame, gradient: "gradient-fire" },
+  { label: "Secret", icon: Fingerprint, gradient: "gradient-cyan" },
+  { label: "Memes", icon: Laugh, gradient: "gradient-yellow" },
+  { label: "Hot Take", icon: Flame, gradient: "gradient-fire" },
+  { label: "Group Chat", icon: UserPlus, gradient: "gradient-blue" },
+  { label: "Data", icon: ShieldCheck, gradient: "gradient-green" },
+];
+
 export const HeroImage = () => {
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
-
-  const backgroundX = useTransform(mouseX, [-0.5, 0.5], [-10, 10]);
-  const backgroundY = useTransform(mouseY, [-0.5, 0.5], [-10, 10]);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      const { clientX, clientY } = e;
-      const { innerWidth, innerHeight } = window;
-      mouseX.set(clientX / innerWidth - 0.5);
-      mouseY.set(clientY / innerHeight - 0.5);
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, [mouseX, mouseY]);
-
   return (
-    <section className="relative min-h-screen overflow-hidden bg-[hsl(var(--neutral-0))]">
-      {/* Layered background for depth */}
-      <motion.div className="absolute inset-0" style={{ x: backgroundX, y: backgroundY }}>
-        <RadialGrid />
-        <ParticleField />
-      </motion.div>
+    <section className="relative min-h-screen overflow-hidden">
+      {/* Hidden SVG with gradient definitions */}
+      <svg width="0" height="0" className="absolute">
+        <defs>
+          <linearGradient id="gradient-purple" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#a855f7" />
+            <stop offset="100%" stopColor="#6366f1" />
+          </linearGradient>
+          <linearGradient id="gradient-blue" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#3b82f6" />
+            <stop offset="100%" stopColor="#06b6d4" />
+          </linearGradient>
+          <linearGradient id="gradient-yellow" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#fbbf24" />
+            <stop offset="100%" stopColor="#f97316" />
+          </linearGradient>
+          <linearGradient id="gradient-teal" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#14b8a6" />
+            <stop offset="100%" stopColor="#22d3ee" />
+          </linearGradient>
+          <linearGradient id="gradient-pink" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ec4899" />
+            <stop offset="100%" stopColor="#f43f5e" />
+          </linearGradient>
+          <linearGradient id="gradient-orange" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#f97316" />
+            <stop offset="100%" stopColor="#eab308" />
+          </linearGradient>
+          <linearGradient id="gradient-green" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#22c55e" />
+            <stop offset="100%" stopColor="#10b981" />
+          </linearGradient>
+          <linearGradient id="gradient-rainbow" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#f43f5e" />
+            <stop offset="25%" stopColor="#f97316" />
+            <stop offset="50%" stopColor="#eab308" />
+            <stop offset="75%" stopColor="#22c55e" />
+            <stop offset="100%" stopColor="#3b82f6" />
+          </linearGradient>
+          <linearGradient id="gradient-red" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ef4444" />
+            <stop offset="100%" stopColor="#dc2626" />
+          </linearGradient>
+          <linearGradient id="gradient-fire" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stopColor="#dc2626" />
+            <stop offset="50%" stopColor="#f97316" />
+            <stop offset="100%" stopColor="#fbbf24" />
+          </linearGradient>
+          <linearGradient id="gradient-cyan" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#06b6d4" />
+            <stop offset="100%" stopColor="#0ea5e9" />
+          </linearGradient>
+        </defs>
+      </svg>
 
-      {/* Noise texture */}
-      <div
-        className="absolute inset-0 opacity-[0.015]"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
-        }}
-      />
+      {/* Shader background */}
+      <div className="absolute inset-0">
+        <Dithering
+          style={{ width: "100%", height: "100%" }}
+          colorBack="#878787"
+          colorFront="#0f0f0f"
+          shape="wave"
+          type="4x4"
+          size={2}
+          speed={0.7}
+          scale={0.6}
+          offsetX={0.06}
+          offsetY={-0.12}
+        />
+      </div>
 
-      {/* Vignette */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,hsl(var(--neutral-0))_80%)]" />
+      <div className="relative z-10 w-full min-h-screen flex flex-col justify-end px-8 pb-12 md:px-12 md:pb-16 lg:px-16 lg:pb-20">
+        <div className="flex items-end justify-between w-full">
+          <motion.div initial="initial" animate="animate" className="text-left">
+            <motion.p
+              variants={fadeIn}
+              transition={{ duration: 0.5, delay: 0 }}
+              className="landing-body text-muted-foreground mb-6 text-sm"
+            ></motion.p>
 
-      {/* Main content */}
-      <div className="relative z-10 w-full min-h-screen flex flex-col items-center justify-center px-6">
-        <div className="max-w-4xl mx-auto text-center">
-          {/* Pre-title */}
-          <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-xs uppercase tracking-[0.3em] text-[hsl(var(--neutral-500))] mb-12"
-          >
-            Privacy-first communication
-          </motion.p>
+            <motion.div variants={fadeIn} transition={{ duration: 0.5, delay: 0.1 }} className="mb-8">
+              <LayoutGroup>
+                <motion.div
+                  className="flex flex-col items-start text-3xl sm:text-4xl md:text-5xl lg:text-8xl font-light"
+                  layout
+                >
+                  <motion.span
+                    className="text-foreground"
+                    layout
+                    transition={{ type: "spring", damping: 30, stiffness: 400 }}
+                  >
+                    Your
+                  </motion.span>
 
-          {/* Main title */}
-          <div className="space-y-2 md:space-y-4 mb-12">
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tight text-[hsl(var(--neutral-900))]"
+                  <TextRotate
+                    texts={ROTATING_TEXTS.map(({ label, icon: Icon, gradient }) => (
+                      <span key={label} className="flex items-center gap-3 sm:gap-4">
+                        {label}
+                        <Icon
+                          size="1em"
+                          className="shrink-0 translate-y-[0.05em]"
+                          style={{ stroke: `url(#${gradient})` }}
+                          strokeWidth={1.5}
+                        />
+                      </span>
+                    ))}
+                    mainClassName="text-background px-3 sm:px-6 bg-primary overflow-hidden py-1 sm:py-2 justify-start rounded-lg my-2 sm:my-4"
+                    staggerFrom="last"
+                    initial={{ y: "100%" }}
+                    animate={{ y: 0 }}
+                    exit={{ y: "-120%" }}
+                    staggerDuration={0.025}
+                    splitLevelClassName="overflow-hidden pb-0.5 sm:pb-1"
+                    transition={{ type: "spring", damping: 30, stiffness: 400 }}
+                    rotationInterval={3000}
+                  />
+
+                  <motion.span
+                    className="text-foreground font-light"
+                    layout
+                    transition={{ type: "spring", damping: 30, stiffness: 400 }}
+                  >
+                    is Private.
+                  </motion.span>
+                </motion.div>
+              </LayoutGroup>
+            </motion.div>
+
+            <motion.p
+              variants={fadeIn}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="landing-body text-primary mb-0 text-sm max-w-sm"
             >
-              Communication without
-            </motion.h1>
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
-              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tight text-[hsl(var(--brand-600))]"
-            >
-              compromise.
-            </motion.h1>
-          </div>
+              A space for your community to connect, create, and grow together—without ads, tracking, or compromise.
+            </motion.p>
+          </motion.div>
 
-          {/* Subtitle */}
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.8 }}
-            className="text-base md:text-lg text-[hsl(var(--neutral-500))] max-w-xl mx-auto leading-relaxed font-light"
-          >
-            End-to-end encrypted messaging, voice, and community spaces. Built on infrastructure designed for privacy,
-            not profit.
-          </motion.p>
-
-          {/* CTA */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 1 }}
-            className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4"
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="hidden sm:block"
           >
             <Link to="/app">
-              <Button
-                size="lg"
-                className="rounded-full px-8 h-12 text-sm font-normal tracking-wide bg-[hsl(var(--brand-600))] hover:bg-[hsl(var(--brand-700))] text-[hsl(var(--neutral-0))] border-0 group"
-              >
-                Get started
-                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </Link>
-            <Link to="/features">
-              <Button
-                variant="ghost"
-                size="lg"
-                className="rounded-full px-8 h-12 text-sm font-normal tracking-wide text-[hsl(var(--neutral-600))] hover:text-[hsl(var(--neutral-800))] hover:bg-[hsl(var(--neutral-100))]"
-              >
-                Learn more
+              <Button size="lg" className="rounded-xl uppercase tracking-wider group">
+                Download Kloak
+                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
           </motion.div>
         </div>
+
+        {/* Mobile button - full width below content */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="sm:hidden mt-8"
+        >
+          <Link to="/app">
+            <Button size="lg" className="rounded-xl uppercase tracking-wider group w-full">
+              Download Kloak
+              <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+            </Button>
+          </Link>
+        </motion.div>
       </div>
     </section>
   );
