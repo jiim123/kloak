@@ -1398,7 +1398,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         throw error;
       }
 
-      const permissions: ChannelPermission[] = (data ?? []).map((row) => ({
+      const permissions: ChannelPermission[] = (data ?? []).map((row: any) => ({
         id: row.id,
         channel_id: row.channel_id,
         role_id: row.role_id,
@@ -1429,7 +1429,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
       const { error } = await supabase.rpc('set_role_permission', {
         _server_id: serverId,
         _user_id: userId,
-        _permission: permission,
+        _permission: permission as any,
         _role_id: roleId || null,
         _role_name: roleName || null,
         _allowed: allowed,
@@ -1459,7 +1459,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
       const { error } = await supabase.rpc('set_channel_permission', {
         _channel_id: channelId,
         _user_id: userId,
-        _permission: permission,
+        _permission: permission as any,
         _allowed: allowed,
         _role_id: roleId || null,
         _role_name: roleName || null,
