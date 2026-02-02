@@ -55,6 +55,8 @@ interface ChannelMapping {
 }
 
 const MAX_LENGTH = 2000;
+const MIN_TEXTAREA_HEIGHT = 40;
+const MAX_TEXTAREA_HEIGHT = 160;
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 const MAX_IMAGE_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const DRAFT_SAVE_DELAY = 500; // ms
@@ -101,7 +103,6 @@ const ActionButtons = memo(
 
     return (
       <div className="flex items-center gap-1 mb-0.5 relative">
-
         {/* Character count warning */}
         {showCharacterWarning && (
           <span
@@ -260,7 +261,6 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const draftSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastHeightRef = useRef<number>(0);
 
   // Load permissions when server/channel changes
   useEffect(() => {
@@ -288,35 +288,38 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const URL_REGEX = /https?:\/\/[^\s<]+/gi;
 
   // Check if message contains blocked links
-  const containsBlockedLinks = useCallback((text: string): boolean => {
-    if (!blockLinks || isAdmin) return false;
-    
-    const urls = text.match(URL_REGEX);
-    if (!urls || urls.length === 0) return false;
+  const containsBlockedLinks = useCallback(
+    (text: string): boolean => {
+      if (!blockLinks || isAdmin) return false;
 
-    // Check each URL against whitelist
-    for (const url of urls) {
-      try {
-        const urlObj = new URL(url);
-        const domain = urlObj.hostname.replace(/^www\./, '');
-        
-        // Check if domain is in whitelist
-        const isWhitelisted = allowedLinkDomains.some(allowed => {
-          const normalizedAllowed = allowed.replace(/^www\./, '');
-          return domain === normalizedAllowed || domain.endsWith('.' + normalizedAllowed);
-        });
+      const urls = text.match(URL_REGEX);
+      if (!urls || urls.length === 0) return false;
 
-        if (!isWhitelisted) {
-          return true; // Found a blocked link
+      // Check each URL against whitelist
+      for (const url of urls) {
+        try {
+          const urlObj = new URL(url);
+          const domain = urlObj.hostname.replace(/^www\./, "");
+
+          // Check if domain is in whitelist
+          const isWhitelisted = allowedLinkDomains.some((allowed) => {
+            const normalizedAllowed = allowed.replace(/^www\./, "");
+            return domain === normalizedAllowed || domain.endsWith("." + normalizedAllowed);
+          });
+
+          if (!isWhitelisted) {
+            return true; // Found a blocked link
+          }
+        } catch {
+          // Invalid URL, consider it blocked
+          return true;
         }
-      } catch {
-        // Invalid URL, consider it blocked
-        return true;
       }
-    }
 
-    return false;
-  }, [blockLinks, isAdmin, allowedLinkDomains]);
+      return false;
+    },
+    [blockLinks, isAdmin, allowedLinkDomains],
+  );
 
   // Memoized queued messages
   const queuedMessages = useMemo(() => getQueuedForChannel(channelId), [getQueuedForChannel, channelId]);
@@ -329,7 +332,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     channelMappingsRef.current = [];
     // Reset textarea height
     if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = `${MIN_TEXTAREA_HEIGHT}px`;
     }
   }, [channelId]);
 
@@ -350,20 +353,20 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     }, DRAFT_SAVE_DELAY);
   }, []);
 
-  // Optimized auto-resize - only resize when needed
+  // Fixed auto-resize - always recalculate properly
   const resizeTextarea = useCallback(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
-    // Reset height to measure actual content
-    textarea.style.height = "auto";
-    const newHeight = Math.min(textarea.scrollHeight, 160);
+    // Reset to 0 to get accurate scrollHeight measurement
+    textarea.style.height = "0px";
 
-    // Only update if height changed
-    if (newHeight !== lastHeightRef.current) {
-      textarea.style.height = newHeight + "px";
-      lastHeightRef.current = newHeight;
-    }
+    // Calculate new height with min/max constraints
+    const scrollHeight = textarea.scrollHeight;
+    const newHeight = Math.min(Math.max(scrollHeight, MIN_TEXTAREA_HEIGHT), MAX_TEXTAREA_HEIGHT);
+
+    // Always apply the height
+    textarea.style.height = `${newHeight}px`;
   }, []);
 
   // Detect mentions efficiently
@@ -466,9 +469,12 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       setShowMentions(false);
       setMentionStartIndex(-1);
 
-      setTimeout(() => textareaRef.current?.focus(), 50);
+      setTimeout(() => {
+        textareaRef.current?.focus();
+        resizeTextarea();
+      }, 50);
     },
-    [content, mentionStartIndex, mentionQuery],
+    [content, mentionStartIndex, mentionQuery, resizeTextarea],
   );
 
   const handleChannelSelect = useCallback(
@@ -494,9 +500,12 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       setShowChannels(false);
       setChannelStartIndex(-1);
 
-      setTimeout(() => textareaRef.current?.focus(), 50);
+      setTimeout(() => {
+        textareaRef.current?.focus();
+        resizeTextarea();
+      }, 50);
     },
-    [content, channelStartIndex, channelQuery],
+    [content, channelStartIndex, channelQuery, resizeTextarea],
   );
 
   // Helper functions
@@ -538,9 +547,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
 
     // Check for blocked links
     if (containsBlockedLinks(messageContent)) {
-      const whitelistMsg = allowedLinkDomains.length > 0 
-        ? ` Allowed domains: ${allowedLinkDomains.join(', ')}`
-        : '';
+      const whitelistMsg = allowedLinkDomains.length > 0 ? ` Allowed domains: ${allowedLinkDomains.join(", ")}` : "";
       showWarning("Links not allowed", `This channel doesn't allow posting links.${whitelistMsg}`);
       return;
     }
@@ -574,8 +581,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
 
     // Reset textarea height
     if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      lastHeightRef.current = 0;
+      textareaRef.current.style.height = `${MIN_TEXTAREA_HEIGHT}px`;
     }
 
     try {
@@ -665,6 +671,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
           requestAnimationFrame(() => {
             const newPos = start + prefix.length + selectedText.length + suffix.length;
             textarea.setSelectionRange(newPos, newPos);
+            resizeTextarea();
           });
         }
       } else {
@@ -674,11 +681,12 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
           requestAnimationFrame(() => {
             const cursorPos = start + prefix.length;
             textarea.setSelectionRange(cursorPos, cursorPos);
+            resizeTextarea();
           });
         }
       }
     },
-    [content],
+    [content, resizeTextarea],
   );
 
   const handleKeyDown = useCallback(
@@ -737,7 +745,13 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       if (!items) return;
 
       const imageItem = Array.from(items).find((it) => it.type.startsWith("image/"));
-      if (!imageItem) return;
+      if (!imageItem) {
+        // Text paste - trigger resize after paste completes
+        requestAnimationFrame(() => {
+          resizeTextarea();
+        });
+        return;
+      }
 
       const file = imageItem.getAsFile();
       if (!file) return;
@@ -790,6 +804,11 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
         setShowMentions(false);
         setReplyingTo(null);
 
+        // Reset textarea height
+        if (textareaRef.current) {
+          textareaRef.current.style.height = `${MIN_TEXTAREA_HEIGHT}px`;
+        }
+
         const message = await sendMessage(channelId, user.id, combined, currentReplyTo?.id);
 
         if (message) {
@@ -822,6 +841,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       sendMessage,
       convertMentionsForSend,
       onStopTyping,
+      resizeTextarea,
     ],
   );
 
@@ -841,6 +861,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
           requestAnimationFrame(() => {
             const newCursorPos = start + emoji.length;
             textarea.setSelectionRange(newCursorPos, newCursorPos);
+            resizeTextarea();
           });
         }
       } else {
@@ -851,7 +872,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       }
       setShowEmojiPicker(false);
     },
-    [content],
+    [content, resizeTextarea],
   );
 
   const handleFormat = useCallback(
@@ -891,10 +912,11 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
             textarea.setSelectionRange(selectStart, selectEnd);
           }
           textarea.focus();
+          resizeTextarea();
         });
       }
     },
-    [content],
+    [content, resizeTextarea],
   );
 
   const handleImageUpload = useCallback(
@@ -1017,50 +1039,56 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
 
       {/* Format toolbar - inline above input */}
       {showFormatToolbar && (
-        <FormatToolbar 
-          onFormat={handleFormat} 
-          onClose={() => setShowFormatToolbar(false)} 
+        <FormatToolbar
+          onFormat={handleFormat}
+          onClose={() => setShowFormatToolbar(false)}
           onImageClick={() => setShowImageUpload(true)}
         />
       )}
 
       {/* Reply preview */}
-      {replyingTo && (() => {
-        // Check if ghost mode is enabled and reply author is not admin
-        const isGhostMode = currentChannel?.ghost_mode || false;
-        const replyAuthorMember = replyingTo.user?.id ? members.find(m => m.user_id === replyingTo.user?.id) : null;
-        const replyAuthorIsAdmin = replyAuthorMember ? (replyAuthorMember.role === 'owner' || replyAuthorMember.role === 'admin') : false;
-        const showReplyAuthorIdentity = !isGhostMode || replyAuthorIsAdmin;
-        
-        return (
-          <div className={`flex items-center gap-2 px-3 sm:px-4 py-2 bg-muted/40 border-b border-border/50 font-[Inter,system-ui,sans-serif] ${!showFormatToolbar ? 'rounded-t-2xl' : ''}`}>
-            <span className="text-[12px] sm:text-[13px] leading-[1.5] text-muted-foreground">
-              Replying to {showReplyAuthorIdentity ? (
-                <span className="font-medium text-primary">@{replyingTo.user?.username}</span>
-              ) : (
-                <span className="font-medium text-primary italic">Anonymous</span>
-              )}
-            </span>
-          {isImageOnlyMessage(replyingTo.content) ? (
-            <img
-              src={replyingTo.content.trim()}
-              alt="Image attachment"
-              className="w-8 h-8 rounded object-cover flex-shrink-0"
-            />
-          ) : (
-            <span className="text-[12px] sm:text-[13px] leading-[1.5] text-muted-foreground truncate flex-1 hidden sm:inline">
-              <ReplyPreview content={replyingTo.content} maxLength={50} />
-            </span>
-          )}
-            <button
-              onClick={cancelReply}
-              className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-150 ml-auto"
+      {replyingTo &&
+        (() => {
+          // Check if ghost mode is enabled and reply author is not admin
+          const isGhostMode = currentChannel?.ghost_mode || false;
+          const replyAuthorMember = replyingTo.user?.id ? members.find((m) => m.user_id === replyingTo.user?.id) : null;
+          const replyAuthorIsAdmin = replyAuthorMember
+            ? replyAuthorMember.role === "owner" || replyAuthorMember.role === "admin"
+            : false;
+          const showReplyAuthorIdentity = !isGhostMode || replyAuthorIsAdmin;
+
+          return (
+            <div
+              className={`flex items-center gap-2 px-3 sm:px-4 py-2 bg-muted/40 border-b border-border/50 font-[Inter,system-ui,sans-serif] ${!showFormatToolbar ? "rounded-t-2xl" : ""}`}
             >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        );
-      })()}
+              <span className="text-[12px] sm:text-[13px] leading-[1.5] text-muted-foreground">
+                Replying to{" "}
+                {showReplyAuthorIdentity ? (
+                  <span className="font-medium text-primary">@{replyingTo.user?.username}</span>
+                ) : (
+                  <span className="font-medium text-primary italic">Anonymous</span>
+                )}
+              </span>
+              {isImageOnlyMessage(replyingTo.content) ? (
+                <img
+                  src={replyingTo.content.trim()}
+                  alt="Image attachment"
+                  className="w-8 h-8 rounded object-cover flex-shrink-0"
+                />
+              ) : (
+                <span className="text-[12px] sm:text-[13px] leading-[1.5] text-muted-foreground truncate flex-1 hidden sm:inline">
+                  <ReplyPreview content={replyingTo.content} maxLength={50} />
+                </span>
+              )}
+              <button
+                onClick={cancelReply}
+                className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-150 ml-auto"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          );
+        })()}
 
       {/* Floating input container */}
       <MobileOptimizedInput
@@ -1174,7 +1202,7 @@ const MobileOptimizedInput = memo(
             </button>
           )}
 
-          {/* Textarea - with improved mobile styles */}
+          {/* Textarea - with improved mobile styles and fixed min-height */}
           <textarea
             ref={textareaRef}
             value={content}
@@ -1186,7 +1214,7 @@ const MobileOptimizedInput = memo(
             placeholder={canSendMessage ? `Message #${channelName}` : "You cannot send messages here"}
             disabled={!canSendMessage}
             rows={1}
-            className={`flex-1 bg-transparent resize-none outline-none text-foreground placeholder:text-muted-foreground/60 py-2 px-1 min-w-0 font-[Inter,system-ui,sans-serif] ${
+            className={`flex-1 bg-transparent resize-none outline-none text-foreground placeholder:text-muted-foreground/60 py-2 px-1 min-w-0 min-h-[40px] overflow-y-auto font-[Inter,system-ui,sans-serif] ${
               !canSendMessage ? "cursor-not-allowed opacity-50" : ""
             }`}
             style={{
@@ -1194,6 +1222,7 @@ const MobileOptimizedInput = memo(
               fontSize: isMobile ? "16px" : "15px",
               lineHeight: "1.5",
               fontWeight: 400,
+              maxHeight: "160px",
             }}
           />
 
