@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams, useLocation, useParams, Outlet } from 're
 import { useAuthStore, initializeAuth } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
+import { getLastChannel } from '@/lib/storage';
 import { ServerSidebar } from '@/components/layout/ServerSidebar';
 import { HomeLanding } from '@/components/home/HomeLanding';
 import { ExploreServers } from '@/components/home/ExploreServers';
@@ -232,11 +233,14 @@ const AppLayout = () => {
         navigate(`/app/servers/${currentServer.id}`, { replace: true });
       }
     } else if (urlServerId && !urlChannelId && channels.length > 0 && !isServerSpecialView) {
-      // On server page without channel, select first channel if none selected
+      // On server page without channel, restore last visited or select first channel
       if (!currentChannel || currentChannel.server_id !== currentServer.id) {
-        const firstChannel = channels[0];
-        if (firstChannel) {
-          navigate(`/app/servers/${currentServer.id}/channels/${firstChannel.id}`, { replace: true });
+        // Try to restore last visited channel for this server
+        const lastChannelId = getLastChannel(currentServer.id);
+        const lastChannel = lastChannelId ? channels.find(c => c.id === lastChannelId) : null;
+        const targetChannel = lastChannel || channels[0];
+        if (targetChannel) {
+          navigate(`/app/servers/${currentServer.id}/channels/${targetChannel.id}`, { replace: true });
         }
       }
     }
