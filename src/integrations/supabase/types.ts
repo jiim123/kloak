@@ -192,6 +192,7 @@ export type Database = {
           permission: Database["public"]["Enums"]["permission_type"]
           role_id: string | null
           role_name: Database["public"]["Enums"]["server_role"] | null
+          user_id: string | null
         }
         Insert: {
           allowed: boolean
@@ -201,6 +202,7 @@ export type Database = {
           permission: Database["public"]["Enums"]["permission_type"]
           role_id?: string | null
           role_name?: Database["public"]["Enums"]["server_role"] | null
+          user_id?: string | null
         }
         Update: {
           allowed?: boolean
@@ -210,6 +212,7 @@ export type Database = {
           permission?: Database["public"]["Enums"]["permission_type"]
           role_id?: string | null
           role_name?: Database["public"]["Enums"]["server_role"] | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -224,6 +227,13 @@ export type Database = {
             columns: ["role_id"]
             isOneToOne: false
             referencedRelation: "server_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "channel_permissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -1268,6 +1278,168 @@ export type Database = {
           },
         ]
       }
+      task_assignees: {
+        Row: {
+          assigned_at: string | null
+          assigned_by: string | null
+          id: string
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          id?: string
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          id?: string
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_assignees_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_assignees_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_assignees_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_comments: {
+        Row: {
+          content: string
+          created_at: string | null
+          edited_at: string | null
+          id: string
+          reply_to_id: string | null
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          edited_at?: string | null
+          id?: string
+          reply_to_id?: string | null
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          edited_at?: string | null
+          id?: string
+          reply_to_id?: string | null
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_comments_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "task_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          channel_id: string
+          created_at: string | null
+          created_by: string
+          description: string | null
+          due_date: string | null
+          id: string
+          priority: Database["public"]["Enums"]["task_priority"] | null
+          server_id: string
+          status: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          channel_id: string
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: Database["public"]["Enums"]["task_priority"] | null
+          server_id: string
+          status?: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          channel_id?: string
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: Database["public"]["Enums"]["task_priority"] | null
+          server_id?: string
+          status?: Database["public"]["Enums"]["task_status"]
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       thread_attachments: {
         Row: {
           file_name: string
@@ -1608,6 +1780,10 @@ export type Database = {
         Args: { _member_id: string; _role_id: string; _user_id: string }
         Returns: boolean
       }
+      assign_task_users: {
+        Args: { _assignee_ids: string[]; _task_id: string; _user_id: string }
+        Returns: Json
+      }
       ban_member: {
         Args: { _server_id: string; _target_user_id: string; _user_id: string }
         Returns: boolean
@@ -1706,6 +1882,32 @@ export type Database = {
         Args: { _name: string; _owner_id: string }
         Returns: Json
       }
+      create_task: {
+        Args: {
+          _assignee_ids?: string[]
+          _channel_id: string
+          _description?: string
+          _due_date?: string
+          _priority?: string
+          _title: string
+          _user_id: string
+        }
+        Returns: Json
+      }
+      create_task_comment:
+        | {
+            Args: { _content: string; _task_id: string; _user_id: string }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _content: string
+              _reply_to_id?: string
+              _task_id: string
+              _user_id: string
+            }
+            Returns: Json
+          }
       create_thread: {
         Args: { _message_id: string; _user_id: string }
         Returns: string
@@ -1762,6 +1964,14 @@ export type Database = {
         Args: { _role_id: string; _user_id: string }
         Returns: boolean
       }
+      delete_task: {
+        Args: { _task_id: string; _user_id: string }
+        Returns: Json
+      }
+      delete_task_comment: {
+        Args: { _comment_id: string; _user_id: string }
+        Returns: Json
+      }
       delete_thread_message: {
         Args: { _message_id: string; _user_id: string }
         Returns: boolean
@@ -1797,6 +2007,17 @@ export type Database = {
       }
       get_channel_permissions: { Args: { _channel_id: string }; Returns: Json }
       get_channel_server_id: { Args: { _channel_id: string }; Returns: string }
+      get_channel_tasks: {
+        Args: {
+          _assignee_filter?: string
+          _channel_id: string
+          _sort_by?: string
+          _sort_order?: string
+          _status_filter?: string
+          _user_id: string
+        }
+        Returns: Json
+      }
       get_deletion_preview: { Args: { _user_id: string }; Returns: Json }
       get_dm_conversation_id: { Args: { _message_id: string }; Returns: string }
       get_dm_messages: {
@@ -1841,6 +2062,10 @@ export type Database = {
         | { Args: { _server_id: string; _user_id?: string }; Returns: Json }
       get_server_members: { Args: { _server_id: string }; Returns: Json }
       get_server_roles: { Args: { _server_id: string }; Returns: Json }
+      get_task_comments: {
+        Args: { _task_id: string; _user_id: string }
+        Returns: Json
+      }
       get_thread_by_message_id: { Args: { _message_id: string }; Returns: Json }
       get_thread_info: { Args: { _message_id: string }; Returns: Json }
       get_thread_message_count: {
@@ -2033,17 +2258,30 @@ export type Database = {
         }
         Returns: Json
       }
-      set_channel_permission: {
-        Args: {
-          _allowed: boolean
-          _channel_id: string
-          _permission: Database["public"]["Enums"]["permission_type"]
-          _role_id?: string
-          _role_name?: Database["public"]["Enums"]["server_role"]
-          _user_id: string
-        }
-        Returns: Json
-      }
+      set_channel_permission:
+        | {
+            Args: {
+              _allowed: boolean
+              _channel_id: string
+              _permission: Database["public"]["Enums"]["permission_type"]
+              _role_id?: string
+              _role_name?: Database["public"]["Enums"]["server_role"]
+              _user_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _allowed: boolean
+              _channel_id: string
+              _permission: Database["public"]["Enums"]["permission_type"]
+              _role_id?: string
+              _role_name?: Database["public"]["Enums"]["server_role"]
+              _target_user_id?: string
+              _user_id: string
+            }
+            Returns: Json
+          }
       set_role_permission: {
         Args: {
           _allowed?: boolean
@@ -2088,6 +2326,10 @@ export type Database = {
         Args: { _new_owner_id: string; _server_id: string; _user_id: string }
         Returns: boolean
       }
+      unassign_task_users: {
+        Args: { _assignee_ids: string[]; _task_id: string; _user_id: string }
+        Returns: Json
+      }
       unban_member: {
         Args: { _server_id: string; _target_user_id: string; _user_id: string }
         Returns: boolean
@@ -2126,6 +2368,22 @@ export type Database = {
         }
         Returns: Json
       }
+      update_task: {
+        Args: {
+          _description?: string
+          _due_date?: string
+          _priority?: string
+          _status?: string
+          _task_id: string
+          _title?: string
+          _user_id: string
+        }
+        Returns: Json
+      }
+      update_task_comment: {
+        Args: { _comment_id: string; _content: string; _user_id: string }
+        Returns: Json
+      }
       update_user_last_seen: { Args: { _user_id: string }; Returns: boolean }
       update_user_profile: {
         Args: { _updates: Json; _user_id: string }
@@ -2144,7 +2402,7 @@ export type Database = {
       }
     }
     Enums: {
-      channel_type: "text" | "voice" | "announcement" | "forum"
+      channel_type: "text" | "voice" | "announcement" | "forum" | "tasks"
       friendship_status: "pending" | "accepted" | "blocked"
       mention_type: "user" | "everyone" | "here" | "role"
       notification_type: "mention" | "dm" | "friend_request" | "server_invite"
@@ -2164,7 +2422,32 @@ export type Database = {
         | "transfer_ownership"
         | "manage_invites"
         | "manage_emojis"
+        | "attach_files"
+        | "embed_links"
+        | "read_message_history"
+        | "mention_everyone"
+        | "mention_roles"
+        | "change_nickname"
+        | "use_external_emojis"
+        | "manage_webhooks"
+        | "manage_threads"
+        | "create_instant_invite"
+        | "connect"
+        | "speak"
+        | "use_voice_activation"
+        | "deafen_members"
+        | "move_members"
+        | "use_application_commands"
+        | "view_tasks"
+        | "create_tasks"
+        | "edit_own_tasks"
+        | "edit_all_tasks"
+        | "assign_tasks"
+        | "change_task_status"
+        | "delete_tasks"
       server_role: "owner" | "admin" | "moderator" | "member"
+      task_priority: "low" | "medium" | "high"
+      task_status: "open" | "in_progress" | "completed" | "archived"
       user_status: "online" | "idle" | "dnd" | "offline"
     }
     CompositeTypes: {
@@ -2293,7 +2576,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      channel_type: ["text", "voice", "announcement", "forum"],
+      channel_type: ["text", "voice", "announcement", "forum", "tasks"],
       friendship_status: ["pending", "accepted", "blocked"],
       mention_type: ["user", "everyone", "here", "role"],
       notification_type: ["mention", "dm", "friend_request", "server_invite"],
@@ -2313,8 +2596,33 @@ export const Constants = {
         "transfer_ownership",
         "manage_invites",
         "manage_emojis",
+        "attach_files",
+        "embed_links",
+        "read_message_history",
+        "mention_everyone",
+        "mention_roles",
+        "change_nickname",
+        "use_external_emojis",
+        "manage_webhooks",
+        "manage_threads",
+        "create_instant_invite",
+        "connect",
+        "speak",
+        "use_voice_activation",
+        "deafen_members",
+        "move_members",
+        "use_application_commands",
+        "view_tasks",
+        "create_tasks",
+        "edit_own_tasks",
+        "edit_all_tasks",
+        "assign_tasks",
+        "change_task_status",
+        "delete_tasks",
       ],
       server_role: ["owner", "admin", "moderator", "member"],
+      task_priority: ["low", "medium", "high"],
+      task_status: ["open", "in_progress", "completed", "archived"],
       user_status: ["online", "idle", "dnd", "offline"],
     },
   },
