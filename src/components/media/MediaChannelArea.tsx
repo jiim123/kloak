@@ -689,17 +689,20 @@ const MediaLightbox = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex flex-col bg-black/95 backdrop-blur-md"
       onClick={onClose}
     >
-      <Button
-        size="icon"
-        variant="ghost"
-        className="absolute top-4 right-4 text-foreground hover:bg-muted"
-        onClick={onClose}
-      >
-        <X className="w-6 h-6" />
-      </Button>
+      {/* Top controls bar - matching ImageLightbox design */}
+      <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-end p-4 bg-gradient-to-b from-black/50 to-transparent">
+        <button
+          onClick={onClose}
+          className="p-2.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-white"
+          aria-label="Close"
+          title="Close"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
 
       <div 
         className="max-w-4xl max-h-[90vh] w-full mx-4"
