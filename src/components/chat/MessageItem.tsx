@@ -20,7 +20,6 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
-import { Textarea } from "@/components/ui/textarea";
 import { useAuthStore } from "@/stores/authStore";
 import { useMessageStore } from "@/stores/messageStore";
 import { useServerStore } from "@/stores/serverStore";
@@ -43,6 +42,9 @@ import { getPollIdFromContent, isPollMessageContent } from "@/lib/poll";
 
 // Static data moved outside component
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "👋", "🔥", "👀", "💯", "🙌", "😍", "🤔"] as const;
+
+const MIN_EDIT_TEXTAREA_HEIGHT = 60;
+const MAX_EDIT_TEXTAREA_HEIGHT = 300;
 
 const ROLE_COLORS: Record<string, string> = {
   owner: "text-yellow-400",
@@ -142,6 +144,7 @@ export const MessageItem = memo(function MessageItem({
   }, [message.id, getOptimisticStatus]);
 
   const isOwnMessage = useMemo(() => user?.id === message.user_id, [user?.id, message.user_id]);
+
   const messageUser = message.user;
 
   // Memoize member lookups
@@ -170,6 +173,7 @@ export const MessageItem = memo(function MessageItem({
       setCustomEmojiMap(new Map());
       return;
     }
+
     let cancelled = false;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -192,6 +196,7 @@ export const MessageItem = memo(function MessageItem({
     };
 
     load(0);
+
     return () => {
       cancelled = true;
       if (retryTimer) clearTimeout(retryTimer);
@@ -207,6 +212,7 @@ export const MessageItem = memo(function MessageItem({
       .filter(Boolean);
 
     let best: CustomServerRole | null = null;
+
     for (const r of resolved) {
       if (!r?.icon) continue;
       if (!best) {
@@ -215,6 +221,7 @@ export const MessageItem = memo(function MessageItem({
       }
       const aPos = typeof r.position === "number" ? r.position : Number.POSITIVE_INFINITY;
       const bPos = typeof best.position === "number" ? best.position : Number.POSITIVE_INFINITY;
+
       if (aPos !== bPos) {
         if (aPos < bPos) best = r;
         continue;
@@ -223,6 +230,7 @@ export const MessageItem = memo(function MessageItem({
       const bCreated = best.created_at ? Date.parse(best.created_at) : Number.POSITIVE_INFINITY;
       if (aCreated < bCreated) best = r;
     }
+
     if (!best?.icon) return null;
     return { name: best.name, icon: best.icon };
   }, [messageMember?.roles, roles]);
@@ -341,17 +349,17 @@ export const MessageItem = memo(function MessageItem({
   const messageAuthorIsAdmin = useMemo(() => {
     if (!messageMember) return false;
     const role = messageMember.role;
-    return role === 'owner' || role === 'admin';
+    return role === "owner" || role === "admin";
   }, [messageMember]);
   const showGhostIdentity = isGhostMode && !messageAuthorIsAdmin;
 
   // Check if reply author is admin (for ghost mode)
   const replyAuthorIsAdmin = useMemo(() => {
     if (!message.reply_to?.user?.id || !isGhostMode) return false;
-    const replyMember = members.find(m => m.user_id === message.reply_to?.user?.id);
+    const replyMember = members.find((m) => m.user_id === message.reply_to?.user?.id);
     if (!replyMember) return false;
     const role = replyMember.role;
-    return role === 'owner' || role === 'admin';
+    return role === "owner" || role === "admin";
   }, [message.reply_to?.user?.id, members, isGhostMode]);
   const showReplyAuthorIdentity = !isGhostMode || replyAuthorIsAdmin;
 
@@ -363,20 +371,47 @@ export const MessageItem = memo(function MessageItem({
 
   const formattedTimestamp = useMemo(() => formatMessageTimestamp(message.created_at), [message.created_at]);
 
-  // Focus textarea when editing starts (only on initial mount into edit mode)
+  // Auto-resize textarea for edit mode
+  const resizeEditTextarea = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    // Reset to 0 to get accurate scrollHeight measurement
+    textarea.style.height = "0px";
+
+    // Calculate new height with min/max constraints
+    const scrollHeight = textarea.scrollHeight;
+    const newHeight = Math.min(Math.max(scrollHeight, MIN_EDIT_TEXTAREA_HEIGHT), MAX_EDIT_TEXTAREA_HEIGHT);
+
+    // Always apply the height
+    textarea.style.height = `${newHeight}px`;
+  }, []);
+
+  // Focus textarea when editing starts and resize to fit content
   const hasInitializedEdit = useRef(false);
   useEffect(() => {
     if (isEditing && textareaRef.current && !hasInitializedEdit.current) {
       hasInitializedEdit.current = true;
+
+      // Resize first to show full content
+      resizeEditTextarea();
+
+      // Then focus and place cursor at end
       textareaRef.current.focus();
-      // Place cursor at end only on initial focus
       const len = textareaRef.current.value.length;
       textareaRef.current.setSelectionRange(len, len);
     }
     if (!isEditing) {
       hasInitializedEdit.current = false;
     }
-  }, [isEditing]);
+  }, [isEditing, resizeEditTextarea]);
+
+  // Also resize when editContent changes (for initial load)
+  useEffect(() => {
+    if (isEditing) {
+      resizeEditTextarea();
+    }
+  }, [editContent, isEditing, resizeEditTextarea]);
 
   // Custom event handler for external edit trigger
   useEffect(() => {
@@ -494,6 +529,14 @@ export const MessageItem = memo(function MessageItem({
     setIsEditing(true);
   }, [message.content, usersMap]);
 
+  const handleEditContentChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      setEditContent(e.target.value);
+      resizeEditTextarea();
+    },
+    [resizeEditTextarea],
+  );
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === "Enter" && !e.shiftKey) {
@@ -529,7 +572,9 @@ export const MessageItem = memo(function MessageItem({
   const topCustomRoleColor = useMemo(() => {
     const memberRoles = messageMember?.roles ?? [];
     if (memberRoles.length === 0) return null;
+
     const resolved = memberRoles.map((mr) => roles.find((r) => r.id === mr.id) ?? mr).filter(Boolean);
+
     let best: CustomServerRole | null = null;
     for (const r of resolved as CustomServerRole[]) {
       if (!best) {
@@ -540,6 +585,7 @@ export const MessageItem = memo(function MessageItem({
       const bPos = typeof best.position === "number" ? best.position : Number.POSITIVE_INFINITY;
       if (aPos < bPos) best = r;
     }
+
     return best?.color ?? null;
   }, [messageMember?.roles, roles]);
 
@@ -555,9 +601,9 @@ export const MessageItem = memo(function MessageItem({
       : ({ color: topCustomRoleColor } as React.CSSProperties);
   }, [topCustomRoleColor]);
 
-  const displayName = showGhostIdentity 
-    ? "Anonymous" 
-    : (messageMember?.nickname || messageUser?.display_name || messageUser?.username);
+  const displayName = showGhostIdentity
+    ? "Anonymous"
+    : messageMember?.nickname || messageUser?.display_name || messageUser?.username;
 
   const handleUsernameClick = useCallback(
     (e: React.MouseEvent) => {
@@ -630,7 +676,7 @@ export const MessageItem = memo(function MessageItem({
                       {!isGrouped && messageUser ? (
                         showGhostIdentity ? (
                           // Ghost avatar for anonymous users
-                          <div 
+                          <div
                             className="w-10 h-10 rounded-full bg-muted flex items-center justify-center cursor-default"
                             title="Anonymous"
                           >
@@ -775,12 +821,15 @@ export const MessageItem = memo(function MessageItem({
                     {/* Message content */}
                     {isEditing ? (
                       <div className="flex flex-col gap-2">
-                        <Textarea
+                        <textarea
                           ref={textareaRef}
                           value={editContent}
-                          onChange={(e) => setEditContent(e.target.value)}
-                          className="min-h-[60px] resize-none text-sm"
+                          onChange={handleEditContentChange}
+                          className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm resize-none outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 min-h-[60px] max-h-[300px] overflow-y-auto"
                           onKeyDown={handleKeyDown}
+                          style={{
+                            lineHeight: "1.5",
+                          }}
                         />
                         <div className="flex gap-2 text-[11px]">
                           <span className="text-muted-foreground">
@@ -803,19 +852,16 @@ export const MessageItem = memo(function MessageItem({
                           (() => {
                             // Extract title and content for announcement channels
                             const content = message.content || "";
-                            const parts = content.split('\n\n');
-                            const title = parts.length > 1 
-                              ? parts[0].trim() 
-                              : content.split('\n')[0].trim() || "";
-                            const announcementContent = parts.length > 1 
-                              ? parts.slice(1).join('\n\n').trim() 
-                              : content.split('\n').slice(1).join('\n').trim();
-                            
+                            const parts = content.split("\n\n");
+                            const title = parts.length > 1 ? parts[0].trim() : content.split("\n")[0].trim() || "";
+                            const announcementContent =
+                              parts.length > 1
+                                ? parts.slice(1).join("\n\n").trim()
+                                : content.split("\n").slice(1).join("\n").trim();
+
                             return (
                               <div className="space-y-2">
-                                {title && (
-                                  <h3 className="text-lg font-semibold text-foreground">{title}</h3>
-                                )}
+                                {title && <h3 className="text-lg font-semibold text-foreground">{title}</h3>}
                                 {announcementContent && (
                                   <MessageContent
                                     content={announcementContent}
@@ -1082,6 +1128,7 @@ export const MessageItem = memo(function MessageItem({
               )}
             </div>
           </ContextMenuTrigger>
+
           <ContextMenuContent>
             <ContextMenuItem onClick={() => setReplyingTo(message)}>
               <Reply className="w-4 h-4 mr-2" />
