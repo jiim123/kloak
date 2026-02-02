@@ -2,14 +2,14 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { GrainGradient } from "@paper-design/shaders-react";
+import { Dithering } from "@paper-design/shaders-react";
 
 export const HeroImage = () => {
   return (
     <section className="relative min-h-screen overflow-hidden bg-[hsl(var(--neutral-0))]">
       {/* Shader background */}
       <div className="absolute inset-0">
-        <GrainGradient
+        <Dithering
           style={{ width: "100%", height: "100%" }}
           colorBack="#0f0f0f"
           colorFront="#a6a6a6"
