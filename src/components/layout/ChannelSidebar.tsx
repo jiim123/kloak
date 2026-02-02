@@ -272,6 +272,11 @@ const SortableChannel = ({
         {/* Channel name */}
         <span className="truncate flex-1 text-left">{channel.name}</span>
 
+        {/* Unread indicator */}
+        {isUnread && !isActive && (
+          <div className="w-1.5 h-1.5 rounded-full bg-foreground flex-shrink-0" />
+        )}
+
         {/* Private indicator */}
         {channel.is_private && <Lock className="w-3 h-3 text-muted-foreground flex-shrink-0" />}
 
