@@ -19,6 +19,7 @@ export const HeroImage = () => {
           shape="ripple"
           speed={1}
           scale={2.64}
+          offsetY={-0.86}
         />
       </div>
 
