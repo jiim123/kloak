@@ -236,7 +236,8 @@ ActionButtons.displayName = "ActionButtons";
 export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }: MessageInputProps) => {
   const { user } = useAuthStore();
   const { replyingTo, setReplyingTo, sendMessage } = useMessageStore();
-  const { members, currentServer, currentChannel, fetchRolePermissions, fetchChannelPermissions } = useServerStore();
+  const { members, currentServer, currentChannel, channels, fetchRolePermissions, fetchChannelPermissions } =
+    useServerStore();
   const { getQueuedForChannel } = useOfflineQueueStore();
 
   const [content, setContent] = useState("");
@@ -283,6 +284,48 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const canSendInReadOnly = isReadOnlyChannel ? hasPermission("manage_messages") : true;
   const canSendMessage = !isMuted && canSendMessagesPermission && canSendInReadOnly;
   const isAdmin = hasPermission("manage_messages");
+
+  // Create a map of channel IDs to channel names for quick lookup
+  const channelIdToNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    channels.forEach((channel) => {
+      map.set(channel.id, channel.name);
+    });
+    return map;
+  }, [channels]);
+
+  // Create a map of user IDs to usernames for quick lookup
+  const userIdToNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    members.forEach((member) => {
+      if (member.user) {
+        map.set(member.user_id, member.nickname || member.user.display_name || member.user.username);
+      }
+    });
+    return map;
+  }, [members]);
+
+  // Convert raw mentions/channels to readable format for display
+  const convertToReadableFormat = useCallback(
+    (text: string): string => {
+      let result = text;
+
+      // Convert channel mentions: <#channel-id> -> #channel-name
+      result = result.replace(/<#([a-f0-9-]+)>/gi, (match, channelId) => {
+        const channelName = channelIdToNameMap.get(channelId);
+        return channelName ? `#${channelName}` : match;
+      });
+
+      // Convert user mentions: <@user-id> -> @username
+      result = result.replace(/<@([a-f0-9-]+)>/gi, (match, userId) => {
+        const userName = userIdToNameMap.get(userId);
+        return userName ? `@${userName}` : match;
+      });
+
+      return result;
+    },
+    [channelIdToNameMap, userIdToNameMap],
+  );
 
   // URL detection regex for link blocking
   const URL_REGEX = /https?:\/\/[^\s<]+/gi;
@@ -1004,6 +1047,9 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     );
   }
 
+  // Convert reply content to readable format
+  const readableReplyContent = replyingTo?.content ? convertToReadableFormat(replyingTo.content) : "";
+
   return (
     <div className="px-4 pb-4 sm:pb-6 relative">
       {/* Queued messages indicator */}
@@ -1077,7 +1123,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
                 />
               ) : (
                 <span className="text-[12px] sm:text-[13px] leading-[1.5] text-muted-foreground truncate flex-1 hidden sm:inline">
-                  <ReplyPreview content={replyingTo.content} maxLength={50} />
+                  <ReplyPreview content={readableReplyContent} maxLength={50} />
                 </span>
               )}
               <button
