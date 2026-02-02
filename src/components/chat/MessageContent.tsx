@@ -529,11 +529,30 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
 interface ReplyPreviewProps {
   content: string;
   maxLength?: number;
+  usersMap?: Map<string, UserInfo>;
 }
 
-export const ReplyPreview = ({ content, maxLength = 50 }: ReplyPreviewProps) => {
-  const { currentServer } = useServerStore();
+export const ReplyPreview = ({ content, maxLength = 50, usersMap }: ReplyPreviewProps) => {
+  const { currentServer, members } = useServerStore();
   const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
+
+  // Build users map from members if not provided
+  const resolvedUsersMap = useMemo(() => {
+    if (usersMap && usersMap.size > 0) return usersMap;
+    
+    const map = new Map<string, UserInfo>();
+    members.forEach(member => {
+      if (member.user) {
+        map.set(member.user_id, {
+          id: member.user_id,
+          username: member.user.username,
+          display_name: member.user.display_name,
+          nickname: member.nickname,
+        });
+      }
+    });
+    return map;
+  }, [usersMap, members]);
 
   // Load server emoji map for :name: rendering
   useEffect(() => {
@@ -574,15 +593,29 @@ export const ReplyPreview = ({ content, maxLength = 50 }: ReplyPreviewProps) => 
       .replace(/~~([^~]+)~~/g, '$1')
       .replace(/__([^_]+)__/g, '$1')
       .replace(/\|\|([^|]+)\|\|/g, '[spoiler]')
-      .replace(/\n/g, ' ')
-      .trim();
+      .replace(/\n/g, ' ');
+    
+    // Convert <@userId> mentions to @username
+    result = result.replace(
+      /<@(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})>/g,
+      (match, userId) => {
+        const userInfo = resolvedUsersMap.get(userId);
+        const displayName = userInfo?.nickname || userInfo?.display_name || userInfo?.username || 'user';
+        return `@${displayName}`;
+      }
+    );
+
+    // Convert <#channelId> to #channel
+    result = result.replace(/<#\w{8}-\w{4}-\w{4}-\w{4}-\w{12}>/g, '#channel');
+    
+    result = result.trim();
     
     if (result.length > maxLength) {
       result = result.slice(0, maxLength - 3) + '...';
     }
     
     return result;
-  }, [content, maxLength]);
+  }, [content, maxLength, resolvedUsersMap]);
 
   // Replace custom emojis
   const rendered = useMemo(() => {
