@@ -17,43 +17,59 @@ interface ImageUploadDialogProps {
   onUpload: (file: File) => Promise<void>;
 }
 
+interface SelectedFile {
+  file: File;
+  preview: string;
+}
+
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILES = 10;
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
 export const ImageUploadDialog = ({ open, onOpenChange, onUpload }: ImageUploadDialogProps) => {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileSelect = (file: File) => {
+  const handleFileSelect = (files: FileList | File[]) => {
     setError(null);
-
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      setError('Please select a valid image file (JPEG, PNG, GIF, or WebP)');
-      return;
-    }
-
-    if (file.size > MAX_FILE_SIZE) {
-      setError('File size must be less than 10MB');
-      return;
-    }
-
-    setSelectedFile(file);
+    const fileArray = Array.from(files);
     
-    // Create preview
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setPreview(e.target?.result as string);
-    };
-    reader.readAsDataURL(file);
+    // Check total count
+    if (selectedFiles.length + fileArray.length > MAX_FILES) {
+      setError(`You can only attach up to ${MAX_FILES} images at once`);
+      return;
+    }
+
+    const validFiles: SelectedFile[] = [];
+    
+    for (const file of fileArray) {
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        setError('Please select valid image files (JPEG, PNG, GIF, or WebP)');
+        continue;
+      }
+
+      if (file.size > MAX_FILE_SIZE) {
+        setError('Each file must be less than 10MB');
+        continue;
+      }
+
+      // Create preview
+      const preview = URL.createObjectURL(file);
+      validFiles.push({ file, preview });
+    }
+
+    if (validFiles.length > 0) {
+      setSelectedFiles(prev => [...prev, ...validFiles]);
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file) handleFileSelect(file);
+    if (e.dataTransfer.files.length > 0) {
+      handleFileSelect(e.dataTransfer.files);
+    }
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -61,13 +77,21 @@ export const ImageUploadDialog = ({ open, onOpenChange, onUpload }: ImageUploadD
   };
 
   const handleUpload = async () => {
-    if (!selectedFile) return;
+    if (selectedFiles.length === 0) return;
 
     setIsUploading(true);
     setError(null);
 
     try {
-      await onUpload(selectedFile);
+      // Call onUpload for each file
+      for (const { file, preview } of selectedFiles) {
+        const result = onUpload(file);
+        if (result instanceof Promise) {
+          await result;
+        }
+        // Revoke preview URL
+        URL.revokeObjectURL(preview);
+      }
       handleClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');
@@ -77,15 +101,20 @@ export const ImageUploadDialog = ({ open, onOpenChange, onUpload }: ImageUploadD
   };
 
   const handleClose = () => {
-    setSelectedFile(null);
-    setPreview(null);
+    // Revoke all preview URLs
+    selectedFiles.forEach(({ preview }) => URL.revokeObjectURL(preview));
+    setSelectedFiles([]);
     setError(null);
     onOpenChange(false);
   };
 
-  const clearSelection = () => {
-    setSelectedFile(null);
-    setPreview(null);
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => {
+      const newFiles = [...prev];
+      URL.revokeObjectURL(newFiles[index].preview);
+      newFiles.splice(index, 1);
+      return newFiles;
+    });
     setError(null);
   };
 
@@ -95,10 +124,10 @@ export const ImageUploadDialog = ({ open, onOpenChange, onUpload }: ImageUploadD
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ImageIcon className="w-5 h-5" />
-            Upload Image
+            Upload Images
           </DialogTitle>
           <DialogDescription>
-            Share an image with this channel
+            Share images with this channel (up to {MAX_FILES} at once)
           </DialogDescription>
         </DialogHeader>
 
@@ -111,47 +140,61 @@ export const ImageUploadDialog = ({ open, onOpenChange, onUpload }: ImageUploadD
         </Alert>
 
         {/* Upload area */}
-        {!preview ? (
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary hover:bg-accent/50 transition-colors"
-          >
-            <Upload className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
-            <p className="text-sm text-foreground font-medium mb-1">
-              Click to upload or drag and drop
-            </p>
+        <div
+          onClick={() => fileInputRef.current?.click()}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary hover:bg-accent/50 transition-colors"
+        >
+          <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+          <p className="text-sm text-foreground font-medium mb-1">
+            Click to upload or drag and drop
+          </p>
+          <p className="text-xs text-muted-foreground">
+            JPEG, PNG, GIF, or WebP (max 10MB each)
+          </p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            multiple
+            onChange={(e) => {
+              if (e.target.files && e.target.files.length > 0) {
+                handleFileSelect(e.target.files);
+              }
+              // Reset input so same file can be selected again
+              e.target.value = '';
+            }}
+            className="hidden"
+          />
+        </div>
+
+        {/* Selected files preview */}
+        {selectedFiles.length > 0 && (
+          <div className="space-y-2">
             <p className="text-xs text-muted-foreground">
-              JPEG, PNG, GIF, or WebP (max 10MB)
+              {selectedFiles.length} image{selectedFiles.length > 1 ? 's' : ''} selected
             </p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/gif,image/webp"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleFileSelect(file);
-              }}
-              className="hidden"
-            />
-          </div>
-        ) : (
-          <div className="relative">
-            <img
-              src={preview}
-              alt="Preview"
-              className="w-full max-h-64 object-contain rounded-lg bg-secondary"
-            />
-            <button
-              onClick={clearSelection}
-              className="absolute top-2 right-2 p-1.5 rounded-full bg-background/80 hover:bg-background text-foreground transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-            <p className="text-xs text-muted-foreground mt-2 text-center">
-              {selectedFile?.name} ({(selectedFile?.size ?? 0 / 1024 / 1024).toFixed(2)} MB)
-            </p>
+            <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
+              {selectedFiles.map((item, index) => (
+                <div key={index} className="relative group">
+                  <img
+                    src={item.preview}
+                    alt={`Preview ${index + 1}`}
+                    className="w-16 h-16 object-cover rounded-lg border border-border"
+                  />
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeFile(index);
+                    }}
+                    className="absolute -top-1.5 -right-1.5 p-0.5 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -165,9 +208,9 @@ export const ImageUploadDialog = ({ open, onOpenChange, onUpload }: ImageUploadD
           </Button>
           <Button 
             onClick={handleUpload} 
-            disabled={!selectedFile || isUploading}
+            disabled={selectedFiles.length === 0 || isUploading}
           >
-            {isUploading ? 'Uploading...' : 'Upload & Send'}
+            {isUploading ? 'Uploading...' : `Attach ${selectedFiles.length > 0 ? selectedFiles.length : ''} Image${selectedFiles.length !== 1 ? 's' : ''}`}
           </Button>
         </DialogFooter>
       </DialogContent>
