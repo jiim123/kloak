@@ -48,10 +48,23 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
   const [showAddFriend, setShowAddFriend] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Fetch friends on mount
   useEffect(() => {
     if (user?.id) {
       fetchFriends(user.id);
     }
+  }, [user?.id, fetchFriends]);
+
+  // Refetch friends when the tab becomes visible (user switches back to app)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && user?.id) {
+        fetchFriends(user.id);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [user?.id, fetchFriends]);
 
   const onlineFriends = friends.filter((f) => {

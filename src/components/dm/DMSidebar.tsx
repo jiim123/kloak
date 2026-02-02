@@ -29,10 +29,23 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
   const { getUnreadCount, markAsRead } = useUnreadDMs(user?.id || null);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Fetch conversations on mount
   useEffect(() => {
     if (user?.id) {
       fetchConversations(user.id);
     }
+  }, [user?.id, fetchConversations]);
+
+  // Refetch conversations when the tab becomes visible (user switches back to app)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && user?.id) {
+        fetchConversations(user.id);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [user?.id, fetchConversations]);
 
   const filteredConversations = conversations.filter((conv) => {
