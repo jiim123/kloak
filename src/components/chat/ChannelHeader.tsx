@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Hash, Volume2, MessageSquare, Pin, Search, Users, Lock, Megaphone } from "lucide-react";
+import { Hash, Volume2, MessageSquare, Pin, Search, Users, Lock, Megaphone, Film } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
@@ -88,7 +88,7 @@ export const ChannelHeader = ({ channel }: ChannelHeaderProps) => {
   const { isMemberSidebarOpen, toggleMemberSidebar, openModal } = useUIStore();
   const [hoveredButton, setHoveredButton] = useState<string | null>(null);
 
-  const ChannelIcon = channel.type === "voice" ? Volume2 : channel.type === "forum" ? MessageSquare : channel.type === "announcement" ? Megaphone : Hash;
+  const ChannelIcon = channel.type === "voice" ? Volume2 : channel.type === "forum" ? MessageSquare : channel.type === "announcement" ? Megaphone : channel.type === "media" ? Film : Hash;
 
   const buttons = [
     {

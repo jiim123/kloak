@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Hash, Volume2, Megaphone } from 'lucide-react';
+import { Hash, Volume2, Megaphone, Film } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useServerStore } from '@/stores/serverStore';
 import { cn } from '@/lib/utils';
@@ -24,6 +24,8 @@ const getChannelIcon = (type: string) => {
       return <Volume2 className="w-4 h-4" />;
     case 'announcement':
       return <Megaphone className="w-4 h-4" />;
+    case 'media':
+      return <Film className="w-4 h-4" />;
     default:
       return <Hash className="w-4 h-4" />;
   }
