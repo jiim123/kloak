@@ -2,24 +2,25 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dithering } from "@paper-design/shaders-react";
+import { SmokeRing } from "@paper-design/shaders-react";
 
 export const HeroImage = () => {
   return (
     <section className="relative min-h-screen overflow-hidden bg-[hsl(var(--neutral-0))]">
       {/* Shader background */}
       <div className="absolute inset-0">
-        <Dithering
+        <SmokeRing
           style={{ width: "100%", height: "100%" }}
+          colors={["#4d4d4d"]}
           colorBack="#0f0f0f"
-          colorFront="#737373"
-          shape="sphere"
-          type="4x4"
-          size={1.8}
-          speed={0.3}
-          scale={2.88}
-          rotation={200}
-          offsetY={1}
+          noiseScale={3}
+          noiseIterations={3}
+          radius={0.95}
+          thickness={0.85}
+          innerShape={0.9}
+          speed={0.46}
+          scale={2.24}
+          offsetY={0.46}
         />
       </div>
 
