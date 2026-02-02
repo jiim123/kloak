@@ -17,9 +17,9 @@ export const HeroImage = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-xs uppercase tracking-[0.3em] text-[hsl(var(--neutral-500))] mb-12"
+            className="text-xs font-mono text-primary tracking-widest uppercase tracking-[0.3em] text-[hsl(var(--neutral-500))] mb-12"
           >
-            Privacy-first communication
+            Build your community.
           </motion.p>
 
           {/* Main title */}
