@@ -44,7 +44,7 @@ export const ForumChannelArea = () => {
   const { currentChannel, currentServer } = useServerStore();
   const { user } = useAuthStore();
   const { sendMessage } = useMessageStore();
-  const { setMobileSidebarOpen, setMemberSidebarOpen } = useUIStore();
+  const { setMobileSidebarOpen, setMemberSidebarOpen, openModal } = useUIStore();
   const { typingUsers, startTyping, stopTyping } = useTyping(currentChannel?.id || null);
   const isMobile = useIsMobile();
   const { hasPermission } = useMemberPermissions(currentChannel?.id);
@@ -1389,7 +1389,10 @@ export const ForumChannelArea = () => {
                 {threadDescription && (
                   <div className="mb-6 pb-6 border-b border-border">
                     <div className="flex gap-3">
-                      <Avatar className="w-8 h-8 flex-shrink-0">
+                      <Avatar 
+                        className="w-8 h-8 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => selectedThread?.created_by && openModal('userProfile', { userId: selectedThread.created_by })}
+                      >
                         <AvatarImage src={opUser?.avatar_url} />
                         <AvatarFallback>
                           {opUser?.username?.[0]?.toUpperCase() || "?"}
@@ -1397,7 +1400,10 @@ export const ForumChannelArea = () => {
                       </Avatar>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
-                          <span className="font-medium text-sm">
+                          <span 
+                            className="font-medium text-sm cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => selectedThread?.created_by && openModal('userProfile', { userId: selectedThread.created_by })}
+                          >
                             {opUser?.display_name || opUser?.username || "Unknown"}
                           </span>
                           <span className="text-xs text-muted-foreground">
@@ -1440,7 +1446,10 @@ export const ForumChannelArea = () => {
                           </Avatar>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="font-medium text-sm">
+                              <span 
+                                className="font-medium text-sm cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => msg.user_id && openModal('userProfile', { userId: msg.user_id })}
+                              >
                                 {msg.user?.display_name || msg.user?.username || "Unknown"}
                               </span>
                               <span className="text-xs text-muted-foreground">
@@ -1758,7 +1767,10 @@ export const ForumChannelArea = () => {
                     {threadDescription && (
                       <div className="mb-6 pb-6 border-b border-border">
                         <div className="flex gap-3">
-                          <Avatar className="w-8 h-8 flex-shrink-0">
+                          <Avatar 
+                            className="w-8 h-8 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => selectedThread?.created_by && openModal('userProfile', { userId: selectedThread.created_by })}
+                          >
                             <AvatarImage src={opUser?.avatar_url} />
                             <AvatarFallback>
                               {opUser?.username?.[0]?.toUpperCase() || "?"}
@@ -1766,7 +1778,10 @@ export const ForumChannelArea = () => {
                           </Avatar>
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
-                              <span className="font-medium text-sm">
+                              <span 
+                                className="font-medium text-sm cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => selectedThread?.created_by && openModal('userProfile', { userId: selectedThread.created_by })}
+                              >
                                 {opUser?.display_name || opUser?.username || "Unknown"}
                               </span>
                               <span className="text-xs text-muted-foreground">
@@ -1809,7 +1824,10 @@ export const ForumChannelArea = () => {
                               </Avatar>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
-                                  <span className="font-medium text-sm">
+                                  <span 
+                                    className="font-medium text-sm cursor-pointer hover:opacity-80 transition-opacity"
+                                    onClick={() => msg.user_id && openModal('userProfile', { userId: msg.user_id })}
+                                  >
                                     {msg.user?.display_name || msg.user?.username || "Unknown"}
                                   </span>
                                   <span className="text-xs text-muted-foreground">
