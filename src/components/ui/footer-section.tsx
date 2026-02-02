@@ -5,6 +5,7 @@ import KloakLogo from '@/assets/kloak-logo.svg';
 
 const footerLinks = [
   { title: 'Philosophy', href: '/philosophy' },
+  { title: 'FAQ', href: '/faq' },
   { title: 'Terms', href: '/terms' },
   { title: 'Privacy', href: '/privacy' },
   { title: 'Cookies', href: '/cookies' },
