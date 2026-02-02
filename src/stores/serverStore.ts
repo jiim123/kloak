@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
 import { inviteCodeRateLimiter } from '@/lib/security';
+import { saveLastChannel, getLastChannel } from '@/lib/storage';
 import { useAuthStore } from './authStore';
 import { useFriendStore } from './friendStore';
 import type {
@@ -489,9 +490,14 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }
   },
   setCurrentChannel: (channel) => {
-    // Persist to localStorage
+    const { currentServer } = get();
+    // Persist to localStorage (global for backwards compat)
     if (channel) {
       localStorage.setItem('kloak-current-channel-id', channel.id);
+      // Also save per-server last channel
+      if (currentServer) {
+        saveLastChannel(currentServer.id, channel.id);
+      }
     } else {
       localStorage.removeItem('kloak-current-channel-id');
     }
@@ -523,15 +529,22 @@ export const useServerStore = create<ServerState>((set, get) => ({
       // Also fetch roles when fetching channels
       await get().fetchRoles(serverId);
 
-      // Always try to restore the persisted channel when switching servers
+      // Try to restore the last visited channel for this specific server
       const { currentChannel } = get();
+      const lastChannelForServer = getLastChannel(serverId);
       const persistedChannelId = localStorage.getItem('kloak-current-channel-id');
 
-      // Restore channel: try persisted first, then keep current if valid, else first channel
+      // Restore channel priority: 
+      // 1. Last channel for this specific server
+      // 2. Global persisted channel (if it belongs to this server)
+      // 3. First channel in the server
       if (channels.length > 0) {
-        const restoredChannel = persistedChannelId
-          ? channels.find(c => c.id === persistedChannelId)
+        const lastChannel = lastChannelForServer
+          ? channels.find(c => c.id === lastChannelForServer)
           : null;
+        const restoredChannel = lastChannel || (persistedChannelId
+          ? channels.find(c => c.id === persistedChannelId)
+          : null);
 
         // If current channel is valid for this server, keep it
         const currentIsValid = currentChannel && channels.find(c => c.id === currentChannel.id);

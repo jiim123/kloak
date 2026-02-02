@@ -8,6 +8,7 @@ const STORAGE_KEYS = {
   THEME: 'kloak-theme',
   DRAFTS: 'kloak-drafts',
   WELCOME_SHOWN: 'kloak-welcome-shown',
+  LAST_CHANNELS: 'kloak-last-channels',
 } as const;
 
 // Secret Key Storage
@@ -84,4 +85,35 @@ export const hasSeenWelcome = (userId: string): boolean => {
 
 export const markWelcomeSeen = (userId: string): void => {
   localStorage.setItem(`${STORAGE_KEYS.WELCOME_SHOWN}-${userId}`, 'true');
+};
+
+// Last Visited Channel per Server
+interface LastChannels {
+  [serverId: string]: string; // serverId -> channelId
+}
+
+export const saveLastChannel = (serverId: string, channelId: string): void => {
+  const lastChannels = getLastChannels();
+  lastChannels[serverId] = channelId;
+  localStorage.setItem(STORAGE_KEYS.LAST_CHANNELS, JSON.stringify(lastChannels));
+};
+
+export const getLastChannel = (serverId: string): string | null => {
+  const lastChannels = getLastChannels();
+  return lastChannels[serverId] || null;
+};
+
+export const getLastChannels = (): LastChannels => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.LAST_CHANNELS);
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+};
+
+export const clearLastChannel = (serverId: string): void => {
+  const lastChannels = getLastChannels();
+  delete lastChannels[serverId];
+  localStorage.setItem(STORAGE_KEYS.LAST_CHANNELS, JSON.stringify(lastChannels));
 };
