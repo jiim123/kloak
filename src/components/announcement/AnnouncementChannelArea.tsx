@@ -9,7 +9,6 @@ import { useUIStore } from "@/stores/uiStore";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { useSwipeGestureRef } from "@/hooks/useSwipeGesture";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useRealtimeReactions } from "@/hooks/useRealtimeReactions";
 import { Loader2, MessageSquare, Clock, MoreVertical, Smile, Reply, Pencil, Trash2, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -151,29 +150,95 @@ export const AnnouncementChannelArea = () => {
     return Object.values(groups);
   }, []);
 
-  // Subscribe to real-time reactions for this channel
-  useRealtimeReactions(currentChannel?.id || null);
+  // Keep a ref to announcements for realtime callbacks
+  const announcementsRef = useRef<Message[]>([]);
+  useEffect(() => {
+    announcementsRef.current = announcements;
+  }, [announcements]);
 
-  // Sync reactions from messageStore to announcements state
-  const messagesByChannel = useMessageStore((state) => state.messagesByChannel);
-  
+  // Subscribe to real-time reactions for announcement posts
   useEffect(() => {
     if (!currentChannel?.id) return;
-    
-    const channelData = messagesByChannel[currentChannel.id];
-    if (!channelData) return;
 
-    // Update announcements with reactions from messageStore
-    setAnnouncements((prev) => {
-      return prev.map((announcement) => {
-        const messageInStore = channelData.messages.find(m => m.id === announcement.id);
-        if (messageInStore && messageInStore.reactions) {
-          return { ...announcement, reactions: messageInStore.reactions };
+    const channel = supabase
+      .channel(`announcement-reactions:${currentChannel.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "reactions",
+        },
+        async (payload) => {
+          try {
+            const newReaction = payload.new as { message_id: string; user_id: string; emoji: string };
+            
+            // Check if this reaction is for an announcement in this channel
+            if (!announcementsRef.current.some(a => a.id === newReaction.message_id)) return;
+            
+            // Fetch updated reactions for this message
+            const { data: reactionsData } = await supabase
+              .from("reactions")
+              .select("*")
+              .eq("message_id", newReaction.message_id);
+            
+            if (reactionsData) {
+              const reactions = groupReactions(reactionsData, user?.id);
+              
+              setAnnouncements((prev) =>
+                prev.map((a) =>
+                  a.id === newReaction.message_id ? { ...a, reactions } : a
+                )
+              );
+            }
+          } catch (error) {
+            console.error("[Announcement] Failed to handle reaction insert:", error);
+          }
         }
-        return announcement;
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "reactions",
+        },
+        async (payload) => {
+          try {
+            const deletedReaction = payload.old as { message_id?: string; user_id?: string; emoji?: string };
+            if (!deletedReaction.message_id) return;
+            
+            // Check if this reaction is for an announcement in this channel
+            if (!announcementsRef.current.some(a => a.id === deletedReaction.message_id)) return;
+            
+            // Fetch updated reactions for this message
+            const { data: reactionsData } = await supabase
+              .from("reactions")
+              .select("*")
+              .eq("message_id", deletedReaction.message_id);
+            
+            if (reactionsData !== null) {
+              const reactions = groupReactions(reactionsData, user?.id);
+              
+              setAnnouncements((prev) =>
+                prev.map((a) =>
+                  a.id === deletedReaction.message_id ? { ...a, reactions } : a
+                )
+              );
+            }
+          } catch (error) {
+            console.error("[Announcement] Failed to handle reaction delete:", error);
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log(`[Announcement] Reactions subscription for ${currentChannel.id}:`, status);
       });
-    });
-  }, [currentChannel?.id, messagesByChannel]);
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentChannel?.id, user?.id, groupReactions]);
 
   // Fetch announcements
   const fetchAnnouncements = useCallback(async () => {
