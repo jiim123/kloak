@@ -121,52 +121,63 @@ export const MentionAutocomplete = ({
   return (
     <div
       ref={containerRef}
-      className="absolute z-50 w-64 bg-popover border border-border rounded-lg shadow-lg overflow-hidden"
+      className="absolute z-50 w-72 bg-card/95 backdrop-blur-sm border border-border/50 rounded-xl shadow-xl overflow-hidden"
       style={{
         bottom: position.top,
         left: position.left,
       }}
     >
-      <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase border-b border-border">
-        Members
+      <div className="px-3 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/50">
+        Mention
       </div>
-      <ScrollArea className="max-h-48">
-        {options.map((option, index) => (
-          <div
-            key={option.id || option.type}
-            className={cn(
-              "flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors",
-              index === selectedIndex ? "bg-accent" : "hover:bg-accent/50",
-            )}
-            onClick={() => onSelect(option)}
-            onMouseEnter={() => setSelectedIndex(index)}
-          >
-            {option.type === "user" && option.user ? (
-              <>
-                <Avatar className="w-6 h-6">
-                  <AvatarImage src={option.user.avatar_url || undefined} />
-                  <AvatarFallback style={{ backgroundColor: option.user.banner_color }}>
-                    {option.user.username[0].toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="font-medium text-sm truncate">{option.label}</span>
-                {option.user.username !== option.label && (
-                  <span className="text-xs text-muted-foreground truncate">@{option.user.username}</span>
-                )}
-              </>
-            ) : (
-              <>
-                <div className="w-6 h-6 rounded-full bg-primary/80 flex items-center justify-center">
-                  <span className="text-xs font-bold text-primary">@</span>
-                </div>
-                <span className="font-medium text-sm">@{option.label}</span>
-                <span className="text-xs text-muted-foreground ml-auto">
-                  {option.type === "everyone" ? "Notify everyone" : "Notify online"}
-                </span>
-              </>
-            )}
-          </div>
-        ))}
+      <ScrollArea className="max-h-52">
+        <div className="p-1">
+          {options.map((option, index) => (
+            <div
+              key={option.id || option.type}
+              className={cn(
+                "flex items-center gap-2.5 px-2.5 py-2 cursor-pointer rounded-lg transition-colors duration-150",
+                index === selectedIndex
+                  ? "bg-primary/10 text-foreground"
+                  : "text-foreground/80 hover:bg-muted/50 hover:text-foreground",
+              )}
+              onClick={() => onSelect(option)}
+              onMouseEnter={() => setSelectedIndex(index)}
+            >
+              {option.type === "user" && option.user ? (
+                <>
+                  <Avatar className="w-7 h-7 flex-shrink-0">
+                    <AvatarImage src={option.user.avatar_url || undefined} />
+                    <AvatarFallback
+                      className="text-xs font-medium"
+                      style={{ backgroundColor: option.user.banner_color || "hsl(var(--muted))" }}
+                    >
+                      {option.user.username[0].toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <span className="font-medium text-[13px] leading-tight truncate">{option.label}</span>
+                    {option.user.username !== option.label && (
+                      <span className="text-[11px] text-muted-foreground truncate">@{option.user.username}</span>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                    <span className="text-xs font-bold text-primary">@</span>
+                  </div>
+                  <div className="flex items-center justify-between flex-1 min-w-0">
+                    <span className="font-medium text-[13px]">@{option.label}</span>
+                    <span className="text-[11px] text-muted-foreground ml-2">
+                      {option.type === "everyone" ? "Notify all" : "Notify online"}
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
       </ScrollArea>
     </div>
   );
