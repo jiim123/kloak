@@ -112,7 +112,7 @@ export const HeroImage = () => {
           softness={0.6}
           intensity={0.38}
           noise={0}
-          shape="blob"
+          shape="wave"
           speed={0.5}
           rotation={204}
           offsetX={0.3}
