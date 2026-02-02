@@ -12,13 +12,13 @@ export const HeroImage = () => {
         <Dithering
           style={{ width: "100%", height: "100%" }}
           colorBack="#0f0f0f"
-          colorFront="#a6a6a6"
+          colorFront="#737373"
           shape="sphere"
           type="4x4"
           size={1.8}
-          speed={0.42}
-          scale={1.76}
-          rotation={252}
+          speed={0.3}
+          scale={2.88}
+          rotation={200}
           offsetY={1}
         />
       </div>
