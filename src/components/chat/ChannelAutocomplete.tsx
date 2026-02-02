@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { Hash, Volume2, Megaphone } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { useServerStore } from '@/stores/serverStore';
-import { cn } from '@/lib/utils';
-import type { Channel } from '@/types';
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Hash, Volume2, Megaphone } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useServerStore } from "@/stores/serverStore";
+import { cn } from "@/lib/utils";
+import type { Channel } from "@/types";
 
 interface ChannelOption {
   id: string;
@@ -20,36 +20,30 @@ interface ChannelAutocompleteProps {
 
 const getChannelIcon = (type: string) => {
   switch (type) {
-    case 'voice':
+    case "voice":
       return <Volume2 className="w-4 h-4" />;
-    case 'announcement':
+    case "announcement":
       return <Megaphone className="w-4 h-4" />;
     default:
       return <Hash className="w-4 h-4" />;
   }
 };
 
-export const ChannelAutocomplete = ({
-  query,
-  position,
-  onSelect,
-  onClose,
-}: ChannelAutocompleteProps) => {
+export const ChannelAutocomplete = ({ query, position, onSelect, onClose }: ChannelAutocompleteProps) => {
   const { channels } = useServerStore();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Build options list - filter text channels only (you can't really "go to" voice channels via link)
+  // Build options list - filter text and announcement channels (you can't really "go to" voice channels via link)
   const options: ChannelOption[] = channels
-    .filter(c => 
-      c.type === 'text' && 
-      c.name.toLowerCase().includes(query.toLowerCase())
+    .filter(
+      (c) => (c.type === "text" || c.type === "announcement") && c.name.toLowerCase().includes(query.toLowerCase()),
     )
     .slice(0, 10)
-    .map(channel => ({
+    .map((channel) => ({
       id: channel.id,
       name: channel.name,
-      type: channel.type || 'text',
+      type: channel.type || "text",
     }));
 
   // Reset selection when options change
@@ -58,33 +52,36 @@ export const ChannelAutocomplete = ({
   }, [query]);
 
   // Keyboard navigation
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (options.length === 0) return;
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (options.length === 0) return;
 
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        setSelectedIndex(prev => (prev + 1) % options.length);
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        setSelectedIndex(prev => (prev - 1 + options.length) % options.length);
-        break;
-      case 'Enter':
-      case 'Tab':
-        e.preventDefault();
-        onSelect(options[selectedIndex]);
-        break;
-      case 'Escape':
-        e.preventDefault();
-        onClose();
-        break;
-    }
-  }, [options, selectedIndex, onSelect, onClose]);
+      switch (e.key) {
+        case "ArrowDown":
+          e.preventDefault();
+          setSelectedIndex((prev) => (prev + 1) % options.length);
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          setSelectedIndex((prev) => (prev - 1 + options.length) % options.length);
+          break;
+        case "Enter":
+        case "Tab":
+          e.preventDefault();
+          onSelect(options[selectedIndex]);
+          break;
+        case "Escape":
+          e.preventDefault();
+          onClose();
+          break;
+      }
+    },
+    [options, selectedIndex, onSelect, onClose],
+  );
 
   useEffect(() => {
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
   // Click outside to close
@@ -94,8 +91,8 @@ export const ChannelAutocomplete = ({
         onClose();
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose]);
 
   if (options.length === 0) {
@@ -105,34 +102,41 @@ export const ChannelAutocomplete = ({
   return (
     <div
       ref={containerRef}
-      className="absolute z-50 w-64 bg-popover border border-border rounded-lg shadow-lg overflow-hidden"
+      className="absolute z-50 w-72 bg-card/95 backdrop-blur-sm border border-border/50 rounded-xl shadow-xl overflow-hidden"
       style={{
         bottom: position.top,
         left: position.left,
       }}
     >
-      <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase border-b border-border">
+      <div className="px-3 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/50">
         Channels
       </div>
-      <ScrollArea className="max-h-48">
-        {options.map((option, index) => (
-          <div
-            key={option.id}
-            className={cn(
-              "flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors",
-              index === selectedIndex ? "bg-accent" : "hover:bg-accent/50"
-            )}
-            onClick={() => onSelect(option)}
-            onMouseEnter={() => setSelectedIndex(index)}
-          >
-            <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
-              {getChannelIcon(option.type)}
+      <ScrollArea className="max-h-52">
+        <div className="p-1">
+          {options.map((option, index) => (
+            <div
+              key={option.id}
+              className={cn(
+                "flex items-center gap-2.5 px-2.5 py-2 cursor-pointer rounded-lg transition-colors duration-150",
+                index === selectedIndex
+                  ? "bg-primary/10 text-foreground"
+                  : "text-foreground/80 hover:bg-muted/50 hover:text-foreground",
+              )}
+              onClick={() => onSelect(option)}
+              onMouseEnter={() => setSelectedIndex(index)}
+            >
+              <div
+                className={cn(
+                  "w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-colors",
+                  index === selectedIndex ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground",
+                )}
+              >
+                {getChannelIcon(option.type)}
+              </div>
+              <span className="font-medium text-[13px] truncate">#{option.name}</span>
             </div>
-            <span className="font-medium text-sm truncate">
-              #{option.name}
-            </span>
-          </div>
-        ))}
+          ))}
+        </div>
       </ScrollArea>
     </div>
   );
