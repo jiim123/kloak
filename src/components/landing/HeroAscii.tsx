@@ -11,7 +11,7 @@ export const HeroImage = () => {
       <div className="absolute inset-0">
         <GrainGradient
           style={{ width: "100%", height: "100%" }}
-          colors={["#000000", "#b3b3b3", "#54514a"]}
+          colors={["#ffffff", "#000000"]}
           colorBack="#0f0f0f"
           softness={0.5}
           intensity={0.5}
