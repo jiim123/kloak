@@ -128,7 +128,7 @@ export const MentionAutocomplete = ({
       }}
     >
       <div className="px-3 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/50">
-        Members
+        Mention
       </div>
       <ScrollArea className="max-h-52">
         <div className="p-1">
