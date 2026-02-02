@@ -559,15 +559,6 @@ export const AnnouncementChannelArea = () => {
                         case 'codeblock':
                           editor.chain().focus().toggleCodeBlock().run();
                           break;
-                        case 'alignLeft':
-                          editor.chain().focus().setTextAlign('left').run();
-                          break;
-                        case 'alignCenter':
-                          editor.chain().focus().setTextAlign('center').run();
-                          break;
-                        case 'alignRight':
-                          editor.chain().focus().setTextAlign('right').run();
-                          break;
                         case 'separator':
                           editor.chain().focus().setHorizontalRule().run();
                           break;
