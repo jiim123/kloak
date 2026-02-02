@@ -1130,7 +1130,6 @@ export const ForumChannelArea = () => {
               {/* Formatting Toolbar */}
               <div className="mb-3 format-toolbar" onMouseDown={(e) => e.preventDefault()}>
                 <FormatToolbar
-                  expanded={true}
                   onFormat={handleFormat}
                   onImageClick={() => setShowImageUpload(true)}
                   onClose={() => {

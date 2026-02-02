@@ -525,7 +525,6 @@ export const AnnouncementChannelArea = () => {
                 {/* Formatting Toolbar */}
                 <div className="mb-3 format-toolbar" onMouseDown={(e) => e.preventDefault()}>
                   <FormatToolbar
-                    expanded={true}
                     onFormat={(formatType) => {
                       const editorRef = editingMessage ? editTextareaRef.current : createTextareaRef.current;
                       const editor = editorRef?.editor;

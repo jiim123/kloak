@@ -101,12 +101,6 @@ const ActionButtons = memo(
 
     return (
       <div className="flex items-center gap-1 mb-0.5 relative">
-        {/* Format toolbar */}
-        {showFormatToolbar && (
-          <div className="absolute bottom-full right-0 mb-2 z-50">
-            <FormatToolbar onFormat={onFormat} onClose={() => setShowFormatToolbar(false)} />
-          </div>
-        )}
 
         {/* Character count warning */}
         {showCharacterWarning && (
@@ -1021,6 +1015,15 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
         />
       )}
 
+      {/* Format toolbar - inline above input */}
+      {showFormatToolbar && (
+        <FormatToolbar 
+          onFormat={handleFormat} 
+          onClose={() => setShowFormatToolbar(false)} 
+          onImageClick={() => setShowImageUpload(true)}
+        />
+      )}
+
       {/* Reply preview */}
       {replyingTo && (() => {
         // Check if ghost mode is enabled and reply author is not admin
@@ -1030,7 +1033,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
         const showReplyAuthorIdentity = !isGhostMode || replyAuthorIsAdmin;
         
         return (
-          <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-muted/40 rounded-t-2xl border-b border-border/50 font-[Inter,system-ui,sans-serif]">
+          <div className={`flex items-center gap-2 px-3 sm:px-4 py-2 bg-muted/40 border-b border-border/50 font-[Inter,system-ui,sans-serif] ${!showFormatToolbar ? 'rounded-t-2xl' : ''}`}>
             <span className="text-[12px] sm:text-[13px] leading-[1.5] text-muted-foreground">
               Replying to {showReplyAuthorIdentity ? (
                 <span className="font-medium text-primary">@{replyingTo.user?.username}</span>
