@@ -11,70 +11,52 @@ interface UnreadDMState {
   [conversationId: string]: DMUnreadInfo;
 }
 
+const REFETCH_COOLDOWN_MS = 5000;
+
 export const useUnreadDMs = (userId: string | null) => {
   const [unreadState, setUnreadState] = useState<UnreadDMState>({});
   const [isLoading, setIsLoading] = useState(true);
-  const fetchSeqRef = useRef(0);
+  const lastFetchRef = useRef(0);
 
-  const fetchUnreadCounts = useCallback(async () => {
+  const fetchUnreadCounts = useCallback(async ({ force = false } = {}) => {
     if (!userId) {
       setUnreadState({});
       setIsLoading(false);
       return;
     }
 
-    const seq = ++fetchSeqRef.current;
-    try {
-      // Get all conversations where user is a participant
-      const { data: participations, error: partError } = await supabase
-        .from('dm_participants')
-        .select('conversation_id, last_read_at')
-        .eq('user_id', userId);
+    // Cooldown to prevent burst queries
+    const now = Date.now();
+    if (!force && now - lastFetchRef.current < REFETCH_COOLDOWN_MS) {
+      return;
+    }
+    lastFetchRef.current = now;
 
-      if (partError) throw partError;
-      if (!participations || participations.length === 0) {
-        setUnreadState({});
-        setIsLoading(false);
+    try {
+      // Use batched RPC call instead of N+1 queries
+      const { data, error } = await supabase.rpc('get_dm_unread_counts', {
+        _user_id: userId,
+      });
+
+      if (error) {
+        console.error('Failed to fetch DM unread counts:', error);
         return;
       }
 
-      // Build unread counts for each conversation
       const newState: UnreadDMState = {};
+      (data || []).forEach((row: { conversation_id: string; unread_count: number; last_read_at: string | null }) => {
+        newState[row.conversation_id] = {
+          conversationId: row.conversation_id,
+          unreadCount: Number(row.unread_count),
+          lastReadAt: row.last_read_at,
+        };
+      });
 
-      for (const participation of participations) {
-        const { conversation_id, last_read_at } = participation;
-
-        // Count messages newer than last_read_at
-        let query = supabase
-          .from('direct_messages')
-          .select('id', { count: 'exact', head: true })
-          .eq('conversation_id', conversation_id)
-          .neq('sender_id', userId); // Don't count own messages
-
-        if (last_read_at) {
-          query = query.gt('created_at', last_read_at);
-        }
-
-        const { count, error } = await query;
-
-        if (!error) {
-          newState[conversation_id] = {
-            conversationId: conversation_id,
-            unreadCount: count || 0,
-            lastReadAt: last_read_at,
-          };
-        }
-      }
-
-      if (fetchSeqRef.current === seq) {
-        setUnreadState(newState);
-      }
+      setUnreadState(newState);
     } catch (error) {
       console.error('Failed to fetch DM unread counts:', error);
     } finally {
-      if (fetchSeqRef.current === seq) {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
     }
   }, [userId]);
 
@@ -99,7 +81,7 @@ export const useUnreadDMs = (userId: string | null) => {
         if (error) throw error;
       }
 
-      // Update local state
+      // Update local state optimistically
       setUnreadState((prev) => ({
         ...prev,
         [conversationId]: {
@@ -144,26 +126,25 @@ export const useUnreadDMs = (userId: string | null) => {
 
   // Fetch on mount and when userId changes
   useEffect(() => {
-    fetchUnreadCounts();
+    fetchUnreadCounts({ force: true });
   }, [fetchUnreadCounts]);
 
-  // Reconcile on app focus / tab restore (realtime can be lossy during sleep/background)
+  // Reconcile on visibility change only (removed duplicate focus listener)
   useEffect(() => {
-    const handleFocus = () => fetchUnreadCounts();
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible') fetchUnreadCounts();
+      if (document.visibilityState === 'visible') {
+        fetchUnreadCounts();
+      }
     };
 
-    window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
-      window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [fetchUnreadCounts]);
 
-  // Subscribe to dm_participants changes for real-time sync
+  // Subscribe to dm_participants INSERT only (not updates to avoid self-trigger loop)
   useEffect(() => {
     if (!userId) return;
 
@@ -172,14 +153,14 @@ export const useUnreadDMs = (userId: string | null) => {
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT', // Only new participants, not updates (avoids self-trigger on markAsRead)
           schema: 'public',
           table: 'dm_participants',
           filter: `user_id=eq.${userId}`,
         },
         () => {
-          // Refetch when last_read_at changes
-          fetchUnreadCounts();
+          // New conversation created, refetch
+          fetchUnreadCounts({ force: true });
         }
       )
       .subscribe();
@@ -189,7 +170,7 @@ export const useUnreadDMs = (userId: string | null) => {
     };
   }, [userId, fetchUnreadCounts]);
 
-  // Periodic refresh (cheap, avoids stuck counts when realtime is missed)
+  // Periodic refresh (cheap with RPC, avoids stuck counts when realtime is missed)
   useEffect(() => {
     if (!userId) return;
     const interval = setInterval(() => {
