@@ -1019,6 +1019,7 @@ export const MessageItem = memo(function MessageItem({
                       open={showDesktopEmojiPicker}
                       onOpenChange={setShowDesktopEmojiPicker}
                       onEmojiSelect={handleDesktopAddReaction}
+                      serverId={currentServer?.id}
                     >
                       <button
                         className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
@@ -1196,6 +1197,7 @@ export const MessageItem = memo(function MessageItem({
                     open={showMobileEmojiPicker}
                     onOpenChange={setShowMobileEmojiPicker}
                     onEmojiSelect={handleMobileAddReaction}
+                    serverId={currentServer?.id}
                   >
                     <button
                       className="p-2.5 rounded-xl bg-secondary/80 hover:bg-accent transition-colors flex-shrink-0"
