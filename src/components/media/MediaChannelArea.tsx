@@ -3,6 +3,7 @@ import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { ChannelHeader } from "@/components/chat/ChannelHeader";
+import { MediaComments } from "./MediaComments";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,6 +24,7 @@ import {
   Film,
   Image as ImageIcon,
   Loader2,
+  MessageSquare,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -683,72 +685,114 @@ const MediaLightbox = ({
   onClose: () => void;
 }) => {
   const isYouTube = item.media_type === 'youtube';
+  const [showComments, setShowComments] = useState(true);
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex flex-col bg-black/95 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex bg-black/95 backdrop-blur-md"
       onClick={onClose}
     >
-      {/* Top controls bar - matching ImageLightbox design */}
-      <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-end p-4 bg-gradient-to-b from-black/50 to-transparent">
-        <button
-          onClick={onClose}
-          className="p-2.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-white"
-          aria-label="Close"
-          title="Close"
-        >
-          <X className="w-5 h-5" />
-        </button>
-      </div>
-
-      <div 
-        className="max-w-4xl max-h-[90vh] w-full mx-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {isYouTube ? (
-          <AspectRatio ratio={16/9} className="bg-muted rounded-xl overflow-hidden">
-            <iframe
-              src={`https://www.youtube.com/embed/${item.youtube_video_id}?autoplay=1`}
-              title={item.title || 'YouTube video'}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              className="w-full h-full"
-            />
-          </AspectRatio>
-        ) : (
-          <img
-            src={item.media_url}
-            alt={item.title || 'Media'}
-            className="max-h-[80vh] w-auto mx-auto object-contain rounded-xl"
-          />
-        )}
-
-        {/* Info panel */}
-        {(item.title || item.description) && (
-          <div className="mt-4 p-4 bg-card rounded-xl">
-            {item.title && (
-              <h3 className="text-lg font-semibold text-foreground mb-1">{item.title}</h3>
-            )}
-            {item.description && (
-              <p className="text-sm text-muted-foreground">{item.description}</p>
-            )}
-            <div className="flex items-center gap-2 mt-3 text-sm text-muted-foreground">
-              <Avatar className="w-5 h-5">
-                <AvatarImage src={item.user?.avatar_url || undefined} />
-                <AvatarFallback style={{ backgroundColor: item.user?.banner_color || 'hsl(var(--primary))' }} className="text-[10px]">
-                  {item.user?.username?.[0]?.toUpperCase() || '?'}
-                </AvatarFallback>
-              </Avatar>
-              <span>{item.user?.username}</span>
-              <span>•</span>
-              <span>{formatRelativeTime(item.created_at)}</span>
+      {/* Main content area */}
+      <div className="flex-1 flex flex-col">
+        {/* Top controls bar */}
+        <div className="flex items-center justify-between p-4 bg-gradient-to-b from-black/50 to-transparent">
+          <div className="flex items-center gap-3">
+            <Avatar className="w-8 h-8">
+              <AvatarImage src={item.user?.avatar_url || undefined} />
+              <AvatarFallback style={{ backgroundColor: item.user?.banner_color || 'hsl(var(--primary))' }} className="text-xs text-primary-foreground">
+                {item.user?.username?.[0]?.toUpperCase() || '?'}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="text-sm font-medium text-white">{item.user?.username}</p>
+              <p className="text-xs text-white/60">{formatRelativeTime(item.created_at)}</p>
             </div>
           </div>
-        )}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowComments(!showComments);
+              }}
+              className={`p-2.5 rounded-lg transition-colors text-white ${
+                showComments ? 'bg-white/20' : 'bg-white/10 hover:bg-white/20'
+              }`}
+              aria-label={showComments ? 'Hide comments' : 'Show comments'}
+              title={showComments ? 'Hide comments' : 'Show comments'}
+            >
+              <MessageSquare className="w-5 h-5" />
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-white"
+              aria-label="Close"
+              title="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Media content */}
+        <div 
+          className="flex-1 flex items-center justify-center p-4"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="max-w-4xl max-h-full w-full">
+            {isYouTube ? (
+              <AspectRatio ratio={16/9} className="bg-muted rounded-xl overflow-hidden">
+                <iframe
+                  src={`https://www.youtube.com/embed/${item.youtube_video_id}?autoplay=1`}
+                  title={item.title || 'YouTube video'}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="w-full h-full"
+                />
+              </AspectRatio>
+            ) : (
+              <img
+                src={item.media_url}
+                alt={item.title || 'Media'}
+                className="max-h-[75vh] w-auto mx-auto object-contain rounded-xl"
+              />
+            )}
+
+            {/* Title and description below media */}
+            {(item.title || item.description) && (
+              <div className="mt-4 text-center">
+                {item.title && (
+                  <h3 className="text-lg font-semibold text-white mb-1">{item.title}</h3>
+                )}
+                {item.description && (
+                  <p className="text-sm text-white/70">{item.description}</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
+
+      {/* Comments sidebar */}
+      <AnimatePresence>
+        {showComments && (
+          <motion.div
+            initial={{ x: '100%', opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: '100%', opacity: 0 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="w-[360px] bg-background border-l border-border flex flex-col h-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <MediaComments 
+              mediaId={item.id} 
+              channelId={item.channel_id}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };
