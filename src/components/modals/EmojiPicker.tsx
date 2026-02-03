@@ -1,8 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { Search, X, Clock } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
@@ -1052,15 +1050,19 @@ const saveRecentEmoji = (emoji: string) => {
 
 export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange }: EmojiPickerProps) => {
   const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState("smileys");
+  const [activeCategory, setActiveCategory] = useState("recent");
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const recentEmojis = useMemo(() => getRecentEmojis(), [open]);
 
-  // Reset search when closed
+  // Reset search when closed, default to recent if we have recent emojis
   useEffect(() => {
     if (!open) {
       setSearch("");
+    } else {
+      // When opening, show recent if available, otherwise smileys
+      const recent = getRecentEmojis();
+      setActiveCategory(recent.length > 0 ? "recent" : "smileys");
     }
   }, [open]);
 
@@ -1077,8 +1079,6 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange }: Emo
       }
     });
 
-    // For now, just return all emojis when searching (in a real app, you'd filter by emoji names/keywords)
-    // This at least shows the search is working
     return results.slice(0, 64);
   }, [search]);
 
@@ -1088,17 +1088,20 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange }: Emo
     onOpenChange?.(false);
   };
 
-  const categories = Object.entries(EMOJI_CATEGORIES).map(([key, cat]) => ({
-    key,
-    ...cat,
-    emojis: key === "recent" ? recentEmojis : cat.emojis,
-  }));
+  // Build categories with recent first
+  const categories = useMemo(() => {
+    return Object.entries(EMOJI_CATEGORIES).map(([key, cat]) => ({
+      key,
+      ...cat,
+      emojis: key === "recent" ? recentEmojis : cat.emojis,
+    }));
+  }, [recentEmojis]);
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>{children}</PopoverTrigger>
       <PopoverContent
-        className="w-[360px] sm:w-[420px] p-0 bg-card/95 backdrop-blur-xl border-border/50 rounded-2xl shadow-2xl overflow-hidden"
+        className="w-[400px] sm:w-[460px] p-0 bg-card border-border/50 rounded-2xl shadow-2xl overflow-hidden"
         side="top"
         align="end"
         sideOffset={12}
@@ -1107,72 +1110,84 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange }: Emo
         }}
       >
         {/* Search Header */}
-        <div className="p-3 border-b border-border/30">
+        <div className="p-4 pb-3 border-b border-border/30">
           <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none">
+              <Search className="w-[18px] h-[18px] text-muted-foreground/40" />
+              {!search && <span className="text-[15px] text-muted-foreground/40">Search emoji...</span>}
+            </div>
+            <input
               ref={searchInputRef}
+              type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search emoji..."
-              className="pl-10 h-11 rounded-xl bg-muted/50 border-border/30 focus-visible:ring-primary/30 text-[15px]"
+              className="w-full h-14 pl-12 pr-12 rounded-2xl bg-muted/30 border border-border/30 text-[15px] text-foreground outline-none focus:border-primary/30 focus:bg-muted/40 transition-all"
             />
             {search && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg hover:bg-secondary"
+              <button
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                 onClick={() => {
                   setSearch("");
                   searchInputRef.current?.focus();
                 }}
               >
                 <X className="w-4 h-4" />
-              </Button>
+              </button>
             )}
           </div>
         </div>
 
         {/* Category Tabs */}
         {!search && (
-          <div className="flex border-b border-border/30 px-2 py-2 gap-0.5 overflow-x-auto scrollbar-hide bg-muted/20">
+          <div className="flex border-b border-border/30 px-3 py-3 gap-1 overflow-x-auto scrollbar-hide">
             {categories.map((cat) => (
               <button
                 key={cat.key}
                 className={cn(
-                  "flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200",
-                  activeCategory === cat.key ? "bg-primary/15 shadow-sm ring-1 ring-primary/20" : "hover:bg-muted/60",
+                  "flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200",
+                  activeCategory === cat.key
+                    ? "bg-primary/10 ring-1 ring-primary/20"
+                    : "hover:bg-muted/50 text-muted-foreground hover:text-foreground",
                 )}
                 onClick={() => setActiveCategory(cat.key)}
                 title={cat.name}
               >
-                <span className="text-[22px]">{cat.icon}</span>
+                {cat.key === "recent" ? (
+                  <Clock
+                    className={cn(
+                      "w-5 h-5 transition-colors",
+                      activeCategory === cat.key ? "text-primary" : "text-muted-foreground",
+                    )}
+                  />
+                ) : (
+                  <span className="text-[26px]">{cat.icon}</span>
+                )}
               </button>
             ))}
           </div>
         )}
 
         {/* Emoji Grid */}
-        <ScrollArea className="h-[340px] sm:h-[380px]">
-          <div className="p-3">
+        <ScrollArea className="h-[380px] sm:h-[420px]">
+          <div className="p-4">
             {search ? (
               // Search results
               filteredEmojis && filteredEmojis.length > 0 ? (
                 <>
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center">
-                      <Search className="w-4 h-4 text-muted-foreground" />
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-muted/40 flex items-center justify-center">
+                      <Search className="w-5 h-5 text-muted-foreground" />
                     </div>
-                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">
                       Search Results
                     </h3>
                   </div>
-                  <div className="grid grid-cols-6 sm:grid-cols-7 gap-1">
+                  <div className="grid grid-cols-6 gap-1.5">
                     {filteredEmojis.map((emoji, i) => (
                       <button
                         key={`search-${emoji}-${i}`}
                         type="button"
-                        className="aspect-square p-0 text-[28px] sm:text-[30px] hover:bg-muted/80 active:scale-90 rounded-xl flex items-center justify-center transition-all duration-150"
+                        className="aspect-square p-0 text-[36px] sm:text-[38px] hover:bg-muted/50 active:scale-90 rounded-xl flex items-center justify-center transition-all duration-150"
                         onClick={() => handleSelect(emoji)}
                         onMouseDown={(e) => e.preventDefault()}
                       >
@@ -1182,12 +1197,12 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange }: Emo
                   </div>
                 </>
               ) : (
-                <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <div className="w-14 h-14 rounded-2xl bg-muted/50 flex items-center justify-center mb-4">
-                    <Search className="w-7 h-7 text-muted-foreground/50" />
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-muted/40 flex items-center justify-center mb-4">
+                    <Search className="w-8 h-8 text-muted-foreground/40" />
                   </div>
                   <p className="text-sm font-medium text-muted-foreground">No emoji found</p>
-                  <p className="text-xs text-muted-foreground/70 mt-1">Try a different search term</p>
+                  <p className="text-xs text-muted-foreground/60 mt-1.5">Try a different search term</p>
                 </div>
               )
             ) : (
@@ -1197,26 +1212,26 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange }: Emo
                   cat.key === activeCategory && (
                     <div key={cat.key}>
                       {/* Category Header */}
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-muted/40 flex items-center justify-center">
                           {cat.key === "recent" ? (
-                            <Clock className="w-4 h-4 text-muted-foreground" />
+                            <Clock className="w-5 h-5 text-muted-foreground" />
                           ) : (
-                            <span className="text-lg">{cat.icon}</span>
+                            <span className="text-xl">{cat.icon}</span>
                           )}
                         </div>
-                        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">
                           {cat.name}
                         </h3>
                       </div>
 
                       {cat.emojis.length > 0 ? (
-                        <div className="grid grid-cols-6 sm:grid-cols-7 gap-1">
+                        <div className="grid grid-cols-6 gap-1.5">
                           {cat.emojis.map((emoji, i) => (
                             <button
                               key={`${cat.key}-${emoji}-${i}`}
                               type="button"
-                              className="aspect-square p-0 text-[28px] sm:text-[30px] hover:bg-muted/80 active:scale-90 rounded-xl flex items-center justify-center transition-all duration-150"
+                              className="aspect-square p-0 text-[36px] sm:text-[38px] hover:bg-muted/50 active:scale-90 rounded-xl flex items-center justify-center transition-all duration-150"
                               onClick={() => handleSelect(emoji)}
                               onMouseDown={(e) => e.preventDefault()}
                             >
@@ -1225,15 +1240,15 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange }: Emo
                           ))}
                         </div>
                       ) : (
-                        <div className="flex flex-col items-center justify-center py-12 text-center">
-                          <div className="w-12 h-12 rounded-2xl bg-muted/30 flex items-center justify-center mb-3">
-                            <Clock className="w-6 h-6 text-muted-foreground/50" />
+                        <div className="flex flex-col items-center justify-center py-16 text-center">
+                          <div className="w-14 h-14 rounded-2xl bg-muted/30 flex items-center justify-center mb-4">
+                            <Clock className="w-7 h-7 text-muted-foreground/40" />
                           </div>
                           <p className="text-sm font-medium text-muted-foreground">
                             {cat.key === "recent" ? "No recently used emoji" : "No emojis available"}
                           </p>
                           {cat.key === "recent" && (
-                            <p className="text-xs text-muted-foreground/70 mt-1.5 max-w-[200px]">
+                            <p className="text-xs text-muted-foreground/60 mt-2 max-w-[220px]">
                               Emoji you use will appear here for quick access
                             </p>
                           )}
@@ -1245,11 +1260,6 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange }: Emo
             )}
           </div>
         </ScrollArea>
-
-        {/* Footer hint */}
-        <div className="px-3 py-2 border-t border-border/30 bg-muted/10">
-          <p className="text-[11px] text-muted-foreground/60 text-center">Click an emoji to insert it</p>
-        </div>
       </PopoverContent>
     </Popover>
   );
