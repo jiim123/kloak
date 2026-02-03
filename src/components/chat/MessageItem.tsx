@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo, memo, forwardRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Smile, Reply, Pencil, Trash2, Pin, MoreHorizontal, CornerUpLeft, Copy, Eye } from "lucide-react";
+import { Smile, Reply, Pencil, Trash2, Pin, MoreHorizontal, CornerUpLeft, Copy, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -25,6 +25,7 @@ import { useMessageStore } from "@/stores/messageStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useSyncStore } from "@/stores/syncStore";
+import { useEmbedStore } from "@/stores/embedStore";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MessageContent } from "./MessageContent";
@@ -101,6 +102,7 @@ export const MessageItem = memo(function MessageItem({
   const showTimestamps = useUIStore((state) => state.showTimestamps);
   const { openModal } = useUIStore();
   const { getOptimisticStatus } = useSyncStore();
+  const { hideEmbedsForMessage, isMessageEmbedHidden } = useEmbedStore();
   const [searchParams, setSearchParams] = useSearchParams();
   const isMobile = useIsMobile();
 
@@ -343,6 +345,27 @@ export const MessageItem = memo(function MessageItem({
   }, [user?.id, message.content]);
 
   const pollId = useMemo(() => getPollIdFromContent(message.content), [message.content]);
+
+  // Check if message has embeddable URLs (non-image links that generate previews)
+  const hasEmbeddableUrls = useMemo(() => {
+    const urlPattern = /https?:\/\/[^\s<>`\]]+/g;
+    const urls = message.content.match(urlPattern) || [];
+    // Filter out image URLs
+    const imageExtensions = /\.(gif|jpe?g|png|webp|bmp|svg)(\?.*)?$/i;
+    const imageHosts = [/media\d*\.giphy\.com/i, /i\.giphy\.com/i, /tenor\.com.*\.gif/i, /i\.imgur\.com/i];
+    return urls.some(url => {
+      if (imageExtensions.test(url)) return false;
+      if (imageHosts.some(pattern => pattern.test(url))) return false;
+      return true;
+    });
+  }, [message.content]);
+
+  const isEmbedHidden = isMessageEmbedHidden(message.id);
+
+  const handleRemoveEmbed = useCallback(() => {
+    hideEmbedsForMessage(message.id);
+    toast.success("Embed removed");
+  }, [hideEmbedsForMessage, message.id]);
 
   // Ghost mode - hide avatar/username for non-admin message authors
   const isGhostMode = currentChannel?.ghost_mode || false;
@@ -718,6 +741,7 @@ export const MessageItem = memo(function MessageItem({
                             content={message.content}
                             currentUserId={user?.id}
                             messageId={message.id}
+                            hideEmbeds={isEmbedHidden}
                             messageUser={
                               messageUser
                                 ? {
@@ -867,6 +891,7 @@ export const MessageItem = memo(function MessageItem({
                                     content={announcementContent}
                                     currentUserId={user?.id}
                                     messageId={message.id}
+                                    hideEmbeds={isEmbedHidden}
                                     messageUser={
                                       messageUser
                                         ? {
@@ -886,6 +911,7 @@ export const MessageItem = memo(function MessageItem({
                             content={message.content}
                             currentUserId={user?.id}
                             messageId={message.id}
+                            hideEmbeds={isEmbedHidden}
                             messageUser={
                               messageUser
                                 ? {
@@ -1154,6 +1180,15 @@ export const MessageItem = memo(function MessageItem({
                 </ContextMenuItem>
               </>
             )}
+            {hasEmbeddableUrls && !isEmbedHidden && (
+              <>
+                <ContextMenuSeparator />
+                <ContextMenuItem onClick={handleRemoveEmbed}>
+                  <EyeOff className="w-4 h-4 mr-2" />
+                  Remove Embed
+                </ContextMenuItem>
+              </>
+            )}
             {(isOwnMessage || isAdmin) && (
               <>
                 <ContextMenuSeparator />
@@ -1249,6 +1284,20 @@ export const MessageItem = memo(function MessageItem({
                 >
                   <Pin className={cn("w-5 h-5", message.is_pinned ? "text-primary" : "text-muted-foreground")} />
                   <span className="font-medium">{message.is_pinned ? "Unpin Message" : "Pin Message"}</span>
+                </button>
+              )}
+
+              {/* Remove Embed */}
+              {hasEmbeddableUrls && !isEmbedHidden && (
+                <button
+                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-accent active:bg-accent text-left transition-colors"
+                  onClick={() => {
+                    handleRemoveEmbed();
+                    setShowMobileActions(false);
+                  }}
+                >
+                  <EyeOff className="w-5 h-5 text-muted-foreground" />
+                  <span className="font-medium">Remove Embed</span>
                 </button>
               )}
 

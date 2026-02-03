@@ -26,6 +26,7 @@ interface MessageContentProps {
   messageId?: string;
   users?: UserInfo[];
   messageUser?: UserInfo | null;
+  hideEmbeds?: boolean;
 }
 
 interface ParsedSegment {
@@ -292,7 +293,7 @@ export const parseTextContent = (
   return parsed;
 };
 
-export const MessageContent = ({ content, currentUserId, messageId, users, messageUser }: MessageContentProps) => {
+export const MessageContent = ({ content, currentUserId, messageId, users, messageUser, hideEmbeds = false }: MessageContentProps) => {
   const navigate = useNavigate();
   const { linkPreviewsEnabled, openModal } = useUIStore();
   const { members, currentServer, channels, setCurrentChannel } = useServerStore();
@@ -503,7 +504,7 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
       )}
 
       {/* Link previews (excluding image URLs) */}
-      {linkPreviewsEnabled && nonInviteLinkUrls.length > 0 && (
+      {linkPreviewsEnabled && !hideEmbeds && nonInviteLinkUrls.length > 0 && (
         <div className="flex flex-col gap-2">
           {nonInviteLinkUrls.slice(0, 3).map((url, index) => (
             <LinkPreview 

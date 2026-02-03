@@ -11,14 +11,19 @@ export interface ActiveEmbed {
 
 interface EmbedStore {
   activeEmbeds: ActiveEmbed[];
+  hiddenEmbedMessages: Set<string>; // messageIds where embeds are hidden
   addEmbed: (embed: ActiveEmbed) => void;
   removeEmbed: (id: string) => void;
   getEmbedForMessage: (messageId: string, url: string) => ActiveEmbed | undefined;
   clearEmbedsForChannel: (channelId: string) => void;
+  hideEmbedsForMessage: (messageId: string) => void;
+  showEmbedsForMessage: (messageId: string) => void;
+  isMessageEmbedHidden: (messageId: string) => boolean;
 }
 
 export const useEmbedStore = create<EmbedStore>((set, get) => ({
   activeEmbeds: [],
+  hiddenEmbedMessages: new Set(),
   
   addEmbed: (embed) => {
     const { activeEmbeds } = get();
@@ -37,5 +42,21 @@ export const useEmbedStore = create<EmbedStore>((set, get) => ({
   
   clearEmbedsForChannel: (channelId) => {
     set({ activeEmbeds: get().activeEmbeds.filter(e => e.channelId !== channelId) });
+  },
+  
+  hideEmbedsForMessage: (messageId) => {
+    const newSet = new Set(get().hiddenEmbedMessages);
+    newSet.add(messageId);
+    set({ hiddenEmbedMessages: newSet });
+  },
+  
+  showEmbedsForMessage: (messageId) => {
+    const newSet = new Set(get().hiddenEmbedMessages);
+    newSet.delete(messageId);
+    set({ hiddenEmbedMessages: newSet });
+  },
+  
+  isMessageEmbedHidden: (messageId) => {
+    return get().hiddenEmbedMessages.has(messageId);
   },
 }));
