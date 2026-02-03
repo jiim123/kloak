@@ -3051,6 +3051,28 @@ export const ServerSettingsModal = () => {
                 {activeTab === "emojis" &&
                   (canManageEmojis ? (
                     <div className="space-y-4">
+                      {/* Import from emoji.gg */}
+                      <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="min-w-0 flex-1">
+                            <h4 className="text-sm font-semibold">Import from emoji.gg</h4>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              Browse and import emoji packs from emoji.gg
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            rounded="xl"
+                            onClick={() => openModal("import-emoji-pack")}
+                            className="h-9 flex-shrink-0"
+                          >
+                            <Link2 className="w-4 h-4 mr-2" />
+                            Import Pack
+                          </Button>
+                        </div>
+                      </div>
+
                       <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4 space-y-3">
                         <h4 className="text-sm font-semibold">Custom Emojis</h4>
                         <p className="text-xs text-muted-foreground">
@@ -3113,28 +3135,6 @@ export const ServerSettingsModal = () => {
                               Clear
                             </Button>
                           </div>
-                        </div>
-                      </div>
-
-                      {/* Import from emoji.gg */}
-                      <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="min-w-0 flex-1">
-                            <h4 className="text-sm font-semibold">Import from emoji.gg</h4>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              Browse and import emoji packs from emoji.gg
-                            </p>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            rounded="xl"
-                            onClick={() => openModal("import-emoji-pack")}
-                            className="h-9 flex-shrink-0"
-                          >
-                            <Link2 className="w-4 h-4 mr-2" />
-                            Import Pack
-                          </Button>
                         </div>
                       </div>
 
