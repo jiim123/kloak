@@ -563,7 +563,7 @@ export const MessageItem = memo(function MessageItem({
       "group relative flex px-3 rounded-lg transition-colors duration-200 hover:bg-muted/40",
       compactMode ? "gap-2 py-0.5" : "gap-3 py-1.5",
     ];
-    if (isMentioned) classes.push("bg-primary/10 border-l-2 border-l-primary");
+    if (isMentioned) classes.push("bg-amber-950/50 border-l-2 border-l-amber-500");
     if (isHighlighted) classes.push("animate-highlight-message bg-primary/20 ring-2 ring-primary/50");
     if (isPending) classes.push("opacity-70");
     return classes.join(" ");
