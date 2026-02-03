@@ -1156,7 +1156,7 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange }: Emo
                   <Clock
                     className={cn(
                       "w-5 h-5 transition-colors",
-                      activeCategory === cat.key ? "text-primary" : "text-muted-foreground",
+                      activeCategory === cat.key ? "text-primary bg-primary/20" : "text-muted-foreground",
                     )}
                   />
                 ) : (
