@@ -614,6 +614,160 @@ export type Database = {
           },
         ]
       }
+      media_comment_reactions: {
+        Row: {
+          comment_id: string
+          created_at: string
+          emoji: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          comment_id: string
+          created_at?: string
+          emoji: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string
+          emoji?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_comment_reactions_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "media_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_comment_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_comments: {
+        Row: {
+          content: string
+          created_at: string
+          edited_at: string | null
+          id: string
+          media_id: string
+          reply_to_id: string | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          media_id: string
+          reply_to_id?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          media_id?: string
+          reply_to_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_comments_media_id_fkey"
+            columns: ["media_id"]
+            isOneToOne: false
+            referencedRelation: "media_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_comments_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "media_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_items: {
+        Row: {
+          channel_id: string
+          created_at: string | null
+          description: string | null
+          file_size: number | null
+          height: number | null
+          id: string
+          media_type: string
+          media_url: string
+          thumbnail_url: string | null
+          title: string | null
+          user_id: string
+          width: number | null
+          youtube_video_id: string | null
+        }
+        Insert: {
+          channel_id: string
+          created_at?: string | null
+          description?: string | null
+          file_size?: number | null
+          height?: number | null
+          id?: string
+          media_type: string
+          media_url: string
+          thumbnail_url?: string | null
+          title?: string | null
+          user_id: string
+          width?: number | null
+          youtube_video_id?: string | null
+        }
+        Update: {
+          channel_id?: string
+          created_at?: string | null
+          description?: string | null
+          file_size?: number | null
+          height?: number | null
+          id?: string
+          media_type?: string
+          media_url?: string
+          thumbnail_url?: string | null
+          title?: string | null
+          user_id?: string
+          width?: number | null
+          youtube_video_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_items_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_items_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mentions: {
         Row: {
           id: string
@@ -2402,7 +2556,13 @@ export type Database = {
       }
     }
     Enums: {
-      channel_type: "text" | "voice" | "announcement" | "forum" | "tasks"
+      channel_type:
+        | "text"
+        | "voice"
+        | "announcement"
+        | "forum"
+        | "tasks"
+        | "media"
       friendship_status: "pending" | "accepted" | "blocked"
       mention_type: "user" | "everyone" | "here" | "role"
       notification_type: "mention" | "dm" | "friend_request" | "server_invite"
@@ -2576,7 +2736,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      channel_type: ["text", "voice", "announcement", "forum", "tasks"],
+      channel_type: [
+        "text",
+        "voice",
+        "announcement",
+        "forum",
+        "tasks",
+        "media",
+      ],
       friendship_status: ["pending", "accepted", "blocked"],
       mention_type: ["user", "everyone", "here", "role"],
       notification_type: ["mention", "dm", "friend_request", "server_invite"],
