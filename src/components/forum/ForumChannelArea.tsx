@@ -9,7 +9,7 @@ import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { useTyping } from "@/hooks/useTyping";
 import { useSwipeGestureRef } from "@/hooks/useSwipeGesture";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { MessageSquare, Hash, ArrowRight, Clock, Send, Loader2, Plus, X, ArrowUp, Paperclip, Reply, Smile, Pencil, Trash2, CornerUpLeft, ArrowLeft } from "lucide-react";
+import { MessageSquare, Hash, ArrowRight, Clock, Send, Loader2, Plus, X, ArrowUp, Paperclip, Reply, Smile, Pencil, Trash2, CornerUpLeft, ArrowLeft, Users, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -1216,9 +1216,31 @@ export const ForumChannelArea = () => {
           {isLoading ? (
             <div className="p-4 text-center text-muted-foreground">Loading threads...</div>
           ) : threads.length === 0 ? (
-            <div className="p-8 text-center">
-              <MessageSquare className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-              <p className="text-muted-foreground">No threads yet. Create one to get started!</p>
+            <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+              <div className="relative mb-6">
+                <div className="absolute inset-0 rounded-full bg-muted/30 blur-xl scale-150" />
+                <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-muted/80 to-muted/40 border border-border/50 flex items-center justify-center">
+                  <MessageSquare className="w-12 h-12 text-muted-foreground" />
+                </div>
+              </div>
+              <h2 className="text-2xl font-bold text-foreground mb-3">Forum Threads</h2>
+              <p className="text-muted-foreground mb-6 max-w-sm leading-relaxed">
+                Start discussions with your community. Topics stay organized and easy to follow.
+              </p>
+              <div className="flex flex-wrap justify-center gap-3">
+                <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-muted/50 text-sm text-muted-foreground">
+                  <Layers className="w-4 h-4" />
+                  <span>Organized threads</span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-muted/50 text-sm text-muted-foreground">
+                  <Users className="w-4 h-4" />
+                  <span>Community discussions</span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-muted/50 text-sm text-muted-foreground">
+                  <Reply className="w-4 h-4" />
+                  <span>Threaded replies</span>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="divide-y divide-border">

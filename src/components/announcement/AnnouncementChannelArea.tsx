@@ -9,7 +9,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { useSwipeGestureRef } from "@/hooks/useSwipeGesture";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Loader2, MessageSquare, Clock, MoreVertical, Smile, Reply, Pencil, Trash2, Copy } from "lucide-react";
+import { Loader2, MessageSquare, Clock, MoreVertical, Smile, Reply, Pencil, Trash2, Copy, Megaphone, Users, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -755,9 +755,31 @@ export const AnnouncementChannelArea = () => {
             {isLoading ? (
               <div className="p-4 text-center text-muted-foreground">Loading announcements...</div>
             ) : announcements.length === 0 ? (
-              <div className="p-8 text-center">
-                <MessageSquare className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <p className="text-muted-foreground">No announcements yet. Create one to get started!</p>
+              <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+                <div className="relative mb-6">
+                  <div className="absolute inset-0 rounded-full bg-muted/30 blur-xl scale-150" />
+                  <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-muted/80 to-muted/40 border border-border/50 flex items-center justify-center">
+                    <Megaphone className="w-12 h-12 text-muted-foreground" />
+                  </div>
+                </div>
+                <h2 className="text-2xl font-bold text-foreground mb-3">Announcements</h2>
+                <p className="text-muted-foreground mb-6 max-w-sm leading-relaxed">
+                  Share important updates with your community. Announcements support rich text, images, and comments.
+                </p>
+                <div className="flex flex-wrap justify-center gap-3">
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-muted/50 text-sm text-muted-foreground">
+                    <Megaphone className="w-4 h-4" />
+                    <span>Rich content</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-muted/50 text-sm text-muted-foreground">
+                    <MessageSquare className="w-4 h-4" />
+                    <span>Comments</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-muted/50 text-sm text-muted-foreground">
+                    <Bell className="w-4 h-4" />
+                    <span>Notify members</span>
+                  </div>
+                </div>
               </div>
             ) : (
               <div className="p-4 space-y-6">
