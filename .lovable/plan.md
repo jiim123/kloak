@@ -1,326 +1,349 @@
 
-
-# Storage Implementation Audit Report
+# Comprehensive Real-Time & Egress Audit Report
 
 ## Executive Summary
 
-This audit identifies several inefficiencies in the storage URL handling that are likely contributing to elevated Supabase egress costs. The good news: **no signed URLs are being used**, and all buckets are correctly configured as public. However, there are critical issues with **cache-busting patterns** and **URL generation inside render loops** that defeat browser caching.
+The audit reveals **critical issues** with real-time subscription architecture that are likely the primary drivers of high egress costs. The most impactful finding is an **unfiltered global user subscription** that broadcasts every user update to every connected client. Combined with frequent polling and over-fetching patterns, these issues compound to create unnecessary bandwidth usage.
 
 ---
 
-## Part One: Audit Findings
+## AREA ONE: Real-Time Subscription Issues
 
-### 1. Storage Bucket Inventory
+### Issue 1.1: CRITICAL - Global Unfiltered User Updates
+**Severity: CRITICAL** | **Impact: VERY HIGH**
 
-| Bucket | Visibility | Content Type | Status |
-|--------|-----------|--------------|--------|
-| `avatars` | PUBLIC | User avatars and banners | Correct |
-| `server-icons` | PUBLIC | Server icons and banners | Correct |
-| `attachments` | PUBLIC | Message file attachments | Correct |
-| `server-emojis` | PUBLIC | Custom server emojis | Correct |
+**Location**: `src/hooks/useRealtimeUsers.ts` (lines 86-168)
 
-**Assessment**: All buckets are correctly configured as public. Content stored in these buckets (avatars, server icons, attachments, custom emojis) is meant to be publicly accessible, so no change is needed to bucket visibility.
-
----
-
-### 2. Signed URL Usage
-
-**Result**: No instances of `createSignedUrl` found in the codebase.
-
-This is excellent - the application correctly uses `getPublicUrl` for all storage access, which generates static, cacheable URLs.
-
----
-
-### 3. Cache-Busting Patterns (CRITICAL)
-
-**Severity: HIGH** - These patterns completely defeat browser caching.
-
-#### Issue 3.1: Server Settings Modal
-**File**: `src/components/modals/ServerSettingsModal.tsx`
+**Problem**: The `useRealtimeUsers` hook subscribes to ALL updates on the `users` table with no filter:
 
 ```typescript
-// Line 882 - uploadIcon function
-return `${publicUrl}?t=${Date.now()}`;
-
-// Line 929 - uploadBanner function  
-return `${publicUrl}?t=${Date.now()}`;
+const channel = supabase
+  .channel('users-status-global')
+  .on(
+    'postgres_changes',
+    {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'users',
+      // NO FILTER - receives EVERY user update platform-wide
+    },
+    (payload) => { ... }
+  )
 ```
 
-**Impact**: Every time a server icon or banner is uploaded, the URL stored in the database includes a timestamp parameter. While the intention is to force a cache refresh after upload, this means:
-- The cached URL will never match subsequent requests
-- Every user seeing this server icon/banner downloads a fresh copy
-- The timestamp becomes permanent part of the stored URL
+**Why It's Critical**: 
+- Every `last_seen` heartbeat (every 30 seconds per user) broadcasts to ALL connected clients
+- Every status change broadcasts to ALL clients
+- If you have 1,000 users online, that's ~33 user updates per second globally
+- Each client receives ALL 33 updates per second, even for users they don't care about
+- This creates O(n²) scaling: users × updates × payload size
 
-#### Issue 3.2: Server Settings Page
-**File**: `src/components/settings/ServerSettingsPage.tsx`
+**Estimated Egress Impact**: With typical User row size (~500-800 bytes) and 1,000 online users:
+- 33 updates/second × 700 bytes × 1,000 clients = **23 MB/second** just for presence updates
+
+### Issue 1.2: HIGH - Presence Polling Fallback
+**Severity: HIGH** | **Impact: MODERATE**
+
+**Location**: `src/hooks/useRealtimeUsers.ts` (lines 170-216)
+
+**Problem**: A polling fallback runs every 15 seconds that fetches presence data for all friends and DM participants:
 
 ```typescript
-// Line 1104 - uploadIcon function
-return `${publicUrl}?t=${Date.now()}`;
+const pollInterval = setInterval(pollPresence, 15000);
 
-// Line 1154 - uploadBanner function
-return `${publicUrl}?t=${Date.now()}`;
+const pollPresence = async () => {
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, status, last_seen')
+    .in('id', Array.from(userIds));
+  // ...
+};
 ```
 
-**Impact**: Same as above - duplicate implementation with same cache-busting problem.
+**Why It's Problematic**:
+- Runs regardless of whether realtime is working
+- With 50 friends, queries 50 user rows every 15 seconds
+- Duplicates data already received via realtime (when it works)
 
-**Estimated Impact**: HIGH - Server icons appear in:
-- Server sidebar (visible constantly)
-- Server headers
-- Invite previews
-- Explore servers page
-- Quick switcher
+### Issue 1.3: MEDIUM - Reactions Subscription Architecture
+**Severity: MEDIUM** | **Impact: MODERATE**
 
-A single server icon with a cache-busting URL could be downloaded thousands of times when it should be cached once.
+**Location**: `src/hooks/useRealtimeReactions.ts`
+
+**Current Implementation**: Correctly filtered by channel_id, but subscribes to ALL events ('*') instead of just INSERT/DELETE on reactions table.
+
+**Issue**: Full row payloads are broadcast. The reactions table may contain data beyond what's needed (though it's relatively small).
+
+### Issue 1.4: LOW - Duplicate Channel Subscriptions Risk
+**Severity: LOW** | **Impact: LOW**
+
+**Locations**: Multiple hooks create subscriptions that could overlap:
+- `useRealtimeMessages` creates `messages:{channelId}`
+- `useRealtimeReactions` creates `reactions:{channelId}` 
+- `useRealtimePinnedMessages` creates `pinned:{channelId}`
+
+**Good Finding**: Each has proper cleanup in useEffect returns.
 
 ---
 
-### 4. URL Generation Inside Render Loops (CRITICAL)
+## AREA TWO: Database Query Inefficiencies
 
-**Severity: HIGH** - These patterns generate URLs on every render cycle.
+### Issue 2.1: HIGH - Over-Fetching with SELECT *
+**Severity: HIGH** | **Impact: MODERATE**
 
-#### Issue 4.1: ServerSettingsModal - Emoji List (Mobile View)
-**File**: `src/components/modals/ServerSettingsModal.tsx`
-**Lines**: 2278-2282
+**Locations** (12 files with 140+ instances):
+- `src/hooks/useUnread.ts` - channel_reads
+- `src/hooks/useRealtimeDMs.ts` - dm_reactions
+- `src/stores/dmStore.ts` - dm_reactions
+- `src/stores/notificationStore.ts` - notifications
+- `src/stores/pollStore.ts` - polls
+- `src/components/forum/ForumChannelArea.tsx` - threads, users, thread_reactions
+- `src/components/media/MediaComments.tsx` - users, media_comment_reactions
+- `src/components/announcement/*.tsx` - users, reactions
+
+**Example**:
+```typescript
+const { data: channelReads } = await supabase
+  .from('channel_reads')
+  .select('*')  // Fetches ALL columns
+  .eq('user_id', user.id)
+  .in('channel_id', serverChannelIds);
+```
+
+**Why It's Problematic**: Fetching all columns when only 2-3 are needed wastes bandwidth on every request.
+
+### Issue 2.2: MEDIUM - Unread Count Per-Channel Queries
+**Severity: MEDIUM** | **Impact: MODERATE**
+
+**Location**: `src/hooks/useUnread.ts` (lines 86-133)
+
+**Problem**: For each channel, a separate query is made to count unread messages:
 
 ```typescript
-{serverEmojis.map((emoji) => {
-  const { data: urlData } = supabase.storage
-    .from("server-emojis")
-    .getPublicUrl(emoji.file_path);
-  const url = urlData.publicUrl;
-  // ... renders image
-})}
+const tasks = serverChannelIds.map((channelId) => async () => {
+  // One query per channel to count unread messages
+  let query = supabase
+    .from('messages')
+    .select('id', { count: 'exact' })
+    .eq('channel_id', channelId)
+    // ...
+});
 ```
 
-**Impact**: Every render of this component regenerates URLs for ALL server emojis. While `getPublicUrl` doesn't make network requests, this pattern:
-- Creates unnecessary work on every render
-- Is inconsistent with the proper caching pattern used elsewhere (see `fetchServerEmojis`)
-- Could interact poorly with React's reconciliation
+**Why It's Problematic**:
+- A server with 50 channels = 50 queries every time unread counts are fetched
+- Polling runs every 15 seconds, plus on focus/visibility changes
+- Could be consolidated into a single RPC call
 
-#### Issue 4.2: ServerSettingsModal - Emoji List (Desktop View)
-**File**: `src/components/modals/ServerSettingsModal.tsx`
-**Lines**: 3147-3151
+### Issue 2.3: MEDIUM - N+1 Pattern in Search Results
+**Severity: MEDIUM** | **Impact: LOW** (settings page, low frequency)
 
-Same pattern as above - duplicate code in desktop view.
-
-#### Issue 4.3: ServerSettingsPage - Emoji List
-**File**: `src/components/settings/ServerSettingsPage.tsx`
-**Lines**: 2943-2947
+**Location**: `src/components/modals/SearchModal.tsx` (lines 98-102)
 
 ```typescript
-{serverEmojis.map((emoji) => {
-  const { data: urlData } = supabase.storage
-    .from('server-emojis')
-    .getPublicUrl(emoji.file_path);
-  const url = urlData.publicUrl;
-  // ... renders image
-})}
+(data || []).map(async (result: SearchResult) => {
+  const [userRes, channelRes] = await Promise.all([
+    supabase.from('users').select('username, display_name, avatar_url, banner_color').eq('id', result.user_id).single(),
+    supabase.from('channels').select('name').eq('id', result.channel_id).single(),
+  ]);
 ```
 
-Same pattern - URL generation inside map function.
+**Problem**: For each search result, two additional queries are made.
 
 ---
 
-### 5. Good Patterns Found (Reference for Fixes)
+## AREA THREE: Polling & Refresh Patterns
 
-#### 5.1: Centralized Emoji Caching
-**File**: `src/lib/serverEmojis.ts`
+### Issue 3.1: HIGH - Multiple Competing Polling Systems
+**Severity: HIGH** | **Impact: MODERATE**
 
-This file implements the correct pattern:
-- In-memory cache with TTL (60 seconds)
-- URLs are generated once and cached
-- Deduplication of concurrent requests
-- Proper error handling with retry
+**Polling Intervals Found**:
+
+| Hook | Interval | Purpose |
+|------|----------|---------|
+| `usePresence` | 30s | Update own last_seen |
+| `useRealtimeUsers` | 15s | Fetch friend/DM presence |
+| `useUnread` | 15s | Fetch unread counts |
+| `useUnreadDMs` | 15s | Fetch DM unread counts |
+| `useBackgroundSync` | 60s | Refresh all data |
+| `useConnectionStatus` | Heartbeat | Check connection |
+
+**Problem**: These overlap and create redundant queries:
+- Presence data is both polled AND received via realtime
+- Unread counts are both polled AND updated via realtime subscription
+- Multiple hooks may query the same data simultaneously
+
+### Issue 3.2: MEDIUM - Aggressive Refetch on Focus/Visibility
+**Severity: MEDIUM** | **Impact: MODERATE**
+
+**Location**: `src/hooks/useUnread.ts` (lines 361-374)
 
 ```typescript
-const CACHE_TTL_MS = 60_000;
-const cache = new Map<string, CacheEntry>();
+useEffect(() => {
+  const handleFocus = () => fetchUnreadCounts({ force: true });
+  const handleVisibility = () => {
+    if (document.visibilityState === 'visible') fetchUnreadCounts({ force: true });
+  };
 
-export async function fetchServerEmojis(serverId: string): Promise<ServerEmoji[]> {
-  // ... proper caching implementation
-}
+  window.addEventListener('focus', handleFocus);
+  document.addEventListener('visibilitychange', handleVisibility);
 ```
 
-#### 5.2: EmojiPicker Component
-**File**: `src/components/modals/EmojiPicker.tsx`
-
-Uses the centralized `fetchServerEmojis` function - this is correct.
-
-#### 5.3: MessageContent Component
-**File**: `src/components/chat/MessageContent.tsx`
-
-Properly uses `fetchServerEmojis` with caching.
+**Problem**: Both 'focus' AND 'visibilitychange' trigger refetches. A single tab switch can trigger both events, causing duplicate fetches.
 
 ---
 
-### 6. URL Storage Pattern Analysis
+## AREA FOUR: Real-Time Payload Size
 
-The application stores full URLs in the database after upload:
+### Issue 4.1: MEDIUM - Full User Rows in Member Lists
+**Severity: MEDIUM** | **Impact: MODERATE**
+
+**Location**: `src/stores/serverStore.ts` - fetchMembers uses RPC that returns full user data:
+
+The `get_server_members_with_roles` RPC returns complete user objects including:
+- bio (potentially large text)
+- banner_url
+- avatar_decoration
+- profile_effect
+- All status fields
+
+When broadcast via realtime (useRealtimeMembers), the full member data is transmitted.
+
+### Issue 4.2: LOW - Message Payloads Include Full User Data
+**Severity: LOW** | **Impact: LOW** (already well-optimized)
+
+**Good Finding**: The `useRealtimeMessages` hook fetches user data separately via `getCachedUser()` with a 60-second cache, avoiding redundant fetches. This is well-implemented.
+
+---
+
+## AREA FIVE: Edge Functions
+
+### Issue 5.1: LOW - No Response Caching Headers
+**Severity: LOW** | **Impact: LOW**
+
+**Location**: `supabase/functions/fetch-link-preview/index.ts`
+
+**Problem**: Link preview responses don't include cache headers:
+```typescript
+return new Response(
+  JSON.stringify(preview),
+  { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  // No Cache-Control header
+);
+```
+
+**Impact**: Same links previewed multiple times require fresh edge function calls.
+
+---
+
+## AREA SIX: Image Handling
+
+### Good Finding: Lazy Loading Implemented
+Images across the application use `loading="lazy"` (130 instances found). This is correctly implemented.
+
+### Good Finding: Image Size Limits
+The link preview edge function limits HTML parsing to 512KB to prevent memory issues.
+
+---
+
+## Prioritized Fix Recommendations
+
+### Priority 1: CRITICAL - Fix Global User Subscription
+**Estimated Impact: 70-80% egress reduction**
+
+**Solution Options**:
+
+**Option A (Recommended)**: Remove global subscription entirely, rely on targeted presence
+- Remove the unfiltered `users-status-global` channel
+- Keep the polling fallback (but optimize it)
+- Users only see presence for people in their current context
+
+**Option B**: Filter by relevant user IDs
+- Build a list of user IDs the client cares about (friends, current server members, DM participants)
+- Use row-level filtering (though Supabase has limits on filter complexity)
+
+**Option C**: Use Supabase Presence instead of postgres_changes
+- Presence is ephemeral and doesn't broadcast full rows
+- Only track minimal data (user_id, status)
+
+### Priority 2: HIGH - Consolidate Polling Systems
+**Estimated Impact: 10-15% egress reduction**
+
+1. Create a single unified polling manager
+2. Deduplicate overlapping data fetches
+3. Reduce polling frequency where realtime is reliable
+4. Remove double-firing on focus + visibility change
+
+### Priority 3: HIGH - Optimize Query Column Selection
+**Estimated Impact: 5-10% egress reduction**
+
+Replace `select('*')` with specific columns:
 
 ```typescript
-// UserSettingsModal.tsx - avatar upload
-const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(filePath);
-await updateUser({ avatar_url: publicUrl });
+// Before
+.select('*')
+
+// After
+.select('id, last_read_at, last_read_message_id, mention_count')
 ```
 
-This is generally fine, BUT the cache-busting URLs (with `?t=...`) are being stored permanently, causing ongoing cache misses.
+### Priority 4: MEDIUM - Batch Unread Count Queries
+**Estimated Impact: 5% egress reduction**
 
----
+Create an RPC function to get all unread counts in one query:
 
-### 7. Other Patterns Reviewed
+```sql
+CREATE FUNCTION get_channel_unread_counts(_user_id uuid, _channel_ids uuid[])
+RETURNS TABLE (channel_id uuid, unread_count int, mention_count int)
+```
 
-#### 7.1: File Naming with Timestamps
-**Files**: Multiple upload handlers
+### Priority 5: MEDIUM - Add Edge Function Cache Headers
+**Estimated Impact: 1-2% egress reduction**
 
 ```typescript
-// MessageInput.tsx
-const timestamp = Date.now();
-const fileName = `${user.id}/${timestamp}-${crypto.randomUUID()}.${fileExt}`;
+return new Response(
+  JSON.stringify(preview),
+  { 
+    headers: { 
+      ...corsHeaders, 
+      'Content-Type': 'application/json',
+      'Cache-Control': 'public, max-age=3600' // Cache for 1 hour
+    } 
+  }
+);
 ```
 
-**Assessment**: This is FINE - timestamps in file NAMES (not URLs) don't affect caching. They're used for uniqueness and cleanup tracking.
+---
 
-#### 7.2: Random Filenames in Forum/Announcements
-**Files**: `ForumChannelArea.tsx`, `AnnouncementChannelArea.tsx`
+## Summary of Findings
 
-```typescript
-const fileName = `${Math.random()}.${fileExt}`;
-```
+| Area | Severity | Estimated Impact |
+|------|----------|------------------|
+| Global user subscription | CRITICAL | 70-80% of excess egress |
+| Competing polling systems | HIGH | 10-15% of excess egress |
+| SELECT * over-fetching | HIGH | 5-10% of excess egress |
+| Per-channel unread queries | MEDIUM | 5% of excess egress |
+| Edge function caching | LOW | 1-2% of excess egress |
 
-**Assessment**: This is FINE - random names for uploaded files don't affect caching of retrievals.
+**Total Estimated Reducible Egress: 85-95% of current excess**
 
 ---
 
-## Part Two: Proposed Fix Strategy
+## Implementation Plan
 
-### Fix 1: Remove Cache-Busting from Upload Functions
+### Phase 1: Critical Fix (Immediate)
+1. Modify `useRealtimeUsers` to remove unfiltered global subscription
+2. Implement targeted presence updates only for visible users
 
-**Files to modify**:
-- `src/components/modals/ServerSettingsModal.tsx`
-- `src/components/settings/ServerSettingsPage.tsx`
+### Phase 2: Query Optimization (Week 1)
+1. Audit all `select('*')` calls and replace with specific columns
+2. Create batch RPC for unread counts
 
-**Change**: Remove `?t=${Date.now()}` from returned URLs.
+### Phase 3: Polling Consolidation (Week 2)
+1. Create unified background sync manager
+2. Remove redundant polling
+3. Fix double-trigger on focus events
 
-**Alternative approach**: Instead of cache-busting, use a version number in the file path itself (e.g., `{serverId}/icon-v{timestamp}.png`) so that:
-- New uploads get a new path
-- Old cached URLs remain valid for their content
-- Browser naturally fetches new version when path changes
-
-### Fix 2: Centralize Server Emoji URL Handling
-
-**Current problem**: ServerSettingsModal and ServerSettingsPage generate URLs inline instead of using the cached `fetchServerEmojis`.
-
-**Fix**: Create a utility hook that provides emoji URLs from the cache:
-
-```typescript
-// Proposed: src/hooks/useServerEmojiUrls.ts
-export function useServerEmojiUrls(serverId: string) {
-  const [emojis, setEmojis] = useState<ServerEmoji[]>([]);
-  
-  useEffect(() => {
-    if (serverId) {
-      fetchServerEmojis(serverId).then(setEmojis);
-    }
-  }, [serverId]);
-  
-  return emojis;
-}
-```
-
-Then update the settings components to use this hook instead of inline URL generation.
-
-### Fix 3: Memoize Any Remaining URL Generation
-
-For any component that still needs to generate URLs, wrap in `useMemo`:
-
-```typescript
-const emojiUrls = useMemo(() => {
-  return serverEmojis.map(emoji => ({
-    ...emoji,
-    url: supabase.storage.from('server-emojis').getPublicUrl(emoji.file_path).data.publicUrl
-  }));
-}, [serverEmojis]);
-```
-
-### Fix 4: Database URL Cleanup (Optional)
-
-Existing URLs in the database with `?t=...` parameters will continue causing cache misses until they're updated. Options:
-
-1. **Do nothing**: URLs will be fixed when users next update their icons
-2. **Migration script**: Remove query parameters from existing URLs
-
----
-
-## Part Three: Implementation Plan
-
-### Phase 1: Fix Cache-Busting (Highest Priority)
-
-1. **ServerSettingsModal.tsx**
-   - Remove `?t=${Date.now()}` from `uploadIcon` return (line 882)
-   - Remove `?t=${Date.now()}` from `uploadBanner` return (line 929)
-
-2. **ServerSettingsPage.tsx**
-   - Remove `?t=${Date.now()}` from `uploadIcon` return (line 1104)
-   - Remove `?t=${Date.now()}` from `uploadBanner` return (line 1154)
-
-### Phase 2: Fix Inline URL Generation
-
-1. **Create new hook**: `src/hooks/useServerEmojis.ts`
-   - Wraps existing `fetchServerEmojis` 
-   - Provides React-friendly state management
-
-2. **Update ServerSettingsModal.tsx**
-   - Use the new hook instead of inline `getPublicUrl` calls
-   - Affects lines 2278-2308 and 3147-3180
-
-3. **Update ServerSettingsPage.tsx**
-   - Use the new hook instead of inline `getPublicUrl` calls  
-   - Affects lines 2943-2980
-
-### Phase 3: Verification
-
-1. Search codebase for any remaining `?t=${Date.now()}` patterns
-2. Search for any remaining inline `getPublicUrl` calls in render functions
-3. Test that image loading still works correctly after changes
-
----
-
-## Risk Assessment
-
-| Change | Risk Level | Mitigation |
-|--------|-----------|------------|
-| Remove cache-busting | LOW | Images already cached will still work; new uploads get clean URLs |
-| Centralize emoji URLs | LOW | Using existing proven caching mechanism |
-| Database cleanup | MEDIUM | Optional - only needed for perfectionism |
-
----
-
-## Expected Impact
-
-After implementing these fixes:
-
-1. **Server icons/banners**: Will be cached by browsers, reducing repeated downloads
-2. **Custom emojis in settings**: Will use cached URLs instead of regenerating
-3. **Overall egress**: Should see significant reduction for repeat visitors
-
----
-
-## Files to Modify Summary
-
-| File | Changes |
-|------|---------|
-| `src/components/modals/ServerSettingsModal.tsx` | Remove cache-busting (2 locations), use cached emoji URLs (2 locations) |
-| `src/components/settings/ServerSettingsPage.tsx` | Remove cache-busting (2 locations), use cached emoji URLs (1 location) |
-| `src/hooks/useServerEmojis.ts` | **NEW FILE** - React hook for cached emoji access |
-
----
-
-## Questions for Review
-
-1. **Cache-busting intent**: The cache-busting was likely added to force immediate refresh after upload. After removing it, users may need to hard-refresh to see their new icon. Is this acceptable, or should we implement the versioned filename approach?
-
-2. **Database cleanup**: Should we create a migration to clean up existing URLs with `?t=...` parameters? This would prevent cache misses for existing server icons until they're re-uploaded.
-
-3. **Scope confirmation**: This audit focused on storage URL handling. Should we also review other potential sources of high egress (e.g., large database queries, realtime subscriptions)?
-
+### Phase 4: Edge Function Optimization (Week 2)
+1. Add cache headers to link preview responses
+2. Consider caching frequently-previewed URLs
