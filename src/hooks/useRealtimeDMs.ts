@@ -138,10 +138,10 @@ export const useRealtimeDMs = ({
 
       if (!messageData) return;
 
-      // Fetch updated reactions for this message
+      // Fetch updated reactions for this message - only columns we need
       const { data: reactionsData } = await supabase
         .from('dm_reactions')
-        .select('*')
+        .select('id, message_id, user_id, emoji')
         .eq('message_id', messageId);
 
       const reactions = groupReactions(reactionsData || [], userId || undefined);

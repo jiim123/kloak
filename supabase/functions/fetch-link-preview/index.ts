@@ -230,7 +230,13 @@ serve(async (req) => {
           type: 'image',
           image: url,
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json',
+            'Cache-Control': 'public, max-age=86400', // Cache for 24 hours
+          } 
+        }
       );
     }
 
@@ -256,7 +262,13 @@ serve(async (req) => {
               siteName: 'YouTube',
               favicon: 'https://www.google.com/s2/favicons?domain=youtube.com&sz=32',
             }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { 
+              headers: { 
+                ...corsHeaders, 
+                'Content-Type': 'application/json',
+                'Cache-Control': 'public, max-age=86400', // Cache for 24 hours
+              } 
+            }
           );
         }
       } catch (e) {
@@ -273,7 +285,13 @@ serve(async (req) => {
           siteName: 'YouTube',
           favicon: 'https://www.google.com/s2/favicons?domain=youtube.com&sz=32',
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json',
+            'Cache-Control': 'public, max-age=86400',
+          } 
+        }
       );
     }
 
@@ -286,7 +304,13 @@ serve(async (req) => {
           siteName: 'X (Twitter)',
           favicon: 'https://www.google.com/s2/favicons?domain=x.com&sz=32',
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json',
+            'Cache-Control': 'public, max-age=3600',
+          } 
+        }
       );
     }
 
@@ -319,7 +343,13 @@ serve(async (req) => {
               siteName: 'Spotify',
               favicon: 'https://www.google.com/s2/favicons?domain=spotify.com&sz=32',
             }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { 
+              headers: { 
+                ...corsHeaders, 
+                'Content-Type': 'application/json',
+                'Cache-Control': 'public, max-age=3600',
+              } 
+            }
           );
         }
       } catch (e) {
@@ -336,7 +366,13 @@ serve(async (req) => {
           siteName: 'Spotify',
           favicon: 'https://www.google.com/s2/favicons?domain=spotify.com&sz=32',
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json',
+            'Cache-Control': 'public, max-age=3600',
+          } 
+        }
       );
     }
 
@@ -369,7 +405,13 @@ serve(async (req) => {
               favicon: 'https://www.google.com/s2/favicons?domain=soundcloud.com&sz=32',
               soundcloudUrl: embedUrl,
             }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { 
+              headers: { 
+                ...corsHeaders, 
+                'Content-Type': 'application/json',
+                'Cache-Control': 'public, max-age=3600',
+              } 
+            }
           );
         }
       } catch (e) {
@@ -384,7 +426,13 @@ serve(async (req) => {
           siteName: 'SoundCloud',
           favicon: 'https://www.google.com/s2/favicons?domain=soundcloud.com&sz=32',
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json',
+            'Cache-Control': 'public, max-age=3600',
+          } 
+        }
       );
     }
 
@@ -455,7 +503,14 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify(preview),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json',
+          // Cache link previews for 1 hour to reduce repeated edge function calls
+          'Cache-Control': 'public, max-age=3600',
+        } 
+      }
     );
   } catch (error) {
     console.error('Error fetching link preview:', error);
