@@ -364,20 +364,10 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
                   </div>
                 </div>
                 <h2 className="text-2xl font-bold text-foreground mb-3">Anonymous Channel</h2>
-                <p className="text-muted-foreground mb-6 max-w-sm leading-relaxed">
+                <p className="text-muted-foreground max-w-sm leading-relaxed">
                   Messages in <span className="font-semibold text-foreground">#{channelName}</span> are anonymous. 
                   Your identity stays hidden from other members.
                 </p>
-                <div className="flex flex-wrap justify-center gap-3">
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-muted/50 text-sm text-muted-foreground">
-                    <Ghost className="w-4 h-4" />
-                    <span>Hidden identity</span>
-                  </div>
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-muted/50 text-sm text-muted-foreground">
-                    <Hash className="w-4 h-4" />
-                    <span>Speak freely</span>
-                  </div>
-                </div>
               </>
             ) : (
               <>

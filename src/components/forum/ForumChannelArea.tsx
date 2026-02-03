@@ -1224,23 +1224,9 @@ export const ForumChannelArea = () => {
                 </div>
               </div>
               <h2 className="text-2xl font-bold text-foreground mb-3">Forum Threads</h2>
-              <p className="text-muted-foreground mb-6 max-w-sm leading-relaxed">
+              <p className="text-muted-foreground max-w-sm leading-relaxed">
                 Start discussions with your community. Topics stay organized and easy to follow.
               </p>
-              <div className="flex flex-wrap justify-center gap-3">
-                <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-muted/50 text-sm text-muted-foreground">
-                  <Layers className="w-4 h-4" />
-                  <span>Organized threads</span>
-                </div>
-                <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-muted/50 text-sm text-muted-foreground">
-                  <Users className="w-4 h-4" />
-                  <span>Community discussions</span>
-                </div>
-                <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-muted/50 text-sm text-muted-foreground">
-                  <Reply className="w-4 h-4" />
-                  <span>Threaded replies</span>
-                </div>
-              </div>
             </div>
           ) : (
             <div className="divide-y divide-border">

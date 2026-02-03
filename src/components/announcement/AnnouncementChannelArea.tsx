@@ -763,23 +763,9 @@ export const AnnouncementChannelArea = () => {
                   </div>
                 </div>
                 <h2 className="text-2xl font-bold text-foreground mb-3">Announcements</h2>
-                <p className="text-muted-foreground mb-6 max-w-sm leading-relaxed">
+                <p className="text-muted-foreground max-w-sm leading-relaxed">
                   Share important updates with your community. Announcements support rich text, images, and comments.
                 </p>
-                <div className="flex flex-wrap justify-center gap-3">
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-muted/50 text-sm text-muted-foreground">
-                    <Megaphone className="w-4 h-4" />
-                    <span>Rich content</span>
-                  </div>
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-muted/50 text-sm text-muted-foreground">
-                    <MessageSquare className="w-4 h-4" />
-                    <span>Comments</span>
-                  </div>
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-muted/50 text-sm text-muted-foreground">
-                    <Bell className="w-4 h-4" />
-                    <span>Notify members</span>
-                  </div>
-                </div>
               </div>
             ) : (
               <div className="p-4 space-y-6">

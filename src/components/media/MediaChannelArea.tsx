@@ -407,20 +407,6 @@ export const MediaChannelArea = () => {
               <p className="text-muted-foreground mb-6 max-w-sm leading-relaxed">
                 Share videos, pictures, and GIFs with your community in this visual gallery.
               </p>
-              <div className="flex flex-wrap justify-center gap-3 mb-6">
-                <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-muted/50 text-sm text-muted-foreground">
-                  <ImageIcon className="w-4 h-4" />
-                  <span>Images & GIFs</span>
-                </div>
-                <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-muted/50 text-sm text-muted-foreground">
-                  <Play className="w-4 h-4" />
-                  <span>Videos</span>
-                </div>
-                <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-muted/50 text-sm text-muted-foreground">
-                  <Link2 className="w-4 h-4" />
-                  <span>YouTube links</span>
-                </div>
-              </div>
               {canSendMessages && (
                 <Button onClick={() => setIsUploadModalOpen(true)} className="gap-2">
                   <Upload className="w-4 h-4" />
