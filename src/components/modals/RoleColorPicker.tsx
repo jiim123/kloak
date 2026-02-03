@@ -296,44 +296,48 @@ export const RoleColorPicker = ({
   gradientAngle,
   onGradientAngleChange,
 }: RoleColorPickerProps) => {
-  const presetColors = colorType === 'solid' ? PRESET_COLORS : [];
-  const gradientPresets = colorType === 'gradient' ? GRADIENT_PRESETS : [];
+  // Ensure only 2 gradient colors
+  const twoGradientColors = gradientColors.slice(0, 2);
+  if (twoGradientColors.length < 2) {
+    twoGradientColors.push('#5865F2');
+  }
   
   return (
     <div className="space-y-3">
-      <Label className="text-sm">Role color</Label>
-      
-      {/* Solid/Gradient Toggle */}
-      <div className="inline-flex bg-secondary/80 rounded-md p-0.5 border border-border/50">
-        <button
-          type="button"
-          onClick={() => onColorTypeChange('solid')}
-          className={cn(
-            "px-4 py-1.5 text-xs font-medium rounded transition-all",
-            colorType === 'solid'
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          Solid
-        </button>
-        <button
-          type="button"
-          onClick={() => onColorTypeChange('gradient')}
-          className={cn(
-            "px-4 py-1.5 text-xs font-medium rounded transition-all",
-            colorType === 'gradient'
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          Gradient
-        </button>
+      {/* Title and Toggle in same row */}
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">Role color</Label>
+        <div className="inline-flex bg-secondary/80 rounded-md p-0.5 border border-border/50">
+          <button
+            type="button"
+            onClick={() => onColorTypeChange('solid')}
+            className={cn(
+              "px-3 py-1 text-xs font-medium rounded transition-all",
+              colorType === 'solid'
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            Solid
+          </button>
+          <button
+            type="button"
+            onClick={() => onColorTypeChange('gradient')}
+            className={cn(
+              "px-3 py-1 text-xs font-medium rounded transition-all",
+              colorType === 'gradient'
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            Gradient
+          </button>
+        </div>
       </div>
       
       {/* Color Selection Area */}
       <div className="flex items-start gap-3">
-        {/* Color Picker(s) */}
+        {/* Color Picker(s) - same pill design for both */}
         {colorType === 'solid' ? (
           <ColorPickerPopover color={color} onColorChange={onColorChange}>
             <button
@@ -346,37 +350,25 @@ export const RoleColorPicker = ({
           </ColorPickerPopover>
         ) : (
           <div className="flex gap-2">
-            {gradientColors.map((gradColor, idx) => (
+            {twoGradientColors.map((gradColor, idx) => (
               <ColorPickerPopover
                 key={idx}
                 color={gradColor}
                 onColorChange={(newColor) => {
-                  const newColors = [...gradientColors];
+                  const newColors = [...twoGradientColors];
                   newColors[idx] = newColor;
                   onGradientColorsChange(newColors);
                 }}
               >
                 <button
                   type="button"
-                  className={cn(
-                    "w-10 h-10 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
-                    idx === 0 ? "border-primary/50 hover:border-primary" : "border-border hover:border-primary/50"
-                  )}
+                  className="w-12 h-12 rounded-full border-2 border-primary/50 flex items-center justify-center shrink-0 hover:border-primary transition-colors"
                   style={{ backgroundColor: gradColor }}
                 >
-                  <Plus className="w-4 h-4 text-white drop-shadow-md" />
+                  <Plus className="w-5 h-5 text-white drop-shadow-md" />
                 </button>
               </ColorPickerPopover>
             ))}
-            {gradientColors.length < 4 && (
-              <button
-                type="button"
-                onClick={() => onGradientColorsChange([...gradientColors, '#5865F2'])}
-                className="w-10 h-10 rounded-full border-2 border-dashed border-border hover:border-primary/50 flex items-center justify-center shrink-0 transition-colors bg-secondary/30"
-              >
-                <Plus className="w-4 h-4 text-muted-foreground" />
-              </button>
-            )}
           </div>
         )}
         
@@ -384,7 +376,7 @@ export const RoleColorPicker = ({
         <div className="flex-1 min-w-0">
           {colorType === 'solid' ? (
             <div className="grid grid-cols-10 gap-1.5">
-              {presetColors.map((presetColor, idx) => (
+              {PRESET_COLORS.map((presetColor, idx) => (
                 <button
                   key={idx}
                   type="button"
@@ -399,21 +391,21 @@ export const RoleColorPicker = ({
             </div>
           ) : (
             <div className="grid grid-cols-5 gap-1.5">
-              {gradientPresets.map((preset, idx) => (
+              {GRADIENT_PRESETS.map((preset, idx) => (
                 <button
                   key={idx}
                   type="button"
                   onClick={() => {
-                    onGradientColorsChange(preset.colors);
+                    onGradientColorsChange(preset.colors.slice(0, 2));
                     onGradientAngleChange(preset.angle);
                   }}
                   className={cn(
                     "h-6 rounded-full transition-all hover:scale-105 hover:ring-2 hover:ring-primary/50",
-                    JSON.stringify(gradientColors) === JSON.stringify(preset.colors) && 
+                    JSON.stringify(twoGradientColors) === JSON.stringify(preset.colors.slice(0, 2)) && 
                     "ring-2 ring-primary scale-105"
                   )}
                   style={{
-                    background: `linear-gradient(${preset.angle}deg, ${preset.colors.join(', ')})`,
+                    background: `linear-gradient(${preset.angle}deg, ${preset.colors.slice(0, 2).join(', ')})`,
                   }}
                 />
               ))}
@@ -428,7 +420,7 @@ export const RoleColorPicker = ({
           <div 
             className="h-10 rounded-lg border border-border"
             style={{ 
-              background: `linear-gradient(${gradientAngle}deg, ${gradientColors.join(', ')})` 
+              background: `linear-gradient(${gradientAngle}deg, ${twoGradientColors.join(', ')})` 
             }}
           />
           <div className="flex items-center gap-2">
