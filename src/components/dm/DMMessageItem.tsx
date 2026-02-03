@@ -236,7 +236,7 @@ export const DMMessageItem = ({ message, isFirst, onReply }: DMMessageItemProps)
 
           {/* Reactions */}
           {message.reactions && message.reactions.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-2">
+            <div className="flex flex-wrap gap-2 mt-2">
               {message.reactions.map((reaction) => (
                 <HoverCard key={reaction.emoji} openDelay={200}>
                   <HoverCardTrigger asChild>
@@ -244,14 +244,14 @@ export const DMMessageItem = ({ message, isFirst, onReply }: DMMessageItemProps)
                       <button
                         onClick={() => handleReactionClick(reaction.emoji)}
                         className={cn(
-                          'flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border transition-all duration-200 animate-reaction-pop',
+                          'flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all duration-200 animate-reaction-pop',
                           reaction.hasReacted
                             ? 'bg-primary/20 border-primary text-primary'
-                            : 'bg-secondary border-transparent hover:border-border'
+                            : 'bg-secondary/80 border-transparent hover:border-border hover:bg-secondary'
                         )}
                       >
-                        <span>{reaction.emoji}</span>
-                        <span className="text-[11px]">{reaction.count}</span>
+                        <span className="text-xl leading-none font-emoji">{reaction.emoji}</span>
+                        <span className="text-sm font-medium">{reaction.count}</span>
                       </button>
                     </span>
                   </HoverCardTrigger>
