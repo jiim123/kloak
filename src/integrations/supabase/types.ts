@@ -2367,6 +2367,10 @@ export type Database = {
         Args: { _member_id: string; _role_id: string; _user_id: string }
         Returns: boolean
       }
+      reset_user_secret_key: {
+        Args: { _new_key_hash: string; _user_id: string }
+        Returns: undefined
+      }
       revoke_server_invite: {
         Args: { _invite_id: string; _user_id: string }
         Returns: boolean
