@@ -692,7 +692,7 @@
 
   /* Message link styling */
   .message-link {
-    @apply text-primary hover:underline;
+    @apply text-cyan-400 hover:underline;
   }
 
   /* Hide inline image placeholders (images are rendered separately) */
