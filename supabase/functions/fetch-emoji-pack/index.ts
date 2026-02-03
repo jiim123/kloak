@@ -1,19 +1,24 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders } from "../_shared/cors.ts";
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
 
 interface EmojiGGEmoji {
+  id: number;
   title: string;
   slug: string;
-  image: string;
+  image: string; // This is just the filename like "99951-smallflowers.gif"
 }
 
 interface EmojiGGPack {
+  id: number;
   name: string;
-  slug: string;
+  slug: string; // e.g., "140792-blue-white-text-reactions"
   emojis: EmojiGGEmoji[];
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -31,18 +36,18 @@ serve(async (req) => {
 
     // Extract pack slug from URL
     // Formats: 
-    // - https://emoji.gg/pack/1234-pack-name
-    // - https://emoji.gg/emojis/pack/1234-pack-name
-    const urlMatch = packUrl.match(/emoji\.gg(?:\/emojis)?\/pack\/(\d+(?:-[\w-]+)?)/i);
+    // - https://emoji.gg/pack/140792-blue-white-text-reactions
+    // - https://emoji.gg/emojis/pack/140792-blue-white-text-reactions
+    const urlMatch = packUrl.match(/emoji\.gg(?:\/emojis)?\/pack\/([\w-]+)/i);
     if (!urlMatch) {
       return new Response(
-        JSON.stringify({ error: "Invalid emoji.gg pack URL. Please provide a valid pack URL like https://emoji.gg/pack/1234-pack-name" }),
+        JSON.stringify({ error: "Invalid emoji.gg pack URL. Please provide a valid pack URL like https://emoji.gg/pack/140792-pack-name" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const packSlug = urlMatch[1];
-    console.log("Fetching pack:", packSlug);
+    console.log("Looking for pack with slug:", packSlug);
 
     // Fetch all packs from emoji.gg API
     const packsResponse = await fetch("https://emoji.gg/api/packs", {
@@ -57,28 +62,26 @@ serve(async (req) => {
     }
 
     const allPacks: EmojiGGPack[] = await packsResponse.json();
+    console.log(`Fetched ${allPacks.length} packs from emoji.gg`);
 
     // Find the matching pack by slug
-    const packIdMatch = packSlug.match(/^(\d+)/);
-    const packId = packIdMatch ? packIdMatch[1] : packSlug;
-    
-    const pack = allPacks.find((p) => 
-      p.slug === packSlug || 
-      p.slug.startsWith(packId + "-") ||
-      p.slug === packId
-    );
+    const pack = allPacks.find((p) => p.slug === packSlug);
 
     if (!pack) {
+      console.log("Available pack slugs (first 10):", allPacks.slice(0, 10).map(p => p.slug));
       return new Response(
         JSON.stringify({ error: "Pack not found. Please check the URL and try again." }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Map emojis with proper image URLs
+    console.log(`Found pack: ${pack.name} with ${pack.emojis.length} emojis`);
+
+    // Map emojis with proper CDN URLs
+    // Image URL format: https://cdn3.emoji.gg/emojis/{image}
     const emojis = pack.emojis.map((emoji) => ({
       name: emoji.slug.replace(/-/g, "_").toLowerCase().slice(0, 32),
-      imageUrl: emoji.image,
+      imageUrl: `https://cdn3.emoji.gg/emojis/${emoji.image}`,
       originalName: emoji.title,
     }));
 
