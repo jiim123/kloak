@@ -235,7 +235,7 @@ const SortableChannel = ({
   };
 
   const buttonContent = (
-    <div className="flex items-center w-full">
+    <div className="flex items-center w-full min-w-0">
       {/* Visible drag handle in sort mode on mobile */}
       {isMobile && isSortingMode && isAdmin && (
         <div
@@ -249,7 +249,7 @@ const SortableChannel = ({
       <button
         onClick={isSortingMode ? undefined : onSelect}
         className={cn(
-          "group relative flex-1 flex items-center gap-2 px-2 py-2 rounded-md text-sm transition-all duration-150 select-none",
+          "group relative flex-1 min-w-0 flex items-center gap-2 px-2 py-2 rounded-md text-sm transition-all duration-150 select-none",
           "hover:bg-secondary/80",
           isActive && !isSortingMode && "bg-secondary text-foreground",
           !isActive && "text-muted-foreground hover:text-foreground",
