@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, forwardRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, forwardRef, useMemo } from "react";
 import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useUIStore } from "@/stores/uiStore";
@@ -11,12 +11,14 @@ import {
   Trash2, 
   Smile, 
   CornerUpLeft,
-  MessageSquare 
+  MessageSquare,
+  X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { EmojiGifPicker } from "@/components/modals/EmojiGifPicker";
 import { DeleteMessageModal } from "@/components/modals/DeleteMessageModal";
 import { supabase } from "@/integrations/supabase/client";
@@ -61,7 +63,7 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
   const [replyContent, setReplyContent] = useState("");
   const [replyingToComment, setReplyingToComment] = useState<string | null>(null);
   const [isSendingReply, setIsSendingReply] = useState(false);
-  const [hoveredCommentId, setHoveredCommentId] = useState<string | null>(null);
+  
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -665,18 +667,17 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
             comments.map((comment) => (
               <div
                 key={comment.id}
-                className="group relative"
-                onMouseEnter={() => setHoveredCommentId(comment.id)}
-                onMouseLeave={() => setHoveredCommentId(null)}
+                className="group relative py-1 px-2 -mx-2 rounded hover:bg-accent/5"
               >
-                {/* Reply reference */}
+                {/* Reply reference - matching chat style */}
                 {comment.reply_to && (
-                  <div className="flex items-center gap-2 mb-1 ml-10 text-xs text-muted-foreground">
-                    <CornerUpLeft className="w-3 h-3" />
-                    <span className="font-medium">
-                      {comment.reply_to.user?.display_name || comment.reply_to.user?.username || 'Unknown'}
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1 ml-11">
+                    <CornerUpLeft className="w-3 h-3 flex-shrink-0" />
+                    <span>Replying to</span>
+                    <span className="font-medium text-primary">
+                      @{comment.reply_to.user?.username || 'unknown'}
                     </span>
-                    <span className="line-clamp-1 opacity-75">
+                    <span className="truncate max-w-[150px] opacity-75">
                       {comment.reply_to.content?.slice(0, 50)}
                       {(comment.reply_to.content?.length || 0) > 50 ? '...' : ''}
                     </span>
@@ -705,8 +706,8 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
                     </Avatar>
                   </button>
 
-                  <div className="flex-1 min-w-0 relative">
-                    <div className="flex items-baseline gap-2 pr-20">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-2">
                       <button
                         type="button"
                         className="font-medium text-sm text-foreground hover:underline focus:outline-none"
@@ -720,155 +721,176 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
                       </button>
                       <span className="text-xs text-muted-foreground flex-shrink-0">
                         {formatMessageTimestamp(comment.created_at)}
-                        {comment.edited_at && (
-                          <span className="ml-1 opacity-75">(edited)</span>
-                        )}
                       </span>
                     </div>
-                    
-                    {/* Action buttons - matching announcement comments design */}
-                    {(hoveredCommentId === comment.id || emojiPickerOpen === comment.id) && editingCommentId !== comment.id && (
-                      <div 
-                        className="hover-actions-menu absolute right-0 -top-4 z-50 flex items-center gap-1 bg-background/95 backdrop-blur-sm border border-border rounded-xl shadow-xl p-1 transition-opacity duration-200"
-                        onMouseEnter={() => setHoveredCommentId(comment.id)}
-                        onMouseLeave={(e) => {
-                          const relatedTarget = e.relatedTarget as HTMLElement;
-                          if (!relatedTarget || !relatedTarget.closest('[role="dialog"]')) {
-                            setHoveredCommentId(null);
-                          }
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <EmojiGifPicker
-                          onEmojiSelect={handleEmojiSelect}
-                          onGifSelect={() => {}}
-                          open={emojiPickerOpen === comment.id}
-                          onOpenChange={(open) => {
-                            setEmojiPickerOpen(open ? comment.id : null);
-                            if (open) {
-                              setHoveredCommentId(comment.id);
-                            }
-                          }}
-                          disableGif
-                          serverId={currentServer?.id}
-                          serverName={currentServer?.name}
-                        >
-                          <button
-                            type="button"
-                            className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                            aria-label="Add reaction"
-                            title="Add reaction"
-                            onMouseDown={(e) => e.preventDefault()}
-                          >
-                            <Smile className="w-4 h-4" />
-                          </button>
-                        </EmojiGifPicker>
-                        
-                        <button
-                          type="button"
-                          className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setReplyingToComment(comment.id);
-                          }}
-                          onMouseDown={(e) => e.preventDefault()}
-                          aria-label="Reply"
-                          title="Reply"
-                        >
-                          <Reply className="w-4 h-4" />
-                        </button>
-                        
-                        {comment.user_id === user?.id && (
-                          <button
-                            type="button"
-                            className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setEditingCommentId(comment.id);
-                              setEditContent(comment.content);
-                            }}
-                            onMouseDown={(e) => e.preventDefault()}
-                            aria-label="Edit"
-                            title="Edit"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                        )}
-                        
-                        {(comment.user_id === user?.id || canManageMessages) && (
-                          <button
-                            type="button"
-                            className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-destructive hover:text-destructive"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setCommentToDelete(comment);
-                              setShowDeleteModal(true);
-                            }}
-                            onMouseDown={(e) => e.preventDefault()}
-                            aria-label="Delete"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    )}
 
                     {editingCommentId === comment.id ? (
-                      <div className="mt-1 space-y-2">
-                        <Textarea
+                      <div className="mt-1 flex flex-col gap-2">
+                        <textarea
                           ref={editTextareaRef}
                           value={editContent}
                           onChange={(e) => setEditContent(e.target.value)}
-                          className="min-h-[60px] text-sm"
-                          autoFocus
-                        />
-                        <div className="flex gap-2">
-                          <Button size="sm" onClick={handleEdit}>
-                            Save
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="ghost"
-                            onClick={() => {
+                          className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm resize-none outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 min-h-[60px] max-h-[200px]"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Escape') {
                               setEditingCommentId(null);
                               setEditContent("");
-                            }}
-                          >
-                            Cancel
-                          </Button>
+                            } else if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              handleEdit();
+                            }
+                          }}
+                          autoFocus
+                        />
+                        <div className="flex gap-2 text-[11px]">
+                          <span className="text-muted-foreground">
+                            escape to{" "}
+                            <button 
+                              className="text-primary hover:underline" 
+                              onClick={() => {
+                                setEditingCommentId(null);
+                                setEditContent("");
+                              }}
+                            >
+                              cancel
+                            </button>
+                            {" • "}enter to{" "}
+                            <button className="text-primary hover:underline" onClick={handleEdit}>
+                              save
+                            </button>
+                          </span>
                         </div>
                       </div>
                     ) : (
-                      <p className="text-sm text-foreground/90 mt-0.5 whitespace-pre-wrap break-words">
-                        {comment.content}
-                      </p>
+                      <>
+                        <p className="text-sm text-foreground/90 mt-0.5 whitespace-pre-wrap break-words">
+                          {comment.content}
+                        </p>
+                        {comment.edited_at && (
+                          <span className="text-[10px] text-muted-foreground ml-1">(edited)</span>
+                        )}
+                      </>
                     )}
 
-                    {/* Reactions - matching announcement comments design */}
-                    {comment.reactions && comment.reactions.length > 0 && (
+                    {/* Reactions with HoverCard - matching chat style */}
+                    {comment.reactions && comment.reactions.length > 0 && !editingCommentId && (
                       <div className="flex flex-wrap gap-1 mt-2">
                         {comment.reactions.map((reaction) => (
-                          <button
-                            key={reaction.emoji}
-                            onClick={() => handleReaction(comment.id, reaction.emoji)}
-                            className={`flex items-center gap-1.5 px-2.5 py-1 text-sm rounded-md border transition-colors duration-200 ${
-                              reaction.hasReacted
-                                ? "bg-primary/20 border-primary text-primary"
-                                : "bg-secondary border-transparent hover:border-border"
-                            }`}
-                          >
-                            {reactionEmojiNode(reaction.emoji)}
-                            <span className="text-xs">{reaction.count}</span>
-                          </button>
+                          <HoverCard key={reaction.emoji} openDelay={200}>
+                            <HoverCardTrigger asChild>
+                              <button
+                                onClick={() => handleReaction(comment.id, reaction.emoji)}
+                                className={`flex items-center gap-1.5 px-2.5 py-1 text-lg rounded-md border transition-colors duration-200 ${
+                                  reaction.hasReacted
+                                    ? "bg-primary/20 border-primary text-primary"
+                                    : "bg-secondary border-transparent hover:border-border"
+                                }`}
+                              >
+                                {reactionEmojiNode(reaction.emoji)}
+                                <span className="text-xs">{reaction.count}</span>
+                              </button>
+                            </HoverCardTrigger>
+                            <HoverCardContent className="w-auto p-2" align="start" side="top">
+                              <div className="flex items-center gap-2">
+                                <div className="shrink-0 text-2xl">{reactionEmojiNode(reaction.emoji)}</div>
+                                <div className="min-w-0 text-sm">
+                                  <span className="text-muted-foreground">reacted by </span>
+                                  {reaction.users.slice(0, 5).map((userId, idx) => {
+                                    const reactingUser = comments.find(c => c.user_id === userId)?.user;
+                                    const name = userId === user?.id ? 'You' : (reactingUser?.display_name || reactingUser?.username || 'Unknown');
+                                    return (
+                                      <span key={userId}>
+                                        <span className="font-medium">{name}</span>
+                                        {idx < Math.min(reaction.users.length, 5) - 1 ? ', ' : ''}
+                                      </span>
+                                    );
+                                  })}
+                                  {reaction.users.length > 5 && (
+                                    <span className="text-muted-foreground"> and {reaction.users.length - 5} others</span>
+                                  )}
+                                </div>
+                              </div>
+                            </HoverCardContent>
+                          </HoverCard>
                         ))}
                       </div>
                     )}
                   </div>
                 </div>
+
+                {/* Hover actions - matching chat style with opacity transition */}
+                {!editingCommentId && (
+                  <div 
+                    className="absolute right-2 -top-3 hidden md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 md:flex items-center gap-0.5 bg-background/95 backdrop-blur-sm border border-border rounded-xl shadow-xl p-1 transition-opacity duration-200 z-50"
+                  >
+                    <EmojiGifPicker
+                      onEmojiSelect={handleEmojiSelect}
+                      onGifSelect={() => {}}
+                      open={emojiPickerOpen === comment.id}
+                      onOpenChange={(open) => {
+                        setEmojiPickerOpen(open ? comment.id : null);
+                      }}
+                      disableGif
+                      serverId={currentServer?.id}
+                      serverName={currentServer?.name}
+                    >
+                      <button
+                        type="button"
+                        className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                        aria-label="Add reaction"
+                        title="Add reaction"
+                      >
+                        <Smile className="w-4 h-4" />
+                      </button>
+                    </EmojiGifPicker>
+                    
+                    <button
+                      type="button"
+                      className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                      onClick={() => setReplyingToComment(comment.id)}
+                      aria-label="Reply"
+                      title="Reply"
+                    >
+                      <Reply className="w-4 h-4" />
+                    </button>
+                    
+                    {comment.user_id === user?.id && (
+                      <>
+                        <div className="w-px h-5 bg-border mx-0.5" />
+                        <button
+                          type="button"
+                          className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                          onClick={() => {
+                            setEditingCommentId(comment.id);
+                            setEditContent(comment.content);
+                          }}
+                          aria-label="Edit"
+                          title="Edit"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+                    
+                    {(comment.user_id === user?.id || canManageMessages) && (
+                      <>
+                        <div className="w-px h-5 bg-border mx-0.5" />
+                        <button
+                          type="button"
+                          className="p-2 rounded-lg bg-transparent hover:bg-destructive/10 transition-colors text-destructive"
+                          onClick={() => {
+                            setCommentToDelete(comment);
+                            setShowDeleteModal(true);
+                          }}
+                          aria-label="Delete"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             ))
           )}
@@ -879,21 +901,24 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
       {user && (
         <div className="p-3 border-t border-border">
           {replyingToCommentData && (
-            <div className="flex items-center gap-2 mb-2 p-2 bg-muted rounded-lg text-sm">
-              <Reply className="w-4 h-4 text-muted-foreground" />
+            <div className="flex items-center gap-2 mb-2 px-3 py-2 bg-muted/50 border-l-2 border-primary rounded text-sm">
+              <CornerUpLeft className="w-4 h-4 text-muted-foreground flex-shrink-0" />
               <span className="text-muted-foreground">Replying to</span>
-              <span className="font-medium text-foreground">
-                {replyingToCommentData.user?.display_name || replyingToCommentData.user?.username}
+              <span className="font-medium text-primary">
+                @{replyingToCommentData.user?.username || 'unknown'}
               </span>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="w-5 h-5 ml-auto"
+              <span className="truncate text-muted-foreground opacity-75 max-w-[120px]">
+                {replyingToCommentData.content?.slice(0, 30)}
+                {(replyingToCommentData.content?.length || 0) > 30 ? '...' : ''}
+              </span>
+              <button
+                type="button"
+                className="ml-auto p-1 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
                 onClick={() => setReplyingToComment(null)}
+                aria-label="Cancel reply"
               >
-                <span className="sr-only">Cancel reply</span>
-                ×
-              </Button>
+                <X className="w-4 h-4" />
+              </button>
             </div>
           )}
           <div className="flex gap-2">
