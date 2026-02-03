@@ -2852,6 +2852,25 @@ export const ServerSettingsPage = () => {
             <TabsContent value="emojis" className="m-0 p-6">
               {canManageEmojis ? (
                 <div className="space-y-5 max-w-4xl">
+                  {/* Import from emoji.gg */}
+                  <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/50">
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-sm font-semibold">Import from emoji.gg</h4>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Browse and import emoji packs from emoji.gg
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openModal("import-emoji-pack")}
+                    >
+                      <Link2 className="w-4 h-4 mr-2" />
+                      Import Pack
+                    </Button>
+                  </div>
+
                   <div className="space-y-2">
                     <h4 className="text-sm font-semibold">Custom Emojis</h4>
                     <p className="text-xs text-muted-foreground">
