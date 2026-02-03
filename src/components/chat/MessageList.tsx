@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { Ghost } from "lucide-react";
 import { ChevronDown, Loader2, Hash, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -354,17 +355,42 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
         {/* Channel welcome message - enhanced empty state */}
         {!isLoading && messages.length === 0 && (
           <div className="flex flex-col items-start px-4 pt-16 pb-8">
-            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-              <Hash className="w-10 h-10 text-primary" />
-            </div>
-            <h2 className="text-3xl font-bold text-foreground mb-2">Welcome to #{channelName}!</h2>
-            <p className="text-muted-foreground mb-4">
-              This is the start of the <span className="font-semibold">#{channelName}</span> channel.
-            </p>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Sparkles className="w-4 h-4 text-yellow-500" />
-              <span>Be the first to send a message!</span>
-            </div>
+            {currentChannel?.ghost_mode ? (
+              <>
+                <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mb-6">
+                  <Ghost className="w-10 h-10 text-muted-foreground" />
+                </div>
+                <h2 className="text-3xl font-bold text-foreground mb-2">Anonymous Channel</h2>
+                <p className="text-muted-foreground mb-4 max-w-md">
+                  Messages in <span className="font-semibold">#{channelName}</span> are anonymous. 
+                  Your username and avatar won't be visible to other members.
+                </p>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Ghost className="w-4 h-4" />
+                    <span>Your identity is hidden from other members</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-yellow-500" />
+                    <span>Be the first to send an anonymous message!</span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+                  <Hash className="w-10 h-10 text-primary" />
+                </div>
+                <h2 className="text-3xl font-bold text-foreground mb-2">Welcome to #{channelName}!</h2>
+                <p className="text-muted-foreground mb-4">
+                  This is the start of the <span className="font-semibold">#{channelName}</span> channel.
+                </p>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Sparkles className="w-4 h-4 text-yellow-500" />
+                  <span>Be the first to send a message!</span>
+                </div>
+              </>
+            )}
           </div>
         )}
 
