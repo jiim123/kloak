@@ -19,3 +19,4 @@ export { WelcomeModal } from './WelcomeModal';
 export { OnboardingModal } from './OnboardingModal';
 export { PermissionDebugPanel } from './PermissionDebugPanel';
 export { ImportDiscordTemplateModal } from './ImportDiscordTemplateModal';
+export { ImportEmojiPackModal } from './ImportEmojiPackModal';

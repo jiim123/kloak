@@ -33,6 +33,7 @@ export type ModalType =
   | 'confirmAction'
   | 'permission-debug'
   | 'import-discord-template'
+  | 'import-emoji-pack'
   | null;
 
 interface ModalData {

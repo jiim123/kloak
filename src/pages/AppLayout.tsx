@@ -35,7 +35,8 @@ import {
   ConfirmActionModal,
   ChangeNicknameModal,
   PermissionDebugPanel,
-  ImportDiscordTemplateModal
+  ImportDiscordTemplateModal,
+  ImportEmojiPackModal
 } from '@/components/modals';
 import { PersistentEmbedContainer } from '@/components/chat/PersistentEmbedContainer';
 import { DesktopTitleBar } from '@/components/layout/DesktopTitleBar';
@@ -511,6 +512,7 @@ const AppLayout = () => {
       <ChangeNicknameModal />
       <PermissionDebugPanel />
       <ImportDiscordTemplateModal />
+      <ImportEmojiPackModal />
 
       {/* Persistent embed container for Twitch/Kick streams */}
       <PersistentEmbedContainer />
