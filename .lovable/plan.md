@@ -1,235 +1,303 @@
 
-# Query Performance Analysis & Optimization Plan
+# PostgREST Query Optimization Audit Report
 
-## Analysis of pg_stat_statements Results
+## Executive Summary
 
-The query statistics reveal several critical performance bottlenecks that explain the high database load:
+After analyzing the entire codebase, I identified **81 instances of `supabase.from()` queries** and **460+ RPC calls** across 22 files. The primary causes of excessive PostgREST usage are:
 
-### Top Query Concerns
-
-| Rank | Query | Calls | Mean Time | Issue |
-|------|-------|-------|-----------|-------|
-| 1 | `realtime.list_changes` | 12.5M | 5.9ms | Supabase internal - indicates high realtime volume |
-| 2 | `realtime subscription insert` | 2.3M | 1.6ms | Massive subscription churn |
-| 5 | `update_user_last_seen` | 50K | 3.5ms | Presence heartbeat every 30s |
-| 6 | `update_user_status` | 24K | 3.4ms | Status changes |
-| 14 | `dm_participants SELECT` | 487K | 0.09ms | **Extremely high call count** |
-| 19 | `messages count (unread)` | 147K | 0.25ms | Per-channel unread counting |
+1. **N+1 query patterns** in unread tracking and search
+2. **Aggressive polling intervals** (15-30 seconds across multiple hooks)
+3. **Duplicate polling mechanisms** (heartbeat + latency + presence + unread all polling)
+4. **Refetch storms** triggered by visibility changes and realtime events
 
 ---
 
-## Critical Issues Identified
+## Area 1: Critical Issues (High Impact)
 
-### Issue 1: DM Unread Hook Over-Fetching (HIGH PRIORITY)
-**Location**: `src/hooks/useUnreadDMs.ts`
+### Issue 1: N+1 Query Pattern in Unread Tracking
+**Location:** `src/hooks/useUnread.ts` (lines 86-135)
+**Impact:** CRITICAL - Generates N queries per polling cycle
 
-**Problems Found**:
-1. **N+1 Query Pattern**: For each conversation, a separate count query runs (lines 44-67)
-2. **Duplicate Event Listeners**: Both `focus` AND `visibilitychange` trigger refetch (lines 152-158) - same issue we fixed in `useUnread.ts` but not here
-3. **30-second Polling**: Runs every 30 seconds regardless of realtime
-4. **Self-Triggering Loop**: Subscribes to dm_participants changes, but marking as read also triggers a change, causing a refetch cycle
+**Problem:**
+```typescript
+// For EACH channel, a separate query runs:
+const tasks = serverChannelIds.map((channelId) => async () => {
+  let query = supabase
+    .from('messages')
+    .select('id', { count: 'exact' })
+    .eq('channel_id', channelId)
+    // ... filters
+});
+```
 
-**Evidence**: 487K calls to dm_participants + 147K message count queries
+A user in 5 servers with 10 channels each = 50 queries every 15 seconds = **200 queries/minute just for unread counts**.
 
-### Issue 2: Presence Heartbeat Frequency
-**Location**: `src/hooks/usePresence.ts`
-
-**Current Behavior**: Updates `last_seen` every 30 seconds (50K calls recorded)
-
-**Assessment**: This is expected behavior, but the frequency could be reduced if needed. The 30-second interval is reasonable for presence accuracy.
-
-### Issue 3: High Realtime Subscription Volume
-**Evidence**: 12.5M realtime list_changes + 2.3M subscription inserts
-
-**Root Cause**: Multiple overlapping subscriptions per user:
-- `all-dms:{userId}` for DM messages
-- `dm-reactions:{userId}` for DM reactions  
-- `dm-participants:{userId}` for new conversations
-- `dm-unreads:{userId}` for unread tracking
-- Plus all channel/server subscriptions
+**Fix:** Create a single RPC function `get_all_channel_unread_counts` that returns all unread counts in one query.
 
 ---
 
-## Optimization Plan
+### Issue 2: Multiple Overlapping Polling Mechanisms
+**Locations:**
+- `useConnectionStatus.ts`: Heartbeat every 30s + Latency check every 60s
+- `useUnread.ts`: Poll every 15s
+- `useUnreadDMs.ts`: Poll every 30s  
+- `useRealtimeUsers.ts`: Presence poll every 30s
+- `usePresence.ts`: Last seen update every 30s
 
-### Phase 1: Fix useUnreadDMs Hook (HIGH IMPACT)
+**Impact:** 4-6 queries per minute baseline, multiplied by concurrent hooks
 
-**Changes**:
+**Problem:** Each hook independently polls the database. A user with the app open generates:
+- 2 queries/minute (heartbeat)
+- 1 query/minute (latency)
+- 4 queries/minute (unread - but this is N queries)
+- 2 queries/minute (DM unread)
+- 2 queries/minute (presence)
+- 2 queries/minute (last seen)
 
-1. **Remove duplicate focus listener** (same fix applied to useUnread.ts):
+**Fix:** 
+1. Consolidate heartbeat and latency into a single check
+2. Increase unread polling to 30-60 seconds
+3. Make presence polling only active when friends list is visible
+
+---
+
+### Issue 3: Search Results N+1 Pattern
+**Location:** `src/components/modals/SearchModal.tsx` (lines 97-110)
+**Impact:** HIGH - 50 queries per search (25 results x 2 queries each)
+
+**Problem:**
 ```typescript
-// REMOVE this duplicate handler
-window.addEventListener('focus', handleFocus);
-
-// KEEP only visibilitychange with cooldown
+const enrichedResults = await Promise.all(
+  (data || []).map(async (result) => {
+    const [userRes, channelRes] = await Promise.all([
+      supabase.from('users').select('...').eq('id', result.user_id).single(),
+      supabase.from('channels').select('name').eq('id', result.channel_id).single(),
+    ]);
+    // ...
+  })
+);
 ```
 
-2. **Batch the count queries with a single RPC call**:
-```sql
--- New RPC function
-CREATE OR REPLACE FUNCTION get_dm_unread_counts(_user_id uuid)
-RETURNS TABLE (
-  conversation_id uuid,
-  unread_count bigint,
-  last_read_at timestamptz
-)
-LANGUAGE sql SECURITY DEFINER
-AS $$
-  SELECT 
-    dp.conversation_id,
-    COUNT(dm.id) FILTER (
-      WHERE dm.sender_id != _user_id 
-      AND (dp.last_read_at IS NULL OR dm.created_at > dp.last_read_at)
-    ) as unread_count,
-    dp.last_read_at
-  FROM dm_participants dp
-  LEFT JOIN direct_messages dm ON dm.conversation_id = dp.conversation_id
-  WHERE dp.user_id = _user_id
-  GROUP BY dp.conversation_id, dp.last_read_at;
-$$;
+**Fix:** Batch fetch all users and channels with `IN` clause:
+```typescript
+const userIds = [...new Set(data.map(r => r.user_id))];
+const channelIds = [...new Set(data.map(r => r.channel_id))];
+const [users, channels] = await Promise.all([
+  supabase.from('users').select('id, username, ...').in('id', userIds),
+  supabase.from('channels').select('id, name').in('id', channelIds),
+]);
 ```
 
-3. **Add refetch cooldown** (same pattern as useUnread.ts):
-```typescript
-const REFETCH_COOLDOWN_MS = 5000;
-const lastFetchRef = useRef(0);
+---
 
-const fetchUnreadCounts = useCallback(async ({ force = false } = {}) => {
-  const now = Date.now();
-  if (!force && now - lastFetchRef.current < REFETCH_COOLDOWN_MS) return;
-  lastFetchRef.current = now;
-  // ... rest of function
-}, [userId]);
-```
+## Area 2: Medium Impact Issues
 
-4. **Prevent self-triggered refetch loop**:
+### Issue 4: Over-fetching with select('*')
+**Locations:**
+- `usePreferencesSync.ts` line 45: `select('*')` on user_preferences
+- `serverStore.ts` line 1182: `select('*')` on server_roles
+- `serverStore.ts` line 1376: `select('*')` on role_permissions
+- `serverStore.ts` line 1406: `select('*')` on channel_permissions
+- `UserProfilePopup.tsx` line 205: `select("*")` on users
+
+**Fix:** Specify only required columns in each query.
+
+---
+
+### Issue 5: Visibility Change Refetch Storms
+**Locations:**
+- `useUnread.ts` lines 363-382
+- `useUnreadDMs.ts` lines 162-167
+- `useRealtimeUsers.ts` lines 155-161
+
+**Problem:** Every tab switch triggers refetches from multiple hooks simultaneously.
+
+**Fix:** Add a global "last refetch" timestamp and cooldown to prevent multiple hooks from refetching simultaneously.
+
+---
+
+### Issue 6: Realtime Event Handlers Triggering Full Refetches
+**Location:** `useUnread.ts` lines 307-332
+
+**Problem:**
 ```typescript
-// In the realtime subscription, ignore last_read_at updates
-// since we update local state optimistically
-.on('postgres_changes', {
-  event: 'INSERT', // Only new participants, not updates
-  schema: 'public',
-  table: 'dm_participants',
-  filter: `user_id=eq.${userId}`,
-}, () => {
+.on('postgres_changes', { event: '*', ... }, () => {
+  channelIdsRef.current = []; // Reset to force refetch
   fetchUnreadCounts({ force: true });
 })
 ```
 
-### Phase 2: Create Composite Database Indexes
+Instead of using the realtime payload, it refetches all data.
 
-**Migration**:
+**Fix:** Process the realtime payload directly when possible.
+
+---
+
+## Area 3: Well-Optimized Patterns (No Changes Needed)
+
+These patterns are already efficient:
+
+1. **Message caching** (`messageStore.ts`): 5-minute TTL cache prevents redundant fetches
+2. **DM message caching** (`dmStore.ts`): Messages cached per conversation
+3. **User cache in realtime** (`useRealtimeMessages.ts`): 60-second TTL prevents repeated user fetches
+4. **Batch RPC for friends** (`friendStore.ts`): Single call fetches all friend data
+5. **Batch RPC for servers** (`serverStore.ts`): `get_user_servers` returns all server data
+
+---
+
+## Implementation Plan
+
+### Phase 1: Critical Fixes (Highest Impact)
+
+#### Task 1.1: Create Batch Unread RPC Function
+Create a new RPC function that returns unread counts for all channels in one query:
+
 ```sql
--- Message pagination (most common query)
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_messages_channel_created 
-ON public.messages(channel_id, created_at DESC);
-
--- DM pagination (high frequency)
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_direct_messages_conv_created 
-ON public.direct_messages(conversation_id, created_at DESC);
+CREATE OR REPLACE FUNCTION get_all_channel_unread_counts(
+  _user_id UUID,
+  _channel_ids UUID[]
+)
+RETURNS TABLE(
+  channel_id UUID,
+  unread_count BIGINT,
+  mention_count INTEGER,
+  last_read_at TIMESTAMPTZ,
+  last_read_message_id UUID,
+  first_unread_message_id UUID
+)
 ```
 
-### Phase 3: Consolidate DM Realtime Subscriptions
+**Impact:** Reduces 50+ queries to 1 query per polling cycle.
 
-**Current**: 4 separate subscriptions for DM functionality
-**Proposed**: Consolidate into fewer channels where possible
+#### Task 1.2: Update useUnread Hook
+Refactor to use the new batch RPC instead of N individual queries.
 
----
-
-## Expected Impact
-
-| Optimization | Estimated Reduction |
-|-------------|-------------------|
-| Batch DM unread queries | 90% fewer dm_participants queries |
-| Remove duplicate focus handler | 50% fewer redundant refetches |
-| Add refetch cooldown | Prevent burst queries on tab switch |
-| Composite indexes | 30-50% faster message pagination |
-
-**Total Estimated Query Reduction**: 60-70% fewer database calls
+#### Task 1.3: Batch Search Result Enrichment
+Refactor `SearchModal.tsx` to batch user and channel fetches.
 
 ---
 
-## Implementation Summary
+### Phase 2: Polling Optimization
 
-### Files to Modify:
+#### Task 2.1: Consolidate Connection Monitoring
+Merge heartbeat and latency checks into a single query every 60 seconds.
 
-1. **`src/hooks/useUnreadDMs.ts`**
-   - Remove duplicate `focus` event listener
-   - Add refetch cooldown mechanism
-   - Change realtime subscription from `*` to `INSERT` only
-   - Replace N+1 loop with single RPC call
+#### Task 2.2: Increase Polling Intervals
+- `useUnread`: 15s -> 45s (or 60s)
+- `useRealtimeUsers`: Keep 30s but only when friends panel is visible
 
-2. **New Database Migration**
-   - Create `get_dm_unread_counts` RPC function
-   - Create composite indexes for pagination
+#### Task 2.3: Add Global Refetch Coordination
+Create a shared "last sync" timestamp to prevent multiple hooks from refetching simultaneously on visibility change.
 
-### Files Already Fixed (from previous work):
-- `src/hooks/useUnread.ts` - Fixed duplicate handlers
-- `src/hooks/useRealtimeUsers.ts` - Removed global subscription
-- `supabase/functions/fetch-link-preview/index.ts` - Added cache headers
+---
+
+### Phase 3: Query Efficiency
+
+#### Task 3.1: Replace select('*') with Specific Columns
+Update all queries to specify only needed columns:
+
+| File | Table | Current | Should Be |
+|------|-------|---------|-----------|
+| usePreferencesSync.ts | user_preferences | * | theme, notifications_enabled, ... |
+| serverStore.ts | server_roles | * | id, name, color, position, ... |
+| serverStore.ts | role_permissions | * | id, role_id, permission, allowed |
+| serverStore.ts | channel_permissions | * | id, channel_id, permission, allowed |
+| UserProfilePopup.tsx | users | * | id, username, display_name, avatar_url, ... |
 
 ---
 
 ## Technical Details
 
-### New RPC Function Specification
+### Database Migration: Batch Unread RPC
 
 ```sql
-CREATE OR REPLACE FUNCTION get_dm_unread_counts(_user_id uuid)
-RETURNS TABLE (
-  conversation_id uuid,
-  unread_count bigint,
-  last_read_at timestamptz
+CREATE OR REPLACE FUNCTION public.get_all_channel_unread_counts(
+  _user_id UUID,
+  _channel_ids UUID[],
+  _blocked_user_ids UUID[] DEFAULT '{}'::UUID[]
 )
-LANGUAGE sql SECURITY DEFINER
-SET search_path = public
+RETURNS TABLE(
+  channel_id UUID,
+  unread_count BIGINT,
+  mention_count INTEGER,
+  last_read_at TIMESTAMPTZ,
+  last_read_message_id UUID
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
 AS $$
+BEGIN
+  RETURN QUERY
+  WITH channel_reads_data AS (
+    SELECT 
+      cr.channel_id,
+      cr.last_read_at,
+      cr.last_read_message_id,
+      COALESCE(cr.mention_count, 0) AS mention_count
+    FROM channel_reads cr
+    WHERE cr.user_id = _user_id
+      AND cr.channel_id = ANY(_channel_ids)
+  ),
+  unread_counts AS (
+    SELECT 
+      m.channel_id,
+      COUNT(*) AS unread_count
+    FROM messages m
+    LEFT JOIN channel_reads_data crd ON crd.channel_id = m.channel_id
+    WHERE m.channel_id = ANY(_channel_ids)
+      AND m.user_id != _user_id
+      AND (crd.last_read_at IS NULL OR m.created_at > crd.last_read_at)
+      AND (array_length(_blocked_user_ids, 1) IS NULL 
+           OR m.user_id != ALL(_blocked_user_ids))
+    GROUP BY m.channel_id
+  )
   SELECT 
-    dp.conversation_id,
-    COALESCE(COUNT(dm.id) FILTER (
-      WHERE dm.sender_id != _user_id 
-      AND (dp.last_read_at IS NULL OR dm.created_at > dp.last_read_at)
-    ), 0) as unread_count,
-    dp.last_read_at
-  FROM dm_participants dp
-  LEFT JOIN direct_messages dm ON dm.conversation_id = dp.conversation_id
-  WHERE dp.user_id = _user_id
-  GROUP BY dp.conversation_id, dp.last_read_at;
+    c.id AS channel_id,
+    COALESCE(uc.unread_count, 0)::BIGINT AS unread_count,
+    COALESCE(crd.mention_count, 0)::INTEGER AS mention_count,
+    crd.last_read_at,
+    crd.last_read_message_id
+  FROM unnest(_channel_ids) AS c(id)
+  LEFT JOIN channel_reads_data crd ON crd.channel_id = c.id
+  LEFT JOIN unread_counts uc ON uc.channel_id = c.id;
+END;
 $$;
-
-GRANT EXECUTE ON FUNCTION get_dm_unread_counts TO anon, authenticated;
 ```
 
-### Updated useUnreadDMs Hook Pattern
+### Code Changes Summary
 
-```typescript
-const fetchUnreadCounts = useCallback(async ({ force = false } = {}) => {
-  if (!userId) return;
-  
-  const now = Date.now();
-  if (!force && now - lastFetchRef.current < REFETCH_COOLDOWN_MS) return;
-  lastFetchRef.current = now;
+| File | Change Type | Description |
+|------|-------------|-------------|
+| `src/hooks/useUnread.ts` | Major refactor | Replace N queries with single RPC |
+| `src/hooks/useConnectionStatus.ts` | Minor | Merge heartbeat/latency, increase interval |
+| `src/components/modals/SearchModal.tsx` | Moderate | Batch user/channel fetches |
+| `src/hooks/useRealtimeUsers.ts` | Minor | Add visibility check |
+| `src/stores/serverStore.ts` | Minor | Specify columns in 3 queries |
+| `src/hooks/usePreferencesSync.ts` | Minor | Specify columns |
+| `src/components/modals/UserProfilePopup.tsx` | Minor | Specify columns |
 
-  const { data, error } = await supabase.rpc('get_dm_unread_counts', {
-    _user_id: userId,
-  });
+---
 
-  if (error) {
-    console.error('Failed to fetch DM unread counts:', error);
-    return;
-  }
+## Expected Impact
 
-  const newState: UnreadDMState = {};
-  (data || []).forEach((row) => {
-    newState[row.conversation_id] = {
-      conversationId: row.conversation_id,
-      unreadCount: Number(row.unread_count),
-      lastReadAt: row.last_read_at,
-    };
-  });
-  
-  setUnreadState(newState);
-}, [userId]);
-```
+| Optimization | Current Queries | After | Reduction |
+|--------------|-----------------|-------|-----------|
+| Unread tracking (50 channels) | 50/poll | 1/poll | 98% |
+| Search (25 results) | 50/search | 2/search | 96% |
+| Connection monitoring | 3/minute | 1/minute | 67% |
+| Polling frequency reduction | 4 polls/min | 2 polls/min | 50% |
 
-This replaces the N+1 loop with a single database call, dramatically reducing query volume.
+**Estimated total reduction: 70-85% fewer PostgREST requests**
+
+---
+
+## Files to Modify
+
+1. **New migration:** Create `get_all_channel_unread_counts` RPC
+2. `src/hooks/useUnread.ts` - Major refactor
+3. `src/hooks/useConnectionStatus.ts` - Consolidate and increase interval
+4. `src/components/modals/SearchModal.tsx` - Batch queries
+5. `src/hooks/useRealtimeUsers.ts` - Add visibility gate
+6. `src/stores/serverStore.ts` - Specify columns (3 locations)
+7. `src/hooks/usePreferencesSync.ts` - Specify columns
+8. `src/components/modals/UserProfilePopup.tsx` - Specify columns
