@@ -2140,6 +2140,21 @@ export type Database = {
         Returns: Json
       }
       generate_invite_code: { Args: never; Returns: string }
+      get_all_channel_unread_counts: {
+        Args: {
+          _blocked_user_ids?: string[]
+          _channel_ids: string[]
+          _user_id: string
+        }
+        Returns: {
+          channel_id: string
+          first_unread_message_id: string
+          last_read_at: string
+          last_read_message_id: string
+          mention_count: number
+          unread_count: number
+        }[]
+      }
       get_banned_members: {
         Args: { _server_id: string; _user_id: string }
         Returns: Json

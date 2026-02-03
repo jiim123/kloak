@@ -78,8 +78,8 @@ export const patchUserAcrossStores = (updatedUser: Partial<User> & { id: string 
   });
 };
 
-// Presence polling interval - only poll when tab is visible
-const PRESENCE_POLL_INTERVAL_MS = 30_000; // 30 seconds (increased from 15s)
+// OPTIMIZATION: Increased polling interval from 30s to 45s
+const PRESENCE_POLL_INTERVAL_MS = 45_000;
 
 /**
  * Hook for targeted presence updates.

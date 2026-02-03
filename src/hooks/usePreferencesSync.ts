@@ -40,9 +40,10 @@ export const usePreferencesSync = () => {
 
     const loadPreferences = async () => {
       try {
+        // OPTIMIZATION: Specify only required columns instead of select('*')
         const { data, error } = await supabase
           .from('user_preferences')
-          .select('*')
+          .select('theme, link_previews_enabled, desktop_notifications_enabled, notification_sound_enabled, show_message_preview, compact_mode, show_timestamps, animate_emojis')
           .eq('user_id', user.id)
           .maybeSingle();
 

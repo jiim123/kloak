@@ -20,8 +20,8 @@ interface ServerUnreadInfo {
   totalMentions: number;
 }
 
-const UNREAD_POLL_INTERVAL_MS = 15000; // keep sidebars consistent even if realtime is lossy
-const MAX_CONCURRENT_UNREAD_QUERIES = 6;
+// OPTIMIZATION: Increased from 15s to 45s - reduced polling frequency
+const UNREAD_POLL_INTERVAL_MS = 45000;
 const CHANNEL_READ_EVENT = 'kloak:channel-read';
 
 export const useUnread = (serverChannelIds: string[] = []) => {
@@ -34,28 +34,8 @@ export const useUnread = (serverChannelIds: string[] = []) => {
   const queuedRef = useRef(false);
   const channelIdsKey = [...serverChannelIds].sort().join(',');
 
-  const promisePool = useCallback(async <T,>(tasks: Array<() => Promise<T>>, concurrency: number): Promise<T[]> => {
-    const results: T[] = [];
-    let idx = 0;
-
-    const workers = Array.from({ length: Math.max(1, concurrency) }).map(async () => {
-      while (idx < tasks.length) {
-        const current = idx++;
-        try {
-          results[current] = await tasks[current]();
-        } catch {
-          // leave empty slot; caller can handle missing results
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          results[current] = undefined as any;
-        }
-      }
-    });
-
-    await Promise.all(workers);
-    return results;
-  }, []);
-
-  // Fetch channel reads for user
+  // OPTIMIZATION: Use batch RPC instead of N+1 queries
+  // This reduces 50+ queries to a single query per polling cycle
   const fetchUnreadCounts = useCallback(async (opts?: { force?: boolean }) => {
     if (!user || serverChannelIds.length === 0) return;
 
@@ -74,76 +54,52 @@ export const useUnread = (serverChannelIds: string[] = []) => {
     setIsLoading(true);
 
     try {
-      // Get channel reads - only fetch columns we need (optimized query)
-      const { data: channelReads } = await supabase
-        .from('channel_reads')
-        .select('channel_id, last_read_at, last_read_message_id, mention_count')
-        .eq('user_id', user.id)
-        .in('channel_id', serverChannelIds);
+      // Get blocked user IDs for filtering
+      const blockedUserIds = useFriendStore.getState().visibilityBlockedUserIds;
+
+      // OPTIMIZATION: Single RPC call replaces N individual queries
+      const { data, error } = await supabase.rpc('get_all_channel_unread_counts', {
+        _user_id: user.id,
+        _channel_ids: serverChannelIds,
+        _blocked_user_ids: blockedUserIds.length > 0 ? blockedUserIds : [],
+      });
+
+      if (error) {
+        console.error('Error fetching unread counts:', error);
+        throw error;
+      }
+
+      if (fetchSeqRef.current !== seq) return;
 
       const newState: UnreadState = {};
-
-      const tasks = serverChannelIds.map((channelId) => async () => {
-        const channelRead = channelReads?.find((r) => r.channel_id === channelId);
-        let unreadCount = 0;
-        let firstUnreadMessageId: string | null = null;
-
-        let query = supabase
-          .from('messages')
-          .select('id', { count: 'exact' })
-          .eq('channel_id', channelId)
-          .neq('user_id', user.id)
-          .order('created_at', { ascending: true })
-          .limit(1);
-
-        const blockedUserIds = useFriendStore.getState().visibilityBlockedUserIds;
-        const blockedIn = blockedUserIds.length > 0 ? `(${blockedUserIds.map((id) => `"${id}"`).join(',')})` : null;
-        if (blockedIn) {
-          query = query.not('user_id', 'in', blockedIn);
-        }
-
-        if (channelRead?.last_read_at) {
-          query = query.gt('created_at', channelRead.last_read_at);
-        }
-
-        const { data: unreadMessages, count, error } = await query;
-        if (error) {
-          // Keep base state even if this channel count fails
-          return {
-            channelId,
-            unreadCount: 0,
-            firstUnreadMessageId: null,
-            mentionCount: channelRead?.mention_count || 0,
-            lastReadMessageId: channelRead?.last_read_message_id || null,
-            lastReadAt: channelRead?.last_read_at || null,
-          };
-        }
-
-        unreadCount = count || 0;
-        firstUnreadMessageId = unreadMessages?.[0]?.id || null;
-
-        return {
-          channelId,
-          unreadCount,
-          firstUnreadMessageId,
-          mentionCount: channelRead?.mention_count || 0,
-          lastReadMessageId: channelRead?.last_read_message_id || null,
-          lastReadAt: channelRead?.last_read_at || null,
+      (data || []).forEach((row: {
+        channel_id: string;
+        unread_count: number;
+        mention_count: number;
+        last_read_at: string | null;
+        last_read_message_id: string | null;
+        first_unread_message_id: string | null;
+      }) => {
+        newState[row.channel_id] = {
+          unreadCount: Number(row.unread_count),
+          mentionCount: row.mention_count,
+          lastReadMessageId: row.last_read_message_id,
+          lastReadAt: row.last_read_at,
+          firstUnreadMessageId: row.first_unread_message_id,
         };
       });
 
-      const results = await promisePool(tasks, MAX_CONCURRENT_UNREAD_QUERIES);
-      if (fetchSeqRef.current !== seq) return;
-
-      results.forEach((r) => {
-        if (!r) return;
-        newState[r.channelId] = {
-          unreadCount: r.unreadCount,
-          mentionCount: r.mentionCount,
-          lastReadMessageId: r.lastReadMessageId,
-          lastReadAt: r.lastReadAt,
-          firstUnreadMessageId: r.firstUnreadMessageId,
-        };
+      // Ensure all requested channels have an entry (even if no unread)
+      serverChannelIds.forEach((channelId) => {
+        if (!newState[channelId]) {
+          newState[channelId] = {
+            unreadCount: 0,
+            mentionCount: 0,
+            lastReadMessageId: null,
+            lastReadAt: null,
+            firstUnreadMessageId: null,
+          };
+        }
       });
 
       setUnreadState(newState);
@@ -159,7 +115,7 @@ export const useUnread = (serverChannelIds: string[] = []) => {
         fetchUnreadCounts({ force: true });
       }
     }
-  }, [user, serverChannelIds, unreadState, promisePool]);
+  }, [user, serverChannelIds, unreadState]);
 
   // Mark channel as read
   const markAsRead = useCallback(
@@ -332,7 +288,7 @@ export const useUnread = (serverChannelIds: string[] = []) => {
   }, [user, fetchUnreadCounts]);
 
   // Cross-component sync: when any part of the app marks a channel as read,
-  // immediately clear that channel locally if it’s in our tracked set.
+  // immediately clear that channel locally if it's in our tracked set.
   useEffect(() => {
     const handler = (e: Event) => {
       const ev = e as CustomEvent<{ channelId?: string; at?: string }>;

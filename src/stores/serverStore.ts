@@ -1177,9 +1177,10 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   fetchRoles: async (serverId: string) => {
     try {
+      // OPTIMIZATION: Specify only required columns instead of select('*')
       const { data, error } = await supabase
         .from('server_roles')
-        .select('*')
+        .select('id, server_id, name, color, icon, position, created_at')
         .eq('server_id', serverId)
         .order('position', { ascending: true });
 
@@ -1370,10 +1371,10 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   fetchRolePermissions: async (serverId: string) => {
     try {
-      // Query role_permissions table directly
+      // OPTIMIZATION: Specify only required columns instead of select('*')
       const { data, error } = await supabase
         .from('role_permissions')
-        .select('*')
+        .select('id, server_id, role_id, role_name, permission, allowed, created_at')
         .eq('server_id', serverId);
 
       if (error) {
@@ -1400,10 +1401,10 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   fetchChannelPermissions: async (channelId: string) => {
     try {
-      // Query channel_permissions table directly
+      // OPTIMIZATION: Specify only required columns instead of select('*')
       const { data, error } = await supabase
         .from('channel_permissions')
-        .select('*')
+        .select('id, channel_id, role_id, role_name, user_id, permission, allowed, created_at')
         .eq('channel_id', channelId);
 
       if (error) {
