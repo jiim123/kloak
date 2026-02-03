@@ -33,6 +33,7 @@ interface AuthState {
   updateUser: (updates: Partial<User>) => Promise<void>;
   updateStatus: (status: UserStatus, options?: { source?: 'manual' | 'auto' }) => Promise<void>;
   updateLastSeen: () => Promise<void>;
+  resetSecretKey: () => Promise<{ newSecretKey: string } | null>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -292,6 +293,33 @@ export const useAuthStore = create<AuthState>()(
           // The last_seen is only used for other users' presence display
         } catch (error) {
           console.error('Failed to update last seen:', error);
+        }
+      },
+
+      resetSecretKey: async () => {
+        const { user } = get();
+        if (!user) return null;
+
+        try {
+          // Generate a new secret key
+          const newSecretKey = generateSecretKey();
+          const newKeyHash = await hashSecretKey(newSecretKey);
+
+          // Update the key hash in the database
+          const { error } = await supabase.rpc('reset_user_secret_key', {
+            _user_id: user.id,
+            _new_key_hash: newKeyHash,
+          });
+
+          if (error) throw error;
+
+          // Update local state with the new key
+          set({ secretKey: newSecretKey });
+
+          return { newSecretKey };
+        } catch (error) {
+          console.error('Failed to reset secret key:', error);
+          return null;
         }
       },
     }),

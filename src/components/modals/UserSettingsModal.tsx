@@ -20,6 +20,8 @@ import {
   Volume2,
   Sparkles as DecorationIcon,
   X,
+  RefreshCw,
+  AlertTriangle,
   ArrowLeft,
 } from "lucide-react";
 import {
@@ -86,13 +88,17 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     animateEmojis,
     setAnimateEmojis,
   } = useUIStore();
-  const { user, secretKey, updateUser, logout } = useAuthStore();
+  const { user, secretKey, updateUser, logout, resetSecretKey } = useAuthStore();
   const { blockedUsers, unblockUser, fetchFriends, isLoading: isFriendsLoading } = useFriendStore();
 
   const [activeTab, setActiveTab] = useState("account");
   const [isLoading, setIsLoading] = useState(false);
   const [showSecretKey, setShowSecretKey] = useState(false);
   const [showKeyConfirm, setShowKeyConfirm] = useState(false);
+  const [showResetKeyConfirm, setShowResetKeyConfirm] = useState(false);
+  const [newSecretKey, setNewSecretKey] = useState<string | null>(null);
+  const [showNewKeyModal, setShowNewKeyModal] = useState(false);
+  const [isResettingKey, setIsResettingKey] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDeletePreview, setShowDeletePreview] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -495,6 +501,19 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
             </p>
           </div>
         )}
+
+        {/* Reset Key Button */}
+        <Button
+          variant="secondary"
+          onClick={() => setShowResetKeyConfirm(true)}
+          className="w-full h-11 rounded-xl border-amber-500/30 hover:border-amber-500/50 hover:bg-amber-500/10"
+        >
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Reset Secret Key
+        </Button>
+        <p className="text-xs text-muted-foreground">
+          If you believe your key has been compromised, you can generate a new one. Your old key will be invalidated immediately.
+        </p>
       </div>
 
       {/* Danger Zone */}
@@ -1442,6 +1461,90 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
             >
               {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
               Delete Forever
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reset Key Confirmation */}
+      <AlertDialog open={showResetKeyConfirm} onOpenChange={setShowResetKeyConfirm}>
+        <AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-amber-500">
+              <AlertTriangle className="w-5 h-5" />
+              Reset Secret Key?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="leading-relaxed space-y-2">
+              <span className="block">This will generate a new secret key and immediately invalidate your current one.</span>
+              <span className="block font-medium text-foreground">Make sure to save the new key - you won't be able to recover it later!</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel className="m-0 rounded-xl">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                setShowResetKeyConfirm(false);
+                setIsResettingKey(true);
+                const result = await resetSecretKey();
+                setIsResettingKey(false);
+                if (result) {
+                  setNewSecretKey(result.newSecretKey);
+                  setShowNewKeyModal(true);
+                  toast.success("Secret key reset successfully!");
+                } else {
+                  toast.error("Failed to reset secret key");
+                }
+              }}
+              className="rounded-xl bg-amber-600 text-white hover:bg-amber-700"
+            >
+              {isResettingKey ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+              Reset Key
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* New Secret Key Display Modal */}
+      <AlertDialog open={showNewKeyModal} onOpenChange={(open) => {
+        if (!open) {
+          setShowNewKeyModal(false);
+          setNewSecretKey(null);
+        }
+      }}>
+        <AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-lg rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-emerald-500">
+              <Check className="w-5 h-5" />
+              New Secret Key Generated
+            </AlertDialogTitle>
+            <AlertDialogDescription className="leading-relaxed">
+              Your old key has been invalidated. Save this new key now - it will only be shown once!
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 bg-secondary/50 rounded-xl border border-border/50">
+              <code className="text-xs font-mono break-all select-all">{newSecretKey}</code>
+            </div>
+            <Button
+              onClick={async () => {
+                if (newSecretKey) {
+                  await navigator.clipboard.writeText(newSecretKey);
+                  toast.success("New secret key copied!");
+                }
+              }}
+              className="w-full h-11 rounded-xl"
+            >
+              <Copy className="w-4 h-4 mr-2" />
+              Copy New Key
+            </Button>
+            <p className="text-xs text-destructive flex items-center gap-2">
+              <Key className="w-3 h-3" />
+              Write this down or save it securely. You cannot recover this key!
+            </p>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogAction className="w-full rounded-xl">
+              I've Saved My Key
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
