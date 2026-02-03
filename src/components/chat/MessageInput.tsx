@@ -149,6 +149,7 @@ const ActionButtons = memo(
               open={showEmojiPicker}
               onOpenChange={setShowEmojiPicker}
               onEmojiSelect={onEmojiSelect}
+              serverId={currentServer?.id}
             >
               <button
                 type="button"
@@ -197,6 +198,7 @@ const ActionButtons = memo(
               open={showEmojiPicker}
               onOpenChange={setShowEmojiPicker}
               onEmojiSelect={onEmojiSelect}
+              serverId={currentServer?.id}
             >
               <button
                 type="button"
