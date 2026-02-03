@@ -542,28 +542,90 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
     const existingReaction = comment?.reactions?.find(r => r.emoji === emoji);
     const hasReacted = existingReaction?.hasReacted;
 
+    // Optimistic UI update - update state immediately
+    setComments((prev) =>
+      prev.map((c) => {
+        if (c.id !== commentId) return c;
+        
+        const reactions = [...(c.reactions || [])];
+        const reactionIndex = reactions.findIndex(r => r.emoji === emoji);
+        
+        if (hasReacted) {
+          // Removing reaction
+          if (reactionIndex !== -1) {
+            const reaction = reactions[reactionIndex];
+            if (reaction.count <= 1) {
+              reactions.splice(reactionIndex, 1);
+            } else {
+              reactions[reactionIndex] = {
+                ...reaction,
+                count: reaction.count - 1,
+                users: reaction.users.filter(u => u !== user.id),
+                hasReacted: false,
+              };
+            }
+          }
+        } else {
+          // Adding reaction
+          if (reactionIndex !== -1) {
+            const reaction = reactions[reactionIndex];
+            reactions[reactionIndex] = {
+              ...reaction,
+              count: reaction.count + 1,
+              users: [...reaction.users, user.id],
+              hasReacted: true,
+            };
+          } else {
+            reactions.push({
+              emoji,
+              count: 1,
+              users: [user.id],
+              hasReacted: true,
+            });
+          }
+        }
+        
+        return { ...c, reactions };
+      })
+    );
+
     try {
       if (hasReacted) {
-        await supabase
+        const { error } = await supabase
           .from("media_comment_reactions" as any)
           .delete()
           .eq("comment_id", commentId)
           .eq("user_id", user.id)
           .eq("emoji", emoji);
+        if (error) throw error;
       } else {
-        await supabase
+        const { error } = await supabase
           .from("media_comment_reactions" as any)
           .insert({
             comment_id: commentId,
             user_id: user.id,
             emoji,
           } as any);
+        if (error) throw error;
       }
-      // Real-time sync is handled by postgres_changes subscription
     } catch (error) {
       console.error("Failed to toggle reaction:", error);
+      // Revert optimistic update on error by refetching
+      const { data: reactionsDataRaw } = await supabase
+        .from("media_comment_reactions" as any)
+        .select("*")
+        .eq("comment_id", commentId);
+      
+      const reactionsData = reactionsDataRaw as any[] || [];
+      const reactions = groupReactions(reactionsData, user?.id);
+      
+      setComments((prev) =>
+        prev.map((c) =>
+          c.id === commentId ? { ...c, reactions } : c
+        )
+      );
     }
-  }, [user, comments]);
+  }, [user, comments, groupReactions]);
 
   const handleEmojiSelect = useCallback((emoji: string) => {
     if (emojiPickerOpen) {
