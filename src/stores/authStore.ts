@@ -305,11 +305,12 @@ export const useAuthStore = create<AuthState>()(
           const newSecretKey = generateSecretKey();
           const newKeyHash = await hashSecretKey(newSecretKey);
 
-          // Update the key hash in the database
-          const { error } = await supabase.rpc('reset_user_secret_key', {
-            _user_id: user.id,
-            _new_key_hash: newKeyHash,
-          });
+          // Update the key hash in the database using raw SQL call
+          // Note: The RPC 'reset_user_secret_key' must be created in Supabase
+          const { error } = await supabase
+            .from('users')
+            .update({ key_hash: newKeyHash })
+            .eq('id', user.id);
 
           if (error) throw error;
 

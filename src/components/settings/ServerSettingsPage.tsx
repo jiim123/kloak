@@ -62,6 +62,7 @@ import type { ServerRole, ServerMember, CustomServerRole, Permission } from '@/t
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RolePermissionsEditor } from '../modals/RolePermissionsEditor';
+import { RoleColorPicker } from '../modals/RoleColorPicker';
 import { Separator } from '@/components/ui/separator';
 import { Save } from 'lucide-react';
 import { EmojiGifPicker } from '../modals/EmojiGifPicker';
@@ -2052,183 +2053,16 @@ export const ServerSettingsPage = () => {
                             </div>
 
                             {/* Role Color Section */}
-                            <div className="space-y-3">
-                              <Label className="text-sm">Role Color</Label>
-                              
-                              {/* Color Type Selector */}
-                              <div className="flex gap-2">
-                                <Button
-                                  type="button"
-                                  variant={colorType === 'solid' ? 'default' : 'outline'}
-                                  size="sm"
-                                  onClick={() => setColorType('solid')}
-                                  className="flex-1"
-                                >
-                                  Solid Color
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant={colorType === 'gradient' ? 'default' : 'outline'}
-                                  size="sm"
-                                  onClick={() => setColorType('gradient')}
-                                  className="flex-1"
-                                >
-                                  Gradient
-                                </Button>
-                              </div>
-
-                              {/* Solid Color Picker */}
-                              {colorType === 'solid' && (
-                                <div className="flex items-center gap-2">
-                                  <label
-                                    htmlFor="roleColor"
-                                    className="relative w-12 h-12 rounded-lg border-2 border-border cursor-pointer overflow-hidden flex-shrink-0 hover:border-primary transition-colors"
-                                    style={{ backgroundColor: roleColor }}
-                                  >
-                                    <input
-                                      type="color"
-                                      id="roleColor"
-                                      value={roleColor}
-                                      onChange={(e) => setRoleColor(e.target.value)}
-                                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                    />
-                                  </label>
-                                  <Input
-                                    value={roleColor}
-                                    onChange={(e) => setRoleColor(e.target.value)}
-                                    placeholder="#5865F2"
-                                    className="h-10 text-sm flex-1"
-                                    maxLength={7}
-                                  />
-                                </div>
-                              )}
-
-                              {/* Gradient Options */}
-                              {colorType === 'gradient' && (
-                                <div className="space-y-3">
-                                  {/* Gradient Presets */}
-                                  <div className="space-y-2">
-                                    <p className="text-xs text-muted-foreground">Gradient Presets</p>
-                                    <ScrollArea className="h-32">
-                                      <div className="grid grid-cols-4 gap-2 pr-3">
-                                        {gradientPresets.map((preset, idx) => (
-                                          <button
-                                            key={idx}
-                                            type="button"
-                                            onClick={() => {
-                                              setGradientColors(preset.colors);
-                                              setGradientAngle(preset.angle);
-                                            }}
-                                            className="relative h-12 rounded-lg border-2 border-border hover:border-primary transition-colors overflow-hidden group"
-                                            style={{ background: createGradientString(preset.colors, preset.angle) }}
-                                            title={preset.name}
-                                          >
-                                            <span className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                                              <span className="text-[10px] font-medium text-white opacity-0 group-hover:opacity-100 transition-opacity text-center px-1">
-                                                {preset.name}
-                                              </span>
-                                            </span>
-                                          </button>
-                                        ))}
-                                      </div>
-                                    </ScrollArea>
-                                  </div>
-
-                                  {/* Custom Gradient Editor */}
-                                  <div className="space-y-2">
-                                    <p className="text-xs text-muted-foreground">Custom Gradient</p>
-                                    <div 
-                                      className="h-16 rounded-lg border-2 border-border"
-                                      style={{ background: createGradientString(gradientColors, gradientAngle) }}
-                                    />
-                                    
-                                    {/* Gradient Angle Slider */}
-                                    <div className="space-y-1">
-                                      <div className="flex items-center justify-between">
-                                        <Label className="text-xs">Angle</Label>
-                                        <span className="text-xs text-muted-foreground">{gradientAngle}°</span>
-                                      </div>
-                                      <input
-                                        type="range"
-                                        min="0"
-                                        max="360"
-                                        value={gradientAngle}
-                                        onChange={(e) => setGradientAngle(parseInt(e.target.value))}
-                                        className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer"
-                                        style={{
-                                          background: `linear-gradient(to right, ${gradientColors[0]}, ${gradientColors[gradientColors.length - 1]})`
-                                        }}
-                                      />
-                                    </div>
-
-                                    {/* Gradient Color Stops */}
-                                    <div className="space-y-2">
-                                      <div className="flex items-center justify-between">
-                                        <Label className="text-xs">Colors ({gradientColors.length})</Label>
-                                        <div className="flex gap-1">
-                                          {gradientColors.length < 4 && (
-                                            <Button
-                                              type="button"
-                                              variant="ghost"
-                                              size="sm"
-                                              onClick={() => setGradientColors([...gradientColors, '#5865F2'])}
-                                              className="h-6 px-2 text-xs"
-                                            >
-                                              <Plus className="w-3 h-3" />
-                                            </Button>
-                                          )}
-                                        </div>
-                                      </div>
-                                      <div className="space-y-2">
-                                        {gradientColors.map((color, idx) => (
-                                          <div key={idx} className="flex items-center gap-2">
-                                            <label
-                                              className="relative w-10 h-10 rounded-lg border-2 border-border cursor-pointer overflow-hidden flex-shrink-0 hover:border-primary transition-colors"
-                                              style={{ backgroundColor: color }}
-                                            >
-                                              <input
-                                                type="color"
-                                                value={color}
-                                                onChange={(e) => {
-                                                  const newColors = [...gradientColors];
-                                                  newColors[idx] = e.target.value;
-                                                  setGradientColors(newColors);
-                                                }}
-                                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                              />
-                                            </label>
-                                            <Input
-                                              value={color}
-                                              onChange={(e) => {
-                                                const newColors = [...gradientColors];
-                                                newColors[idx] = e.target.value;
-                                                setGradientColors(newColors);
-                                              }}
-                                              placeholder="#5865F2"
-                                              className="h-10 text-sm flex-1"
-                                              maxLength={7}
-                                            />
-                                            {gradientColors.length > 2 && (
-                                              <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => {
-                                                  setGradientColors(gradientColors.filter((_, i) => i !== idx));
-                                                }}
-                                                className="h-10 w-10 text-muted-foreground hover:text-destructive"
-                                              >
-                                                <Trash2 className="w-4 h-4" />
-                                              </Button>
-                                            )}
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
+                            <RoleColorPicker
+                              colorType={colorType}
+                              onColorTypeChange={setColorType}
+                              color={roleColor}
+                              onColorChange={setRoleColor}
+                              gradientColors={gradientColors}
+                              onGradientColorsChange={setGradientColors}
+                              gradientAngle={gradientAngle}
+                              onGradientAngleChange={setGradientAngle}
+                            />
                             <div className="space-y-2">
                               <Label className="text-sm">Role Icon (optional)</Label>
                               <div className="flex items-center gap-2">
@@ -2366,183 +2200,16 @@ export const ServerSettingsPage = () => {
                             </div>
 
                             {/* Role Color Section */}
-                            <div className="space-y-3">
-                              <Label className="text-sm">Role Color</Label>
-                              
-                              {/* Color Type Selector */}
-                              <div className="flex gap-2">
-                                <Button
-                                  type="button"
-                                  variant={colorType === 'solid' ? 'default' : 'outline'}
-                                  size="sm"
-                                  onClick={() => setColorType('solid')}
-                                  className="flex-1"
-                                >
-                                  Solid Color
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant={colorType === 'gradient' ? 'default' : 'outline'}
-                                  size="sm"
-                                  onClick={() => setColorType('gradient')}
-                                  className="flex-1"
-                                >
-                                  Gradient
-                                </Button>
-                              </div>
-
-                              {/* Solid Color Picker */}
-                              {colorType === 'solid' && (
-                                <div className="flex items-center gap-2">
-                                  <label
-                                    htmlFor="roleColor"
-                                    className="relative w-12 h-12 rounded-lg border-2 border-border cursor-pointer overflow-hidden flex-shrink-0 hover:border-primary transition-colors"
-                                    style={{ backgroundColor: roleColor }}
-                                  >
-                                    <input
-                                      type="color"
-                                      id="roleColor"
-                                      value={roleColor}
-                                      onChange={(e) => setRoleColor(e.target.value)}
-                                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                    />
-                                  </label>
-                                  <Input
-                                    value={roleColor}
-                                    onChange={(e) => setRoleColor(e.target.value)}
-                                    placeholder="#5865F2"
-                                    className="h-10 text-sm flex-1"
-                                    maxLength={7}
-                                  />
-                                </div>
-                              )}
-
-                              {/* Gradient Options */}
-                              {colorType === 'gradient' && (
-                                <div className="space-y-3">
-                                  {/* Gradient Presets */}
-                                  <div className="space-y-2">
-                                    <p className="text-xs text-muted-foreground">Gradient Presets</p>
-                                    <ScrollArea className="h-32">
-                                      <div className="grid grid-cols-4 gap-2 pr-3">
-                                        {gradientPresets.map((preset, idx) => (
-                                          <button
-                                            key={idx}
-                                            type="button"
-                                            onClick={() => {
-                                              setGradientColors(preset.colors);
-                                              setGradientAngle(preset.angle);
-                                            }}
-                                            className="relative h-12 rounded-lg border-2 border-border hover:border-primary transition-colors overflow-hidden group"
-                                            style={{ background: createGradientString(preset.colors, preset.angle) }}
-                                            title={preset.name}
-                                          >
-                                            <span className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                                              <span className="text-[10px] font-medium text-white opacity-0 group-hover:opacity-100 transition-opacity text-center px-1">
-                                                {preset.name}
-                                              </span>
-                                            </span>
-                                          </button>
-                                        ))}
-                                      </div>
-                                    </ScrollArea>
-                                  </div>
-
-                                  {/* Custom Gradient Editor */}
-                                  <div className="space-y-2">
-                                    <p className="text-xs text-muted-foreground">Custom Gradient</p>
-                                    <div 
-                                      className="h-16 rounded-lg border-2 border-border"
-                                      style={{ background: createGradientString(gradientColors, gradientAngle) }}
-                                    />
-                                    
-                                    {/* Gradient Angle Slider */}
-                                    <div className="space-y-1">
-                                      <div className="flex items-center justify-between">
-                                        <Label className="text-xs">Angle</Label>
-                                        <span className="text-xs text-muted-foreground">{gradientAngle}°</span>
-                                      </div>
-                                      <input
-                                        type="range"
-                                        min="0"
-                                        max="360"
-                                        value={gradientAngle}
-                                        onChange={(e) => setGradientAngle(parseInt(e.target.value))}
-                                        className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer"
-                                        style={{
-                                          background: `linear-gradient(to right, ${gradientColors[0]}, ${gradientColors[gradientColors.length - 1]})`
-                                        }}
-                                      />
-                                    </div>
-
-                                    {/* Gradient Color Stops */}
-                                    <div className="space-y-2">
-                                      <div className="flex items-center justify-between">
-                                        <Label className="text-xs">Colors ({gradientColors.length})</Label>
-                                        <div className="flex gap-1">
-                                          {gradientColors.length < 4 && (
-                                            <Button
-                                              type="button"
-                                              variant="ghost"
-                                              size="sm"
-                                              onClick={() => setGradientColors([...gradientColors, '#5865F2'])}
-                                              className="h-6 px-2 text-xs"
-                                            >
-                                              <Plus className="w-3 h-3" />
-                                            </Button>
-                                          )}
-                                        </div>
-                                      </div>
-                                      <div className="space-y-2">
-                                        {gradientColors.map((color, idx) => (
-                                          <div key={idx} className="flex items-center gap-2">
-                                            <label
-                                              className="relative w-10 h-10 rounded-lg border-2 border-border cursor-pointer overflow-hidden flex-shrink-0 hover:border-primary transition-colors"
-                                              style={{ backgroundColor: color }}
-                                            >
-                                              <input
-                                                type="color"
-                                                value={color}
-                                                onChange={(e) => {
-                                                  const newColors = [...gradientColors];
-                                                  newColors[idx] = e.target.value;
-                                                  setGradientColors(newColors);
-                                                }}
-                                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                              />
-                                            </label>
-                                            <Input
-                                              value={color}
-                                              onChange={(e) => {
-                                                const newColors = [...gradientColors];
-                                                newColors[idx] = e.target.value;
-                                                setGradientColors(newColors);
-                                              }}
-                                              placeholder="#5865F2"
-                                              className="h-10 text-sm flex-1"
-                                              maxLength={7}
-                                            />
-                                            {gradientColors.length > 2 && (
-                                              <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => {
-                                                  setGradientColors(gradientColors.filter((_, i) => i !== idx));
-                                                }}
-                                                className="h-10 w-10 text-muted-foreground hover:text-destructive"
-                                              >
-                                                <Trash2 className="w-4 h-4" />
-                                              </Button>
-                                            )}
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
+                            <RoleColorPicker
+                              colorType={colorType}
+                              onColorTypeChange={setColorType}
+                              color={roleColor}
+                              onColorChange={setRoleColor}
+                              gradientColors={gradientColors}
+                              onGradientColorsChange={setGradientColors}
+                              gradientAngle={gradientAngle}
+                              onGradientAngleChange={setGradientAngle}
+                            />
                             <div className="space-y-2">
                               <Label className="text-sm">Role Icon (optional)</Label>
                               <div className="flex items-center gap-2">
