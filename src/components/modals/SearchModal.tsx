@@ -93,21 +93,45 @@ export const SearchModal = () => {
 
       if (error) throw error;
 
-      // Fetch user and channel details for results
-      const enrichedResults = await Promise.all(
-        (data || []).map(async (result: SearchResult) => {
-          const [userRes, channelRes] = await Promise.all([
-            supabase.from('users').select('username, display_name, avatar_url, banner_color').eq('id', result.user_id).single(),
-            supabase.from('channels').select('name').eq('id', result.channel_id).single(),
-          ]);
+      // OPTIMIZATION: Batch fetch users and channels instead of N+1 queries
+      // This reduces 50 queries to just 2 queries
+      const rawResults = data || [];
+      
+      if (rawResults.length === 0) {
+        setResults([]);
+        return;
+      }
 
-          return {
-            ...result,
-            user: userRes.data || undefined,
-            channel: channelRes.data || undefined,
-          };
-        })
+      // Collect unique IDs
+      const userIds = [...new Set(rawResults.map((r: SearchResult) => r.user_id))];
+      const channelIds = [...new Set(rawResults.map((r: SearchResult) => r.channel_id))];
+
+      // Batch fetch users and channels in parallel
+      const [usersRes, channelsRes] = await Promise.all([
+        supabase
+          .from('users')
+          .select('id, username, display_name, avatar_url, banner_color')
+          .in('id', userIds),
+        supabase
+          .from('channels')
+          .select('id, name')
+          .in('id', channelIds),
+      ]);
+
+      // Create lookup maps
+      const usersMap = new Map(
+        (usersRes.data || []).map((u) => [u.id, u])
       );
+      const channelsMap = new Map(
+        (channelsRes.data || []).map((c) => [c.id, c])
+      );
+
+      // Enrich results using the maps
+      const enrichedResults = rawResults.map((result: SearchResult) => ({
+        ...result,
+        user: usersMap.get(result.user_id) || undefined,
+        channel: channelsMap.get(result.channel_id) || undefined,
+      }));
 
       setResults(enrichedResults);
     } catch (error) {

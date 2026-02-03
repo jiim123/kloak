@@ -3,15 +3,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { useSyncStore } from '@/stores/syncStore';
 import { useOnlineStatus } from './useOnlineStatus';
 
-const HEARTBEAT_INTERVAL = 30000; // 30 seconds
-const LATENCY_CHECK_INTERVAL = 60000; // 1 minute
+// OPTIMIZATION: Consolidated heartbeat and latency into single check every 60s
+const COMBINED_CHECK_INTERVAL = 60000; // 60 seconds (was 30s heartbeat + 60s latency)
 const HEARTBEAT_FAILURES_BEFORE_RECONNECT = 2;
 
 type RealtimeListener = (connected: boolean) => void;
 
 let sharedRealtimeChannel: ReturnType<typeof supabase.channel> | null = null;
-let sharedHeartbeatTimer: NodeJS.Timeout | null = null;
-let sharedLatencyTimer: NodeJS.Timeout | null = null;
+let sharedCombinedTimer: NodeJS.Timeout | null = null;
 let sharedSubscriberCount = 0;
 const realtimeListeners = new Set<RealtimeListener>();
 
@@ -27,7 +26,7 @@ const notifyRealtimeConnected = (connected: boolean) => {
 
 /**
  * Hook for monitoring connection status and latency
- * Provides real-time feedback about connection quality
+ * OPTIMIZATION: Consolidated heartbeat and latency checks into single query
  */
 export function useConnectionStatus() {
   const { isOnline } = useOnlineStatus();
@@ -40,24 +39,40 @@ export function useConnectionStatus() {
   } = useSyncStore();
   
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(true);
-  const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
-  const latencyRef = useRef<NodeJS.Timeout | null>(null);
+  const combinedTimerRef = useRef<NodeJS.Timeout | null>(null);
   const heartbeatFailuresRef = useRef(0);
 
-  // Check latency by timing a simple query
-  const checkLatency = useCallback(async () => {
+  // Combined heartbeat and latency check - single query instead of two
+  const checkConnectionHealth = useCallback(async () => {
     if (!isOnline) return;
     
     const start = performance.now();
     try {
-      await supabase.from('users').select('id').limit(1);
+      const { error } = await supabase.from('users').select('id').limit(1);
+      if (error) throw error;
+      
+      // Success - update latency and reset failures
       const latency = Math.round(performance.now() - start);
       updateLatency(latency);
+      heartbeatFailuresRef.current = 0;
+      
+      if (connection.status !== 'connected') {
+        setConnectionStatus('connected');
+        resetReconnectAttempts();
+      }
     } catch (error) {
       // Connection issue
       updateLatency(-1);
+      heartbeatFailuresRef.current += 1;
+      
+      if (heartbeatFailuresRef.current >= HEARTBEAT_FAILURES_BEFORE_RECONNECT) {
+        if (connection.status === 'connected') {
+          setConnectionStatus('reconnecting');
+          incrementReconnectAttempts();
+        }
+      }
     }
-  }, [isOnline, updateLatency]);
+  }, [isOnline, connection.status, setConnectionStatus, updateLatency, resetReconnectAttempts, incrementReconnectAttempts]);
 
   // Monitor Supabase realtime connection
   useEffect(() => {
@@ -110,74 +125,34 @@ export function useConnectionStatus() {
           // ignore
         }
         sharedRealtimeChannel = null;
-        if (sharedHeartbeatTimer) clearInterval(sharedHeartbeatTimer);
-        if (sharedLatencyTimer) clearInterval(sharedLatencyTimer);
-        sharedHeartbeatTimer = null;
-        sharedLatencyTimer = null;
+        if (sharedCombinedTimer) clearInterval(sharedCombinedTimer);
+        sharedCombinedTimer = null;
       }
     };
   }, [isOnline, setConnectionStatus, resetReconnectAttempts, incrementReconnectAttempts]);
 
-  // Heartbeat to detect silent disconnections
+  // OPTIMIZATION: Single combined check instead of separate heartbeat + latency
   useEffect(() => {
     if (!isOnline) return;
-
-    const heartbeat = async () => {
-      try {
-        const { error } = await supabase.from('users').select('id').limit(1);
-        if (error) throw error;
-        heartbeatFailuresRef.current = 0;
-        
-        if (connection.status !== 'connected') {
-          setConnectionStatus('connected');
-          resetReconnectAttempts();
-        }
-      } catch (error) {
-        heartbeatFailuresRef.current += 1;
-        if (heartbeatFailuresRef.current >= HEARTBEAT_FAILURES_BEFORE_RECONNECT) {
-          if (connection.status === 'connected') {
-            setConnectionStatus('reconnecting');
-            incrementReconnectAttempts();
-          }
-        }
-      }
-    };
 
     // Initial check
-    heartbeat();
+    checkConnectionHealth();
     
-    // Periodic heartbeat
-    // Use a shared timer so multiple components don't create multiple heartbeats.
-    if (!sharedHeartbeatTimer) {
-      sharedHeartbeatTimer = setInterval(heartbeat, HEARTBEAT_INTERVAL);
+    // Periodic combined check using shared timer
+    if (!sharedCombinedTimer) {
+      sharedCombinedTimer = setInterval(checkConnectionHealth, COMBINED_CHECK_INTERVAL);
     }
-    heartbeatRef.current = sharedHeartbeatTimer;
+    combinedTimerRef.current = sharedCombinedTimer;
 
     return () => {
       // shared timer is cleaned up when last subscriber unmounts
     };
-  }, [isOnline, connection.status, setConnectionStatus, resetReconnectAttempts, incrementReconnectAttempts]);
-
-  // Latency monitoring
-  useEffect(() => {
-    if (!isOnline) return;
-
-    checkLatency();
-    if (!sharedLatencyTimer) {
-      sharedLatencyTimer = setInterval(checkLatency, LATENCY_CHECK_INTERVAL);
-    }
-    latencyRef.current = sharedLatencyTimer;
-
-    return () => {
-      // shared timer is cleaned up when last subscriber unmounts
-    };
-  }, [isOnline, checkLatency]);
+  }, [isOnline, checkConnectionHealth]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
-      if (latencyRef.current) clearInterval(latencyRef.current);
+      if (combinedTimerRef.current) clearInterval(combinedTimerRef.current);
     };
   }, []);
 

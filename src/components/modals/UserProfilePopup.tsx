@@ -202,7 +202,12 @@ export const UserProfilePopup = () => {
     const fetchProfile = async () => {
       setIsLoading(true);
       try {
-        const { data, error } = await supabase.from("users").select("*").eq("id", userId).single();
+        // OPTIMIZATION: Specify only required columns instead of select('*')
+        const { data, error } = await supabase
+          .from("users")
+          .select("id, username, display_name, avatar_url, banner_url, avatar_decoration, profile_effect, banner_color, profile_theme_primary, profile_theme_accent, bio, status, custom_status, created_at, last_seen")
+          .eq("id", userId)
+          .single();
 
         if (error) throw error;
 
