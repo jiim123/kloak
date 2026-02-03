@@ -354,25 +354,28 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
 
         {/* Channel welcome message - enhanced empty state */}
         {!isLoading && messages.length === 0 && (
-          <div className="flex flex-col items-start px-4 pt-16 pb-8">
+          <div className={`flex flex-col px-4 pt-16 pb-8 ${currentChannel?.ghost_mode ? 'items-center text-center' : 'items-start'}`}>
             {currentChannel?.ghost_mode ? (
               <>
-                <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mb-6">
-                  <Ghost className="w-10 h-10 text-muted-foreground" />
-                </div>
-                <h2 className="text-3xl font-bold text-foreground mb-2">Anonymous Channel</h2>
-                <p className="text-muted-foreground mb-4 max-w-md">
-                  Messages in <span className="font-semibold">#{channelName}</span> are anonymous. 
-                  Your username and avatar won't be visible to other members.
-                </p>
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <Ghost className="w-4 h-4" />
-                    <span>Your identity is hidden from other members</span>
+                <div className="relative mb-6">
+                  <div className="absolute inset-0 rounded-full bg-muted/30 blur-xl scale-150" />
+                  <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-muted/80 to-muted/40 border border-border/50 flex items-center justify-center">
+                    <Ghost className="w-12 h-12 text-muted-foreground" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-yellow-500" />
-                    <span>Be the first to send an anonymous message!</span>
+                </div>
+                <h2 className="text-2xl font-bold text-foreground mb-3">Anonymous Channel</h2>
+                <p className="text-muted-foreground mb-6 max-w-sm leading-relaxed">
+                  Messages in <span className="font-semibold text-foreground">#{channelName}</span> are anonymous. 
+                  Your identity stays hidden from other members.
+                </p>
+                <div className="flex flex-wrap justify-center gap-3">
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-muted/50 text-sm text-muted-foreground">
+                    <Ghost className="w-4 h-4" />
+                    <span>Hidden identity</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-muted/50 text-sm text-muted-foreground">
+                    <Hash className="w-4 h-4" />
+                    <span>Speak freely</span>
                   </div>
                 </div>
               </>
