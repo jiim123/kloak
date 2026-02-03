@@ -2183,6 +2183,14 @@ export type Database = {
         }
         Returns: Json
       }
+      get_dm_unread_counts: {
+        Args: { _user_id: string }
+        Returns: {
+          conversation_id: string
+          last_read_at: string
+          unread_count: number
+        }[]
+      }
       get_invite_details_by_code: {
         Args: { _invite_code: string }
         Returns: {
