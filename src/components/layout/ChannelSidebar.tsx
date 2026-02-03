@@ -289,7 +289,7 @@ const SortableChannel = ({
 
         {/* Mention badge */}
         {mentionCount > 0 && !isSortingMode && (
-          <span className="px-1.5 py-0.5 text-xs font-bold rounded-full bg-destructive text-destructive-foreground">
+          <span className="px-1.5 py-0.5 text-xs font-bold rounded-full bg-amber-600 text-white flex-shrink-0">
             {mentionCount > 99 ? "99+" : mentionCount}
           </span>
         )}
