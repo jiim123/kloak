@@ -2,3 +2,6 @@ project_id = "foquucurnwpqcvgqukpz"
 
 [functions.fetch-link-preview]
 verify_jwt = false
+
+[functions.fetch-emoji-pack]
+verify_jwt = false
