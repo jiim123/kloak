@@ -533,6 +533,16 @@ export const ServerSettingsPage = () => {
   const [serverEmojis, setServerEmojis] = useState<Array<{ id: string; name: string; file_path: string }>>([]);
   const emojiInputRef = useRef<HTMLInputElement>(null);
 
+  // Memoize emoji URLs to prevent regenerating on every render
+  const serverEmojisWithUrls = useMemo(() => {
+    return serverEmojis.map((emoji) => {
+      const { data: urlData } = supabase.storage
+        .from('server-emojis')
+        .getPublicUrl(emoji.file_path);
+      return { ...emoji, url: urlData.publicUrl };
+    });
+  }, [serverEmojis]);
+
   // Banned members state (separate from `members`, which intentionally excludes banned)
   const [bannedMembers, setBannedMembers] = useState<
     Array<{
@@ -1100,8 +1110,7 @@ export const ServerSettingsPage = () => {
       .from('server-icons')
       .getPublicUrl(filePath);
 
-    // Add cache buster to force refresh
-    return `${publicUrl}?t=${Date.now()}`;
+    return publicUrl;
   };
 
   const handleBannerSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1150,8 +1159,7 @@ export const ServerSettingsPage = () => {
       .from('server-icons')
       .getPublicUrl(filePath);
 
-    // Add cache buster to force refresh
-    return `${publicUrl}?t=${Date.now()}`;
+    return publicUrl;
   };
 
   const handleRemoveBanner = async () => {
@@ -2940,40 +2948,33 @@ export const ServerSettingsPage = () => {
                     {serverEmojis.length > 0 ? (
                       <ScrollArea className="h-[calc(100vh-28rem)] pr-4">
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                          {serverEmojis.map((emoji) => {
-                            const { data: urlData } = supabase.storage
-                              .from('server-emojis')
-                              .getPublicUrl(emoji.file_path);
-                            const url = urlData.publicUrl;
-
-                            return (
-                              <div
-                                key={emoji.id}
-                                className="flex items-center gap-3 p-2 rounded-lg border bg-background/40"
-                              >
-                                <img
-                                  src={url}
-                                  alt={emoji.name}
-                                  className="w-10 h-10 rounded-md object-cover bg-secondary"
-                                  loading="lazy"
-                                />
-                                <div className="min-w-0 flex-1">
-                                  <div className="text-sm font-medium truncate">:{emoji.name}:</div>
-                                  <div className="text-xs text-muted-foreground truncate">{emoji.name}</div>
-                                </div>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => deleteServerEmoji(emoji)}
-                                  className="text-muted-foreground hover:text-destructive h-8 px-2"
-                                  title="Delete emoji"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
+                          {serverEmojisWithUrls.map((emoji) => (
+                            <div
+                              key={emoji.id}
+                              className="flex items-center gap-3 p-2 rounded-lg border bg-background/40"
+                            >
+                              <img
+                                src={emoji.url}
+                                alt={emoji.name}
+                                className="w-10 h-10 rounded-md object-cover bg-secondary"
+                                loading="lazy"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="text-sm font-medium truncate">:{emoji.name}:</div>
+                                <div className="text-xs text-muted-foreground truncate">{emoji.name}</div>
                               </div>
-                            );
-                          })}
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => deleteServerEmoji(emoji)}
+                                className="text-muted-foreground hover:text-destructive h-8 px-2"
+                                title="Delete emoji"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ))}
                         </div>
                       </ScrollArea>
                     ) : (
