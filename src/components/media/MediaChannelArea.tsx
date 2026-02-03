@@ -59,7 +59,9 @@ interface MediaItem {
 }
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo'];
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB for images
+const MAX_VIDEO_SIZE = 10 * 1024 * 1024; // 10MB for videos
 
 // Extract YouTube video ID from URL
 const extractYouTubeId = (url: string): string | null => {
@@ -158,13 +160,21 @@ export const MediaChannelArea = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     
-    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-      toast.error('Only JPEG, PNG, GIF, and WebP images are allowed');
+    const isImage = ALLOWED_IMAGE_TYPES.includes(file.type);
+    const isVideo = ALLOWED_VIDEO_TYPES.includes(file.type);
+    
+    if (!isImage && !isVideo) {
+      toast.error('Only images (JPEG, PNG, GIF, WebP) and videos (MP4, WebM, MOV, AVI) are allowed');
       return;
     }
     
-    if (file.size > MAX_FILE_SIZE) {
-      toast.error('File size must be less than 10MB');
+    if (isImage && file.size > MAX_IMAGE_SIZE) {
+      toast.error('Image size must be less than 5MB');
+      return;
+    }
+    
+    if (isVideo && file.size > MAX_VIDEO_SIZE) {
+      toast.error('Video size must be less than 10MB');
       return;
     }
     
@@ -222,7 +232,15 @@ export const MediaChannelArea = () => {
           .getPublicUrl(filePath);
         
         mediaUrl = urlData.publicUrl;
-        mediaType = selectedFile.type === 'image/gif' ? 'gif' : 'image';
+        
+        // Determine media type based on file type
+        if (ALLOWED_VIDEO_TYPES.includes(selectedFile.type)) {
+          mediaType = 'video';
+        } else if (selectedFile.type === 'image/gif') {
+          mediaType = 'gif';
+        } else {
+          mediaType = 'image';
+        }
         
         // Get image dimensions
         if (filePreview) {
@@ -321,15 +339,25 @@ export const MediaChannelArea = () => {
     setIsDragging(false);
     
     const files = Array.from(e.dataTransfer.files);
-    const imageFile = files.find(f => ALLOWED_IMAGE_TYPES.includes(f.type));
+    const mediaFile = files.find(f => 
+      ALLOWED_IMAGE_TYPES.includes(f.type) || ALLOWED_VIDEO_TYPES.includes(f.type)
+    );
     
-    if (imageFile) {
-      if (imageFile.size > MAX_FILE_SIZE) {
-        toast.error('File size must be less than 10MB');
+    if (mediaFile) {
+      const isImage = ALLOWED_IMAGE_TYPES.includes(mediaFile.type);
+      const isVideo = ALLOWED_VIDEO_TYPES.includes(mediaFile.type);
+      
+      if (isImage && mediaFile.size > MAX_IMAGE_SIZE) {
+        toast.error('Image size must be less than 5MB');
         return;
       }
-      setSelectedFile(imageFile);
-      setFilePreview(URL.createObjectURL(imageFile));
+      if (isVideo && mediaFile.size > MAX_VIDEO_SIZE) {
+        toast.error('Video size must be less than 10MB');
+        return;
+      }
+      
+      setSelectedFile(mediaFile);
+      setFilePreview(URL.createObjectURL(mediaFile));
       setUploadType('file');
       setIsUploadModalOpen(true);
     }
@@ -466,14 +494,14 @@ export const MediaChannelArea = () => {
                       Click to select or drag and drop
                     </p>
                     <p className="text-xs text-muted-foreground/70 mt-1">
-                      JPEG, PNG, GIF, WebP up to 10MB
+                      Images up to 5MB • Videos up to 10MB
                     </p>
                   </div>
                 )}
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime,video/x-msvideo"
                   className="hidden"
                   onChange={handleFileChange}
                 />
