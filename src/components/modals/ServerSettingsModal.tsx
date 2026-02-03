@@ -219,6 +219,16 @@ export const ServerSettingsModal = () => {
   const [serverEmojis, setServerEmojis] = useState<Array<{ id: string; name: string; file_path: string }>>([]);
   const emojiInputRef = useRef<HTMLInputElement>(null);
 
+  // Memoize emoji URLs to prevent regenerating on every render
+  const serverEmojisWithUrls = useMemo(() => {
+    return serverEmojis.map((emoji) => {
+      const { data: urlData } = supabase.storage
+        .from("server-emojis")
+        .getPublicUrl(emoji.file_path);
+      return { ...emoji, url: urlData.publicUrl };
+    });
+  }, [serverEmojis]);
+
   // Banned members state (separate from `members`, which intentionally excludes banned)
   const [bannedMembers, setBannedMembers] = useState<
     Array<{
@@ -879,7 +889,7 @@ export const ServerSettingsModal = () => {
       data: { publicUrl },
     } = supabase.storage.from("server-icons").getPublicUrl(filePath);
 
-    return `${publicUrl}?t=${Date.now()}`;
+    return publicUrl;
   };
 
   const handleBannerSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -926,7 +936,7 @@ export const ServerSettingsModal = () => {
       data: { publicUrl },
     } = supabase.storage.from("server-icons").getPublicUrl(filePath);
 
-    return `${publicUrl}?t=${Date.now()}`;
+    return publicUrl;
   };
 
   const handleRemoveBanner = async () => {
@@ -2272,40 +2282,34 @@ export const ServerSettingsModal = () => {
 
                     <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 space-y-3">
                       <h4 className="text-sm font-semibold">Server Emojis</h4>
-                      {serverEmojis.length > 0 ? (
+                      {serverEmojisWithUrls.length > 0 ? (
                         <div className="max-h-[300px] overflow-y-auto overscroll-contain touch-pan-y">
                           <div className="grid grid-cols-2 gap-2">
-                            {serverEmojis.map((emoji) => {
-                              const { data: urlData } = supabase.storage
-                                .from("server-emojis")
-                                .getPublicUrl(emoji.file_path);
-                              const url = urlData.publicUrl;
-                              return (
-                                <div
-                                  key={emoji.id}
-                                  className="flex items-center gap-2 p-2 rounded-xl bg-background/50 border border-border/30"
-                                >
-                                  <img
-                                    src={url}
-                                    alt={emoji.name}
-                                    className="w-8 h-8 rounded-lg object-cover bg-secondary"
-                                    loading="lazy"
-                                  />
-                                  <div className="min-w-0 flex-1">
-                                    <div className="text-xs font-medium truncate">:{emoji.name}:</div>
-                                  </div>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    rounded="lg"
-                                    onClick={() => deleteServerEmoji(emoji)}
-                                    className="text-muted-foreground hover:text-destructive h-7 w-7 p-0"
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                  </Button>
+                            {serverEmojisWithUrls.map((emoji) => (
+                              <div
+                                key={emoji.id}
+                                className="flex items-center gap-2 p-2 rounded-xl bg-background/50 border border-border/30"
+                              >
+                                <img
+                                  src={emoji.url}
+                                  alt={emoji.name}
+                                  className="w-8 h-8 rounded-lg object-cover bg-secondary"
+                                  loading="lazy"
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-xs font-medium truncate">:{emoji.name}:</div>
                                 </div>
-                              );
-                            })}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  rounded="lg"
+                                  onClick={() => deleteServerEmoji(emoji)}
+                                  className="text-muted-foreground hover:text-destructive h-7 w-7 p-0"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       ) : (
@@ -3144,40 +3148,33 @@ export const ServerSettingsModal = () => {
                         {serverEmojis.length > 0 ? (
                           <div className="max-h-[350px] sm:max-h-[400px] overflow-y-auto overscroll-contain touch-pan-y">
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                              {serverEmojis.map((emoji) => {
-                                const { data: urlData } = supabase.storage
-                                  .from("server-emojis")
-                                  .getPublicUrl(emoji.file_path);
-                                const url = urlData.publicUrl;
-
-                                return (
-                                  <div
-                                    key={emoji.id}
-                                    className="flex items-center gap-2 p-2 rounded-xl bg-background/50 border border-border/30"
-                                  >
-                                    <img
-                                      src={url}
-                                      alt={emoji.name}
-                                      className="w-8 h-8 rounded-lg object-cover bg-secondary"
-                                      loading="lazy"
-                                    />
-                                    <div className="min-w-0 flex-1">
-                                      <div className="text-xs font-medium truncate">:{emoji.name}:</div>
-                                    </div>
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      rounded="xl"
-                                      onClick={() => deleteServerEmoji(emoji)}
-                                      className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
-                                      title="Delete emoji"
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </Button>
+                              {serverEmojisWithUrls.map((emoji) => (
+                                <div
+                                  key={emoji.id}
+                                  className="flex items-center gap-2 p-2 rounded-xl bg-background/50 border border-border/30"
+                                >
+                                  <img
+                                    src={emoji.url}
+                                    alt={emoji.name}
+                                    className="w-8 h-8 rounded-lg object-cover bg-secondary"
+                                    loading="lazy"
+                                  />
+                                  <div className="min-w-0 flex-1">
+                                    <div className="text-xs font-medium truncate">:{emoji.name}:</div>
                                   </div>
-                                );
-                              })}
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    rounded="xl"
+                                    onClick={() => deleteServerEmoji(emoji)}
+                                    className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
+                                    title="Delete emoji"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </Button>
+                                </div>
+                              ))}
                             </div>
                           </div>
                         ) : (
