@@ -112,10 +112,10 @@ export const AnnouncementChannelArea = () => {
       if (match) {
         const url = customEmojiMap.get(match[1]);
         if (url) {
-          return <img src={url} alt={emoji} className="w-5 h-5 object-contain" loading="lazy" />;
+          return <img src={url} alt={emoji} className="w-6 h-6 object-contain" loading="lazy" />;
         }
       }
-      return <span className="text-base leading-none font-emoji">{emoji}</span>;
+      return <span className="text-xl leading-none font-emoji">{emoji}</span>;
     },
     [customEmojiMap],
   );
@@ -875,7 +875,7 @@ export const AnnouncementChannelArea = () => {
                         
                         {/* Reactions */}
                         {announcement.reactions && announcement.reactions.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 mb-4">
+                          <div className="flex flex-wrap gap-2 mb-4">
                             {announcement.reactions.map((reaction) => (
                               <button
                                 key={reaction.emoji}
@@ -931,14 +931,14 @@ export const AnnouncementChannelArea = () => {
                                   }
                                 }}
                                 className={cn(
-                                  "flex items-center gap-1.5 px-2.5 py-1 text-sm rounded-md border transition-colors duration-200",
+                                  "flex items-center gap-2 px-3 py-1.5 rounded-full border transition-colors duration-200",
                                   reaction.hasReacted
                                     ? "bg-primary/20 border-primary text-primary"
-                                    : "bg-secondary border-transparent hover:border-border"
+                                    : "bg-secondary/80 border-transparent hover:border-border hover:bg-secondary"
                                 )}
                               >
                                 {reactionEmojiNode(reaction.emoji)}
-                                <span className="text-xs">{reaction.count}</span>
+                                <span className="text-sm font-medium">{reaction.count}</span>
                               </button>
                             ))}
                           </div>

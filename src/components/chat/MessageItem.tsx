@@ -257,10 +257,10 @@ export const MessageItem = memo(function MessageItem({
       if (match) {
         const url = customEmojiMap.get(match[1]);
         if (url) {
-          return <img src={url} alt={emoji} className="w-5 h-5 object-contain" loading="lazy" />;
+          return <img src={url} alt={emoji} className="w-6 h-6 object-contain" loading="lazy" />;
         }
       }
-      return <span className="text-base leading-none font-emoji">{emoji}</span>;
+      return <span className="text-xl leading-none font-emoji">{emoji}</span>;
     },
     [customEmojiMap],
   );
@@ -970,7 +970,7 @@ export const MessageItem = memo(function MessageItem({
 
                     {/* Reactions - skip for system messages */}
                     {!message.is_system_message && message.reactions && message.reactions.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
+                      <div className="flex flex-wrap gap-2 mt-2">
                         {message.reactions.map((reaction) => (
                           <HoverCard key={reaction.emoji} openDelay={200}>
                             <HoverCardTrigger asChild>
@@ -980,14 +980,14 @@ export const MessageItem = memo(function MessageItem({
                                     canAddReactions && handleReactionClick(reaction.emoji, reaction.hasReacted)
                                   }
                                   disabled={!canAddReactions}
-                                  className={`flex items-center gap-1.5 px-2.5 py-1 text-lg rounded-md border transition-colors duration-200 ${
+                                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-colors duration-200 ${
                                     reaction.hasReacted
                                       ? "bg-primary/20 border-primary text-primary"
-                                      : "bg-secondary border-transparent hover:border-border"
+                                      : "bg-secondary/80 border-transparent hover:border-border hover:bg-secondary"
                                   } ${!canAddReactions ? "opacity-50 cursor-not-allowed" : ""}`}
                                 >
                                   {reactionEmojiNode(reaction.emoji)}
-                                  <span className="text-xs">{reaction.count}</span>
+                                  <span className="text-sm font-medium">{reaction.count}</span>
                                 </button>
                               </span>
                             </HoverCardTrigger>
