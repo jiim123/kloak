@@ -628,14 +628,23 @@ const MediaCard = ({
         )}
 
         {/* Hover overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
         
-        {/* Title overlay */}
-        {item.title && (
-          <div className="absolute bottom-0 left-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity">
-            <p className="text-foreground text-sm font-medium line-clamp-2">{item.title}</p>
+        {/* Bottom info overlay - user and title together to avoid overlap */}
+        <div className="absolute bottom-0 left-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center gap-2 mb-1">
+            <Avatar className="w-5 h-5 border border-border flex-shrink-0">
+              <AvatarImage src={item.user?.avatar_url || undefined} />
+              <AvatarFallback style={{ backgroundColor: item.user?.banner_color || 'hsl(var(--primary))' }} className="text-[8px] text-primary-foreground">
+                {item.user?.username?.[0]?.toUpperCase() || '?'}
+              </AvatarFallback>
+            </Avatar>
+            <span className="text-foreground text-xs truncate">{item.user?.username}</span>
           </div>
-        )}
+          {item.title && (
+            <p className="text-foreground text-sm font-medium line-clamp-2">{item.title}</p>
+          )}
+        </div>
 
         {/* Actions */}
         {canDelete && (
@@ -662,16 +671,6 @@ const MediaCard = ({
           </div>
         )}
       </AspectRatio>
-
-      {/* User info */}
-      <div className="absolute bottom-2 left-2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-        <Avatar className="w-6 h-6 border-2 border-border">
-          <AvatarImage src={item.user?.avatar_url || undefined} />
-          <AvatarFallback style={{ backgroundColor: item.user?.banner_color || 'hsl(var(--primary))' }} className="text-[10px] text-primary-foreground">
-            {item.user?.username?.[0]?.toUpperCase() || '?'}
-          </AvatarFallback>
-        </Avatar>
-      </div>
     </motion.div>
   );
 };

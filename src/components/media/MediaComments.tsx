@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, forwardRef } from "react";
 import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
+import { useUIStore } from "@/stores/uiStore";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { 
   Send, 
@@ -51,6 +52,7 @@ interface MediaCommentsProps {
 export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ mediaId, channelId }, ref) => {
   const { user } = useAuthStore();
   const { currentServer } = useServerStore();
+  const { openModal } = useUIStore();
   const { hasPermission } = useMemberPermissions(channelId);
   const canManageMessages = hasPermission("manage_messages");
 
@@ -590,18 +592,40 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
                 )}
 
                 <div className="flex gap-3">
-                  <Avatar className="w-8 h-8 flex-shrink-0">
-                    <AvatarImage src={comment.user?.avatar_url || undefined} />
-                    <AvatarFallback className="text-xs bg-primary text-primary-foreground">
-                      {comment.user?.username?.[0]?.toUpperCase() || '?'}
-                    </AvatarFallback>
-                  </Avatar>
+                  <button
+                    type="button"
+                    className="flex-shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-full"
+                    onClick={() => {
+                      if (comment.user) {
+                        openModal('userProfile', { userId: comment.user.id });
+                      }
+                    }}
+                    aria-label={`View ${comment.user?.username}'s profile`}
+                  >
+                    <Avatar className="w-8 h-8 cursor-pointer hover:opacity-80 transition-opacity">
+                      <AvatarImage src={comment.user?.avatar_url || undefined} />
+                      <AvatarFallback 
+                        className="text-xs text-primary-foreground"
+                        style={{ backgroundColor: comment.user?.banner_color || 'hsl(var(--primary))' }}
+                      >
+                        {comment.user?.username?.[0]?.toUpperCase() || '?'}
+                      </AvatarFallback>
+                    </Avatar>
+                  </button>
 
                   <div className="flex-1 min-w-0 relative">
                     <div className="flex items-baseline gap-2 pr-20">
-                      <span className="font-medium text-sm text-foreground">
+                      <button
+                        type="button"
+                        className="font-medium text-sm text-foreground hover:underline focus:outline-none"
+                        onClick={() => {
+                          if (comment.user) {
+                            openModal('userProfile', { userId: comment.user.id });
+                          }
+                        }}
+                      >
                         {comment.user?.display_name || comment.user?.username || 'Unknown'}
-                      </span>
+                      </button>
                       <span className="text-xs text-muted-foreground flex-shrink-0">
                         {formatMessageTimestamp(comment.created_at)}
                         {comment.edited_at && (
