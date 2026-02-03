@@ -38,23 +38,25 @@ export const HeroImage = () => {
           </motion.p>
 
           {/* Main title */}
-          <div className="space-y-2 md:space-y-4 mb-12">
-            <motion.h1
+          <div className="mb-12">
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tight text-white"
             >
-              Communication without
-            </motion.h1>
-            <motion.h1
+              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tight text-white leading-[1.1]">
+                Communication without
+              </h1>
+            </motion.div>
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
-              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tight text-white"
             >
-              compromise.
-            </motion.h1>
+              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tight text-white leading-[1.1]">
+                compromise.
+              </h1>
+            </motion.div>
           </div>
 
           {/* Subtitle */}
