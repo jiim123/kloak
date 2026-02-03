@@ -33,7 +33,7 @@ import { isImageOnlyMessage, convertMentionsToReadable, convertMentionsToRaw } f
 import { ReplyPreview } from "./MessageContent";
 import { formatMessageTimestamp } from "@/lib/format";
 import { DeleteMessageModal } from "@/components/modals/DeleteMessageModal";
-import { EmojiGifPicker } from "@/components/modals/EmojiGifPicker";
+import { EmojiPicker } from "@/components/modals/EmojiPicker";
 import type { CustomServerRole, Message, ServerRole } from "@/types";
 import { format } from "date-fns";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
@@ -1015,13 +1015,10 @@ export const MessageItem = memo(function MessageItem({
                 <div className="absolute right-2 -top-4 hidden md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 md:flex items-center gap-1 bg-background/95 backdrop-blur-sm border border-border rounded-xl shadow-xl p-1 transition-opacity duration-200">
                   {/* Reactions - Desktop */}
                   {canAddReactions && (
-                    <EmojiGifPicker
+                    <EmojiPicker
                       open={showDesktopEmojiPicker}
                       onOpenChange={setShowDesktopEmojiPicker}
                       onEmojiSelect={handleDesktopAddReaction}
-                      disableGif
-                      serverId={currentServer?.id}
-                      serverName={currentServer?.name}
                     >
                       <button
                         className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
@@ -1030,7 +1027,7 @@ export const MessageItem = memo(function MessageItem({
                       >
                         <Smile className="w-4 h-4" />
                       </button>
-                    </EmojiGifPicker>
+                    </EmojiPicker>
                   )}
 
                   {/* Reply - Hide for announcement channels */}
@@ -1195,13 +1192,10 @@ export const MessageItem = memo(function MessageItem({
                   {/* Divider */}
                   <div className="w-px h-8 bg-border/50 mx-1 flex-shrink-0" />
                   {/* Full emoji picker - Mobile (separate state) */}
-                  <EmojiGifPicker
+                  <EmojiPicker
                     open={showMobileEmojiPicker}
                     onOpenChange={setShowMobileEmojiPicker}
                     onEmojiSelect={handleMobileAddReaction}
-                    disableGif
-                    serverId={currentServer?.id}
-                    serverName={currentServer?.name}
                   >
                     <button
                       className="p-2.5 rounded-xl bg-secondary/80 hover:bg-accent transition-colors flex-shrink-0"
@@ -1209,7 +1203,7 @@ export const MessageItem = memo(function MessageItem({
                     >
                       <MoreHorizontal className="w-5 h-5 text-muted-foreground" />
                     </button>
-                  </EmojiGifPicker>
+                  </EmojiPicker>
                 </div>
               </div>
             )}

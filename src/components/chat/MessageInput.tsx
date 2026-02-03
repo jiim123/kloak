@@ -29,7 +29,7 @@ import { extractMentions, isImageOnlyMessage } from "@/lib/message";
 import { ReplyPreview } from "./MessageContent";
 import { MentionAutocomplete } from "./MentionAutocomplete";
 import { ChannelAutocomplete } from "./ChannelAutocomplete";
-import { EmojiGifPicker } from "@/components/modals/EmojiGifPicker";
+import { EmojiPicker } from "@/components/modals/EmojiPicker";
 import { ImageUploadDialog } from "@/components/modals/ImageUploadDialog";
 import { CreatePollModal } from "@/components/modals/CreatePollModal";
 import { FormatToolbar, FORMAT_SYNTAX, getColorSyntax, getCodeBlockSyntax } from "./FormatToolbar";
@@ -145,13 +145,10 @@ const ActionButtons = memo(
             </DropdownMenu>
 
             {/* Emoji button - always visible */}
-            <EmojiGifPicker
+            <EmojiPicker
               open={showEmojiPicker}
               onOpenChange={setShowEmojiPicker}
               onEmojiSelect={onEmojiSelect}
-              disableGif
-              serverId={currentServer?.id}
-              serverName={currentServer?.name}
             >
               <button
                 type="button"
@@ -160,7 +157,7 @@ const ActionButtons = memo(
               >
                 <Smile className="w-5 h-5" />
               </button>
-            </EmojiGifPicker>
+            </EmojiPicker>
           </>
         ) : (
           <>
@@ -196,13 +193,10 @@ const ActionButtons = memo(
             </button>
 
             {/* Emoji button */}
-            <EmojiGifPicker
+            <EmojiPicker
               open={showEmojiPicker}
               onOpenChange={setShowEmojiPicker}
               onEmojiSelect={onEmojiSelect}
-              disableGif
-              serverId={currentServer?.id}
-              serverName={currentServer?.name}
             >
               <button
                 type="button"
@@ -211,7 +205,7 @@ const ActionButtons = memo(
               >
                 <Smile className="w-5 h-5" />
               </button>
-            </EmojiGifPicker>
+            </EmojiPicker>
           </>
         )}
 
