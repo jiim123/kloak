@@ -63,6 +63,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RolePermissionsEditor } from '../modals/RolePermissionsEditor';
 import { RoleColorPicker } from '../modals/RoleColorPicker';
+import { RoleIconPreview } from '@/components/ui/role-icon-preview';
 import { Separator } from '@/components/ui/separator';
 import { Save } from 'lucide-react';
 import { EmojiGifPicker } from '../modals/EmojiGifPicker';
@@ -2087,9 +2088,9 @@ export const ServerSettingsPage = () => {
                                   </Button>
                                 </EmojiGifPicker>
                                 <div className="flex-1 min-w-0">
-                                  {roleIcon ? (
+                                {roleIcon ? (
                                     <div className="flex items-center gap-2">
-                                      <span className="text-sm font-emoji leading-none">{roleIcon}</span>
+                                      <RoleIconPreview icon={roleIcon} serverId={server.id} />
                                       <Button
                                         type="button"
                                         variant="ghost"
@@ -2236,7 +2237,7 @@ export const ServerSettingsPage = () => {
                                 <div className="flex-1 min-w-0">
                                   {roleIcon ? (
                                     <div className="flex items-center gap-2">
-                                      <span className="text-sm font-emoji leading-none">{roleIcon}</span>
+                                      <RoleIconPreview icon={roleIcon} serverId={server.id} />
                                       <Button
                                         type="button"
                                         variant="ghost"

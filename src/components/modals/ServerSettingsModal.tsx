@@ -57,6 +57,7 @@ import type { ServerRole, ServerMember, CustomServerRole } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { RolePermissionsEditor } from "./RolePermissionsEditor";
 import { RoleColorPicker } from "./RoleColorPicker";
+import { RoleIconPreview } from "@/components/ui/role-icon-preview";
 import { EmojiGifPicker } from "./EmojiGifPicker";
 import {
   DropdownMenu,
@@ -1736,7 +1737,7 @@ export const ServerSettingsModal = () => {
                           <div className="flex-1 min-w-0">
                             {roleIcon ? (
                               <div className="flex items-center gap-2">
-                                <span className="text-sm font-emoji leading-none">{roleIcon}</span>
+                                <RoleIconPreview icon={roleIcon} serverId={server.id} />
                                 <Button
                                   type="button"
                                   variant="ghost"
@@ -1837,7 +1838,7 @@ export const ServerSettingsModal = () => {
                             <div className="flex-1 min-w-0">
                               {roleIcon ? (
                                 <div className="flex items-center gap-2">
-                                  <span className="text-sm font-emoji leading-none">{roleIcon}</span>
+                                  <RoleIconPreview icon={roleIcon} serverId={server.id} />
                                   <Button
                                     type="button"
                                     variant="ghost"
@@ -2627,7 +2628,7 @@ export const ServerSettingsModal = () => {
                             <div className="flex-1 min-w-0">
                               {roleIcon ? (
                                 <div className="flex items-center gap-2">
-                                  <span className="text-sm font-emoji leading-none">{roleIcon}</span>
+                                  <RoleIconPreview icon={roleIcon} serverId={server.id} />
                                   <Button
                                     type="button"
                                     variant="ghost"
