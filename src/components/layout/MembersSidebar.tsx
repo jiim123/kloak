@@ -303,7 +303,7 @@ export const MembersSidebar = () => {
     const canChangeNickname =
       checkPermission("manage_nicknames") && (canModerate(currentUserRole, member.role) || isSelf);
     const canTransfer = checkPermission("transfer_ownership") && !isSelf && member.role !== "owner";
-    const canManageRoles = checkPermission("manage_roles") && canModerate(currentUserRole, member.role) && !isSelf;
+    const canManageRoles = checkPermission("manage_roles") && (canModerate(currentUserRole, member.role) || (isSelf && isServerOwner));
 
     const hasAdminActions =
       canKick || canBan || canChangeNickname || canTransfer || (canManageRoles && roles.length > 0);
