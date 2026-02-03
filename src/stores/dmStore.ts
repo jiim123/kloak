@@ -169,9 +169,10 @@ export const useDMStore = create<DMState>((set, get) => ({
       
       let reactions: any[] = [];
       if (messageIds.length > 0) {
+        // Only fetch columns we need (optimized query)
         const { data: reactionData } = await supabase
           .from('dm_reactions')
-          .select('*')
+          .select('id, message_id, user_id, emoji')
           .in('message_id', messageIds);
         reactions = reactionData || [];
       }

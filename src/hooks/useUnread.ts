@@ -74,10 +74,10 @@ export const useUnread = (serverChannelIds: string[] = []) => {
     setIsLoading(true);
 
     try {
-      // Get channel reads
+      // Get channel reads - only fetch columns we need (optimized query)
       const { data: channelReads } = await supabase
         .from('channel_reads')
-        .select('*')
+        .select('channel_id, last_read_at, last_read_message_id, mention_count')
         .eq('user_id', user.id)
         .in('channel_id', serverChannelIds);
 
@@ -358,17 +358,25 @@ export const useUnread = (serverChannelIds: string[] = []) => {
   }, [serverChannelIds]);
 
   // Reconcile on app focus / tab restore (realtime can be lossy during sleep/background)
+  // OPTIMIZATION: Only use visibilitychange (not focus) to avoid double-firing
+  // when switching tabs. A single event is sufficient and reduces redundant queries.
   useEffect(() => {
-    const handleFocus = () => fetchUnreadCounts({ force: true });
+    let lastRefetchTime = 0;
+    const REFETCH_COOLDOWN_MS = 5000; // Don't refetch more than once per 5 seconds
+
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible') fetchUnreadCounts({ force: true });
+      if (document.visibilityState !== 'visible') return;
+      
+      const now = Date.now();
+      if (now - lastRefetchTime < REFETCH_COOLDOWN_MS) return;
+      lastRefetchTime = now;
+      
+      fetchUnreadCounts({ force: true });
     };
 
-    window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
-      window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [fetchUnreadCounts]);

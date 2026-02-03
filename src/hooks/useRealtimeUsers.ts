@@ -78,97 +78,26 @@ export const patchUserAcrossStores = (updatedUser: Partial<User> & { id: string 
   });
 };
 
+// Presence polling interval - only poll when tab is visible
+const PRESENCE_POLL_INTERVAL_MS = 30_000; // 30 seconds (increased from 15s)
+
 /**
- * Hook for real-time user presence updates across the app.
- * Subscribes to postgres_changes on users table and patches all stores.
- * Also includes a polling fallback for critical presence updates.
+ * Hook for targeted presence updates.
+ * 
+ * OPTIMIZATION: Removed global unfiltered subscription to users table.
+ * Previously, we subscribed to ALL user updates platform-wide which caused
+ * massive egress (O(n²) scaling - every user's heartbeat broadcast to every client).
+ * 
+ * Now we only poll presence for users the client actually cares about:
+ * - Friends
+ * - DM conversation participants
+ * - Current server members (handled separately by useRealtimeMembers)
  */
 export const useRealtimeUsers = () => {
+  const lastPollRef = useRef<number>(0);
+
   useEffect(() => {
-    const channel = supabase
-      .channel('users-status-global')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'users',
-        },
-        (payload) => {
-          const updatedUser = payload.new as User;
-          // Patch current server members in-place (avoid refetch storms from last_seen heartbeats)
-          useServerStore.setState((state) => {
-            if (!state.currentServer || state.members.length === 0) return {};
-            let changed = false;
-            const members = state.members.map((m) => {
-              if (m.user_id !== updatedUser.id) return m;
-              changed = true;
-              return {
-                ...m,
-                user: m.user ? { ...m.user, ...updatedUser } : updatedUser,
-              };
-            });
-            return changed ? { members } : {};
-          });
-
-          // Patch friend lists (Friends UI uses friendStore data, not serverStore members)
-          useFriendStore.setState((state) => {
-            type HasId = { id: string };
-            const patch = <T extends HasId>(list: T[]): { list: T[]; changed: boolean } => {
-              let changed = false;
-              const next = list.map((item) => {
-                if (item.id !== updatedUser.id) return item;
-                changed = true;
-                return { ...item, ...updatedUser } as T;
-              });
-              return changed ? { list: next, changed } : { list, changed: false };
-            };
-
-            const friends = patch(state.friends);
-            const pendingRequests = patch(state.pendingRequests);
-            const outgoingRequests = patch(state.outgoingRequests);
-            const blockedUsers = patch(state.blockedUsers);
-
-            if (!friends.changed && !pendingRequests.changed && !outgoingRequests.changed && !blockedUsers.changed) {
-              return {};
-            }
-
-            return {
-              friends: friends.list,
-              pendingRequests: pendingRequests.list,
-              outgoingRequests: outgoingRequests.list,
-              blockedUsers: blockedUsers.list,
-            };
-          });
-
-          // Patch DM conversations (header/avatar presence, etc.)
-          useDMStore.setState((state) => {
-            if (!state.currentConversation && state.conversations.length === 0) return {};
-
-            let changed = false;
-            const conversations = state.conversations.map((c) => {
-              if (c.other_user?.id !== updatedUser.id) return c;
-              changed = true;
-              return { ...c, other_user: { ...c.other_user, ...updatedUser } };
-            });
-
-            const currentConversation =
-              state.currentConversation?.other_user?.id === updatedUser.id
-                ? { ...state.currentConversation, other_user: { ...state.currentConversation.other_user, ...updatedUser } }
-                : state.currentConversation;
-
-            return changed || currentConversation !== state.currentConversation
-              ? { conversations, currentConversation }
-              : {};
-          });
-        }
-      )
-      .subscribe((status) => {
-        console.log('[useRealtimeUsers] Subscription status:', status);
-      });
-
-    // Polling fallback: refetch friends and DM presence data periodically
-    // This ensures presence is updated even if realtime events are missed
+    // Targeted polling: only fetch presence for users we care about
     const pollPresence = async () => {
       const userId = useAuthStore.getState().user?.id;
       if (!userId) return;
@@ -188,7 +117,12 @@ export const useRealtimeUsers = () => {
 
       if (userIds.size === 0) return;
 
-      // Fetch latest presence data for these users
+      // Throttle: don't poll more than once per 10 seconds
+      const now = Date.now();
+      if (now - lastPollRef.current < 10_000) return;
+      lastPollRef.current = now;
+
+      // Fetch only the columns we need (optimized query)
       const { data, error } = await supabase
         .from('users')
         .select('id, status, last_seen')
@@ -206,13 +140,28 @@ export const useRealtimeUsers = () => {
       });
     };
 
-    // Poll immediately on mount, then every 15 seconds
-    pollPresence();
-    const pollInterval = setInterval(pollPresence, 15000);
+    // Poll immediately on mount (if tab is visible)
+    if (document.visibilityState === 'visible') {
+      pollPresence();
+    }
+
+    // Poll at reduced frequency (30 seconds instead of 15)
+    const pollInterval = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      pollPresence();
+    }, PRESENCE_POLL_INTERVAL_MS);
+
+    // Also poll when tab becomes visible (but with throttling)
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        pollPresence();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
-      supabase.removeChannel(channel);
       clearInterval(pollInterval);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, []);
 };
