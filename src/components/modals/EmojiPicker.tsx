@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Search, X, Clock } from "lucide-react";
+import { Search, X, Clock, ChevronLeft, ChevronRight } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -1052,8 +1052,32 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange }: Emo
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("recent");
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const categoryScrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
 
   const recentEmojis = useMemo(() => getRecentEmojis(), [open]);
+
+  // Check scroll state for category bar
+  const updateScrollState = () => {
+    const container = categoryScrollRef.current;
+    if (container) {
+      setCanScrollLeft(container.scrollLeft > 0);
+      setCanScrollRight(container.scrollLeft < container.scrollWidth - container.clientWidth - 1);
+    }
+  };
+
+  // Scroll category bar
+  const scrollCategories = (direction: "left" | "right") => {
+    const container = categoryScrollRef.current;
+    if (container) {
+      const scrollAmount = 120;
+      container.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      });
+    }
+  };
 
   // Reset search when closed, default to recent if we have recent emojis
   useEffect(() => {
@@ -1063,13 +1087,14 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange }: Emo
       // When opening, show recent if available, otherwise smileys
       const recent = getRecentEmojis();
       setActiveCategory(recent.length > 0 ? "recent" : "smileys");
+      // Check scroll state after render
+      setTimeout(updateScrollState, 100);
     }
   }, [open]);
 
   const filteredEmojis = useMemo(() => {
     if (!search.trim()) return null;
 
-    const query = search.toLowerCase();
     const results: string[] = [];
 
     // Search through all categories
@@ -1079,7 +1104,7 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange }: Emo
       }
     });
 
-    return results.slice(0, 64);
+    return results.slice(0, 50);
   }, [search]);
 
   const handleSelect = (emoji: string) => {
@@ -1101,7 +1126,7 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange }: Emo
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>{children}</PopoverTrigger>
       <PopoverContent
-        className="w-[400px] sm:w-[460px] p-0 bg-card border-border/50 rounded-2xl shadow-2xl overflow-hidden"
+        className="w-[380px] sm:w-[420px] p-0 bg-card border-border/50 rounded-2xl shadow-2xl overflow-hidden"
         side="top"
         align="end"
         sideOffset={12}
@@ -1112,7 +1137,7 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange }: Emo
         {/* Search Header */}
         <div className="p-4 pb-3 border-b border-border/30">
           <div className="relative">
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2.5 pointer-events-none">
               <Search className="w-[18px] h-[18px] text-muted-foreground/40" />
               {!search && <span className="text-[15px] text-muted-foreground/40">Search emoji...</span>}
             </div>
@@ -1137,38 +1162,65 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange }: Emo
           </div>
         </div>
 
-        {/* Category Tabs */}
+        {/* Category Tabs - Scrollable */}
         {!search && (
-          <div className="flex border-b border-border/30 px-3 py-3 gap-1 overflow-x-auto scrollbar-hide">
-            {categories.map((cat) => (
+          <div className="relative border-b border-border/30">
+            {/* Left scroll indicator */}
+            {canScrollLeft && (
               <button
-                key={cat.key}
-                className={cn(
-                  "flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200",
-                  activeCategory === cat.key
-                    ? "bg-primary/10 ring-1 ring-primary/20"
-                    : "hover:bg-muted/50 text-muted-foreground hover:text-foreground",
-                )}
-                onClick={() => setActiveCategory(cat.key)}
-                title={cat.name}
+                onClick={() => scrollCategories("left")}
+                className="absolute left-0 top-0 bottom-0 w-10 bg-gradient-to-r from-card via-card/90 to-transparent z-10 flex items-center justify-start pl-1"
               >
-                {cat.key === "recent" ? (
-                  <Clock
-                    className={cn(
-                      "w-5 h-5 transition-colors",
-                      activeCategory === cat.key ? "text-primary bg-primary/20" : "text-muted-foreground",
-                    )}
-                  />
-                ) : (
-                  <span className="text-[26px]">{cat.icon}</span>
-                )}
+                <ChevronLeft className="w-5 h-5 text-muted-foreground" />
               </button>
-            ))}
+            )}
+
+            {/* Scrollable container */}
+            <div
+              ref={categoryScrollRef}
+              className="flex px-3 py-3 gap-1.5 overflow-x-auto scrollbar-hide scroll-smooth"
+              onScroll={updateScrollState}
+            >
+              {categories.map((cat) => (
+                <button
+                  key={cat.key}
+                  className={cn(
+                    "flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200",
+                    activeCategory === cat.key
+                      ? "bg-primary/10 ring-1 ring-primary/20"
+                      : "hover:bg-muted/50 text-muted-foreground hover:text-foreground",
+                  )}
+                  onClick={() => setActiveCategory(cat.key)}
+                  title={cat.name}
+                >
+                  {cat.key === "recent" ? (
+                    <Clock
+                      className={cn(
+                        "w-6 h-6 transition-colors",
+                        activeCategory === cat.key ? "text-primary" : "text-muted-foreground",
+                      )}
+                    />
+                  ) : (
+                    <span className="text-[28px] leading-none">{cat.icon}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* Right scroll indicator */}
+            {canScrollRight && (
+              <button
+                onClick={() => scrollCategories("right")}
+                className="absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-card via-card/90 to-transparent z-10 flex items-center justify-end pr-1"
+              >
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              </button>
+            )}
           </div>
         )}
 
         {/* Emoji Grid */}
-        <ScrollArea className="h-[380px] sm:h-[420px]">
+        <ScrollArea className="h-[360px] sm:h-[400px]">
           <div className="p-4">
             {search ? (
               // Search results
@@ -1182,12 +1234,12 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange }: Emo
                       Search Results
                     </h3>
                   </div>
-                  <div className="grid grid-cols-6 gap-1.5">
+                  <div className="grid grid-cols-5 gap-2">
                     {filteredEmojis.map((emoji, i) => (
                       <button
                         key={`search-${emoji}-${i}`}
                         type="button"
-                        className="aspect-square p-0 text-[36px] sm:text-[38px] hover:bg-muted/50 active:scale-90 rounded-xl flex items-center justify-center transition-all duration-150"
+                        className="w-[64px] h-[64px] text-[32px] hover:bg-muted/50 active:scale-90 rounded-xl flex items-center justify-center transition-all duration-150"
                         onClick={() => handleSelect(emoji)}
                         onMouseDown={(e) => e.preventDefault()}
                       >
@@ -1226,12 +1278,12 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange }: Emo
                       </div>
 
                       {cat.emojis.length > 0 ? (
-                        <div className="grid grid-cols-6 gap-1.5">
+                        <div className="grid grid-cols-5 gap-2">
                           {cat.emojis.map((emoji, i) => (
                             <button
                               key={`${cat.key}-${emoji}-${i}`}
                               type="button"
-                              className="aspect-square p-0 text-[36px] sm:text-[38px] hover:bg-muted/50 active:scale-90 rounded-xl flex items-center justify-center transition-all duration-150"
+                              className="w-[64px] h-[64px] text-[32px] hover:bg-muted/50 active:scale-90 rounded-xl flex items-center justify-center transition-all duration-150"
                               onClick={() => handleSelect(emoji)}
                               onMouseDown={(e) => e.preventDefault()}
                             >
