@@ -393,7 +393,37 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
         async (payload) => {
           try {
             const deletedReaction = payload.old as any;
-            const commentId = deletedReaction.comment_id;
+            const commentId = deletedReaction?.comment_id;
+            
+            // comment_id might not be available if REPLICA IDENTITY isn't FULL
+            // In that case, refetch all reactions for all comments in this media
+            if (!commentId) {
+              console.log("[MediaComments] No comment_id in DELETE payload, refetching all reactions");
+              
+              // Refetch reactions for all comments in this media
+              const commentIds = commentsRef.current.map(c => c.id);
+              if (commentIds.length === 0) return;
+              
+              const { data: reactionsDataRaw } = await supabase
+                .from("media_comment_reactions" as any)
+                .select("*")
+                .in("comment_id", commentIds);
+              
+              const reactionsData = reactionsDataRaw as any[] || [];
+              const reactionsMap: Record<string, any[]> = {};
+              reactionsData.forEach((r: any) => {
+                if (!reactionsMap[r.comment_id]) reactionsMap[r.comment_id] = [];
+                reactionsMap[r.comment_id].push(r);
+              });
+              
+              setComments((prev) =>
+                prev.map((c) => ({
+                  ...c,
+                  reactions: groupReactions(reactionsMap[c.id] || [], user?.id),
+                }))
+              );
+              return;
+            }
             
             // Check if this reaction is for a comment in this media
             if (!commentsRef.current.some(c => c.id === commentId)) return;
