@@ -42,6 +42,7 @@ import { PersistentEmbedContainer } from '@/components/chat/PersistentEmbedConta
 import { DesktopTitleBar } from '@/components/layout/DesktopTitleBar';
 import { VoicePersistentHost } from '@/components/voice/VoicePersistentHost';
 import { cn } from '@/lib/utils';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { useDMStore } from '@/stores/dmStore';
 import { useFriendStore } from '@/stores/friendStore';
 import { supabase } from '@/integrations/supabase/client';
@@ -393,63 +394,72 @@ const AppLayout = () => {
                 <UserSettingsPage />
               </div>
             ) : (
-              <>
-                {/* Secondary sidebar - 240px fixed */}
-                <div className="w-60 flex-shrink-0 bg-layout-sidebar-secondary">
-                  {isDMView ? (
-                    <DMSidebar
-                      showFriends={showFriends}
-                      onShowFriendsChange={(show: boolean) => navigate(show ? '/app/friends' : '/app')}
-                      showExplore={showExplore}
-                      onShowExploreChange={(show: boolean) => navigate(show ? '/app/explore' : '/app')}
-                    />
-                  ) : (
-                    <ChannelSidebar />
-                  )}
-                </div>
+              <ResizablePanelGroup direction="horizontal" className="flex-1">
+                {/* Secondary sidebar - resizable, default 240px (~15% of typical viewport) */}
+                <ResizablePanel 
+                  defaultSize={15} 
+                  minSize={10} 
+                  maxSize={30}
+                  className="bg-layout-sidebar-secondary"
+                >
+                  <div className="h-full">
+                    {isDMView ? (
+                      <DMSidebar
+                        showFriends={showFriends}
+                        onShowFriendsChange={(show: boolean) => navigate(show ? '/app/friends' : '/app')}
+                        showExplore={showExplore}
+                        onShowExploreChange={(show: boolean) => navigate(show ? '/app/explore' : '/app')}
+                      />
+                    ) : (
+                      <ChannelSidebar />
+                    )}
+                  </div>
+                </ResizablePanel>
+
+                <ResizableHandle className="w-1 bg-transparent hover:bg-primary/20 transition-colors" />
 
                 {/* Main area - flexible */}
-                <div className="flex-1 min-w-0 bg-layout-chat relative overflow-hidden">
-                  <VoicePersistentHost />
-                  {isDMView ? (
-                    currentConversation ? (
-                      <DMChatArea />
+                <ResizablePanel defaultSize={isMemberSidebarOpen && !isDMView && !isServerSpecialView ? 70 : 85}>
+                  <div className="h-full bg-layout-chat relative overflow-hidden">
+                    <VoicePersistentHost />
+                    {isDMView ? (
+                      currentConversation ? (
+                        <DMChatArea />
+                      ) : (
+                        <>
+                          <div className={showFriends ? 'block h-full' : 'hidden'}>
+                            <FriendsList onOpenDM={() => navigate('/app')} />
+                          </div>
+                          <div className={showExplore ? 'block h-full' : 'hidden'}>
+                            <ExploreServers />
+                          </div>
+                          <div className={!showFriends && !showExplore ? 'block h-full' : 'hidden'}>
+                            <HomeLanding />
+                          </div>
+                        </>
+                      )
                     ) : (
-                      <>
-                        <div className={showFriends ? 'block h-full' : 'hidden'}>
-                          <FriendsList onOpenDM={() => navigate('/app')} />
-                        </div>
-                        <div className={showExplore ? 'block h-full' : 'hidden'}>
-                          <ExploreServers />
-                        </div>
-                        <div className={!showFriends && !showExplore ? 'block h-full' : 'hidden'}>
-                          <HomeLanding />
-                        </div>
-                      </>
-                    )
-                  ) : (
-                    isServerOverviewView ? (
-                      <ServerOverviewView />
-                    ) : isServerMembersViewAllowed ? (
-                      <ServerMembersView />
-                    ) : (
-                      <ChatArea />
-                    )
-                  )}
-                </div>
-
-                {/* Members sidebar - 240px, collapsible, only in server view */}
-                {!isDMView && !isServerSpecialView && (
-                  <div
-                    className={cn(
-                      "flex-shrink-0 bg-layout-members transition-all duration-200",
-                      isMemberSidebarOpen ? "w-60" : "w-0 overflow-hidden"
+                      isServerOverviewView ? (
+                        <ServerOverviewView />
+                      ) : isServerMembersViewAllowed ? (
+                        <ServerMembersView />
+                      ) : (
+                        <ChatArea />
+                      )
                     )}
-                  >
-                    <MembersSidebar />
                   </div>
+                </ResizablePanel>
+
+                {/* Members sidebar - collapsible, only in server view */}
+                {!isDMView && !isServerSpecialView && isMemberSidebarOpen && (
+                  <>
+                    <ResizableHandle className="w-1 bg-transparent hover:bg-primary/20 transition-colors" />
+                    <ResizablePanel defaultSize={15} minSize={10} maxSize={25} className="bg-layout-members">
+                      <MembersSidebar />
+                    </ResizablePanel>
+                  </>
                 )}
-              </>
+              </ResizablePanelGroup>
             )}
           </div>
 
