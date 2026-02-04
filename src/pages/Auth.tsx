@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   XCircle,
   CircleUserRound,
+  Sparkles,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,13 @@ import { Footer } from "@/components/ui/footer-section";
 import { isTauriWindow, resizeWindowForApp } from "@/lib/tauriRuntime";
 import { SEO } from "@/components/seo";
 import { SEO_CONFIG } from "@/lib/seo";
+import {
+  validateUsernameComprehensive,
+  generateUsernameSuggestions,
+  checkRegistrationRateLimit,
+  recordRegistrationAttempt,
+  logBlockedUsernameAttempt,
+} from "@/utils/blockedUsernames";
 
 const tabContentVariants = {
   enter: (direction: number) => ({
@@ -43,8 +51,6 @@ const tabContentVariants = {
     opacity: 0,
   }),
 };
-
-
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -69,10 +75,13 @@ const Auth = () => {
   // Create account state
   const [username, setUsername] = useState("");
   const [usernameError, setUsernameError] = useState<string | null>(null);
+  const [usernameErrorType, setUsernameErrorType] = useState<string | null>(null);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [isUsernameAvailable, setIsUsernameAvailable] = useState<boolean | null>(null);
   const [generatedKey, setGeneratedKey] = useState<string | null>(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([]);
+  const [rateLimitCooldown, setRateLimitCooldown] = useState<number | null>(null);
 
   // Login state
   const [secretKey, setSecretKey] = useState("");
@@ -93,34 +102,68 @@ const Auth = () => {
   useEffect(() => {
     setError(null);
     setUsernameError(null);
+    setUsernameErrorType(null);
     setUsername("");
     setSecretKey("");
     setGeneratedKey(null);
     setIsUsernameAvailable(null);
+    setUsernameSuggestions([]);
   }, [activeTab, setError]);
 
-  // Validate username format
-  const validateUsername = useCallback((value: string): string | null => {
-    if (!value) return null;
-    if (value.length < 3) return "Username must be at least 3 characters";
-    if (value.length > 20) return "Username must be 20 characters or less";
-    if (!/^[a-zA-Z0-9_]+$/.test(value)) return "Only letters, numbers, and underscores allowed";
-    return null;
-  }, []);
-
-  // Check username availability with debounce
+  // Rate limit cooldown countdown
   useEffect(() => {
-    const validation = validateUsername(username);
-    setUsernameError(validation);
+    if (rateLimitCooldown === null || rateLimitCooldown <= 0) return;
 
-    if (validation || !username) {
+    const interval = setInterval(() => {
+      setRateLimitCooldown((prev) => {
+        if (prev === null || prev <= 1) {
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [rateLimitCooldown]);
+
+  // Validate username with comprehensive checks + debounced availability check
+  useEffect(() => {
+    // Run comprehensive validation immediately
+    if (!username) {
+      setUsernameError(null);
+      setUsernameErrorType(null);
       setIsUsernameAvailable(null);
+      setUsernameSuggestions([]);
       return;
     }
 
+    const validation = validateUsernameComprehensive(username);
+    
+    if (!validation.isValid) {
+      setUsernameError(validation.error || 'Invalid username');
+      setUsernameErrorType(validation.errorType || null);
+      setIsUsernameAvailable(null);
+      
+      // Log blocked username attempts for security monitoring
+      if (validation.errorType === 'reserved' || validation.errorType === 'contains_restricted') {
+        logBlockedUsernameAttempt(username, validation.errorType);
+        // Generate suggestions for blocked usernames
+        const suggestions = generateUsernameSuggestions(username, 4);
+        setUsernameSuggestions(suggestions);
+      } else {
+        setUsernameSuggestions([]);
+      }
+      return;
+    }
+
+    // Clear error and suggestions if validation passed
+    setUsernameError(null);
+    setUsernameErrorType(null);
+    setUsernameSuggestions([]);
     setIsCheckingUsername(true);
     setIsUsernameAvailable(null);
 
+    // Debounced availability check
     const timeoutId = setTimeout(async () => {
       try {
         // Use the secure RPC function to check availability (bypasses RLS)
@@ -128,33 +171,55 @@ const Auth = () => {
 
         if (error) throw error;
         setIsUsernameAvailable(data === true);
+        
+        // Generate suggestions if username is taken
+        if (data !== true) {
+          const suggestions = generateUsernameSuggestions(username, 4);
+          setUsernameSuggestions(suggestions);
+        }
       } catch (err) {
         console.error("Username check failed:", err);
         setIsUsernameAvailable(null);
       } finally {
         setIsCheckingUsername(false);
       }
-    }, 500);
+    }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [username, validateUsername]);
+  }, [username]);
 
   // Handle create account
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const validation = validateUsername(username);
-    if (validation) {
-      setUsernameError(validation);
+    // Check rate limit
+    const rateLimit = checkRegistrationRateLimit();
+    if (!rateLimit.allowed) {
+      setRateLimitCooldown(rateLimit.remainingSeconds || 30);
+      toast({
+        variant: "destructive",
+        title: "Too many attempts",
+        description: `Please wait ${rateLimit.remainingSeconds} seconds before trying again.`,
+      });
+      return;
+    }
+
+    const validation = validateUsernameComprehensive(username);
+    if (!validation.isValid) {
+      setUsernameError(validation.error || 'Invalid username');
+      setUsernameErrorType(validation.errorType || null);
+      recordRegistrationAttempt();
       return;
     }
 
     if (isUsernameAvailable === false) {
       setUsernameError("Username is already taken");
+      recordRegistrationAttempt();
       return;
     }
 
     try {
+      recordRegistrationAttempt();
       const result = await createAccount(username.trim().toLowerCase());
       if (result) {
         setGeneratedKey(result.secretKey);
@@ -220,6 +285,12 @@ const Auth = () => {
     navigate(redirectTo || "/app", { replace: true });
   };
 
+  // Handle suggestion click
+  const handleSuggestionClick = (suggestion: string) => {
+    setUsername(suggestion);
+    setUsernameSuggestions([]);
+  };
+
   // Render username input status icon
   const renderUsernameStatus = () => {
     if (!username) return null;
@@ -227,6 +298,67 @@ const Auth = () => {
     if (isCheckingUsername) return <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />;
     if (isUsernameAvailable === true) return <CheckCircle2 className="w-4 h-4 text-[hsl(var(--kloak-success))]" />;
     if (isUsernameAvailable === false) return <XCircle className="w-4 h-4 text-destructive" />;
+    return null;
+  };
+
+  // Get input className based on state
+  const getInputClassName = () => {
+    if (usernameError) {
+      return "pr-10 border-destructive focus-visible:ring-destructive bg-destructive/5";
+    }
+    if (isUsernameAvailable === true) {
+      return "pr-10 border-[hsl(var(--kloak-success))] focus-visible:ring-[hsl(var(--kloak-success))] bg-[hsl(var(--kloak-success))]/5";
+    }
+    if (isUsernameAvailable === false) {
+      return "pr-10 border-destructive focus-visible:ring-destructive bg-destructive/5";
+    }
+    return "pr-10";
+  };
+
+  // Render username suggestions
+  const renderUsernameSuggestions = () => {
+    if (usernameSuggestions.length === 0) return null;
+
+    return (
+      <div className="mt-2 p-3 rounded-lg bg-muted/50 border border-border">
+        <div className="flex items-center gap-1.5 mb-2 text-xs text-muted-foreground">
+          <Sparkles className="w-3 h-3" />
+          <span>Try these instead:</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {usernameSuggestions.map((suggestion) => (
+            <button
+              key={suggestion}
+              type="button"
+              onClick={() => handleSuggestionClick(suggestion)}
+              className="px-2.5 py-1 text-xs font-medium rounded-md bg-background border border-border hover:bg-accent hover:border-primary/30 transition-colors"
+            >
+              {suggestion}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Render username field helper text
+  const renderUsernameHelperText = () => {
+    if (usernameError) {
+      return <p className="text-xs text-destructive">{usernameError}</p>;
+    }
+    if (!usernameError && isUsernameAvailable === false) {
+      return <p className="text-xs text-destructive">Username is already taken</p>;
+    }
+    if (!usernameError && isUsernameAvailable === true) {
+      return <p className="text-xs text-[hsl(var(--kloak-success))]">Username is available!</p>;
+    }
+    if (!usernameError && isUsernameAvailable === null && username && !isCheckingUsername) {
+      return (
+        <p className="text-xs text-muted-foreground">
+          3-32 characters. Letters, numbers, underscores, and hyphens only.
+        </p>
+      );
+    }
     return null;
   };
 
@@ -256,6 +388,14 @@ const Auth = () => {
                   Login with Key
                 </TabsTrigger>
               </TabsList>
+
+              {/* Rate limit warning */}
+              {rateLimitCooldown !== null && rateLimitCooldown > 0 && (
+                <div className="mb-4 p-3 rounded-lg bg-[hsl(var(--kloak-warning))]/10 border border-[hsl(var(--kloak-warning))]/20 flex items-center gap-2 text-[hsl(var(--kloak-warning))]">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <p className="text-sm">Too many attempts. Try again in {rateLimitCooldown}s</p>
+                </div>
+              )}
 
               {/* Error display */}
               {error && (
@@ -287,35 +427,20 @@ const Auth = () => {
                               placeholder="your_username"
                               value={username}
                               onChange={(e) => setUsername(e.target.value)}
-                              maxLength={20}
-                              disabled={isLoading}
-                              className={cn(
-                                "pr-10",
-                                usernameError && "border-destructive focus-visible:ring-destructive",
-                                isUsernameAvailable === true &&
-                                  "border-[hsl(var(--kloak-success))] focus-visible:ring-[hsl(var(--kloak-success))]",
-                              )}
+                              maxLength={32}
+                              disabled={isLoading || (rateLimitCooldown !== null && rateLimitCooldown > 0)}
+                              className={cn(getInputClassName())}
                             />
                             <div className="absolute right-3 top-1/2 -translate-y-1/2">{renderUsernameStatus()}</div>
                           </div>
-                          {usernameError && <p className="text-xs text-destructive">{usernameError}</p>}
-                          {!usernameError && isUsernameAvailable === false && (
-                            <p className="text-xs text-destructive">Username is already taken</p>
-                          )}
-                          {!usernameError && isUsernameAvailable === true && (
-                            <p className="text-xs text-[hsl(var(--kloak-success))]">Username is available!</p>
-                          )}
-                          {!usernameError && isUsernameAvailable === null && username && !isCheckingUsername && (
-                            <p className="text-xs text-muted-foreground">
-                              3-20 characters. Letters, numbers, and underscores only.
-                            </p>
-                          )}
+                          {renderUsernameHelperText()}
+                          {renderUsernameSuggestions()}
                         </div>
 
                         <Button
                           type="submit"
                           className="w-full"
-                          disabled={isLoading || !!usernameError || isUsernameAvailable !== true}
+                          disabled={isLoading || !!usernameError || isUsernameAvailable !== true || (rateLimitCooldown !== null && rateLimitCooldown > 0)}
                         >
                           {isLoading ? (
                             <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -425,6 +550,14 @@ const Auth = () => {
                 </TabsTrigger>
               </TabsList>
 
+              {/* Rate limit warning */}
+              {rateLimitCooldown !== null && rateLimitCooldown > 0 && (
+                <div className="mb-4 p-3 rounded-lg bg-[hsl(var(--kloak-warning))]/10 border border-[hsl(var(--kloak-warning))]/20 flex items-center gap-2 text-[hsl(var(--kloak-warning))]">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <p className="text-sm">Too many attempts. Try again in {rateLimitCooldown}s</p>
+                </div>
+              )}
+
               {/* Error display */}
               {error && (
                 <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 flex items-center gap-2 text-destructive">
@@ -455,35 +588,20 @@ const Auth = () => {
                               placeholder="your_username"
                               value={username}
                               onChange={(e) => setUsername(e.target.value)}
-                              maxLength={20}
-                              disabled={isLoading}
-                              className={cn(
-                                "pr-10",
-                                usernameError && "border-destructive focus-visible:ring-destructive",
-                                isUsernameAvailable === true &&
-                                  "border-[hsl(var(--kloak-success))] focus-visible:ring-[hsl(var(--kloak-success))]",
-                              )}
+                              maxLength={32}
+                              disabled={isLoading || (rateLimitCooldown !== null && rateLimitCooldown > 0)}
+                              className={cn(getInputClassName())}
                             />
                             <div className="absolute right-3 top-1/2 -translate-y-1/2">{renderUsernameStatus()}</div>
                           </div>
-                          {usernameError && <p className="text-xs text-destructive">{usernameError}</p>}
-                          {!usernameError && isUsernameAvailable === false && (
-                            <p className="text-xs text-destructive">Username is already taken</p>
-                          )}
-                          {!usernameError && isUsernameAvailable === true && (
-                            <p className="text-xs text-[hsl(var(--kloak-success))]">Username is available!</p>
-                          )}
-                          {!usernameError && isUsernameAvailable === null && username && !isCheckingUsername && (
-                            <p className="text-xs text-muted-foreground">
-                              3-20 characters. Letters, numbers, and underscores only.
-                            </p>
-                          )}
+                          {renderUsernameHelperText()}
+                          {renderUsernameSuggestions()}
                         </div>
 
                         <Button
                           type="submit"
                           className="w-full"
-                          disabled={isLoading || !!usernameError || isUsernameAvailable !== true}
+                          disabled={isLoading || !!usernameError || isUsernameAvailable !== true || (rateLimitCooldown !== null && rateLimitCooldown > 0)}
                         >
                           {isLoading ? (
                             <Loader2 className="w-4 h-4 animate-spin mr-2" />
