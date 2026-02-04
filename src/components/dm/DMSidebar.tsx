@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, X, MessageSquare, Compass, UsersRound, Users } from "lucide-react";
+import { Search, X, MessageSquare, Compass, UserRoundPlus, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -42,13 +42,13 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
   // Refetch conversations when the tab becomes visible (user switches back to app)
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && user?.id) {
+      if (document.visibilityState === "visible" && user?.id) {
         fetchConversations(user.id);
       }
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [user?.id, fetchConversations]);
 
   const filteredConversations = conversations.filter((conv) => {
@@ -56,11 +56,9 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
     // For groups, search by group name or participant names
     if (conv.is_group) {
       const groupName = conv.name?.toLowerCase() || "";
-      const participantNames = conv.participants?.map(p => 
-        (p.user?.display_name || p.user?.username || "").toLowerCase()
-      ).join(" ") || "";
-      return groupName.includes(searchQuery.toLowerCase()) || 
-             participantNames.includes(searchQuery.toLowerCase());
+      const participantNames =
+        conv.participants?.map((p) => (p.user?.display_name || p.user?.username || "").toLowerCase()).join(" ") || "";
+      return groupName.includes(searchQuery.toLowerCase()) || participantNames.includes(searchQuery.toLowerCase());
     }
     // For 1:1 conversations
     const username = conv.other_user?.username?.toLowerCase() || "";
@@ -159,7 +157,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
           onClick={() => setShowCreateGroup(true)}
           title="Create Group"
         >
-          <UsersRound className="w-4 h-4" />
+          <UserRoundPlus className="w-4 h-4" />
         </Button>
       </div>
 
@@ -187,7 +185,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
           </div>
         )}
 
-      {/* Conversations */}
+        {/* Conversations */}
         {filteredConversations.map((conversation) => {
           const unreadCount = getUnreadCount(conversation.id);
           const hasUnread = unreadCount > 0;
@@ -197,17 +195,15 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
           const getGroupDisplayName = () => {
             if (conversation.name) return conversation.name;
             // Fallback to participant names (exclude current user)
-            const otherParticipants = conversation.participants?.filter(
-              (p) => p.user_id !== user?.id
-            ) || [];
+            const otherParticipants = conversation.participants?.filter((p) => p.user_id !== user?.id) || [];
             const names = otherParticipants
-              .map((p) => p.user?.display_name || p.user?.username || 'Unknown')
+              .map((p) => p.user?.display_name || p.user?.username || "Unknown")
               .slice(0, 3);
-            if (names.length === 0) return 'Group';
+            if (names.length === 0) return "Group";
             if (otherParticipants.length > 3) {
-              return `${names.join(', ')} +${otherParticipants.length - 3}`;
+              return `${names.join(", ")} +${otherParticipants.length - 3}`;
             }
-            return names.join(', ');
+            return names.join(", ");
           };
 
           return (
@@ -222,7 +218,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
               {/* Avatar with status (or stacked avatars for group) */}
               <div className="relative flex-shrink-0">
                 {isGroup ? (
-                  <StackedAvatars 
+                  <StackedAvatars
                     users={
                       (conversation.participants
                         ?.filter((p) => p.user_id !== user?.id)
@@ -236,8 +232,8 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
                     <AvatarWithDecoration user={conversation.other_user} className="w-8 h-8" />
                     {(() => {
                       const presence = getEffectivePresence(
-                        (conversation.other_user?.status as UserStatus) || 'offline',
-                        conversation.other_user?.last_seen
+                        (conversation.other_user?.status as UserStatus) || "offline",
+                        conversation.other_user?.last_seen,
                       );
                       return (
                         <div
@@ -261,10 +257,9 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
                       hasUnread ? "font-semibold text-foreground" : "font-medium text-foreground",
                     )}
                   >
-                    {isGroup 
+                    {isGroup
                       ? getGroupDisplayName()
-                      : (conversation.other_user?.display_name || conversation.other_user?.username || "Unknown")
-                    }
+                      : conversation.other_user?.display_name || conversation.other_user?.username || "Unknown"}
                   </span>
                   <div className="flex items-center gap-2">
                     {conversation.last_message && (
