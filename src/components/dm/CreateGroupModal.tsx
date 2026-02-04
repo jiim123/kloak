@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Search, Users, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFriendStore } from "@/stores/friendStore";
+import { useDMStore } from "@/stores/dmStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useToast } from "@/hooks/use-toast";
 import type { User } from "@/types";
@@ -18,8 +20,10 @@ interface CreateGroupModalProps {
 }
 
 export const CreateGroupModal = ({ open, onOpenChange }: CreateGroupModalProps) => {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const { friends, fetchFriends } = useFriendStore();
+  const { createGroupConversation } = useDMStore();
   const { toast } = useToast();
   
   const [groupName, setGroupName] = useState("");
@@ -68,17 +72,32 @@ export const CreateGroupModal = ({ open, onOpenChange }: CreateGroupModalProps) 
       return;
     }
 
+    if (!user?.id) return;
+
     setIsCreating(true);
     
-    // TODO: Implement group creation via RPC
-    // For now, show a coming soon message
-    toast({
-      title: "Coming Soon",
-      description: "Group conversations will be available in a future update.",
-    });
+    const conversation = await createGroupConversation(
+      user.id,
+      selectedFriends,
+      groupName.trim() || undefined
+    );
     
     setIsCreating(false);
-    onOpenChange(false);
+
+    if (conversation) {
+      toast({
+        title: "Group created",
+        description: `Your group "${groupName.trim() || 'New Group'}" has been created.`,
+      });
+      onOpenChange(false);
+      navigate("/app");
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Failed to create group",
+        description: "Something went wrong. Please try again.",
+      });
+    }
   };
 
   const selectedFriendData = friends.filter((f) => selectedFriends.includes(f.id));

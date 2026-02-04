@@ -13,6 +13,7 @@ interface DMState {
   // Conversation actions
   fetchConversations: (userId: string) => Promise<void>;
   openConversation: (userId: string, otherUserId: string) => Promise<DMConversation | null>;
+  createGroupConversation: (userId: string, participantIds: string[], name?: string) => Promise<DMConversation | null>;
   setCurrentConversation: (conversation: DMConversation | null) => void;
 
   // Message actions
@@ -83,6 +84,9 @@ export const useDMStore = create<DMState>((set, get) => ({
         return {
           id: conv.id,
           created_at: conv.created_at,
+          is_group: conv.is_group || false,
+          name: conv.name || null,
+          participants: conv.participants,
           other_user: otherParticipant?.user as User,
           last_message: conv.last_message as DirectMessage,
         };
@@ -134,6 +138,50 @@ export const useDMStore = create<DMState>((set, get) => ({
       return conversation;
     } catch (error) {
       console.error('Failed to open conversation:', error);
+      return null;
+    }
+  },
+
+  createGroupConversation: async (userId: string, participantIds: string[], name?: string) => {
+    try {
+      const { data, error } = await supabase.rpc('create_group_dm', {
+        _creator_id: userId,
+        _participant_ids: participantIds,
+        _name: name || null,
+      });
+
+      if (error) throw error;
+
+      const convData = data as unknown as {
+        id: string;
+        created_at: string;
+        is_group: boolean;
+        name: string | null;
+        participants: Array<{ user_id: string; user: User }>;
+      };
+
+      const conversation: DMConversation = {
+        id: convData.id,
+        created_at: convData.created_at,
+        is_group: convData.is_group,
+        name: convData.name,
+        participants: convData.participants?.map((p) => ({
+          id: p.user_id,
+          conversation_id: convData.id,
+          user_id: p.user_id,
+          last_read_at: null,
+          user: p.user,
+        })),
+      };
+
+      set((state) => ({
+        conversations: [conversation, ...state.conversations],
+        currentConversation: conversation,
+      }));
+
+      return conversation;
+    } catch (error) {
+      console.error('Failed to create group conversation:', error);
       return null;
     }
   },

@@ -547,14 +547,20 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          is_group: boolean | null
+          name: string | null
         }
         Insert: {
           created_at?: string | null
           id?: string
+          is_group?: boolean | null
+          name?: string | null
         }
         Update: {
           created_at?: string | null
           id?: string
+          is_group?: boolean | null
+          name?: string | null
         }
         Relationships: []
       }
@@ -2059,6 +2065,14 @@ export type Database = {
           _server_id: string
           _type?: string
           _user_id?: string
+        }
+        Returns: Json
+      }
+      create_group_dm: {
+        Args: {
+          _creator_id: string
+          _name?: string
+          _participant_ids: string[]
         }
         Returns: Json
       }

@@ -52,6 +52,16 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
 
   const filteredConversations = conversations.filter((conv) => {
     if (!searchQuery) return true;
+    // For groups, search by group name or participant names
+    if (conv.is_group) {
+      const groupName = conv.name?.toLowerCase() || "";
+      const participantNames = conv.participants?.map(p => 
+        (p.user?.display_name || p.user?.username || "").toLowerCase()
+      ).join(" ") || "";
+      return groupName.includes(searchQuery.toLowerCase()) || 
+             participantNames.includes(searchQuery.toLowerCase());
+    }
+    // For 1:1 conversations
     const username = conv.other_user?.username?.toLowerCase() || "";
     const displayName = conv.other_user?.display_name?.toLowerCase() || "";
     return username.includes(searchQuery.toLowerCase()) || displayName.includes(searchQuery.toLowerCase());
@@ -176,10 +186,28 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
           </div>
         )}
 
-        {/* Conversations */}
+      {/* Conversations */}
         {filteredConversations.map((conversation) => {
           const unreadCount = getUnreadCount(conversation.id);
           const hasUnread = unreadCount > 0;
+          const isGroup = conversation.is_group || false;
+
+          // Get display name for groups
+          const getGroupDisplayName = () => {
+            if (conversation.name) return conversation.name;
+            // Fallback to participant names (exclude current user)
+            const otherParticipants = conversation.participants?.filter(
+              (p) => p.user_id !== user?.id
+            ) || [];
+            const names = otherParticipants
+              .map((p) => p.user?.display_name || p.user?.username || 'Unknown')
+              .slice(0, 3);
+            if (names.length === 0) return 'Group';
+            if (otherParticipants.length > 3) {
+              return `${names.join(', ')} +${otherParticipants.length - 3}`;
+            }
+            return names.join(', ');
+          };
 
           return (
             <div
@@ -190,23 +218,31 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
               )}
               onClick={() => handleSelectConversation(conversation)}
             >
-              {/* Avatar with status */}
+              {/* Avatar with status (or group icon) */}
               <div className="relative flex-shrink-0">
-                <AvatarWithDecoration user={conversation.other_user} className="w-8 h-8" />
-                {(() => {
-                  const presence = getEffectivePresence(
-                    (conversation.other_user?.status as UserStatus) || 'offline',
-                    conversation.other_user?.last_seen
-                  );
-                  return (
-                    <div
-                      className={cn(
-                        "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-layout-sidebar-secondary",
-                        getStatusClass(presence.status),
-                      )}
-                    />
-                  );
-                })()}
+                {isGroup ? (
+                  <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
+                    <Users className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                ) : (
+                  <>
+                    <AvatarWithDecoration user={conversation.other_user} className="w-8 h-8" />
+                    {(() => {
+                      const presence = getEffectivePresence(
+                        (conversation.other_user?.status as UserStatus) || 'offline',
+                        conversation.other_user?.last_seen
+                      );
+                      return (
+                        <div
+                          className={cn(
+                            "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-layout-sidebar-secondary",
+                            getStatusClass(presence.status),
+                          )}
+                        />
+                      );
+                    })()}
+                  </>
+                )}
               </div>
 
               {/* Name and last message */}
@@ -218,7 +254,10 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
                       hasUnread ? "font-semibold text-foreground" : "font-medium text-foreground",
                     )}
                   >
-                    {conversation.other_user?.display_name || conversation.other_user?.username || "Unknown"}
+                    {isGroup 
+                      ? getGroupDisplayName()
+                      : (conversation.other_user?.display_name || conversation.other_user?.username || "Unknown")
+                    }
                   </span>
                   <div className="flex items-center gap-2">
                     {conversation.last_message && (
