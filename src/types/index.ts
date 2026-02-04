@@ -304,6 +304,8 @@ export interface Mention {
 export interface DMConversation {
   id: string;
   created_at: string;
+  is_group?: boolean;
+  name?: string | null;
   participants?: DMParticipant[];
   last_message?: DirectMessage;
   other_user?: User;
