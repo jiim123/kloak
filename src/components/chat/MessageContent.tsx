@@ -465,10 +465,8 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
     }
   }, [openModal, channels, currentServer, setCurrentChannel, navigate]);
   
-  const hasEmbeds = inviteCodes.length > 0 || (linkPreviewsEnabled && !hideEmbeds && nonInviteLinkUrls.length > 0);
-  
   return (
-    <div className="break-words" onClick={handleClick} onKeyDown={handleKeyDown} data-message-id={messageId}>
+    <div className="!block break-words" onClick={handleClick} onKeyDown={handleKeyDown} data-message-id={messageId}>
       {/* Message text content */}
       <span className="inline">
         {segments.map((segment, index) => {
