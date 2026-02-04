@@ -191,14 +191,14 @@ export function validateUsernameComprehensive(username: string): UsernameValidat
   if (trimmed.length < 3) {
     return { 
       isValid: false, 
-      error: 'Username must be between 3 and 32 characters', 
+      error: 'Username must be between 3 and 16 characters', 
       errorType: 'length' 
     };
   }
-  if (trimmed.length > 32) {
+  if (trimmed.length > 16) {
     return { 
       isValid: false, 
-      error: 'Username must be between 3 and 32 characters', 
+      error: 'Username must be between 3 and 16 characters', 
       errorType: 'length' 
     };
   }
