@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
-import { Bell, Check, Trash2, MessageCircle, AtSign, UserPlus, Mail, X } from "lucide-react";
+import { Bell, Check, Trash2, MessageCircle, AtSign, UserPlus, Mail, X, AlertTriangle, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -11,10 +11,44 @@ import { useFriendStore } from "@/stores/friendStore";
 import { useAuthStore } from "@/stores/authStore";
 import { requestNotificationPermission } from "@/hooks/useRealtimeNotifications";
 import { cn } from "@/lib/utils";
-import type { NotificationType, Notification } from "@/types";
+import type { Notification } from "@/types";
 
-const getNotificationIcon = (type: NotificationType) => {
-  switch (type) {
+// Theme types and classes
+type NotificationTheme = 'amber' | 'emerald' | 'red' | 'blue' | 'violet' | 'default';
+
+const themeClasses = {
+  amber: { bg: 'bg-amber-500/10', text: 'text-amber-500', indicator: 'bg-amber-500', bgUnread: 'bg-amber-500/5' },
+  emerald: { bg: 'bg-emerald-500/10', text: 'text-emerald-500', indicator: 'bg-emerald-500', bgUnread: 'bg-emerald-500/5' },
+  red: { bg: 'bg-red-500/10', text: 'text-red-500', indicator: 'bg-red-500', bgUnread: 'bg-red-500/5' },
+  blue: { bg: 'bg-blue-500/10', text: 'text-blue-500', indicator: 'bg-blue-500', bgUnread: 'bg-blue-500/5' },
+  violet: { bg: 'bg-violet-500/10', text: 'text-violet-500', indicator: 'bg-violet-500', bgUnread: 'bg-violet-500/5' },
+  default: { bg: 'bg-primary/10', text: 'text-primary', indicator: 'bg-primary', bgUnread: 'bg-primary/5' },
+};
+
+const getNotificationTheme = (notification: Notification): NotificationTheme => {
+  // Check for warning (kick/ban) based on title
+  const title = notification.title?.toLowerCase() || '';
+  if (title.includes('kicked') || title.includes('banned')) {
+    return 'red';
+  }
+  
+  switch (notification.type) {
+    case 'mention': return 'amber';
+    case 'dm': return 'emerald';
+    case 'friend_request': return 'blue';
+    case 'server_invite': return 'violet';
+    default: return 'default';
+  }
+};
+
+const getNotificationIcon = (notification: Notification) => {
+  // Check for warning first
+  const title = notification.title?.toLowerCase() || '';
+  if (title.includes('kicked') || title.includes('banned')) {
+    return <AlertTriangle className="w-4 h-4" />;
+  }
+  
+  switch (notification.type) {
     case "mention":
       return <AtSign className="w-4 h-4" />;
     case "dm":
@@ -38,7 +72,7 @@ const extractUsernameFromBody = (body: string | null): string | null => {
 export const NotificationBell = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotificationStore();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, clearAllNotifications, deleteNotification } = useNotificationStore();
   const { pendingRequests, acceptRequest, declineRequest } = useFriendStore();
   const [isOpen, setIsOpen] = useState(false);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
@@ -53,6 +87,12 @@ export const NotificationBell = () => {
   const handleMarkAllAsRead = () => {
     if (user) {
       markAllAsRead(user.id);
+    }
+  };
+
+  const handleClearAll = () => {
+    if (user) {
+      clearAllNotifications(user.id);
     }
   };
 
@@ -153,17 +193,30 @@ export const NotificationBell = () => {
               </span>
             )}
           </div>
-          {notifications.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 px-3 text-xs rounded-lg hover:bg-secondary/60 transition-colors"
-              onClick={handleMarkAllAsRead}
-            >
-              <Trash2 className="w-3 h-3 mr-1.5" />
-              Clear all
-            </Button>
-          )}
+          <div className="flex items-center gap-1">
+            {unreadCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2 text-xs rounded-lg hover:bg-secondary/60 transition-colors"
+                onClick={handleMarkAllAsRead}
+              >
+                <CheckCheck className="w-3 h-3 mr-1" />
+                Mark as read
+              </Button>
+            )}
+            {notifications.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2 text-xs rounded-lg hover:bg-secondary/60 transition-colors"
+                onClick={handleClearAll}
+              >
+                <Trash2 className="w-3 h-3 mr-1" />
+                Clear all
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Notifications List */}
@@ -174,13 +227,15 @@ export const NotificationBell = () => {
                 const isProcessing = processingIds.has(notification.id);
                 const showFriendActions = isFriendRequestPending(notification);
                 const isUnread = !notification.is_read;
+                const theme = getNotificationTheme(notification);
+                const colors = themeClasses[theme];
 
                 return (
                   <div
                     key={notification.id}
                     className={cn(
                       "group relative flex flex-col gap-2 p-3 rounded-xl transition-colors animate-notification-enter",
-                      isUnread && "bg-primary/5",
+                      isUnread && colors.bgUnread,
                       !showFriendActions && "cursor-pointer hover:bg-secondary/60",
                     )}
                     style={{
@@ -191,7 +246,7 @@ export const NotificationBell = () => {
                   >
                     {/* Unread indicator */}
                     {isUnread && (
-                      <div className="absolute left-1 top-1/2 -translate-y-1/2 w-1 h-8 rounded-full bg-primary" />
+                      <div className={cn("absolute left-1 top-1/2 -translate-y-1/2 w-1 h-8 rounded-full", colors.indicator)} />
                     )}
 
                     <div className="flex items-start gap-3">
@@ -199,10 +254,10 @@ export const NotificationBell = () => {
                       <div
                         className={cn(
                           "flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center",
-                          isUnread ? "bg-primary/10 text-primary" : "bg-secondary/80 text-muted-foreground",
+                          isUnread ? cn(colors.bg, colors.text) : "bg-secondary/80 text-muted-foreground",
                         )}
                       >
-                        {getNotificationIcon(notification.type)}
+                        {getNotificationIcon(notification)}
                       </div>
 
                       {/* Content */}
