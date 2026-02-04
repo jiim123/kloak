@@ -2,167 +2,149 @@
 
 ## Overview
 
-This plan improves the group chat UI by creating distinct visual elements for group conversations, including stacked avatars in the sidebar and a proper group chat header with intro message.
+This plan fixes the bug where group chats revert to 1:1 DM appearance in the sidebar. The root cause is that the `get_user_dm_conversations` RPC function was not updated to include the new `is_group` and `name` columns.
 
 ---
 
-## What Will Change
+## Root Cause Analysis
 
-### For Users
-- Group chats in the DM sidebar show 3 stacked avatars (first 3 participants) instead of a generic icon
-- Group chat header displays stacked avatars of participants
-- Intro message is contextual: shows group name or participant names
-- Clear visual distinction between 1:1 DMs and group conversations
+### The Bug Flow
+
+```text
+1. User creates group via create_group_dm
+   -> Returns {is_group: true, name: "My Group", participants: [...]}
+   -> Sidebar displays correctly with stacked avatars
+
+2. fetchConversations() is triggered by:
+   - App initial load
+   - Visibility change (tab switch back)
+   - New participant added (realtime listener)
+
+3. get_user_dm_conversations RPC returns:
+   -> {id, created_at, participants, last_message}
+   -> MISSING: is_group, name
+
+4. Store maps: conv.is_group || false -> false
+   -> Conversation treated as 1:1 DM
+   -> Shows first other_user's avatar instead of stacked avatars
+```
+
+### Evidence
+
+The `get_user_dm_conversations` function (in migration `20260123100000_add_dm_blocking.sql`) builds this JSON:
+
+```sql
+json_build_object(
+  'id', dc.id,
+  'created_at', dc.created_at,
+  'participants', (...),
+  'last_message', (...)
+)
+-- MISSING: 'is_group', dc.is_group
+-- MISSING: 'name', dc.name
+```
+
+While `create_group_dm` (in migration `20260204132258`) correctly includes:
+
+```sql
+json_build_object(
+  'id', dc.id,
+  'created_at', dc.created_at,
+  'is_group', dc.is_group,    -- Included
+  'name', dc.name,            -- Included
+  'participants', (...)
+)
+```
+
+---
+
+## The Fix
+
+### Database Migration
+
+Update the `get_user_dm_conversations` RPC to include the missing columns:
+
+```sql
+CREATE OR REPLACE FUNCTION public.get_user_dm_conversations(_user_id uuid)
+RETURNS json
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN (
+    SELECT json_agg(conv)
+    FROM (
+      SELECT json_build_object(
+        'id', dc.id,
+        'created_at', dc.created_at,
+        'is_group', dc.is_group,    -- ADD THIS
+        'name', dc.name,            -- ADD THIS
+        'participants', (...),
+        'last_message', (...)
+      ) as conv
+      FROM dm_conversations dc
+      WHERE ...
+    ) sub
+  );
+END;
+$$;
+```
 
 ---
 
 ## Implementation Steps
 
-### Step 1: Create Stacked Avatars Component
+### Step 1: Create Database Migration
 
-A reusable component that displays 2-3 overlapping avatars:
+Add a new migration that replaces the `get_user_dm_conversations` function with the updated version that includes `is_group` and `name` in the JSON output.
 
-| Props | Type | Description |
-|-------|------|-------------|
-| users | User[] | Array of users to display (max 3) |
-| size | 'sm' \| 'md' \| 'lg' | Avatar size variant |
-| className | string | Additional styling |
+### Step 2: Verify Frontend Mapping
 
-Visual layout: Avatars overlap horizontally with slight offset, creating a "stack" effect.
+The frontend code in `dmStore.ts` already handles these fields correctly:
 
-### Step 2: Create Group Chat Header Component
+```typescript
+return {
+  id: conv.id,
+  is_group: conv.is_group || false,  // Will now receive actual value
+  name: conv.name || null,           // Will now receive actual value
+  participants: conv.participants,
+  // ...
+};
+```
 
-A new `GroupChatHeader` component specifically for group conversations:
-
-- Displays stacked avatars (no status dot - groups don't have presence)
-- Shows group name OR comma-separated participant names
-- "More Options" menu adapted for groups (no "Call User", has "Leave Group")
-- Mobile sidebar toggle support
-
-### Step 3: Update DMSidebar for Group Display
-
-Replace the generic `Users` icon with stacked avatars:
-
-- Extract first 3 participants (excluding current user)
-- Use `StackedAvatars` component with `size="sm"`
-- Keep existing name display logic (group name or participant names)
-
-### Step 4: Update DMChatArea for Group Detection
-
-Add conditional rendering based on `is_group`:
-
-- Use `DMHeader` for 1:1 conversations
-- Use `GroupChatHeader` for group conversations
-- Show appropriate intro section based on conversation type
-
-### Step 5: Create Group Chat Intro Section
-
-For group conversations, the intro shows:
-
-- Stacked avatars (larger size)
-- Group name as heading (or "Group Chat" if no name)
-- Text: "This is the beginning of your group chat with [name/participants]."
+No frontend changes needed - just the RPC fix.
 
 ---
 
 ## Technical Details
 
-### New Files
+### Files to Change
 
-| File | Purpose |
-|------|---------|
-| `src/components/ui/stacked-avatars.tsx` | Reusable stacked avatar component |
-| `src/components/dm/GroupChatHeader.tsx` | Header component for group conversations |
+| File | Change |
+|------|--------|
+| New migration file | Update `get_user_dm_conversations` RPC |
 
-### Files to Modify
+### Complete Updated RPC Function
 
-| File | Changes |
-|------|---------|
-| `src/components/dm/DMSidebar.tsx` | Use StackedAvatars for group rows |
-| `src/components/dm/DMChatArea.tsx` | Conditional header/intro for groups |
-| `src/components/dm/index.ts` | Export new components |
+The function will add two lines to the `json_build_object` call:
 
-### StackedAvatars Component Structure
-
-```text
-Container (relative, flex)
-├── Avatar 1 (z-30, no offset)
-├── Avatar 2 (z-20, offset -8px left)
-└── Avatar 3 (z-10, offset -16px left)
+```sql
+'is_group', COALESCE(dc.is_group, false),
+'name', dc.name,
 ```
 
-Size variants:
-- sm: 24x24px (sidebar)
-- md: 32x32px (header)
-- lg: 48x48px (intro section)
-
-### GroupChatHeader Props
-
-```text
-interface GroupChatHeaderProps {
-  conversation: DMConversation;
-  participants: User[];  // Other participants (excluding current user)
-}
-```
-
-### DMChatArea Conditional Logic
-
-```text
-if (currentConversation.is_group) {
-  // Extract other participants
-  const otherParticipants = participants.filter(p => p.user_id !== user.id)
-  
-  // Render GroupChatHeader
-  // Render group intro section
-} else {
-  // Render DMHeader (existing)
-  // Render 1:1 intro section (existing)
-}
-```
-
-### Group Intro Text Logic
-
-```text
-if (conversation.name) {
-  "This is the beginning of your group chat with {name}."
-} else {
-  "This is the beginning of your group chat with {participant1}, {participant2}, and {participant3}."
-}
-```
+Using `COALESCE` ensures backward compatibility with existing 1:1 conversations that have `NULL` for `is_group`.
 
 ---
 
-## Data Flow
+## Verification
 
-```text
-DMSidebar renders conversations
-        |
-        v
-For each group conversation:
-  - Extract first 3 other participants
-  - Render StackedAvatars component
-  - Display group name or participant names
-        |
-        v
-User clicks group conversation
-        |
-        v
-DMChatArea detects is_group = true
-        |
-        v
-Renders GroupChatHeader + Group Intro
-        |
-        v
-Messages display as normal
-```
+After the fix:
 
----
-
-## Edge Cases
-
-- Group with only 1 other participant: Show single avatar (fallback)
-- Group with 2 participants: Show 2 stacked avatars
-- Participant with no avatar: Show initial letter fallback
-- Very long group name: Truncate with ellipsis
-- Many participants (>3): Show first 3 avatars, name shows "+X more"
+1. Create a new group chat -> displays correctly
+2. Switch tabs and return -> still displays correctly
+3. Have another user send a message -> still displays correctly
+4. Refresh the page -> still displays correctly
 
