@@ -60,7 +60,7 @@ interface MediaItem {
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo'];
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB for images
+const MAX_IMAGE_SIZE = 3 * 1024 * 1024; // 3MB for images
 const MAX_VIDEO_SIZE = 10 * 1024 * 1024; // 10MB for videos
 
 // Extract YouTube video ID from URL
@@ -169,7 +169,7 @@ export const MediaChannelArea = () => {
     }
     
     if (isImage && file.size > MAX_IMAGE_SIZE) {
-      toast.error('Image size must be less than 5MB');
+      toast.error('Image size must be less than 3MB');
       return;
     }
     
@@ -348,7 +348,7 @@ export const MediaChannelArea = () => {
       const isVideo = ALLOWED_VIDEO_TYPES.includes(mediaFile.type);
       
       if (isImage && mediaFile.size > MAX_IMAGE_SIZE) {
-        toast.error('Image size must be less than 5MB');
+        toast.error('Image size must be less than 3MB');
         return;
       }
       if (isVideo && mediaFile.size > MAX_VIDEO_SIZE) {
@@ -496,7 +496,7 @@ export const MediaChannelArea = () => {
                       Click to select or drag and drop
                     </p>
                     <p className="text-xs text-muted-foreground/70 mt-1">
-                      Images up to 5MB • Videos up to 10MB
+                      Images up to 3MB • Videos up to 10MB
                     </p>
                   </div>
                 )}

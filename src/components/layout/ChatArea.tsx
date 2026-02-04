@@ -22,7 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, handleError } from "@/lib/errorHandler";
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1MB
 
 export const ChatArea = () => {
   const { currentChannel } = useServerStore();
@@ -54,7 +54,7 @@ export const ChatArea = () => {
     }
     
     if (file.size > MAX_FILE_SIZE) {
-      handleError(new Error('File size must be less than 10MB'));
+      handleError(new Error('File size must be less than 1MB'));
       return;
     }
 

@@ -22,7 +22,7 @@ interface SelectedFile {
   preview: string;
 }
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1MB
 const MAX_FILES = 10;
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
@@ -51,7 +51,7 @@ export const ImageUploadDialog = ({ open, onOpenChange, onUpload }: ImageUploadD
       }
 
       if (file.size > MAX_FILE_SIZE) {
-        setError('Each file must be less than 10MB');
+        setError('Each file must be less than 1MB');
         continue;
       }
 
@@ -151,7 +151,7 @@ export const ImageUploadDialog = ({ open, onOpenChange, onUpload }: ImageUploadD
             Click to upload or drag and drop
           </p>
           <p className="text-xs text-muted-foreground">
-            JPEG, PNG, GIF, or WebP (max 10MB each)
+            JPEG, PNG, GIF, or WebP (max 1MB each)
           </p>
           <input
             ref={fileInputRef}
