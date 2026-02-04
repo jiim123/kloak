@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Users, X, MessageSquare, Compass, UsersRound } from "lucide-react";
+import { Search, X, MessageSquare, Compass, UsersRound, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
+import { StackedAvatars } from "@/components/ui/stacked-avatars";
 import { LoggedInUserPanel } from "@/components/layout/LoggedInUserPanel";
 import { VoiceConnectedBanner } from "@/components/layout/VoiceConnectedBanner";
 import { CreateGroupModal } from "@/components/dm/CreateGroupModal";
@@ -14,7 +15,7 @@ import { useUnreadDMs } from "@/hooks/useUnreadDMs";
 import { formatCompactTime } from "@/lib/format";
 import { getEffectivePresence } from "@/lib/presence";
 import { ConversationItemSkeleton } from "@/components/ui/skeletons";
-import type { DMConversation, UserStatus } from "@/types";
+import type { DMConversation, UserStatus, User } from "@/types";
 
 interface DMSidebarProps {
   showFriends: boolean;
@@ -218,12 +219,18 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
               )}
               onClick={() => handleSelectConversation(conversation)}
             >
-              {/* Avatar with status (or group icon) */}
+              {/* Avatar with status (or stacked avatars for group) */}
               <div className="relative flex-shrink-0">
                 {isGroup ? (
-                  <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
-                    <Users className="w-4 h-4 text-muted-foreground" />
-                  </div>
+                  <StackedAvatars 
+                    users={
+                      (conversation.participants
+                        ?.filter((p) => p.user_id !== user?.id)
+                        .slice(0, 3)
+                        .map((p) => p.user) || []) as User[]
+                    }
+                    size="sm"
+                  />
                 ) : (
                   <>
                     <AvatarWithDecoration user={conversation.other_user} className="w-8 h-8" />
