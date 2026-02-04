@@ -556,10 +556,10 @@ export const MessageItem = memo(function MessageItem({
 
   const handleStartEditing = useCallback(() => {
     // Convert UUID mentions to readable format for editing
-    const readableContent = convertMentionsToReadable(message.content, usersMap);
+    const readableContent = convertMentionsToReadable(message.content, usersMap, channelsMap);
     setEditContent(readableContent);
     setIsEditing(true);
-  }, [message.content, usersMap]);
+  }, [message.content, usersMap, channelsMap]);
 
   const handleEditContentChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
