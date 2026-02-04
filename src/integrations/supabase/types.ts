@@ -546,23 +546,34 @@ export type Database = {
       dm_conversations: {
         Row: {
           created_at: string | null
+          created_by: string | null
           id: string
           is_group: boolean | null
           name: string | null
         }
         Insert: {
           created_at?: string | null
+          created_by?: string | null
           id?: string
           is_group?: boolean | null
           name?: string | null
         }
         Update: {
           created_at?: string | null
+          created_by?: string | null
           id?: string
           is_group?: boolean | null
           name?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "dm_conversations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       dm_participants: {
         Row: {
