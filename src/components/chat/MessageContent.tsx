@@ -283,7 +283,7 @@ export const parseTextContent = (
       if (!url) return full;
       const safeUrl = escapeHtml(url);
       const safeName = escapeHtml(name);
-      return `<img src="${safeUrl}" alt=":${safeName}:" title=":${safeName}:" class="inline-block w-8 h-8 align-text-bottom object-contain" loading="lazy" />`;
+      return `<img src="${safeUrl}" alt=":${safeName}:" title=":${safeName}:" class="inline-block w-8 h-8 align-middle object-contain" loading="lazy" />`;
     });
   }
   
@@ -466,7 +466,7 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
   }, [openModal, channels, currentServer, setCurrentChannel, navigate]);
   
   return (
-    <div className="break-words" onClick={handleClick} onKeyDown={handleKeyDown} data-message-id={messageId}>
+    <div className="break-words inline" onClick={handleClick} onKeyDown={handleKeyDown} data-message-id={messageId}>
       {segments.map((segment, index) => {
         switch (segment.type) {
           case 'code-block':

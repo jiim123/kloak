@@ -576,7 +576,7 @@ export const MessageItem = memo(function MessageItem({
   // Computed class names
   const outerClassName = useMemo(() => {
     const base = "px-2";
-    const padding = compactMode ? "py-0" : isGrouped ? "py-0.5" : "py-1";
+    const padding = compactMode ? "py-0" : isGrouped ? "py-px" : "py-1";
     const animation = shouldAnimate ? "animate-message-slide-in" : "";
     return `${base} ${padding} ${animation}`.trim();
   }, [compactMode, isGrouped, shouldAnimate]);
@@ -584,7 +584,7 @@ export const MessageItem = memo(function MessageItem({
   const innerClassName = useMemo(() => {
     const classes = [
       "group relative flex px-3 rounded-lg transition-colors duration-200 hover:bg-muted/40",
-      compactMode ? "gap-2 py-0.5" : "gap-3 py-1.5",
+      compactMode ? "gap-2 py-0.5" : isGrouped ? "gap-3 py-0.5" : "gap-3 py-1.5",
     ];
     if (isMentioned) classes.push("bg-amber-950/50 border-l-2 border-l-amber-500");
     if (isHighlighted) classes.push("animate-highlight-message bg-primary/20 ring-2 ring-primary/50");
@@ -869,7 +869,7 @@ export const MessageItem = memo(function MessageItem({
                         </div>
                       </div>
                     ) : (
-                      <div className="text-[14px] sm:text-[14px] font-normal leading-[1.5] font-[Inter,system-ui,sans-serif]">
+                      <div className="text-[14px] sm:text-[14px] font-normal leading-[1.5] font-[Inter,system-ui,sans-serif] [&>div]:flex [&>div]:items-center [&>div]:flex-wrap">
                         {pollId ? (
                           <PollMessage pollId={pollId} />
                         ) : currentChannel?.type === "announcement" ? (
