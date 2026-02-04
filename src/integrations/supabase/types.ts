@@ -1915,6 +1915,7 @@ export type Database = {
           display_name: string | null
           id: string
           key_hash: string
+          last_key_reset_at: string | null
           last_seen: string | null
           profile_effect: string | null
           profile_theme_accent: string | null
@@ -1933,6 +1934,7 @@ export type Database = {
           display_name?: string | null
           id?: string
           key_hash: string
+          last_key_reset_at?: string | null
           last_seen?: string | null
           profile_effect?: string | null
           profile_theme_accent?: string | null
@@ -1951,6 +1953,7 @@ export type Database = {
           display_name?: string | null
           id?: string
           key_hash?: string
+          last_key_reset_at?: string | null
           last_seen?: string | null
           profile_effect?: string | null
           profile_theme_accent?: string | null
@@ -2422,10 +2425,12 @@ export type Database = {
         Args: { _member_id: string; _role_id: string; _user_id: string }
         Returns: boolean
       }
-      reset_user_secret_key: {
-        Args: { _new_key_hash: string; _user_id: string }
-        Returns: undefined
-      }
+      reset_user_secret_key:
+        | { Args: { _new_key_hash: string; _user_id: string }; Returns: Json }
+        | {
+            Args: { _new_key_hash: string; _user_id: string }
+            Returns: undefined
+          }
       revoke_server_invite: {
         Args: { _invite_id: string; _user_id: string }
         Returns: boolean
