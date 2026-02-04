@@ -26,6 +26,7 @@ interface DMState {
   updateGroupName: (conversationId: string, userId: string, newName: string) => Promise<boolean>;
   addGroupMembers: (conversationId: string, userId: string, memberIds: string[]) => Promise<boolean>;
   leaveGroup: (conversationId: string, userId: string) => Promise<boolean>;
+  kickGroupMember: (conversationId: string, kickerId: string, targetUserId: string) => Promise<boolean>;
 
   // Reaction actions
   addReaction: (messageId: string, userId: string, emoji: string) => Promise<void>;
@@ -87,10 +88,11 @@ export const useDMStore = create<DMState>((set, get) => ({
         );
 
         return {
-          id: conv.id,
-          created_at: conv.created_at,
-          is_group: conv.is_group || false,
-          name: conv.name || null,
+          id: conv.conversation?.id || conv.id,
+          created_at: conv.conversation?.created_at || conv.created_at,
+          is_group: conv.conversation?.is_group || conv.is_group || false,
+          name: conv.conversation?.name || conv.name || null,
+          created_by: conv.conversation?.created_by || null,
           participants: conv.participants,
           other_user: otherParticipant?.user as User,
           last_message: conv.last_message as DirectMessage,
@@ -566,6 +568,22 @@ export const useDMStore = create<DMState>((set, get) => ({
       return true;
     } catch (error) {
       console.error('Failed to leave group:', error);
+      return false;
+    }
+  },
+
+  kickGroupMember: async (conversationId: string, kickerId: string, targetUserId: string) => {
+    try {
+      const { data, error } = await supabase.rpc('kick_group_dm_member' as any, {
+        _conversation_id: conversationId,
+        _kicker_id: kickerId,
+        _target_user_id: targetUserId,
+      });
+
+      if (error) throw error;
+      return data === true;
+    } catch (error) {
+      console.error('Failed to kick group member:', error);
       return false;
     }
   },

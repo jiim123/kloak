@@ -2334,7 +2334,14 @@ export type Database = {
         Returns: Json
       }
       get_user_by_id: { Args: { _user_id: string }; Returns: Json }
-      get_user_dm_conversations: { Args: { _user_id: string }; Returns: Json }
+      get_user_dm_conversations: {
+        Args: { _user_id: string }
+        Returns: {
+          conversation: Json
+          last_message: Json
+          participants: Json
+        }[]
+      }
       get_user_friends: { Args: { _user_id: string }; Returns: Json }
       get_user_poll_votes: {
         Args: { _poll_id: string; _user_id: string }

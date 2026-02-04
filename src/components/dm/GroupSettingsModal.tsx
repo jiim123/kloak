@@ -6,11 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Users, Settings, UserPlus, X } from "lucide-react";
+import { Search, Users, Settings, UserPlus, X, Crown, UserMinus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFriendStore } from "@/stores/friendStore";
 import { useDMStore } from "@/stores/dmStore";
 import { useAuthStore } from "@/stores/authStore";
+import { useUIStore } from "@/stores/uiStore";
 import { toast } from "sonner";
 import type { DMConversation, User } from "@/types";
 
@@ -29,13 +30,17 @@ export const GroupSettingsModal = ({
 }: GroupSettingsModalProps) => {
   const { user } = useAuthStore();
   const { friends, fetchFriends } = useFriendStore();
-  const { updateGroupName, addGroupMembers, fetchConversations } = useDMStore();
+  const { updateGroupName, addGroupMembers, kickGroupMember, fetchConversations } = useDMStore();
+  const { openModal } = useUIStore();
 
   const [groupName, setGroupName] = useState(conversation.name || "");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isAddingMembers, setIsAddingMembers] = useState(false);
+  const [kickingUserId, setKickingUserId] = useState<string | null>(null);
+
+  const isCreator = user?.id === conversation.created_by;
 
   // Fetch friends when modal opens
   useEffect(() => {
@@ -72,7 +77,7 @@ export const GroupSettingsModal = ({
   };
 
   const handleSaveName = async () => {
-    if (!user?.id) return;
+    if (!user?.id || !isCreator) return;
 
     setIsSaving(true);
     const success = await updateGroupName(conversation.id, user.id, groupName.trim());
@@ -80,7 +85,6 @@ export const GroupSettingsModal = ({
 
     if (success) {
       toast.success(groupName.trim() ? "Group name updated" : "Group name removed");
-      // Refresh conversations to update the sidebar
       fetchConversations(user.id);
     } else {
       toast.error("Failed to update group name");
@@ -97,7 +101,6 @@ export const GroupSettingsModal = ({
     if (success) {
       toast.success(`Added ${selectedFriends.length} member(s) to the group`);
       setSelectedFriends([]);
-      // Refresh conversations to update the sidebar
       fetchConversations(user.id);
       onOpenChange(false);
     } else {
@@ -105,7 +108,29 @@ export const GroupSettingsModal = ({
     }
   };
 
+  const handleKickMember = async (targetUserId: string) => {
+    if (!user?.id || !isCreator) return;
+
+    setKickingUserId(targetUserId);
+    const success = await kickGroupMember(conversation.id, user.id, targetUserId);
+    setKickingUserId(null);
+
+    if (success) {
+      toast.success("Member removed from group");
+      fetchConversations(user.id);
+    } else {
+      toast.error("Failed to remove member");
+    }
+  };
+
+  const handleAvatarClick = (targetUser: User) => {
+    openModal("userProfile", { user: targetUser });
+  };
+
   const selectedFriendData = friends.filter((f) => selectedFriends.includes(f.id));
+
+  // Default to invite tab if not creator
+  const defaultTab = isCreator ? "name" : "invite";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -117,61 +142,94 @@ export const GroupSettingsModal = ({
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="name" className="mt-2">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="name" className="flex items-center gap-2">
-              <Users className="w-4 h-4" />
-              Group Name
-            </TabsTrigger>
+        <Tabs defaultValue={defaultTab} className="mt-2">
+          <TabsList className={cn("grid w-full", isCreator ? "grid-cols-2" : "grid-cols-1")}>
+            {isCreator && (
+              <TabsTrigger value="name" className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Group Name
+              </TabsTrigger>
+            )}
             <TabsTrigger value="invite" className="flex items-center gap-2">
               <UserPlus className="w-4 h-4" />
-              Invite Members
+              {isCreator ? "Members" : "Invite Members"}
             </TabsTrigger>
           </TabsList>
 
-          {/* Group Name Tab */}
-          <TabsContent value="name" className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label htmlFor="group-name">Group Name</Label>
-              <Input
-                id="group-name"
-                placeholder="Enter a group name (optional)"
-                value={groupName}
-                onChange={(e) => setGroupName(e.target.value)}
-                maxLength={50}
-              />
-              <p className="text-xs text-muted-foreground">
-                Leave empty to use participant names as the group title.
-              </p>
-            </div>
+          {/* Group Name Tab - Only for creator */}
+          {isCreator && (
+            <TabsContent value="name" className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="group-name">Group Name</Label>
+                <Input
+                  id="group-name"
+                  placeholder="Enter a group name (optional)"
+                  value={groupName}
+                  onChange={(e) => setGroupName(e.target.value)}
+                  maxLength={50}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Leave empty to use participant names as the group title.
+                </p>
+              </div>
 
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSaveName} disabled={isSaving} loading={isSaving}>
-                Save Name
-              </Button>
-            </div>
-          </TabsContent>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveName} disabled={isSaving}>
+                  {isSaving ? "Saving..." : "Save Name"}
+                </Button>
+              </div>
+            </TabsContent>
+          )}
 
-          {/* Invite Members Tab */}
+          {/* Members/Invite Tab */}
           <TabsContent value="invite" className="space-y-4 mt-4">
             {/* Current Participants */}
             <div className="space-y-2">
               <Label>Current Members ({participants.length})</Label>
-              <div className="flex flex-wrap gap-2 p-2 bg-secondary/50 rounded-lg max-h-[80px] overflow-y-auto">
-                {participants.map((participant) => (
-                  <div
-                    key={participant.id}
-                    className="flex items-center gap-1.5 px-2 py-1 bg-background rounded-full text-xs"
-                  >
-                    <AvatarWithDecoration user={participant} className="w-4 h-4" />
-                    <span className="truncate max-w-[80px]">
-                      {participant.display_name || participant.username}
-                    </span>
-                  </div>
-                ))}
+              <div className="space-y-1 max-h-[120px] overflow-y-auto border border-border rounded-lg p-2">
+                {participants.map((participant) => {
+                  const isParticipantCreator = participant.id === conversation.created_by;
+                  const canKick = isCreator && !isParticipantCreator && participant.id !== user?.id;
+
+                  return (
+                    <div
+                      key={participant.id}
+                      className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-secondary/50 transition-colors"
+                    >
+                      <button
+                        onClick={() => handleAvatarClick(participant)}
+                        className="flex-shrink-0 hover:opacity-80 transition-opacity"
+                      >
+                        <AvatarWithDecoration user={participant} className="w-7 h-7" />
+                      </button>
+                      <button
+                        onClick={() => handleAvatarClick(participant)}
+                        className="flex-1 min-w-0 text-left hover:underline"
+                      >
+                        <span className="text-sm font-medium truncate block">
+                          {participant.display_name || participant.username}
+                        </span>
+                      </button>
+                      {isParticipantCreator && (
+                        <Crown className="w-4 h-4 text-yellow-500 flex-shrink-0" />
+                      )}
+                      {canKick && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 flex-shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => handleKickMember(participant.id)}
+                          disabled={kickingUserId === participant.id}
+                        >
+                          <UserMinus className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -260,9 +318,8 @@ export const GroupSettingsModal = ({
               <Button
                 onClick={handleAddMembers}
                 disabled={selectedFriends.length === 0 || isAddingMembers}
-                loading={isAddingMembers}
               >
-                Add Members ({selectedFriends.length})
+                {isAddingMembers ? "Adding..." : `Add Members (${selectedFriends.length})`}
               </Button>
             </div>
           </TabsContent>
