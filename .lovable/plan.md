@@ -1,146 +1,172 @@
 
+# Fix Role Permission System for Channel Management
 
-# Color-Themed Notifications with Enhanced Actions
+## Problem Summary
+Users with custom roles that have `manage_channels` permission enabled are being blocked from updating channel permissions. The error "Only admins and owners can manage channel permissions" is thrown even when they should have access.
 
-## Overview
-Enhance the notification bell component with color-coded notification types, separate "Mark all as read" and "Clear all" buttons, and ensure proper click-to-navigate behavior.
+## Root Cause
+The `set_channel_permission` database RPC function uses a hardcoded role check (`role != 'owner' AND role != 'admin'`) instead of the proper `check_user_server_permission` function that correctly evaluates custom role permissions.
 
-## Current State Analysis
-- Notifications already have icons based on type (AtSign, MessageCircle, etc.)
-- `handleNotificationClick` already navigates using `notification.link` - this works for mentions/DMs
-- ScrollArea is implemented but needs verification
-- Only one button exists that calls `markAllAsRead` but is labeled "Clear all" (bug!)
+## Solution
 
-## Changes Required
+### Create New Migration
+**File:** `supabase/migrations/[timestamp]_fix_channel_permission_role_check.sql`
 
-### 1. Color Theme System
-Create a helper function that returns theme-specific classes based on notification type:
-
-| Type | Detection | Icon BG | Text Color | Indicator Bar |
-|------|-----------|---------|------------|---------------|
-| mention | `type === "mention"` | `bg-amber-500/10` | `text-amber-500` | `bg-amber-500` |
-| dm | `type === "dm"` | `bg-emerald-500/10` | `text-emerald-500` | `bg-emerald-500` |
-| warning | title contains "kicked"/"banned" | `bg-red-500/10` | `text-red-500` | `bg-red-500` |
-| friend_request | `type === "friend_request"` | `bg-blue-500/10` | `text-blue-500` | `bg-blue-500` |
-| server_invite | `type === "server_invite"` | `bg-violet-500/10` | `text-violet-500` | `bg-violet-500` |
-
-### 2. Warning Icon
-Import `AlertTriangle` from lucide-react and add to the icon switch for warning notifications.
-
-### 3. Header Buttons - Split Actions
-Replace single button with two separate buttons:
+Update the `set_channel_permission` function to use `check_user_server_permission` instead of the hardcoded role check.
 
 ```text
-[Notifications (3)]          [CheckCheck Mark as read] [Trash2 Clear all]
+Key Changes:
+1. Replace hardcoded role check with: check_user_server_permission(_user_id, channel_server_id, 'manage_channels')
+2. Change error message from "Only admins and owners..." to generic "Permission denied"
+3. Keep all other logic intact (target validation, permission upsert, etc.)
 ```
 
-| Button | Icon | Action | When Visible |
-|--------|------|--------|--------------|
-| Mark as read | `CheckCheck` | `markAllAsRead(userId)` | `unreadCount > 0` |
-| Clear all | `Trash2` | `clearAllNotifications(userId)` | `notifications.length > 0` |
+### Technical Details
 
-### 4. Add `clearAllNotifications` to Store
-**File:** `src/stores/notificationStore.ts`
+**Current (buggy):**
+```sql
+SELECT role INTO user_role
+FROM server_members
+WHERE server_id = channel_server_id AND user_id = _user_id;
 
-Add new function to delete all notifications:
-
-```typescript
-clearAllNotifications: async (userId: string) => {
-  try {
-    const { error } = await supabase
-      .from('notifications')
-      .delete()
-      .eq('user_id', userId);
-
-    if (error) throw error;
-    set({ notifications: [], unreadCount: 0 });
-  } catch (error) {
-    console.error('Failed to clear notifications:', error);
-  }
-},
+IF user_role IS NULL OR (user_role != 'owner' AND user_role != 'admin') THEN
+  RAISE EXCEPTION 'Only admins and owners can manage channel permissions';
+END IF;
 ```
 
-### 5. Apply Color Theme to Notification Items
-Update the notification item rendering:
+**Fixed:**
+```sql
+IF NOT public.check_user_server_permission(_user_id, channel_server_id, 'manage_channels') THEN
+  RAISE EXCEPTION 'Permission denied';
+END IF;
+```
 
-- **Unread background:** Use theme-specific subtle background (e.g., `bg-amber-500/5` for mentions)
-- **Icon container:** Use theme-specific background and text colors
-- **Unread indicator bar:** Use theme-specific color instead of generic `bg-primary`
+### How `check_user_server_permission` Works
 
-### 6. Navigation on Click
-The existing `handleNotificationClick` function already:
-1. Marks the notification as read
-2. Navigates to `notification.link` using React Router
-3. Closes the popover
+The existing function correctly:
+1. Returns `true` immediately for owners (bypass)
+2. Gets user's custom role IDs from `server_member_roles`
+3. Checks `role_permissions` table for any custom role with `manage_channels = true`
+4. Returns deny if any custom role has explicit `allowed = false`
+5. Returns allow if any custom role has explicit `allowed = true`
+6. Falls back to base role defaults if no custom role permissions set
 
-This should work correctly as long as notifications are created with proper `link` values:
-- Mentions: `/app?server={serverId}&channel={channelId}&message={messageId}`
-- DMs: `/app?conversation={conversationId}`
+### Files to Create/Modify
 
-No changes needed here - the click handling is already implemented correctly.
+| File | Action |
+|------|--------|
+| `supabase/migrations/[timestamp]_fix_channel_permission_role_check.sql` | Create new migration |
 
-## Files to Modify
+### Test Cases Enabled After Fix
 
-| File | Changes |
-|------|---------|
-| `src/stores/notificationStore.ts` | Add `clearAllNotifications` function to interface and implementation |
-| `src/components/notifications/NotificationBell.tsx` | Add color theming helper, split header buttons, import AlertTriangle and CheckCheck icons, apply themed colors to notification items |
+| Scenario | Expected Result |
+|----------|-----------------|
+| Server owner manages channel permissions | Allowed |
+| User with base role `admin` manages channel permissions | Allowed |
+| User with custom role + `manage_channels` enabled | Allowed (currently broken) |
+| User with multiple roles (one grants permission) | Allowed (currently broken) |
+| User with `member` role and no custom roles | Denied |
+| User with custom role but `manage_channels` NOT enabled | Denied |
 
-## Technical Details
+### Migration Content
 
-### New Helper Function
-```typescript
-type NotificationTheme = 'amber' | 'emerald' | 'red' | 'blue' | 'violet' | 'default';
+```sql
+-- Fix channel permission management to respect custom role permissions
+-- The previous version used hardcoded role checks instead of the permission system
 
-const getNotificationTheme = (notification: Notification): NotificationTheme => {
-  // Check for warning (kick/ban) based on title
-  const title = notification.title?.toLowerCase() || '';
-  if (title.includes('kicked') || title.includes('banned')) {
-    return 'red';
-  }
+CREATE OR REPLACE FUNCTION public.set_channel_permission(
+  _channel_id uuid,
+  _user_id uuid,
+  _permission permission_type,
+  _allowed boolean,
+  _role_id uuid DEFAULT NULL,
+  _role_name server_role DEFAULT NULL,
+  _target_user_id uuid DEFAULT NULL
+)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  channel_server_id uuid;
+  new_permission_id uuid;
+BEGIN
+  -- Get channel's server_id
+  SELECT server_id INTO channel_server_id
+  FROM channels
+  WHERE id = _channel_id;
   
-  switch (notification.type) {
-    case 'mention': return 'amber';
-    case 'dm': return 'emerald';
-    case 'friend_request': return 'blue';
-    case 'server_invite': return 'violet';
-    default: return 'default';
-  }
-};
-
-const themeClasses = {
-  amber: { bg: 'bg-amber-500/10', text: 'text-amber-500', indicator: 'bg-amber-500', bgUnread: 'bg-amber-500/5' },
-  emerald: { bg: 'bg-emerald-500/10', text: 'text-emerald-500', indicator: 'bg-emerald-500', bgUnread: 'bg-emerald-500/5' },
-  red: { bg: 'bg-red-500/10', text: 'text-red-500', indicator: 'bg-red-500', bgUnread: 'bg-red-500/5' },
-  blue: { bg: 'bg-blue-500/10', text: 'text-blue-500', indicator: 'bg-blue-500', bgUnread: 'bg-blue-500/5' },
-  violet: { bg: 'bg-violet-500/10', text: 'text-violet-500', indicator: 'bg-violet-500', bgUnread: 'bg-violet-500/5' },
-  default: { bg: 'bg-primary/10', text: 'text-primary', indicator: 'bg-primary', bgUnread: 'bg-primary/5' },
-};
-```
-
-### Updated Icon Function
-```typescript
-const getNotificationIcon = (notification: Notification) => {
-  // Check for warning first
-  const title = notification.title?.toLowerCase() || '';
-  if (title.includes('kicked') || title.includes('banned')) {
-    return <AlertTriangle className="w-4 h-4" />;
-  }
+  IF channel_server_id IS NULL THEN
+    RAISE EXCEPTION 'Channel not found';
+  END IF;
   
-  switch (notification.type) {
-    case "mention": return <AtSign className="w-4 h-4" />;
-    case "dm": return <MessageCircle className="w-4 h-4" />;
-    case "friend_request": return <UserPlus className="w-4 h-4" />;
-    case "server_invite": return <Mail className="w-4 h-4" />;
-    default: return <Bell className="w-4 h-4" />;
-  }
-};
+  -- Check permission using database-backed permission system
+  -- This properly checks custom roles with manage_channels permission
+  IF NOT public.check_user_server_permission(_user_id, channel_server_id, 'manage_channels') THEN
+    RAISE EXCEPTION 'Permission denied';
+  END IF;
+  
+  -- Validate that exactly one target is provided
+  IF (_role_id IS NOT NULL)::int + (_role_name IS NOT NULL)::int + (_target_user_id IS NOT NULL)::int != 1 THEN
+    RAISE EXCEPTION 'Exactly one of role_id, role_name, or target_user_id must be provided';
+  END IF;
+  
+  -- If role_id is provided, verify it belongs to the server
+  IF _role_id IS NOT NULL THEN
+    IF NOT EXISTS (SELECT 1 FROM server_roles WHERE id = _role_id AND server_id = channel_server_id) THEN
+      RAISE EXCEPTION 'Role not found in this server';
+    END IF;
+  END IF;
+  
+  -- If target_user_id is provided, verify they are a member
+  IF _target_user_id IS NOT NULL THEN
+    IF NOT EXISTS (SELECT 1 FROM server_members WHERE server_id = channel_server_id AND user_id = _target_user_id) THEN
+      RAISE EXCEPTION 'Target user is not a member of this server';
+    END IF;
+  END IF;
+  
+  -- Delete existing matching permission first
+  DELETE FROM channel_permissions
+  WHERE channel_id = _channel_id
+    AND permission = _permission
+    AND (
+      (_role_id IS NOT NULL AND role_id = _role_id AND role_name IS NULL AND user_id IS NULL) OR
+      (_role_name IS NOT NULL AND role_name = _role_name AND role_id IS NULL AND user_id IS NULL) OR
+      (_target_user_id IS NOT NULL AND user_id = _target_user_id AND role_id IS NULL AND role_name IS NULL)
+    );
+  
+  -- Insert the new permission
+  INSERT INTO channel_permissions (channel_id, role_id, role_name, user_id, permission, allowed)
+  VALUES (_channel_id, _role_id, _role_name, _target_user_id, _permission, _allowed);
+  
+  -- Return the permission
+  SELECT id INTO new_permission_id
+  FROM channel_permissions
+  WHERE channel_id = _channel_id
+    AND (role_id = _role_id OR (role_id IS NULL AND _role_id IS NULL))
+    AND (role_name = _role_name OR (role_name IS NULL AND _role_name IS NULL))
+    AND (user_id = _target_user_id OR (user_id IS NULL AND _target_user_id IS NULL))
+    AND permission = _permission;
+  
+  RETURN (
+    SELECT json_build_object(
+      'id', cp.id,
+      'channel_id', cp.channel_id,
+      'role_id', cp.role_id,
+      'role_name', cp.role_name,
+      'user_id', cp.user_id,
+      'permission', cp.permission,
+      'allowed', cp.allowed,
+      'created_at', cp.created_at
+    )
+    FROM channel_permissions cp
+    WHERE cp.id = new_permission_id
+  );
+END;
+$$;
 ```
 
-## Visual Result
-- Mention notifications: Amber-themed with @ icon
-- DM notifications: Emerald-themed with chat bubble icon  
-- Kick/Ban warnings: Red-themed with alert triangle icon
-- Friend requests: Blue-themed with user plus icon
-- Server invites: Violet-themed with mail icon
+### No Frontend Changes Required
 
+The client-side permission evaluation in `src/lib/permissions.ts` already correctly handles custom roles via `evaluatePermission()`. The bug is purely in the database RPC layer.
