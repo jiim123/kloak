@@ -150,23 +150,32 @@ export const MessageItem = memo(function MessageItem({
   const messageUser = message.user;
 
   // Memoize member lookups
-  const { currentMember, messageMember, usersMap } = useMemo(() => {
-    const map = new Map<string, { username: string; display_name?: string | null; nickname?: string | null }>();
+  const channels = useServerStore((state) => state.channels);
+  
+  const { currentMember, messageMember, usersMap, channelsMap } = useMemo(() => {
+    const userMap = new Map<string, { username: string; display_name?: string | null; nickname?: string | null }>();
     members.forEach((m) => {
       if (m.user) {
-        map.set(m.user_id, {
+        userMap.set(m.user_id, {
           username: m.user.username,
           display_name: m.user.display_name,
           nickname: m.nickname,
         });
       }
     });
+    
+    const channelMap = new Map<string, { name: string }>();
+    channels.forEach((c) => {
+      channelMap.set(c.id, { name: c.name });
+    });
+    
     return {
       currentMember: members.find((m) => m.user_id === user?.id),
       messageMember: members.find((m) => m.user_id === message.user_id),
-      usersMap: map,
+      usersMap: userMap,
+      channelsMap: channelMap,
     };
-  }, [members, user?.id, message.user_id]);
+  }, [members, channels, user?.id, message.user_id]);
 
   // Load server emoji map
   useEffect(() => {
@@ -440,7 +449,7 @@ export const MessageItem = memo(function MessageItem({
   useEffect(() => {
     const handler = (e: CustomEvent<{ messageId: string }>) => {
       if (e.detail.messageId === message.id && isOwnMessage) {
-        const readableContent = convertMentionsToReadable(message.content, usersMap);
+        const readableContent = convertMentionsToReadable(message.content, usersMap, channelsMap);
         setEditContent(readableContent);
         setIsEditing(true);
         onStartEdit?.();
@@ -448,20 +457,20 @@ export const MessageItem = memo(function MessageItem({
     };
     window.addEventListener("startEditMessage" as keyof WindowEventMap, handler as EventListener);
     return () => window.removeEventListener("startEditMessage" as keyof WindowEventMap, handler as EventListener);
-  }, [message.id, message.content, isOwnMessage, onStartEdit, usersMap]);
+  }, [message.id, message.content, isOwnMessage, onStartEdit, usersMap, channelsMap]);
 
   // Callbacks
   const handleEdit = useCallback(async () => {
     const trimmed = editContent.trim();
     if (trimmed && user) {
       // Convert readable mentions back to UUID format before saving
-      const rawContent = convertMentionsToRaw(trimmed, usersMap);
+      const rawContent = convertMentionsToRaw(trimmed, usersMap, channelsMap);
       if (rawContent !== message.content) {
         await editMessage(message.id, rawContent, user.id);
       }
     }
     setIsEditing(false);
-  }, [editContent, message.content, message.id, user, editMessage, usersMap]);
+  }, [editContent, message.content, message.id, user, editMessage, usersMap, channelsMap]);
 
   const handleCancelEdit = useCallback(() => {
     setIsEditing(false);
