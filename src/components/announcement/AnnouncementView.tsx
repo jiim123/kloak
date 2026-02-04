@@ -8,6 +8,7 @@ import { X, Send, Loader2, Reply, Pencil, Trash2, Smile, ArrowLeft, CornerUpLeft
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { EmojiGifPicker } from "@/components/modals/EmojiGifPicker";
 import { DeleteMessageModal } from "@/components/modals/DeleteMessageModal";
 import { supabase } from "@/integrations/supabase/client";
@@ -768,21 +769,51 @@ export const AnnouncementView = ({ message, onClose }: AnnouncementViewProps) =>
                         
                         {/* Reactions */}
                         {comment.reactions && comment.reactions.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {comment.reactions.map((reaction) => (
-                              <button
-                                key={reaction.emoji}
-                                onClick={() => handleAddReaction(comment.id, reaction.emoji)}
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-colors duration-200 ${
-                                  reaction.hasReacted
-                                    ? "bg-primary/20 border-primary text-primary"
-                                    : "bg-secondary/80 border-transparent hover:border-border hover:bg-secondary"
-                                }`}
-                              >
-                                {reactionEmojiNode(reaction.emoji)}
-                                <span className="text-sm font-medium">{reaction.count}</span>
-                              </button>
-                            ))}
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {comment.reactions.map((reaction) => {
+                              // Get user names for hover card
+                              const reactionUserNames = reaction.users.slice(0, 5).map((userId) => {
+                                if (userId === user?.id) return 'You';
+                                const reactingComment = comments.find(c => c.user_id === userId);
+                                return reactingComment?.user?.display_name || reactingComment?.user?.username || 'Unknown';
+                              });
+                              const remainingCount = Math.max(0, reaction.users.length - 5);
+                              
+                              return (
+                                <HoverCard key={reaction.emoji} openDelay={200}>
+                                  <HoverCardTrigger asChild>
+                                    <button
+                                      onClick={() => handleAddReaction(comment.id, reaction.emoji)}
+                                      className={`flex items-center gap-1.5 px-2.5 py-1 text-sm rounded-md border transition-colors duration-200 ${
+                                        reaction.hasReacted
+                                          ? "bg-primary/20 border-primary text-primary"
+                                          : "bg-secondary border-transparent hover:border-border"
+                                      }`}
+                                    >
+                                      {reactionEmojiNode(reaction.emoji)}
+                                      <span className="text-xs">{reaction.count}</span>
+                                    </button>
+                                  </HoverCardTrigger>
+                                  <HoverCardContent className="w-auto p-2" align="start" side="top">
+                                    <div className="flex items-center gap-2">
+                                      <div className="shrink-0 text-2xl">{reactionEmojiNode(reaction.emoji)}</div>
+                                      <div className="min-w-0 text-sm">
+                                        <span className="text-muted-foreground">reacted by </span>
+                                        {reactionUserNames.map((name, idx) => (
+                                          <span key={`${reaction.emoji}-${idx}`}>
+                                            <span className="font-medium">{name}</span>
+                                            {idx < reactionUserNames.length - 1 ? ', ' : ''}
+                                          </span>
+                                        ))}
+                                        {remainingCount > 0 && (
+                                          <span className="text-muted-foreground"> and {remainingCount} others</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </HoverCardContent>
+                                </HoverCard>
+                              );
+                            })}
                           </div>
                         )}
                       </>
