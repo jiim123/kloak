@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { ArrowDown, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { StackedAvatars } from '@/components/ui/stacked-avatars';
 import { useDMStore } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -11,7 +12,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { DMMessageInput } from './DMMessageInput';
 import { DMMessageItem } from './DMMessageItem';
 import { DMHeader } from './DMHeader';
-import type { DirectMessage } from '@/types';
+import { GroupChatHeader } from './GroupChatHeader';
+import type { DirectMessage, User } from '@/types';
 
 export const DMChatArea = () => {
   const { user } = useAuthStore();
@@ -106,6 +108,36 @@ export const DMChatArea = () => {
 
   const groupedMessages = groupMessages(messages);
 
+  // Determine if this is a group conversation
+  const isGroup = currentConversation?.is_group || false;
+
+  // Get other participants for group chats (excluding current user)
+  const otherParticipants = useMemo(() => {
+    if (!isGroup || !currentConversation?.participants) return [];
+    return currentConversation.participants
+      .filter((p) => p.user_id !== user?.id)
+      .map((p) => p.user)
+      .filter((u): u is User => u != null);
+  }, [isGroup, currentConversation?.participants, user?.id]);
+
+  // Get display name for group intro
+  const getGroupDisplayName = useCallback(() => {
+    if (!currentConversation) return "";
+    if (currentConversation.name) return currentConversation.name;
+    
+    const names = otherParticipants
+      .slice(0, 3)
+      .map((p) => p.display_name || p.username || "Unknown");
+    
+    if (otherParticipants.length > 3) {
+      return `${names.join(", ")} and ${otherParticipants.length - 3} others`;
+    }
+    if (names.length === 1) return names[0];
+    if (names.length === 2) return `${names[0]} and ${names[1]}`;
+    if (names.length === 0) return "Group";
+    return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  }, [currentConversation, otherParticipants]);
+
   if (!currentConversation) {
     return (
       <div className="h-full flex items-center justify-center bg-layout-chat">
@@ -121,8 +153,15 @@ export const DMChatArea = () => {
 
   return (
     <div ref={swipeRef} className="h-full flex flex-col bg-layout-chat">
-      {/* DM Header - sticky on mobile, hidden desktop handled inside */}
-      <DMHeader otherUser={otherUser} />
+      {/* Header - different for group vs 1:1 */}
+      {isGroup ? (
+        <GroupChatHeader 
+          conversation={currentConversation} 
+          participants={otherParticipants} 
+        />
+      ) : (
+        <DMHeader otherUser={otherUser} />
+      )}
 
       {/* Messages container */}
       <div
@@ -130,32 +169,47 @@ export const DMChatArea = () => {
         className="flex-1 overflow-y-auto px-4"
         onScroll={handleScroll}
       >
-        {/* Start of conversation */}
-        <div className="py-8 mb-4">
-          <div className="flex items-center gap-4 mb-4">
-            <div
-              className="w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl font-bold"
-              style={{ backgroundColor: otherUser?.banner_color || '#5865F2' }}
-            >
-              {otherUser?.avatar_url ? (
-                <img
-                  src={otherUser.avatar_url}
-                  alt={otherUser.username}
-                  className="w-full h-full rounded-full object-cover"
-                />
-              ) : (
-                (otherUser?.username?.[0] || '?').toUpperCase()
-              )}
+        {/* Start of conversation - different for group vs 1:1 */}
+        {isGroup ? (
+          <div className="py-8 mb-4">
+            <div className="flex items-center gap-4 mb-4">
+              <StackedAvatars users={otherParticipants} size="lg" />
             </div>
+            <h2 className="text-2xl font-bold text-foreground">
+              {currentConversation.name || "Group Chat"}
+            </h2>
+            <p className="text-muted-foreground">
+              This is the beginning of your group chat with{' '}
+              <span className="font-semibold">{getGroupDisplayName()}</span>.
+            </p>
           </div>
-          <h2 className="text-2xl font-bold text-foreground">
-            {otherUser?.display_name || otherUser?.username}
-          </h2>
-          <p className="text-muted-foreground">
-            This is the beginning of your direct message history with{' '}
-            <span className="font-semibold">@{otherUser?.username}</span>.
-          </p>
-        </div>
+        ) : (
+          <div className="py-8 mb-4">
+            <div className="flex items-center gap-4 mb-4">
+              <div
+                className="w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl font-bold"
+                style={{ backgroundColor: otherUser?.banner_color || '#5865F2' }}
+              >
+                {otherUser?.avatar_url ? (
+                  <img
+                    src={otherUser.avatar_url}
+                    alt={otherUser.username}
+                    className="w-full h-full rounded-full object-cover"
+                  />
+                ) : (
+                  (otherUser?.username?.[0] || '?').toUpperCase()
+                )}
+              </div>
+            </div>
+            <h2 className="text-2xl font-bold text-foreground">
+              {otherUser?.display_name || otherUser?.username}
+            </h2>
+            <p className="text-muted-foreground">
+              This is the beginning of your direct message history with{' '}
+              <span className="font-semibold">@{otherUser?.username}</span>.
+            </p>
+          </div>
+        )}
 
         {/* Messages */}
         {isLoading ? (
@@ -209,7 +263,7 @@ export const DMChatArea = () => {
         /* Message input - matches channel input style */
         <DMMessageInput
           conversationId={currentConversation.id}
-          otherUsername={otherUser?.username || 'user'}
+          otherUsername={isGroup ? getGroupDisplayName() : (otherUser?.username || 'user')}
           replyingTo={replyingTo}
           onCancelReply={() => setReplyingTo(null)}
         />
