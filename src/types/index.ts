@@ -306,6 +306,7 @@ export interface DMConversation {
   created_at: string;
   is_group?: boolean;
   name?: string | null;
+  created_by?: string | null;
   participants?: DMParticipant[];
   last_message?: DirectMessage;
   other_user?: User;
