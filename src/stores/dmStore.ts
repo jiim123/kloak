@@ -22,6 +22,11 @@ interface DMState {
   editMessage: (messageId: string, senderId: string, content: string) => Promise<void>;
   deleteMessage: (messageId: string, senderId: string) => Promise<void>;
 
+  // Group actions
+  updateGroupName: (conversationId: string, userId: string, newName: string) => Promise<boolean>;
+  addGroupMembers: (conversationId: string, userId: string, memberIds: string[]) => Promise<boolean>;
+  leaveGroup: (conversationId: string, userId: string) => Promise<boolean>;
+
   // Reaction actions
   addReaction: (messageId: string, userId: string, emoji: string) => Promise<void>;
   removeReaction: (messageId: string, userId: string, emoji: string) => Promise<void>;
@@ -493,5 +498,75 @@ export const useDMStore = create<DMState>((set, get) => ({
 
   getMessages: (conversationId: string) => {
     return get().messagesByConversation[conversationId] || [];
+  },
+
+  updateGroupName: async (conversationId: string, userId: string, newName: string) => {
+    try {
+      const { error } = await supabase.rpc('update_group_dm_name', {
+        _conversation_id: conversationId,
+        _user_id: userId,
+        _new_name: newName,
+      });
+
+      if (error) throw error;
+
+      // Update local state
+      set((state) => ({
+        conversations: state.conversations.map((c) =>
+          c.id === conversationId ? { ...c, name: newName.trim() || null } : c
+        ),
+        currentConversation: state.currentConversation?.id === conversationId
+          ? { ...state.currentConversation, name: newName.trim() || null }
+          : state.currentConversation,
+      }));
+
+      return true;
+    } catch (error) {
+      console.error('Failed to update group name:', error);
+      return false;
+    }
+  },
+
+  addGroupMembers: async (conversationId: string, userId: string, memberIds: string[]) => {
+    try {
+      const { error } = await supabase.rpc('add_group_dm_members', {
+        _conversation_id: conversationId,
+        _user_id: userId,
+        _new_member_ids: memberIds,
+      });
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Failed to add group members:', error);
+      return false;
+    }
+  },
+
+  leaveGroup: async (conversationId: string, userId: string) => {
+    try {
+      const { error } = await supabase.rpc('leave_group_dm', {
+        _conversation_id: conversationId,
+        _user_id: userId,
+      });
+
+      if (error) throw error;
+
+      // Remove conversation from local state
+      set((state) => ({
+        conversations: state.conversations.filter((c) => c.id !== conversationId),
+        currentConversation: state.currentConversation?.id === conversationId
+          ? null
+          : state.currentConversation,
+        messagesByConversation: Object.fromEntries(
+          Object.entries(state.messagesByConversation).filter(([key]) => key !== conversationId)
+        ),
+      }));
+
+      return true;
+    } catch (error) {
+      console.error('Failed to leave group:', error);
+      return false;
+    }
   },
 }));

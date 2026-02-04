@@ -5,3 +5,4 @@ export { DMMessageInput } from './DMMessageInput';
 export { DMMessageItem } from './DMMessageItem';
 export { DMHeader } from './DMHeader';
 export { GroupChatHeader } from './GroupChatHeader';
+export { GroupSettingsModal } from './GroupSettingsModal';
