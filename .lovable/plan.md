@@ -1,150 +1,63 @@
 
+# Fix: DM Sidebar Sync Issues
 
-## Overview
+## Problem Summary
+When users create group chats or start DMs, the conversations don't appear in the sidebar for invited participants because the realtime subscription for `dm_participants` table events isn't working.
 
-This plan fixes the bug where group chats revert to 1:1 DM appearance in the sidebar. The root cause is that the `get_user_dm_conversations` RPC function was not updated to include the new `is_group` and `name` columns.
+## Root Cause
+The `dm_participants` table is missing from the Supabase Realtime publication, so INSERT/DELETE events are never broadcast to clients.
 
----
-
-## Root Cause Analysis
-
-### The Bug Flow
-
-```text
-1. User creates group via create_group_dm
-   -> Returns {is_group: true, name: "My Group", participants: [...]}
-   -> Sidebar displays correctly with stacked avatars
-
-2. fetchConversations() is triggered by:
-   - App initial load
-   - Visibility change (tab switch back)
-   - New participant added (realtime listener)
-
-3. get_user_dm_conversations RPC returns:
-   -> {id, created_at, participants, last_message}
-   -> MISSING: is_group, name
-
-4. Store maps: conv.is_group || false -> false
-   -> Conversation treated as 1:1 DM
-   -> Shows first other_user's avatar instead of stacked avatars
-```
-
-### Evidence
-
-The `get_user_dm_conversations` function (in migration `20260123100000_add_dm_blocking.sql`) builds this JSON:
-
-```sql
-json_build_object(
-  'id', dc.id,
-  'created_at', dc.created_at,
-  'participants', (...),
-  'last_message', (...)
-)
--- MISSING: 'is_group', dc.is_group
--- MISSING: 'name', dc.name
-```
-
-While `create_group_dm` (in migration `20260204132258`) correctly includes:
-
-```sql
-json_build_object(
-  'id', dc.id,
-  'created_at', dc.created_at,
-  'is_group', dc.is_group,    -- Included
-  'name', dc.name,            -- Included
-  'participants', (...)
-)
-```
-
----
-
-## The Fix
+## Solution
 
 ### Database Migration
+Add `dm_participants` and `dm_conversations` tables to the realtime publication with proper replica identity:
 
-Update the `get_user_dm_conversations` RPC to include the missing columns:
+```text
++---------------------------+     +---------------------------+
+|  dm_participants          |     |  dm_conversations         |
++---------------------------+     +---------------------------+
+| REPLICA IDENTITY: FULL    |     | REPLICA IDENTITY: FULL    |
+| Publication: supabase_    |     | Publication: supabase_    |
+|             realtime      |     |             realtime      |
++---------------------------+     +---------------------------+
+         |                                   |
+         v                                   v
+   Realtime events fire              Realtime events fire
+   for INSERT/DELETE                 for UPDATE (name changes)
+```
 
+### SQL Changes Required
+1. Set `REPLICA IDENTITY FULL` on both tables (required for filtered subscriptions)
+2. Add both tables to the `supabase_realtime` publication
+
+### Expected Behavior After Fix
+- When User A creates a group with User B and C:
+  - User A sees conversation immediately (local state update)
+  - Users B and C receive realtime `dm_participants` INSERT event
+  - Their `useRealtimeDMs` hook triggers `fetchConversations()`
+  - Conversation appears in their sidebar
+
+### Technical Details
+
+**Migration SQL:**
 ```sql
-CREATE OR REPLACE FUNCTION public.get_user_dm_conversations(_user_id uuid)
-RETURNS json
-LANGUAGE plpgsql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  RETURN (
-    SELECT json_agg(conv)
-    FROM (
-      SELECT json_build_object(
-        'id', dc.id,
-        'created_at', dc.created_at,
-        'is_group', dc.is_group,    -- ADD THIS
-        'name', dc.name,            -- ADD THIS
-        'participants', (...),
-        'last_message', (...)
-      ) as conv
-      FROM dm_conversations dc
-      WHERE ...
-    ) sub
-  );
-END;
-$$;
+-- Enable full replica identity for filtered subscriptions
+ALTER TABLE dm_participants REPLICA IDENTITY FULL;
+ALTER TABLE dm_conversations REPLICA IDENTITY FULL;
+
+-- Add to realtime publication
+ALTER PUBLICATION supabase_realtime ADD TABLE dm_participants;
+ALTER PUBLICATION supabase_realtime ADD TABLE dm_conversations;
 ```
 
----
+**No code changes required** - the `useRealtimeDMs` hook already has the correct subscription logic, it just wasn't receiving events.
 
-## Implementation Steps
+### Files Affected
+- New database migration only
+- No frontend code changes needed
 
-### Step 1: Create Database Migration
-
-Add a new migration that replaces the `get_user_dm_conversations` function with the updated version that includes `is_group` and `name` in the JSON output.
-
-### Step 2: Verify Frontend Mapping
-
-The frontend code in `dmStore.ts` already handles these fields correctly:
-
-```typescript
-return {
-  id: conv.id,
-  is_group: conv.is_group || false,  // Will now receive actual value
-  name: conv.name || null,           // Will now receive actual value
-  participants: conv.participants,
-  // ...
-};
-```
-
-No frontend changes needed - just the RPC fix.
-
----
-
-## Technical Details
-
-### Files to Change
-
-| File | Change |
-|------|--------|
-| New migration file | Update `get_user_dm_conversations` RPC |
-
-### Complete Updated RPC Function
-
-The function will add two lines to the `json_build_object` call:
-
-```sql
-'is_group', COALESCE(dc.is_group, false),
-'name', dc.name,
-```
-
-Using `COALESCE` ensures backward compatibility with existing 1:1 conversations that have `NULL` for `is_group`.
-
----
-
-## Verification
-
+### Testing Verification
 After the fix:
-
-1. Create a new group chat -> displays correctly
-2. Switch tabs and return -> still displays correctly
-3. Have another user send a message -> still displays correctly
-4. Refresh the page -> still displays correctly
-
+1. User A creates a group chat with User B
+2. User B should see the conversation appear in their DM sidebar within 1-2 seconds
+3. Same for 1-to-1 DMs initiated from profile popups
