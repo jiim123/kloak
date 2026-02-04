@@ -33,7 +33,7 @@ interface AuthState {
   updateUser: (updates: Partial<User>) => Promise<void>;
   updateStatus: (status: UserStatus, options?: { source?: 'manual' | 'auto' }) => Promise<void>;
   updateLastSeen: () => Promise<void>;
-  resetSecretKey: () => Promise<{ newSecretKey: string } | null>;
+  resetSecretKey: () => Promise<{ newSecretKey: string } | { error: string; cooldownEndsAt?: string; hoursRemaining?: number } | null>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -305,14 +305,23 @@ export const useAuthStore = create<AuthState>()(
           const newSecretKey = generateSecretKey();
           const newKeyHash = await hashSecretKey(newSecretKey);
 
-          // Update the key hash in the database using raw SQL call
-          // Note: The RPC 'reset_user_secret_key' must be created in Supabase
-          const { error } = await supabase
-            .from('users')
-            .update({ key_hash: newKeyHash })
-            .eq('id', user.id);
+          // Use the RPC function with cooldown enforcement
+          const { data, error } = await supabase.rpc('reset_user_secret_key', {
+            _user_id: user.id,
+            _new_key_hash: newKeyHash,
+          });
 
           if (error) throw error;
+
+          // Check if cooldown is active
+          const result = data as { success: boolean; error?: string; cooldown_ends_at?: string; hours_remaining?: number };
+          if (!result.success && result.error === 'cooldown') {
+            return { 
+              error: 'cooldown', 
+              cooldownEndsAt: result.cooldown_ends_at,
+              hoursRemaining: result.hours_remaining 
+            };
+          }
 
           // Update local state with the new key
           set({ secretKey: newSecretKey });

@@ -42,6 +42,7 @@ import { Switch } from "@/components/ui/switch";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { AvatarDecorationModal } from "@/components/modals/AvatarDecorationModal";
 import { ProfileEffectModal } from "@/components/modals/ProfileEffectModal";
+import { DockNavigation } from "@/components/ui/dock-navigation";
 import { useUIStore, THEMES, type Theme } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useFriendStore } from "@/stores/friendStore";
@@ -99,6 +100,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const [newSecretKey, setNewSecretKey] = useState<string | null>(null);
   const [showNewKeyModal, setShowNewKeyModal] = useState(false);
   const [isResettingKey, setIsResettingKey] = useState(false);
+  const [resetCooldownEndsAt, setResetCooldownEndsAt] = useState<Date | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDeletePreview, setShowDeletePreview] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -460,60 +462,113 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         </div>
       </div>
 
-      {/* Secret Key Section */}
-      <div className="space-y-3">
+      {/* Secret Key Section - Redesigned */}
+      <div className="space-y-4">
         <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Secret Key</Label>
-
-        {!keyRevealed ? (
-          <Button variant="secondary" onClick={() => setShowKeyConfirm(true)} className="w-full h-12 rounded-xl">
-            <Eye className="w-4 h-4 mr-2" />
-            View Secret Key
-          </Button>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex gap-2">
-              <Input
-                type={showSecretKey ? "text" : "password"}
-                value={secretKey || ""}
-                readOnly
-                className="font-mono text-xs h-12 rounded-xl bg-secondary/50"
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowSecretKey(!showSecretKey)}
-                className="h-12 w-12 rounded-xl flex-shrink-0"
-              >
-                {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleCopyKey}
-                className="h-12 w-12 rounded-xl flex-shrink-0"
-              >
-                {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-              </Button>
+        
+        {/* View Secret Key Card */}
+        <div className="p-4 rounded-xl bg-secondary/50 border border-border/50 space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Eye className="w-5 h-5 text-primary" />
             </div>
-            <p className="text-xs text-destructive flex items-center gap-2">
-              <Key className="w-3 h-3" />
-              Keep this key safe! It's the only way to access your account.
-            </p>
+            <div className="flex-1">
+              <h4 className="text-sm font-medium">View Secret Key</h4>
+              <p className="text-xs text-muted-foreground">Access your current secret key</p>
+            </div>
           </div>
-        )}
 
-        {/* Reset Key Button */}
-        <Button
-          variant="secondary"
-          onClick={() => setShowResetKeyConfirm(true)}
-          className="w-full h-11 rounded-xl border-amber-500/30 hover:border-amber-500/50 hover:bg-amber-500/10"
-        >
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Reset Secret Key
-        </Button>
-        <p className="text-xs text-muted-foreground">
-          If you believe your key has been compromised, you can generate a new one. Your old key will be invalidated immediately.
-        </p>
+          {!keyRevealed ? (
+            <Button variant="secondary" onClick={() => setShowKeyConfirm(true)} className="w-full h-11 rounded-xl">
+              <Eye className="w-4 h-4 mr-2" />
+              Reveal Secret Key
+            </Button>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <Input
+                  type={showSecretKey ? "text" : "password"}
+                  value={secretKey || ""}
+                  readOnly
+                  className="font-mono text-xs h-11 rounded-xl bg-background/50"
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowSecretKey(!showSecretKey)}
+                  className="h-11 w-11 rounded-xl flex-shrink-0"
+                >
+                  {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleCopyKey}
+                  className="h-11 w-11 rounded-xl flex-shrink-0"
+                >
+                  {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                </Button>
+              </div>
+              <p className="text-xs text-destructive flex items-center gap-2">
+                <Key className="w-3 h-3" />
+                Keep this key safe! It's the only way to access your account.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Reset Secret Key Card */}
+        <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+              <RefreshCw className="w-5 h-5 text-amber-500" />
+            </div>
+            <div className="flex-1">
+              <h4 className="text-sm font-medium text-amber-500">Reset Secret Key</h4>
+              <p className="text-xs text-muted-foreground">Generate a new key if compromised</p>
+            </div>
+          </div>
+
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            If you believe your key has been compromised, you can generate a new one. Your old key will be invalidated immediately.
+          </p>
+
+          {resetCooldownEndsAt && resetCooldownEndsAt > new Date() ? (
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+              <Clock className="w-4 h-4 text-amber-500 flex-shrink-0" />
+              <div className="text-xs">
+                <span className="text-amber-500 font-medium">Cooldown active</span>
+                <span className="text-muted-foreground ml-1">
+                  – Available {new Date(resetCooldownEndsAt).toLocaleString(undefined, { 
+                    month: 'short', 
+                    day: 'numeric', 
+                    hour: 'numeric', 
+                    minute: '2-digit' 
+                  })}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <Button
+              variant="secondary"
+              onClick={() => setShowResetKeyConfirm(true)}
+              disabled={isResettingKey}
+              className="w-full h-11 rounded-xl border-amber-500/30 hover:border-amber-500/50 hover:bg-amber-500/10"
+            >
+              {isResettingKey ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4 mr-2" />
+              )}
+              Reset Secret Key
+            </Button>
+          )}
+
+          <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+            <Clock className="w-3 h-3" />
+            24-hour cooldown between resets
+          </p>
+        </div>
       </div>
 
       {/* Danger Zone */}
@@ -1186,28 +1241,11 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           </div>
 
           {/* Dock Navigation */}
-          <div className="relative w-full flex gap-2 p-2 bg-background/95 backdrop-blur-xl rounded-2xl border border-border shadow-2xl overflow-x-auto scrollbar-hide scroll-smooth justify-start">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeTab === item.id;
-
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  className={cn(
-                    "relative flex flex-col items-center gap-1 px-4 py-2.5 rounded-xl transition-all flex-shrink-0",
-                    isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground hover:bg-secondary",
-                  )}
-                >
-                  <Icon className="w-5 h-5" />
-                  <span className="text-[10px] font-medium">{item.label}</span>
-                </button>
-              );
-            })}
-          </div>
+          <DockNavigation 
+            navItems={navItems} 
+            activeTab={activeTab} 
+            onTabChange={setActiveTab} 
+          />
         </div>
       )}
 
@@ -1488,9 +1526,18 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 const result = await resetSecretKey();
                 setIsResettingKey(false);
                 if (result) {
-                  setNewSecretKey(result.newSecretKey);
-                  setShowNewKeyModal(true);
-                  toast.success("Secret key reset successfully!");
+                  // Check if it's a cooldown error
+                  if ('error' in result && result.error === 'cooldown') {
+                    if (result.cooldownEndsAt) {
+                      setResetCooldownEndsAt(new Date(result.cooldownEndsAt));
+                    }
+                    const hoursLeft = result.hoursRemaining ? Math.ceil(result.hoursRemaining) : 24;
+                    toast.error(`You can reset your key again in ${hoursLeft} hour${hoursLeft !== 1 ? 's' : ''}`);
+                  } else if ('newSecretKey' in result) {
+                    setNewSecretKey(result.newSecretKey);
+                    setShowNewKeyModal(true);
+                    toast.success("Secret key reset successfully!");
+                  }
                 } else {
                   toast.error("Failed to reset secret key");
                 }

@@ -466,37 +466,39 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
   }, [openModal, channels, currentServer, setCurrentChannel, navigate]);
   
   return (
-    <div className="break-words inline" onClick={handleClick} onKeyDown={handleKeyDown} data-message-id={messageId}>
-      {segments.map((segment, index) => {
-        switch (segment.type) {
-          case 'code-block':
-            return (
-              <CodeBlock 
-                key={index} 
-                code={segment.content} 
-                language={segment.language} 
-              />
-            );
-          case 'inline-code':
-            return <InlineCode key={index}>{segment.content}</InlineCode>;
-          case 'text':
-            return (
-              <span
-                key={index}
-                dangerouslySetInnerHTML={{
-                  __html: parseTextContent(segment.content, currentUserId, usersMap, customEmojiMap, channelsMap),
-                }}
-              />
-            );
-          default:
-            return null;
-        }
-      })}
-      
+    <div className="!block break-words" onClick={handleClick} onKeyDown={handleKeyDown} data-message-id={messageId}>
+      {/* Message text content */}
+      <span className="inline">
+        {segments.map((segment, index) => {
+          switch (segment.type) {
+            case 'code-block':
+              return (
+                <CodeBlock 
+                  key={index} 
+                  code={segment.content} 
+                  language={segment.language} 
+                />
+              );
+            case 'inline-code':
+              return <InlineCode key={index}>{segment.content}</InlineCode>;
+            case 'text':
+              return (
+                <span
+                  key={index}
+                  dangerouslySetInnerHTML={{
+                    __html: parseTextContent(segment.content, currentUserId, usersMap, customEmojiMap, channelsMap),
+                  }}
+                />
+              );
+            default:
+              return null;
+          }
+        })}
+      </span>
 
       {/* Invite link previews */}
       {inviteCodes.length > 0 && (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 mt-2">
           {inviteCodes.slice(0, 3).map((code) => (
             <InviteLinkPreview key={code} inviteCode={code} />
           ))}
@@ -505,7 +507,7 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
 
       {/* Link previews (excluding image URLs) */}
       {linkPreviewsEnabled && !hideEmbeds && nonInviteLinkUrls.length > 0 && (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 mt-2">
           {nonInviteLinkUrls.slice(0, 3).map((url, index) => (
             <LinkPreview 
               key={`${url}-${index}`} 

@@ -150,23 +150,32 @@ export const MessageItem = memo(function MessageItem({
   const messageUser = message.user;
 
   // Memoize member lookups
-  const { currentMember, messageMember, usersMap } = useMemo(() => {
-    const map = new Map<string, { username: string; display_name?: string | null; nickname?: string | null }>();
+  const channels = useServerStore((state) => state.channels);
+  
+  const { currentMember, messageMember, usersMap, channelsMap } = useMemo(() => {
+    const userMap = new Map<string, { username: string; display_name?: string | null; nickname?: string | null }>();
     members.forEach((m) => {
       if (m.user) {
-        map.set(m.user_id, {
+        userMap.set(m.user_id, {
           username: m.user.username,
           display_name: m.user.display_name,
           nickname: m.nickname,
         });
       }
     });
+    
+    const channelMap = new Map<string, { name: string }>();
+    channels.forEach((c) => {
+      channelMap.set(c.id, { name: c.name });
+    });
+    
     return {
       currentMember: members.find((m) => m.user_id === user?.id),
       messageMember: members.find((m) => m.user_id === message.user_id),
-      usersMap: map,
+      usersMap: userMap,
+      channelsMap: channelMap,
     };
-  }, [members, user?.id, message.user_id]);
+  }, [members, channels, user?.id, message.user_id]);
 
   // Load server emoji map
   useEffect(() => {
@@ -440,7 +449,7 @@ export const MessageItem = memo(function MessageItem({
   useEffect(() => {
     const handler = (e: CustomEvent<{ messageId: string }>) => {
       if (e.detail.messageId === message.id && isOwnMessage) {
-        const readableContent = convertMentionsToReadable(message.content, usersMap);
+        const readableContent = convertMentionsToReadable(message.content, usersMap, channelsMap);
         setEditContent(readableContent);
         setIsEditing(true);
         onStartEdit?.();
@@ -448,20 +457,20 @@ export const MessageItem = memo(function MessageItem({
     };
     window.addEventListener("startEditMessage" as keyof WindowEventMap, handler as EventListener);
     return () => window.removeEventListener("startEditMessage" as keyof WindowEventMap, handler as EventListener);
-  }, [message.id, message.content, isOwnMessage, onStartEdit, usersMap]);
+  }, [message.id, message.content, isOwnMessage, onStartEdit, usersMap, channelsMap]);
 
   // Callbacks
   const handleEdit = useCallback(async () => {
     const trimmed = editContent.trim();
     if (trimmed && user) {
       // Convert readable mentions back to UUID format before saving
-      const rawContent = convertMentionsToRaw(trimmed, usersMap);
+      const rawContent = convertMentionsToRaw(trimmed, usersMap, channelsMap);
       if (rawContent !== message.content) {
         await editMessage(message.id, rawContent, user.id);
       }
     }
     setIsEditing(false);
-  }, [editContent, message.content, message.id, user, editMessage, usersMap]);
+  }, [editContent, message.content, message.id, user, editMessage, usersMap, channelsMap]);
 
   const handleCancelEdit = useCallback(() => {
     setIsEditing(false);
@@ -520,13 +529,15 @@ export const MessageItem = memo(function MessageItem({
 
   const handleCopyText = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(message.content);
+      // Convert UUID mentions to readable format before copying
+      const readableContent = convertMentionsToReadable(message.content, usersMap, channelsMap);
+      await navigator.clipboard.writeText(readableContent);
       toast.success("Message copied to clipboard");
     } catch (error) {
       console.error("Failed to copy text:", error);
       toast.error("Failed to copy message");
     }
-  }, [message.content]);
+  }, [message.content, usersMap, channelsMap]);
 
   const handleCopyMessageId = useCallback(() => {
     navigator.clipboard.writeText(message.id);
@@ -547,10 +558,10 @@ export const MessageItem = memo(function MessageItem({
 
   const handleStartEditing = useCallback(() => {
     // Convert UUID mentions to readable format for editing
-    const readableContent = convertMentionsToReadable(message.content, usersMap);
+    const readableContent = convertMentionsToReadable(message.content, usersMap, channelsMap);
     setEditContent(readableContent);
     setIsEditing(true);
-  }, [message.content, usersMap]);
+  }, [message.content, usersMap, channelsMap]);
 
   const handleEditContentChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -674,20 +685,12 @@ export const MessageItem = memo(function MessageItem({
         <ContextMenu>
           <ContextMenuTrigger asChild disabled={isMobile}>
             <div
-              className={`${innerClassName} cursor-pointer`}
+              className={innerClassName}
               onMouseEnter={() => setIsRowHovered(true)}
               onMouseLeave={() => setIsRowHovered(false)}
               onTouchStart={handleTouchStart}
               onTouchEnd={clearLongPress}
               onTouchMove={clearLongPress}
-              onClick={(e) => {
-                // Don't trigger reply when clicking on interactive elements
-                const target = e.target as HTMLElement;
-                const isInteractive = target.closest('button, a, input, textarea, [role="button"], [contenteditable], .emoji-picker');
-                if (!isInteractive && !isEditing && !isPending && !message.is_system_message) {
-                  setReplyingTo(message);
-                }
-              }}
             >
               {/* Avatar / Timestamp column - hidden for system messages */}
               {!message.is_system_message && (

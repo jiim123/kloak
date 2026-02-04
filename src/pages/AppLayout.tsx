@@ -399,9 +399,9 @@ const AppLayout = () => {
               </div>
             ) : (
               <ResizablePanelGroup direction="horizontal" className="flex-1">
-                {/* Secondary sidebar - resizable, default 240px (~15% of typical viewport) */}
+                {/* Secondary sidebar - resizable, default 380px (~20% of typical 1920px viewport) */}
                 <ResizablePanel 
-                  defaultSize={15} 
+                  defaultSize={20} 
                   minSize={10} 
                   maxSize={30}
                   className="bg-layout-sidebar-secondary"

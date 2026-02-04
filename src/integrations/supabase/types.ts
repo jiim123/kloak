@@ -1915,6 +1915,7 @@ export type Database = {
           display_name: string | null
           id: string
           key_hash: string
+          last_key_reset_at: string | null
           last_seen: string | null
           profile_effect: string | null
           profile_theme_accent: string | null
@@ -1933,6 +1934,7 @@ export type Database = {
           display_name?: string | null
           id?: string
           key_hash: string
+          last_key_reset_at?: string | null
           last_seen?: string | null
           profile_effect?: string | null
           profile_theme_accent?: string | null
@@ -1951,6 +1953,7 @@ export type Database = {
           display_name?: string | null
           id?: string
           key_hash?: string
+          last_key_reset_at?: string | null
           last_seen?: string | null
           profile_effect?: string | null
           profile_theme_accent?: string | null
@@ -2329,6 +2332,7 @@ export type Database = {
         Args: { _server_id: string; _user_id: string }
         Returns: boolean
       }
+      is_username_blocked: { Args: { username: string }; Returns: boolean }
       join_server_by_invite:
         | { Args: { _invite_code: string; _user_id: string }; Returns: Json }
         | {
@@ -2394,10 +2398,33 @@ export type Database = {
         Args: { _server_id: string; _user_id: string }
         Returns: string
       }
-      register_user: {
-        Args: { _banner_color?: string; _key_hash: string; _username: string }
-        Returns: Json
-      }
+      register_user:
+        | {
+            Args: { _key_hash: string; _username: string }
+            Returns: {
+              avatar_decoration: string
+              avatar_url: string
+              banner_color: string
+              banner_url: string
+              bio: string
+              created_at: string
+              custom_status: string
+              display_name: string
+              id: string
+              last_seen: string
+              profile_effect: string
+              status: string
+              username: string
+            }[]
+          }
+        | {
+            Args: {
+              _banner_color?: string
+              _key_hash: string
+              _username: string
+            }
+            Returns: Json
+          }
       remove_channel_member: {
         Args: {
           _channel_id: string
@@ -2422,10 +2449,12 @@ export type Database = {
         Args: { _member_id: string; _role_id: string; _user_id: string }
         Returns: boolean
       }
-      reset_user_secret_key: {
-        Args: { _new_key_hash: string; _user_id: string }
-        Returns: undefined
-      }
+      reset_user_secret_key:
+        | { Args: { _new_key_hash: string; _user_id: string }; Returns: Json }
+        | {
+            Args: { _new_key_hash: string; _user_id: string }
+            Returns: undefined
+          }
       revoke_server_invite: {
         Args: { _invite_id: string; _user_id: string }
         Returns: boolean
