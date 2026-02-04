@@ -9,6 +9,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Shield, Key, Users, HelpCircle } from "lucide-react";
+import { SmokeRing } from "@paper-design/shaders-react";
 
 const faqCategories = [
   {
@@ -91,34 +92,51 @@ const FAQ = () => {
         <main className="pt-10">
           {/* Hero Section */}
           <section className="relative py-32 md:py-40 px-8 lg:px-16 overflow-hidden">
-            <div className="max-w-7xl mx-auto">
+            {/* Cyan shader background */}
+            <div className="absolute inset-0">
+              <SmokeRing
+                style={{ width: "100%", height: "100%" }}
+                colors={["#0891b2"]}
+                colorBack="#0c2d36"
+                noiseScale={3}
+                noiseIterations={3}
+                radius={0.95}
+                thickness={0.85}
+                innerShape={0.9}
+                speed={0.3}
+                scale={2.24}
+                offsetY={0.46}
+              />
+            </div>
+            
+            <div className="relative z-10 max-w-7xl mx-auto">
               <motion.div
                 className="flex items-center gap-4 mb-8"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.6 }}
               >
-                <span className="text-xs font-mono text-primary tracking-widest uppercase">Help Center</span>
+                <span className="text-xs font-mono text-white/80 tracking-widest uppercase">Help Center</span>
               </motion.div>
 
               <motion.h1
-                className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light text-foreground leading-tight tracking-tight mb-8"
+                className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light text-white leading-tight tracking-tight mb-8"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.1 }}
               >
                 Frequently asked
                 <br />
-                <span className="text-primary/60">questions.</span>
+                <span className="text-white/60">questions.</span>
               </motion.h1>
 
               <motion.p
-                className="text-lg md:text-xl text-muted-foreground max-w-2xl leading-relaxed"
+                className="text-lg md:text-xl text-white/70 max-w-2xl leading-relaxed"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
               >
-                Everything you need to know about Kloak. Can't find what you're looking for? Join our community server.
+                Everything you need to know about Kloak. Can not find what you are looking for? Join our community server.
               </motion.p>
             </div>
           </section>
