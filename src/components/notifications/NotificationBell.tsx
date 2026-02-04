@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { useAuthStore } from "@/stores/authStore";
+import { useServerStore } from "@/stores/serverStore";
 import { requestNotificationPermission } from "@/hooks/useRealtimeNotifications";
 import { cn } from "@/lib/utils";
 import type { Notification } from "@/types";
@@ -96,10 +97,34 @@ export const NotificationBell = () => {
     }
   };
 
-  const handleNotificationClick = (notificationId: string, link: string | null) => {
+  const handleNotificationClick = (notificationId: string, link: string | null, notificationType: string) => {
     markAsRead(notificationId);
     if (link) {
-      navigate(link);
+      // Parse the link to extract server, channel, and message IDs
+      const url = new URL(link, window.location.origin);
+      const serverId = url.searchParams.get('server');
+      const channelId = url.searchParams.get('channel');
+      const messageId = url.searchParams.get('message');
+      const conversationId = url.searchParams.get('conversation');
+      
+      // For mentions, navigate to the proper server/channel route
+      if (notificationType === 'mention' && serverId && channelId) {
+        // Clear current server state to force a fresh load
+        useServerStore.getState().clearServerState();
+        
+        // Navigate with message ID for scroll-to-message
+        if (messageId) {
+          navigate(`/app/servers/${serverId}/channels/${channelId}?message=${messageId}`);
+        } else {
+          navigate(`/app/servers/${serverId}/channels/${channelId}`);
+        }
+      } else if (conversationId) {
+        // DM navigation
+        navigate(`/app?conversation=${conversationId}`);
+      } else {
+        // Fallback to the link as-is
+        navigate(link);
+      }
     }
     setIsOpen(false);
   };
@@ -197,23 +222,23 @@ export const NotificationBell = () => {
             {unreadCount > 0 && (
               <Button
                 variant="ghost"
-                size="sm"
-                className="h-8 px-2 text-xs rounded-lg hover:bg-secondary/60 transition-colors"
+                size="icon"
+                className="h-7 w-7 rounded-lg hover:bg-secondary/60 transition-colors"
                 onClick={handleMarkAllAsRead}
+                title="Mark all as read"
               >
-                <CheckCheck className="w-3 h-3 mr-1" />
-                Mark as read
+                <CheckCheck className="w-3.5 h-3.5" />
               </Button>
             )}
             {notifications.length > 0 && (
               <Button
                 variant="ghost"
-                size="sm"
-                className="h-8 px-2 text-xs rounded-lg hover:bg-secondary/60 transition-colors"
+                size="icon"
+                className="h-7 w-7 rounded-lg hover:bg-secondary/60 transition-colors"
                 onClick={handleClearAll}
+                title="Clear all"
               >
-                <Trash2 className="w-3 h-3 mr-1" />
-                Clear all
+                <Trash2 className="w-3.5 h-3.5" />
               </Button>
             )}
           </div>
@@ -242,7 +267,7 @@ export const NotificationBell = () => {
                       animationDelay: `${index * 50}ms`,
                       animationFillMode: "both",
                     }}
-                    onClick={() => !showFriendActions && handleNotificationClick(notification.id, notification.link)}
+                    onClick={() => !showFriendActions && handleNotificationClick(notification.id, notification.link, notification.type)}
                   >
                     {/* Unread indicator */}
                     {isUnread && (
