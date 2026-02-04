@@ -102,6 +102,61 @@ export type Database = {
           },
         ]
       }
+      category_permissions: {
+        Row: {
+          allowed: boolean
+          category_id: string
+          created_at: string | null
+          id: string
+          permission: string
+          role_id: string | null
+          role_name: string | null
+          user_id: string | null
+        }
+        Insert: {
+          allowed?: boolean
+          category_id: string
+          created_at?: string | null
+          id?: string
+          permission: string
+          role_id?: string | null
+          role_name?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          allowed?: boolean
+          category_id?: string
+          created_at?: string | null
+          id?: string
+          permission?: string
+          role_id?: string | null
+          role_name?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "category_permissions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "channel_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "category_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "server_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "category_permissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       channel_categories: {
         Row: {
           created_at: string | null

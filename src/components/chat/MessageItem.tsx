@@ -714,9 +714,11 @@ export const MessageItem = memo(function MessageItem({
                           />
                         )
                       ) : (
-                        <span className="text-[11px] font-[Inter,system-ui,sans-serif] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                          {formattedTime}
-                        </span>
+                        <div className="h-full flex items-center justify-center">
+                          <span className="text-[11px] font-[Inter,system-ui,sans-serif] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                            {formattedTime}
+                          </span>
+                        </div>
                       )}
                     </div>
                   )}
