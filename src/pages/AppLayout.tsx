@@ -17,7 +17,7 @@ import { MobileSidebar } from '@/components/layout/MobileSidebar';
 import { MobileMembersSidebar } from '@/components/layout/MobileMembersSidebar';
 import { ConnectionStatus } from '@/components/ui/ConnectionStatus';
 import { DMSidebar, FriendsList, DMChatArea } from '@/components/dm';
-import { ServerSettingsPage } from '@/components/settings/ServerSettingsPage';
+import { ServerSettingsPage, ChannelSettingsPage } from '@/components/settings';
 import {
   CreateServerModal,
   JoinServerModal,
@@ -384,7 +384,7 @@ const AppLayout = () => {
               <ServerSidebar />
             </div>
 
-            {/* Server Settings Page - takes full space except server icons */}
+            {/* Full-screen settings pages - take full space except server icons */}
             {isServerSettingsOpen ? (
               <div className="flex-1 min-w-0">
                 <ServerSettingsPage />
@@ -392,6 +392,10 @@ const AppLayout = () => {
             ) : activeModal === 'user-settings' ? (
               <div className="flex-1 min-w-0">
                 <UserSettingsPage />
+              </div>
+            ) : activeModal === 'edit-channel' ? (
+              <div className="flex-1 min-w-0">
+                <ChannelSettingsPage />
               </div>
             ) : (
               <ResizablePanelGroup direction="horizontal" className="flex-1">

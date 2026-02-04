@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useUIStore } from "@/stores/uiStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +38,8 @@ const SLOWMODE_OPTIONS = [
   { value: "3600", label: "1 hour" },
 ];
 
+// Mobile-only modal for editing channels/categories
+// Desktop uses ChannelSettingsPage (full-screen) instead
 export const EditChannelModal = () => {
   const isMobile = useIsMobile();
   const { activeModal, modalData, closeModal } = useUIStore();
@@ -164,9 +165,7 @@ export const EditChannelModal = () => {
       if (isCategory && categoryId) {
         await updateCategory(
           categoryId,
-          {
-            name: name.trim(),
-          },
+          { name: name.trim() },
           user.id,
         );
         toast.success("Category updated");
@@ -539,7 +538,7 @@ export const EditChannelModal = () => {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium">Category Settings</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Category-level settings affect how channels within this category behave. Individual channel settings can override these defaults.
+              Category-level settings affect how channels within this category behave.
             </p>
           </div>
         </div>
@@ -604,189 +603,83 @@ export const EditChannelModal = () => {
   // Check if we need to show save button
   const showSaveButton = activeTab === "overview" || (activeTab === "settings" && !isCategory);
 
-  // Don't render if no valid target
-  if (!isOpen || !hasValidTarget) return null;
+  // Don't render for desktop - use ChannelSettingsPage instead
+  // Only render modal for mobile
+  if (!isOpen || !hasValidTarget || !isMobile) return null;
 
-  // Full-screen modal layout (like ServerSettings/UserSettings)
   return (
     <>
       {/* Mobile: Custom Dialog with Dock */}
-      {isMobile && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-end p-4 pb-6">
-          {/* Backdrop */}
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={handleClose} />
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-end p-4 pb-6">
+        {/* Backdrop */}
+        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={handleClose} />
 
-          {/* Dialog */}
-          <div
-            className="relative bg-background rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-border mb-4"
-            style={{ maxHeight: "calc(100vh - 140px)" }}
-          >
-            {/* Header */}
-            <div className="px-5 py-4 border-b border-border flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold">{navItems.find((n) => n.id === activeTab)?.label}</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {isCategory ? category?.name : `#${channel?.name}`}
-                </p>
-              </div>
-              <Button variant="ghost" size="icon" onClick={handleClose} className="rounded-full">
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
-
-            {/* Content */}
-            <div className="overflow-y-auto p-5" style={{ maxHeight: "calc(100vh - 300px)" }}>
-              {isCategory ? renderCategoryContent() : renderChannelContent()}
-              
-              {/* Save Button for overview and settings */}
-              {showSaveButton && (
-                <div className="flex gap-3 pt-6 mt-6 border-t border-border/50">
-                  <Button type="button" variant="outline" onClick={handleClose} className="flex-1 h-11 rounded-xl">
-                    Cancel
-                  </Button>
-                  <Button onClick={handleSubmit} disabled={isSubmitting || !name.trim()} className="flex-1 h-11 rounded-xl">
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      "Save Changes"
-                    )}
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Dock Navigation */}
-          <div className="relative w-full flex gap-2 p-2 bg-background/95 backdrop-blur-xl rounded-2xl border border-border shadow-2xl overflow-x-auto scrollbar-hide scroll-smooth justify-start">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  className={cn(
-                    "relative flex flex-col items-center gap-1 px-4 py-2.5 rounded-xl transition-all flex-shrink-0",
-                    isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground hover:bg-secondary",
-                  )}
-                >
-                  <Icon className="w-5 h-5" />
-                  <span className="text-[10px] font-medium">{item.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Desktop: Full-screen modal like ServerSettings */}
-      {!isMobile && (
-        <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-          <DialogContent className="max-w-[90vw] w-full max-h-[90vh] h-[85vh] overflow-hidden p-0 rounded-2xl gap-0 flex flex-col">
-            {/* Header */}
-            <div className="relative px-6 pt-6 pb-4 border-b border-border/50 flex-shrink-0">
-              <div className="absolute -top-20 -right-20 w-40 h-40 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
-
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary mb-4">
-                {isCategory ? (
-                  <>
-                    <FolderOpen className="w-3 h-3" />
-                    Edit Category
-                  </>
-                ) : (
-                  <>
-                    <Hash className="w-3 h-3" />
-                    Edit Channel
-                  </>
-                )}
-              </div>
-
-              <h2 className="text-xl font-semibold">
+        {/* Dialog */}
+        <div
+          className="relative bg-background rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-border mb-4"
+          style={{ maxHeight: "calc(100vh - 140px)" }}
+        >
+          {/* Header */}
+          <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold">{navItems.find((n) => n.id === activeTab)?.label}</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
                 {isCategory ? category?.name : `#${channel?.name}`}
-              </h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                {isCategory 
-                  ? "Modify category settings and permissions" 
-                  : "Modify channel settings and permissions"}
               </p>
             </div>
+            <Button variant="ghost" size="icon" onClick={handleClose} className="rounded-full">
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
 
-            {/* Main Content Area */}
-            <div className="flex-1 flex overflow-hidden">
-              {/* Sidebar Navigation */}
-              <div className="w-56 bg-secondary/20 border-r border-border/50 flex flex-col overflow-hidden flex-shrink-0">
-                <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-                  {navItems.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = activeTab === item.id;
-
-                    return (
-                      <button
-                        key={item.id}
-                        onClick={() => setActiveTab(item.id)}
-                        className={cn(
-                          "w-full flex items-center gap-3 px-4 py-3 text-sm rounded-xl transition-all",
-                          isActive
-                            ? "bg-background shadow-sm"
-                            : "text-muted-foreground hover:text-foreground hover:bg-secondary/80",
-                        )}
-                      >
-                        <Icon className="w-4 h-4" />
-                        {item.label}
-                      </button>
-                    );
-                  })}
-                </nav>
+          {/* Content */}
+          <div className="overflow-y-auto p-5" style={{ maxHeight: "calc(100vh - 300px)" }}>
+            {isCategory ? renderCategoryContent() : renderChannelContent()}
+            
+            {/* Save Button for overview and settings */}
+            {showSaveButton && (
+              <div className="flex gap-3 pt-6 mt-6 border-t border-border/50">
+                <Button type="button" variant="outline" onClick={handleClose} className="flex-1 h-11 rounded-xl">
+                  Cancel
+                </Button>
+                <Button onClick={handleSubmit} disabled={isSubmitting || !name.trim()} className="flex-1 h-11 rounded-xl">
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </Button>
               </div>
+            )}
+          </div>
+        </div>
 
-              {/* Content Area */}
-              <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-                <div className="flex-1 overflow-y-auto p-8">
-                  <div className="max-w-2xl">
-                    {/* Tab Title */}
-                    <div className="mb-6 pb-5 border-b border-border">
-                      <h3 className="text-xl font-semibold">{navItems.find((n) => n.id === activeTab)?.label}</h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {activeTab === "overview" && (isCategory ? "Basic category information" : "Basic channel information")}
-                        {activeTab === "settings" && (isCategory ? "Category configuration options" : "Channel configuration options")}
-                        {activeTab === "members" && "Manage who can access this private channel"}
-                        {activeTab === "permissions" && (isCategory ? "Control category access and abilities" : "Control channel access and abilities")}
-                      </p>
-                    </div>
-
-                    {/* Tab Content */}
-                    {isCategory ? renderCategoryContent() : renderChannelContent()}
-
-                    {/* Save Button for overview and settings (channel) */}
-                    {showSaveButton && (
-                      <div className="flex gap-3 pt-6 mt-6 border-t border-border/50">
-                        <Button type="button" variant="outline" onClick={handleClose} className="h-11 rounded-xl px-8">
-                          Cancel
-                        </Button>
-                        <Button onClick={handleSubmit} disabled={isSubmitting || !name.trim()} className="h-11 rounded-xl px-8">
-                          {isSubmitting ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Saving...
-                            </>
-                          ) : (
-                            "Save Changes"
-                          )}
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+        {/* Dock Navigation */}
+        <div className="relative w-full flex gap-2 p-2 bg-background/95 backdrop-blur-xl rounded-2xl border border-border shadow-2xl overflow-x-auto scrollbar-hide scroll-smooth justify-start">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={cn(
+                  "relative flex flex-col items-center gap-1 px-4 py-2.5 rounded-xl transition-all flex-shrink-0",
+                  isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-secondary",
+                )}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="text-[10px] font-medium">{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Delete confirmation dialog */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
