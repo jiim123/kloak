@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
-import { Paperclip, Smile, Send, X, Type } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback, memo } from 'react';
+import { Paperclip, Smile, Send, X, Type, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useDMStore } from '@/stores/dmStore';
 import { saveDraft, getDraft, clearDraft } from '@/lib/storage';
-import { EmojiGifPicker } from '@/components/modals/EmojiGifPicker';
+import { EmojiPicker } from '@/components/modals/EmojiPicker';
 import { ImageUploadDialog } from '@/components/modals/ImageUploadDialog';
 import { FormatToolbar, FORMAT_SYNTAX, getColorSyntax, getCodeBlockSyntax } from '@/components/chat/FormatToolbar';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,6 +18,89 @@ interface DMMessageInputProps {
 }
 
 const MAX_LENGTH = 2000;
+const MIN_TEXTAREA_HEIGHT = 40;
+const MAX_TEXTAREA_HEIGHT = 160;
+const DRAFT_SAVE_DELAY = 500;
+
+// Memoized action buttons to prevent re-renders
+const ActionButtons = memo(({
+  showFormatToolbar,
+  setShowFormatToolbar,
+  showEmojiPicker,
+  setShowEmojiPicker,
+  content,
+  isSending,
+  onSubmit,
+  onEmojiSelect,
+}: {
+  showFormatToolbar: boolean;
+  setShowFormatToolbar: (show: boolean) => void;
+  showEmojiPicker: boolean;
+  setShowEmojiPicker: (show: boolean) => void;
+  content: string;
+  isSending: boolean;
+  onSubmit: () => void;
+  onEmojiSelect: (emoji: string) => void;
+}) => {
+  const showCharacterWarning = content.length > MAX_LENGTH - 200;
+
+  return (
+    <div className="flex items-center gap-1 mb-0.5 relative">
+      {/* Character count warning */}
+      {showCharacterWarning && (
+        <span className={`text-[13px] font-[Inter,system-ui,sans-serif] mr-1 ${content.length > MAX_LENGTH - 50 ? 'text-destructive' : 'text-muted-foreground'}`}>
+          {MAX_LENGTH - content.length}
+        </span>
+      )}
+
+      {/* Format button */}
+      <button
+        type="button"
+        onClick={() => setShowFormatToolbar(!showFormatToolbar)}
+        className={cn(
+          'p-2 rounded-xl transition-colors duration-150',
+          showFormatToolbar 
+            ? 'text-primary bg-primary/10' 
+            : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+        )}
+        onMouseDown={(e) => e.preventDefault()}
+        title="Format text"
+      >
+        <Type className="w-5 h-5" />
+      </button>
+
+      {/* Emoji button */}
+      <EmojiPicker
+        open={showEmojiPicker}
+        onOpenChange={setShowEmojiPicker}
+        onEmojiSelect={onEmojiSelect}
+      >
+        <button 
+          type="button"
+          className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-150"
+          onMouseDown={(e) => e.preventDefault()}
+        >
+          <Smile className="w-5 h-5" />
+        </button>
+      </EmojiPicker>
+
+      {/* Send button */}
+      <button
+        onClick={onSubmit}
+        disabled={!content.trim() || isSending}
+        className={cn(
+          'p-2 rounded-xl transition-all duration-150',
+          content.trim() && !isSending
+            ? 'bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95'
+            : 'bg-muted/50 text-muted-foreground/50 cursor-not-allowed'
+        )}
+      >
+        {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+      </button>
+    </div>
+  );
+});
+ActionButtons.displayName = 'ActionButtons';
 
 export const DMMessageInput = ({ 
   conversationId, 
@@ -36,17 +119,17 @@ export const DMMessageInput = ({
   const [showImageUpload, setShowImageUpload] = useState(false);
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const draftSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load draft on mount and conversation change
   useEffect(() => {
     const draft = getDraft(`dm-${conversationId}`);
     setContent(draft);
+    // Reset textarea height
+    if (textareaRef.current) {
+      textareaRef.current.style.height = `${MIN_TEXTAREA_HEIGHT}px`;
+    }
   }, [conversationId]);
-
-  // Save draft on content change
-  useEffect(() => {
-    saveDraft(`dm-${conversationId}`, content);
-  }, [conversationId, content]);
 
   // Focus textarea when replying
   useEffect(() => {
@@ -55,21 +138,35 @@ export const DMMessageInput = ({
     }
   }, [replyingTo]);
 
-  // Auto-resize textarea
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.style.height = 'auto';
-      textarea.style.height = Math.min(textarea.scrollHeight, 160) + 'px';
+  // Debounced draft save
+  const saveDraftDebounced = useCallback((conversationId: string, content: string) => {
+    if (draftSaveTimeoutRef.current) {
+      clearTimeout(draftSaveTimeoutRef.current);
     }
-  }, [content]);
+    draftSaveTimeoutRef.current = setTimeout(() => {
+      saveDraft(`dm-${conversationId}`, content);
+    }, DRAFT_SAVE_DELAY);
+  }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  // Fixed auto-resize
+  const resizeTextarea = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    textarea.style.height = '0px';
+    const scrollHeight = textarea.scrollHeight;
+    const newHeight = Math.min(Math.max(scrollHeight, MIN_TEXTAREA_HEIGHT), MAX_TEXTAREA_HEIGHT);
+    textarea.style.height = `${newHeight}px`;
+  }, []);
+
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
-    if (value.length <= MAX_LENGTH) {
-      setContent(value);
-    }
-  };
+    if (value.length > MAX_LENGTH) return;
+
+    setContent(value);
+    saveDraftDebounced(conversationId, value);
+    resizeTextarea();
+  }, [conversationId, saveDraftDebounced, resizeTextarea]);
 
   const handleSubmit = async () => {
     if (!content.trim() || !user || isSending) return;
@@ -81,6 +178,11 @@ export const DMMessageInput = ({
     clearDraft(`dm-${conversationId}`);
     const currentReplyTo = replyingTo;
     onCancelReply?.();
+    
+    // Reset textarea height
+    if (textareaRef.current) {
+      textareaRef.current.style.height = `${MIN_TEXTAREA_HEIGHT}px`;
+    }
     
     setIsSending(true);
     try {
@@ -102,7 +204,7 @@ export const DMMessageInput = ({
   };
 
   // Apply formatting to selected text or insert format syntax
-  const applyFormatShortcut = (formatType: string) => {
+  const applyFormatShortcut = useCallback((formatType: string) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
@@ -138,9 +240,9 @@ export const DMMessageInput = ({
         });
       }
     }
-  };
+  }, [content]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     // Format shortcuts (Ctrl/Cmd + key)
     if (e.ctrlKey || e.metaKey) {
       switch (e.key.toLowerCase()) {
@@ -171,10 +273,10 @@ export const DMMessageInput = ({
       e.preventDefault();
       handleSubmit();
     }
-  };
+  }, [applyFormatShortcut, handleSubmit]);
 
   // Handle emoji selection - insert at cursor position
-  const handleEmojiSelect = (emoji: string) => {
+  const handleEmojiSelect = useCallback((emoji: string) => {
     const textarea = textareaRef.current;
     if (textarea) {
       const start = textarea.selectionStart;
@@ -197,31 +299,10 @@ export const DMMessageInput = ({
     }
     
     setShowEmojiPicker(false);
-  };
-
-  // Handle GIF selection - insert GIF URL as message content
-  const handleGifSelect = (gifUrl: string) => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const newContent = content.slice(0, start) + gifUrl + content.slice(end);
-      
-      if (newContent.length <= MAX_LENGTH) {
-        setContent(newContent);
-      }
-    } else {
-      const newContent = content + gifUrl;
-      if (newContent.length <= MAX_LENGTH) {
-        setContent(newContent);
-      }
-    }
-    
-    setShowEmojiPicker(false);
-  };
+  }, [content]);
 
   // Handle format selection from toolbar
-  const handleFormat = (formatType: string, value?: string) => {
+  const handleFormat = useCallback((formatType: string, value?: string) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
@@ -264,7 +345,7 @@ export const DMMessageInput = ({
         textarea.focus();
       });
     }
-  };
+  }, [content]);
 
   // Handle image upload
   const handleImageUpload = async (file: File) => {
@@ -308,14 +389,12 @@ export const DMMessageInput = ({
     showSuccess('Image uploaded successfully');
   };
 
-  const showCharacterWarning = content.length > MAX_LENGTH - 200;
-
   return (
     <div className="px-4 pb-6 relative">
       {/* Reply preview */}
       {replyingTo && (
         <div className="flex items-center gap-2 px-4 py-2 bg-secondary rounded-t-2xl border-b border-border">
-          <span className="text-sm text-muted-foreground">
+          <span className="text-sm text-muted-foreground font-[Inter,system-ui,sans-serif]">
             Replying to <span className="font-medium text-primary">@{replyingTo.sender?.username}</span>
           </span>
           <span className="text-sm text-muted-foreground truncate flex-1">
@@ -333,16 +412,26 @@ export const DMMessageInput = ({
       {/* Floating input container */}
       <div 
         className={cn(
-          "rounded-2xl bg-secondary border transition-all duration-200 ease-out",
+          'rounded-2xl bg-secondary border transition-all duration-200 ease-out',
           isFocused ? 'border-border -translate-y-[3px] shadow-lg' : 'border-transparent translate-y-0',
           replyingTo ? 'rounded-t-none' : ''
         )}
       >
+        {/* Format toolbar */}
+        {showFormatToolbar && (
+          <div className="px-3 pt-2">
+            <FormatToolbar 
+              onFormat={handleFormat} 
+              onClose={() => setShowFormatToolbar(false)} 
+            />
+          </div>
+        )}
+
         <div className="flex items-end gap-2 p-3">
           {/* Attachment button */}
           <button 
             onClick={() => setShowImageUpload(true)}
-            className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150 mb-0.5"
+            className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-150 mb-0.5"
             title="Upload image"
           >
             <Paperclip className="w-5 h-5" />
@@ -358,74 +447,21 @@ export const DMMessageInput = ({
             onKeyDown={handleKeyDown}
             placeholder={`Message @${otherUsername}`}
             rows={1}
-            className="flex-1 bg-transparent resize-none outline-none text-foreground placeholder:text-muted-foreground text-[15px] leading-relaxed py-2 px-1 font-light"
-            style={{ fontFamily: "system-ui, -apple-system, sans-serif, 'Noto Color Emoji'" }}
+            className="flex-1 bg-transparent resize-none outline-none text-foreground placeholder:text-muted-foreground text-[15px] leading-relaxed py-2 px-1 font-[Inter,system-ui,sans-serif]"
+            style={{ fontFamily: "Inter, system-ui, -apple-system, sans-serif, 'Noto Color Emoji'" }}
           />
 
           {/* Action buttons */}
-          <div className="flex items-center gap-1 mb-0.5 relative">
-            {/* Format toolbar */}
-            {showFormatToolbar && (
-              <div className="absolute bottom-full right-0 mb-2 z-50">
-                <FormatToolbar 
-                  onFormat={handleFormat} 
-                  onClose={() => setShowFormatToolbar(false)} 
-                />
-              </div>
-            )}
-
-            {/* Character count warning */}
-            {showCharacterWarning && (
-              <span className={`text-xs mr-1 ${content.length > MAX_LENGTH - 50 ? 'text-destructive' : 'text-muted-foreground'}`}>
-                {MAX_LENGTH - content.length}
-              </span>
-            )}
-
-            {/* Format button */}
-            <button
-              type="button"
-              onClick={() => setShowFormatToolbar(!showFormatToolbar)}
-              className={cn(
-                "p-2 rounded-xl transition-colors duration-150",
-                showFormatToolbar 
-                  ? 'text-primary bg-primary/10' 
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-              )}
-              onMouseDown={(e) => e.preventDefault()}
-              title="Format text"
-            >
-              <Type className="w-5 h-5" />
-            </button>
-
-            {/* Emoji/GIF button with picker */}
-            <EmojiGifPicker
-              open={showEmojiPicker}
-              onOpenChange={setShowEmojiPicker}
-              onEmojiSelect={handleEmojiSelect}
-              onGifSelect={handleGifSelect}
-            >
-              <button 
-                type="button"
-                className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
-                onMouseDown={(e) => e.preventDefault()}
-              >
-                <Smile className="w-5 h-5" />
-              </button>
-            </EmojiGifPicker>
-
-            {/* Send button */}
-            <button
-              onClick={handleSubmit}
-              disabled={!content.trim() || isSending}
-              className={`p-2 rounded-xl transition-all duration-150 ${
-                content.trim() && !isSending
-                  ? 'bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95'
-                  : 'bg-muted text-muted-foreground cursor-not-allowed'
-              }`}
-            >
-              <Send className="w-5 h-5" />
-            </button>
-          </div>
+          <ActionButtons
+            showFormatToolbar={showFormatToolbar}
+            setShowFormatToolbar={setShowFormatToolbar}
+            showEmojiPicker={showEmojiPicker}
+            setShowEmojiPicker={setShowEmojiPicker}
+            content={content}
+            isSending={isSending}
+            onSubmit={handleSubmit}
+            onEmojiSelect={handleEmojiSelect}
+          />
         </div>
       </div>
 
