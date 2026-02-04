@@ -691,14 +691,6 @@ export const MessageItem = memo(function MessageItem({
               onTouchStart={handleTouchStart}
               onTouchEnd={clearLongPress}
               onTouchMove={clearLongPress}
-              onClick={(e) => {
-                // Don't trigger reply when clicking on interactive elements
-                const target = e.target as HTMLElement;
-                const isInteractive = target.closest('button, a, input, textarea, [role="button"], [contenteditable], .emoji-picker');
-                if (!isInteractive && !isEditing && !isPending && !message.is_system_message) {
-                  setReplyingTo(message);
-                }
-              }}
             >
               {/* Avatar / Timestamp column - hidden for system messages */}
               {!message.is_system_message && (
