@@ -814,20 +814,20 @@ export const MessageItem = memo(function MessageItem({
                     {/* Reply reference */}
                     {message.reply_to && (
                       <div
-                        className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1 cursor-pointer hover:text-foreground"
+                        className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1 cursor-pointer hover:text-foreground flex-nowrap overflow-hidden"
                         onClick={handleReplyClick}
                       >
                         <CornerUpLeft className="w-3 h-3 flex-shrink-0" />
-                        <span>Replying to</span>
+                        <span className="flex-shrink-0">Replying to</span>
                         {showReplyAuthorIdentity ? (
-                          <span className="font-medium text-primary">
+                          <span className="font-medium text-primary flex-shrink-0">
                             @{message.reply_to.user?.username || "unknown"}
                           </span>
                         ) : (
-                          <span className="font-medium text-primary italic">Anonymous</span>
+                          <span className="font-medium text-primary italic flex-shrink-0">Anonymous</span>
                         )}
                         {isPollMessageContent(message.reply_to.content) ? (
-                          <span className="italic">poll</span>
+                          <span className="italic flex-shrink-0">poll</span>
                         ) : isImageOnlyMessage(message.reply_to.content) ? (
                           <img
                             src={message.reply_to.content.trim()}
@@ -835,8 +835,8 @@ export const MessageItem = memo(function MessageItem({
                             className="w-6 h-6 rounded object-cover flex-shrink-0"
                           />
                         ) : (
-                          <span className="truncate max-w-[200px]">
-                            <ReplyPreview content={message.reply_to.content} maxLength={50} />
+                          <span className="truncate max-w-[120px] sm:max-w-[200px]">
+                            <ReplyPreview content={message.reply_to.content} maxLength={30} />
                           </span>
                         )}
                       </div>
