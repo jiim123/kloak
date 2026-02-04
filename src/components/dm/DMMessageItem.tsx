@@ -145,7 +145,7 @@ export const DMMessageItem = ({ message, isFirst, onReply }: DMMessageItemProps)
     <>
       <div
         className={cn(
-          'group flex gap-4 py-0.5 px-2 -mx-2 rounded hover:bg-secondary/30 transition-all duration-200',
+          'group flex gap-4 py-0.5 px-2 -mx-2 rounded hover:bg-secondary/30 transition-all duration-200 cursor-pointer',
           shouldAnimate.current && 'animate-message-slide-in',
           isFirst && 'mt-4 pt-1',
           isMentioned && 'bg-primary/10 border-l-2 border-l-primary'
@@ -156,6 +156,14 @@ export const DMMessageItem = ({ message, isFirst, onReply }: DMMessageItemProps)
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         onTouchMove={handleTouchMove}
+        onClick={(e) => {
+          // Don't trigger reply when clicking on interactive elements
+          const target = e.target as HTMLElement;
+          const isInteractive = target.closest('button, a, input, textarea, [role="button"], [contenteditable]');
+          if (!isInteractive && !isEditing && onReply) {
+            onReply(message);
+          }
+        }}
       >
         {/* Avatar or spacer */}
         <div className="w-10 flex-shrink-0">

@@ -667,7 +667,15 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
             comments.map((comment) => (
               <div
                 key={comment.id}
-                className="group relative py-1 px-2 -mx-2 rounded hover:bg-accent/5"
+                className="group relative py-1 px-2 -mx-2 rounded hover:bg-accent/5 cursor-pointer"
+                onClick={(e) => {
+                  // Don't trigger reply when clicking on interactive elements
+                  const target = e.target as HTMLElement;
+                  const isInteractive = target.closest('button, a, input, textarea, [role="button"], [contenteditable]');
+                  if (!isInteractive && editingCommentId !== comment.id) {
+                    setReplyingToComment(comment.id);
+                  }
+                }}
               >
                 {/* Reply reference - matching chat style */}
                 {comment.reply_to && (
