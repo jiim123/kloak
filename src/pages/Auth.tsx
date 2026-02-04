@@ -301,16 +301,16 @@ const Auth = () => {
     return null;
   };
 
-  // Get input className based on state
+  // Get input className based on state - only use border color, not ring
   const getInputClassName = () => {
     if (usernameError) {
-      return "pr-10 border-destructive focus-visible:ring-destructive bg-destructive/5";
+      return "pr-10 border-destructive focus-visible:border-destructive focus-visible:ring-destructive/30 bg-destructive/5";
     }
     if (isUsernameAvailable === true) {
-      return "pr-10 border-[hsl(var(--kloak-success))] focus-visible:ring-[hsl(var(--kloak-success))] bg-[hsl(var(--kloak-success))]/5";
+      return "pr-10 border-[hsl(var(--kloak-success))] focus-visible:border-[hsl(var(--kloak-success))] focus-visible:ring-[hsl(var(--kloak-success))]/30 bg-[hsl(var(--kloak-success))]/5";
     }
     if (isUsernameAvailable === false) {
-      return "pr-10 border-destructive focus-visible:ring-destructive bg-destructive/5";
+      return "pr-10 border-destructive focus-visible:border-destructive focus-visible:ring-destructive/30 bg-destructive/5";
     }
     return "pr-10";
   };
@@ -355,7 +355,7 @@ const Auth = () => {
     if (!usernameError && isUsernameAvailable === null && username && !isCheckingUsername) {
       return (
         <p className="text-xs text-muted-foreground">
-          3-32 characters. Letters, numbers, underscores, and hyphens only.
+          3-16 characters. Letters, numbers, underscores, and hyphens only.
         </p>
       );
     }
@@ -427,7 +427,7 @@ const Auth = () => {
                               placeholder="your_username"
                               value={username}
                               onChange={(e) => setUsername(e.target.value)}
-                              maxLength={32}
+                              maxLength={16}
                               disabled={isLoading || (rateLimitCooldown !== null && rateLimitCooldown > 0)}
                               className={cn(getInputClassName())}
                             />
@@ -583,12 +583,12 @@ const Auth = () => {
                         <div className="space-y-2">
                           <Label htmlFor="username">Username</Label>
                           <div className="relative">
-                            <Input
+                          <Input
                               id="username"
                               placeholder="your_username"
                               value={username}
                               onChange={(e) => setUsername(e.target.value)}
-                              maxLength={32}
+                              maxLength={16}
                               disabled={isLoading || (rateLimitCooldown !== null && rateLimitCooldown > 0)}
                               className={cn(getInputClassName())}
                             />
