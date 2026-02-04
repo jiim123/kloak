@@ -58,7 +58,7 @@ const MAX_LENGTH = 2000;
 const MIN_TEXTAREA_HEIGHT = 40;
 const MAX_TEXTAREA_HEIGHT = 160;
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-const MAX_IMAGE_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_IMAGE_FILE_SIZE = 1 * 1024 * 1024; // 1MB
 const DRAFT_SAVE_DELAY = 500; // ms
 const TYPING_STOP_DELAY = 2000; // ms
 
@@ -801,7 +801,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       }
 
       if (file.size > MAX_IMAGE_FILE_SIZE) {
-        showWarning("Image too large", "File size must be less than 10MB");
+        showWarning("Image too large", "File size must be less than 1MB");
         return;
       }
 
