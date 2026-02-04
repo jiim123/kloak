@@ -11,6 +11,7 @@ interface NotificationState {
   fetchNotifications: (userId: string) => Promise<void>;
   markAsRead: (notificationId: string) => Promise<void>;
   markAllAsRead: (userId: string) => Promise<void>;
+  clearAllNotifications: (userId: string) => Promise<void>;
   deleteNotification: (notificationId: string) => Promise<void>;
   
   // Create notifications
@@ -92,6 +93,21 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       }));
     } catch (error) {
       console.error('Failed to mark all as read:', error);
+    }
+  },
+
+  clearAllNotifications: async (userId: string) => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      set({ notifications: [], unreadCount: 0 });
+    } catch (error) {
+      console.error('Failed to clear notifications:', error);
     }
   },
 
