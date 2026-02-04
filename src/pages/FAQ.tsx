@@ -29,6 +29,10 @@ const faqCategories = [
         q: "What features does Kloak offer?",
         a: "Kloak includes servers with text and voice channels, channel categories, direct messaging (1-to-1 and group), real-time chat with reactions and replies, file attachments, user presence indicators, a friend system, customizable profiles, and notifications—all without requiring personal information.",
       },
+      {
+        q: "Is Kloak free?",
+        a: "Using Kloak will always be free. However, some features—particularly those that require significant server resources like voice channels and file storage—may require a paid tier. This isn't about profit; it's about sustainability. Running servers costs money, and offering premium features helps us keep the core platform free for everyone. The specific features that will be premium are still being finalized and will be communicated clearly.",
+      },
     ],
   },
   {
