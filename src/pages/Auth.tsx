@@ -14,12 +14,14 @@ import {
   XCircle,
   CircleUserRound,
   Sparkles,
+  Info,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -420,7 +422,21 @@ const Auth = () => {
                     >
                       <form onSubmit={handleCreateAccount} className="space-y-4">
                         <div className="space-y-2">
-                          <Label htmlFor="username">Username</Label>
+                          <div className="flex items-center gap-1.5">
+                            <Label htmlFor="username">Username</Label>
+                            <TooltipProvider delayDuration={0}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
+                                    <Info className="w-3.5 h-3.5" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-[220px] text-xs">
+                                  <p>3-16 characters. Letters, numbers, underscores, and hyphens only. No offensive or impersonating names.</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
                           <div className="relative">
                             <Input
                               id="username"
@@ -581,9 +597,23 @@ const Auth = () => {
                     >
                       <form onSubmit={handleCreateAccount} className="space-y-4">
                         <div className="space-y-2">
-                          <Label htmlFor="username">Username</Label>
+                          <div className="flex items-center gap-1.5">
+                            <Label htmlFor="username">Username</Label>
+                            <TooltipProvider delayDuration={0}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
+                                    <Info className="w-3.5 h-3.5" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-[220px] text-xs">
+                                  <p>3-16 characters. Letters, numbers, underscores, and hyphens only. No offensive or impersonating names.</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
                           <div className="relative">
-                          <Input
+                            <Input
                               id="username"
                               placeholder="your_username"
                               value={username}
