@@ -2,220 +2,167 @@
 
 ## Overview
 
-✅ **COMPLETED** - This plan has been fully implemented.
-
-This plan implements full group DM functionality, extending the existing 1:1 direct messaging system to support multi-user group conversations.
+This plan improves the group chat UI by creating distinct visual elements for group conversations, including stacked avatars in the sidebar and a proper group chat header with intro message.
 
 ---
 
 ## What Will Change
 
 ### For Users
-- Create group conversations with 2+ friends
-- Set optional group names
-- See group conversations in the DM sidebar with a distinct group icon
-- Send and receive messages in groups just like regular DMs
-
-### Technical Summary
-1. Database schema updates to support groups
-2. New RPC function for group creation
-3. Updated RPC to return group metadata
-4. Frontend store, types, and UI updates
+- Group chats in the DM sidebar show 3 stacked avatars (first 3 participants) instead of a generic icon
+- Group chat header displays stacked avatars of participants
+- Intro message is contextual: shows group name or participant names
+- Clear visual distinction between 1:1 DMs and group conversations
 
 ---
 
 ## Implementation Steps
 
-### Step 1: Database Schema Updates
+### Step 1: Create Stacked Avatars Component
 
-Add two columns to `dm_conversations` table:
+A reusable component that displays 2-3 overlapping avatars:
 
-```text
-dm_conversations
-+---------------+----------+---------+
-| Column        | Type     | Default |
-+---------------+----------+---------+
-| is_group      | boolean  | false   |
-| name          | text     | null    |
-+---------------+----------+---------+
-```
+| Props | Type | Description |
+|-------|------|-------------|
+| users | User[] | Array of users to display (max 3) |
+| size | 'sm' \| 'md' \| 'lg' | Avatar size variant |
+| className | string | Additional styling |
 
-This allows existing 1:1 conversations to continue working while enabling group support.
+Visual layout: Avatars overlap horizontally with slight offset, creating a "stack" effect.
 
-### Step 2: Create `create_group_dm` RPC Function
+### Step 2: Create Group Chat Header Component
 
-A new SECURITY DEFINER function that:
-- Accepts creator user ID, array of participant IDs, and optional group name
-- Validates that creator is friends with all participants (or skip for MVP)
-- Creates a new conversation with `is_group = true`
-- Adds creator + all participants to `dm_participants`
-- Returns the new conversation with all participants
+A new `GroupChatHeader` component specifically for group conversations:
 
-### Step 3: Update `get_user_dm_conversations` RPC
+- Displays stacked avatars (no status dot - groups don't have presence)
+- Shows group name OR comma-separated participant names
+- "More Options" menu adapted for groups (no "Call User", has "Leave Group")
+- Mobile sidebar toggle support
 
-Modify to include:
-- `is_group` field
-- `name` field
-- For groups: return all participants (not just "other_user")
+### Step 3: Update DMSidebar for Group Display
 
-### Step 4: Update TypeScript Types
+Replace the generic `Users` icon with stacked avatars:
 
-Extend `DMConversation` interface:
+- Extract first 3 participants (excluding current user)
+- Use `StackedAvatars` component with `size="sm"`
+- Keep existing name display logic (group name or participant names)
 
-```text
-DMConversation
-+---------------+--------------------+
-| Field         | Type               |
-+---------------+--------------------+
-| is_group      | boolean (optional) |
-| name          | string (optional)  |
-| participants  | DMParticipant[]    |
-+---------------+--------------------+
-```
+### Step 4: Update DMChatArea for Group Detection
 
-### Step 5: Update dmStore
+Add conditional rendering based on `is_group`:
 
-Add new method:
+- Use `DMHeader` for 1:1 conversations
+- Use `GroupChatHeader` for group conversations
+- Show appropriate intro section based on conversation type
 
-```text
-createGroupConversation(
-  userId: string,
-  participantIds: string[],
-  name?: string
-) => Promise<DMConversation | null>
-```
+### Step 5: Create Group Chat Intro Section
 
-### Step 6: Update CreateGroupModal
+For group conversations, the intro shows:
 
-- Connect to the new `createGroupConversation` store method
-- On success: navigate to the new group conversation
-- Show appropriate loading/error states
-
-### Step 7: Update DMSidebar UI
-
-For group conversations:
-- Display group icon (Users) or stacked avatars
-- Show group name (or "Group with X, Y, Z" if no name)
-- No individual status indicator (groups don't have presence)
+- Stacked avatars (larger size)
+- Group name as heading (or "Group Chat" if no name)
+- Text: "This is the beginning of your group chat with [name/participants]."
 
 ---
 
 ## Technical Details
 
-### Database Migration SQL
+### New Files
 
-```sql
--- Add group support columns
-ALTER TABLE dm_conversations
-ADD COLUMN is_group boolean DEFAULT false,
-ADD COLUMN name text;
-
--- Create group DM function
-CREATE OR REPLACE FUNCTION create_group_dm(
-  _creator_id uuid,
-  _participant_ids uuid[],
-  _name text DEFAULT NULL
-)
-RETURNS json
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  new_conv_id uuid;
-  result json;
-BEGIN
-  -- Validate at least 2 other participants
-  IF array_length(_participant_ids, 1) < 2 THEN
-    RAISE EXCEPTION 'Groups require at least 2 other participants';
-  END IF;
-
-  -- Create group conversation
-  INSERT INTO dm_conversations (is_group, name)
-  VALUES (true, _name)
-  RETURNING id INTO new_conv_id;
-
-  -- Add creator as participant
-  INSERT INTO dm_participants (conversation_id, user_id)
-  VALUES (new_conv_id, _creator_id);
-
-  -- Add all other participants
-  INSERT INTO dm_participants (conversation_id, user_id)
-  SELECT new_conv_id, unnest(_participant_ids);
-
-  -- Return conversation with participants
-  SELECT json_build_object(
-    'id', dc.id,
-    'created_at', dc.created_at,
-    'is_group', dc.is_group,
-    'name', dc.name,
-    'participants', (
-      SELECT json_agg(json_build_object(
-        'user_id', dp.user_id,
-        'user', json_build_object(
-          'id', u.id,
-          'username', u.username,
-          'display_name', u.display_name,
-          'avatar_url', u.avatar_url
-        )
-      ))
-      FROM dm_participants dp
-      JOIN users u ON u.id = dp.user_id
-      WHERE dp.conversation_id = dc.id
-    )
-  ) INTO result
-  FROM dm_conversations dc
-  WHERE dc.id = new_conv_id;
-
-  RETURN result;
-END;
-$$;
-```
+| File | Purpose |
+|------|---------|
+| `src/components/ui/stacked-avatars.tsx` | Reusable stacked avatar component |
+| `src/components/dm/GroupChatHeader.tsx` | Header component for group conversations |
 
 ### Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/types/index.ts` | Add `is_group` and `name` to `DMConversation` |
-| `src/stores/dmStore.ts` | Add `createGroupConversation` method |
-| `src/components/dm/CreateGroupModal.tsx` | Connect to store, handle success/error |
-| `src/components/dm/DMSidebar.tsx` | Display groups differently (icon, name) |
+| `src/components/dm/DMSidebar.tsx` | Use StackedAvatars for group rows |
+| `src/components/dm/DMChatArea.tsx` | Conditional header/intro for groups |
+| `src/components/dm/index.ts` | Export new components |
+
+### StackedAvatars Component Structure
+
+```text
+Container (relative, flex)
+├── Avatar 1 (z-30, no offset)
+├── Avatar 2 (z-20, offset -8px left)
+└── Avatar 3 (z-10, offset -16px left)
+```
+
+Size variants:
+- sm: 24x24px (sidebar)
+- md: 32x32px (header)
+- lg: 48x48px (intro section)
+
+### GroupChatHeader Props
+
+```text
+interface GroupChatHeaderProps {
+  conversation: DMConversation;
+  participants: User[];  // Other participants (excluding current user)
+}
+```
+
+### DMChatArea Conditional Logic
+
+```text
+if (currentConversation.is_group) {
+  // Extract other participants
+  const otherParticipants = participants.filter(p => p.user_id !== user.id)
+  
+  // Render GroupChatHeader
+  // Render group intro section
+} else {
+  // Render DMHeader (existing)
+  // Render 1:1 intro section (existing)
+}
+```
+
+### Group Intro Text Logic
+
+```text
+if (conversation.name) {
+  "This is the beginning of your group chat with {name}."
+} else {
+  "This is the beginning of your group chat with {participant1}, {participant2}, and {participant3}."
+}
+```
 
 ---
 
 ## Data Flow
 
 ```text
-User clicks "Create Group"
+DMSidebar renders conversations
         |
         v
-CreateGroupModal opens
+For each group conversation:
+  - Extract first 3 other participants
+  - Render StackedAvatars component
+  - Display group name or participant names
         |
         v
-User selects friends + optional name
+User clicks group conversation
         |
         v
-dmStore.createGroupConversation()
+DMChatArea detects is_group = true
         |
         v
-Supabase RPC: create_group_dm
+Renders GroupChatHeader + Group Intro
         |
         v
-New conversation returned
-        |
-        v
-Store updated, navigate to group
-        |
-        v
-Group appears in sidebar
+Messages display as normal
 ```
 
 ---
 
-## Edge Cases Handled
+## Edge Cases
 
-- Groups require minimum 2 other participants (3 total including creator)
-- Group name is optional (UI will show participant names if empty)
-- Existing 1:1 DMs unaffected (`is_group = false` by default)
-- Groups have no presence status (no green dot)
+- Group with only 1 other participant: Show single avatar (fallback)
+- Group with 2 participants: Show 2 stacked avatars
+- Participant with no avatar: Show initial letter fallback
+- Very long group name: Truncate with ellipsis
+- Many participants (>3): Show first 3 avatars, name shows "+X more"
 
