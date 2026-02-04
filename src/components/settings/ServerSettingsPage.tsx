@@ -856,6 +856,35 @@ export const ServerSettingsPage = () => {
     };
   }, [isServerSettingsOpen, server?.id, user?.id, canManageInvites]);
 
+  // Load server emojis when settings open
+  useEffect(() => {
+    if (!isServerSettingsOpen) return;
+    if (!server?.id) return;
+    if (!canManageEmojis) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('server_emojis')
+          .select('id, name, file_path')
+          .eq('server_id', server.id)
+          .order('created_at', { ascending: true });
+
+        if (error) throw error;
+        if (cancelled) return;
+        setServerEmojis((data ?? []) as Array<{ id: string; name: string; file_path: string }>);
+      } catch {
+        if (!cancelled) setServerEmojis([]);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isServerSettingsOpen, server?.id, canManageEmojis]);
+
   const createInvite = async () => {
     if (!server?.id || !user?.id) return;
     if (!canManageInvites) return;
