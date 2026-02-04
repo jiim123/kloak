@@ -15,6 +15,7 @@ import type {
   CustomServerRole,
   RolePermission,
   ChannelPermission,
+  CategoryPermission,
   Permission
 } from '@/types';
 
@@ -80,12 +81,17 @@ interface ServerState {
   // Permission actions
   rolePermissions: RolePermission[];
   channelPermissions: ChannelPermission[];
+  categoryPermissions: CategoryPermission[];
   fetchRolePermissions: (serverId: string) => Promise<void>;
   fetchChannelPermissions: (channelId: string) => Promise<void>;
+  fetchCategoryPermissions: (categoryId: string) => Promise<void>;
   setRolePermission: (serverId: string, userId: string, permission: Permission, roleId?: string, roleName?: ServerRole, allowed?: boolean) => Promise<void>;
   setChannelPermission: (channelId: string, userId: string, permission: Permission, allowed: boolean, roleId?: string, roleName?: ServerRole, targetUserId?: string) => Promise<void>;
+  setCategoryPermission: (categoryId: string, userId: string, permission: Permission, allowed: boolean, roleId?: string, roleName?: ServerRole, targetUserId?: string) => Promise<void>;
   deleteRolePermission: (permissionId: string, userId: string) => Promise<void>;
   deleteChannelPermission: (permissionId: string, userId: string) => Promise<void>;
+  deleteCategoryPermission: (permissionId: string, userId: string) => Promise<void>;
+  syncCategoryPermissionsToChannels: (categoryId: string, userId: string) => Promise<void>;
 
   // Discord Template Import
   importDiscordTemplate: (serverId: string, userId: string, templateUrl: string) => Promise<{ success: boolean; error?: string; imported?: { categories: number; channels: number; roles: number } }>;
@@ -104,6 +110,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
   roles: [],
   rolePermissions: [],
   channelPermissions: [],
+  categoryPermissions: [],
   channelMembers: [],
   isLoading: false,
   error: null,
@@ -1535,6 +1542,166 @@ export const useServerStore = create<ServerState>((set, get) => ({
       }
     } catch (error) {
       console.error('Failed to delete channel permission:', error);
+      throw error;
+    }
+  },
+
+  fetchCategoryPermissions: async (categoryId: string) => {
+    try {
+      const { data, error } = await (supabase as any)
+        .from('category_permissions')
+        .select('*')
+        .eq('category_id', categoryId);
+
+      if (error) {
+        console.error('Query error:', error);
+        throw error;
+      }
+
+      const permissions: CategoryPermission[] = (data ?? []).map((row: any) => ({
+        id: row.id,
+        category_id: row.category_id,
+        role_id: row.role_id,
+        role_name: row.role_name as ServerRole | null,
+        user_id: row.user_id || null,
+        permission: row.permission as Permission,
+        allowed: row.allowed,
+        created_at: row.created_at ?? '',
+      }));
+
+      set({ categoryPermissions: permissions });
+    } catch (error) {
+      console.error('Failed to fetch category permissions:', error);
+      throw error;
+    }
+  },
+
+  setCategoryPermission: async (
+    categoryId: string,
+    userId: string,
+    permission: Permission,
+    allowed: boolean,
+    roleId?: string,
+    roleName?: ServerRole,
+    targetUserId?: string
+  ) => {
+    try {
+      // Build the filter for finding existing permission
+      let query = (supabase as any)
+        .from('category_permissions')
+        .select('id')
+        .eq('category_id', categoryId)
+        .eq('permission', permission);
+
+      if (roleId) {
+        query = query.eq('role_id', roleId);
+      } else if (roleName) {
+        query = query.eq('role_name', roleName).is('role_id', null);
+      } else if (targetUserId) {
+        query = query.eq('user_id', targetUserId);
+      }
+
+      const { data: existing } = await query.maybeSingle();
+
+      if (existing) {
+        // Update existing
+        const { error } = await (supabase as any)
+          .from('category_permissions')
+          .update({ allowed })
+          .eq('id', existing.id);
+
+        if (error) throw error;
+      } else {
+        // Insert new
+        const insertData: Record<string, any> = {
+          category_id: categoryId,
+          permission,
+          allowed,
+        };
+
+        if (roleId) insertData.role_id = roleId;
+        else if (roleName) insertData.role_name = roleName;
+        else if (targetUserId) insertData.user_id = targetUserId;
+
+        const { error } = await (supabase as any)
+          .from('category_permissions')
+          .insert(insertData);
+
+        if (error) throw error;
+      }
+
+      // Refresh category permissions
+      await get().fetchCategoryPermissions(categoryId);
+    } catch (error) {
+      console.error('Failed to set category permission:', error);
+      throw error;
+    }
+  },
+
+  deleteCategoryPermission: async (permissionId: string, userId: string) => {
+    try {
+      // Get the permission first to know which category to refresh
+      const { categoryPermissions } = get();
+      const toDelete = categoryPermissions.find((p) => p.id === permissionId);
+
+      const { error } = await (supabase as any)
+        .from('category_permissions')
+        .delete()
+        .eq('id', permissionId);
+
+      if (error) throw error;
+
+      // Refresh category permissions
+      if (toDelete) {
+        await get().fetchCategoryPermissions(toDelete.category_id);
+      }
+    } catch (error) {
+      console.error('Failed to delete category permission:', error);
+      throw error;
+    }
+  },
+
+  syncCategoryPermissionsToChannels: async (categoryId: string, userId: string) => {
+    try {
+      const { channels, categoryPermissions } = get();
+      
+      // Get all channels in this category
+      const categoryChannels = channels.filter(c => c.category_id === categoryId);
+      
+      if (categoryChannels.length === 0) {
+        return;
+      }
+
+      // For each channel, delete existing permissions and copy from category
+      for (const channel of categoryChannels) {
+        // Delete existing channel permissions
+        await supabase
+          .from('channel_permissions')
+          .delete()
+          .eq('channel_id', channel.id);
+
+        // Copy category permissions to channel
+        if (categoryPermissions.length > 0) {
+          const channelPerms = categoryPermissions.map(cp => ({
+            channel_id: channel.id,
+            role_id: cp.role_id,
+            role_name: cp.role_name,
+            user_id: cp.user_id,
+            permission: cp.permission,
+            allowed: cp.allowed,
+          }));
+
+          const { error } = await supabase
+            .from('channel_permissions')
+            .insert(channelPerms);
+
+          if (error) {
+            console.error(`Failed to sync permissions to channel ${channel.id}:`, error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to sync category permissions to channels:', error);
       throw error;
     }
   },

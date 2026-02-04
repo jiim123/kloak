@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Hash, Trash2, FolderOpen, Settings, Shield, Loader2, Clock, Lock, AlertTriangle, X, Users, Link2, Eye, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { ChannelPermissionsEditor } from "./ChannelPermissionsEditor";
+import { CategoryPermissionsEditor } from "./CategoryPermissionsEditor";
 import { ChannelMembersEditor } from "./ChannelMembersEditor";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -50,6 +51,7 @@ export const EditChannelModal = () => {
     updateCategory,
     deleteCategory,
     fetchChannelPermissions,
+    fetchCategoryPermissions,
   } = useServerStore();
   const { user } = useAuthStore();
 
@@ -79,12 +81,17 @@ export const EditChannelModal = () => {
   const hasValidTarget = isCategory ? !!category : !!channel;
   const targetName = isCategory ? category?.name : channel?.name;
 
-  const navItems = [
-    { id: "overview", label: "Overview", icon: Hash },
-    { id: "settings", label: "Settings", icon: Settings },
-    ...(channel?.is_private ? [{ id: "members", label: "Members", icon: Users }] : []),
-    { id: "permissions", label: "Permissions", icon: Shield },
-  ];
+  const navItems = isCategory
+    ? [
+        { id: "overview", label: "Overview", icon: FolderOpen },
+        { id: "permissions", label: "Permissions", icon: Shield },
+      ]
+    : [
+        { id: "overview", label: "Overview", icon: Hash },
+        { id: "settings", label: "Settings", icon: Settings },
+        ...(channel?.is_private ? [{ id: "members", label: "Members", icon: Users }] : []),
+        { id: "permissions", label: "Permissions", icon: Shield },
+      ];
 
   useEffect(() => {
     if (isCategory && category) {
@@ -96,6 +103,12 @@ export const EditChannelModal = () => {
       setBlockLinks(false);
       setAllowedLinkDomains([]);
       setGhostMode(false);
+
+      if (category.id) {
+        fetchCategoryPermissions(category.id).catch((error) => {
+          console.error("Failed to fetch category permissions:", error);
+        });
+      }
     } else if (channel) {
       setName(channel.name);
       setTopic(channel.topic || "");
@@ -116,7 +129,7 @@ export const EditChannelModal = () => {
     if (showDeleteImmediately && hasValidTarget) {
       setShowDeleteConfirm(true);
     }
-  }, [channel, category, isCategory, showDeleteImmediately, hasValidTarget, fetchChannelPermissions]);
+  }, [channel, category, isCategory, showDeleteImmediately, hasValidTarget, fetchChannelPermissions, fetchCategoryPermissions]);
 
   const handleClose = () => {
     setError("");
@@ -517,97 +530,151 @@ export const EditChannelModal = () => {
     }
   };
 
-  // Category content (simpler, no tabs needed)
-  const categoryContent = (
-    <>
-      {/* Header */}
-      <div className="relative px-6 pt-6 pb-4">
-        <div className="absolute -top-20 -right-20 w-40 h-40 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary mb-4">
-          <FolderOpen className="w-3 h-3" />
-          Edit Category
-        </div>
-
-        <h2 className="text-xl font-semibold">{category?.name}</h2>
-        <p className="text-sm text-muted-foreground mt-1">Modify category settings</p>
+  // Category Overview Content
+  const categoryOverviewContent = (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-3">
+        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Category Name</Label>
+        <Input
+          id="category-name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Category name"
+          className="h-11 rounded-xl border-border/50 bg-secondary/30"
+          maxLength={50}
+        />
       </div>
 
-      {/* Content */}
-      <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-6">
-        <div className="space-y-3">
-          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Category Name</Label>
-          <Input
-            id="category-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Category name"
-            className="h-11 rounded-xl border-border/50 bg-secondary/30"
-            maxLength={50}
-          />
+      {error && (
+        <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20">
+          <p className="text-sm text-destructive">{error}</p>
         </div>
+      )}
 
-        {error && (
-          <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20">
-            <p className="text-sm text-destructive">{error}</p>
+      {/* Danger Zone */}
+      <div className="p-4 rounded-xl border border-destructive/30 bg-destructive/5 space-y-4">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center flex-shrink-0">
+            <Trash2 className="w-5 h-5 text-destructive" />
           </div>
-        )}
-
-        {/* Danger Zone */}
-        <div className="p-4 rounded-xl border border-destructive/30 bg-destructive/5 space-y-4">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center flex-shrink-0">
-              <Trash2 className="w-5 h-5 text-destructive" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-destructive">Danger Zone</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Deleting a category will move all its channels to uncategorized.
-              </p>
-            </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-destructive">Danger Zone</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Deleting a category will move all its channels to uncategorized.
+            </p>
           </div>
-          <Button
-            type="button"
-            variant="destructive"
-            size="sm"
-            className="w-full h-10 rounded-xl"
-            onClick={() => setShowDeleteConfirm(true)}
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete Category
-          </Button>
         </div>
+        <Button
+          type="button"
+          variant="destructive"
+          size="sm"
+          className="w-full h-10 rounded-xl"
+          onClick={() => setShowDeleteConfirm(true)}
+        >
+          <Trash2 className="h-4 w-4 mr-2" />
+          Delete Category
+        </Button>
+      </div>
 
-        {/* Footer */}
-        <div className="flex gap-3 pt-2">
-          <Button type="button" variant="outline" onClick={handleClose} className="flex-1 h-11 rounded-xl">
-            Cancel
-          </Button>
-          <Button type="submit" disabled={isSubmitting || !name.trim()} className="flex-1 h-11 rounded-xl">
-            {isSubmitting ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              "Save Changes"
-            )}
-          </Button>
-        </div>
-      </form>
-    </>
+      {/* Footer */}
+      <div className="flex gap-3 pt-2">
+        <Button type="button" variant="outline" onClick={handleClose} className="flex-1 h-11 rounded-xl">
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isSubmitting || !name.trim()} className="flex-1 h-11 rounded-xl">
+          {isSubmitting ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Save Changes"
+          )}
+        </Button>
+      </div>
+    </form>
   );
+
+  // Category Permissions Content
+  const categoryPermissionsContent = (
+    <div>
+      {categoryId && currentServer ? (
+        <CategoryPermissionsEditor categoryId={categoryId} serverId={currentServer.id} onClose={handleClose} />
+      ) : (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="w-12 h-12 rounded-xl bg-secondary/80 flex items-center justify-center mb-4">
+            <Loader2 className="w-6 h-6 text-muted-foreground animate-spin" />
+          </div>
+          <p className="text-sm text-muted-foreground">Loading permissions...</p>
+        </div>
+      )}
+    </div>
+  );
+
+  // Render category content based on active tab
+  const renderCategoryContent = () => {
+    switch (activeTab) {
+      case "overview":
+        return categoryOverviewContent;
+      case "permissions":
+        return categoryPermissionsContent;
+      default:
+        return null;
+    }
+  };
 
   // Don't render if no valid target
   if (!isOpen || !hasValidTarget) return null;
 
   return (
     <>
-      {/* Category Modal (simple, same for mobile/desktop) */}
+      {/* Category Modal with tabs */}
       {isCategory && category && (
         <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-          <DialogContent className="sm:max-w-md max-w-[calc(100vw-2rem)] overflow-hidden p-0 rounded-2xl gap-0">
-            {categoryContent}
+          <DialogContent className="sm:max-w-4xl max-w-[calc(100vw-2rem)] max-h-[90vh] sm:max-h-[85vh] overflow-hidden p-0 rounded-2xl gap-0 flex flex-col">
+            {/* Header */}
+            <div className="relative px-6 pt-6 pb-4 border-b border-border/50">
+              <div className="absolute -top-20 -right-20 w-40 h-40 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
+
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary mb-4">
+                <FolderOpen className="w-3 h-3" />
+                Edit Category
+              </div>
+
+              <h2 className="text-xl font-semibold">{category.name}</h2>
+              <p className="text-sm text-muted-foreground mt-1">Modify category settings and permissions</p>
+            </div>
+
+            {/* Tabs Layout */}
+            <div className="flex flex-1 min-h-0">
+              {/* Tab Sidebar */}
+              <div className="w-48 border-r border-border/50 p-4 space-y-1">
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveTab(item.id)}
+                      className={cn(
+                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all",
+                        isActive
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground hover:bg-secondary",
+                      )}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Tab Content */}
+              <div className="flex-1 overflow-y-auto p-6">
+                {renderCategoryContent()}
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       )}

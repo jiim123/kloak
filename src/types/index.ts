@@ -104,6 +104,17 @@ export interface ChannelPermission {
   created_at: string;
 }
 
+export interface CategoryPermission {
+  id: string;
+  category_id: string;
+  role_id: string | null;
+  role_name: ServerRole | null;
+  user_id: string | null;
+  permission: Permission;
+  allowed: boolean;
+  created_at: string;
+}
+
 export interface Server {
   id: string;
   name: string;
