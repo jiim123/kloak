@@ -59,6 +59,7 @@ import { RolePermissionsEditor } from "./RolePermissionsEditor";
 import { RoleColorPicker } from "./RoleColorPicker";
 import { RoleIconPreview } from "@/components/ui/role-icon-preview";
 import { EmojiGifPicker } from "./EmojiGifPicker";
+import { DockNavigation } from "@/components/ui/dock-navigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -2059,27 +2060,11 @@ export const ServerSettingsModal = () => {
           </div>
 
           {/* Dock Navigation */}
-          <div className="relative w-full flex gap-2 p-2 bg-background/95 backdrop-blur-xl rounded-2xl border border-border shadow-2xl overflow-x-auto scrollbar-hide scroll-smooth justify-start">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  className={cn(
-                    "relative flex flex-col flex-shrink-0 items-center gap-1 px-4 py-2.5 rounded-xl transition-all",
-                    isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground hover:bg-secondary",
-                  )}
-                >
-                  <Icon className="w-5 h-5" />
-                  <span className="text-[10px] font-medium">{item.label}</span>
-                </button>
-              );
-            })}
-          </div>
+          <DockNavigation
+            navItems={navItems}
+            activeTab={activeTab}
+            onTabChange={(tabId) => setActiveTab(tabId as SettingsTabId)}
+          />
         </div>
       )}
 
