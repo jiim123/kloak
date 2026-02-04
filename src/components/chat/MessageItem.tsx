@@ -529,13 +529,15 @@ export const MessageItem = memo(function MessageItem({
 
   const handleCopyText = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(message.content);
+      // Convert UUID mentions to readable format before copying
+      const readableContent = convertMentionsToReadable(message.content, usersMap, channelsMap);
+      await navigator.clipboard.writeText(readableContent);
       toast.success("Message copied to clipboard");
     } catch (error) {
       console.error("Failed to copy text:", error);
       toast.error("Failed to copy message");
     }
-  }, [message.content]);
+  }, [message.content, usersMap, channelsMap]);
 
   const handleCopyMessageId = useCallback(() => {
     navigator.clipboard.writeText(message.id);
