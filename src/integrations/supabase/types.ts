@@ -1990,6 +1990,14 @@ export type Database = {
         Args: { _emoji: string; _message_id: string; _user_id: string }
         Returns: Json
       }
+      add_group_dm_members: {
+        Args: {
+          _conversation_id: string
+          _new_member_ids: string[]
+          _user_id: string
+        }
+        Returns: Json
+      }
       add_reaction: {
         Args: { _emoji: string; _message_id: string; _user_id: string }
         Returns: Json
@@ -2361,6 +2369,10 @@ export type Database = {
         Args: { _server_id: string; _target_user_id: string; _user_id: string }
         Returns: boolean
       }
+      leave_group_dm: {
+        Args: { _conversation_id: string; _user_id: string }
+        Returns: Json
+      }
       leave_server: {
         Args: { _server_id: string; _user_id: string }
         Returns: boolean
@@ -2623,6 +2635,10 @@ export type Database = {
       }
       update_channel: {
         Args: { _channel_id: string; _updates: string; _user_id: string }
+        Returns: Json
+      }
+      update_group_dm_name: {
+        Args: { _conversation_id: string; _new_name: string; _user_id: string }
         Returns: Json
       }
       update_member_nickname: {

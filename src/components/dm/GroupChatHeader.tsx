@@ -1,19 +1,27 @@
 import { useState } from "react";
-import { MoreHorizontal, LogOut, Settings, Menu } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { LogOut, Settings, Menu } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { StackedAvatars } from "@/components/ui/stacked-avatars";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useUIStore } from "@/stores/uiStore";
+import { useDMStore } from "@/stores/dmStore";
+import { useAuthStore } from "@/stores/authStore";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { DMConversation, User } from "@/types";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+import { GroupSettingsModal } from "./GroupSettingsModal";
 
 interface GroupChatHeaderProps {
   conversation: DMConversation;
@@ -42,9 +50,15 @@ const spanVariants = {
 const transition = { delay: 0.1, type: "spring" as const, bounce: 0, duration: 0.6 };
 
 export const GroupChatHeader = ({ conversation, participants }: GroupChatHeaderProps) => {
+  const navigate = useNavigate();
+  const { user } = useAuthStore();
   const { setMobileSidebarOpen } = useUIStore();
+  const { leaveGroup, setCurrentConversation, fetchConversations } = useDMStore();
+  
   const [hoveredButton, setHoveredButton] = useState<string | null>(null);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showLeaveDialog, setShowLeaveDialog] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
 
   // Get display name for the group
   const getGroupDisplayName = () => {
@@ -60,103 +74,158 @@ export const GroupChatHeader = ({ conversation, participants }: GroupChatHeaderP
     return names.join(", ");
   };
 
-  const handleLeaveGroup = () => {
-    toast.info("Leave group feature coming soon");
-    setIsMenuOpen(false);
-  };
-
-  const handleGroupSettings = () => {
-    toast.info("Group settings coming soon");
-    setIsMenuOpen(false);
+  const handleLeaveGroup = async () => {
+    if (!user?.id) return;
+    
+    setIsLeaving(true);
+    const success = await leaveGroup(conversation.id, user.id);
+    setIsLeaving(false);
+    
+    if (success) {
+      toast.success("You have left the group");
+      setCurrentConversation(null);
+      fetchConversations(user.id);
+      navigate("/app");
+    } else {
+      toast.error("Failed to leave group");
+    }
+    setShowLeaveDialog(false);
   };
 
   return (
-    <div className="px-4 py-2 md:py-0 md:h-12 flex items-center justify-between border-b border-border/50 flex-shrink-0 bg-background/50 backdrop-blur-sm sticky top-0 z-40">
-      {/* Left side - Sidebar toggle (mobile) + Group info */}
-      <div className="flex items-center gap-2 min-w-0 flex-1">
-        {/* Mobile sidebar toggle */}
-        <button
-          onClick={() => setMobileSidebarOpen(true)}
-          className="md:hidden p-2 rounded-2xl bg-secondary text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150 flex-shrink-0"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
+    <>
+      <div className="px-4 py-2 md:py-0 md:h-12 flex items-center justify-between border-b border-border/50 flex-shrink-0 bg-background/50 backdrop-blur-sm sticky top-0 z-40">
+        {/* Left side - Sidebar toggle (mobile) + Group info */}
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          {/* Mobile sidebar toggle */}
+          <button
+            onClick={() => setMobileSidebarOpen(true)}
+            className="md:hidden p-2 rounded-2xl bg-secondary text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150 flex-shrink-0"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
 
-        {/* Group info */}
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <StackedAvatars users={participants} size="sm" />
-          <span className="font-semibold text-foreground truncate">
-            {getGroupDisplayName()}
-          </span>
+          {/* Group info */}
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <StackedAvatars users={participants} size="sm" />
+            <span className="font-semibold text-foreground truncate">
+              {getGroupDisplayName()}
+            </span>
+          </div>
+        </div>
+
+        {/* Right side - Action Buttons */}
+        <div className="flex items-center gap-1 flex-shrink-0 rounded-xl border border-border/50 bg-background/70 backdrop-blur-xl p-1">
+          {/* Settings Button */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <motion.button
+                variants={buttonVariants}
+                initial={false}
+                animate="animate"
+                custom={hoveredButton === "settings"}
+                transition={transition}
+                onMouseEnter={() => setHoveredButton("settings")}
+                onMouseLeave={() => setHoveredButton(null)}
+                onClick={() => setShowSettingsModal(true)}
+                className={cn(
+                  "relative flex items-center rounded-xl py-2 text-sm font-medium transition-colors duration-300",
+                  hoveredButton === "settings"
+                    ? "bg-muted/70 text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Settings className="w-4 h-4 flex-shrink-0" />
+                <AnimatePresence initial={false}>
+                  {hoveredButton === "settings" && (
+                    <motion.span
+                      variants={spanVariants}
+                      initial="initial"
+                      animate="animate"
+                      exit="exit"
+                      transition={transition}
+                      className="overflow-hidden whitespace-nowrap text-sm"
+                    >
+                      Settings
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </motion.button>
+            </TooltipTrigger>
+            <TooltipContent>Group Settings</TooltipContent>
+          </Tooltip>
+
+          {/* Leave Group Button */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <motion.button
+                variants={buttonVariants}
+                initial={false}
+                animate="animate"
+                custom={hoveredButton === "leave"}
+                transition={transition}
+                onMouseEnter={() => setHoveredButton("leave")}
+                onMouseLeave={() => setHoveredButton(null)}
+                onClick={() => setShowLeaveDialog(true)}
+                className={cn(
+                  "relative flex items-center rounded-xl py-2 text-sm font-medium transition-colors duration-300",
+                  hoveredButton === "leave"
+                    ? "bg-destructive/20 text-destructive"
+                    : "text-muted-foreground hover:text-destructive"
+                )}
+              >
+                <LogOut className="w-4 h-4 flex-shrink-0" />
+                <AnimatePresence initial={false}>
+                  {hoveredButton === "leave" && (
+                    <motion.span
+                      variants={spanVariants}
+                      initial="initial"
+                      animate="animate"
+                      exit="exit"
+                      transition={transition}
+                      className="overflow-hidden whitespace-nowrap text-sm"
+                    >
+                      Leave
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </motion.button>
+            </TooltipTrigger>
+            <TooltipContent>Leave Group</TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
-      {/* Right side - Actions */}
-      <div className="flex items-center gap-1 flex-shrink-0 rounded-xl border border-border/50 bg-background/70 backdrop-blur-xl p-1">
-        <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <DropdownMenuTrigger asChild>
-                <motion.button
-                  variants={buttonVariants}
-                  initial={false}
-                  animate="animate"
-                  custom={hoveredButton === "more"}
-                  transition={transition}
-                  onMouseEnter={() => setHoveredButton("more")}
-                  onMouseLeave={() => setHoveredButton(null)}
-                  className={cn(
-                    "relative flex items-center rounded-xl py-2 text-sm font-medium transition-colors duration-300",
-                    hoveredButton === "more" || isMenuOpen
-                      ? "bg-muted/70 text-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <MoreHorizontal className="w-4 h-4 flex-shrink-0" />
-                  <AnimatePresence initial={false}>
-                    {hoveredButton === "more" && (
-                      <motion.span
-                        variants={spanVariants}
-                        initial="initial"
-                        animate="animate"
-                        exit="exit"
-                        transition={transition}
-                        className="overflow-hidden whitespace-nowrap text-sm"
-                      >
-                        More
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
-                </motion.button>
-              </DropdownMenuTrigger>
-            </TooltipTrigger>
-            <TooltipContent>More Options</TooltipContent>
-          </Tooltip>
+      {/* Group Settings Modal */}
+      <GroupSettingsModal
+        open={showSettingsModal}
+        onOpenChange={setShowSettingsModal}
+        conversation={conversation}
+        participants={participants}
+      />
 
-          <DropdownMenuContent
-            align="end"
-            className="w-48 bg-popover border border-border shadow-lg z-50"
-          >
-            <DropdownMenuItem
-              onClick={handleGroupSettings}
-              className="flex items-center gap-2 cursor-pointer"
-            >
-              <Settings className="w-4 h-4" />
-              <span>Group Settings</span>
-            </DropdownMenuItem>
-
-            <DropdownMenuSeparator />
-
-            <DropdownMenuItem
+      {/* Leave Group Confirmation */}
+      <AlertDialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Leave Group</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to leave this group? A message will be sent notifying other members that you left.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
               onClick={handleLeaveGroup}
-              className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
+              disabled={isLeaving}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              <LogOut className="w-4 h-4" />
-              <span>Leave Group</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </div>
+              {isLeaving ? "Leaving..." : "Leave Group"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
+
