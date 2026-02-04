@@ -685,7 +685,7 @@ export const MessageItem = memo(function MessageItem({
         <ContextMenu>
           <ContextMenuTrigger asChild disabled={isMobile}>
             <div
-              className={`${innerClassName} cursor-pointer`}
+              className={innerClassName}
               onMouseEnter={() => setIsRowHovered(true)}
               onMouseLeave={() => setIsRowHovered(false)}
               onTouchStart={handleTouchStart}
