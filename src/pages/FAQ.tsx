@@ -2,14 +2,8 @@ import { motion } from "framer-motion";
 import { NavigationMenu } from "@/components/layout/NavigationMenu";
 import { Footer } from "@/components/ui/footer-section";
 import { SEO } from "@/components/seo";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Shield, Key, Users, HelpCircle } from "lucide-react";
-import { SmokeRing } from "@paper-design/shaders-react";
 
 const faqCategories = [
   {
@@ -18,23 +12,23 @@ const faqCategories = [
     questions: [
       {
         q: "What is Kloak?",
-        a: "Kloak is a privacy-first communication platform designed for real-time messaging. It functions similarly to Discord, offering servers, channels, direct messages, and voice chat. The fundamental difference is that your privacy is the architecture, not a feature.",
+        a: "Kloak is a communication platform built for real-time messaging with privacy at its core. Like Discord, it offers servers, channels, direct messages, and voice chat. The difference: privacy is built into the architecture, not added as a feature.",
       },
       {
         q: "Who is Kloak for?",
-        a: "Kloak is for anyone who values their digital privacy. Whether you're a community organizer, a group of friends, a team, or just someone tired of platforms harvesting your data. Kloak gives you a space to communicate without surveillance.",
+        a: "Kloak is for anyone who values digital privacy. Community organizers, friend groups, teams, or individuals who are tired of platforms harvesting their data. Kloak provides a space to communicate without surveillance.",
       },
       {
         q: "Why is Kloak privacy-focused?",
-        a: "We believe communication is a fundamental right that shouldn't come with strings attached. Traditional platforms require your email, phone number, and track your behavior to monetize you. Kloak was built from the ground up to prove that great communication tools don't need to compromise your privacy.",
+        a: "Communication is a fundamental right that shouldn't come with strings attached. Traditional platforms require your email, phone number, and track your behavior to monetize you. Kloak was built to prove that great communication tools don't need to compromise your privacy.",
       },
       {
         q: "What features does Kloak offer?",
-        a: "Kloak includes servers with text and voice channels, channel categories, direct messaging (1-to-1 and group), real-time chat with reactions and replies, file attachments, user presence indicators, a friend system, customizable profiles, and notifications. All without requiring personal information.",
+        a: "Kloak includes servers with text and voice channels, channel categories, direct messaging for individuals and groups, real-time chat with reactions and replies, share images and videos, a friend system, customizable profiles, and notifications. None of these features require personal information.",
       },
       {
         q: "Is Kloak free?",
-        a: "Using Kloak will always be free. However, some features that require significant server resources like voice channels and large file storage may require a paid tier in the future. This isn't about profit. It's about sustainability. Running servers costs money, and offering premium features helps us keep the core platform free for everyone.",
+        a: "Using Kloak will always be free. However, some features that require significant server resources like voice channels and large file storage may require a paid tier in the future. Running servers costs money, and offering premium features helps us keep the core platform free for everyone.",
       },
     ],
   },
@@ -44,11 +38,11 @@ const faqCategories = [
     questions: [
       {
         q: "How does authentication work without email or password?",
-        a: "When you create an account, Kloak generates a unique 64-character cryptographic secret key. This key is your identity. No email, phone number, or password required. You simply paste your key to log in from any device.",
+        a: "When you create an account, Kloak generates a unique 64-character cryptographic key. This key is your identity. No email, phone number, or password required. You paste your key to log in from any device.",
       },
       {
         q: "What happens if I lose my secret key?",
-        a: "Your secret key is the only way to access your account. By design, we cannot recover it for you. This ensures true privacy since we don't store any information that could identify you. Always save your key in a secure location like a password manager.",
+        a: "Your secret key is the only way to access your account. By design, we cannot recover it for you. This ensures true privacy because we don't store any information that could identify you. Save your key in a secure location like a password manager.",
       },
       {
         q: "Where can I find my secret key after signing up?",
@@ -56,7 +50,7 @@ const faqCategories = [
       },
       {
         q: "Is my data encrypted?",
-        a: "Your secret key is hashed using SHA-256 before being stored. We never see or store your actual key. Messages are transmitted securely over encrypted connections. Your conversations belong to you.",
+        a: "Your secret key is hashed using SHA-256 before being stored. We never see or store your actual key. Messages are transmitted securely over encrypted connections.",
       },
     ],
   },
@@ -92,51 +86,34 @@ const FAQ = () => {
         <main className="pt-10">
           {/* Hero Section */}
           <section className="relative py-32 md:py-40 px-8 lg:px-16 overflow-hidden">
-            {/* Cyan shader background */}
-            <div className="absolute inset-0">
-              <SmokeRing
-                style={{ width: "100%", height: "100%" }}
-                colors={["#0891b2"]}
-                colorBack="#0c2d36"
-                noiseScale={3}
-                noiseIterations={3}
-                radius={0.95}
-                thickness={0.85}
-                innerShape={0.9}
-                speed={0.3}
-                scale={2.24}
-                offsetY={0.46}
-              />
-            </div>
-            
-            <div className="relative z-10 max-w-7xl mx-auto">
+            <div className="max-w-7xl mx-auto">
               <motion.div
                 className="flex items-center gap-4 mb-8"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.6 }}
               >
-                <span className="text-xs font-mono text-white/80 tracking-widest uppercase">Help Center</span>
+                <span className="text-xs font-mono text-primary tracking-widest uppercase">Help Center</span>
               </motion.div>
 
               <motion.h1
-                className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light text-white leading-tight tracking-tight mb-8"
+                className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light text-foreground leading-tight tracking-tight mb-8"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.1 }}
               >
                 Frequently asked
                 <br />
-                <span className="text-white/60">questions.</span>
+                <span className="text-primary/60">questions.</span>
               </motion.h1>
 
               <motion.p
-                className="text-lg md:text-xl text-white/70 max-w-2xl leading-relaxed"
+                className="text-lg md:text-xl text-muted-foreground max-w-2xl leading-relaxed"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
               >
-                Everything you need to know about Kloak. Can not find what you are looking for? Join our community server.
+                Everything you need to know about Kloak. Can't find what you're looking for? Join our community server.
               </motion.p>
             </div>
           </section>
@@ -161,9 +138,7 @@ const FAQ = () => {
                     <div className="w-12 h-12 border border-primary/30 flex items-center justify-center">
                       <category.icon className="w-6 h-6 text-primary" />
                     </div>
-                    <span className="text-xs font-mono text-primary tracking-widest uppercase">
-                      {category.title}
-                    </span>
+                    <span className="text-xs font-mono text-primary tracking-widest uppercase">{category.title}</span>
                   </div>
                 </motion.div>
 
