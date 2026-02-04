@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Users, X, MessageSquare, Compass, Plus } from "lucide-react";
+import { Search, Users, X, MessageSquare, Compass, UsersRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -158,7 +158,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
           onClick={() => setShowCreateGroup(true)}
           title="Create Group"
         >
-          <Plus className="w-4 h-4" />
+          <UsersRound className="w-4 h-4" />
         </Button>
       </div>
 
