@@ -81,9 +81,11 @@ export const EditChannelModal = () => {
   const hasValidTarget = isCategory ? !!category : !!channel;
   const targetName = isCategory ? category?.name : channel?.name;
 
+  // Navigation items - categories now have settings too
   const navItems = isCategory
     ? [
         { id: "overview", label: "Overview", icon: FolderOpen },
+        { id: "settings", label: "Settings", icon: Settings },
         { id: "permissions", label: "Permissions", icon: Shield },
       ]
     : [
@@ -237,9 +239,9 @@ export const EditChannelModal = () => {
     </div>
   );
 
-  // Overview Tab Content
-  const overviewContent = (
-    <form onSubmit={handleSubmit} className="space-y-6">
+  // Channel Overview Tab Content
+  const channelOverviewContent = (
+    <div className="space-y-6">
       <div className="space-y-3">
         <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Channel Name</Label>
         <div className="relative">
@@ -278,27 +280,11 @@ export const EditChannelModal = () => {
           <p className="text-sm text-destructive">{error}</p>
         </div>
       )}
-
-      <div className="flex gap-3 pt-4">
-        <Button type="button" variant="outline" onClick={handleClose} className="flex-1 h-11 rounded-xl">
-          Cancel
-        </Button>
-        <Button type="submit" disabled={isSubmitting || !name.trim()} className="flex-1 h-11 rounded-xl">
-          {isSubmitting ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            "Save Changes"
-          )}
-        </Button>
-      </div>
-    </form>
+    </div>
   );
 
-  // Settings Tab Content
-  const settingsContent = (
+  // Channel Settings Tab Content
+  const channelSettingsContent = (
     <div className="space-y-6">
       {/* Slowmode */}
       <div className="space-y-3">
@@ -462,28 +448,11 @@ export const EditChannelModal = () => {
           Delete Channel
         </Button>
       </div>
-
-      {/* Footer */}
-      <div className="flex gap-3 pt-4">
-        <Button type="button" variant="outline" onClick={handleClose} className="flex-1 h-11 rounded-xl">
-          Cancel
-        </Button>
-        <Button onClick={handleSubmit} disabled={isSubmitting || !name.trim()} className="flex-1 h-11 rounded-xl">
-          {isSubmitting ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            "Save Changes"
-          )}
-        </Button>
-      </div>
     </div>
   );
 
   // Permissions Tab Content
-  const permissionsContent = (
+  const channelPermissionsContent = (
     <div>
       {channelId && currentServer ? (
         <ChannelPermissionsEditor channelId={channelId} serverId={currentServer.id} onClose={handleClose} />
@@ -499,7 +468,7 @@ export const EditChannelModal = () => {
   );
 
   // Members Tab Content (for private channels)
-  const membersContent = (
+  const channelMembersContent = (
     <div>
       {channelId && currentServer ? (
         <ChannelMembersEditor channelId={channelId} serverId={currentServer.id} onClose={handleClose} />
@@ -514,17 +483,17 @@ export const EditChannelModal = () => {
     </div>
   );
 
-  // Render content based on active tab
-  const renderContent = () => {
+  // Render channel content based on active tab
+  const renderChannelContent = () => {
     switch (activeTab) {
       case "overview":
-        return overviewContent;
+        return channelOverviewContent;
       case "settings":
-        return settingsContent;
+        return channelSettingsContent;
       case "members":
-        return membersContent;
+        return channelMembersContent;
       case "permissions":
-        return permissionsContent;
+        return channelPermissionsContent;
       default:
         return null;
     }
@@ -532,17 +501,22 @@ export const EditChannelModal = () => {
 
   // Category Overview Content
   const categoryOverviewContent = (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="space-y-6">
       <div className="space-y-3">
         <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Category Name</Label>
-        <Input
-          id="category-name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Category name"
-          className="h-11 rounded-xl border-border/50 bg-secondary/30"
-          maxLength={50}
-        />
+        <div className="relative">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-secondary/80 flex items-center justify-center">
+            <FolderOpen className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <Input
+            id="category-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Category name"
+            className="h-11 pl-14 rounded-xl border-border/50 bg-secondary/30"
+            maxLength={50}
+          />
+        </div>
       </div>
 
       {error && (
@@ -550,6 +524,26 @@ export const EditChannelModal = () => {
           <p className="text-sm text-destructive">{error}</p>
         </div>
       )}
+    </div>
+  );
+
+  // Category Settings Content
+  const categorySettingsContent = (
+    <div className="space-y-6">
+      {/* Info about category settings */}
+      <div className="p-4 rounded-xl bg-secondary/30 border border-border/50">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-secondary/80 flex items-center justify-center flex-shrink-0">
+            <Settings className="w-5 h-5 text-muted-foreground" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium">Category Settings</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Category-level settings affect how channels within this category behave. Individual channel settings can override these defaults.
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* Danger Zone */}
       <div className="p-4 rounded-xl border border-destructive/30 bg-destructive/5 space-y-4">
@@ -567,7 +561,6 @@ export const EditChannelModal = () => {
         <Button
           type="button"
           variant="destructive"
-          size="sm"
           className="w-full h-10 rounded-xl"
           onClick={() => setShowDeleteConfirm(true)}
         >
@@ -575,24 +568,7 @@ export const EditChannelModal = () => {
           Delete Category
         </Button>
       </div>
-
-      {/* Footer */}
-      <div className="flex gap-3 pt-2">
-        <Button type="button" variant="outline" onClick={handleClose} className="flex-1 h-11 rounded-xl">
-          Cancel
-        </Button>
-        <Button type="submit" disabled={isSubmitting || !name.trim()} className="flex-1 h-11 rounded-xl">
-          {isSubmitting ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            "Save Changes"
-          )}
-        </Button>
-      </div>
-    </form>
+    </div>
   );
 
   // Category Permissions Content
@@ -616,6 +592,8 @@ export const EditChannelModal = () => {
     switch (activeTab) {
       case "overview":
         return categoryOverviewContent;
+      case "settings":
+        return categorySettingsContent;
       case "permissions":
         return categoryPermissionsContent;
       default:
@@ -623,64 +601,17 @@ export const EditChannelModal = () => {
     }
   };
 
+  // Check if we need to show save button
+  const showSaveButton = activeTab === "overview" || (activeTab === "settings" && !isCategory);
+
   // Don't render if no valid target
   if (!isOpen || !hasValidTarget) return null;
 
+  // Full-screen modal layout (like ServerSettings/UserSettings)
   return (
     <>
-      {/* Category Modal with tabs */}
-      {isCategory && category && (
-        <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-          <DialogContent className="sm:max-w-4xl max-w-[calc(100vw-2rem)] max-h-[90vh] sm:max-h-[85vh] overflow-hidden p-0 rounded-2xl gap-0 flex flex-col">
-            {/* Header */}
-            <div className="relative px-6 pt-6 pb-4 border-b border-border/50">
-              <div className="absolute -top-20 -right-20 w-40 h-40 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
-
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary mb-4">
-                <FolderOpen className="w-3 h-3" />
-                Edit Category
-              </div>
-
-              <h2 className="text-xl font-semibold">{category.name}</h2>
-              <p className="text-sm text-muted-foreground mt-1">Modify category settings and permissions</p>
-            </div>
-
-            {/* Tabs Layout */}
-            <div className="flex flex-1 min-h-0">
-              {/* Tab Sidebar */}
-              <div className="w-48 border-r border-border/50 p-4 space-y-1">
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = activeTab === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => setActiveTab(item.id)}
-                      className={cn(
-                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all",
-                        isActive
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:text-foreground hover:bg-secondary",
-                      )}
-                    >
-                      <Icon className="w-4 h-4" />
-                      {item.label}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Tab Content */}
-              <div className="flex-1 overflow-y-auto p-6">
-                {renderCategoryContent()}
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {/* Channel Modal - Mobile with Dock */}
-      {!isCategory && channel && isMobile && (
+      {/* Mobile: Custom Dialog with Dock */}
+      {isMobile && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-end p-4 pb-6">
           {/* Backdrop */}
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={handleClose} />
@@ -694,7 +625,9 @@ export const EditChannelModal = () => {
             <div className="px-5 py-4 border-b border-border flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold">{navItems.find((n) => n.id === activeTab)?.label}</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">#{channel.name}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {isCategory ? category?.name : `#${channel?.name}`}
+                </p>
               </div>
               <Button variant="ghost" size="icon" onClick={handleClose} className="rounded-full">
                 <X className="w-5 h-5" />
@@ -702,13 +635,32 @@ export const EditChannelModal = () => {
             </div>
 
             {/* Content */}
-            <div className="overflow-y-auto p-5" style={{ maxHeight: "calc(100vh - 240px)" }}>
-              {renderContent()}
+            <div className="overflow-y-auto p-5" style={{ maxHeight: "calc(100vh - 300px)" }}>
+              {isCategory ? renderCategoryContent() : renderChannelContent()}
+              
+              {/* Save Button for overview and settings */}
+              {showSaveButton && (
+                <div className="flex gap-3 pt-6 mt-6 border-t border-border/50">
+                  <Button type="button" variant="outline" onClick={handleClose} className="flex-1 h-11 rounded-xl">
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSubmit} disabled={isSubmitting || !name.trim()} className="flex-1 h-11 rounded-xl">
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save Changes"
+                    )}
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Dock Navigation */}
-          <div className="relative flex gap-2 p-2 bg-background/95 backdrop-blur-xl rounded-2xl border border-border shadow-2xl">
+          <div className="relative w-full flex gap-2 p-2 bg-background/95 backdrop-blur-xl rounded-2xl border border-border shadow-2xl overflow-x-auto scrollbar-hide scroll-smooth justify-start">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -717,7 +669,7 @@ export const EditChannelModal = () => {
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
                   className={cn(
-                    "relative flex flex-col items-center gap-1 px-4 py-2.5 rounded-xl transition-all",
+                    "relative flex flex-col items-center gap-1 px-4 py-2.5 rounded-xl transition-all flex-shrink-0",
                     isActive
                       ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:text-foreground hover:bg-secondary",
@@ -732,51 +684,105 @@ export const EditChannelModal = () => {
         </div>
       )}
 
-      {/* Channel Modal - Desktop with Sidebar */}
-      {!isCategory && channel && !isMobile && (
+      {/* Desktop: Full-screen modal like ServerSettings */}
+      {!isMobile && (
         <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-          <DialogContent className="sm:max-w-5xl max-w-[calc(100vw-2rem)] max-h-[90vh] sm:max-h-[85vh] overflow-hidden p-0 rounded-2xl gap-0 flex flex-col">
+          <DialogContent className="max-w-[90vw] w-full max-h-[90vh] h-[85vh] overflow-hidden p-0 rounded-2xl gap-0 flex flex-col">
             {/* Header */}
-            <div className="relative px-6 pt-6 pb-4 border-b border-border/50">
+            <div className="relative px-6 pt-6 pb-4 border-b border-border/50 flex-shrink-0">
               <div className="absolute -top-20 -right-20 w-40 h-40 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
 
               <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary mb-4">
-                <Hash className="w-3 h-3" />
-                Edit Channel
+                {isCategory ? (
+                  <>
+                    <FolderOpen className="w-3 h-3" />
+                    Edit Category
+                  </>
+                ) : (
+                  <>
+                    <Hash className="w-3 h-3" />
+                    Edit Channel
+                  </>
+                )}
               </div>
 
-              <h2 className="text-xl font-semibold">#{channel.name}</h2>
-              <p className="text-sm text-muted-foreground mt-1">Modify channel settings and permissions</p>
+              <h2 className="text-xl font-semibold">
+                {isCategory ? category?.name : `#${channel?.name}`}
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                {isCategory 
+                  ? "Modify category settings and permissions" 
+                  : "Modify channel settings and permissions"}
+              </p>
             </div>
 
-            {/* Tabs Layout */}
+            {/* Main Content Area */}
             <div className="flex-1 flex overflow-hidden">
-              {/* Sidebar */}
-              <div className="w-48 sm:w-56 border-r border-border/50 bg-secondary/20 p-3 space-y-1 flex-shrink-0">
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = activeTab === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => setActiveTab(item.id)}
-                      className={cn(
-                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                        isActive
-                          ? "bg-primary/10 text-primary"
-                          : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
-                      )}
-                    >
-                      <Icon className="w-4 h-4" />
-                      {item.label}
-                    </button>
-                  );
-                })}
+              {/* Sidebar Navigation */}
+              <div className="w-56 bg-secondary/20 border-r border-border/50 flex flex-col overflow-hidden flex-shrink-0">
+                <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+                  {navItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = activeTab === item.id;
+
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => setActiveTab(item.id)}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-4 py-3 text-sm rounded-xl transition-all",
+                          isActive
+                            ? "bg-background shadow-sm"
+                            : "text-muted-foreground hover:text-foreground hover:bg-secondary/80",
+                        )}
+                      >
+                        <Icon className="w-4 h-4" />
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </nav>
               </div>
 
               {/* Content Area */}
-              <div className="flex-1 overflow-y-auto p-6">{renderContent()}</div>
+              <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+                <div className="flex-1 overflow-y-auto p-8">
+                  <div className="max-w-2xl">
+                    {/* Tab Title */}
+                    <div className="mb-6 pb-5 border-b border-border">
+                      <h3 className="text-xl font-semibold">{navItems.find((n) => n.id === activeTab)?.label}</h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {activeTab === "overview" && (isCategory ? "Basic category information" : "Basic channel information")}
+                        {activeTab === "settings" && (isCategory ? "Category configuration options" : "Channel configuration options")}
+                        {activeTab === "members" && "Manage who can access this private channel"}
+                        {activeTab === "permissions" && (isCategory ? "Control category access and abilities" : "Control channel access and abilities")}
+                      </p>
+                    </div>
+
+                    {/* Tab Content */}
+                    {isCategory ? renderCategoryContent() : renderChannelContent()}
+
+                    {/* Save Button for overview and settings (channel) */}
+                    {showSaveButton && (
+                      <div className="flex gap-3 pt-6 mt-6 border-t border-border/50">
+                        <Button type="button" variant="outline" onClick={handleClose} className="h-11 rounded-xl px-8">
+                          Cancel
+                        </Button>
+                        <Button onClick={handleSubmit} disabled={isSubmitting || !name.trim()} className="h-11 rounded-xl px-8">
+                          {isSubmitting ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            "Save Changes"
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </DialogContent>
         </Dialog>

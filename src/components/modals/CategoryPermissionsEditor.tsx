@@ -397,15 +397,8 @@ export const CategoryPermissionsEditor = ({ categoryId, serverId, onClose }: Cat
 
   return (
     <div className="space-y-4">
-      <div>
-        <h3 className="text-sm font-semibold">Category Permissions</h3>
-        <p className="text-xs text-muted-foreground mt-1">
-          Set permissions for this category. You can sync these permissions to all channels in the category.
-        </p>
-      </div>
-
       {/* Sync to Channels Button */}
-      <div className="p-3 rounded-xl bg-secondary/30 border border-border/50">
+      <div className="p-4 rounded-xl bg-secondary/30 border border-border/50">
         <div className="flex items-center justify-between gap-4">
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium">Sync to Channels</p>
@@ -418,7 +411,7 @@ export const CategoryPermissionsEditor = ({ categoryId, serverId, onClose }: Cat
             size="sm"
             onClick={handleSyncToChannels}
             disabled={isSyncing || channelsInCategory.length === 0}
-            className="flex-shrink-0"
+            className="flex-shrink-0 rounded-xl"
           >
             {isSyncing ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -430,11 +423,11 @@ export const CategoryPermissionsEditor = ({ categoryId, serverId, onClose }: Cat
         </div>
       </div>
 
-      <div className="flex gap-4" style={{ height: 'calc(85vh - 380px)', minHeight: '350px' }}>
+      <div className="flex gap-4" style={{ height: 'calc(60vh - 200px)', minHeight: '350px' }}>
         {/* Role List Sidebar */}
-        <div className="w-48 border-r border-border">
+        <div className="w-48 border-r border-border/50 flex-shrink-0">
           <ScrollArea className="h-full">
-            <div className="space-y-1 p-2">
+            <div className="space-y-1 pr-3">
               {allRoles.map((role) => {
                 const roleKey = role.id || role.name!;
                 const isSelected = selectedRoleKey === roleKey;
@@ -445,7 +438,7 @@ export const CategoryPermissionsEditor = ({ categoryId, serverId, onClose }: Cat
                     key={roleKey}
                     onClick={() => setSelectedRoleKey(roleKey)}
                     className={cn(
-                      "w-full flex items-center justify-between gap-2 px-3 py-2 rounded-md text-sm transition-colors",
+                      "w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm transition-colors",
                       isSelected
                         ? "bg-primary text-primary-foreground"
                         : "hover:bg-secondary text-foreground"
@@ -478,11 +471,11 @@ export const CategoryPermissionsEditor = ({ categoryId, serverId, onClose }: Cat
         </div>
 
         {/* Permissions Panel */}
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           {selectedRole ? (
             <ScrollArea className="h-full pr-4">
               <div className="space-y-6">
-                <div className="flex items-center gap-2 pb-2 border-b">
+                <div className="flex items-center gap-2 pb-2 border-b border-border/50">
                   <div
                     className="w-4 h-4 rounded-full"
                     style={{ backgroundColor: selectedRole.color }}
@@ -505,7 +498,7 @@ export const CategoryPermissionsEditor = ({ categoryId, serverId, onClose }: Cat
                         const state = getPermissionState(selectedRoleKey!, permission);
 
                         return (
-                          <div key={permission} className="flex items-center justify-between p-2 rounded-md hover:bg-secondary/50 group/item">
+                          <div key={permission} className="flex items-center justify-between p-2 rounded-lg hover:bg-secondary/50 group/item">
                             <Label
                               htmlFor={`${selectedRoleKey}-${permission}`}
                               className="text-sm font-normal cursor-pointer flex-1"
@@ -564,11 +557,11 @@ export const CategoryPermissionsEditor = ({ categoryId, serverId, onClose }: Cat
         </div>
       </div>
 
-      <div className="flex items-center justify-end gap-2 pt-4 border-t mt-4">
-        <Button variant="outline" onClick={onClose} disabled={isSaving}>
+      <div className="flex items-center justify-end gap-2 pt-4 border-t border-border/50">
+        <Button variant="outline" onClick={onClose} disabled={isSaving} className="rounded-xl">
           Cancel
         </Button>
-        <Button onClick={handleSave} disabled={isSaving}>
+        <Button onClick={handleSave} disabled={isSaving} className="rounded-xl">
           {isSaving ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
