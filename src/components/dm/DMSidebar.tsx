@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Users, X, MessageSquare, Compass } from "lucide-react";
+import { Search, Users, X, MessageSquare, Compass, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { LoggedInUserPanel } from "@/components/layout/LoggedInUserPanel";
 import { VoiceConnectedBanner } from "@/components/layout/VoiceConnectedBanner";
+import { CreateGroupModal } from "@/components/dm/CreateGroupModal";
 import { useDMStore } from "@/stores/dmStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useUnreadDMs } from "@/hooks/useUnreadDMs";
@@ -28,6 +29,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
   const { conversations, currentConversation, fetchConversations, setCurrentConversation, isLoading } = useDMStore();
   const { getUnreadCount, markAsRead } = useUnreadDMs(user?.id || null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
 
   // Fetch conversations on mount
   useEffect(() => {
@@ -125,20 +127,29 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
       {/* Search */}
       <div className="p-2">
         <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             type="text"
             placeholder="Find or start a conversation"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8 h-8 bg-secondary/50 border border-border/80 text-sm"
+            className="pl-9"
           />
         </div>
       </div>
 
-      {/* Section header */}
-      <div className="px-4 py-2">
+      {/* Section header with Create Group */}
+      <div className="px-4 py-2 flex items-center justify-between">
         <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Direct Messages</h3>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="h-6 w-6"
+          onClick={() => setShowCreateGroup(true)}
+          title="Create Group"
+        >
+          <Plus className="w-4 h-4" />
+        </Button>
       </div>
 
       {/* Conversations list */}
@@ -244,6 +255,9 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
 
       <VoiceConnectedBanner />
       <LoggedInUserPanel />
+
+      {/* Create Group Modal */}
+      <CreateGroupModal open={showCreateGroup} onOpenChange={setShowCreateGroup} />
     </div>
   );
 };
