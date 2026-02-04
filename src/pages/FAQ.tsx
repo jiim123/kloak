@@ -1,4 +1,6 @@
+import { motion } from "framer-motion";
 import { NavigationMenu } from "@/components/layout/NavigationMenu";
+import { Footer } from "@/components/ui/footer-section";
 import { SEO } from "@/components/seo";
 import {
   Accordion,
@@ -6,7 +8,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Shield, Key, Users } from "lucide-react";
+import { Shield, Key, Users, HelpCircle } from "lucide-react";
 
 const faqCategories = [
   {
@@ -15,11 +17,11 @@ const faqCategories = [
     questions: [
       {
         q: "What is Kloak?",
-        a: "Kloak is a privacy-first communication platform designed for real-time messaging. It functions similarly to Discord, offering servers, channels, direct messages, and voice chat—but with a fundamental difference: your privacy is the architecture, not a feature.",
+        a: "Kloak is a privacy-first communication platform designed for real-time messaging. It functions similarly to Discord, offering servers, channels, direct messages, and voice chat. The fundamental difference is that your privacy is the architecture, not a feature.",
       },
       {
         q: "Who is Kloak for?",
-        a: "Kloak is for anyone who values their digital privacy. Whether you're a community organizer, a group of friends, a team, or just someone tired of platforms harvesting your data—Kloak gives you a space to communicate without surveillance.",
+        a: "Kloak is for anyone who values their digital privacy. Whether you're a community organizer, a group of friends, a team, or just someone tired of platforms harvesting your data. Kloak gives you a space to communicate without surveillance.",
       },
       {
         q: "Why is Kloak privacy-focused?",
@@ -27,11 +29,11 @@ const faqCategories = [
       },
       {
         q: "What features does Kloak offer?",
-        a: "Kloak includes servers with text and voice channels, channel categories, direct messaging (1-to-1 and group), real-time chat with reactions and replies, file attachments, user presence indicators, a friend system, customizable profiles, and notifications—all without requiring personal information.",
+        a: "Kloak includes servers with text and voice channels, channel categories, direct messaging (1-to-1 and group), real-time chat with reactions and replies, file attachments, user presence indicators, a friend system, customizable profiles, and notifications. All without requiring personal information.",
       },
       {
         q: "Is Kloak free?",
-        a: "Using Kloak will always be free. However, some features—particularly those that require significant server resources like voice channels and file storage—may require a paid tier. This isn't about profit; it's about sustainability. Running servers costs money, and offering premium features helps us keep the core platform free for everyone. The specific features that will be premium are still being finalized and will be communicated clearly.",
+        a: "Using Kloak will always be free. However, some features that require significant server resources like voice channels and large file storage may require a paid tier in the future. This isn't about profit. It's about sustainability. Running servers costs money, and offering premium features helps us keep the core platform free for everyone.",
       },
     ],
   },
@@ -41,19 +43,19 @@ const faqCategories = [
     questions: [
       {
         q: "How does authentication work without email or password?",
-        a: "When you create an account, Kloak generates a unique 64-character cryptographic secret key. This key is your identity—no email, phone number, or password required. You simply paste your key to log in from any device.",
+        a: "When you create an account, Kloak generates a unique 64-character cryptographic secret key. This key is your identity. No email, phone number, or password required. You simply paste your key to log in from any device.",
       },
       {
         q: "What happens if I lose my secret key?",
-        a: "Your secret key is the only way to access your account. By design, we cannot recover it for you—this ensures true privacy since we don't store any information that could identify you. Always save your key in a secure location like a password manager.",
+        a: "Your secret key is the only way to access your account. By design, we cannot recover it for you. This ensures true privacy since we don't store any information that could identify you. Always save your key in a secure location like a password manager.",
       },
       {
         q: "Where can I find my secret key after signing up?",
-        a: "After creating your account, your key is displayed once. You can always view it again by going to User Settings → Account → View Secret Key while logged in. We strongly recommend saving it immediately after account creation.",
+        a: "After creating your account, your key is displayed once. You can always view it again by going to User Settings, then Account, then View Secret Key while logged in. We strongly recommend saving it immediately after account creation.",
       },
       {
         q: "Is my data encrypted?",
-        a: "Your secret key is hashed using SHA-256 before being stored—we never see or store your actual key. Messages are transmitted securely over encrypted connections. Your conversations belong to you.",
+        a: "Your secret key is hashed using SHA-256 before being stored. We never see or store your actual key. Messages are transmitted securely over encrypted connections. Your conversations belong to you.",
       },
     ],
   },
@@ -63,11 +65,11 @@ const faqCategories = [
     questions: [
       {
         q: "How do I create or join a server?",
-        a: "To create a server, click the '+' button in the server sidebar and choose 'Create Server.' To join an existing server, you'll need an invite code from a server member—paste it in the 'Join Server' dialog or use a direct invite link.",
+        a: "To create a server, click the '+' button in the server sidebar and choose 'Create Server.' To join an existing server, you'll need an invite code from a server member. Paste it in the 'Join Server' dialog or use a direct invite link.",
       },
       {
         q: "Can I use Kloak on multiple devices?",
-        a: "Yes! Since your identity is your secret key, you can log in from any device by pasting your key. Your servers, messages, and friends will sync across all devices.",
+        a: "Yes. Since your identity is your secret key, you can log in from any device by pasting your key. Your servers, messages, and friends will sync across all devices.",
       },
       {
         q: "How do direct messages work?",
@@ -79,70 +81,125 @@ const faqCategories = [
 
 const FAQ = () => {
   return (
-    <>
+    <div className="min-h-screen bg-background flex flex-col items-center w-full">
       <SEO
         title="FAQ"
         description="Frequently asked questions about Kloak. Learn about our privacy-first approach, secret key authentication, and how to use the platform."
       />
-      <div className="min-h-screen bg-background">
+      <div className="w-full">
         <NavigationMenu />
+        <main className="pt-10">
+          {/* Hero Section */}
+          <section className="relative py-32 md:py-40 px-8 lg:px-16 overflow-hidden">
+            <div className="max-w-7xl mx-auto">
+              <motion.div
+                className="flex items-center gap-4 mb-8"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.6 }}
+              >
+                <span className="text-xs font-mono text-primary tracking-widest uppercase">Help Center</span>
+              </motion.div>
 
-        <main className="pt-24 pb-16 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mx-auto">
-            {/* Header */}
-            <div className="text-center mb-12">
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">
-                Frequently Asked Questions
-              </h1>
-              <p className="text-muted-foreground text-lg">
-                Everything you need to know about Kloak
-              </p>
+              <motion.h1
+                className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light text-foreground leading-tight tracking-tight mb-8"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.1 }}
+              >
+                Frequently asked
+                <br />
+                <span className="text-primary/60">questions.</span>
+              </motion.h1>
+
+              <motion.p
+                className="text-lg md:text-xl text-muted-foreground max-w-2xl leading-relaxed"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+              >
+                Everything you need to know about Kloak. Can't find what you're looking for? Join our community server.
+              </motion.p>
             </div>
+          </section>
 
-            {/* FAQ Categories */}
-            <div className="space-y-8">
-              {faqCategories.map((category) => (
-                <section key={category.title}>
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <category.icon className="w-5 h-5 text-primary" />
+          {/* FAQ Categories */}
+          {faqCategories.map((category, categoryIndex) => (
+            <section
+              key={category.title}
+              className={`relative py-24 px-8 lg:px-16 border-y border-border/20 ${
+                categoryIndex % 2 === 0 ? "bg-card/50" : ""
+              }`}
+            >
+              <div className="max-w-7xl mx-auto">
+                <motion.div
+                  className="mb-12"
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6 }}
+                >
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-12 h-12 border border-primary/30 flex items-center justify-center">
+                      <category.icon className="w-6 h-6 text-primary" />
                     </div>
-                    <h2 className="text-xl font-semibold">{category.title}</h2>
+                    <span className="text-xs font-mono text-primary tracking-widest uppercase">
+                      {category.title}
+                    </span>
                   </div>
+                </motion.div>
 
-                  <Accordion type="single" collapsible className="space-y-2">
-                    {category.questions.map((item, index) => (
+                <Accordion type="single" collapsible className="space-y-4">
+                  {category.questions.map((item, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.5, delay: index * 0.1 }}
+                    >
                       <AccordionItem
-                        key={index}
                         value={`${category.title}-${index}`}
-                        className="border border-border/50 rounded-xl px-4 data-[state=open]:bg-secondary/30"
+                        className="border border-border/30 bg-background hover:bg-card/50 transition-colors px-6 md:px-8"
                       >
-                        <AccordionTrigger className="text-left font-medium hover:no-underline">
+                        <AccordionTrigger className="text-left font-medium hover:no-underline py-6 text-base md:text-lg">
                           {item.q}
                         </AccordionTrigger>
-                        <AccordionContent className="text-muted-foreground leading-relaxed">
+                        <AccordionContent className="text-muted-foreground leading-relaxed pb-6 text-sm md:text-base">
                           {item.a}
                         </AccordionContent>
                       </AccordionItem>
-                    ))}
-                  </Accordion>
-                </section>
-              ))}
-            </div>
+                    </motion.div>
+                  ))}
+                </Accordion>
+              </div>
+            </section>
+          ))}
 
-            {/* Footer CTA */}
-            <div className="mt-16 text-center p-6 rounded-2xl bg-secondary/30 border border-border/30">
-              <p className="text-muted-foreground mb-2">
-                Still have questions?
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Join our community server to get help from other Kloak users.
-              </p>
+          {/* Footer CTA */}
+          <section className="relative py-24 px-8 lg:px-16 bg-card/50 border-b border-border/20">
+            <div className="max-w-2xl mx-auto">
+              <motion.div
+                className="text-center border border-border/30 bg-background p-10 md:p-14 rounded-lg"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+              >
+                <HelpCircle className="w-12 h-12 text-primary mx-auto mb-6" />
+                <h2 className="text-3xl sm:text-4xl font-light text-foreground leading-tight tracking-tight mb-4">
+                  Still have questions?
+                </h2>
+                <p className="text-muted-foreground max-w-lg mx-auto leading-relaxed">
+                  Join our community server to get help from other Kloak users and stay updated on new features.
+                </p>
+              </motion.div>
             </div>
-          </div>
+          </section>
         </main>
+        <Footer />
       </div>
-    </>
+    </div>
   );
 };
 
