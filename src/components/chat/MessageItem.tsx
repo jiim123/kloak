@@ -698,7 +698,7 @@ export const MessageItem = memo(function MessageItem({
                   {compactMode ? (
                     <div className="w-16 flex-shrink-0 pt-0.5">
                       <span
-                        className={`text-[11px] font-[Inter,system-ui,sans-serif] text-muted-foreground/70 transition-opacity duration-150 whitespace-nowrap block ${
+                        className={`text-[10px] font-[Inter,system-ui,sans-serif] text-muted-foreground/70 transition-opacity duration-150 whitespace-nowrap block ${
                           showTimestamps || !isGrouped ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                         }`}
                       >
@@ -726,7 +726,7 @@ export const MessageItem = memo(function MessageItem({
                         )
                       ) : (
                         <div className="h-full flex items-center justify-center">
-                          <span className="text-[11px] font-[Inter,system-ui,sans-serif] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                          <span className="text-[10px] font-[Inter,system-ui,sans-serif] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                             {formattedTime}
                           </span>
                         </div>
@@ -815,7 +815,7 @@ export const MessageItem = memo(function MessageItem({
                             </Tooltip>
                           )}
                           {showTimestamps && (
-                            <span className="text-[12px] sm:text-[13px] text-muted-foreground leading-none">
+                            <span className="text-[11px] sm:text-[12px] text-muted-foreground leading-none">
                               {formattedTimestamp}
                             </span>
                           )}
