@@ -14,6 +14,7 @@ import { useUnread } from "@/hooks/useUnread";
 import { useUnreadDMs } from "@/hooks/useUnreadDMs";
 import { useDMStore } from "@/stores/dmStore";
 import { supabase } from "@/integrations/supabase/client";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import {
   DndContext,
   DragEndEvent,
@@ -1214,9 +1215,21 @@ export const HorizontalServerSidebar = () => {
         </DragOverlay>
       </DndContext>
 
-      {/* Right side - Settings only */}
+      {/* Right side - Notifications & Settings */}
       <div className="flex items-center gap-2 flex-shrink-0">
         <div className="w-0.5 h-6 bg-border rounded-full" />
+
+        {/* Notification bell */}
+        <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
+          <TooltipTrigger asChild>
+            <div>
+              <NotificationBell variant="sidebar" />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="font-medium">
+            Notifications
+          </TooltipContent>
+        </Tooltip>
 
         {/* Settings button */}
         <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>

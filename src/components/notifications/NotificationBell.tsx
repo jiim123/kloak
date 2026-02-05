@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
+import { motion } from "framer-motion";
 import { Bell, Check, Trash2, MessageCircle, AtSign, UserPlus, Mail, X, AlertTriangle, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { MotionButton } from "@/components/ui/motion-elements";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -13,6 +15,10 @@ import { useServerStore } from "@/stores/serverStore";
 import { requestNotificationPermission } from "@/hooks/useRealtimeNotifications";
 import { cn } from "@/lib/utils";
 import type { Notification } from "@/types";
+
+export interface NotificationBellProps {
+  variant?: "default" | "sidebar";
+}
 
 // Theme types and classes
 type NotificationTheme = 'amber' | 'emerald' | 'red' | 'blue' | 'violet' | 'default';
@@ -70,7 +76,14 @@ const extractUsernameFromBody = (body: string | null): string | null => {
   return match ? match[1] : null;
 };
 
-export const NotificationBell = () => {
+const sidebarIconVariants = {
+  initial: { scale: 0.8, opacity: 0 },
+  animate: { scale: 1, opacity: 1, borderRadius: 4 },
+  hover: { borderRadius: 6 },
+  tap: { scale: 0.95 },
+};
+
+export const NotificationBell = ({ variant = "default" }: NotificationBellProps) => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { notifications, unreadCount, markAsRead, markAllAsRead, clearAllNotifications, deleteNotification } = useNotificationStore();
@@ -184,20 +197,53 @@ export const NotificationBell = () => {
     return pendingRequests.some((r) => r.username?.toLowerCase() === username.toLowerCase());
   };
 
+  const renderDefaultTrigger = () => (
+    <Button variant="ghost" size="icon" className="relative w-8 h-8">
+      <Bell className="w-4 h-4" />
+      {unreadCount > 0 && (
+        <Badge
+          variant="destructive"
+          className="absolute -top-1 -right-1 w-5 h-5 p-0 flex items-center justify-center text-[10px]"
+        >
+          {unreadCount > 99 ? "99+" : unreadCount}
+        </Badge>
+      )}
+    </Button>
+  );
+
+  const renderSidebarTrigger = () => (
+    <MotionButton
+      className="relative group flex-shrink-0"
+      whileHover="hover"
+      whileTap="tap"
+    >
+      <motion.div
+        variants={sidebarIconVariants}
+        initial="animate"
+        animate="animate"
+        whileHover="hover"
+        whileTap="tap"
+        transition={{ type: "spring", stiffness: 400, damping: 25 }}
+        className="w-10 h-10 flex items-center justify-center bg-secondary hover:bg-primary/20 hover:text-neutral-200"
+      >
+        <Bell className="w-4 h-4" />
+      </motion.div>
+      {unreadCount > 0 && (
+        <motion.span
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
+        >
+          {unreadCount > 99 ? "99+" : unreadCount}
+        </motion.span>
+      )}
+    </MotionButton>
+  );
+
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative w-8 h-8">
-          <Bell className="w-4 h-4" />
-          {unreadCount > 0 && (
-            <Badge
-              variant="destructive"
-              className="absolute -top-1 -right-1 w-5 h-5 p-0 flex items-center justify-center text-[10px]"
-            >
-              {unreadCount > 99 ? "99+" : unreadCount}
-            </Badge>
-          )}
-        </Button>
+        {variant === "sidebar" ? renderSidebarTrigger() : renderDefaultTrigger()}
       </PopoverTrigger>
 
       <PopoverContent

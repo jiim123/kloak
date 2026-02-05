@@ -6,7 +6,6 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useServerStore } from "@/stores/serverStore";
 import { useUIStore } from "@/stores/uiStore";
-import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { cn } from "@/lib/utils";
 import type { Channel } from "@/types";
 
@@ -154,10 +153,6 @@ export const ChannelHeader = ({ channel }: ChannelHeaderProps) => {
 
       {/* Right side - Actions */}
       <div className="flex items-center gap-1 flex-shrink-0 rounded-xl border border-border/50 bg-background/70 backdrop-blur-xl p-1">
-        <NotificationBell />
-
-        <div className="mx-1 h-[20px] w-[1px] bg-border/50" aria-hidden="true" />
-
         {buttons.map((button) => (
           <HeaderButton
             key={button.id}
