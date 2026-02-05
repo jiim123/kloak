@@ -923,6 +923,7 @@ export type Database = {
           content: string
           created_at: string | null
           edited_at: string | null
+          embed_hidden: boolean
           id: string
           is_pinned: boolean | null
           is_system_message: boolean | null
@@ -934,6 +935,7 @@ export type Database = {
           content: string
           created_at?: string | null
           edited_at?: string | null
+          embed_hidden?: boolean
           id?: string
           is_pinned?: boolean | null
           is_system_message?: boolean | null
@@ -945,6 +947,7 @@ export type Database = {
           content?: string
           created_at?: string | null
           edited_at?: string | null
+          embed_hidden?: boolean
           id?: string
           is_pinned?: boolean | null
           is_system_message?: boolean | null
@@ -2628,6 +2631,10 @@ export type Database = {
             }
             Returns: Json
           }
+      set_message_embed_hidden: {
+        Args: { _hidden: boolean; _message_id: string; _user_id: string }
+        Returns: boolean
+      }
       set_role_permission: {
         Args: {
           _allowed?: boolean
