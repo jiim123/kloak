@@ -25,7 +25,6 @@ import { useMessageStore } from "@/stores/messageStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useSyncStore } from "@/stores/syncStore";
-import { useEmbedStore } from "@/stores/embedStore";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MessageContent } from "./MessageContent";
@@ -93,7 +92,7 @@ export const MessageItem = memo(function MessageItem({
 }: MessageItemProps) {
   // Selectors
   const user = useAuthStore((state) => state.user);
-  const { setReplyingTo, editMessage, pinMessage, addReaction, removeReaction } = useMessageStore();
+  const { setReplyingTo, editMessage, pinMessage, addReaction, removeReaction, setEmbedHidden } = useMessageStore();
   const members = useServerStore((state) => state.members);
   const roles = useServerStore((state) => state.roles);
   const currentServer = useServerStore((state) => state.currentServer);
@@ -102,7 +101,6 @@ export const MessageItem = memo(function MessageItem({
   const showTimestamps = useUIStore((state) => state.showTimestamps);
   const { openModal } = useUIStore();
   const { getOptimisticStatus } = useSyncStore();
-  const { hideEmbedsForMessage, isMessageEmbedHidden } = useEmbedStore();
   const [searchParams, setSearchParams] = useSearchParams();
   const isMobile = useIsMobile();
 
@@ -369,12 +367,14 @@ export const MessageItem = memo(function MessageItem({
     });
   }, [message.content]);
 
-  const isEmbedHidden = isMessageEmbedHidden(message.id);
+  // Use embed_hidden from database (applies to all users)
+  const isEmbedHidden = message.embed_hidden === true;
 
-  const handleRemoveEmbed = useCallback(() => {
-    hideEmbedsForMessage(message.id);
+  const handleRemoveEmbed = useCallback(async () => {
+    if (!user) return;
+    await setEmbedHidden(message.id, user.id, true);
     toast.success("Embed removed");
-  }, [hideEmbedsForMessage, message.id]);
+  }, [setEmbedHidden, message.id, user]);
 
   // Ghost mode - hide avatar/username for non-admin message authors
   const isGhostMode = currentChannel?.ghost_mode || false;

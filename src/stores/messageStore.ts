@@ -41,6 +41,7 @@ interface MessageState {
   editMessage: (messageId: string, content: string, userId: string) => Promise<void>;
   deleteMessage: (messageId: string, userId: string) => Promise<void>;
   pinMessage: (messageId: string, isPinned: boolean, userId: string) => Promise<void>;
+  setEmbedHidden: (messageId: string, userId: string, hidden: boolean) => Promise<void>;
 
   // Reaction actions
   addReaction: (messageId: string, userId: string, emoji: string) => Promise<void>;
@@ -561,6 +562,47 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       });
     } catch (error) {
       console.error('Failed to pin message:', error);
+    }
+  },
+
+  setEmbedHidden: async (messageId: string, userId: string, hidden: boolean) => {
+    try {
+      const { data, error } = await supabase.rpc('set_message_embed_hidden', {
+        _message_id: messageId,
+        _user_id: userId,
+        _hidden: hidden,
+      });
+
+      if (error) throw error;
+      if (!data) {
+        console.error('Failed to set embed hidden: not authorized or message not found');
+        return;
+      }
+
+      // Update in all channel caches
+      set((state) => {
+        const updatedCaches = { ...state.messagesByChannel };
+        
+        for (const channelId in updatedCaches) {
+          const cache = updatedCaches[channelId];
+          if (!cache) continue;
+          
+          const messageIndex = cache.messages.findIndex(m => m.id === messageId);
+          if (messageIndex !== -1) {
+            updatedCaches[channelId] = {
+              ...cache,
+              messages: cache.messages.map(m =>
+                m.id === messageId ? { ...m, embed_hidden: hidden } : m
+              ),
+            };
+            break;
+          }
+        }
+        
+        return { messagesByChannel: updatedCaches };
+      });
+    } catch (error) {
+      console.error('Failed to set embed hidden:', error);
     }
   },
 

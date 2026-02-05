@@ -256,6 +256,7 @@ export interface Message {
   content: string;
   is_pinned: boolean;
   is_system_message?: boolean;
+  embed_hidden?: boolean;
   edited_at: string | null;
   created_at: string;
   user?: User;
