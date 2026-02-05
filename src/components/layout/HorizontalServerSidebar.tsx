@@ -148,9 +148,9 @@ const ServerIconVisual = ({
       )}
     >
       {server.icon_url ? (
-        <Avatar className="w-10 h-10 border-0">
-          <AvatarImage src={server.icon_url} alt={server.name} className="object-cover" />
-          <AvatarFallback className={getServerColor(server.name)}>{getServerInitials(server.name)}</AvatarFallback>
+        <Avatar className="w-10 h-10 border-0 rounded-[4px]">
+          <AvatarImage src={server.icon_url} alt={server.name} className="object-cover rounded-[4px]" />
+          <AvatarFallback className={cn("rounded-[4px]", getServerColor(server.name))}>{getServerInitials(server.name)}</AvatarFallback>
         </Avatar>
       ) : (
         <span className="text-xs font-bold text-white">{getServerInitials(server.name)}</span>
@@ -302,9 +302,9 @@ const HorizontalFolderItem = ({
                         !server.icon_url && getServerColor(server.name)
                       )}>
                         {server.icon_url ? (
-                          <Avatar className="w-8 h-8 border-0">
-                            <AvatarImage src={server.icon_url} alt={server.name} className="object-cover" />
-                            <AvatarFallback className={getServerColor(server.name)}>
+                          <Avatar className="w-8 h-8 border-0 rounded-[4px]">
+                            <AvatarImage src={server.icon_url} alt={server.name} className="object-cover rounded-[4px]" />
+                            <AvatarFallback className={cn("rounded-[4px]", getServerColor(server.name))}>
                               {getServerInitials(server.name)}
                             </AvatarFallback>
                           </Avatar>
@@ -496,9 +496,9 @@ const HorizontalDraggableServerItem = forwardRef<
                     )}
                   >
                     {server.icon_url ? (
-                      <Avatar className="w-10 h-10 border-0">
-                        <AvatarImage src={server.icon_url} alt={server.name} className="object-cover" />
-                        <AvatarFallback className={getServerColor(server.name)}>
+                      <Avatar className="w-10 h-10 border-0 rounded-[4px]">
+                        <AvatarImage src={server.icon_url} alt={server.name} className="object-cover rounded-[4px]" />
+                        <AvatarFallback className={cn("rounded-[4px]", getServerColor(server.name))}>
                           {getServerInitials(server.name)}
                         </AvatarFallback>
                       </Avatar>
