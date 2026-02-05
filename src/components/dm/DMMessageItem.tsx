@@ -232,6 +232,15 @@ export const DMMessageItem = memo(function DMMessageItem({ message, isFirst, onR
               onTouchStart={handleTouchStart}
               onTouchEnd={clearLongPress}
               onTouchMove={clearLongPress}
+              onClick={(e) => {
+                // Click-to-reply: trigger reply when clicking on message body
+                // Don't trigger on interactive elements
+                const target = e.target as HTMLElement;
+                const isInteractive = target.closest('button, a, input, textarea, [role="button"], [contenteditable], img.cursor-pointer, .hover-actions-menu');
+                if (!isInteractive && !isEditing && onReply) {
+                  onReply(message);
+                }
+              }}
             >
               {/* Avatar / Timestamp column */}
               <div className="w-10 flex-shrink-0">

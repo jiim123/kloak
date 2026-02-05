@@ -682,9 +682,17 @@ export const AnnouncementView = ({ message, onClose }: AnnouncementViewProps) =>
               return (
                 <div
                   key={comment.id}
-                  className="group relative flex gap-3"
+                  className="group relative flex gap-3 cursor-pointer"
                   onMouseEnter={() => setHoveredCommentId(comment.id)}
                   onMouseLeave={() => setHoveredCommentId(null)}
+                  onClick={(e) => {
+                    // Click-to-reply: trigger reply when clicking on comment body
+                    const target = e.target as HTMLElement;
+                    const isInteractive = target.closest('button, a, input, textarea, [role="button"], [contenteditable], .hover-actions-menu');
+                    if (!isInteractive && !isEditing) {
+                      setReplyingToComment(comment.id);
+                    }
+                  }}
                 >
                   <Avatar className="w-8 h-8 flex-shrink-0">
                     <AvatarImage src={comment.user?.avatar_url} />

@@ -1443,9 +1443,17 @@ export const ForumChannelArea = () => {
                       return (
                         <div
                           key={msg.id}
-                          className="group relative flex gap-3"
+                         className="group relative flex gap-3 cursor-pointer"
                           onMouseEnter={() => setHoveredMessageId(msg.id)}
                           onMouseLeave={() => setHoveredMessageId(null)}
+                         onClick={(e) => {
+                           // Click-to-reply: trigger reply when clicking on message body
+                           const target = e.target as HTMLElement;
+                           const isInteractive = target.closest('button, a, input, textarea, [role="button"], [contenteditable], .hover-actions-menu');
+                           if (!isInteractive && !isEditing) {
+                             setReplyingToThread(msg.id);
+                           }
+                         }}
                         >
                           <Avatar className="w-8 h-8 flex-shrink-0">
                             <AvatarImage src={msg.user?.avatar_url} />
