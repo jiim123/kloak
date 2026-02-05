@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 export interface ActiveEmbed {
   id: string; // unique identifier (url-based)
@@ -11,7 +12,7 @@ export interface ActiveEmbed {
 
 interface EmbedStore {
   activeEmbeds: ActiveEmbed[];
-  hiddenEmbedMessages: Set<string>; // messageIds where embeds are hidden
+  hiddenEmbedMessages: string[]; // messageIds where embeds are hidden (array for persistence)
   addEmbed: (embed: ActiveEmbed) => void;
   removeEmbed: (id: string) => void;
   getEmbedForMessage: (messageId: string, url: string) => ActiveEmbed | undefined;
@@ -21,42 +22,49 @@ interface EmbedStore {
   isMessageEmbedHidden: (messageId: string) => boolean;
 }
 
-export const useEmbedStore = create<EmbedStore>((set, get) => ({
-  activeEmbeds: [],
-  hiddenEmbedMessages: new Set(),
-  
-  addEmbed: (embed) => {
-    const { activeEmbeds } = get();
-    // Don't add duplicates
-    if (activeEmbeds.some(e => e.id === embed.id)) return;
-    set({ activeEmbeds: [...activeEmbeds, embed] });
-  },
-  
-  removeEmbed: (id) => {
-    set({ activeEmbeds: get().activeEmbeds.filter(e => e.id !== id) });
-  },
-  
-  getEmbedForMessage: (messageId, url) => {
-    return get().activeEmbeds.find(e => e.messageId === messageId && e.url === url);
-  },
-  
-  clearEmbedsForChannel: (channelId) => {
-    set({ activeEmbeds: get().activeEmbeds.filter(e => e.channelId !== channelId) });
-  },
-  
-  hideEmbedsForMessage: (messageId) => {
-    const newSet = new Set(get().hiddenEmbedMessages);
-    newSet.add(messageId);
-    set({ hiddenEmbedMessages: newSet });
-  },
-  
-  showEmbedsForMessage: (messageId) => {
-    const newSet = new Set(get().hiddenEmbedMessages);
-    newSet.delete(messageId);
-    set({ hiddenEmbedMessages: newSet });
-  },
-  
-  isMessageEmbedHidden: (messageId) => {
-    return get().hiddenEmbedMessages.has(messageId);
-  },
-}));
+export const useEmbedStore = create<EmbedStore>()(
+  persist(
+    (set, get) => ({
+      activeEmbeds: [],
+      hiddenEmbedMessages: [],
+      
+      addEmbed: (embed) => {
+        const { activeEmbeds } = get();
+        // Don't add duplicates
+        if (activeEmbeds.some(e => e.id === embed.id)) return;
+        set({ activeEmbeds: [...activeEmbeds, embed] });
+      },
+      
+      removeEmbed: (id) => {
+        set({ activeEmbeds: get().activeEmbeds.filter(e => e.id !== id) });
+      },
+      
+      getEmbedForMessage: (messageId, url) => {
+        return get().activeEmbeds.find(e => e.messageId === messageId && e.url === url);
+      },
+      
+      clearEmbedsForChannel: (channelId) => {
+        set({ activeEmbeds: get().activeEmbeds.filter(e => e.channelId !== channelId) });
+      },
+      
+      hideEmbedsForMessage: (messageId) => {
+        const { hiddenEmbedMessages } = get();
+        if (!hiddenEmbedMessages.includes(messageId)) {
+          set({ hiddenEmbedMessages: [...hiddenEmbedMessages, messageId] });
+        }
+      },
+      
+      showEmbedsForMessage: (messageId) => {
+        set({ hiddenEmbedMessages: get().hiddenEmbedMessages.filter(id => id !== messageId) });
+      },
+      
+      isMessageEmbedHidden: (messageId) => {
+        return get().hiddenEmbedMessages.includes(messageId);
+      },
+    }),
+    {
+      name: 'kloak-hidden-embeds',
+      partialize: (state) => ({ hiddenEmbedMessages: state.hiddenEmbedMessages }),
+    }
+  )
+);
