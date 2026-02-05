@@ -257,12 +257,14 @@ export const useRealtimeDMs = ({
           table: 'dm_participants',
           filter: `user_id=eq.${userId}`,
         },
-        () => {
-          // New conversation created, refetch conversations and update cache
-          fetchConversations(userId).then(() => {
-            const ids = useDMStore.getState().conversations.map((c) => c.id);
-            conversationIdsRef.current = new Set(ids);
-          });
+      (payload) => {
+        // Immediately add the new conversation ID to prevent race conditions
+        const newConvId = payload.new?.conversation_id;
+        if (newConvId) {
+          conversationIdsRef.current.add(newConvId);
+        }
+        // Background refresh for full conversation data
+        fetchConversations(userId);
         }
       )
       .on(
@@ -273,11 +275,14 @@ export const useRealtimeDMs = ({
           table: 'dm_participants',
           filter: `user_id=eq.${userId}`,
         },
-        () => {
-          fetchConversations(userId).then(() => {
-            const ids = useDMStore.getState().conversations.map((c) => c.id);
-            conversationIdsRef.current = new Set(ids);
-          });
+      (payload) => {
+        // Immediately remove the conversation ID
+        const removedConvId = payload.old?.conversation_id;
+        if (removedConvId) {
+          conversationIdsRef.current.delete(removedConvId);
+        }
+        // Background refresh
+        fetchConversations(userId);
         }
       )
       .subscribe();
