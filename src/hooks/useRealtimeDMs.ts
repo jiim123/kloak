@@ -2,6 +2,7 @@ import { useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useDMStore } from '@/stores/dmStore';
 import type { DirectMessage, ReactionGroup } from '@/types';
+import { useRealtimeUserUpdates } from './useRealtimeUserUpdates';
 
 interface UseRealtimeDMsOptions {
   userId: string | null;
@@ -284,4 +285,40 @@ export const useRealtimeDMs = ({
       supabase.removeChannel(channel);
     };
   }, [userId, fetchConversations]);
+
+  // Subscribe to user updates for all DM conversation participants
+  const conversations = useDMStore((state) => state.conversations);
+  const currentConversation = useDMStore((state) => state.currentConversation);
+  
+  // Collect all unique user IDs from conversations (other_user for 1:1, participants for groups)
+  const participantUserIds = (() => {
+    const ids = new Set<string>();
+    conversations.forEach((conv) => {
+      if (conv.other_user?.id) {
+        ids.add(conv.other_user.id);
+      }
+      if (conv.participants) {
+        conv.participants.forEach((p) => {
+          if (p.user_id && p.user_id !== userId) {
+            ids.add(p.user_id);
+          }
+        });
+      }
+    });
+    // Also include current conversation participants
+    if (currentConversation?.participants) {
+      currentConversation.participants.forEach((p) => {
+        if (p.user_id && p.user_id !== userId) {
+          ids.add(p.user_id);
+        }
+      });
+    }
+    return Array.from(ids);
+  })();
+
+  // Subscribe to user updates for DM participants
+  useRealtimeUserUpdates(
+    participantUserIds,
+    `dm-participant-users:${userId || 'none'}`,
+  );
 };

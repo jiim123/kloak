@@ -78,8 +78,9 @@ export const patchUserAcrossStores = (updatedUser: Partial<User> & { id: string 
   });
 };
 
-// OPTIMIZATION: Increased polling interval from 30s to 45s
-const PRESENCE_POLL_INTERVAL_MS = 45_000;
+// Reduced polling interval from 45s to 15s for better presence updates
+// Targeted realtime subscriptions handle most updates; this is fallback for friends list
+const PRESENCE_POLL_INTERVAL_MS = 15_000;
 
 /**
  * Hook for targeted presence updates.

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useServerStore } from '@/stores/serverStore';
 import { toast } from '@/hooks/use-toast';
+import { useRealtimeUserUpdates } from './useRealtimeUserUpdates';
 
 export const useRealtimeMembers = (serverId: string | null) => {
   // Use refs to avoid recreating subscription when store functions change
@@ -15,6 +16,16 @@ export const useRealtimeMembers = (serverId: string | null) => {
       fetchRolesRef.current = state.fetchRoles;
     });
   }, []);
+
+  // Get member user IDs for targeted user updates subscription
+  const members = useServerStore((state) => state.members);
+  const memberUserIds = members.map((m) => m.user_id);
+
+  // Subscribe to user updates (status, avatar, etc.) for current server members
+  useRealtimeUserUpdates(
+    memberUserIds,
+    `server-member-users:${serverId || 'none'}`,
+  );
 
   useEffect(() => {
     if (!serverId) return;
