@@ -111,10 +111,10 @@ const pillVariants = {
 
 const iconVariants = {
   initial: { scale: 0.8, opacity: 0 },
-  animate: { scale: 1, opacity: 1, borderRadius: 6 },
-  hover: { borderRadius: 10 },
+  animate: { scale: 1, opacity: 1, borderRadius: 4 },
+  hover: { borderRadius: 6 },
   tap: { scale: 0.95 },
-  active: { scale: 1, borderRadius: 12 },
+  active: { scale: 1, borderRadius: 8 },
 };
 
 const serverItemVariants = {
@@ -143,17 +143,17 @@ const ServerIconVisual = ({
   return (
     <div
       className={cn(
-        "w-12 h-12 overflow-hidden rounded-[6px] flex items-center justify-center",
+        "w-10 h-10 overflow-hidden rounded-[4px] flex items-center justify-center",
         !server.icon_url && getServerColor(server.name),
       )}
     >
       {server.icon_url ? (
-        <Avatar className="w-12 h-12 border-0">
+        <Avatar className="w-10 h-10 border-0">
           <AvatarImage src={server.icon_url} alt={server.name} className="object-cover" />
           <AvatarFallback className={getServerColor(server.name)}>{getServerInitials(server.name)}</AvatarFallback>
         </Avatar>
       ) : (
-        <span className="text-sm font-bold text-white">{getServerInitials(server.name)}</span>
+        <span className="text-xs font-bold text-white">{getServerInitials(server.name)}</span>
       )}
     </div>
   );
@@ -248,7 +248,7 @@ const HorizontalFolderItem = ({
                     whileHover="hover"
                     whileTap="tap"
                     transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                    className="w-12 h-12 flex items-center justify-center text-white relative"
+                    className="w-10 h-10 flex items-center justify-center text-white relative"
                     style={{ backgroundColor: folder.color }}
                   >
                     <Folder className="w-5 h-5" />
@@ -489,14 +489,14 @@ const HorizontalDraggableServerItem = forwardRef<
                     whileTap="tap"
                     transition={{ type: "spring", stiffness: 400, damping: 25 }}
                     className={cn(
-                      "w-12 h-12 overflow-hidden",
+                      "w-10 h-10 overflow-hidden",
                       isActive && !server.icon_url && "ring-2 ring-primary/50",
                       !server.icon_url && getServerColor(server.name),
                       server.icon_url && "border-0",
                     )}
                   >
                     {server.icon_url ? (
-                      <Avatar className="w-12 h-12 border-0">
+                      <Avatar className="w-10 h-10 border-0">
                         <AvatarImage src={server.icon_url} alt={server.name} className="object-cover" />
                         <AvatarFallback className={getServerColor(server.name)}>
                           {getServerInitials(server.name)}
@@ -504,7 +504,7 @@ const HorizontalDraggableServerItem = forwardRef<
                       </Avatar>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <span className="text-sm font-bold text-white">{getServerInitials(server.name)}</span>
+                        <span className="text-xs font-bold text-white">{getServerInitials(server.name)}</span>
                       </div>
                     )}
                   </motion.div>
@@ -1000,13 +1000,13 @@ export const HorizontalServerSidebar = () => {
                       whileTap="tap"
                       transition={{ type: "spring", stiffness: 400, damping: 25 }}
                       className={cn(
-                        "w-12 h-12 flex items-center justify-center",
+                        "w-10 h-10 flex items-center justify-center",
                         currentServer === null
                           ? "bg-primary text-primary-foreground ring-2 ring-primary/50"
                           : "bg-secondary hover:bg-primary/20 hover:text-neutral-200",
                       )}
                     >
-                      <Home className="w-5 h-5" />
+                      <Home className="w-4 h-4" />
                     </motion.div>
 
                     {/* Unread DM badge */}
@@ -1030,7 +1030,7 @@ export const HorizontalServerSidebar = () => {
               </Tooltip>
 
               {/* Separator */}
-              <div className="w-0.5 h-8 bg-border rounded-full flex-shrink-0" />
+              <div className="w-0.5 h-6 bg-border rounded-full flex-shrink-0" />
 
               {/* Folders (as popovers) */}
               {foldersWithServers.map(({ folder, servers: folderServers }) => (
@@ -1146,6 +1146,50 @@ export const HorizontalServerSidebar = () => {
                   );
                 })}
               </AnimatePresence>
+
+              {/* Add Server button - inline with servers */}
+              <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
+                <TooltipTrigger asChild>
+                  <MotionButton
+                    whileTap={{ scale: 0.95 }}
+                    whileHover="hover"
+                    initial="default"
+                    onClick={() => openModal("create-server")}
+                    className="relative w-10 h-10 rounded-[4px] text-muted-foreground hover:text-foreground transition-colors duration-200 flex items-center justify-center overflow-hidden flex-shrink-0"
+                  >
+                    <motion.svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 40 40">
+                      <motion.rect
+                        x="1"
+                        y="1"
+                        width="38"
+                        height="38"
+                        rx="3"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeDasharray="5 3"
+                        variants={{
+                          default: { strokeDashoffset: 0, opacity: 0.5 },
+                          hover: {
+                            strokeDashoffset: -8,
+                            opacity: 0,
+                            transition: { strokeDashoffset: { duration: 0.6, ease: "linear" }, opacity: { duration: 0.2, delay: 0.4 } },
+                          },
+                        }}
+                      />
+                    </motion.svg>
+                    <motion.div
+                      className="absolute inset-0 rounded-[4px] border border-muted-foreground/50 pointer-events-none"
+                      variants={{ default: { opacity: 0 }, hover: { opacity: 1 } }}
+                      transition={{ duration: 0.2 }}
+                    />
+                    <Plus className="w-4 h-4 relative z-10" />
+                  </MotionButton>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="font-medium">
+                  Add or Join a Server
+                </TooltipContent>
+              </Tooltip>
             </div>
           </ContextMenuTrigger>
           <ContextMenuContent>
@@ -1170,53 +1214,9 @@ export const HorizontalServerSidebar = () => {
         </DragOverlay>
       </DndContext>
 
-      {/* Right side actions */}
+      {/* Right side - Settings only */}
       <div className="flex items-center gap-2 flex-shrink-0">
-        <div className="w-0.5 h-8 bg-border rounded-full" />
-
-        {/* Add Server button */}
-        <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
-          <TooltipTrigger asChild>
-            <MotionButton
-              whileTap={{ scale: 0.95 }}
-              whileHover="hover"
-              initial="default"
-              onClick={() => openModal("create-server")}
-              className="relative w-12 h-12 rounded-[6px] text-muted-foreground hover:text-foreground transition-colors duration-200 flex items-center justify-center overflow-hidden flex-shrink-0"
-            >
-              <motion.svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 48 48">
-                <motion.rect
-                  x="1"
-                  y="1"
-                  width="46"
-                  height="46"
-                  rx="5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeDasharray="6 4"
-                  variants={{
-                    default: { strokeDashoffset: 0, opacity: 0.5 },
-                    hover: {
-                      strokeDashoffset: -10,
-                      opacity: 0,
-                      transition: { strokeDashoffset: { duration: 0.6, ease: "linear" }, opacity: { duration: 0.2, delay: 0.4 } },
-                    },
-                  }}
-                />
-              </motion.svg>
-              <motion.div
-                className="absolute inset-0 rounded-[6px] border border-muted-foreground/50 pointer-events-none"
-                variants={{ default: { opacity: 0 }, hover: { opacity: 1 } }}
-                transition={{ duration: 0.2 }}
-              />
-              <Plus className="w-5 h-5 relative z-10" />
-            </MotionButton>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" className="font-medium">
-            Add or Join a Server
-          </TooltipContent>
-        </Tooltip>
+        <div className="w-0.5 h-6 bg-border rounded-full" />
 
         {/* Settings button */}
         <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
@@ -1235,13 +1235,13 @@ export const HorizontalServerSidebar = () => {
                 whileTap="tap"
                 transition={{ type: "spring", stiffness: 400, damping: 25 }}
                 className={cn(
-                  "w-12 h-12 flex items-center justify-center",
+                  "w-10 h-10 flex items-center justify-center",
                   activeModal === "user-settings"
                     ? "bg-primary text-primary-foreground ring-2 ring-primary/50"
                     : "bg-secondary hover:bg-primary/20 hover:text-neutral-200",
                 )}
               >
-                <Settings className="w-5 h-5" />
+                <Settings className="w-4 h-4" />
               </motion.div>
             </MotionButton>
           </TooltipTrigger>
