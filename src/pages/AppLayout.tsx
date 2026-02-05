@@ -5,6 +5,7 @@ import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
 import { getLastChannel } from '@/lib/storage';
 import { ServerSidebar } from '@/components/layout/ServerSidebar';
+import { HorizontalServerSidebar } from '@/components/layout/HorizontalServerSidebar';
 import { HomeLanding } from '@/components/home/HomeLanding';
 import { ExploreServers } from '@/components/home/ExploreServers';
 import { ChannelSidebar } from '@/components/layout/ChannelSidebar';
@@ -378,20 +379,19 @@ const AppLayout = () => {
           )}
 
           {/* Desktop layout */}
-          <div className="hidden md:flex flex-1 overflow-hidden">
-            {/* Server list sidebar - 72px fixed */}
-            <div className="w-[72px] flex-shrink-0 bg-layout-sidebar">
-              <ServerSidebar />
-            </div>
+          <div className="hidden md:flex flex-col flex-1 overflow-hidden">
+            {/* Horizontal Server Bar at top */}
+            <HorizontalServerSidebar />
 
-            {/* Full-screen settings pages - take full space except server icons */}
-            {isServerSettingsOpen ? (
-              <div className="flex-1 min-w-0">
-                <ServerSettingsPage />
-              </div>
-            ) : activeModal === 'user-settings' ? (
-              <div className="flex-1 min-w-0">
-                <UserSettingsPage />
+            <div className="flex flex-1 overflow-hidden">
+              {/* Full-screen settings pages - take full space */}
+              {isServerSettingsOpen ? (
+                <div className="flex-1 min-w-0">
+                  <ServerSettingsPage />
+                </div>
+              ) : activeModal === 'user-settings' ? (
+                <div className="flex-1 min-w-0">
+                  <UserSettingsPage />
               </div>
             ) : activeModal === 'edit-channel' ? (
               <div className="flex-1 min-w-0">
@@ -465,6 +465,7 @@ const AppLayout = () => {
                 )}
               </ResizablePanelGroup>
             )}
+            </div>
           </div>
 
           {/* Mobile layout */}
