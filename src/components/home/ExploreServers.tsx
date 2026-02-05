@@ -36,9 +36,14 @@ export const ExploreServers = () => {
 
   useEffect(() => {
     let cancelled = false;
+    let isInitialLoad = true;
 
-    (async () => {
-      setIsLoading(true);
+    const fetchServers = async () => {
+      // Only show loading spinner on initial load
+      if (isInitialLoad) {
+        setIsLoading(true);
+      }
+      
       try {
         const { data, error } = await supabase
           .from('servers')
@@ -69,15 +74,30 @@ export const ExploreServers = () => {
         setItems(mapped);
       } catch (e: any) {
         console.error('Failed to load Explore servers:', e);
-        toast.error(e?.message || 'Failed to load public servers');
-        setItems([]);
+        // Only show error toast on initial load
+        if (isInitialLoad) {
+          toast.error(e?.message || 'Failed to load public servers');
+        }
+        if (isInitialLoad) {
+          setItems([]);
+        }
       } finally {
-        if (!cancelled) setIsLoading(false);
+        if (!cancelled && isInitialLoad) {
+          setIsLoading(false);
+          isInitialLoad = false;
+        }
       }
-    })();
+    };
+
+    // Initial fetch
+    fetchServers();
+
+    // Poll every 30 seconds for updates (icons, banners, member counts, etc.)
+    const intervalId = setInterval(fetchServers, 30000);
 
     return () => {
       cancelled = true;
+      clearInterval(intervalId);
     };
   }, []);
 
