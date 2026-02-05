@@ -298,6 +298,10 @@ export const useDMStore = create<DMState>((set, get) => ({
         reactions: [],
       };
 
+    // Add message to local state immediately (optimistic update)
+    // This ensures the sender sees their message even if Realtime is delayed
+    get().addMessage(conversationId, message);
+
       return message;
     } catch (error) {
       console.error('Failed to send DM:', error);
