@@ -1,7 +1,20 @@
 import { useState, useMemo, useEffect, useCallback, forwardRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Folder, Plus, Settings, Home, ChevronDown, Trash2, Edit2, Palette, LogOut, CheckCheck, BellOff, Bell } from "lucide-react";
+import {
+  Folder,
+  Plus,
+  Settings,
+  Home,
+  ChevronDown,
+  Trash2,
+  Edit2,
+  Palette,
+  LogOut,
+  CheckCheck,
+  BellOff,
+  Bell,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -151,7 +164,9 @@ const ServerIconVisual = ({
       {server.icon_url ? (
         <Avatar className="w-10 h-10 border-0 rounded-[4px]">
           <AvatarImage src={server.icon_url} alt={server.name} className="object-cover rounded-[4px]" />
-          <AvatarFallback className={cn("rounded-[4px]", getServerColor(server.name))}>{getServerInitials(server.name)}</AvatarFallback>
+          <AvatarFallback className={cn("rounded-[4px]", getServerColor(server.name))}>
+            {getServerInitials(server.name)}
+          </AvatarFallback>
         </Avatar>
       ) : (
         <span className="text-xs font-bold text-white">{getServerInitials(server.name)}</span>
@@ -295,16 +310,22 @@ const HorizontalFolderItem = ({
                       }}
                       className={cn(
                         "w-full flex items-center gap-3 px-2 py-1.5 rounded-md transition-colors",
-                        isActive ? "bg-primary/20" : "hover:bg-secondary"
+                        isActive ? "bg-primary/20" : "hover:bg-secondary",
                       )}
                     >
-                      <div className={cn(
-                        "w-8 h-8 rounded-[4px] overflow-hidden flex items-center justify-center flex-shrink-0",
-                        !server.icon_url && getServerColor(server.name)
-                      )}>
+                      <div
+                        className={cn(
+                          "w-8 h-8 rounded-[4px] overflow-hidden flex items-center justify-center flex-shrink-0",
+                          !server.icon_url && getServerColor(server.name),
+                        )}
+                      >
                         {server.icon_url ? (
                           <Avatar className="w-8 h-8 border-0 rounded-[4px]">
-                            <AvatarImage src={server.icon_url} alt={server.name} className="object-cover rounded-[4px]" />
+                            <AvatarImage
+                              src={server.icon_url}
+                              alt={server.name}
+                              className="object-cover rounded-[4px]"
+                            />
                             <AvatarFallback className={cn("rounded-[4px]", getServerColor(server.name))}>
                               {getServerInitials(server.name)}
                             </AvatarFallback>
@@ -313,10 +334,7 @@ const HorizontalFolderItem = ({
                           <span className="text-xs font-bold text-white">{getServerInitials(server.name)}</span>
                         )}
                       </div>
-                      <span className={cn(
-                        "text-sm truncate max-w-[150px]",
-                        hasUnread && "font-semibold"
-                      )}>
+                      <span className={cn("text-sm truncate max-w-[150px]", hasUnread && "font-semibold")}>
                         {server.name}
                       </span>
                       {totalMentions > 0 && (
@@ -579,7 +597,8 @@ HorizontalDraggableServerItem.displayName = "HorizontalDraggableServerItem";
 export const HorizontalServerSidebar = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { servers, currentServer, setCurrentServer, isLoading, fetchServers, leaveServer, toggleServerMute } = useServerStore();
+  const { servers, currentServer, setCurrentServer, isLoading, fetchServers, leaveServer, toggleServerMute } =
+    useServerStore();
   const { setCurrentConversation } = useDMStore();
   const { openModal, activeModal, closeModal, closeServerSettings, openServerSettings } = useUIStore();
   const [serverChannels, setServerChannels] = useState<ServerChannels>({});
@@ -654,7 +673,10 @@ export const HorizontalServerSidebar = () => {
 
           setFolderState({ folders: sanitizedFolders, serverToFolder });
           try {
-            localStorage.setItem(SERVER_FOLDERS_STORAGE_KEY, JSON.stringify({ folders: sanitizedFolders, serverToFolder }));
+            localStorage.setItem(
+              SERVER_FOLDERS_STORAGE_KEY,
+              JSON.stringify({ folders: sanitizedFolders, serverToFolder }),
+            );
           } catch {}
         }
 
@@ -757,8 +779,16 @@ export const HorizontalServerSidebar = () => {
 
   const getServerColor = (name: string) => {
     const colors = [
-      "bg-indigo-500", "bg-purple-500", "bg-pink-500", "bg-red-500", "bg-orange-500",
-      "bg-amber-500", "bg-emerald-500", "bg-teal-500", "bg-cyan-500", "bg-blue-500",
+      "bg-indigo-500",
+      "bg-purple-500",
+      "bg-pink-500",
+      "bg-red-500",
+      "bg-orange-500",
+      "bg-amber-500",
+      "bg-emerald-500",
+      "bg-teal-500",
+      "bg-cyan-500",
+      "bg-blue-500",
     ];
     const index = name.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
     return colors[index % colors.length];
@@ -937,7 +967,7 @@ export const HorizontalServerSidebar = () => {
   );
 
   return (
-    <div className="w-full h-14 flex items-center px-3 gap-2 bg-background border-b border-border/30">
+    <div className="w-full h-14 flex items-center px-3 gap-2 bg-background/20 border-b border-border/30">
       <DndContext
         sensors={sensors}
         onDragStart={handleDragStart}
@@ -1174,7 +1204,10 @@ export const HorizontalServerSidebar = () => {
                           hover: {
                             strokeDashoffset: -8,
                             opacity: 0,
-                            transition: { strokeDashoffset: { duration: 0.6, ease: "linear" }, opacity: { duration: 0.2, delay: 0.4 } },
+                            transition: {
+                              strokeDashoffset: { duration: 0.6, ease: "linear" },
+                              opacity: { duration: 0.2, delay: 0.4 },
+                            },
                           },
                         }}
                       />
@@ -1194,9 +1227,7 @@ export const HorizontalServerSidebar = () => {
             </div>
           </ContextMenuTrigger>
           <ContextMenuContent>
-            <ContextMenuItem onSelect={() => setIsCreateFolderOpen(true)}>
-              Create folder…
-            </ContextMenuItem>
+            <ContextMenuItem onSelect={() => setIsCreateFolderOpen(true)}>Create folder…</ContextMenuItem>
             <ContextMenuSeparator />
             <ContextMenuItem disabled className="text-muted-foreground">
               Drag servers onto a folder to organize
@@ -1294,8 +1325,12 @@ export const HorizontalServerSidebar = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setIsCreateFolderOpen(false)}>Cancel</Button>
-            <Button onClick={handleCreateFolder} disabled={!newFolderName.trim()}>Create</Button>
+            <Button variant="ghost" onClick={() => setIsCreateFolderOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateFolder} disabled={!newFolderName.trim()}>
+              Create
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1320,8 +1355,12 @@ export const HorizontalServerSidebar = () => {
             />
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setIsRenameFolderOpen(false)}>Cancel</Button>
-            <Button onClick={handleRenameFolder} disabled={!renameFolderName.trim()}>Save</Button>
+            <Button variant="ghost" onClick={() => setIsRenameFolderOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleRenameFolder} disabled={!renameFolderName.trim()}>
+              Save
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1343,7 +1382,9 @@ export const HorizontalServerSidebar = () => {
             />
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setIsChangeFolderColorOpen(false)}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setIsChangeFolderColorOpen(false)}>
+              Cancel
+            </Button>
             <Button onClick={handleChangeColor}>Save</Button>
           </DialogFooter>
         </DialogContent>
