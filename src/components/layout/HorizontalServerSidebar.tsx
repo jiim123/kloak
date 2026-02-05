@@ -572,7 +572,7 @@ export const HorizontalServerSidebar = () => {
             );
           })}
 
-          {/* New Tab placeholder when selection page is open */}
+          {/* New Tab - works like a server tab */}
           {isServerSelectionOpen && (
             <motion.div
               key="new-tab"
@@ -581,17 +581,41 @@ export const HorizontalServerSidebar = () => {
               animate="visible"
               exit="exit"
               layout
-              className="relative group flex items-center gap-2 px-3 py-1.5 rounded-lg border bg-primary/15 border-primary/40 cursor-default min-w-0"
+              onClick={() => {
+                // Switch to the new tab view (clear server, go home)
+                setCurrentServer(null);
+                setCurrentConversation(null);
+                navigate("/app");
+              }}
+              className={cn(
+                "relative group flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all cursor-pointer min-w-0",
+                currentServer === null
+                  ? "bg-primary/15 border-primary/40"
+                  : "bg-secondary/50 border-border/50 hover:bg-secondary hover:border-border"
+              )}
             >
-              <div className="w-6 h-6 rounded-[3px] bg-primary/20 flex items-center justify-center flex-shrink-0">
-                <Plus className="w-3.5 h-3.5 text-primary" />
+              <div className={cn(
+                "w-6 h-6 rounded-[3px] flex items-center justify-center flex-shrink-0",
+                currentServer === null ? "bg-primary/20" : "bg-muted"
+              )}>
+                <Plus className={cn(
+                  "w-3.5 h-3.5",
+                  currentServer === null ? "text-primary" : "text-muted-foreground"
+                )} />
               </div>
-              <span className="text-sm text-foreground font-medium">New Tab</span>
+              <span className={cn(
+                "text-sm",
+                currentServer === null ? "text-foreground font-medium" : "text-muted-foreground"
+              )}>
+                New Tab
+              </span>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   closeServerSelection();
-                  navigate("/app");
+                  if (currentServer === null) {
+                    navigate("/app");
+                  }
                 }}
                 className="flex-shrink-0 p-0.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
               >
