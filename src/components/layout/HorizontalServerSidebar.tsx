@@ -120,6 +120,18 @@ const ServerTabItem = ({
           )}
           onClick={onClick}
         >
+          {/* Unread indicator - half circle on left */}
+          <AnimatePresence>
+            {(hasUnread || totalMentions > 0) && !isActive && (
+              <motion.div
+                initial={{ scale: 0, x: -4 }}
+                animate={{ scale: 1, x: 0 }}
+                exit={{ scale: 0, x: -4 }}
+                className="absolute -left-[3px] top-1/2 -translate-y-1/2 w-[6px] h-5 bg-foreground rounded-r-full"
+              />
+            )}
+          </AnimatePresence>
+
           {/* Server icon */}
           <div
             className={cn(
@@ -150,14 +162,11 @@ const ServerTabItem = ({
             {server.name}
           </span>
 
-          {/* Unread/mention badge */}
+          {/* Mention count badge */}
           {totalMentions > 0 && (
             <span className="flex-shrink-0 min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-[10px] text-destructive-foreground flex items-center justify-center px-1 font-bold">
               {totalMentions > 99 ? "99+" : totalMentions}
             </span>
-          )}
-          {hasUnread && totalMentions === 0 && (
-            <span className="flex-shrink-0 w-2 h-2 bg-foreground rounded-full" />
           )}
 
           {/* Close button */}
@@ -377,7 +386,7 @@ export const HorizontalServerSidebar = () => {
 
   const hasNewTabOpen = isServerSelectionOpen;
 
-  // Open the server selection page
+  // Open the server selection page and add "New Tab" to tabs
   const addNewTab = useCallback(() => {
     if (isServerSelectionOpen) return;
     openServerSelection();
@@ -507,7 +516,7 @@ export const HorizontalServerSidebar = () => {
             const server = tab.serverId ? serversById.get(tab.serverId) : null;
             if (!server) return null;
 
-            const isActive = currentServer?.id === server.id;
+            const isActive = currentServer?.id === server.id && !isServerSelectionOpen;
             const channelIds = serverChannels[server.id] || [];
             const { hasUnread, totalMentions } = getServerUnreadInfo(channelIds);
 
@@ -558,6 +567,24 @@ export const HorizontalServerSidebar = () => {
               />
             );
           })}
+
+          {/* New Tab placeholder when selection page is open */}
+          {isServerSelectionOpen && (
+            <motion.div
+              key="new-tab"
+              variants={tabVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              layout
+              className="relative flex items-center gap-2 px-3 py-1.5 rounded-lg border bg-primary/15 border-primary/40 cursor-default min-w-0"
+            >
+              <div className="w-6 h-6 rounded-[3px] bg-primary/20 flex items-center justify-center flex-shrink-0">
+                <Plus className="w-3.5 h-3.5 text-primary" />
+              </div>
+              <span className="text-sm text-foreground font-medium">New Tab</span>
+            </motion.div>
+          )}
         </AnimatePresence>
 
         {/* New Tab button */}
