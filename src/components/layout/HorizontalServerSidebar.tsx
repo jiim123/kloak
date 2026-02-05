@@ -534,7 +534,6 @@ export const HorizontalServerSidebar = () => {
                   setCurrentServer(server);
                   setCurrentConversation(null);
                   closeServerSettings();
-                  closeServerSelection();
                   closeModal();
                   navigate(`/app/servers/${server.id}`);
                 }}

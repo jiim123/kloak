@@ -75,12 +75,10 @@ export const ServerSelectionPage = () => {
   };
 
   const handleCreateServer = () => {
-    closeServerSelection();
     openModal("create-server");
   };
 
   const handleJoinServer = () => {
-    closeServerSelection();
     openModal("join-server");
   };
 
