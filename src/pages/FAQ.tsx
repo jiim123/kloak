@@ -30,6 +30,14 @@ const faqCategories = [
         q: "Is Kloak free?",
         a: "Using Kloak will always be free. However, some features that require significant server resources like voice channels and large file storage may require a paid tier in the future. Running servers costs money, and offering premium features helps us keep the core platform free for everyone.",
       },
+      {
+        q: "Is there a mobile app for Kloak?",
+        a: "Kloak is built as a progressive web app, which means you can use it on any device with a web browser. On mobile, you can add Kloak to your home screen for an app-like experience. A native mobile app may be developed in the future based on community demand.",
+      },
+      {
+        q: "Is there a desktop app?",
+        a: "Yes. Kloak offers a native desktop application built with Tauri, available for Windows, macOS, and Linux. The desktop app provides native window management, system tray integration, and desktop notifications for a more integrated experience.",
+      },
     ],
   },
   {
@@ -52,6 +60,18 @@ const faqCategories = [
         q: "Is my data encrypted?",
         a: "Your secret key is hashed using SHA-256 before being stored. We never see or store your actual key. Messages are transmitted securely over encrypted connections.",
       },
+      {
+        q: "Why don't you require email or phone for login?",
+        a: "Email is the universal tracking ID that links your activity across the entire internet. Phone numbers are tied to your legal identity and can be used to verify you for advertising purposes. We use cryptographic secret keys instead, which prove you are you without telling us anything about who you actually are.",
+      },
+      {
+        q: "Can someone else access my account?",
+        a: "Only someone with your secret key can access your account. We cannot be compelled to give anyone else access because we do not store your key, only a one-way hash. Keep your key secure and never share it with anyone.",
+      },
+      {
+        q: "What data does Kloak collect about me?",
+        a: "Only what is absolutely necessary: your username, a hash of your secret key, your messages and content, optional profile information, and server membership records. We do not collect email, phone number, real name, location, or any biometric data.",
+      },
     ],
   },
   {
@@ -69,6 +89,26 @@ const faqCategories = [
       {
         q: "How do direct messages work?",
         a: "You can start a direct message with any user by clicking on their profile and selecting 'Message.' Kloak also supports group DMs for private conversations with multiple people outside of servers.",
+      },
+      {
+        q: "How do I delete my account?",
+        a: "You can delete your account at any time from User Settings. When you delete your account, your profile and personal data are permanently removed. Your messages may remain in servers but will show as from a deleted user. This action is immediate and irreversible.",
+      },
+      {
+        q: "Who owns the content I create on Kloak?",
+        a: "You do. We only need enough rights to operate the service, meaning we store and transmit your messages to intended recipients. We will not use your content for advertising, train AI models on your messages, sell your content to third parties, or claim ownership over anything you create.",
+      },
+      {
+        q: "How does server moderation work?",
+        a: "Server owners and administrators are responsible for moderating content within their servers. Kloak provides moderation tools including role permissions, message deletion, and user banning. We do not actively monitor private servers or scan messages with AI. We act on reports of platform-wide rule violations.",
+      },
+      {
+        q: "Do you sell or share my data?",
+        a: "No. We do not sell, rent, trade, or share your data with advertisers, data brokers, or anyone else. The only exception is if legally required by Swedish law where our servers are hosted. Even then, we have collected so little data that there is almost nothing to hand over.",
+      },
+      {
+        q: "What behavior is not allowed on Kloak?",
+        a: "We do not micromanage conversations or police opinions, but some things are not okay: illegal activities, harassment and abuse, child exploitation content, intellectual property violations, attacking the platform, and spam or phishing. Violations can result in account termination.",
       },
     ],
   },
