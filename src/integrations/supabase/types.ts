@@ -1937,6 +1937,7 @@ export type Database = {
           profile_effect: string | null
           profile_theme_accent: string | null
           profile_theme_primary: string | null
+          pronouns: string | null
           status: Database["public"]["Enums"]["user_status"] | null
           username: string
         }
@@ -1956,6 +1957,7 @@ export type Database = {
           profile_effect?: string | null
           profile_theme_accent?: string | null
           profile_theme_primary?: string | null
+          pronouns?: string | null
           status?: Database["public"]["Enums"]["user_status"] | null
           username: string
         }
@@ -1975,6 +1977,7 @@ export type Database = {
           profile_effect?: string | null
           profile_theme_accent?: string | null
           profile_theme_primary?: string | null
+          pronouns?: string | null
           status?: Database["public"]["Enums"]["user_status"] | null
           username?: string
         }
