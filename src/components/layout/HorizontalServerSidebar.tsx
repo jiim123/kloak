@@ -120,14 +120,14 @@ const ServerTabItem = ({
           )}
           onClick={onClick}
         >
-          {/* Unread indicator - half circle on left */}
+          {/* Unread indicator - small dot before icon */}
           <AnimatePresence>
             {(hasUnread || totalMentions > 0) && !isActive && (
               <motion.div
-                initial={{ scale: 0, x: -4 }}
-                animate={{ scale: 1, x: 0 }}
-                exit={{ scale: 0, x: -4 }}
-                className="absolute -left-[3px] top-1/2 -translate-y-1/2 w-[6px] h-5 bg-foreground rounded-r-full"
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0 }}
+                className="w-2 h-2 rounded-full bg-primary flex-shrink-0"
               />
             )}
           </AnimatePresence>
@@ -228,7 +228,7 @@ export const HorizontalServerSidebar = () => {
   const { user } = useAuthStore();
   const { servers, currentServer, setCurrentServer, isLoading, fetchServers, leaveServer, toggleServerMute } = useServerStore();
   const { setCurrentConversation } = useDMStore();
-  const { openModal, activeModal, closeModal, closeServerSettings, openServerSettings, openServerSelection, isServerSelectionOpen } = useUIStore();
+  const { openModal, activeModal, closeModal, closeServerSettings, openServerSettings, openServerSelection, closeServerSelection, isServerSelectionOpen } = useUIStore();
   const [serverChannels, setServerChannels] = useState<ServerChannels>({});
   const [tooltipsEnabled, setTooltipsEnabled] = useState(false);
   
@@ -534,6 +534,7 @@ export const HorizontalServerSidebar = () => {
                   setCurrentServer(server);
                   setCurrentConversation(null);
                   closeServerSettings();
+                  closeServerSelection();
                   closeModal();
                   navigate(`/app/servers/${server.id}`);
                 }}
@@ -577,12 +578,22 @@ export const HorizontalServerSidebar = () => {
               animate="visible"
               exit="exit"
               layout
-              className="relative flex items-center gap-2 px-3 py-1.5 rounded-lg border bg-primary/15 border-primary/40 cursor-default min-w-0"
+              className="relative group flex items-center gap-2 px-3 py-1.5 rounded-lg border bg-primary/15 border-primary/40 cursor-default min-w-0"
             >
               <div className="w-6 h-6 rounded-[3px] bg-primary/20 flex items-center justify-center flex-shrink-0">
                 <Plus className="w-3.5 h-3.5 text-primary" />
               </div>
               <span className="text-sm text-foreground font-medium">New Tab</span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closeServerSelection();
+                  navigate("/app");
+                }}
+                className="flex-shrink-0 p-0.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
             </motion.div>
           )}
         </AnimatePresence>

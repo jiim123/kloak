@@ -93,70 +93,41 @@ export const ServerSelectionPage = () => {
     <div className="h-full flex flex-col bg-layout-chat">
       {/* Header */}
       <div className="flex-shrink-0 px-6 py-4 border-b border-border/30">
-        <div className="flex items-center justify-between mb-4">
-          <div>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-1">
             <h1 className="text-2xl font-bold text-foreground">Select a Server</h1>
             <p className="text-sm text-muted-foreground mt-1">
               Choose a server to open in a new tab
             </p>
           </div>
-          <Button variant="ghost" onClick={handleCancel}>
-            Cancel
-          </Button>
-        </div>
 
-        {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search servers..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+          {/* Search */}
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search servers..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleJoinServer} className="gap-2">
+              <Users className="w-4 h-4" />
+              Join Server
+            </Button>
+            <Button onClick={handleCreateServer} className="gap-2">
+              <Plus className="w-4 h-4" />
+              Create Server
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Content */}
       <div className="flex-1 overflow-auto p-6">
-        {/* Create/Join section */}
-        <div className="mb-8">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
-            Create or Join
-          </h2>
-          <div className="flex flex-wrap gap-4">
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleCreateServer}
-              className="flex items-center gap-4 p-4 rounded-xl border border-border/50 bg-secondary/30 hover:bg-secondary/50 hover:border-primary/30 transition-all min-w-[240px]"
-            >
-              <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-                <Plus className="w-6 h-6 text-primary" />
-              </div>
-              <div className="text-left">
-                <div className="font-semibold text-foreground">Create Server</div>
-                <div className="text-sm text-muted-foreground">Start a new community</div>
-              </div>
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleJoinServer}
-              className="flex items-center gap-4 p-4 rounded-xl border border-border/50 bg-secondary/30 hover:bg-secondary/50 hover:border-primary/30 transition-all min-w-[240px]"
-            >
-              <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
-                <Users className="w-6 h-6 text-emerald-500" />
-              </div>
-              <div className="text-left">
-                <div className="font-semibold text-foreground">Join Server</div>
-                <div className="text-sm text-muted-foreground">Enter an invite code</div>
-              </div>
-            </motion.button>
-          </div>
-        </div>
-
         {/* Available servers */}
         <div>
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
