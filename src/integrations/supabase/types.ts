@@ -1920,6 +1920,35 @@ export type Database = {
           },
         ]
       }
+      user_server_tabs: {
+        Row: {
+          id: string
+          tab_order: string[]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          tab_order?: string[]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          tab_order?: string[]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_server_tabs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           avatar_decoration: string | null
@@ -2362,6 +2391,7 @@ export type Database = {
         Returns: number[]
       }
       get_user_server_folders: { Args: { _user_id: string }; Returns: Json }
+      get_user_server_tabs: { Args: { _user_id: string }; Returns: string[] }
       get_user_servers: { Args: { _user_id: string }; Returns: Json }
       is_dm_participant: {
         Args: { _conversation_id: string; _user_id: string }
@@ -2509,6 +2539,10 @@ export type Database = {
       save_user_server_folders: {
         Args: { _folder_data: Json; _user_id: string }
         Returns: boolean
+      }
+      save_user_server_tabs: {
+        Args: { _tab_data: string[]; _user_id: string }
+        Returns: undefined
       }
       search_messages: {
         Args: {
