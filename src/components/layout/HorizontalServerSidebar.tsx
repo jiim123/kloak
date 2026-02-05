@@ -390,7 +390,11 @@ export const HorizontalServerSidebar = () => {
   const addNewTab = useCallback(() => {
     if (isServerSelectionOpen) return;
     openServerSelection();
-  }, [isServerSelectionOpen, openServerSelection]);
+    // Navigate to home to show the selection page
+    setCurrentServer(null);
+    setCurrentConversation(null);
+    navigate("/app");
+  }, [isServerSelectionOpen, openServerSelection, setCurrentServer, setCurrentConversation, navigate]);
 
   // Add a server to tabs (called from ServerSelectionPage)
   const addServerToTabs = useCallback((serverId: string) => {

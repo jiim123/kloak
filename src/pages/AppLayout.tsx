@@ -427,8 +427,8 @@ const AppLayout = () => {
                 <ResizablePanel defaultSize={isMemberSidebarOpen && !isDMView && !isServerSpecialView ? 70 : 85}>
                   <div className="h-full bg-layout-chat relative overflow-hidden">
                     <VoicePersistentHost />
-                    {/* Server Selection Page - show as overlay when open AND no server */}
-                    {isServerSelectionOpen && isDMView && !currentConversation && !showFriends && !showExplore ? (
+                    {/* Server Selection Page - show when open */}
+                    {isServerSelectionOpen ? (
                       <ServerSelectionPage />
                     ) : isDMView ? (
                       currentConversation ? (
