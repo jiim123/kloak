@@ -1,453 +1,227 @@
-import {
-  FileText,
-  Key,
-  Users,
-  MessageSquare,
-  Server,
-  Zap,
-  Scale,
-  Gavel,
-  RefreshCw,
-  ChevronDown,
-  AlertTriangle,
-  ShieldCheck,
-} from "lucide-react";
-import { Footer } from "@/components/ui/footer-section";
-import { NavigationMenu } from "@/components/layout/NavigationMenu";
-import { useState } from "react";
-import { cn } from "@/lib/utils";
-import { SEO } from "@/components/seo";
-import { SEO_CONFIG } from "@/lib/seo";
-
-interface FAQItemProps {
-  question: string;
-  answer: React.ReactNode;
-  defaultOpen?: boolean;
-  accent?: "green" | "red" | "amber" | "default";
-}
-
-const FAQItem = ({ question, answer, defaultOpen = false, accent = "default" }: FAQItemProps) => {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
-
-  const accentStyles = {
-    green: "border-green-500/30 bg-green-500/5",
-    red: "border-red-500/30 bg-red-500/5",
-    amber: "border-amber-500/30 bg-amber-500/5",
-    default: "border-border bg-card/50",
-  };
-
-  const iconColors = {
-    green: "text-green-400",
-    red: "text-red-400",
-    amber: "text-amber-400",
-    default: "text-primary",
-  };
-
-  return (
-    <div
-      className={cn(
-        "group rounded-2xl border transition-all duration-300",
-        accentStyles[accent],
-        isOpen ? "shadow-lg shadow-black/5" : "hover:shadow-md hover:shadow-black/5",
-      )}
-    >
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex w-full items-center justify-between gap-4 p-5 text-left"
-      >
-        <span className="text-base font-medium text-foreground/90 group-hover:text-foreground transition-colors">
-          {question}
-        </span>
-        <ChevronDown
-          className={cn(
-            "h-5 w-5 flex-shrink-0 transition-transform duration-300",
-            iconColors[accent],
-            isOpen && "rotate-180",
-          )}
-        />
-      </button>
-      <div
-        className={cn(
-          "grid transition-all duration-300 ease-out",
-          isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
-        )}
-      >
-        <div className="overflow-hidden">
-          <div className="px-5 pb-5 pt-0 text-sm leading-relaxed text-foreground/70">{answer}</div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const Terms = () => {
-  return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <SEO {...SEO_CONFIG.terms} />
-      <NavigationMenu />
-      <main className="flex-1 pt-20">
-        <div className="max-w-3xl mx-auto px-6 py-16 w-full">
-          {/* Header */}
-          <div className="mb-16 text-center">
-            <div className="mb-6 inline-flex items-center justify-center rounded-2xl bg-primary/10 p-4 ring-1 ring-primary/20">
-              <FileText className="h-8 w-8 text-primary" />
-            </div>
-            <h1 className="mb-3 text-3xl font-semibold tracking-tight md:text-4xl">Terms of Service</h1>
-            <p className="text-muted-foreground">Last updated: January 2025</p>
-          </div>
-
-          {/* Hero card */}
-          <div className="relative mb-12 overflow-hidden rounded-3xl border border-primary/20 bg-primary/5 p-8">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-primary/15 ring-1 ring-primary/30">
-                <ShieldCheck className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <h2 className="mb-2 text-xl font-medium text-foreground">Terms That Respect You</h2>
-                <p className="text-foreground/70 leading-relaxed">
-                  Most terms of service are designed to protect companies while stripping away your rights. Ours are
-                  written to be fair, readable, and honest about what we expect from each other. No 50-page legal
-                  documents, no hidden gotchas.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* FAQ Section */}
-          <div className="space-y-4">
-            <FAQItem
-              question="What am I agreeing to by using Kloak?"
-              defaultOpen={true}
-              answer={
-                <div className="space-y-3">
-                  <p>
-                    By using Kloak, you agree to these terms. Pretty standard stuff. But unlike most services, we're not
-                    burying important details in legal jargon hoping you won't read them.
-                  </p>
-                  <p>
-                    The short version: be a decent human, don't break the law, take responsibility for your secret key,
-                    and we'll provide you with a privacy-respecting communication platform. If you disagree with any
-                    part of these terms, you shouldn't use the service—and we'd rather you know that upfront than
-                    discover it later.
-                  </p>
-                  <p>
-                    The privacy community sometimes pretends you can build a platform with zero ability to cooperate
-                    with law enforcement. You can't—and you shouldn't want to. The goal isn't to protect criminals; it's
-                    to protect ordinary people from mass surveillance.
-                  </p>
-                </div>
-              }
-            />
-
-            <FAQItem
-              question="How does the secret key system work?"
-              accent="amber"
-              answer={
-                <div className="space-y-3">
-                  <p>
-                    Your account is secured by a cryptographically generated secret key instead of a traditional
-                    password. This is the same technology that secures cryptocurrency wallets—battle-tested and
-                    mathematically secure.
-                  </p>
-                  <p>Here's what you need to know:</p>
-                  <ul className="space-y-2 text-foreground/70">
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-amber-400/50" />
-                      <span>
-                        <strong className="text-foreground/90">It's your sole responsibility.</strong> We cannot
-                        recover, reset, or retrieve your key. This isn't us being difficult—we literally don't have it.
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-amber-400/50" />
-                      <span>
-                        <strong className="text-foreground/90">It's the only way in.</strong> There's no "forgot
-                        password" option because there's no password. No email reset, no SMS code, no security questions
-                        about your first pet.
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-amber-400/50" />
-                      <span>
-                        <strong className="text-foreground/90">We only store a hash.</strong> Your actual key never
-                        touches our servers. We store a one-way mathematical fingerprint that lets us verify you without
-                        knowing the original.
-                      </span>
-                    </li>
-                  </ul>
-                  <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-4">
-                    <p className="flex items-start gap-2 text-sm">
-                      <AlertTriangle className="h-4 w-4 mt-0.5 text-red-400 flex-shrink-0" />
-                      <span>
-                        <strong className="text-foreground/90">This is important:</strong> If you lose your secret key,
-                        you permanently lose access to your account. No exceptions, no appeals, no "but I'm really me"
-                        conversations with support. Store your key somewhere safe—write it down, use a password manager,
-                        whatever works for you. Just don't lose it.
-                      </span>
-                    </p>
-                  </div>
-                </div>
-              }
-            />
-
-            <FAQItem
-              question="What behavior isn't allowed?"
-              accent="red"
-              answer={
-                <div className="space-y-3">
-                  <p>
-                    We're not going to micromanage your conversations or police your opinions. But some things are
-                    genuinely not okay, and we need to be clear about them:
-                  </p>
-                  <ul className="space-y-2 text-foreground/70">
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-red-400/50" />
-                      <span>
-                        <strong className="text-foreground/90">Illegal activities.</strong> Don't use Kloak to break the
-                        law. We're not going to help you evade law enforcement, but we're also not going to be your
-                        accomplice.
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-red-400/50" />
-                      <span>
-                        <strong className="text-foreground/90">Harassment and abuse.</strong> Don't use the platform to
-                        stalk, threaten, or harm other people. Privacy tools shouldn't be weapons.
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-red-400/50" />
-                      <span>
-                        <strong className="text-foreground/90">Child exploitation content.</strong> Absolutely zero
-                        tolerance. This will result in immediate account termination and reporting to authorities.
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-red-400/50" />
-                      <span>
-                        <strong className="text-foreground/90">Intellectual property violations.</strong> Don't share
-                        content you don't have the right to share. We're not going to be your piracy platform.
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-red-400/50" />
-                      <span>
-                        <strong className="text-foreground/90">Attacking the platform.</strong> Don't try to hack,
-                        exploit, or compromise Kloak's security. If you find a vulnerability, report it—don't exploit
-                        it.
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-red-400/50" />
-                      <span>
-                        <strong className="text-foreground/90">Spam and phishing.</strong> Don't use Kloak to scam
-                        people or flood servers with garbage.
-                      </span>
-                    </li>
-                  </ul>
-                  <p>
-                    Notice what's not on this list: we don't ban "offensive" speech, controversial opinions, or content
-                    that makes us uncomfortable. We're not here to be the thought police. But there's a difference
-                    between controversial and harmful, and we know it when we see it.
-                  </p>
-                </div>
-              }
-            />
-
-            <FAQItem
-              question="Who owns the content I create?"
-              accent="green"
-              answer={
-                <div className="space-y-3">
-                  <p>You do. Full stop.</p>
-                  <p>
-                    Unlike some platforms that claim broad licenses to your content (looking at you, social media), we
-                    only need enough rights to actually operate the service. When you post a message, we need to store
-                    it and transmit it to the people you're talking to. That's the "license" you're granting us—nothing
-                    more.
-                  </p>
-                  <p>We won't:</p>
-                  <ul className="space-y-2 text-foreground/70">
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-green-400/50" />
-                      <span>Use your content for advertising</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-green-400/50" />
-                      <span>Train AI models on your messages</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-green-400/50" />
-                      <span>Sell or license your content to third parties</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-green-400/50" />
-                      <span>Claim ownership over anything you create</span>
-                    </li>
-                  </ul>
-                  <p>Your words are yours. Your files are yours. We're just the messenger.</p>
-                </div>
-              }
-            />
-
-            <FAQItem
-              question="How does server moderation work?"
-              answer={
-                <div className="space-y-3">
-                  <p>
-                    Server owners and administrators are responsible for moderating content within their servers. This
-                    is a deliberate design choice, not us being lazy.
-                  </p>
-                  <p>
-                    We provide moderation tools—role permissions, message deletion, user banning, etc.—but we don't
-                    actively monitor what happens in private servers. We're not reading your messages, scanning your
-                    files, or using AI to flag "problematic" content.
-                  </p>
-                  <p>This means:</p>
-                  <ul className="space-y-2 text-foreground/70">
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary/50" />
-                      <span>
-                        <strong className="text-foreground/90">Server owners set the rules.</strong> Each community
-                        decides what's acceptable within their space.
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary/50" />
-                      <span>
-                        <strong className="text-foreground/90">We act on reports.</strong> If something violates our
-                        platform-wide rules (the stuff in the "What isn't allowed" section), report it and we'll
-                        investigate.
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary/50" />
-                      <span>
-                        <strong className="text-foreground/90">We don't do mass surveillance.</strong> We won't scan
-                        every message looking for policy violations. That's antithetical to why Kloak exists.
-                      </span>
-                    </li>
-                  </ul>
-                </div>
-              }
-            />
-
-            <FAQItem
-              question="Is the service guaranteed to be available?"
-              answer={
-                <div className="space-y-3">
-                  <p>We try our best, but no.</p>
-                  <p>
-                    We strive for high availability and take reliability seriously—downtime means you can't talk to your
-                    friends, and that sucks. But we're not going to promise 99.999% uptime because sometimes servers
-                    crash, updates need to be deployed, and unexpected things happen.
-                  </p>
-                  <p>
-                    We also reserve the right to modify, suspend, or discontinue features. We'll try to give notice when
-                    possible, but sometimes changes need to happen quickly. This isn't us planning to pull the rug—it's
-                    us being honest that software evolves.
-                  </p>
-                  <p>
-                    What we can promise: we'll communicate openly about outages and changes, and we won't discontinue
-                    core functionality without significant advance notice.
-                  </p>
-                </div>
-              }
-            />
-
-            <FAQItem
-              question="What's the liability situation?"
-              answer={
-                <div className="space-y-3">
-                  <p>Here's the part where we have to put on our lawyer hats (sorry):</p>
-                  <p>
-                    Kloak is provided "as is" without warranties of any kind. We're not liable for damages arising from
-                    your use of the service, including:
-                  </p>
-                  <ul className="space-y-2 text-foreground/70">
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary/50" />
-                      <span>Loss of data (back up anything important)</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary/50" />
-                      <span>Loss of access due to a forgotten secret key (we warned you)</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary/50" />
-                      <span>Unauthorized access to your account (keep your key safe)</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary/50" />
-                      <span>Service interruptions or discontinuation</span>
-                    </li>
-                  </ul>
-                  <p>
-                    This isn't us being mean—it's standard for any service, and anyone who promises otherwise is lying.
-                    We'll do our best to keep things running smoothly, but we can't guarantee perfection.
-                  </p>
-                </div>
-              }
-            />
-
-            <FAQItem
-              question="Can my account be terminated?"
-              accent="red"
-              answer={
-                <div className="space-y-3">
-                  <p>Yes, but only if you violate these terms.</p>
-                  <p>
-                    We reserve the right to terminate or suspend accounts that break the rules—particularly the serious
-                    stuff like illegal activity, harassment, or child exploitation content. We don't terminate accounts
-                    because we disagree with your opinions or because you said something mean about us on social media.
-                  </p>
-                  <p>
-                    On your end, you can delete your account whenever you want through the settings menu. No retention
-                    games, no 30-day "cooling off" periods, no trying to talk you out of it. Your account, your choice.
-                  </p>
-                </div>
-              }
-            />
-
-            <FAQItem
-              question="Will these terms change?"
-              answer={
-                <div className="space-y-3">
-                  <p>Probably, eventually. Software evolves, laws change, and sometimes we need to clarify things.</p>
-                  <p>
-                    When we update these terms, we'll change the "last updated" date at the top. For significant
-                    changes, we'll try to notify users directly. Continued use of Kloak after changes means you accept
-                    the new terms.
-                  </p>
-                  <p>
-                    What won't change: our commitment to being fair, transparent, and treating you like a customer
-                    rather than a product. If we ever write terms that would make current-us ashamed, future-us has
-                    messed up badly.
-                  </p>
-                </div>
-              }
-            />
-          </div>
-
-          {/* Philosophy footer */}
-          <div className="mt-12 flex items-start gap-4 rounded-2xl border border-border/50 bg-muted/30 p-6">
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/20">
-              <Scale className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h3 className="mb-1 font-medium text-foreground/90">The Deal</h3>
-              <p className="text-sm leading-relaxed text-muted-foreground">
-                You pay us for a service. We provide that service honestly and protect your privacy. You don't abuse the
-                platform or hurt other users. That's the deal. No hidden clauses, no surprise arbitration agreements, no
-                signing away your firstborn. Questions? Join a community server and ask.
-              </p>
-            </div>
-          </div>
-        </div>
-        <Footer />
-      </main>
-    </div>
-  );
-};
-
-export default Terms;
+ import { motion } from "framer-motion";
+ import { NavigationMenu } from "@/components/layout/NavigationMenu";
+ import { Footer } from "@/components/ui/footer-section";
+ import { SEO } from "@/components/seo";
+ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+ import { FileText, Shield, UserCheck, Ban, Key, Trash2, Scale } from "lucide-react";
+ 
+ const termsCategories = [
+   {
+     title: "Account & Eligibility",
+     icon: UserCheck,
+     questions: [
+       {
+         q: "Who can use Kloak?",
+         a: "You must be at least 13 years old to use Kloak. If you're under 18, you need permission from a parent or guardian. We don't verify age because that would require collecting personal information, which defeats the purpose of a privacy-first platform. By using Kloak, you're telling us you meet these requirements.",
+       },
+       {
+         q: "What are you agreeing to?",
+         a: "By creating an account and using Kloak, you agree to: follow these terms and our community guidelines, not use Kloak for illegal activities, accept responsibility for your secret key, and respect other users and their privacy. That's really it. We're not hiding anything in fine print because there is no fine print.",
+       },
+     ],
+   },
+   {
+     title: "Prohibited Conduct",
+     icon: Ban,
+     questions: [
+       {
+         q: "What behavior is NOT allowed?",
+         a: "We don't micromanage conversations or police opinions. However, some things are just not acceptable: illegal activities, harassment and abuse (targeted harassment, threats, doxxing, stalking), child exploitation (zero tolerance, immediate termination and law enforcement referral), intellectual property violations, platform attacks (hacking, exploiting, disrupting systems), and spam or phishing. Violations result in account termination. All terminations are final.",
+       },
+       {
+         q: "How is moderation handled?",
+         a: "Server owners and administrators are responsible for moderating content within their servers. Kloak provides moderation tools including role permissions, message deletion, and user banning. We do not actively monitor private servers or scan messages with AI. We act on reports of platform-wide rule violations.",
+       },
+     ],
+   },
+   {
+     title: "Your Secret Key",
+     icon: Key,
+     questions: [
+       {
+         q: "What about your secret key?",
+         a: "Your secret key is the only way to access your account. By design, we cannot recover it for you. This is a feature, not a bug. It ensures true privacy because we don't store any information that could identify you. You are responsible for: keeping your key secure and private, backing up your key in a safe location, and never sharing your key with anyone. If you lose your key, you lose your account. We mean it.",
+       },
+       {
+         q: "Can someone else access my account?",
+         a: "Only someone with your secret key can access your account. We cannot be compelled to give anyone else access because we do not store your key, only a one-way hash. Keep your key secure and never share it with anyone.",
+       },
+     ],
+   },
+   {
+     title: "Content Ownership",
+     icon: FileText,
+     questions: [
+       {
+         q: "Who owns the content you create?",
+         a: "You do. Your messages, files, and content remain yours. We only need enough rights to operate the service, meaning we can store and transmit your messages to their intended recipients. We will never: use your content for advertising, train AI models on your messages, sell your content to third parties, or claim ownership over anything you create.",
+       },
+       {
+         q: "What happens to my content if I leave?",
+         a: "Your messages may remain in servers after account deletion but will show as from a 'Deleted User.' This preserves conversation context for other participants while removing your personal association with the content.",
+       },
+     ],
+   },
+   {
+     title: "Account Termination",
+     icon: Trash2,
+     questions: [
+       {
+         q: "What happens when you delete your account?",
+         a: "You can delete your account at any time from User Settings. When you do: your profile and personal data are permanently deleted, your messages remain in servers but show as from 'Deleted User,' and servers you own may be transferred or deleted. This action is immediate and irreversible. We don't keep backups of deleted accounts.",
+       },
+       {
+         q: "Can Kloak terminate my account?",
+         a: "We may terminate accounts that violate these terms, particularly for illegal activities, harassment, child exploitation, or platform attacks. Terminated accounts cannot be recovered, and all associated data will be deleted.",
+       },
+     ],
+   },
+   {
+     title: "Legal & Liability",
+     icon: Scale,
+     questions: [
+       {
+         q: "Can we change these terms?",
+         a: "Yes, but we'll always notify you of significant changes. We won't suddenly change the rules and expect you to comply retroactively. If you disagree with updated terms, you can stop using Kloak and delete your account. Continued use after changes means you accept the new terms.",
+       },
+       {
+         q: "What about liability?",
+         a: "Kloak is provided 'as is.' We do our best to keep the service running and secure, but we can't guarantee 100% uptime or that nothing will ever go wrong. We're not liable for: content created by other users, temporary service interruptions, loss of data due to lost secret keys, or third-party actions or external circumstances.",
+       },
+     ],
+   },
+ ];
+ 
+ const Terms = () => {
+   return (
+     <div className="min-h-screen bg-background flex flex-col items-center w-full">
+       <SEO
+         title="Terms of Service | Kloak"
+         description="Terms of service for Kloak. Plain English, no tricks. Understand exactly what you're agreeing to."
+       />
+       <div className="w-full">
+         <NavigationMenu />
+         <main className="pt-10">
+           {/* Hero Section - Light Silver Theme */}
+           <section className="relative py-32 md:py-40 px-8 lg:px-16 overflow-hidden bg-neutral-200 dark:bg-neutral-800">
+             <div className="max-w-7xl mx-auto">
+               <motion.div
+                 className="flex items-center gap-4 mb-8"
+                 initial={{ opacity: 0 }}
+                 animate={{ opacity: 1 }}
+                 transition={{ duration: 0.6 }}
+               >
+                 <span className="text-xs font-mono text-neutral-600 dark:text-neutral-400 tracking-widest uppercase">Legal</span>
+               </motion.div>
+ 
+               <motion.h1
+                 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light text-neutral-900 dark:text-neutral-100 leading-tight tracking-tight mb-8"
+                 initial={{ opacity: 0, y: 20 }}
+                 animate={{ opacity: 1, y: 0 }}
+                 transition={{ duration: 0.8, delay: 0.1 }}
+               >
+                 Terms of
+                 <br />
+                 <span className="text-neutral-500 dark:text-neutral-400">service.</span>
+               </motion.h1>
+ 
+               <motion.p
+                 className="text-lg md:text-xl text-neutral-700 dark:text-neutral-300 max-w-2xl leading-relaxed"
+                 initial={{ opacity: 0, y: 20 }}
+                 animate={{ opacity: 1, y: 0 }}
+                 transition={{ duration: 0.8, delay: 0.2 }}
+               >
+                 Plain English, no tricks. These terms are written to be actually readable. We want you to understand exactly what you're agreeing to.
+               </motion.p>
+ 
+               <motion.p
+                 className="text-sm text-neutral-500 dark:text-neutral-500 mt-6"
+                 initial={{ opacity: 0 }}
+                 animate={{ opacity: 1 }}
+                 transition={{ duration: 0.6, delay: 0.3 }}
+               >
+                 Last updated: January 2025
+               </motion.p>
+             </div>
+           </section>
+ 
+           {/* Terms Categories */}
+           {termsCategories.map((category, categoryIndex) => (
+             <section
+               key={category.title}
+               className={`relative py-24 px-8 lg:px-16 border-y border-border/20 ${
+                 categoryIndex % 2 === 0 ? "bg-card/50" : ""
+               }`}
+             >
+               <div className="max-w-7xl mx-auto">
+                 <motion.div
+                   className="mb-12"
+                   initial={{ opacity: 0, y: 20 }}
+                   whileInView={{ opacity: 1, y: 0 }}
+                   viewport={{ once: true }}
+                   transition={{ duration: 0.6 }}
+                 >
+                   <div className="flex items-center gap-4 mb-4">
+                     <div className="w-12 h-12 border border-primary/30 flex items-center justify-center">
+                       <category.icon className="w-6 h-6 text-primary" />
+                     </div>
+                     <span className="text-xs font-mono text-primary tracking-widest uppercase">{category.title}</span>
+                   </div>
+                 </motion.div>
+ 
+                 <Accordion type="single" collapsible className="space-y-4">
+                   {category.questions.map((item, index) => (
+                     <motion.div
+                       key={index}
+                       initial={{ opacity: 0, y: 20 }}
+                       whileInView={{ opacity: 1, y: 0 }}
+                       viewport={{ once: true }}
+                       transition={{ duration: 0.5, delay: index * 0.1 }}
+                     >
+                       <AccordionItem
+                         value={`${category.title}-${index}`}
+                         className="border border-border/30 bg-background hover:bg-card/50 transition-colors px-6 md:px-8"
+                       >
+                         <AccordionTrigger className="text-left font-medium hover:no-underline py-6 text-base md:text-lg">
+                           {item.q}
+                         </AccordionTrigger>
+                         <AccordionContent className="text-muted-foreground leading-relaxed pb-6 text-sm md:text-base">
+                           {item.a}
+                         </AccordionContent>
+                       </AccordionItem>
+                     </motion.div>
+                   ))}
+                 </Accordion>
+               </div>
+             </section>
+           ))}
+ 
+           {/* Footer CTA */}
+           <section className="relative py-24 px-8 lg:px-16 bg-card/50 border-b border-border/20">
+             <div className="max-w-2xl mx-auto">
+               <motion.div
+                 className="text-center border border-border/30 bg-background p-10 md:p-14 rounded-lg"
+                 initial={{ opacity: 0, y: 20 }}
+                 whileInView={{ opacity: 1, y: 0 }}
+                 viewport={{ once: true }}
+                 transition={{ duration: 0.6 }}
+               >
+                 <Shield className="w-12 h-12 text-primary mx-auto mb-6" />
+                 <h2 className="text-3xl sm:text-4xl font-light text-foreground leading-tight tracking-tight mb-4">
+                   Our Commitment
+                 </h2>
+                 <p className="text-muted-foreground max-w-lg mx-auto leading-relaxed">
+                   These terms exist to protect both you and Kloak. We're not trying to trap you with legal tricks. 
+                   We want a relationship built on mutual respect and transparency. Privacy isn't a feature, it's the architecture.
+                 </p>
+               </motion.div>
+             </div>
+           </section>
+         </main>
+         <Footer />
+       </div>
+     </div>
+   );
+ };
+ 
+ export default Terms;
