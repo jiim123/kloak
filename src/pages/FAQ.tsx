@@ -32,11 +32,11 @@ const faqCategories = [
       },
       {
         q: "Is there a mobile app for Kloak?",
-        a: "Kloak is built as a progressive web app, which means you can use it on any device with a web browser. On mobile, you can add Kloak to your home screen for an app-like experience. A native mobile app may be developed in the future based on community demand.",
+        a: "Not yet. Kloak is currently available through your web browser.",
       },
       {
         q: "Is there a desktop app?",
-        a: "Yes. Kloak offers a native desktop application built with Tauri, available for Windows, macOS, and Linux. The desktop app provides native window management, system tray integration, and desktop notifications for a more integrated experience.",
+        a: "Not yet. Kloak is currently available through your web browser.",
       },
     ],
   },
@@ -104,11 +104,11 @@ const faqCategories = [
       },
       {
         q: "Do you sell or share my data?",
-        a: "No. We do not sell, rent, trade, or share your data with advertisers, data brokers, or anyone else. The only exception is if legally required by Swedish law where our servers are hosted. Even then, we have collected so little data that there is almost nothing to hand over.",
+        a: "No. We do not sell, trade, or share your data with advertisers, data brokers, or anyone else. The only exception is if legally required by Swedish law where our servers are hosted. Even then, we have collected so little data that there is almost nothing to hand over.",
       },
       {
         q: "What behavior is not allowed on Kloak?",
-        a: "We do not micromanage conversations or police opinions, but some things are not okay: illegal activities, harassment and abuse, child exploitation content, intellectual property violations, attacking the platform, and spam or phishing. Violations can result in account termination.",
+        a: "We don't micromanage conversations or police opinions. However, some things are not acceptable: illegal activities, harassment and abuse, child exploitation content, intellectual property violations, attacks on the platform, and spam or phishing. Violations result in account termination, and all terminations are final.",
       },
     ],
   },

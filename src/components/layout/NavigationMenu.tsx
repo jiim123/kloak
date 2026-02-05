@@ -11,12 +11,6 @@ const mainLinks = [
   { title: "FAQ", href: "/faq" },
 ];
 
-const legalLinks = [
-  { title: "Terms", href: "/terms" },
-  { title: "Privacy", href: "/privacy" },
-  { title: "Cookies", href: "/cookies" },
-];
-
 export const NavigationMenu = () => {
   const [menuOpen, setMenuOpen] = React.useState(false);
   const location = useLocation();
@@ -44,23 +38,6 @@ export const NavigationMenu = () => {
             <div className="hidden md:flex items-center gap-1">
               {/* Main Links */}
               {mainLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  to={link.href}
-                  className={cn(
-                    "px-4 py-2 text-sm font-medium transition-colors",
-                    location.pathname === link.href ? "text-foreground" : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {link.title}
-                </Link>
-              ))}
-
-              {/* Separator */}
-              <div className="w-px h-4 bg-border mx-2" />
-
-              {/* Legal Links */}
-              {legalLinks.map((link) => (
                 <Link
                   key={link.href}
                   to={link.href}
@@ -141,7 +118,7 @@ export const NavigationMenu = () => {
 
             {/* Links */}
             <div className="space-y-2">
-              {[...mainLinks, ...legalLinks].map((link) => (
+              {mainLinks.map((link) => (
                 <Link
                   key={link.href}
                   to={link.href}
