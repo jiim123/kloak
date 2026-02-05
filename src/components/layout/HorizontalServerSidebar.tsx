@@ -1,11 +1,10 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Plus, Settings, Home, X, ChevronDown, LogOut, CheckCheck, BellOff, Bell } from "lucide-react";
+import { Plus, Settings, Home, X, LogOut, CheckCheck, BellOff, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { MotionButton, MotionDiv } from "@/components/ui/motion-elements";
+import { MotionButton } from "@/components/ui/motion-elements";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
@@ -21,8 +20,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import type { ServerWithMembership, Server } from "@/types";
+import type { ServerWithMembership } from "@/types";
 
 interface ServerChannels {
   [serverId: string]: string[];
@@ -216,118 +214,12 @@ const ServerTabItem = ({
   );
 };
 
-// New Tab placeholder with server selector
-const NewTabPlaceholder = ({
-  servers,
-  openTabServerIds,
-  getServerColor,
-  getServerInitials,
-  onSelectServer,
-  onClose,
-  tooltipsEnabled,
-}: {
-  servers: ServerWithMembership[];
-  openTabServerIds: Set<string>;
-  getServerColor: (name: string) => string;
-  getServerInitials: (name: string) => string;
-  onSelectServer: (serverId: string) => void;
-  onClose: () => void;
-  tooltipsEnabled: boolean;
-}) => {
-  const [isOpen, setIsOpen] = useState(true);
-  
-  // Filter out servers already in tabs
-  const availableServers = useMemo(
-    () => servers.filter((s) => !openTabServerIds.has(s.id)),
-    [servers, openTabServerIds]
-  );
-
-  return (
-    <motion.div
-      variants={tabVariants}
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-      layout
-      className="relative group"
-    >
-      <Popover open={isOpen} onOpenChange={setIsOpen}>
-        <PopoverTrigger asChild>
-          <div
-            className={cn(
-              "flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all cursor-pointer",
-              "bg-primary/10 border-primary/50 text-primary"
-            )}
-          >
-            <div className="w-6 h-6 rounded-[3px] bg-primary/20 flex items-center justify-center">
-              <Plus className="w-4 h-4" />
-            </div>
-            <span className="text-sm font-medium whitespace-nowrap">New Tab</span>
-            <ChevronDown className="w-3.5 h-3.5" />
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onClose();
-              }}
-              className="p-0.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </PopoverTrigger>
-        <PopoverContent side="bottom" align="start" className="w-64 p-2 max-h-80 overflow-auto">
-          <div className="text-xs font-semibold text-muted-foreground px-2 mb-2">
-            Select a server
-          </div>
-          {availableServers.length === 0 ? (
-            <div className="text-sm text-muted-foreground px-2 py-4 text-center">
-              All servers are already open
-            </div>
-          ) : (
-            <div className="space-y-1">
-              {availableServers.map((server) => (
-                <button
-                  key={server.id}
-                  onClick={() => {
-                    onSelectServer(server.id);
-                    setIsOpen(false);
-                  }}
-                  className="w-full flex items-center gap-3 px-2 py-1.5 rounded-md transition-colors hover:bg-secondary"
-                >
-                  <div
-                    className={cn(
-                      "w-8 h-8 rounded-[4px] overflow-hidden flex items-center justify-center flex-shrink-0",
-                      !server.icon_url && getServerColor(server.name)
-                    )}
-                  >
-                    {server.icon_url ? (
-                      <Avatar className="w-8 h-8 border-0 rounded-[4px]">
-                        <AvatarImage src={server.icon_url} alt={server.name} className="object-cover rounded-[4px]" />
-                        <AvatarFallback className={cn("rounded-[4px]", getServerColor(server.name))}>
-                          {getServerInitials(server.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                    ) : (
-                      <span className="text-xs font-bold text-white">{getServerInitials(server.name)}</span>
-                    )}
-                  </div>
-                  <span className="text-sm truncate">{server.name}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </PopoverContent>
-      </Popover>
-    </motion.div>
-  );
-};
-
 export const HorizontalServerSidebar = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { servers, currentServer, setCurrentServer, isLoading, fetchServers, leaveServer, toggleServerMute } = useServerStore();
   const { setCurrentConversation } = useDMStore();
-  const { openModal, activeModal, closeModal, closeServerSettings, openServerSettings } = useUIStore();
+  const { openModal, activeModal, closeModal, closeServerSettings, openServerSettings, openServerSelection, isServerSelectionOpen } = useUIStore();
   const [serverChannels, setServerChannels] = useState<ServerChannels>({});
   const [tooltipsEnabled, setTooltipsEnabled] = useState(false);
   
@@ -483,26 +375,19 @@ export const HorizontalServerSidebar = () => {
     [openTabs]
   );
 
-  const hasNewTabOpen = useMemo(() => openTabs.some((t) => t.isNewTab), [openTabs]);
+  const hasNewTabOpen = isServerSelectionOpen;
 
-  // Add a new empty tab
+  // Open the server selection page
   const addNewTab = useCallback(() => {
-    if (hasNewTabOpen) return; // Don't allow multiple new tabs
-    setOpenTabs((prev) => [...prev, { serverId: null, isNewTab: true }]);
-  }, [hasNewTabOpen]);
+    if (isServerSelectionOpen) return;
+    openServerSelection();
+  }, [isServerSelectionOpen, openServerSelection]);
 
-  // Select a server for the new tab placeholder
-  const selectServerForNewTab = useCallback((serverId: string) => {
+  // Add a server to tabs (called from ServerSelectionPage)
+  const addServerToTabs = useCallback((serverId: string) => {
     setOpenTabs((prev) => {
-      // Find the new tab placeholder and replace it with the selected server
-      const newTabIndex = prev.findIndex((t) => t.isNewTab);
-      if (newTabIndex === -1) {
-        // No new tab placeholder, just add the server
-        return [...prev, { serverId }];
-      }
-      const updated = [...prev];
-      updated[newTabIndex] = { serverId };
-      return updated;
+      if (prev.some((t) => t.serverId === serverId)) return prev;
+      return [...prev, { serverId }];
     });
 
     // Navigate to the server
@@ -524,10 +409,16 @@ export const HorizontalServerSidebar = () => {
     });
   }, []);
 
-  // Remove new tab placeholder
-  const removeNewTabPlaceholder = useCallback(() => {
-    setOpenTabs((prev) => prev.filter((t) => !t.isNewTab));
-  }, []);
+  // Expose addServerToTabs and openTabServerIds via a ref or context - for now we'll use window
+  useEffect(() => {
+    (window as any).__kloakServerTabs = {
+      addServerToTabs,
+      openTabServerIds,
+    };
+    return () => {
+      delete (window as any).__kloakServerTabs;
+    };
+  }, [addServerToTabs, openTabServerIds]);
 
   return (
     <div className="w-full h-14 flex items-center px-3 gap-2 bg-background border-b border-border/30">
@@ -612,22 +503,7 @@ export const HorizontalServerSidebar = () => {
 
         {/* Server tabs */}
         <AnimatePresence mode="popLayout">
-          {openTabs.map((tab, index) => {
-            if (tab.isNewTab) {
-              return (
-                <NewTabPlaceholder
-                  key="new-tab"
-                  servers={servers}
-                  openTabServerIds={openTabServerIds}
-                  getServerColor={getServerColor}
-                  getServerInitials={getServerInitials}
-                  onSelectServer={selectServerForNewTab}
-                  onClose={removeNewTabPlaceholder}
-                  tooltipsEnabled={tooltipsEnabled}
-                />
-              );
-            }
-
+          {openTabs.filter((t) => !t.isNewTab).map((tab, index) => {
             const server = tab.serverId ? serversById.get(tab.serverId) : null;
             if (!server) return null;
 
