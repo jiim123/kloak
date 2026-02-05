@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, forwardRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Folder, Plus, Settings, Home, ChevronDown, ChevronRight, Trash2, Edit2, Palette, LogOut } from "lucide-react";
+import { Folder, Plus, Settings, Home, ChevronDown, ChevronRight, Trash2, Edit2, Palette, LogOut, CheckCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { MotionButton, MotionDiv } from "@/components/ui/motion-elements";
@@ -269,6 +269,7 @@ const DraggableServerItem = forwardRef<
     onClick: () => void;
     onLeaveServer?: (serverId: string) => void;
     onOpenSettings?: () => void;
+    onMarkAsRead?: () => void;
   }
 >(
   (
@@ -288,6 +289,7 @@ const DraggableServerItem = forwardRef<
       onClick,
       onLeaveServer,
       onOpenSettings,
+      onMarkAsRead,
     },
     ref,
   ) => {
@@ -390,6 +392,15 @@ const DraggableServerItem = forwardRef<
           </motion.div>
         </ContextMenuTrigger>
         <ContextMenuContent>
+          <ContextMenuItem
+            onSelect={(e) => {
+              e.preventDefault();
+              onMarkAsRead?.();
+            }}
+          >
+            <CheckCheck className="w-4 h-4 mr-2" />
+            Mark as Read
+          </ContextMenuItem>
           {isOwner && onOpenSettings && (
             <ContextMenuItem
               onSelect={(e) => {
@@ -609,7 +620,7 @@ export const ServerSidebar = () => {
     return Object.values(serverChannels).flat();
   }, [serverChannels]);
 
-  const { getServerUnreadInfo } = useUnread(allChannelIds);
+  const { getServerUnreadInfo, markServerAsRead } = useUnread(allChannelIds);
   const { totalUnread: totalDMUnread, hasUnread: hasDMUnread } = useUnreadDMs(user?.id || null);
 
   const getServerInitials = (name: string) => {
@@ -981,6 +992,11 @@ export const ServerSidebar = () => {
                                 setCurrentServer(server);
                                 openServerSettings();
                               }}
+                              onMarkAsRead={() => {
+                                if (channelIds.length > 0) {
+                                  markServerAsRead(channelIds);
+                                }
+                              }}
                             />
                           );
                         })}
@@ -1030,6 +1046,11 @@ export const ServerSidebar = () => {
                       onOpenSettings={() => {
                         setCurrentServer(server);
                         openServerSettings();
+                      }}
+                      onMarkAsRead={() => {
+                        if (channelIds.length > 0) {
+                          markServerAsRead(channelIds);
+                        }
                       }}
                     />
                   );
