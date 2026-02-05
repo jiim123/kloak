@@ -937,7 +937,7 @@ export const HorizontalServerSidebar = () => {
   );
 
   return (
-    <div className="w-full h-14 flex items-center px-3 gap-2 bg-layout-sidebar border-b border-border/30">
+    <div className="w-full h-14 flex items-center px-3 gap-2 bg-background border-b border-border/30">
       <DndContext
         sensors={sensors}
         onDragStart={handleDragStart}
