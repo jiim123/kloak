@@ -125,7 +125,7 @@ const FAQ = () => {
         <NavigationMenu />
         <main className="pt-10">
           {/* Hero Section */}
-          <section className="relative py-32 md:py-40 px-8 lg:px-16 overflow-hidden">
+          <section className="relative py-32 md:py-40 px-8 lg:px-16 overflow-hidden bg-foreground">
             <div className="max-w-7xl mx-auto">
               <motion.div
                 className="flex items-center gap-4 mb-8"
@@ -133,22 +133,22 @@ const FAQ = () => {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.6 }}
               >
-                <span className="text-xs font-mono text-primary tracking-widest uppercase">Help Center</span>
+                <span className="text-xs font-mono text-background tracking-widest uppercase">Help Center</span>
               </motion.div>
 
               <motion.h1
-                className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light text-foreground leading-tight tracking-tight mb-8"
+                className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light text-background leading-tight tracking-tight mb-8"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.1 }}
               >
                 Frequently asked
                 <br />
-                <span className="text-primary/60">questions.</span>
+                <span className="text-background/60">questions.</span>
               </motion.h1>
 
               <motion.p
-                className="text-lg md:text-xl text-muted-foreground max-w-2xl leading-relaxed"
+                className="text-lg md:text-xl text-background/70 max-w-2xl leading-relaxed"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
