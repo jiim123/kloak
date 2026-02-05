@@ -69,7 +69,7 @@ const Philosophy = () => {
                 offsetY={0.46}
               />
             </div>
-            
+
             <div className="relative z-10 max-w-7xl mx-auto">
               <motion.div
                 className="flex items-center gap-4 mb-8"
@@ -97,7 +97,7 @@ const Philosophy = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
               >
-                It should not be tracked, analyzed, or sold. Ever. This is not a marketing slogan. It is the engineering specification.
+                It should not be tracked, analyzed, or sold. Ever.
               </motion.p>
             </div>
           </section>
@@ -166,14 +166,16 @@ const Philosophy = () => {
                 </div>
                 <div className="space-y-4 text-muted-foreground leading-relaxed">
                   <p>
-                    Somewhere along the way, we all accepted that free communication platforms would spy on us. That our messages would be scanned for advertising keywords. That our social connections would be mapped, analyzed, and sold. That "free" meant we were the product.
+                    Somewhere along the way, we all accepted that free communication platforms would spy on us. That our
+                    messages would be scanned for advertising keywords. That our social connections would be mapped,
+                    analyzed, and sold. That "free" meant we were the product.
                   </p>
                   <p>
-                    The technology exists to build private communication platforms. The business models exist to sustain them without surveillance. The only reason Big Tech doesn't do it is because your data is worth more to them than your trust.
+                    The technology exists to build private communication platforms. The business models exist to sustain
+                    them without surveillance. The only reason Big Tech doesn't do it is because your data is worth more
+                    to them than your trust.
                   </p>
-                  <p>
-                    We made a different choice.
-                  </p>
+                  <p>We made a different choice.</p>
                 </div>
               </motion.div>
             </div>
@@ -194,7 +196,9 @@ const Philosophy = () => {
                   The Bottom Line
                 </h2>
                 <p className="text-muted-foreground max-w-lg mx-auto leading-relaxed">
-                  Kloak exists because we believe there should be a place where people can communicate without being the product. Where privacy isn't a premium feature. Where your conversations are truly your own. That's not idealism. It's just how things should be.
+                  Kloak exists because we believe there should be a place where people can communicate without being the
+                  product. Where privacy isn't a premium feature. Where your conversations are truly your own. That's
+                  not idealism. It's just how things should be.
                 </p>
               </motion.div>
             </div>
