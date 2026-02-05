@@ -398,7 +398,7 @@ const AppLayout = () => {
               <div className="flex-1 min-w-0">
                 <ChannelSettingsPage />
               </div>
-            ) : isServerSelectionOpen ? (
+            ) : isServerSelectionOpen && isDMView ? (
               <div className="flex-1 min-w-0">
                 <ServerSelectionPage />
               </div>
