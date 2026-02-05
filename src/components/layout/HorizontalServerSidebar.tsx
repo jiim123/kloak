@@ -520,7 +520,7 @@ export const HorizontalServerSidebar = () => {
             const server = tab.serverId ? serversById.get(tab.serverId) : null;
             if (!server) return null;
 
-            const isActive = currentServer?.id === server.id && !isServerSelectionOpen;
+            const isActive = currentServer?.id === server.id;
             const channelIds = serverChannels[server.id] || [];
             const { hasUnread, totalMentions } = getServerUnreadInfo(channelIds);
 
