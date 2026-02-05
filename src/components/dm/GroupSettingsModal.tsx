@@ -3,10 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Users, Settings, UserPlus, X, Crown, UserMinus } from "lucide-react";
+import { Search, Settings, X, Crown, UserMinus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFriendStore } from "@/stores/friendStore";
 import { useDMStore } from "@/stores/dmStore";
@@ -102,7 +101,6 @@ export const GroupSettingsModal = ({
       toast.success(`Added ${selectedFriends.length} member(s) to the group`);
       setSelectedFriends([]);
       fetchConversations(user.id);
-      onOpenChange(false);
     } else {
       toast.error("Failed to add members");
     }
@@ -129,12 +127,11 @@ export const GroupSettingsModal = ({
 
   const selectedFriendData = friends.filter((f) => selectedFriends.includes(f.id));
 
-  // Default to invite tab if not creator
-  const defaultTab = isCreator ? "name" : "invite";
+  const hasNameChanged = groupName.trim() !== (conversation.name || "");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Settings className="w-5 h-5" />
@@ -142,188 +139,171 @@ export const GroupSettingsModal = ({
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue={defaultTab} className="mt-2">
-          <TabsList className={cn("grid w-full", isCreator ? "grid-cols-2" : "grid-cols-1")}>
-            {isCreator && (
-              <TabsTrigger value="name" className="flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                Group Name
-              </TabsTrigger>
-            )}
-            <TabsTrigger value="invite" className="flex items-center gap-2">
-              <UserPlus className="w-4 h-4" />
-              {isCreator ? "Members" : "Invite Members"}
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Group Name Tab - Only for creator */}
-          {isCreator && (
-            <TabsContent value="name" className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label htmlFor="group-name">Group Name</Label>
-                <Input
-                  id="group-name"
-                  placeholder="Enter a group name (optional)"
-                  value={groupName}
-                  onChange={(e) => setGroupName(e.target.value)}
-                  maxLength={50}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Leave empty to use participant names as the group title.
-                </p>
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => onOpenChange(false)}>
-                  Cancel
+        <div className="space-y-5 mt-2">
+          {/* Group Name Section */}
+          <div className="space-y-2">
+            <Label htmlFor="group-name" className="flex items-center gap-2">
+              Group Name
+              {!isCreator && (
+                <span className="text-xs text-muted-foreground">(Only creator can edit)</span>
+              )}
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                id="group-name"
+                placeholder="Enter a group name (optional)"
+                value={groupName}
+                onChange={(e) => setGroupName(e.target.value)}
+                maxLength={50}
+                disabled={!isCreator}
+                className={cn(!isCreator && "opacity-60 cursor-not-allowed")}
+              />
+              {isCreator && hasNameChanged && (
+                <Button 
+                  onClick={handleSaveName} 
+                  disabled={isSaving}
+                  size="sm"
+                  className="shrink-0"
+                >
+                  {isSaving ? "Saving..." : "Save"}
                 </Button>
-                <Button onClick={handleSaveName} disabled={isSaving}>
-                  {isSaving ? "Saving..." : "Save Name"}
-                </Button>
-              </div>
-            </TabsContent>
-          )}
-
-          {/* Members/Invite Tab */}
-          <TabsContent value="invite" className="space-y-4 mt-4">
-            {/* Current Participants */}
-            <div className="space-y-2">
-              <Label>Current Members ({participants.length})</Label>
-              <div className="space-y-1 max-h-[120px] overflow-y-auto border border-border rounded-lg p-2">
-                {participants.map((participant) => {
-                  const isParticipantCreator = participant.id === conversation.created_by;
-                  const canKick = isCreator && !isParticipantCreator && participant.id !== user?.id;
-
-                  return (
-                    <div
-                      key={participant.id}
-                      className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-secondary/50 transition-colors"
-                    >
-                      <button
-                        onClick={() => handleAvatarClick(participant)}
-                        className="flex-shrink-0 hover:opacity-80 transition-opacity"
-                      >
-                        <AvatarWithDecoration user={participant} className="w-7 h-7" />
-                      </button>
-                      <button
-                        onClick={() => handleAvatarClick(participant)}
-                        className="flex-1 min-w-0 text-left hover:underline"
-                      >
-                        <span className="text-sm font-medium truncate block">
-                          {participant.display_name || participant.username}
-                        </span>
-                      </button>
-                      {isParticipantCreator && (
-                        <Crown className="w-4 h-4 text-yellow-500 flex-shrink-0" />
-                      )}
-                      {canKick && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 flex-shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => handleKickMember(participant.id)}
-                          disabled={kickingUserId === participant.id}
-                        >
-                          <UserMinus className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Selected Friends Pills */}
-            {selectedFriends.length > 0 && (
-              <div className="space-y-2">
-                <Label>Selected ({selectedFriends.length})</Label>
-                <div className="flex flex-wrap gap-2">
-                  {selectedFriendData.map((friend) => (
-                    <div
-                      key={friend.id}
-                      className="flex items-center gap-1.5 px-2 py-1 bg-primary/20 rounded-full text-sm"
-                    >
-                      <AvatarWithDecoration user={friend} className="w-5 h-5" />
-                      <span className="truncate max-w-[100px]">
-                        {friend.display_name || friend.username}
-                      </span>
-                      <button
-                        onClick={() => toggleFriend(friend.id)}
-                        className="p-0.5 hover:bg-primary/30 rounded-full transition-colors"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Search Friends */}
-            <div className="space-y-2">
-              <Label>Add Friends</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search friends..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-            </div>
-
-            {/* Friends List */}
-            <div className="max-h-[150px] overflow-y-auto space-y-1 border border-border rounded-lg p-2">
-              {availableFriends.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  {searchQuery ? "No friends found" : "All friends are already in this group"}
-                </p>
-              ) : (
-                availableFriends.map((friend) => (
-                  <label
-                    key={friend.id}
-                    className={cn(
-                      "flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors",
-                      selectedFriends.includes(friend.id)
-                        ? "bg-secondary"
-                        : "hover:bg-secondary/50"
-                    )}
-                  >
-                    <Checkbox
-                      checked={selectedFriends.includes(friend.id)}
-                      onCheckedChange={() => toggleFriend(friend.id)}
-                    />
-                    <AvatarWithDecoration user={friend} className="w-8 h-8" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {friend.display_name || friend.username}
-                      </p>
-                      {friend.display_name && (
-                        <p className="text-xs text-muted-foreground truncate">
-                          @{friend.username}
-                        </p>
-                      )}
-                    </div>
-                  </label>
-                ))
               )}
             </div>
+            <p className="text-xs text-muted-foreground">
+              Leave empty to use participant names as the group title.
+            </p>
+          </div>
 
-            {/* Actions */}
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
+          {/* Current Members Section */}
+          <div className="space-y-2">
+            <Label>Current Members ({participants.length})</Label>
+            <div className="space-y-1 max-h-[140px] overflow-y-auto border border-border rounded-lg p-2">
+              {participants.map((participant) => {
+                const isParticipantCreator = participant.id === conversation.created_by;
+                const canKick = isCreator && !isParticipantCreator && participant.id !== user?.id;
+
+                return (
+                  <button
+                    key={participant.id}
+                    onClick={() => handleAvatarClick(participant)}
+                    className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-secondary/50 transition-colors w-full text-left"
+                  >
+                    <AvatarWithDecoration user={participant} className="w-7 h-7 shrink-0" />
+                    <span className="flex-1 min-w-0 text-sm font-medium truncate hover:underline">
+                      {participant.display_name || participant.username}
+                    </span>
+                    {isParticipantCreator && (
+                      <Crown className="w-4 h-4 text-yellow-500 shrink-0" />
+                    )}
+                    {canKick && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleKickMember(participant.id);
+                        }}
+                        disabled={kickingUserId === participant.id}
+                      >
+                        <UserMinus className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Selected Friends Pills */}
+          {selectedFriends.length > 0 && (
+            <div className="space-y-2">
+              <Label>Selected ({selectedFriends.length})</Label>
+              <div className="flex flex-wrap gap-2">
+                {selectedFriendData.map((friend) => (
+                  <div
+                    key={friend.id}
+                    className="flex items-center gap-1.5 px-2 py-1 bg-primary/20 rounded-full text-sm"
+                  >
+                    <AvatarWithDecoration user={friend} className="w-5 h-5" />
+                    <span className="truncate max-w-[100px]">
+                      {friend.display_name || friend.username}
+                    </span>
+                    <button
+                      onClick={() => toggleFriend(friend.id)}
+                      className="p-0.5 hover:bg-primary/30 rounded-full transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Add Friends Section */}
+          <div className="space-y-2">
+            <Label>Add Friends</Label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search friends..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
+
+          {/* Friends List */}
+          <div className="max-h-[150px] overflow-y-auto space-y-1 border border-border rounded-lg p-2">
+            {availableFriends.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                {searchQuery ? "No friends found" : "All friends are already in this group"}
+              </p>
+            ) : (
+              availableFriends.map((friend) => (
+                <label
+                  key={friend.id}
+                  className={cn(
+                    "flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors",
+                    selectedFriends.includes(friend.id)
+                      ? "bg-secondary"
+                      : "hover:bg-secondary/50"
+                  )}
+                >
+                  <Checkbox
+                    checked={selectedFriends.includes(friend.id)}
+                    onCheckedChange={() => toggleFriend(friend.id)}
+                  />
+                  <AvatarWithDecoration user={friend} className="w-8 h-8" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {friend.display_name || friend.username}
+                    </p>
+                    {friend.display_name && (
+                      <p className="text-xs text-muted-foreground truncate">
+                        @{friend.username}
+                      </p>
+                    )}
+                  </div>
+                </label>
+              ))
+            )}
+          </div>
+
+          {/* Add Members Button */}
+          {selectedFriends.length > 0 && (
+            <div className="flex justify-end">
               <Button
                 onClick={handleAddMembers}
-                disabled={selectedFriends.length === 0 || isAddingMembers}
+                disabled={isAddingMembers}
               >
-                {isAddingMembers ? "Adding..." : `Add Members (${selectedFriends.length})`}
+                {isAddingMembers ? "Adding..." : `Add ${selectedFriends.length} Member${selectedFriends.length > 1 ? "s" : ""}`}
               </Button>
             </div>
-          </TabsContent>
-        </Tabs>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
