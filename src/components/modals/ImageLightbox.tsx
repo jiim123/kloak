@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, useDragControls, PanInfo } from 'framer-motion';
 import { X, Download, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
 interface ImageLightboxProps {
   imageUrl: string | null;
   imageUrls?: string[];
@@ -14,7 +15,13 @@ export const ImageLightbox = ({ imageUrl, imageUrls = [], onClose }: ImageLightb
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [currentIndex, setCurrentIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
+  
+  // Pinch-to-zoom state
+  const lastTouchDistance = useRef<number | null>(null);
+  const lastTouchCenter = useRef<{ x: number; y: number } | null>(null);
+  const isPinching = useRef(false);
 
   // Build array of images - use imageUrls if provided, otherwise just the single imageUrl
   const allImages = imageUrls.length > 0 ? imageUrls : imageUrl ? [imageUrl] : [];
@@ -31,6 +38,96 @@ export const ImageLightbox = ({ imageUrl, imageUrls = [], onClose }: ImageLightb
       setCurrentIndex(index >= 0 ? index : 0);
     }
   }, [imageUrl]);
+
+  // Handle scroll-to-zoom
+  const handleWheel = useCallback((e: WheelEvent) => {
+    e.preventDefault();
+    
+    const delta = e.deltaY > 0 ? -0.15 : 0.15;
+    setScale(prev => {
+      const newScale = Math.min(Math.max(prev + delta, 0.5), 5);
+      // Reset position if zooming back to 1
+      if (newScale === 1) {
+        setPosition({ x: 0, y: 0 });
+      }
+      return newScale;
+    });
+  }, []);
+
+  // Handle pinch-to-zoom touch events
+  const getTouchDistance = useCallback((touches: TouchList) => {
+    if (touches.length < 2) return null;
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }, []);
+
+  const getTouchCenter = useCallback((touches: TouchList) => {
+    if (touches.length < 2) return null;
+    return {
+      x: (touches[0].clientX + touches[1].clientX) / 2,
+      y: (touches[0].clientY + touches[1].clientY) / 2,
+    };
+  }, []);
+
+  const handleTouchStart = useCallback((e: TouchEvent) => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      isPinching.current = true;
+      lastTouchDistance.current = getTouchDistance(e.touches);
+      lastTouchCenter.current = getTouchCenter(e.touches);
+    }
+  }, [getTouchDistance, getTouchCenter]);
+
+  const handleTouchMove = useCallback((e: TouchEvent) => {
+    if (e.touches.length === 2 && isPinching.current) {
+      e.preventDefault();
+      
+      const newDistance = getTouchDistance(e.touches);
+      const newCenter = getTouchCenter(e.touches);
+      
+      if (newDistance && lastTouchDistance.current && newCenter) {
+        // Calculate scale change
+        const scaleDelta = (newDistance - lastTouchDistance.current) * 0.01;
+        setScale(prev => {
+          const newScale = Math.min(Math.max(prev + scaleDelta, 0.5), 5);
+          if (newScale === 1) {
+            setPosition({ x: 0, y: 0 });
+          }
+          return newScale;
+        });
+        
+        lastTouchDistance.current = newDistance;
+        lastTouchCenter.current = newCenter;
+      }
+    }
+  }, [getTouchDistance, getTouchCenter]);
+
+  const handleTouchEnd = useCallback((e: TouchEvent) => {
+    if (e.touches.length < 2) {
+      isPinching.current = false;
+      lastTouchDistance.current = null;
+      lastTouchCenter.current = null;
+    }
+  }, []);
+
+  // Set up wheel and touch event listeners
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !imageUrl) return;
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    container.addEventListener('touchstart', handleTouchStart, { passive: false });
+    container.addEventListener('touchmove', handleTouchMove, { passive: false });
+    container.addEventListener('touchend', handleTouchEnd);
+
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [imageUrl, handleWheel, handleTouchStart, handleTouchMove, handleTouchEnd]);
 
   // Handle escape key and arrow navigation
   useEffect(() => {
@@ -183,6 +280,22 @@ export const ImageLightbox = ({ imageUrl, imageUrls = [], onClose }: ImageLightb
     setPosition({ x: 0, y: 0 });
   }, [hasMultipleImages, allImages.length]);
 
+  // Double-tap to zoom
+  const lastTap = useRef<number>(0);
+  const handleDoubleTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    const now = Date.now();
+    if (now - lastTap.current < 300) {
+      // Double tap detected
+      if (scale === 1) {
+        setScale(2);
+      } else {
+        setScale(1);
+        setPosition({ x: 0, y: 0 });
+      }
+    }
+    lastTap.current = now;
+  }, [scale]);
+
   const lightboxContent = (
     <AnimatePresence>
       {imageUrl && currentImage && (
@@ -252,6 +365,7 @@ export const ImageLightbox = ({ imageUrl, imageUrls = [], onClose }: ImageLightb
 
           {/* Main image container */}
           <motion.div
+            ref={imageRef}
             className="flex-1 flex items-center justify-center w-full overflow-hidden select-none touch-none"
             onContextMenu={handleContextMenu}
             onClick={handleImageContainerClick}
@@ -259,16 +373,17 @@ export const ImageLightbox = ({ imageUrl, imageUrls = [], onClose }: ImageLightb
             <motion.img
               src={currentImage}
               alt="Full size image"
-              className="max-w-[95vw] max-h-[85vh] object-contain rounded-lg shadow-2xl select-none pointer-events-auto"
+              className="max-w-[95vw] max-h-[85vh] object-contain rounded-lg shadow-2xl select-none pointer-events-auto cursor-zoom-in"
               style={{ 
                 scale,
                 x: position.x,
                 y: position.y,
+                cursor: scale > 1 ? 'grab' : 'zoom-in',
               }}
-              drag={scale === 1}
+              drag={scale > 1 || scale === 1}
               dragControls={dragControls}
               dragElastic={0.2}
-              dragConstraints={{ top: 0, bottom: 0, left: 0, right: 0 }}
+              dragConstraints={scale > 1 ? { top: -500, bottom: 500, left: -500, right: 500 } : { top: 0, bottom: 0, left: 0, right: 0 }}
               onDragEnd={handleDragEnd}
               draggable={false}
               onContextMenu={handleContextMenu}
@@ -277,8 +392,9 @@ export const ImageLightbox = ({ imageUrl, imageUrls = [], onClose }: ImageLightb
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ duration: 0.2 }}
               whileTap={{ cursor: 'grabbing' }}
+              onClick={handleDoubleTap}
               onPanEnd={(e, info) => {
-                if (scale === 1 && hasMultipleImages) {
+                if (scale === 1 && hasMultipleImages && !isPinching.current) {
                   if (info.offset.x < -100) {
                     handleSwipe('left');
                   } else if (info.offset.x > 100) {
