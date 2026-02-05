@@ -15,6 +15,8 @@ import { useRealtimePinnedMessages } from "@/hooks/useRealtimePinnedMessages";
 import { useSwipeGestureRef } from "@/hooks/useSwipeGesture";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MessageSquare, Hash, ImageIcon, Pin } from "lucide-react";
+import { parseTextContent } from "@/components/chat/MessageContent";
+import { fetchServerEmojis } from "@/lib/serverEmojis";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
@@ -25,7 +27,7 @@ const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp
 const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1MB
 
 export const ChatArea = () => {
-  const { currentChannel } = useServerStore();
+  const { currentChannel, currentServer } = useServerStore();
   const { user } = useAuthStore();
   const { sendMessage, replyingTo, setReplyingTo } = useMessageStore();
   const { setMobileSidebarOpen, setMemberSidebarOpen, openModal } = useUIStore();
@@ -36,6 +38,33 @@ export const ChatArea = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const isProcessingPasteRef = useRef(false);
+  const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
+
+  // Load custom emoji map for pinned message rendering
+  useEffect(() => {
+    const serverId = currentServer?.id;
+    if (!serverId) {
+      setCustomEmojiMap(new Map());
+      return;
+    }
+
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const emojis = await fetchServerEmojis(serverId);
+        if (cancelled) return;
+        const map = new Map<string, string>();
+        emojis.forEach((e) => map.set(e.name, e.url));
+        setCustomEmojiMap(map);
+      } catch (e) {
+        console.error('Failed to load server emojis for pinned message:', e);
+        if (!cancelled) setCustomEmojiMap(new Map());
+      }
+    };
+
+    load();
+    return () => { cancelled = true; };
+  }, [currentServer?.id]);
 
   // Swipe gestures for mobile
   const swipeRef = useSwipeGestureRef({
@@ -254,11 +283,16 @@ export const ChatArea = () => {
       {/* Pinned message bar - most recent pin in one line with See All Pins */}
       {pinnedMessages.length > 0 && (() => {
         const latest = pinnedMessages[0];
-        const snippet = (latest.content || "")
-          .replace(/<[^>]+>/g, " ")
-          .replace(/\s+/g, " ")
-          .trim()
-          .slice(0, 60);
+       // Parse content with custom emojis but strip formatting for snippet
+       const rawContent = (latest.content || "")
+         .replace(/```[\s\S]*?```/g, "[code]") // Replace code blocks
+         .replace(/`[^`]+`/g, "[code]") // Replace inline code
+         .replace(/\n/g, " ") // Replace newlines with spaces
+         .trim();
+       // Truncate before parsing to avoid processing huge messages
+       const truncatedContent = rawContent.slice(0, 100);
+       // Parse with custom emojis to render :emoji: as images
+       const parsedSnippet = parseTextContent(truncatedContent, user?.id, undefined, customEmojiMap);
         const hasAttachments = (latest.attachments?.length ?? 0) > 0;
         const isNew = latest.created_at && (Date.now() - new Date(latest.created_at).getTime() < 24 * 60 * 60 * 1000);
         return (
@@ -273,14 +307,17 @@ export const ChatArea = () => {
             {isNew && (
               <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-primary/20 text-primary flex-shrink-0">new</span>
             )}
-            <span className="text-sm text-muted-foreground truncate min-w-0 flex-1">
-              {snippet || "Pinned message"}
-              {hasAttachments && (
-                <span className="text-muted-foreground/80 ml-1">
-                  {latest.attachments!.length === 1 ? "1 attachment" : `${latest.attachments!.length} attachments`}
-                </span>
-              )}
-            </span>
+           <span 
+             className="text-sm text-muted-foreground truncate min-w-0 flex-1 inline-flex items-center gap-1 [&_img]:w-4 [&_img]:h-4 [&_img]:inline-block [&_img]:align-middle"
+             dangerouslySetInnerHTML={{ 
+               __html: parsedSnippet || "Pinned message" 
+             }}
+           />
+           {hasAttachments && (
+             <span className="text-sm text-muted-foreground/80 flex-shrink-0">
+               {latest.attachments!.length === 1 ? "1 attachment" : `${latest.attachments!.length} attachments`}
+             </span>
+           )}
             <Button
               variant="secondary"
               size="sm"

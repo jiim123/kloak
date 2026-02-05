@@ -25,6 +25,7 @@ export interface User {
   custom_status: string | null;
   created_at: string;
   last_seen: string | null;
+  pronouns?: string | null;
 }
 
 export interface UserProfile extends User {

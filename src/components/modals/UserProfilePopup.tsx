@@ -499,9 +499,16 @@ export const UserProfilePopup = () => {
 
                     {/* Name and username - shown next to avatar on larger screens */}
                     <div className="hidden sm:block flex-1 min-w-0 pb-1 pt-2">
-                      <h2 className="text-xl font-semibold tracking-tight truncate">
-                        {profileUser.display_name || profileUser.username}
-                      </h2>
+                     <div className="flex items-center gap-2 flex-wrap">
+                       <h2 className="text-xl font-semibold tracking-tight truncate">
+                         {profileUser.display_name || profileUser.username}
+                       </h2>
+                       {profileUser.pronouns && (
+                         <span className="text-sm text-[color:var(--profile-muted)] font-normal">
+                           • {profileUser.pronouns}
+                         </span>
+                       )}
+                     </div>
                       <p className="text-sm font-medium text-[color:var(--profile-muted)] truncate">
                         @{profileUser.username}
                       </p>
@@ -510,9 +517,16 @@ export const UserProfilePopup = () => {
 
                   {/* Name and username - shown below avatar on mobile */}
                   <div className="sm:hidden mb-4 relative" style={{ zIndex: 10 }}>
-                    <h2 className="text-xl font-semibold tracking-tight">
-                      {profileUser.display_name || profileUser.username}
-                    </h2>
+                   <div className="flex items-center gap-2 flex-wrap">
+                     <h2 className="text-xl font-semibold tracking-tight">
+                       {profileUser.display_name || profileUser.username}
+                     </h2>
+                     {profileUser.pronouns && (
+                       <span className="text-sm text-[color:var(--profile-muted)] font-normal">
+                         • {profileUser.pronouns}
+                       </span>
+                     )}
+                   </div>
                     <p className="text-sm font-medium text-[color:var(--profile-muted)]">@{profileUser.username}</p>
                   </div>
 

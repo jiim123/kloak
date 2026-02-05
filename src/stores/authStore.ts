@@ -132,6 +132,7 @@ export const useAuthStore = create<AuthState>()(
             custom_status: userData.custom_status as string | null,
             created_at: userData.created_at as string,
             last_seen: userData.last_seen as string | null,
+           pronouns: (userData.pronouns as string | null) ?? null,
           };
 
           // New account starts with no manual status override.
@@ -190,6 +191,7 @@ export const useAuthStore = create<AuthState>()(
             custom_status: userData.custom_status as string | null,
             created_at: userData.created_at as string,
             last_seen: new Date().toISOString(),
+           pronouns: (userData.pronouns as string | null) ?? null,
           };
 
           set({ user, secretKey, isAuthenticated: true, isLoading: false });
@@ -246,6 +248,7 @@ export const useAuthStore = create<AuthState>()(
                 profile_theme_primary: (userData.profile_theme_primary as string | null) ?? user.profile_theme_primary,
                 profile_theme_accent: (userData.profile_theme_accent as string | null) ?? user.profile_theme_accent,
                 custom_status: userData.custom_status as string | null,
+             pronouns: (userData.pronouns as string | null) ?? user.pronouns,
               } 
             });
           } else {

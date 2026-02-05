@@ -127,6 +127,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   // Profile form state
   const [displayName, setDisplayName] = useState(user?.display_name || "");
   const [bio, setBio] = useState(user?.bio || "");
+ const [pronouns, setPronouns] = useState(user?.pronouns || "");
   const [profileThemePrimary, setProfileThemePrimary] = useState<string | null>(user?.profile_theme_primary ?? null);
   const [profileThemeAccent, setProfileThemeAccent] = useState<string | null>(user?.profile_theme_accent ?? null);
   const [localAvatarUrl, setLocalAvatarUrl] = useState<string | null>(user?.avatar_url ?? null);
@@ -167,6 +168,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       await updateUser({
         display_name: displayName.trim() || null,
         bio: bio.trim() || null,
+       pronouns: pronouns.trim() || null,
         profile_theme_primary: profileThemePrimary,
         profile_theme_accent: profileThemeAccent,
       });
@@ -781,6 +783,19 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
             className="rounded-xl resize-none"
           />
         </div>
+
+       {/* Pronouns */}
+       <div className="space-y-3">
+         <Label htmlFor="pronouns" className="text-sm font-medium">Pronouns</Label>
+         <Input
+           id="pronouns"
+           value={pronouns}
+           onChange={(e) => setPronouns(e.target.value)}
+           placeholder="e.g. they/them, she/her, he/him"
+           maxLength={25}
+           className="h-12 rounded-xl"
+         />
+       </div>
 
         {/* Avatar Decoration */}
         <div className="space-y-3">

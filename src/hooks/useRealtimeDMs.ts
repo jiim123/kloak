@@ -76,6 +76,7 @@ export const useRealtimeDMs = ({
           custom_status: data.sender.custom_status,
           created_at: data.sender.created_at,
           last_seen: data.sender.last_seen,
+         pronouns: (data.sender as any).pronouns ?? null,
         } : undefined,
         attachments: [],
         reactions: groupReactions(data.reactions || [], userId || undefined),
