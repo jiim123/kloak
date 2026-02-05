@@ -398,6 +398,10 @@ const AppLayout = () => {
               <div className="flex-1 min-w-0">
                 <ChannelSettingsPage />
               </div>
+            ) : isServerSelectionOpen ? (
+              <div className="flex-1 min-w-0">
+                <ServerSelectionPage />
+              </div>
             ) : (
               <ResizablePanelGroup direction="horizontal" className="flex-1">
                 {/* Secondary sidebar - resizable, default 380px (~20% of typical 1920px viewport) */}
@@ -427,10 +431,7 @@ const AppLayout = () => {
                 <ResizablePanel defaultSize={isMemberSidebarOpen && !isDMView && !isServerSpecialView ? 70 : 85}>
                   <div className="h-full bg-layout-chat relative overflow-hidden">
                     <VoicePersistentHost />
-                    {/* Server Selection Page - show when open */}
-                    {isServerSelectionOpen ? (
-                      <ServerSelectionPage />
-                    ) : isDMView ? (
+                    {isDMView ? (
                       currentConversation ? (
                         <DMChatArea />
                       ) : (
