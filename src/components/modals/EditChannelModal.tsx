@@ -219,14 +219,19 @@ export const EditChannelModal = () => {
     description,
     checked,
     onCheckedChange,
+    disabled,
   }: {
     icon: React.ElementType;
     label: string;
     description: string;
     checked: boolean;
     onCheckedChange: (checked: boolean) => void;
+    disabled?: boolean;
   }) => (
-    <div className="flex items-center gap-4 p-4 rounded-xl bg-secondary/30 border border-border/50">
+    <div className={cn(
+      "flex items-center gap-4 p-4 rounded-xl bg-secondary/30 border border-border/50",
+      disabled && "opacity-60"
+    )}>
       <div className="w-10 h-10 rounded-xl bg-secondary/80 flex items-center justify-center flex-shrink-0">
         <Icon className="w-5 h-5 text-muted-foreground" />
       </div>
@@ -234,7 +239,7 @@ export const EditChannelModal = () => {
         <p className="text-sm font-medium">{label}</p>
         <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
       </div>
-      <Switch checked={checked} onCheckedChange={onCheckedChange} />
+      <Switch checked={checked} onCheckedChange={onCheckedChange} disabled={disabled} />
     </div>
   );
 
@@ -333,9 +338,10 @@ export const EditChannelModal = () => {
         <ToggleCard
           icon={Eye}
           label="Ghost Mode"
-          description="Hide usernames and avatars (admins/owners still visible)"
+          description={channel?.ghost_mode ? "Ghost Mode is permanent and cannot be disabled" : "Hide usernames and avatars (admins/owners still visible)"}
           checked={ghostMode}
           onCheckedChange={setGhostMode}
+          disabled={channel?.ghost_mode}
         />
       </div>
 
