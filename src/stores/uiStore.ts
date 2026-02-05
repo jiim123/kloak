@@ -50,7 +50,6 @@ interface UIState {
   isMemberSidebarOpen: boolean;
   isSettingsOpen: boolean;
   isServerSettingsOpen: boolean;
-  isServerSelectionOpen: boolean;
   activeModal: ModalType;
   modalData: ModalData | null;
   linkPreviewsEnabled: boolean;
@@ -95,10 +94,6 @@ interface UIState {
   openServerSettingsPage: () => void;
   closeServerSettings: () => void;
 
-  // Server selection page actions
-  openServerSelection: () => void;
-  closeServerSelection: () => void;
-
   // Link preview actions
   setLinkPreviewsEnabled: (enabled: boolean) => void;
   dismissLinkPreviewNotice: () => void;
@@ -134,7 +129,6 @@ export const useUIStore = create<UIState>()(
       isMemberSidebarOpen: true,
       isSettingsOpen: false,
       isServerSettingsOpen: false,
-      isServerSelectionOpen: false,
       activeModal: null,
       modalData: null,
       linkPreviewsEnabled: true,
@@ -231,14 +225,6 @@ export const useUIStore = create<UIState>()(
 
       closeServerSettings: () => {
         set({ isServerSettingsOpen: false, activeModal: null });
-      },
-
-      openServerSelection: () => {
-        set({ isServerSelectionOpen: true, isServerSettingsOpen: false, isSettingsOpen: false, activeModal: null });
-      },
-
-      closeServerSelection: () => {
-        set({ isServerSelectionOpen: false });
       },
 
       setLinkPreviewsEnabled: (enabled) => {

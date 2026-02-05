@@ -8,7 +8,6 @@ import { ServerSidebar } from '@/components/layout/ServerSidebar';
 import { HorizontalServerSidebar } from '@/components/layout/HorizontalServerSidebar';
 import { HomeLanding } from '@/components/home/HomeLanding';
 import { ExploreServers } from '@/components/home/ExploreServers';
-import { ServerSelectionPage } from '@/components/home/ServerSelectionPage';
 import { ChannelSidebar } from '@/components/layout/ChannelSidebar';
 import { ChatArea } from '@/components/layout/ChatArea';
 import { MembersSidebar } from '@/components/layout/MembersSidebar';
@@ -63,7 +62,7 @@ const AppLayout = () => {
   const params = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, isLoading } = useAuthStore();
-  const { isMemberSidebarOpen, isServerSettingsOpen, isServerSelectionOpen, closeMobileSidebars, activeModal } = useUIStore();
+  const { isMemberSidebarOpen, isServerSettingsOpen, closeMobileSidebars, activeModal } = useUIStore();
   const { 
     currentServer, 
     currentChannel, 
@@ -397,10 +396,6 @@ const AppLayout = () => {
             ) : activeModal === 'edit-channel' ? (
               <div className="flex-1 min-w-0">
                 <ChannelSettingsPage />
-              </div>
-            ) : isServerSelectionOpen && isDMView ? (
-              <div className="flex-1 min-w-0">
-                <ServerSelectionPage />
               </div>
             ) : (
               <ResizablePanelGroup direction="horizontal" className="flex-1">
