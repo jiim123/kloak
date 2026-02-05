@@ -241,8 +241,8 @@ export const parseTextContent = (
         return escapeHtml(url); // Don't linkify unsafe URLs
       }
       if (isImageUrl(url)) {
-        // Render image inline where it appears - constrained width for all screens
-        return `<img src="${escapeHtml(url)}" alt="Image" class="block w-full max-w-[320px] sm:max-w-[400px] max-h-80 rounded-lg my-2 cursor-pointer hover:opacity-90 object-contain" loading="lazy" data-image-url="${escapeHtml(url)}" />`;
+        // Render image inline where it appears - constrained width for all screens, left-aligned
+        return `<img src="${escapeHtml(url)}" alt="Image" class="block mr-auto max-w-[320px] sm:max-w-[400px] max-h-80 rounded-lg my-2 cursor-pointer hover:opacity-90 object-contain" loading="lazy" data-image-url="${escapeHtml(url)}" />`;
       }
       return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="message-link">${escapeHtml(url)}</a>`;
     }
