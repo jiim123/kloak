@@ -39,6 +39,7 @@ interface ServerState {
   ) => Promise<void>;
   joinServer: (inviteCode: string, userId: string, joinSource?: 'discover' | 'invite_link') => Promise<Server | null>;
   leaveServer: (serverId: string, userId: string) => Promise<void>;
+  toggleServerMute: (serverId: string, userId: string) => Promise<void>;
   deleteServer: (serverId: string) => Promise<void>;
   setCurrentServer: (server: Server | null) => void;
   setCurrentChannel: (channel: Channel | null) => void;
@@ -141,6 +142,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         role: ServerRole;
         nickname: string | null;
         joined_at: string;
+        is_muted?: boolean;
       }>;
 
       const servers: ServerWithMembership[] = serverData.map((item) => ({
@@ -160,6 +162,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
           role: item.role,
           nickname: item.nickname,
           joined_at: item.joined_at,
+          is_muted: item.is_muted ?? false,
         }));
 
       const { currentServer } = get();
@@ -438,6 +441,35 @@ export const useServerStore = create<ServerState>((set, get) => ({
     } catch (error) {
       console.error('Failed to leave server:', error);
       set({ error: 'Failed to leave server' });
+    }
+  },
+
+  toggleServerMute: async (serverId: string, userId: string) => {
+    try {
+      // Get current mute state from servers list
+      const { servers } = get();
+      const server = servers.find(s => s.id === serverId);
+      if (!server) return;
+
+      const newMuteState = !server.is_muted;
+
+      // Update in database
+      const { error } = await supabase
+        .from('server_members')
+        .update({ is_muted: newMuteState })
+        .eq('server_id', serverId)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      // Update local state
+      set((state) => ({
+        servers: state.servers.map((s) =>
+          s.id === serverId ? { ...s, is_muted: newMuteState } : s
+        ),
+      }));
+    } catch (error) {
+      console.error('Failed to toggle server mute:', error);
     }
   },
 
