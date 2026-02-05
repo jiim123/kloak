@@ -244,6 +244,17 @@ export const useUnread = (serverChannelIds: string[] = []) => {
     [unreadState]
   );
 
+  // Mark all channels in a server as read
+  const markServerAsRead = useCallback(
+    async (channelIds: string[]) => {
+      if (!user || channelIds.length === 0) return;
+      
+      // Mark all channels in parallel
+      await Promise.all(channelIds.map(channelId => markAsRead(channelId)));
+    },
+    [user, markAsRead]
+  );
+
   // Fetch on mount and when channel IDs change
   useEffect(() => {
     fetchUnreadCounts();
@@ -346,5 +357,6 @@ export const useUnread = (serverChannelIds: string[] = []) => {
     getTotalMentions,
     getServerUnreadInfo,
     refetch: fetchUnreadCounts,
+    markServerAsRead,
   };
 };
