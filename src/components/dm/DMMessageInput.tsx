@@ -1,5 +1,12 @@
 import { useState, useEffect, useRef, useCallback, memo } from 'react';
-import { Paperclip, Smile, Send, X, Type, Loader2 } from 'lucide-react';
+import { Paperclip, Smile, Send, X, Type, Loader2, MoreHorizontal } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useAuthStore } from '@/stores/authStore';
 import { useDMStore } from '@/stores/dmStore';
 import { saveDraft, getDraft, clearDraft } from '@/lib/storage';
@@ -32,6 +39,8 @@ const ActionButtons = memo(({
   isSending,
   onSubmit,
   onEmojiSelect,
+  showAttachButton,
+  onAttachClick,
 }: {
   showFormatToolbar: boolean;
   setShowFormatToolbar: (show: boolean) => void;
@@ -41,8 +50,12 @@ const ActionButtons = memo(({
   isSending: boolean;
   onSubmit: () => void;
   onEmojiSelect: (emoji: string) => void;
+  showAttachButton?: boolean;
+  onAttachClick?: () => void;
 }) => {
   const showCharacterWarning = content.length > MAX_LENGTH - 200;
+  const isMobile = useIsMobile();
+  const shouldCollapse = isMobile && content.length > 10;
 
   return (
     <div className="flex items-center gap-1 mb-0.5 relative">
@@ -53,36 +66,83 @@ const ActionButtons = memo(({
         </span>
       )}
 
-      {/* Format button */}
-      <button
-        type="button"
-        onClick={() => setShowFormatToolbar(!showFormatToolbar)}
-        className={cn(
-          'p-2 rounded-xl transition-colors duration-150',
-          showFormatToolbar 
-            ? 'text-primary bg-primary/10' 
-            : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-        )}
-        onMouseDown={(e) => e.preventDefault()}
-        title="Format text"
-      >
-        <Type className="w-5 h-5" />
-      </button>
+      {/* Collapsed mobile menu when typing */}
+      {shouldCollapse ? (
+        <>
+          {/* Collapsed actions dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-150"
+                onMouseDown={(e) => e.preventDefault()}
+              >
+                <MoreHorizontal className="w-5 h-5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[160px]">
+              {showAttachButton && (
+                <DropdownMenuItem onClick={onAttachClick}>
+                  <Paperclip className="w-4 h-4 mr-2" />
+                  Upload image
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={() => setShowFormatToolbar(!showFormatToolbar)}>
+                <Type className="w-4 h-4 mr-2" />
+                Format text
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-      {/* Emoji button */}
-      <EmojiPicker
-        open={showEmojiPicker}
-        onOpenChange={setShowEmojiPicker}
-        onEmojiSelect={onEmojiSelect}
-      >
-        <button 
-          type="button"
-          className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-150"
-          onMouseDown={(e) => e.preventDefault()}
-        >
-          <Smile className="w-5 h-5" />
-        </button>
-      </EmojiPicker>
+          {/* Emoji button - always visible */}
+          <EmojiPicker
+            open={showEmojiPicker}
+            onOpenChange={setShowEmojiPicker}
+            onEmojiSelect={onEmojiSelect}
+          >
+            <button
+              type="button"
+              className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-150"
+              onMouseDown={(e) => e.preventDefault()}
+            >
+              <Smile className="w-5 h-5" />
+            </button>
+          </EmojiPicker>
+        </>
+      ) : (
+        <>
+          {/* Format button */}
+          <button
+            type="button"
+            onClick={() => setShowFormatToolbar(!showFormatToolbar)}
+            className={cn(
+              'p-2 rounded-xl transition-colors duration-150',
+              showFormatToolbar 
+                ? 'text-primary bg-primary/10' 
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+            )}
+            onMouseDown={(e) => e.preventDefault()}
+            title="Format text"
+          >
+            <Type className="w-5 h-5" />
+          </button>
+
+          {/* Emoji button */}
+          <EmojiPicker
+            open={showEmojiPicker}
+            onOpenChange={setShowEmojiPicker}
+            onEmojiSelect={onEmojiSelect}
+          >
+            <button 
+              type="button"
+              className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-150"
+              onMouseDown={(e) => e.preventDefault()}
+            >
+              <Smile className="w-5 h-5" />
+            </button>
+          </EmojiPicker>
+        </>
+      )}
 
       {/* Send button */}
       <button
@@ -110,6 +170,7 @@ export const DMMessageInput = ({
 }: DMMessageInputProps) => {
   const { user } = useAuthStore();
   const { sendMessage } = useDMStore();
+  const isMobile = useIsMobile();
   
   const [content, setContent] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -388,21 +449,31 @@ export const DMMessageInput = ({
 
     showSuccess('Image uploaded successfully');
   };
+  const shouldCollapse = isMobile && content.length > 10;
 
   return (
-    <div className="px-4 pb-6 relative">
+    <div className="px-4 pb-4 sm:pb-6 relative">
+      {/* Format toolbar - inline above input */}
+      {showFormatToolbar && (
+        <FormatToolbar 
+          onFormat={handleFormat} 
+          onClose={() => setShowFormatToolbar(false)} 
+          onImageClick={() => setShowImageUpload(true)}
+        />
+      )}
+
       {/* Reply preview */}
       {replyingTo && (
-        <div className="flex items-center gap-2 px-4 py-2 bg-secondary rounded-t-2xl border-b border-border">
-          <span className="text-sm text-muted-foreground font-[Inter,system-ui,sans-serif]">
+        <div className={`flex items-center gap-2 px-3 sm:px-4 py-2 bg-muted/40 border-b border-border/50 font-[Inter,system-ui,sans-serif] ${!showFormatToolbar ? 'rounded-t-2xl' : ''}`}>
+          <span className="text-[12px] sm:text-[13px] leading-[1.5] text-muted-foreground">
             Replying to <span className="font-medium text-primary">@{replyingTo.sender?.username}</span>
           </span>
-          <span className="text-sm text-muted-foreground truncate flex-1">
+          <span className="text-[12px] sm:text-[13px] leading-[1.5] text-muted-foreground truncate flex-1 hidden sm:inline">
             {replyingTo.content.slice(0, 50)}{replyingTo.content.length > 50 ? '...' : ''}
           </span>
           <button 
             onClick={onCancelReply}
-            className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
+            className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-150 ml-auto"
           >
             <X className="w-4 h-4" />
           </button>
@@ -411,31 +482,23 @@ export const DMMessageInput = ({
 
       {/* Floating input container */}
       <div 
-        className={cn(
-          'rounded-2xl bg-secondary border transition-all duration-200 ease-out',
-          isFocused ? 'border-border -translate-y-[3px] shadow-lg' : 'border-transparent translate-y-0',
-          replyingTo ? 'rounded-t-none' : ''
-        )}
+        className={`
+          rounded-2xl bg-card/80 border transition-all duration-200 ease-out
+          ${isFocused ? 'border-primary/30 shadow-lg shadow-primary/5 bg-card' : 'border-border/50 hover:border-border'}
+          ${replyingTo ? 'rounded-t-none' : ''}
+        `}
       >
-        {/* Format toolbar */}
-        {showFormatToolbar && (
-          <div className="px-3 pt-2">
-            <FormatToolbar 
-              onFormat={handleFormat} 
-              onClose={() => setShowFormatToolbar(false)} 
-            />
-          </div>
-        )}
-
-        <div className="flex items-end gap-2 p-3">
+        <div className="flex items-end gap-1 sm:gap-2 p-2 sm:p-3">
           {/* Attachment button */}
-          <button 
-            onClick={() => setShowImageUpload(true)}
-            className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-150 mb-0.5"
-            title="Upload image"
-          >
-            <Paperclip className="w-5 h-5" />
-          </button>
+          {!shouldCollapse && (
+            <button 
+              onClick={() => setShowImageUpload(true)}
+              className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-150 mb-0.5 flex-shrink-0"
+              title="Upload image"
+            >
+              <Paperclip className="w-5 h-5" />
+            </button>
+          )}
 
           {/* Textarea */}
           <textarea
@@ -447,8 +510,14 @@ export const DMMessageInput = ({
             onKeyDown={handleKeyDown}
             placeholder={`Message @${otherUsername}`}
             rows={1}
-            className="flex-1 bg-transparent resize-none outline-none text-foreground placeholder:text-muted-foreground text-[15px] leading-relaxed py-2 px-1 font-[Inter,system-ui,sans-serif]"
-            style={{ fontFamily: "Inter, system-ui, -apple-system, sans-serif, 'Noto Color Emoji'" }}
+            className="flex-1 bg-transparent resize-none outline-none text-foreground placeholder:text-muted-foreground/60 py-2 px-1 min-w-0 min-h-[40px] overflow-y-auto font-[Inter,system-ui,sans-serif]"
+            style={{
+              // Prevent iOS zoom on focus by using 16px minimum
+              fontSize: isMobile ? '16px' : '15px',
+              lineHeight: '1.5',
+              fontWeight: 400,
+              maxHeight: '160px',
+            }}
           />
 
           {/* Action buttons */}
@@ -461,6 +530,8 @@ export const DMMessageInput = ({
             isSending={isSending}
             onSubmit={handleSubmit}
             onEmojiSelect={handleEmojiSelect}
+            showAttachButton={shouldCollapse}
+            onAttachClick={() => setShowImageUpload(true)}
           />
         </div>
       </div>
