@@ -28,7 +28,7 @@ const manifestPoints = [
     icon: Coins,
     title: "You pay us. We work for you.",
     content:
-      "When advertisers pay, the platform optimizes for advertiser interests. Engagement, addiction, surveillance, manipulation. Your attention becomes the product being sold. When you pay directly, we work for you. Our incentive is to make Kloak good enough that you keep paying. Not to make it addictive enough that advertisers keep paying. We succeed when you're satisfied, not when you're manipulated.",
+      "When advertisers pay, the platform optimizes for advertiser interests: engagement, addiction, surveillance, manipulation. Your attention becomes the product being sold. Kloak is free to use, but some features may require payment. When you pay directly, we work for you. Our incentive is to make Kloak valuable enough that you choose to support it. We succeed when you're satisfied, not when you're manipulated.",
   },
   {
     icon: Heart,
