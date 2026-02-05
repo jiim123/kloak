@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, forwardRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Folder, Plus, Settings, Home, ChevronDown, ChevronRight, Trash2, Edit2, Palette, LogOut, CheckCheck } from "lucide-react";
+import { Folder, Plus, Settings, Home, ChevronDown, ChevronRight, Trash2, Edit2, Palette, LogOut, CheckCheck, BellOff, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { MotionButton, MotionDiv } from "@/components/ui/motion-elements";
@@ -270,6 +270,7 @@ const DraggableServerItem = forwardRef<
     onLeaveServer?: (serverId: string) => void;
     onOpenSettings?: () => void;
     onMarkAsRead?: () => void;
+    onToggleMute?: () => void;
   }
 >(
   (
@@ -290,6 +291,7 @@ const DraggableServerItem = forwardRef<
       onLeaveServer,
       onOpenSettings,
       onMarkAsRead,
+      onToggleMute,
     },
     ref,
   ) => {
@@ -401,6 +403,24 @@ const DraggableServerItem = forwardRef<
             <CheckCheck className="w-4 h-4 mr-2" />
             Mark as Read
           </ContextMenuItem>
+          <ContextMenuItem
+            onSelect={(e) => {
+              e.preventDefault();
+              onToggleMute?.();
+            }}
+          >
+            {server.is_muted ? (
+              <>
+                <Bell className="w-4 h-4 mr-2" />
+                Unmute Server
+              </>
+            ) : (
+              <>
+                <BellOff className="w-4 h-4 mr-2" />
+                Mute Server
+              </>
+            )}
+          </ContextMenuItem>
           {isOwner && onOpenSettings && (
             <ContextMenuItem
               onSelect={(e) => {
@@ -437,7 +457,7 @@ DraggableServerItem.displayName = "DraggableServerItem";
 export const ServerSidebar = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { servers, currentServer, setCurrentServer, isLoading, fetchServers, leaveServer } = useServerStore();
+  const { servers, currentServer, setCurrentServer, isLoading, fetchServers, leaveServer, toggleServerMute } = useServerStore();
   const { setCurrentConversation } = useDMStore();
   const { openModal, activeModal, closeModal, closeServerSettings, openServerSettings } = useUIStore();
   const [serverChannels, setServerChannels] = useState<ServerChannels>({});
@@ -997,6 +1017,11 @@ export const ServerSidebar = () => {
                                   markServerAsRead(channelIds);
                                 }
                               }}
+                              onToggleMute={() => {
+                                if (user?.id) {
+                                  toggleServerMute(server.id, user.id);
+                                }
+                              }}
                             />
                           );
                         })}
@@ -1050,6 +1075,11 @@ export const ServerSidebar = () => {
                       onMarkAsRead={() => {
                         if (channelIds.length > 0) {
                           markServerAsRead(channelIds);
+                        }
+                      }}
+                      onToggleMute={() => {
+                        if (user?.id) {
+                          toggleServerMute(server.id, user.id);
                         }
                       }}
                     />
