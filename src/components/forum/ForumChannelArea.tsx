@@ -731,12 +731,28 @@ export const ForumChannelArea = () => {
         const messageData = typeof result === 'string' ? JSON.parse(result) : result;
         
         if (messageData && messageData.id) {
-          // Add message immediately with user data
+          // Add message immediately with user data and reply_to data
+          // Find the reply_to message if we're replying to something
+          let replyToData = null;
+          if (replyToId && threadMessages[threadId]) {
+            const replyToMsg = threadMessages[threadId].find(m => m.id === replyToId);
+            if (replyToMsg) {
+              replyToData = {
+                id: replyToMsg.id,
+                user_id: replyToMsg.user_id,
+                content: replyToMsg.content,
+                created_at: replyToMsg.created_at,
+                user: replyToMsg.user,
+              };
+            }
+          }
+          
           const newMessage: Message = {
             id: messageData.id,
             user_id: user.id,
             content: content,
             reply_to_id: messageData.reply_to_id || null,
+            reply_to: replyToData,
             edited_at: messageData.edited_at || null,
             created_at: messageData.created_at || new Date().toISOString(),
             channel_id: currentChannel?.id || "",
@@ -1859,9 +1875,17 @@ export const ForumChannelArea = () => {
                           return (
                             <div
                               key={msg.id}
-                              className="group relative flex gap-3"
+                              className="group relative flex gap-3 cursor-pointer"
                               onTouchStart={() => setHoveredMessageId(msg.id)}
                               onTouchEnd={() => setTimeout(() => setHoveredMessageId(null), 2000)}
+                              onClick={(e) => {
+                                // Click-to-reply: trigger reply when clicking on message body
+                                const target = e.target as HTMLElement;
+                                const isInteractive = target.closest('button, a, input, textarea, [role="button"], [contenteditable], .hover-actions-menu');
+                                if (!isInteractive && editingMessageId !== msg.id) {
+                                  setReplyingToThread(msg.id);
+                                }
+                              }}
                             >
                               <Avatar className="w-8 h-8 flex-shrink-0">
                                 <AvatarImage src={msg.user?.avatar_url} />
