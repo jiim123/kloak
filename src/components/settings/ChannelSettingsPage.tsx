@@ -78,11 +78,10 @@ export const ChannelSettingsPage = () => {
   const hasValidTarget = isCategory ? !!category : !!channel;
   const targetName = isCategory ? category?.name : channel?.name;
 
-  // Navigation items - categories now have settings too
+  // Navigation items - categories don't have a separate settings tab
   const navItems = isCategory
     ? [
         { id: "overview", label: "Overview", icon: FolderOpen },
-        { id: "settings", label: "Settings", icon: Settings },
         { id: "permissions", label: "Permissions", icon: Shield },
       ]
     : [
@@ -422,29 +421,6 @@ export const ChannelSettingsPage = () => {
         )}
       </div>
 
-      {/* Danger Zone */}
-      <div className="p-4 rounded-xl border border-destructive/30 bg-destructive/5 space-y-4">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center flex-shrink-0">
-            <Trash2 className="w-5 h-5 text-destructive" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-destructive">Danger Zone</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Deleting a channel is irreversible. All messages will be permanently lost.
-            </p>
-          </div>
-        </div>
-        <Button
-          type="button"
-          variant="destructive"
-          className="w-full h-10 rounded-xl"
-          onClick={() => setShowDeleteConfirm(true)}
-        >
-          <Trash2 className="h-4 w-4 mr-2" />
-          Delete Channel
-        </Button>
-      </div>
     </div>
   );
 
@@ -524,50 +500,6 @@ export const ChannelSettingsPage = () => {
     </div>
   );
 
-  // Category Settings Content
-  const categorySettingsContent = (
-    <div className="space-y-6">
-      {/* Info about category settings */}
-      <div className="p-4 rounded-xl bg-secondary/30 border border-border/50">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-secondary/80 flex items-center justify-center flex-shrink-0">
-            <Settings className="w-5 h-5 text-muted-foreground" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium">Category Settings</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Category-level settings affect how channels within this category behave. Individual channel settings can override these defaults.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Danger Zone */}
-      <div className="p-4 rounded-xl border border-destructive/30 bg-destructive/5 space-y-4">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center flex-shrink-0">
-            <Trash2 className="w-5 h-5 text-destructive" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-destructive">Danger Zone</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Deleting a category will move all its channels to uncategorized.
-            </p>
-          </div>
-        </div>
-        <Button
-          type="button"
-          variant="destructive"
-          className="w-full h-10 rounded-xl"
-          onClick={() => setShowDeleteConfirm(true)}
-        >
-          <Trash2 className="h-4 w-4 mr-2" />
-          Delete Category
-        </Button>
-      </div>
-    </div>
-  );
-
   // Category Permissions Content
   const categoryPermissionsContent = (
     <div>
@@ -589,8 +521,6 @@ export const ChannelSettingsPage = () => {
     switch (activeTab) {
       case "overview":
         return categoryOverviewContent;
-      case "settings":
-        return categorySettingsContent;
       case "permissions":
         return categoryPermissionsContent;
       default:

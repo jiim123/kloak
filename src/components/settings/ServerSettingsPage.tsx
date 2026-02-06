@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { PERMISSION_META, PERMISSION_GROUPS } from '@/lib/permissionMeta';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -159,76 +160,8 @@ const createGradientString = (colors: string[], angle: number = 135) => {
   return `linear-gradient(${angle}deg, ${colors.join(', ')})`;
 };
 
-// Permission groups and labels for inline editor
-const PERMISSION_GROUPS: Array<{
-  label: string;
-  permissions: Permission[];
-}> = [
-  {
-    label: 'General Permissions',
-    permissions: ['view_channels', 'read_message_history', 'send_messages', 'add_reactions'],
-  },
-  {
-    label: 'Text Permissions',
-    permissions: ['attach_files', 'embed_links', 'mention_everyone', 'mention_roles', 'use_external_emojis'],
-  },
-  {
-    label: 'Member Permissions',
-    permissions: ['kick_members', 'ban_members', 'mute_members', 'deafen_members', 'move_members', 'manage_nicknames', 'change_nickname'],
-  },
-  {
-    label: 'Channel Permissions',
-    permissions: ['manage_channels', 'manage_messages', 'pin_messages', 'manage_threads'],
-  },
-  {
-    label: 'Administrative Permissions',
-    permissions: ['manage_server', 'manage_roles', 'manage_emojis', 'manage_webhooks', 'manage_invites', 'create_instant_invite', 'transfer_ownership'],
-  },
-  {
-    label: 'Voice Permissions',
-    permissions: ['connect', 'speak', 'use_voice_activation'],
-  },
-  {
-    label: 'Advanced Permissions',
-    permissions: ['use_application_commands'],
-  },
-];
-
-const PERMISSION_LABELS: Record<Permission, string> = {
-  view_channels: 'View Channels',
-  read_message_history: 'Read Message History',
-  send_messages: 'Send Messages',
-  add_reactions: 'Add Reactions',
-  attach_files: 'Attach Files',
-  embed_links: 'Embed Links',
-  mention_everyone: 'Mention @everyone',
-  mention_roles: 'Mention Roles',
-  use_external_emojis: 'Use External Emojis',
-  kick_members: 'Kick Members',
-  ban_members: 'Ban Members',
-  mute_members: 'Mute Members',
-  deafen_members: 'Deafen Members',
-  move_members: 'Move Members',
-  manage_nicknames: 'Manage Nicknames',
-  change_nickname: 'Change Nickname',
-  manage_channels: 'Manage Channels',
-  manage_messages: 'Manage Messages',
-  pin_messages: 'Pin Messages',
-  manage_threads: 'Manage Threads',
-  manage_server: 'Manage Server',
-  manage_roles: 'Manage Roles',
-  manage_emojis: 'Manage Emojis',
-  manage_webhooks: 'Manage Webhooks',
-  manage_invites: 'Manage Invites',
-  create_instant_invite: 'Create Instant Invite',
-  transfer_ownership: 'Transfer Ownership',
-  connect: 'Connect (Voice)',
-  speak: 'Speak (Voice)',
-  use_voice_activation: 'Use Voice Activation',
-  use_application_commands: 'Use Application Commands',
-};
-
-// Inline permissions editor component (without modal wrapper)
+// Permission groups and labels for inline editor are imported from @/lib/permissionMeta
+// Inline permissions editor component (without modal wrapper, unified with role details)
 const RolePermissionsEditorInline = ({ role, serverId }: { role: CustomServerRole; serverId: string }) => {
   const { user } = useAuthStore();
   const {
@@ -376,7 +309,7 @@ const RolePermissionsEditorInline = ({ role, serverId }: { role: CustomServerRol
                         htmlFor={permission}
                         className="text-sm font-normal cursor-pointer flex-1"
                       >
-                        {PERMISSION_LABELS[permission]}
+                        {PERMISSION_META[permission].label}
                       </Label>
                       <div className="flex bg-secondary/80 rounded-lg p-0.5 border border-border/50">
                         <button
