@@ -272,7 +272,7 @@ export const ChatArea = () => {
   return (
     <div 
       ref={swipeRef}
-      className="h-full flex flex-col min-w-0 bg-background relative"
+      className="h-full flex flex-col min-w-0 max-w-full overflow-x-hidden bg-background relative"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -296,7 +296,7 @@ export const ChatArea = () => {
         const hasAttachments = (latest.attachments?.length ?? 0) > 0;
         const isNew = latest.created_at && (Date.now() - new Date(latest.created_at).getTime() < 24 * 60 * 60 * 1000);
         return (
-          <div className="flex items-center gap-2 px-4 py-2 bg-muted/50 border-b border-border/50 flex-shrink-0 min-w-0">
+          <div className="flex items-center gap-2 px-4 py-2 bg-muted/50 border-b border-border/50 flex-shrink-0 min-w-0 overflow-hidden">
             <Pin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             <Avatar className="w-5 h-5 flex-shrink-0">
               <AvatarImage src={latest.user?.avatar_url} />

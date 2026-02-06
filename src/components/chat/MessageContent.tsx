@@ -466,7 +466,7 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
   }, [openModal, channels, currentServer, setCurrentChannel, navigate]);
   
   return (
-    <div className="!block break-words" onClick={handleClick} onKeyDown={handleKeyDown} data-message-id={messageId}>
+    <div className="!block break-words overflow-hidden max-w-full" onClick={handleClick} onKeyDown={handleKeyDown} data-message-id={messageId}>
       {/* Message text content */}
       <span className="inline">
         {segments.map((segment, index) => {
