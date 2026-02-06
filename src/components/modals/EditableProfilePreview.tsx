@@ -87,7 +87,6 @@ export const EditableProfilePreview = ({
 }: EditableProfilePreviewProps) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingBio, setIsEditingBio] = useState(false);
-  const [showThemePickers, setShowThemePickers] = useState(false);
   const [displayNameError, setDisplayNameError] = useState<string | null>(null);
   
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -239,48 +238,42 @@ export const EditableProfilePreview = ({
           />
         )}
 
-        {/* Banner Section - Clickable */}
-        <div className="relative h-28 group cursor-pointer" onClick={() => bannerInputRef.current?.click()}>
+        {/* Banner Section */}
+        <div className="relative h-28">
           {bannerUrl ? (
             <img src={bannerUrl} alt="Banner" className="absolute inset-0 w-full h-full object-cover" />
           ) : (
             <div className="absolute inset-0 bg-gradient-to-b from-black/10 to-black/30" />
           )}
           
-          {/* Banner overlay on hover */}
-          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+          {/* Always visible banner controls */}
+          <div className="absolute inset-0 flex items-center justify-center">
             {isBannerUploading ? (
               <Loader2 className="w-6 h-6 text-white animate-spin" />
             ) : (
-              <>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="rounded-lg"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    bannerInputRef.current?.click();
-                  }}
-                >
-                  <Camera className="w-4 h-4 mr-1.5" />
-                  {bannerUrl ? "Change" : "Upload"}
-                </Button>
-                {bannerUrl && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="rounded-lg"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onBannerRemove();
-                    }}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                )}
-              </>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="rounded-lg bg-black/60 hover:bg-black/80 text-white border-none"
+                onClick={() => bannerInputRef.current?.click()}
+              >
+                <Camera className="w-4 h-4 mr-1.5" />
+                {bannerUrl ? "Change Banner" : "Upload Banner"}
+              </Button>
             )}
           </div>
+          
+          {/* Remove banner button - top right */}
+          {bannerUrl && !isBannerUploading && (
+            <Button
+              variant="secondary"
+              size="icon"
+              className="absolute top-2 right-2 h-7 w-7 rounded-lg bg-black/60 hover:bg-destructive/80 text-white border-none"
+              onClick={onBannerRemove}
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          )}
         </div>
 
         {/* Content Section */}
@@ -289,12 +282,12 @@ export const EditableProfilePreview = ({
           <div className="relative -mt-12 mb-3 flex items-end gap-3">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="relative group cursor-pointer focus:outline-none">
+                <button className="relative cursor-pointer focus:outline-none">
                   <AvatarWithDecoration
                     user={previewUser}
-                    className="w-20 h-20 ring-4 ring-background/80 group-hover:ring-primary/30 transition-all"
+                    className="w-20 h-20"
                   />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
                     <Camera className="w-6 h-6 text-white" />
                   </div>
                   {isLoading && (
@@ -315,26 +308,28 @@ export const EditableProfilePreview = ({
                     Remove Avatar
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={onOpenAvatarDecoration}>
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  {user.avatar_decoration ? "Change Decoration" : "Add Decoration"}
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Decoration badge */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={onOpenAvatarDecoration}
-                  className="w-7 h-7 rounded-full bg-background/80 border border-border/50 flex items-center justify-center hover:bg-background transition-colors -ml-5 mb-1"
-                >
-                  <Plus className="w-3.5 h-3.5 text-muted-foreground" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>Add decoration</TooltipContent>
-            </Tooltip>
+            {/* Decoration button - always visible with text */}
+            <Button
+              variant="secondary"
+              size="sm"
+              className="rounded-lg bg-background/60 hover:bg-background/80 h-8 px-3"
+              onClick={onOpenAvatarDecoration}
+            >
+              {user.avatar_decoration ? (
+                <>
+                  <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                  Change Decoration
+                </>
+              ) : (
+                <>
+                  <Plus className="w-3.5 h-3.5 mr-1.5" />
+                  Add Decoration
+                </>
+              )}
+            </Button>
           </div>
 
           {/* Display Name - Inline Editable */}
@@ -373,12 +368,12 @@ export const EditableProfilePreview = ({
             ) : (
               <button
                 onClick={() => setIsEditingName(true)}
-                className="group flex items-center gap-2 hover:opacity-80 transition-opacity text-left"
+                className="flex items-center gap-2 hover:opacity-80 transition-opacity text-left"
               >
                 <span className="text-lg font-semibold" style={{ color: fg }}>
                   {displayName.trim() || user.display_name || user.username}
                 </span>
-                <Pencil className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: muted }} />
+                <Pencil className="w-3.5 h-3.5" style={{ color: muted }} />
               </button>
             )}
           </div>
@@ -424,12 +419,12 @@ export const EditableProfilePreview = ({
             ) : (
               <button
                 onClick={() => setIsEditingBio(true)}
-                className="group flex items-start gap-2 hover:opacity-80 transition-opacity text-left w-full"
+                className="flex items-start gap-2 hover:opacity-80 transition-opacity text-left w-full"
               >
                 <span className="text-sm leading-relaxed flex-1" style={{ color: muted }}>
                   {bio.trim() || user.bio || "Click to add a bio..."}
                 </span>
-                <Pencil className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5" style={{ color: muted }} />
+                <Pencil className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: muted }} />
               </button>
             )}
           </div>
@@ -443,82 +438,79 @@ export const EditableProfilePreview = ({
               onClick={onOpenProfileEffect}
             >
               <Sparkles className="w-4 h-4 mr-1.5" />
-              {user.profile_effect ? "Effect" : "Add Effect"}
+              {user.profile_effect ? "Change Effect" : "Add Effect"}
             </Button>
-
-            <Button
-              variant="secondary"
-              size="sm"
-              className="rounded-lg bg-background/60 hover:bg-background/80"
-              onClick={() => setShowThemePickers(!showThemePickers)}
-            >
-              <div
-                className="w-4 h-4 rounded-full mr-1.5 border border-border/50"
-                style={{
-                  background: profileThemePrimary && profileThemeAccent
-                    ? `linear-gradient(135deg, ${profileThemePrimary}, ${profileThemeAccent})`
-                    : "hsl(var(--muted))",
-                }}
-              />
-              Theme
-            </Button>
-
-            {(profileThemePrimary || profileThemeAccent) && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="rounded-lg px-2"
-                onClick={() => {
-                  onThemePrimaryChange(null);
-                  onThemeAccentChange(null);
-                }}
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            )}
           </div>
 
-          {/* Theme Pickers (Collapsible) */}
-          {showThemePickers && (
-            <div className="mb-4 p-3 rounded-xl bg-background/60 border border-border/30 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium" style={{ color: muted }}>Primary</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={(profileThemePrimary ?? "#ff0000").toLowerCase()}
-                      onChange={(e) => onThemePrimaryChange(e.target.value)}
-                      className="w-10 h-10 rounded-lg cursor-pointer border border-border/50"
-                    />
-                    <Input
-                      value={(profileThemePrimary ?? "").toLowerCase()}
-                      onChange={(e) => onThemePrimaryChange(e.target.value)}
-                      placeholder="#ff0000"
-                      className="font-mono text-xs h-10 rounded-lg bg-background/50"
-                    />
-                  </div>
+          {/* Theme Pickers - Always visible */}
+          <div className="mb-4 p-3 rounded-xl bg-background/60 border border-border/30 space-y-3">
+            {/* Theme header with buttons */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-4 h-4 rounded-full border border-border/50"
+                  style={{
+                    background: profileThemePrimary && profileThemeAccent
+                      ? `linear-gradient(135deg, ${profileThemePrimary}, ${profileThemeAccent})`
+                      : "hsl(var(--muted))",
+                  }}
+                />
+                <span className="text-sm font-medium" style={{ color: fg }}>Profile Theme</span>
+              </div>
+              {(profileThemePrimary || profileThemeAccent) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="rounded-lg h-7 px-2 text-xs"
+                  onClick={() => {
+                    onThemePrimaryChange(null);
+                    onThemeAccentChange(null);
+                  }}
+                >
+                  <X className="w-3.5 h-3.5 mr-1" />
+                  Reset
+                </Button>
+              )}
+            </div>
+            
+            {/* Color pickers */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium" style={{ color: muted }}>Primary</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={(profileThemePrimary ?? "#ff0000").toLowerCase()}
+                    onChange={(e) => onThemePrimaryChange(e.target.value)}
+                    className="w-10 h-10 rounded-lg cursor-pointer border border-border/50"
+                  />
+                  <Input
+                    value={(profileThemePrimary ?? "").toLowerCase()}
+                    onChange={(e) => onThemePrimaryChange(e.target.value)}
+                    placeholder="#ff0000"
+                    className="font-mono text-xs h-10 rounded-lg bg-background/50"
+                  />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium" style={{ color: muted }}>Accent</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={(profileThemeAccent ?? "#00d4ff").toLowerCase()}
-                      onChange={(e) => onThemeAccentChange(e.target.value)}
-                      className="w-10 h-10 rounded-lg cursor-pointer border border-border/50"
-                    />
-                    <Input
-                      value={(profileThemeAccent ?? "").toLowerCase()}
-                      onChange={(e) => onThemeAccentChange(e.target.value)}
-                      placeholder="#00d4ff"
-                      className="font-mono text-xs h-10 rounded-lg bg-background/50"
-                    />
-                  </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium" style={{ color: muted }}>Accent</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={(profileThemeAccent ?? "#00d4ff").toLowerCase()}
+                    onChange={(e) => onThemeAccentChange(e.target.value)}
+                    className="w-10 h-10 rounded-lg cursor-pointer border border-border/50"
+                  />
+                  <Input
+                    value={(profileThemeAccent ?? "").toLowerCase()}
+                    onChange={(e) => onThemeAccentChange(e.target.value)}
+                    placeholder="#00d4ff"
+                    className="font-mono text-xs h-10 rounded-lg bg-background/50"
+                  />
                 </div>
               </div>
             </div>
-          )}
+          </div>
 
           {/* Divider */}
           <div className="h-px mb-4" style={{ backgroundColor: divider }} />
