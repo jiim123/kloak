@@ -412,6 +412,19 @@ export const useServerStore = create<ServerState>((set, get) => ({
         created_at: serverData.created_at,
       };
 
+      // Defense-in-depth: verify user is not banned after RPC returns
+      const { data: banCheck } = await supabase
+        .from('server_members')
+        .select('is_banned')
+        .eq('server_id', server.id)
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (banCheck?.is_banned) {
+        set({ error: 'You are banned from this server' });
+        return null;
+      }
+
       // Refresh servers list
       await get().fetchServers(userId);
 
@@ -550,7 +563,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
       
       // Use RPC functions to bypass RLS
       const [categoriesResult, channelsResult] = await Promise.all([
-        supabase.rpc('get_server_categories', { _server_id: serverId }),
+        supabase.rpc('get_server_categories', { _server_id: serverId, _user_id: userId }),
         supabase.rpc('get_server_channels', { _server_id: serverId, _user_id: userId }),
       ]);
 
