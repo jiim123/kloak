@@ -24,7 +24,6 @@ import {
   Check,
   Smile,
   GripVertical,
-  ArrowLeft,
   Download,
   Plug
 } from 'lucide-react';
@@ -700,6 +699,17 @@ export const ServerSettingsPage = () => {
       initialServerIdRef.current = null;
     }
   }, [currentServer, isServerSettingsOpen, closeServerSettings]);
+
+  // ESC key to close server settings
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        closeServerSettings();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [closeServerSettings]);
 
   // Fetch members and roles when page opens
   useEffect(() => {
@@ -1457,133 +1467,137 @@ export const ServerSettingsPage = () => {
         className="hidden"
       />
 
-      <div className="h-full flex flex-col bg-background">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-border flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={closeServerSettings}
-            className="flex-shrink-0"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div>
-            <h1 className="text-lg font-semibold">Server Settings</h1>
-            <p className="text-sm text-muted-foreground">
-              Manage your server settings and members
-            </p>
-          </div>
-        </div>
-
-        {/* Content */}
+      <div className="h-full flex bg-background">
+        {/* Sidebar Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex overflow-hidden">
-          <TabsList className="flex flex-col items-start justify-start h-full w-56 border-r border-border bg-secondary/30 p-2 gap-1 rounded-none inline-flex overflow-y-auto">
-            {/* Server Category */}
-            <div className="w-full">
-              <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                Server
-              </div>
-              <TabsTrigger 
-                value="overview" 
-                className="w-full justify-start gap-2 text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
-              >
-                <Settings className="w-4 h-4" />
-                <span>Overview</span>
-              </TabsTrigger>
+          <div className="w-56 flex-shrink-0 border-r border-border bg-secondary/20 flex flex-col overflow-hidden">
+            {/* Server Name Header */}
+            <div className="px-4 pt-5 pb-3">
+              <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground truncate">
+                {server.name}
+              </h2>
             </div>
 
-            {/* People Category */}
-            <div className="w-full mt-2">
-              <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                People
-              </div>
-              <TabsTrigger 
-                value="members" 
-                className="w-full justify-start gap-2 text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
-              >
-                <Users className="w-4 h-4" />
-                <span>Members</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="roles" 
-                className="w-full justify-start gap-2 text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
-              >
-                <Palette className="w-4 h-4" />
-                <span>Roles</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="bans" 
-                className="w-full justify-start gap-2 text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
-              >
-                <Ban className="w-4 h-4" />
-                <span>Bans</span>
-              </TabsTrigger>
-            </div>
-
-            {/* Content Category */}
-            {canManageEmojis && (
-              <div className="w-full mt-2">
-                <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  Content
-                </div>
-                <TabsTrigger
-                  value="emojis"
-                  className="w-full justify-start gap-2 text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            {/* Nav Items */}
+            <ScrollArea className="flex-1 px-2 pb-4">
+              <TabsList className="flex flex-col items-start w-full bg-transparent p-0 gap-0.5 rounded-none h-auto">
+                {/* Overview */}
+                <TabsTrigger 
+                  value="overview" 
+                  className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
                 >
-                  <Smile className="w-4 h-4" />
-                  <span>Emojis</span>
+                  <Settings className="w-4 h-4" />
+                  Overview
                 </TabsTrigger>
-              </div>
-            )}
 
-            {/* Integrations Category */}
-            {(canManageInvites || canManageChannels) && (
-              <div className="w-full mt-2">
-                <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  Integrations
+                {/* Customization Section */}
+                {canManageEmojis && (
+                  <>
+                    <div className="px-3 pt-4 pb-1.5 w-full">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
+                        Customization
+                      </span>
+                    </div>
+                    <TabsTrigger
+                      value="emojis"
+                      className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
+                    >
+                      <Smile className="w-4 h-4" />
+                      Emojis
+                    </TabsTrigger>
+                  </>
+                )}
+
+                {/* User Management Section */}
+                <div className="px-3 pt-4 pb-1.5 w-full">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
+                    User Management
+                  </span>
                 </div>
+                <TabsTrigger 
+                  value="roles" 
+                  className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
+                >
+                  <Palette className="w-4 h-4" />
+                  Roles
+                </TabsTrigger>
                 {canManageInvites && (
                   <TabsTrigger
                     value="invites"
-                    className="w-full justify-start gap-2 text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                    className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
                   >
                     <Link2 className="w-4 h-4" />
-                    <span>Invites</span>
+                    Invites
                   </TabsTrigger>
                 )}
-                {canManageChannels && (
-                  <TabsTrigger
-                    value="integrations"
-                    className="w-full justify-start gap-2 text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
-                  >
-                    <Plug className="w-4 h-4" />
-                    <span>Integrations</span>
-                  </TabsTrigger>
-                )}
-              </div>
-            )}
-
-            {/* Danger Zone Category */}
-            {isOwner && (
-              <div className="w-full mt-2">
-                <div className="px-3 py-1.5 text-[10px] font-semibold text-destructive/70 uppercase tracking-wider">
-                  Danger Zone
-                </div>
-                <TabsTrigger
-                  value="danger-zone"
-                  className="w-full justify-start gap-2 text-sm px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm text-destructive"
+                <TabsTrigger 
+                  value="members" 
+                  className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
                 >
-                  <Trash2 className="w-4 h-4" />
-                  <span>Danger Zone</span>
+                  <Users className="w-4 h-4" />
+                  Members
                 </TabsTrigger>
-              </div>
-            )}
-          </TabsList>
+                <TabsTrigger 
+                  value="bans" 
+                  className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
+                >
+                  <Ban className="w-4 h-4" />
+                  Bans
+                </TabsTrigger>
+
+                {/* Integrations */}
+                {canManageChannels && (
+                  <>
+                    <div className="px-3 pt-4 pb-1.5 w-full">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
+                        Integrations
+                      </span>
+                    </div>
+                    <TabsTrigger
+                      value="integrations"
+                      className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
+                    >
+                      <Plug className="w-4 h-4" />
+                      Integrations
+                    </TabsTrigger>
+                  </>
+                )}
+
+                {/* Delete Server - at bottom, separated */}
+                {isOwner && (
+                  <>
+                    <Separator className="my-3" />
+                    <button
+                      type="button"
+                      onClick={() => setShowDeleteConfirm(true)}
+                      className="w-full flex items-center gap-2.5 text-sm font-medium px-3 py-2 rounded-md text-destructive hover:bg-destructive/10 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete Server
+                    </button>
+                  </>
+                )}
+              </TabsList>
+            </ScrollArea>
+          </div>
           
-          <div className="flex-1 overflow-y-auto">
+          {/* Main Content Area */}
+          <div className="flex-1 overflow-y-auto relative">
+            {/* Close Button (ESC) */}
+            <button
+              type="button"
+              onClick={closeServerSettings}
+              className="absolute top-4 right-4 z-10 flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors group"
+            >
+              <div className="w-9 h-9 rounded-full border border-border bg-secondary/50 flex items-center justify-center group-hover:bg-secondary group-hover:border-muted-foreground/50 transition-colors">
+                <X className="w-4 h-4" />
+              </div>
+              <span className="text-[10px] font-medium uppercase tracking-wider">ESC</span>
+            </button>
+
             {/* Overview Tab */}
-            <TabsContent value="overview" className="m-0 p-6">
+            <TabsContent value="overview" className="m-0 p-6 pr-16">
+              <h2 className="text-xl font-bold mb-6">Overview</h2>
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 max-w-3xl">
                 {/* Server Icon */}
                 <div className="flex items-center gap-4">
@@ -1787,12 +1801,11 @@ export const ServerSettingsPage = () => {
             </TabsContent>
 
             {/* Members Tab */}
-            <TabsContent value="members" className="m-0 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-sm text-muted-foreground">
-                  {members.length} member{members.length !== 1 ? 's' : ''}
-                </p>
-              </div>
+            <TabsContent value="members" className="m-0 p-6 pr-16">
+              <h2 className="text-xl font-bold mb-1">Members</h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                {members.length} member{members.length !== 1 ? 's' : ''}
+              </p>
               <ScrollArea className="h-[calc(100vh-16rem)] pr-4">
                 <div className="space-y-2 max-w-4xl">
                   {members.map((member) => {
@@ -1912,7 +1925,7 @@ export const ServerSettingsPage = () => {
             </TabsContent>
 
             {/* Roles Tab */}
-            <TabsContent value="roles" className="m-0 h-full">
+            <TabsContent value="roles" className="m-0 h-full pr-16">
               {canManageRoles ? (
                 <div className="flex h-full">
                   {/* Left Side - Roles List */}
@@ -2255,13 +2268,13 @@ export const ServerSettingsPage = () => {
             </TabsContent>
 
             {/* Invites Tab */}
-            <TabsContent value="invites" className="m-0 p-6">
+            <TabsContent value="invites" className="m-0 p-6 pr-16">
               {canManageInvites ? (
                 <div className="space-y-4 max-w-4xl">
+                  <h2 className="text-xl font-bold">Invites</h2>
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <h4 className="text-sm font-semibold">Invite Links</h4>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-sm text-muted-foreground">
                         Create, copy, and revoke invite links.
                       </p>
                     </div>
@@ -2428,7 +2441,8 @@ export const ServerSettingsPage = () => {
             </TabsContent>
 
             {/* Bans Tab */}
-            <TabsContent value="bans" className="m-0 p-6">
+            <TabsContent value="bans" className="m-0 p-6 pr-16">
+              <h2 className="text-xl font-bold mb-4">Bans</h2>
               {bannedMembers.length > 0 ? (
                 <ScrollArea className="h-[calc(100vh-16rem)] pr-4">
                   <div className="space-y-2 max-w-4xl">
@@ -2487,9 +2501,10 @@ export const ServerSettingsPage = () => {
             </TabsContent>
 
             {/* Emojis Tab */}
-            <TabsContent value="emojis" className="m-0 p-6">
+            <TabsContent value="emojis" className="m-0 p-6 pr-16">
               {canManageEmojis ? (
                 <div className="space-y-5 max-w-4xl">
+                  <h2 className="text-xl font-bold">Emojis</h2>
                   {/* Import from emoji.gg */}
                   <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/50">
                     <div className="min-w-0 flex-1">
@@ -2628,14 +2643,12 @@ export const ServerSettingsPage = () => {
 
             {/* Integrations Tab */}
             {canManageChannels && (
-              <TabsContent value="integrations" className="m-0 p-6">
+              <TabsContent value="integrations" className="m-0 p-6 pr-16">
                 <div className="space-y-5 max-w-3xl">
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">Integrations</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Connect external services and import data from other platforms.
-                    </p>
-                  </div>
+                  <h2 className="text-xl font-bold">Integrations</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Connect external services and import data from other platforms.
+                  </p>
 
                   {/* Discord Import */}
                   <div className="space-y-2 border border-border rounded-lg p-4 bg-secondary/30">
@@ -2663,36 +2676,8 @@ export const ServerSettingsPage = () => {
               </TabsContent>
             )}
 
-            {/* Danger Zone Tab */}
-            {isOwner && (
-              <TabsContent value="danger-zone" className="m-0 p-6">
-                <div className="space-y-5 max-w-3xl">
-                  <div>
-                    <h3 className="text-lg font-semibold text-destructive mb-2">Danger Zone</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Irreversible and destructive actions for this server.
-                    </p>
-                  </div>
-                  
-                  <div className="border border-destructive/30 rounded-lg p-6 bg-destructive/5">
-                    <h4 className="text-sm font-semibold text-destructive mb-2">Delete Server</h4>
-                    <p className="text-xs text-muted-foreground mb-4">
-                      Deleting this server will permanently remove all channels, messages, and members. This action cannot be undone.
-                    </p>
-                    <Button 
-                      variant="destructive" 
-                      size="sm"
-                      onClick={() => setShowDeleteConfirm(true)}
-                      className="text-sm h-9"
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Delete Server
-                    </Button>
-                  </div>
-                </div>
-              </TabsContent>
-            )}
-            
+
+
           </div>
         </Tabs>
       </div>
