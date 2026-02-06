@@ -195,7 +195,7 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
         </p>
       </div>
 
-      <div className="flex gap-0 border border-border/50 rounded-xl overflow-hidden" style={{ height: 'calc(80vh - 280px)', minHeight: '400px' }}>
+      <div className="flex gap-0 border border-border/50 rounded-xl overflow-hidden max-w-4xl" style={{ height: 'calc(85vh - 220px)', minHeight: '500px' }}>
         {/* Role List Sidebar */}
         <div className="w-48 border-r border-border/50 bg-secondary/20 flex-shrink-0">
           <div className="px-3 pt-3 pb-2">
