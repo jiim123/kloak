@@ -1,7 +1,6 @@
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   Loader2,
-  Upload,
   User,
   UserX,
   Palette,
@@ -18,7 +17,6 @@ import {
   Clock,
   Sparkles,
   Volume2,
-  Sparkles as DecorationIcon,
   X,
   RefreshCw,
   AlertTriangle,
@@ -36,13 +34,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { AvatarDecorationModal } from "@/components/modals/AvatarDecorationModal";
 import { ProfileEffectModal } from "@/components/modals/ProfileEffectModal";
+import { EditableProfilePreview } from "@/components/modals/EditableProfilePreview";
 import { DockNavigation } from "@/components/ui/dock-navigation";
 import { useUIStore, THEMES, type Theme } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -128,7 +126,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   // Profile form state
   const [displayName, setDisplayName] = useState(user?.display_name || "");
   const [bio, setBio] = useState(user?.bio || "");
- const [pronouns, setPronouns] = useState(user?.pronouns || "");
+ // Pronouns removed per user request
   const [profileThemePrimary, setProfileThemePrimary] = useState<string | null>(user?.profile_theme_primary ?? null);
   const [profileThemeAccent, setProfileThemeAccent] = useState<string | null>(user?.profile_theme_accent ?? null);
   const [localAvatarUrl, setLocalAvatarUrl] = useState<string | null>(user?.avatar_url ?? null);
@@ -179,7 +177,6 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       await updateUser({
         display_name: displayName.trim() || null,
         bio: bio.trim() || null,
-       pronouns: pronouns.trim() || null,
         profile_theme_primary: profileThemePrimary,
         profile_theme_accent: profileThemeAccent,
       });
@@ -285,6 +282,21 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       toast.error("Failed to remove banner");
     } finally {
       setIsBannerUploading(false);
+    }
+  };
+
+  const handleAvatarRemove = async () => {
+    if (!user) return;
+    setIsLoading(true);
+    try {
+      setLocalAvatarUrl(null);
+      await updateUser({ avatar_url: null });
+      toast.success("Avatar removed!");
+    } catch (error) {
+      console.error("Failed to remove avatar:", error);
+      toast.error("Failed to remove avatar");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -609,417 +621,60 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   );
 
   // Profile Content
-  const profileContent = (() => {
-    const withAlpha = (hex: string, alphaHex: string) => {
-      // Supports "#RRGGBB" -> "#RRGGBBAA"
-      if (!hex || !hex.startsWith("#") || hex.length !== 7) return hex;
-      return `${hex}${alphaHex}`;
-    };
+  const profileContent = (
+    <div className="max-w-lg mx-auto">
+      <EditableProfilePreview
+        user={user}
+        localAvatarUrl={localAvatarUrl}
+        localBannerUrl={localBannerUrl}
+        displayName={displayName}
+        bio={bio}
+        profileThemePrimary={profileThemePrimary}
+        profileThemeAccent={profileThemeAccent}
+        onAvatarUpload={handleAvatarUpload}
+        onAvatarRemove={handleAvatarRemove}
+        onBannerUpload={handleBannerUpload}
+        onBannerRemove={handleRemoveBanner}
+        onDisplayNameChange={setDisplayName}
+        onBioChange={setBio}
+        onThemePrimaryChange={setProfileThemePrimary}
+        onThemeAccentChange={setProfileThemeAccent}
+        onOpenAvatarDecoration={() => setShowAvatarDecorationModal(true)}
+        onOpenProfileEffect={() => setShowProfileEffectModal(true)}
+        fileInputRef={fileInputRef}
+        bannerInputRef={bannerInputRef}
+        isLoading={isLoading}
+        isBannerUploading={isBannerUploading}
+      />
 
-    const hexToRgb = (hex: string) => {
-      const h = hex.trim().toLowerCase();
-      if (!h.startsWith("#") || h.length !== 7) return null;
-      const r = parseInt(h.slice(1, 3), 16);
-      const g = parseInt(h.slice(3, 5), 16);
-      const b = parseInt(h.slice(5, 7), 16);
-      if ([r, g, b].some((n) => Number.isNaN(n))) return null;
-      return { r, g, b };
-    };
-
-    const relLuminance = (hex: string) => {
-      const rgb = hexToRgb(hex);
-      if (!rgb) return null;
-      const srgb = [rgb.r, rgb.g, rgb.b].map((v) => v / 255);
-      const lin = srgb.map((c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)));
-      return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2];
-    };
-
-    const isLightTheme = (primary?: string | null, accent?: string | null, fallback?: string | null) => {
-      const lums: number[] = [];
-      if (primary) {
-        const l = relLuminance(primary);
-        if (l !== null) lums.push(l);
-      }
-      if (accent) {
-        const l = relLuminance(accent);
-        if (l !== null) lums.push(l);
-      }
-      if (lums.length === 0 && fallback) {
-        const l = relLuminance(fallback);
-        if (l !== null) lums.push(l);
-      }
-      if (lums.length === 0) return false;
-      const avg = lums.reduce((a, b) => a + b, 0) / lums.length;
-      return avg > 0.62;
-    };
-
-    const formatMemberSince = (iso?: string | null) => {
-      if (!iso) return "—";
-      const d = new Date(iso);
-      if (Number.isNaN(d.getTime())) return "—";
-      try {
-        return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
-      } catch {
-        return d.toDateString();
-      }
-    };
-
-    const previewUser = useMemo<UserType | null>(() => {
-      if (!user) return null;
-      return {
-        ...user,
-        avatar_url: localAvatarUrl,
-        banner_url: localBannerUrl,
-        display_name: (displayName.trim() || null) as UserType["display_name"],
-        bio: (bio.trim() || null) as UserType["bio"],
-        profile_theme_primary: profileThemePrimary,
-        profile_theme_accent: profileThemeAccent,
-      };
-    }, [user, localAvatarUrl, localBannerUrl, displayName, bio, profileThemePrimary, profileThemeAccent]);
-
-    const editor = (
-      <div className="space-y-6">
-        {/* Avatar Upload */}
-        <div className="flex items-center gap-5">
-          <div className="cursor-pointer flex-shrink-0 group relative" onClick={() => fileInputRef.current?.click()}>
-            <AvatarWithDecoration
-              user={previewUser ?? user}
-              className="w-20 h-20 ring-4 ring-secondary/50 group-hover:ring-primary/30 transition-all"
-            />
-            <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-              <Upload className="w-6 h-6 text-white" />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Button
-              variant="secondary"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isLoading}
-              className="h-10 rounded-xl"
-            >
-              <Upload className="w-4 h-4 mr-2" />
-              Upload Avatar
-            </Button>
-            <p className="text-xs text-muted-foreground">Max 5MB, JPG or PNG</p>
-          </div>
-          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
-        </div>
-
-        {/* Profile Banner */}
-        <div className="space-y-3">
-          <Label className="text-sm font-medium">Profile Banner</Label>
-          <div className="relative h-24 w-full max-w-md rounded-xl overflow-hidden border border-border/50 bg-secondary/30">
-            {localBannerUrl ? (
-              <>
-                <img
-                  src={localBannerUrl}
-                  alt="Profile banner"
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-b from-black/0 to-black/40" />
-              </>
-            ) : (
-              <div
-                className="absolute inset-0"
-                style={{
-                  background:
-                    previewUser?.profile_theme_primary && previewUser?.profile_theme_accent
-                      ? `linear-gradient(180deg, ${previewUser.profile_theme_primary} 0%, ${previewUser.profile_theme_accent} 100%)`
-                      : previewUser
-                        ? `linear-gradient(180deg, ${withAlpha(previewUser.banner_color, "33")} 0%, ${withAlpha(
-                            previewUser.banner_color,
-                            "14",
-                          )} 100%)`
-                        : undefined,
-                }}
-              />
-            )}
-            {!localBannerUrl && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-xs text-muted-foreground">No banner uploaded</span>
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => bannerInputRef.current?.click()}
-              disabled={isBannerUploading}
-              className="h-10 rounded-xl"
-            >
-              <Upload className="w-4 h-4 mr-2" />
-              Change Banner
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleRemoveBanner}
-              disabled={isBannerUploading || !localBannerUrl}
-              className="h-10 rounded-xl"
-            >
-              Remove Banner
-            </Button>
-            <input ref={bannerInputRef} type="file" accept="image/*" className="hidden" onChange={handleBannerUpload} />
-          </div>
-          <p className="text-xs text-muted-foreground">Recommended wide image • Max 8MB</p>
-        </div>
-
-        {/* Display Name */}
-        <div className="space-y-3">
-          <Label htmlFor="displayName" className="text-sm font-medium">
-            Display Name
-          </Label>
-          <Input
-            id="displayName"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="How others see you"
-            maxLength={32}
-            className="h-12 rounded-xl"
-          />
-        </div>
-
-        {/* Bio */}
-        <div className="space-y-3">
-          <Label htmlFor="bio" className="text-sm font-medium">
-            Bio
-          </Label>
-          <Textarea
-            id="bio"
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            placeholder="Tell us about yourself"
-            rows={3}
-            className="rounded-xl resize-none"
-          />
-        </div>
-
-       {/* Pronouns */}
-       <div className="space-y-3">
-         <Label htmlFor="pronouns" className="text-sm font-medium">Pronouns</Label>
-         <Input
-           id="pronouns"
-           value={pronouns}
-           onChange={(e) => setPronouns(e.target.value)}
-           placeholder="e.g. they/them, she/her, he/him"
-           maxLength={25}
-           className="h-12 rounded-xl"
-         />
-       </div>
-
-        {/* Avatar Decoration */}
-        <div className="space-y-3">
-          <Label className="text-sm font-medium">Avatar Decoration</Label>
-          <Button
-            variant="outline"
-            onClick={() => setShowAvatarDecorationModal(true)}
-            className="w-full h-12 rounded-xl"
-          >
-            <DecorationIcon className="w-4 h-4 mr-2" />
-            {user?.avatar_decoration ? "Change Decoration" : "Add Decoration"}
-          </Button>
-        </div>
-
-        {/* Profile Effect */}
-        <div className="space-y-3">
-          <Label className="text-sm font-medium">Profile Effect</Label>
-          <Button variant="outline" onClick={() => setShowProfileEffectModal(true)} className="w-full h-12 rounded-xl">
-            <Sparkles className="w-4 h-4 mr-2" />
-            {user?.profile_effect ? "Change Effect" : "Add Effect"}
-          </Button>
-        </div>
-
-        {/* Profile Theme */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <Label className="text-sm font-medium">Profile Theme</Label>
-              <p className="text-xs text-muted-foreground mt-1">
-                Pick a primary and accent color for your profile gradient.
-              </p>
-            </div>
-            {(profileThemePrimary ||
-              profileThemeAccent ||
-              user?.profile_theme_primary ||
-              user?.profile_theme_accent) && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setProfileThemePrimary(null);
-                  setProfileThemeAccent(null);
-                }}
-              >
-                Clear
-              </Button>
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Primary</Label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="color"
-                  value={(profileThemePrimary ?? "#ff0000").toLowerCase()}
-                  onChange={(e) => setProfileThemePrimary(e.target.value)}
-                  className="w-12 h-12 rounded-xl cursor-pointer border-2 border-border flex-shrink-0"
-                />
-                <Input
-                  value={(profileThemePrimary ?? "#ff0000").toLowerCase()}
-                  onChange={(e) => setProfileThemePrimary(e.target.value)}
-                  placeholder="#ff0000"
-                  className="font-mono text-sm h-12 rounded-xl"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Accent</Label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="color"
-                  value={(profileThemeAccent ?? "#00d4ff").toLowerCase()}
-                  onChange={(e) => setProfileThemeAccent(e.target.value)}
-                  className="w-12 h-12 rounded-xl cursor-pointer border-2 border-border flex-shrink-0"
-                />
-                <Input
-                  value={(profileThemeAccent ?? "#00d4ff").toLowerCase()}
-                  onChange={(e) => setProfileThemeAccent(e.target.value)}
-                  placeholder="#00d4ff"
-                  className="font-mono text-sm h-12 rounded-xl"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <Button variant="primary" onClick={handleSaveProfile} disabled={isLoading} className="w-full h-12 rounded-xl">
+      <div className="mt-6 flex gap-3">
+        <Button
+          variant="outline"
+          onClick={() => {
+            // Reset to original values
+            setDisplayName(user?.display_name || "");
+            setBio(user?.bio || "");
+            setProfileThemePrimary(user?.profile_theme_primary ?? null);
+            setProfileThemeAccent(user?.profile_theme_accent ?? null);
+            setLocalAvatarUrl(user?.avatar_url ?? null);
+            setLocalBannerUrl(user?.banner_url ?? null);
+          }}
+          className="flex-1 h-11 rounded-xl"
+        >
+          Reset
+        </Button>
+        <Button
+          variant="primary"
+          onClick={handleSaveProfile}
+          disabled={isLoading}
+          className="flex-1 h-11 rounded-xl"
+        >
           {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-          Save Profile
+          Save Changes
         </Button>
       </div>
-    );
-
-    const preview = (
-      <div className="hidden md:block">
-        {(() => {
-          const light = isLightTheme(
-            previewUser?.profile_theme_primary,
-            previewUser?.profile_theme_accent,
-            previewUser?.banner_color,
-          );
-          const fg = light ? "#0b0b0f" : "#f8fafc";
-          const muted = light ? "rgba(11, 11, 15, 0.66)" : "rgba(248, 250, 252, 0.72)";
-          const overlay = light ? "rgba(255, 255, 255, 0.46)" : "rgba(0, 0, 0, 0.34)";
-          const divider = light ? "rgba(11, 11, 15, 0.18)" : "rgba(248, 250, 252, 0.18)";
-          const bannerUrl = previewUser?.banner_url || user?.banner_url;
-
-          return (
-            <div
-              className="relative rounded-2xl border border-border/50 overflow-hidden"
-              style={{
-                background:
-                  previewUser?.profile_theme_primary && previewUser?.profile_theme_accent
-                    ? `linear-gradient(180deg, ${previewUser.profile_theme_primary} 0%, ${previewUser.profile_theme_accent} 100%)`
-                    : previewUser
-                      ? `linear-gradient(180deg, ${withAlpha(previewUser.banner_color, "33")} 0%, ${withAlpha(
-                          previewUser.banner_color,
-                          "14",
-                        )} 100%)`
-                      : undefined,
-              }}
-            >
-              {/* Soft overlay to keep text readable while still showing the theme */}
-              <div className="absolute inset-0" style={{ backgroundColor: overlay }} />
-
-              <div
-                className="relative p-5"
-                style={
-                  {
-                    color: fg,
-                    ["--profile-muted" as any]: muted,
-                  } as React.CSSProperties
-                }
-              >
-                {/* Banner image */}
-                {bannerUrl && (
-                  <div className="-mx-5 -mt-5 mb-4 h-24 relative overflow-hidden">
-                    <img src={bannerUrl} alt="Profile banner" className="absolute inset-0 w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/0 to-black/35" />
-                  </div>
-                )}
-
-                <div className="mb-3">
-                  <div className={cn("inline-block", bannerUrl && "-mt-10")}>
-                    <AvatarWithDecoration user={previewUser ?? user} className="w-16 h-16 shadow-lg" active={true} />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <div className="text-base font-semibold leading-tight">
-                    {(previewUser?.display_name || previewUser?.username || user?.display_name || user?.username) ??
-                      "—"}
-                  </div>
-                  <div className="text-xs font-medium text-[color:var(--profile-muted)]">
-                    {previewUser?.username || user?.username ? `@${previewUser?.username || user?.username}` : "—"}
-                  </div>
-                </div>
-
-                {(previewUser?.bio || user?.bio) && (
-                  <div className="mt-4 text-sm opacity-90 whitespace-pre-wrap break-words">
-                    {previewUser?.bio || user?.bio}
-                  </div>
-                )}
-
-                {/* Divider */}
-                <div className="mt-5 h-px" style={{ backgroundColor: divider }} />
-
-                {/* Info rows (placeholders to feel like full profile) */}
-                <div className="mt-4 space-y-3">
-                  <div className="flex items-start gap-3">
-                    <div className="text-[10px] font-medium text-[color:var(--profile-muted)] uppercase tracking-wider min-w-[92px] pt-0.5">
-                      Member Since
-                    </div>
-                    <div className="text-sm text-foreground">
-                      {formatMemberSince(previewUser?.created_at || user?.created_at)}
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <div className="text-[10px] font-medium text-[color:var(--profile-muted)] uppercase tracking-wider min-w-[92px] pt-0.5">
-                      Servers
-                    </div>
-                    <div className="flex items-center gap-2 flex-1">
-                      {["KL", "GK", "S3"].map((label) => (
-                        <div
-                          key={label}
-                          className="w-8 h-8 rounded-lg bg-secondary/60 border border-border/40 flex items-center justify-center text-[10px] font-semibold text-foreground/90"
-                          title="Server"
-                        >
-                          {label}
-                        </div>
-                      ))}
-                      <div className="text-xs text-[color:var(--profile-muted)]">+ more</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-5 text-xs text-[color:var(--profile-muted)]">Live preview</div>
-              </div>
-            </div>
-          );
-        })()}
-      </div>
-    );
-
-    return (
-      <div className="md:grid md:grid-cols-[7fr_3fr] md:gap-6">
-        <div className="min-w-0">{editor}</div>
-        <div className="min-w-0 md:sticky md:top-6 self-start">{preview}</div>
-      </div>
-    );
-  })();
+    </div>
+  );
 
   // Notifications Content
   const notificationsContent = (
