@@ -2383,10 +2383,13 @@ export type Database = {
           name: string
         }[]
       }
-      get_server_categories: { Args: { _server_id: string }; Returns: Json }
-      get_server_channels:
+      get_server_categories:
         | { Args: { _server_id: string }; Returns: Json }
         | { Args: { _server_id: string; _user_id?: string }; Returns: Json }
+      get_server_channels: {
+        Args: { _server_id: string; _user_id?: string }
+        Returns: Json
+      }
       get_server_members: { Args: { _server_id: string }; Returns: Json }
       get_server_roles: { Args: { _server_id: string }; Returns: Json }
       get_task_comments: {
@@ -2433,16 +2436,10 @@ export type Database = {
         Returns: boolean
       }
       is_username_blocked: { Args: { username: string }; Returns: boolean }
-      join_server_by_invite:
-        | { Args: { _invite_code: string; _user_id: string }; Returns: Json }
-        | {
-            Args: {
-              _invite_code: string
-              _join_source?: string
-              _user_id: string
-            }
-            Returns: Json
-          }
+      join_server_by_invite: {
+        Args: { _invite_code: string; _join_source?: string; _user_id: string }
+        Returns: Json
+      }
       kick_member: {
         Args: { _server_id: string; _target_user_id: string; _user_id: string }
         Returns: boolean

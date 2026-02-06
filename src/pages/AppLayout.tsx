@@ -204,6 +204,7 @@ const AppLayout = () => {
   usePreferencesSync();
 
   // Sync URL params with store state - read from URL and update store
+  // Also acts as a ban guard: if user navigates to a server they're banned from, redirect away
   useEffect(() => {
     if (!user || !servers.length) return;
     
@@ -213,7 +214,19 @@ const AppLayout = () => {
       if (server && server.id !== currentServer?.id) {
         setCurrentServer(server);
       } else if (!server) {
-        // Server not found in user's servers, redirect to home
+        // Server not found in user's servers — could be banned/kicked/left
+        // Check if the user is banned from this server
+        supabase
+          .from('server_members')
+          .select('is_banned')
+          .eq('server_id', urlServerId)
+          .eq('user_id', user.id)
+          .maybeSingle()
+          .then(({ data }) => {
+            if (data?.is_banned) {
+              console.warn('[AppLayout] User is banned from server, redirecting');
+            }
+          });
         navigate('/app', { replace: true });
       }
     }
