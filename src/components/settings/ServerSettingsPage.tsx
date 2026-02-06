@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { PERMISSION_META, PERMISSION_GROUPS } from '@/lib/permissionMeta';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -159,7 +158,89 @@ const createGradientString = (colors: string[], angle: number = 135) => {
   return `linear-gradient(${angle}deg, ${colors.join(', ')})`;
 };
 
-// Permission groups and labels for inline editor are imported from @/lib/permissionMeta
+// Permission groups and labels for inline editor
+// Permission metadata with descriptions and functional status
+interface PermissionMeta {
+  label: string;
+  description: string;
+  enabled: boolean; // Whether this permission has backend enforcement
+}
+
+const PERMISSION_META: Record<Permission, PermissionMeta> = {
+  view_channels: { label: 'View Channels', description: 'Allows members to view channels and read messages in them.', enabled: true },
+  read_message_history: { label: 'Read Message History', description: 'Allows members to read previously sent messages in channels.', enabled: true },
+  send_messages: { label: 'Send Messages', description: 'Allows members to send messages in text channels.', enabled: true },
+  add_reactions: { label: 'Add Reactions', description: 'Allows members to add emoji reactions to messages.', enabled: true },
+  attach_files: { label: 'Attach Files', description: 'Allows members to upload files and images in messages.', enabled: true },
+  embed_links: { label: 'Embed Links', description: 'Allows members to post links with embedded previews.', enabled: true },
+  mention_everyone: { label: 'Mention @everyone', description: 'Allows members to use @everyone to notify all members.', enabled: false },
+  mention_roles: { label: 'Mention Roles', description: 'Allows members to mention roles to notify role members.', enabled: false },
+  use_external_emojis: { label: 'Use External Emojis', description: 'Allows members to use emojis from other servers.', enabled: false },
+  kick_members: { label: 'Kick Members', description: 'Allows members to remove other members from the server. They can rejoin with an invite.', enabled: true },
+  ban_members: { label: 'Ban Members', description: 'Allows members to permanently ban other members from the server.', enabled: true },
+  mute_members: { label: 'Mute Members', description: 'Allows members to mute other members, preventing them from sending messages.', enabled: true },
+  deafen_members: { label: 'Deafen Members', description: 'Allows members to deafen other members in voice channels.', enabled: false },
+  move_members: { label: 'Move Members', description: 'Allows members to move other members between voice channels.', enabled: false },
+  manage_nicknames: { label: 'Manage Nicknames', description: 'Allows members to change the nicknames of other members.', enabled: true },
+  change_nickname: { label: 'Change Own Nickname', description: 'Allows members to change their own server nickname.', enabled: true },
+  manage_channels: { label: 'Manage Channels', description: 'Allows members to create, edit, and delete channels and categories.', enabled: true },
+  manage_messages: { label: 'Manage Messages', description: 'Allows members to delete and pin messages from other members.', enabled: true },
+  pin_messages: { label: 'Pin Messages', description: 'Allows members to pin important messages in channels.', enabled: true },
+  manage_threads: { label: 'Manage Threads', description: 'Allows members to manage and moderate forum threads.', enabled: false },
+  manage_server: { label: 'Manage Server', description: 'Allows members to change the server name, icon, banner, and other settings.', enabled: true },
+  manage_roles: { label: 'Manage Roles', description: 'Allows members to create, edit, and assign roles to other members.', enabled: true },
+  manage_emojis: { label: 'Manage Emojis', description: 'Allows members to upload, edit, and delete custom server emojis.', enabled: true },
+  manage_webhooks: { label: 'Manage Webhooks', description: 'Allows members to create, edit, and delete webhooks for integrations.', enabled: false },
+  manage_invites: { label: 'Manage Invites', description: 'Allows members to create and revoke server invite links.', enabled: true },
+  create_instant_invite: { label: 'Create Invite', description: 'Allows members to create invite links for the server.', enabled: false },
+  transfer_ownership: { label: 'Transfer Ownership', description: 'Allows the owner to transfer server ownership to another member.', enabled: false },
+  connect: { label: 'Connect', description: 'Allows members to join voice channels and listen.', enabled: true },
+  speak: { label: 'Speak', description: 'Allows members to speak in voice channels.', enabled: true },
+  use_voice_activation: { label: 'Voice Activity', description: 'Allows members to use voice activity detection instead of push-to-talk.', enabled: false },
+  use_application_commands: { label: 'Use Commands', description: 'Allows members to use bot and application slash commands.', enabled: false },
+};
+
+const PERMISSION_GROUPS: Array<{
+  label: string;
+  description: string;
+  permissions: Permission[];
+}> = [
+  {
+    label: 'General',
+    description: 'Basic server access and interaction',
+    permissions: ['view_channels', 'read_message_history', 'send_messages', 'add_reactions'],
+  },
+  {
+    label: 'Messages',
+    description: 'Messaging features and content',
+    permissions: ['attach_files', 'embed_links', 'mention_everyone', 'mention_roles', 'use_external_emojis'],
+  },
+  {
+    label: 'Moderation',
+    description: 'Member management and moderation tools',
+    permissions: ['kick_members', 'ban_members', 'mute_members', 'deafen_members', 'move_members', 'manage_nicknames', 'change_nickname'],
+  },
+  {
+    label: 'Channel Management',
+    description: 'Channel and message administration',
+    permissions: ['manage_channels', 'manage_messages', 'pin_messages', 'manage_threads'],
+  },
+  {
+    label: 'Server Administration',
+    description: 'Server-wide settings and configuration',
+    permissions: ['manage_server', 'manage_roles', 'manage_emojis', 'manage_webhooks', 'manage_invites', 'create_instant_invite', 'transfer_ownership'],
+  },
+  {
+    label: 'Voice',
+    description: 'Voice channel capabilities',
+    permissions: ['connect', 'speak', 'use_voice_activation'],
+  },
+  {
+    label: 'Advanced',
+    description: 'Bots and application integrations',
+    permissions: ['use_application_commands'],
+  },
+];
 // Inline permissions editor component (without modal wrapper, unified with role details)
 const RolePermissionsEditorInline = ({ role, serverId }: { role: CustomServerRole; serverId: string }) => {
   const { user } = useAuthStore();
@@ -195,15 +276,7 @@ const RolePermissionsEditorInline = ({ role, serverId }: { role: CustomServerRol
   useEffect(() => {
     const states = new Map<Permission, boolean | null>();
 
-    const allPermissions: Permission[] = [
-      'view_channels', 'read_message_history', 'send_messages', 'add_reactions',
-      'attach_files', 'embed_links', 'mention_everyone', 'mention_roles', 'use_external_emojis',
-      'manage_messages', 'pin_messages', 'manage_channels', 'manage_threads',
-      'kick_members', 'ban_members', 'mute_members', 'deafen_members', 'move_members',
-      'manage_nicknames', 'change_nickname', 'manage_roles', 'manage_server', 'manage_emojis',
-      'manage_webhooks', 'manage_invites', 'create_instant_invite', 'transfer_ownership',
-      'connect', 'speak', 'use_voice_activation', 'use_application_commands'
-    ];
+    const allPermissions: Permission[] = Object.keys(PERMISSION_META) as Permission[];
 
     for (const perm of allPermissions) {
       states.set(perm, null);
@@ -283,80 +356,92 @@ const RolePermissionsEditorInline = ({ role, serverId }: { role: CustomServerRol
   }
 
   return (
-    <div className="space-y-4 max-w-2xl">
-      <div>
-        <h3 className="text-sm font-semibold">Role Permissions</h3>
-        <p className="text-xs text-muted-foreground mt-1">
-          Configure permissions for {role.name}
-        </p>
-      </div>
+    <div className="space-y-6">
+      {PERMISSION_GROUPS.map((group) => (
+        <div key={group.label} className="space-y-1">
+          <div className="mb-3">
+            <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">
+              {group.label}
+            </h4>
+            <p className="text-xs text-muted-foreground mt-0.5">{group.description}</p>
+          </div>
+          <div className="space-y-0.5">
+            {group.permissions.map((permission) => {
+              const meta = PERMISSION_META[permission];
+              const state = permissionStates.get(permission);
+              const isDisabled = !meta.enabled;
 
-      <ScrollArea className="h-[calc(100vh-20rem)] pr-4">
-        <div className="space-y-6">
-          {PERMISSION_GROUPS.map((group) => (
-            <div key={group.label} className="space-y-3">
-              <Label className="text-xs font-semibold text-muted-foreground uppercase">
-                {group.label}
-              </Label>
-              <div className="space-y-2 pl-1">
-                {group.permissions.map((permission) => {
-                  const state = permissionStates.get(permission);
-
-                  return (
-                    <div key={permission} className="flex items-center justify-between p-2 rounded-md hover:bg-secondary/50 group/item">
-                      <Label
-                        htmlFor={permission}
-                        className="text-sm font-normal cursor-pointer flex-1"
-                      >
-                        {PERMISSION_META[permission].label}
-                      </Label>
-                      <div className="flex bg-secondary/80 rounded-lg p-0.5 border border-border/50">
-                        <button
-                          onClick={() => handlePermissionChange(permission, false)}
-                          className={cn(
-                            "px-3 py-1 text-[10px] font-bold rounded-md transition-all",
-                            state === false
-                              ? "bg-destructive text-destructive-foreground shadow-sm"
-                              : "text-muted-foreground hover:text-foreground"
-                          )}
-                        >
-                          DENY
-                        </button>
-                        <button
-                          onClick={() => handlePermissionChange(permission, null)}
-                          className={cn(
-                            "px-3 py-1 text-[10px] font-bold rounded-md transition-all",
-                            state === null
-                              ? "bg-background text-foreground shadow-sm border border-border"
-                              : "text-muted-foreground hover:text-foreground"
-                          )}
-                        >
-                          INHERIT
-                        </button>
-                        <button
-                          onClick={() => handlePermissionChange(permission, true)}
-                          className={cn(
-                            "px-3 py-1 text-[10px] font-bold rounded-md transition-all",
-                            state === true
-                              ? "bg-emerald-500 text-white shadow-sm"
-                              : "text-muted-foreground hover:text-foreground"
-                          )}
-                        >
-                          ALLOW
-                        </button>
-                      </div>
+              return (
+                <div
+                  key={permission}
+                  className={cn(
+                    "flex items-center justify-between p-3 rounded-lg transition-colors",
+                    isDisabled ? "opacity-50" : "hover:bg-secondary/50"
+                  )}
+                >
+                  <div className="flex-1 min-w-0 mr-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{meta.label}</span>
+                      {isDisabled && (
+                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 font-medium text-muted-foreground border-muted-foreground/30">
+                          Coming soon
+                        </Badge>
+                      )}
                     </div>
-                  );
-                })}
-              </div>
-              <Separator />
-            </div>
-          ))}
+                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                      {meta.description}
+                    </p>
+                  </div>
+                  <div className={cn(
+                    "flex bg-secondary/80 rounded-lg p-0.5 border border-border/50 flex-shrink-0",
+                    isDisabled && "pointer-events-none"
+                  )}>
+                    <button
+                      onClick={() => handlePermissionChange(permission, false)}
+                      disabled={isDisabled}
+                      className={cn(
+                        "px-2.5 py-1 text-[10px] font-bold rounded-md transition-all",
+                        state === false
+                          ? "bg-destructive text-destructive-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      ✕
+                    </button>
+                    <button
+                      onClick={() => handlePermissionChange(permission, null)}
+                      disabled={isDisabled}
+                      className={cn(
+                        "px-2.5 py-1 text-[10px] font-bold rounded-md transition-all",
+                        state === null
+                          ? "bg-background text-foreground shadow-sm border border-border"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      /
+                    </button>
+                    <button
+                      onClick={() => handlePermissionChange(permission, true)}
+                      disabled={isDisabled}
+                      className={cn(
+                        "px-2.5 py-1 text-[10px] font-bold rounded-md transition-all",
+                        state === true
+                          ? "bg-emerald-600 text-white shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      ✓
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </ScrollArea>
+      ))}
 
-      <div className="flex items-center justify-end gap-2 pt-4 border-t">
-        <Button onClick={handleSave} disabled={isSaving}>
+      <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t border-border py-3 -mx-6 px-6">
+        <Button onClick={handleSave} disabled={isSaving} size="sm">
           {isSaving ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -365,7 +450,7 @@ const RolePermissionsEditorInline = ({ role, serverId }: { role: CustomServerRol
           ) : (
             <>
               <Save className="w-4 h-4 mr-2" />
-              Save Changes
+              Save Permissions
             </>
           )}
         </Button>
@@ -373,7 +458,6 @@ const RolePermissionsEditorInline = ({ role, serverId }: { role: CustomServerRol
     </div>
   );
 };
-
 const parseColorValue = (colorValue: string): { type: 'solid' | 'gradient'; color?: string; colors?: string[]; angle?: number } => {
   if (colorValue.startsWith('linear-gradient')) {
     // Parse gradient string
@@ -442,7 +526,7 @@ export const ServerSettingsPage = () => {
   const [roleIcon, setRoleIcon] = useState<string>('');
   const [activeRoleId, setActiveRoleId] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<CustomServerRole | null>(null);
-  const [roleTab, setRoleTab] = useState<'details' | 'permissions'>('details');
+  
   const [colorType, setColorType] = useState<'solid' | 'gradient'>('solid');
   const [gradientColors, setGradientColors] = useState<string[]>(['#5865F2', '#7289DA']);
   const [gradientAngle, setGradientAngle] = useState(135);
@@ -553,7 +637,7 @@ export const ServerSettingsPage = () => {
           setSelectedRole(role);
           setEditingRole(role);
           setRoleName(role.name);
-          setRoleTab('details');
+          
           const parsed = parseColorValue(role.color);
           if (parsed.type === 'gradient') {
             setColorType('gradient');
@@ -1984,174 +2068,130 @@ export const ServerSettingsPage = () => {
                     </ScrollArea>
                   </div>
 
-                  {/* Right Side - Role Settings */}
+                  {/* Right Side - Role Settings (unified view) */}
                   <div className="flex-1 overflow-y-auto">
                     {selectedRole ? (
-                      <div className="h-full overflow-y-auto">
-                        <Tabs value={roleTab} onValueChange={(v) => setRoleTab(v as 'details' | 'permissions')} className="flex flex-col">
-                          <div className="px-6 pt-6 pb-4 border-b border-border">
-                            <div className="mb-4">
-                              <h3 className="text-lg font-semibold mb-1">Edit Role</h3>
-                              <p className="text-sm text-muted-foreground">
-                                Modify role settings and permissions
-                              </p>
-                            </div>
-                            <TabsList className="inline-flex h-auto p-1 bg-secondary/30 rounded-xl border border-border/50 w-full max-w-md">
-                              <TabsTrigger 
-                                value="details"
-                                className="flex-1 rounded-lg py-2.5 px-4 text-sm font-medium transition-all duration-200 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
-                              >
-                                Details
-                              </TabsTrigger>
-                              <TabsTrigger 
-                                value="permissions"
-                                className="flex-1 rounded-lg py-2.5 px-4 text-sm font-medium transition-all duration-200 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
-                              >
-                                Permissions
-                              </TabsTrigger>
-                            </TabsList>
+                      <div className="p-6 space-y-6 max-w-2xl">
+                        {/* Role Details Section */}
+                        <div>
+                          <h3 className="text-lg font-semibold mb-1">Edit Role</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Customize appearance and permissions for this role
+                          </p>
+                        </div>
+
+                        <div className="space-y-4 p-4 border rounded-lg bg-secondary/30">
+                          <div className="space-y-2">
+                            <Label className="text-sm">Role Name</Label>
+                            <Input
+                              id="roleName"
+                              value={roleName}
+                              onChange={(e) => setRoleName(e.target.value)}
+                              placeholder="Enter role name"
+                              className="h-10 text-sm"
+                              maxLength={100}
+                            />
                           </div>
 
-                          <TabsContent value="details" className="m-0 p-6">
-                            <div className="space-y-5 max-w-2xl">
-                              {/* Role Form */}
-                              <div className="space-y-4 p-4 border rounded-lg bg-secondary/30">
-                            <div className="space-y-2">
-                              <Label className="text-sm">Role Name</Label>
-                              <Input
-                                id="roleName"
-                                value={roleName}
-                                onChange={(e) => setRoleName(e.target.value)}
-                                placeholder="Enter role name"
-                                className="h-10 text-sm"
-                                maxLength={100}
-                              />
-                            </div>
+                          <RoleColorPicker
+                            colorType={colorType}
+                            onColorTypeChange={setColorType}
+                            color={roleColor}
+                            onColorChange={setRoleColor}
+                            gradientColors={gradientColors}
+                            onGradientColorsChange={setGradientColors}
+                            gradientAngle={gradientAngle}
+                            onGradientAngleChange={setGradientAngle}
+                          />
 
-                            {/* Role Color Section */}
-                            <RoleColorPicker
-                              colorType={colorType}
-                              onColorTypeChange={setColorType}
-                              color={roleColor}
-                              onColorChange={setRoleColor}
-                              gradientColors={gradientColors}
-                              onGradientColorsChange={setGradientColors}
-                              gradientAngle={gradientAngle}
-                              onGradientAngleChange={setGradientAngle}
-                            />
-                            <div className="space-y-2">
-                              <Label className="text-sm">Role Icon (optional)</Label>
-                              <div className="flex items-center gap-2">
-                                <EmojiGifPicker
-                                  disableGif
-                                  serverId={server.id}
-                                  serverName={server.name}
-                                  open={undefined}
-                                  onOpenChange={undefined}
-                                  onEmojiSelect={(emoji) => setRoleIcon(emoji)}
-                                >
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-10 px-3 flex items-center gap-2"
-                                  >
-                                    <Smile className="w-4 h-4" />
-                                    <span className="text-sm">
-                                      {roleIcon ? 'Change' : 'Select'}
-                                    </span>
-                                  </Button>
-                                </EmojiGifPicker>
-                                <div className="flex-1 min-w-0">
+                          <div className="space-y-2">
+                            <Label className="text-sm">Role Icon (optional)</Label>
+                            <div className="flex items-center gap-2">
+                              <EmojiGifPicker
+                                disableGif
+                                serverId={server.id}
+                                serverName={server.name}
+                                open={undefined}
+                                onOpenChange={undefined}
+                                onEmojiSelect={(emoji) => setRoleIcon(emoji)}
+                              >
+                                <Button type="button" variant="outline" size="sm" className="h-10 px-3 flex items-center gap-2">
+                                  <Smile className="w-4 h-4" />
+                                  <span className="text-sm">{roleIcon ? 'Change' : 'Select'}</span>
+                                </Button>
+                              </EmojiGifPicker>
+                              <div className="flex-1 min-w-0">
                                 {roleIcon ? (
-                                    <div className="flex items-center gap-2">
-                                      <RoleIconPreview icon={roleIcon} serverId={server.id} />
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="w-7 h-7"
-                                        onClick={() => setRoleIcon('')}
-                                        title="Clear role icon"
-                                      >
-                                        <X className="w-3.5 h-3.5" />
-                                      </Button>
-                                    </div>
-                                  ) : (
-                                    <p className="text-xs text-muted-foreground truncate">
-                                      Emoji or server emoji (e.g. <span className="font-mono">:cat:</span>)
-                                    </p>
-                                  )}
-                                </div>
+                                  <div className="flex items-center gap-2">
+                                    <RoleIconPreview icon={roleIcon} serverId={server.id} />
+                                    <Button type="button" variant="ghost" size="icon" className="w-7 h-7" onClick={() => setRoleIcon('')} title="Clear role icon">
+                                      <X className="w-3.5 h-3.5" />
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    Emoji or server emoji (e.g. <span className="font-mono">:cat:</span>)
+                                  </p>
+                                )}
                               </div>
                             </div>
-                            <div className="flex items-center gap-2 pt-2">
-                              <Button
-                                onClick={selectedRole ? handleUpdateRole : handleCreateRole}
-                                disabled={!roleName.trim()}
-                                size="sm"
-                                className="flex-1"
-                              >
-                                {selectedRole ? (
-                                  <>
-                                    <Edit2 className="w-4 h-4 mr-2" />
-                                    Update Role
-                                  </>
-                                ) : (
-                                  <>
-                                    <Plus className="w-4 h-4 mr-2" />
-                                    Create Role
-                                  </>
-                                )}
-                              </Button>
-                              {selectedRole && (
-                                <Button
-                                  variant="outline"
-                                  onClick={() => {
-                                    setSelectedRole(null);
-                                    setEditingRole(null);
-                                    setRoleName('');
-                                    setRoleColor('#5865F2');
-                                    setRoleIcon('');
-                                    setColorType('solid');
-                                    setGradientColors(['#5865F2', '#7289DA']);
-                                    setGradientAngle(135);
-                                  }}
-                                  size="sm"
-                                >
-                                  Cancel
-                                </Button>
-                              )}
-                            </div>
                           </div>
 
-                          {/* Delete Role */}
-                          <div className="border-t border-destructive/20 pt-4">
-                            <h4 className="text-sm font-semibold text-destructive mb-2">Danger Zone</h4>
-                            <p className="text-xs text-muted-foreground mb-3">
-                              Deleting this role will remove it from all members.
-                            </p>
-                            <Button 
-                              variant="destructive" 
+                          <div className="flex items-center gap-2 pt-2">
+                            <Button onClick={handleUpdateRole} disabled={!roleName.trim()} size="sm">
+                              <Edit2 className="w-4 h-4 mr-2" />
+                              Save Details
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedRole(null);
+                                setEditingRole(null);
+                                setRoleName('');
+                                setRoleColor('#5865F2');
+                                setRoleIcon('');
+                                setColorType('solid');
+                                setGradientColors(['#5865F2', '#7289DA']);
+                                setGradientAngle(135);
+                              }}
                               size="sm"
-                              onClick={() => handleDeleteRole(selectedRole)}
                             >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Delete Role
+                              Cancel
                             </Button>
                           </div>
-                            </div>
-                          </TabsContent>
+                        </div>
 
-                          <TabsContent value="permissions" className="m-0 p-6">
-                            <RolePermissionsEditorInline 
-                              role={selectedRole}
-                              serverId={server.id}
-                            />
-                          </TabsContent>
-                        </Tabs>
+                        {/* Permissions Section */}
+                        <Separator />
+                        <div>
+                          <h3 className="text-lg font-semibold mb-1">Permissions</h3>
+                          <p className="text-sm text-muted-foreground mb-4">
+                            Configure what members with this role can do. Greyed-out permissions are not yet available.
+                          </p>
+                          <RolePermissionsEditorInline 
+                            role={selectedRole}
+                            serverId={server.id}
+                          />
+                        </div>
+
+                        {/* Delete Role */}
+                        <Separator />
+                        <div className="pb-8">
+                          <h4 className="text-sm font-semibold text-destructive mb-2">Delete Role</h4>
+                          <p className="text-xs text-muted-foreground mb-3">
+                            Permanently delete this role. It will be removed from all members who have it.
+                          </p>
+                          <Button 
+                            variant="destructive" 
+                            size="sm"
+                            onClick={() => handleDeleteRole(selectedRole)}
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete Role
+                          </Button>
+                        </div>
                       </div>
-                    ) : (!selectedRole && !editingRole) ? (
+                    ) : (
                       <div className="p-6 max-w-2xl">
                         <div className="space-y-5">
                           <div>
@@ -2161,7 +2201,6 @@ export const ServerSettingsPage = () => {
                             </p>
                           </div>
 
-                          {/* Role Form */}
                           <div className="space-y-4 p-4 border rounded-lg bg-secondary/30">
                             <div className="space-y-2">
                               <Label className="text-sm">Role Name</Label>
@@ -2175,7 +2214,6 @@ export const ServerSettingsPage = () => {
                               />
                             </div>
 
-                            {/* Role Color Section */}
                             <RoleColorPicker
                               colorType={colorType}
                               onColorTypeChange={setColorType}
@@ -2186,6 +2224,7 @@ export const ServerSettingsPage = () => {
                               gradientAngle={gradientAngle}
                               onGradientAngleChange={setGradientAngle}
                             />
+
                             <div className="space-y-2">
                               <Label className="text-sm">Role Icon (optional)</Label>
                               <div className="flex items-center gap-2">
@@ -2197,30 +2236,16 @@ export const ServerSettingsPage = () => {
                                   onOpenChange={undefined}
                                   onEmojiSelect={(emoji) => setRoleIcon(emoji)}
                                 >
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-10 px-3 flex items-center gap-2"
-                                  >
+                                  <Button type="button" variant="outline" size="sm" className="h-10 px-3 flex items-center gap-2">
                                     <Smile className="w-4 h-4" />
-                                    <span className="text-sm">
-                                      {roleIcon ? 'Change' : 'Select'}
-                                    </span>
+                                    <span className="text-sm">{roleIcon ? 'Change' : 'Select'}</span>
                                   </Button>
                                 </EmojiGifPicker>
                                 <div className="flex-1 min-w-0">
                                   {roleIcon ? (
                                     <div className="flex items-center gap-2">
                                       <RoleIconPreview icon={roleIcon} serverId={server.id} />
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="w-7 h-7"
-                                        onClick={() => setRoleIcon('')}
-                                        title="Clear role icon"
-                                      >
+                                      <Button type="button" variant="ghost" size="icon" className="w-7 h-7" onClick={() => setRoleIcon('')} title="Clear role icon">
                                         <X className="w-3.5 h-3.5" />
                                       </Button>
                                     </div>
@@ -2232,28 +2257,14 @@ export const ServerSettingsPage = () => {
                                 </div>
                               </div>
                             </div>
+
                             <div className="flex items-center gap-2 pt-2">
-                              <Button
-                                onClick={handleCreateRole}
-                                disabled={!roleName.trim()}
-                                size="sm"
-                                className="flex-1"
-                              >
+                              <Button onClick={handleCreateRole} disabled={!roleName.trim()} size="sm" className="flex-1">
                                 <Plus className="w-4 h-4 mr-2" />
                                 Create Role
                               </Button>
                             </div>
                           </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center h-full">
-                        <div className="text-center">
-                          <Palette className="w-12 h-12 text-muted-foreground/50 mb-3 mx-auto" />
-                          <p className="text-sm text-muted-foreground">Select a role to view settings</p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            or click + to create a new role
-                          </p>
                         </div>
                       </div>
                     )}
@@ -2361,30 +2372,22 @@ export const ServerSettingsPage = () => {
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <span className="font-mono text-sm tracking-widest">{invite.code}</span>
                                   {isRevoked && (
-                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
-                                      Revoked
-                                    </Badge>
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">Revoked</Badge>
                                   )}
                                   {!isRevoked && isExpired && (
-                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
-                                      Expired
-                                    </Badge>
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">Expired</Badge>
                                   )}
                                   {!isRevoked && !isExpired && isMaxed && (
-                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
-                                      Max uses reached
-                                    </Badge>
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">Max uses reached</Badge>
                                   )}
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1">
                                   Created by <span className="font-medium text-foreground">{invite.created_by_username}</span>
-                                  {" "}•{" "}
-                                  {new Date(invite.created_at).toLocaleString()}
+                                  {" "}•{" "}{new Date(invite.created_at).toLocaleString()}
                                 </p>
                                 <p className="text-xs text-muted-foreground mt-0.5">
                                   Expires: <span className="font-medium text-foreground">{expiresLabel}</span>
-                                  {" "}•{" "}
-                                  Uses: <span className="font-medium text-foreground">{usesCount}/{maxUsesLabel}</span>
+                                  {" "}•{" "}Uses: <span className="font-medium text-foreground">{usesCount}/{maxUsesLabel}</span>
                                 </p>
                                 {isRevoked && invite.revoked_by_username && (
                                   <p className="text-xs text-muted-foreground mt-0.5">
@@ -2392,29 +2395,12 @@ export const ServerSettingsPage = () => {
                                   </p>
                                 )}
                               </div>
-
                               <div className="flex items-center gap-2 flex-shrink-0">
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => copyInviteLink(invite.code, invite.id)}
-                                  className="h-8 px-3"
-                                >
-                                  {copiedInviteId === invite.id ? (
-                                    <Check className="w-4 h-4" />
-                                  ) : (
-                                    <Copy className="w-4 h-4" />
-                                  )}
+                                <Button type="button" size="sm" variant="outline" onClick={() => copyInviteLink(invite.code, invite.id)} className="h-8 px-3">
+                                  {copiedInviteId === invite.id ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                                 </Button>
                                 {!isRevoked && (
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => revokeInvite(invite.id)}
-                                    className="h-8 px-3"
-                                  >
+                                  <Button type="button" size="sm" variant="outline" onClick={() => revokeInvite(invite.id)} className="h-8 px-3">
                                     Revoke
                                   </Button>
                                 )}
@@ -2468,7 +2454,6 @@ export const ServerSettingsPage = () => {
                             size="sm"
                             onClick={async () => {
                               try {
-                                // Use RPC so pre-emptive bans are properly removed (and user can re-join)
                                 const { error } = await supabase.rpc('unban_member', {
                                   _server_id: server.id,
                                   _user_id: user!.id,
@@ -2675,7 +2660,6 @@ export const ServerSettingsPage = () => {
                 </div>
               </TabsContent>
             )}
-
 
 
           </div>
