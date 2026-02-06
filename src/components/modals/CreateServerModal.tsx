@@ -151,6 +151,8 @@ export const CreateServerModal = () => {
 
     try {
       const success = await joinServer(data.inviteCode.toUpperCase(), user.id);
+      console.log('[CreateServerModal] joinServer result:', success);
+      console.log('[CreateServerModal] store error:', useServerStore.getState().error);
       if (success) {
         toast.success("Successfully joined server!");
         const newServer = servers.find((s) => s.invite_code === data.inviteCode.toUpperCase());
@@ -162,6 +164,7 @@ export const CreateServerModal = () => {
         handleClose();
       } else {
         const storeError = useServerStore.getState().error;
+        console.log('[CreateServerModal] storeError in else:', storeError);
         if (storeError?.toLowerCase().includes('banned')) {
           setShowBannedModal(true);
         } else {
