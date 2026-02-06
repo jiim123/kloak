@@ -150,10 +150,16 @@ export const CreateServerModal = () => {
     useServerStore.setState({ error: null });
 
     try {
-      const success = await joinServer(data.inviteCode.toUpperCase(), user.id);
-      console.log('[CreateServerModal] joinServer result:', success);
-      console.log('[CreateServerModal] store error:', useServerStore.getState().error);
-      if (success) {
+      const result = await joinServer(data.inviteCode.toUpperCase(), user.id);
+      
+      // Always check for banned error first, even if result is truthy
+      const storeError = useServerStore.getState().error;
+      if (storeError?.toLowerCase().includes('banned')) {
+        setShowBannedModal(true);
+        return;
+      }
+      
+      if (result) {
         toast.success("Successfully joined server!");
         const newServer = servers.find((s) => s.invite_code === data.inviteCode.toUpperCase());
         if (newServer) {
@@ -163,12 +169,10 @@ export const CreateServerModal = () => {
         }
         handleClose();
       } else {
-        const storeError = useServerStore.getState().error;
-        console.log('[CreateServerModal] storeError in else:', storeError);
-        if (storeError?.toLowerCase().includes('banned')) {
-          setShowBannedModal(true);
+        if (storeError) {
+          setJoinError(storeError);
         } else {
-          setJoinError(storeError || "Invalid invite code or you may already be a member");
+          setJoinError("Invalid invite code or you may already be a member");
         }
       }
     } catch (error) {
