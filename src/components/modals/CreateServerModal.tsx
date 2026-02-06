@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Upload, Plus, Users, ArrowLeft, X, Sparkles } from "lucide-react";
+import { Loader2, Upload, Plus, Users, ArrowLeft, X, Sparkles, Frown } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +42,7 @@ export const CreateServerModal = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [view, setView] = useState<ModalView>("choose");
   const [joinError, setJoinError] = useState<string | null>(null);
+  const [showBannedModal, setShowBannedModal] = useState(false);
 
   // Icon upload state
   const [iconFile, setIconFile] = useState<File | null>(null);
@@ -146,6 +147,7 @@ export const CreateServerModal = () => {
 
     setIsLoading(true);
     setJoinError(null);
+    useServerStore.setState({ error: null });
 
     try {
       const success = await joinServer(data.inviteCode.toUpperCase(), user.id);
@@ -159,7 +161,12 @@ export const CreateServerModal = () => {
         }
         handleClose();
       } else {
-        setJoinError("Invalid invite code or you may already be a member");
+        const storeError = useServerStore.getState().error;
+        if (storeError?.toLowerCase().includes('banned')) {
+          setShowBannedModal(true);
+        } else {
+          setJoinError(storeError || "Invalid invite code or you may already be a member");
+        }
       }
     } catch (error) {
       setJoinError("Failed to join server");
@@ -173,6 +180,7 @@ export const CreateServerModal = () => {
     joinForm.reset();
     setView("choose");
     setJoinError(null);
+    setShowBannedModal(false);
     clearIcon();
     closeModal();
   };
@@ -192,7 +200,23 @@ export const CreateServerModal = () => {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+    <>
+      {/* Banned modal */}
+      <Dialog open={showBannedModal} onOpenChange={(open) => { if (!open) { setShowBannedModal(false); handleClose(); } }}>
+        <DialogContent className="sm:max-w-sm" hideCloseButton>
+          <div className="flex flex-col items-center justify-center gap-4 py-6">
+            <Frown className="w-16 h-16 text-muted-foreground" />
+            <p className="text-center text-lg font-medium text-foreground">
+              Uh oh, seems that you have been banned from this server
+            </p>
+            <Button variant="outline" onClick={() => { setShowBannedModal(false); handleClose(); }}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isOpen && !showBannedModal} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="sm:max-w-md max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-hidden bg-background/95 backdrop-blur-xl border-border/50 rounded-2xl p-0">
         {/* Hidden file input */}
         <input
@@ -420,6 +444,7 @@ export const CreateServerModal = () => {
           </div>
         )}
       </DialogContent>
-    </Dialog>
+      </Dialog>
+    </>
   );
 };
