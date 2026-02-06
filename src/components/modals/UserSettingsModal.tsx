@@ -22,7 +22,6 @@ import {
   X,
   RefreshCw,
   AlertTriangle,
-  ArrowLeft,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -40,6 +39,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { AvatarDecorationModal } from "@/components/modals/AvatarDecorationModal";
 import { ProfileEffectModal } from "@/components/modals/ProfileEffectModal";
 import { DockNavigation } from "@/components/ui/dock-navigation";
@@ -160,6 +161,16 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     if (variant === "modal" && !isOpen) return;
     fetchFriends(user.id);
   }, [fetchFriends, isOpen, user?.id, variant]);
+
+  // ESC key to close (desktop page variant)
+  useEffect(() => {
+    if (variant !== "page") return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [variant]);
 
   const handleSaveProfile = async () => {
     if (!user) return;
@@ -1266,22 +1277,19 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
       {/* Desktop: In-layout page (rendered from AppLayout) */}
       {variant === "page" && !isMobile && (
-        <div className="h-full flex flex-col bg-background">
-          {/* Header */}
-          <div className="px-6 py-4 border-b border-border flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={handleClose} className="flex-shrink-0">
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <div>
-              <h1 className="text-lg font-semibold">User Settings</h1>
-              <p className="text-sm text-muted-foreground">Manage your account and preferences</p>
+        <div className="h-full flex bg-background">
+          {/* Sidebar Navigation */}
+          <div className="w-56 flex-shrink-0 border-r border-border bg-secondary/20 flex flex-col overflow-hidden">
+            {/* Settings Title Header */}
+            <div className="px-4 pt-5 pb-3">
+              <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground truncate">
+                User Settings
+              </h2>
             </div>
-          </div>
 
-          <div className="flex-1 flex overflow-hidden">
-            {/* Sidebar Navigation */}
-            <div className="w-56 bg-secondary/30 border-r border-border flex flex-col overflow-hidden">
-              <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+            {/* Nav Items */}
+            <ScrollArea className="flex-1 px-2 pb-4">
+              <nav className="flex flex-col gap-0.5">
                 {navItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = activeTab === item.id;
@@ -1291,10 +1299,10 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                       key={item.id}
                       onClick={() => setActiveTab(item.id)}
                       className={cn(
-                        "w-full flex items-center gap-3 px-4 py-3 text-sm rounded-xl transition-all",
+                        "w-full flex items-center gap-2.5 text-sm font-medium px-3 py-2 rounded-md transition-colors",
                         isActive
-                          ? "bg-background shadow-sm"
-                          : "text-muted-foreground hover:text-foreground hover:bg-secondary/80",
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
                       )}
                     >
                       <Icon className="w-4 h-4" />
@@ -1302,25 +1310,48 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                     </button>
                   );
                 })}
-              </nav>
-            </div>
 
-            {/* Content Area */}
-            <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-              <div className="flex-1 overflow-y-auto p-8">
-                <div className={cn(activeTab !== "profile" && "max-w-xl")}>
-                  <div className="mb-6 pb-5 border-b border-border">
-                    <h3 className="text-xl font-semibold">{navItems.find((n) => n.id === activeTab)?.label}</h3>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {activeTab === "account" && "Manage your account credentials and security"}
-                      {activeTab === "profile" && "Customize how others see you"}
-                      {activeTab === "notifications" && "Control how you receive notifications"}
-                      {activeTab === "appearance" && "Personalize your app experience"}
-                      {activeTab === "blocked" && "View and unblock users"}
-                    </p>
-                  </div>
-                  {renderContent()}
-                </div>
+                {/* Logout - at bottom, separated */}
+                <Separator className="my-3" />
+                <button
+                  type="button"
+                  onClick={handleLogoutClick}
+                  className="w-full flex items-center gap-2.5 text-sm font-medium px-3 py-2 rounded-md text-destructive hover:bg-destructive/10 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Log Out
+                </button>
+              </nav>
+            </ScrollArea>
+          </div>
+
+          {/* Main Content Area */}
+          <div className="flex-1 overflow-y-auto relative">
+            {/* Close Button (ESC) */}
+            <button
+              type="button"
+              onClick={handleClose}
+              className="absolute top-4 right-4 z-10 flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors group"
+            >
+              <div className="w-9 h-9 rounded-full border border-border bg-secondary/50 flex items-center justify-center group-hover:bg-secondary group-hover:border-muted-foreground/50 transition-colors">
+                <X className="w-4 h-4" />
+              </div>
+              <span className="text-[10px] font-medium uppercase tracking-wider">ESC</span>
+            </button>
+
+            {/* Content */}
+            <div className="p-6 pr-16">
+              <h2 className="text-xl font-bold mb-1">{navItems.find((n) => n.id === activeTab)?.label}</h2>
+              <p className="text-sm text-muted-foreground mb-6">
+                {activeTab === "account" && "Manage your account credentials and security"}
+                {activeTab === "profile" && "Customize how others see you"}
+                {activeTab === "notifications" && "Control how you receive notifications"}
+                {activeTab === "appearance" && "Personalize your app experience"}
+                {activeTab === "blocked" && "View and unblock users"}
+              </p>
+
+              <div className={cn(activeTab !== "profile" && "max-w-xl")}>
+                {renderContent()}
               </div>
             </div>
           </div>

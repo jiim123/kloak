@@ -18,7 +18,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Hash, Trash2, FolderOpen, Settings, Shield, Loader2, Clock, Lock, AlertTriangle, Users, Link2, Eye, Plus, X, ArrowLeft } from "lucide-react";
+import { Hash, Trash2, FolderOpen, Settings, Shield, Loader2, Clock, Lock, AlertTriangle, Users, Link2, Eye, Plus, X } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { ChannelPermissionsEditor } from "@/components/modals/ChannelPermissionsEditor";
 import { CategoryPermissionsEditor } from "@/components/modals/CategoryPermissionsEditor";
@@ -599,6 +601,15 @@ export const ChannelSettingsPage = () => {
   // Check if we need to show save button
   const showSaveButton = activeTab === "overview" || (activeTab === "settings" && !isCategory);
 
+  // ESC key to close
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   // Don't render if no valid target
   if (!hasValidTarget) {
     return (
@@ -613,35 +624,22 @@ export const ChannelSettingsPage = () => {
 
   return (
     <>
-      <div className="h-full flex flex-col bg-background">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-border flex items-center gap-3 flex-shrink-0">
-          <Button variant="ghost" size="icon" onClick={handleClose} className="flex-shrink-0 rounded-xl">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              {isCategory ? (
-                <FolderOpen className="w-5 h-5 text-primary" />
-              ) : (
-                <Hash className="w-5 h-5 text-primary" />
-              )}
-            </div>
-            <div>
-              <h1 className="text-lg font-semibold">
-                {isCategory ? category?.name : `#${channel?.name}`}
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                {isCategory ? "Category Settings" : "Channel Settings"}
-              </p>
-            </div>
+      <div className="h-full flex bg-background">
+        {/* Sidebar Navigation */}
+        <div className="w-56 flex-shrink-0 border-r border-border bg-secondary/20 flex flex-col overflow-hidden">
+          {/* Channel/Category Name Header */}
+          <div className="px-4 pt-5 pb-3">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground truncate">
+              {isCategory ? category?.name : `# ${channel?.name}`}
+            </h2>
+            <p className="text-[10px] text-muted-foreground/60 mt-0.5">
+              {isCategory ? "Category Settings" : "Channel Settings"}
+            </p>
           </div>
-        </div>
 
-        <div className="flex-1 flex overflow-hidden">
-          {/* Sidebar Navigation */}
-          <div className="w-56 bg-secondary/30 border-r border-border flex flex-col overflow-hidden flex-shrink-0">
-            <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+          {/* Nav Items */}
+          <ScrollArea className="flex-1 px-2 pb-4">
+            <nav className="flex flex-col gap-0.5">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
@@ -651,10 +649,10 @@ export const ChannelSettingsPage = () => {
                     key={item.id}
                     onClick={() => setActiveTab(item.id)}
                     className={cn(
-                      "w-full flex items-center gap-3 px-4 py-3 text-sm rounded-xl transition-all",
+                      "w-full flex items-center gap-2.5 text-sm font-medium px-3 py-2 rounded-md transition-colors",
                       isActive
-                        ? "bg-background shadow-sm"
-                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/80",
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
                     )}
                   >
                     <Icon className="w-4 h-4" />
@@ -662,46 +660,67 @@ export const ChannelSettingsPage = () => {
                   </button>
                 );
               })}
+
+              {/* Delete - at bottom, separated */}
+              <Separator className="my-3" />
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="w-full flex items-center gap-2.5 text-sm font-medium px-3 py-2 rounded-md text-destructive hover:bg-destructive/10 transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete {isCategory ? "Category" : "Channel"}
+              </button>
             </nav>
-          </div>
+          </ScrollArea>
+        </div>
 
-          {/* Content Area */}
-          <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-            <div className="flex-1 overflow-y-auto p-8">
-              <div className="max-w-2xl">
-                {/* Tab Title */}
-                <div className="mb-6 pb-5 border-b border-border">
-                  <h3 className="text-xl font-semibold">{navItems.find((n) => n.id === activeTab)?.label}</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {activeTab === "overview" && (isCategory ? "Basic category information" : "Basic channel information")}
-                    {activeTab === "settings" && (isCategory ? "Category configuration options" : "Channel configuration options")}
-                    {activeTab === "members" && "Manage who can access this private channel"}
-                    {activeTab === "permissions" && (isCategory ? "Control category access and abilities" : "Control channel access and abilities")}
-                  </p>
+        {/* Main Content Area */}
+        <div className="flex-1 overflow-y-auto relative">
+          {/* Close Button (ESC) */}
+          <button
+            type="button"
+            onClick={handleClose}
+            className="absolute top-4 right-4 z-10 flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors group"
+          >
+            <div className="w-9 h-9 rounded-full border border-border bg-secondary/50 flex items-center justify-center group-hover:bg-secondary group-hover:border-muted-foreground/50 transition-colors">
+              <X className="w-4 h-4" />
+            </div>
+            <span className="text-[10px] font-medium uppercase tracking-wider">ESC</span>
+          </button>
+
+          {/* Content */}
+          <div className="p-6 pr-16">
+            <h2 className="text-xl font-bold mb-1">{navItems.find((n) => n.id === activeTab)?.label}</h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              {activeTab === "overview" && (isCategory ? "Basic category information" : "Basic channel information")}
+              {activeTab === "settings" && (isCategory ? "Category configuration options" : "Channel configuration options")}
+              {activeTab === "members" && "Manage who can access this private channel"}
+              {activeTab === "permissions" && (isCategory ? "Control category access and abilities" : "Control channel access and abilities")}
+            </p>
+
+            <div className="max-w-2xl">
+              {/* Tab Content */}
+              {isCategory ? renderCategoryContent() : renderChannelContent()}
+
+              {/* Save Button for overview and settings (channel) */}
+              {showSaveButton && (
+                <div className="flex gap-3 pt-6 mt-6 border-t border-border/50">
+                  <Button type="button" variant="outline" onClick={handleClose} className="h-11 rounded-xl px-8">
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSubmit} disabled={isSubmitting || !name.trim()} className="h-11 rounded-xl px-8">
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save Changes"
+                    )}
+                  </Button>
                 </div>
-
-                {/* Tab Content */}
-                {isCategory ? renderCategoryContent() : renderChannelContent()}
-
-                {/* Save Button for overview and settings (channel) */}
-                {showSaveButton && (
-                  <div className="flex gap-3 pt-6 mt-6 border-t border-border/50">
-                    <Button type="button" variant="outline" onClick={handleClose} className="h-11 rounded-xl px-8">
-                      Cancel
-                    </Button>
-                    <Button onClick={handleSubmit} disabled={isSubmitting || !name.trim()} className="h-11 rounded-xl px-8">
-                      {isSubmitting ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        "Save Changes"
-                      )}
-                    </Button>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           </div>
         </div>
