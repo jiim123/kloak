@@ -2383,9 +2383,10 @@ export type Database = {
           name: string
         }[]
       }
-      get_server_categories:
-        | { Args: { _server_id: string }; Returns: Json }
-        | { Args: { _server_id: string; _user_id?: string }; Returns: Json }
+      get_server_categories: {
+        Args: { _server_id: string; _user_id?: string }
+        Returns: Json
+      }
       get_server_channels: {
         Args: { _server_id: string; _user_id?: string }
         Returns: Json
