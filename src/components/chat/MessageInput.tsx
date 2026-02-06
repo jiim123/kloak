@@ -6,7 +6,6 @@ import {
   X,
   Loader2,
   WifiOff,
-  Type,
   Lock,
   SquareChartGantt,
   MoreHorizontal,
@@ -32,7 +31,7 @@ import { ChannelAutocomplete } from "./ChannelAutocomplete";
 import { EmojiPicker } from "@/components/modals/EmojiPicker";
 import { ImageUploadDialog } from "@/components/modals/ImageUploadDialog";
 import { CreatePollModal } from "@/components/modals/CreatePollModal";
-import { FormatToolbar, FORMAT_SYNTAX, getColorSyntax, getCodeBlockSyntax } from "./FormatToolbar";
+import { SelectionFormatToolbar, FORMAT_SYNTAX, getCodeBlockSyntax } from "./FormatToolbar";
 import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showWarning, handleError } from "@/lib/errorHandler";
 import { messageRateLimiter, validateMessageContent } from "@/lib/security";
@@ -65,8 +64,6 @@ const TYPING_STOP_DELAY = 2000; // ms
 // Memoized action buttons to prevent re-renders
 const ActionButtons = memo(
   ({
-    showFormatToolbar,
-    setShowFormatToolbar,
     showCreatePoll,
     setShowCreatePoll,
     showEmojiPicker,
@@ -76,13 +73,10 @@ const ActionButtons = memo(
     isSending,
     onSubmit,
     onEmojiSelect,
-    onFormat,
     currentServer,
     showAttachButton,
     onAttachClick,
   }: {
-    showFormatToolbar: boolean;
-    setShowFormatToolbar: (show: boolean) => void;
     showCreatePoll: boolean;
     setShowCreatePoll: (show: boolean) => void;
     showEmojiPicker: boolean;
@@ -92,7 +86,6 @@ const ActionButtons = memo(
     isSending: boolean;
     onSubmit: () => void;
     onEmojiSelect: (emoji: string) => void;
-    onFormat: (formatType: string, value?: string) => void;
     currentServer: any;
     showAttachButton?: boolean;
     onAttachClick?: () => void;
@@ -133,10 +126,6 @@ const ActionButtons = memo(
                     Upload image
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem onClick={() => setShowFormatToolbar(!showFormatToolbar)}>
-                  <Type className="w-4 h-4 mr-2" />
-                  Format text
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setShowCreatePoll(true)} disabled={!canSendMessage}>
                   <SquareChartGantt className="w-4 h-4 mr-2" />
                   Create poll
@@ -162,21 +151,6 @@ const ActionButtons = memo(
           </>
         ) : (
           <>
-            {/* Format button */}
-            <button
-              type="button"
-              onClick={() => setShowFormatToolbar(!showFormatToolbar)}
-              className={`p-2 rounded-xl transition-colors duration-150 ${
-                showFormatToolbar
-                  ? "text-primary bg-primary/10"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-              }`}
-              onMouseDown={(e) => e.preventDefault()}
-              title="Format text"
-            >
-              <Type className="w-5 h-5" />
-            </button>
-
             {/* Poll button */}
             <button
               type="button"
@@ -248,7 +222,6 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const [channelPosition, setChannelPosition] = useState({ top: 0, left: 0 });
   const [channelStartIndex, setChannelStartIndex] = useState(-1);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [showFormatToolbar, setShowFormatToolbar] = useState(false);
   const [showImageUpload, setShowImageUpload] = useState(false);
   const [showCreatePoll, setShowCreatePoll] = useState(false);
 
@@ -744,10 +717,6 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
             e.preventDefault();
             applyFormatShortcut("italic");
             return;
-          case "u":
-            e.preventDefault();
-            applyFormatShortcut("underline");
-            return;
           case "e":
             e.preventDefault();
             applyFormatShortcut("code");
@@ -925,9 +894,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
 
       let syntax: { prefix: string; suffix: string };
 
-      if (formatType === "color" && value) {
-        syntax = getColorSyntax(value);
-      } else if (formatType === "codeblock") {
+      if (formatType === "codeblock") {
         syntax = getCodeBlockSyntax(value || "");
       } else {
         syntax = FORMAT_SYNTAX[formatType];
@@ -1079,14 +1046,11 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
         />
       )}
 
-      {/* Format toolbar - inline above input */}
-      {showFormatToolbar && (
-        <FormatToolbar
-          onFormat={handleFormat}
-          onClose={() => setShowFormatToolbar(false)}
-          onImageClick={() => setShowImageUpload(true)}
-        />
-      )}
+      {/* Selection-based format toolbar */}
+      <SelectionFormatToolbar
+        textareaRef={textareaRef}
+        onFormat={handleFormat}
+      />
 
       {/* Reply preview */}
       {replyingTo &&
@@ -1101,7 +1065,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
 
           return (
             <div
-              className={`flex items-center gap-2 px-3 sm:px-4 py-2 bg-muted/40 border-b border-border/50 font-[Inter,system-ui,sans-serif] ${!showFormatToolbar ? "rounded-t-2xl" : ""}`}
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-muted/40 border-b border-border/50 font-[Inter,system-ui,sans-serif] rounded-t-2xl"
             >
               <span className="text-[12px] sm:text-[13px] leading-[1.5] text-muted-foreground">
                 Replying to{" "}
@@ -1144,8 +1108,6 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
         setIsFocused={setIsFocused}
         handleKeyDown={handleKeyDown}
         handlePaste={handlePaste}
-        showFormatToolbar={showFormatToolbar}
-        setShowFormatToolbar={setShowFormatToolbar}
         showCreatePoll={showCreatePoll}
         setShowCreatePoll={setShowCreatePoll}
         showEmojiPicker={showEmojiPicker}
@@ -1153,7 +1115,6 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
         isSending={isSending}
         handleSubmit={handleSubmit}
         handleEmojiSelect={handleEmojiSelect}
-        handleFormat={handleFormat}
         currentServer={currentServer}
         setShowImageUpload={setShowImageUpload}
       />
@@ -1180,8 +1141,6 @@ const MobileOptimizedInput = memo(
     setIsFocused,
     handleKeyDown,
     handlePaste,
-    showFormatToolbar,
-    setShowFormatToolbar,
     showCreatePoll,
     setShowCreatePoll,
     showEmojiPicker,
@@ -1189,7 +1148,6 @@ const MobileOptimizedInput = memo(
     isSending,
     handleSubmit,
     handleEmojiSelect,
-    handleFormat,
     currentServer,
     setShowImageUpload,
   }: {
@@ -1203,8 +1161,6 @@ const MobileOptimizedInput = memo(
     setIsFocused: (focused: boolean) => void;
     handleKeyDown: (e: React.KeyboardEvent) => void;
     handlePaste: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
-    showFormatToolbar: boolean;
-    setShowFormatToolbar: (show: boolean) => void;
     showCreatePoll: boolean;
     setShowCreatePoll: (show: boolean) => void;
     showEmojiPicker: boolean;
@@ -1212,7 +1168,6 @@ const MobileOptimizedInput = memo(
     isSending: boolean;
     handleSubmit: () => void;
     handleEmojiSelect: (emoji: string) => void;
-    handleFormat: (formatType: string, value?: string) => void;
     currentServer: any;
     setShowImageUpload: (show: boolean) => void;
   }) => {
@@ -1270,8 +1225,6 @@ const MobileOptimizedInput = memo(
 
           {/* Action buttons - memoized */}
           <ActionButtons
-            showFormatToolbar={showFormatToolbar}
-            setShowFormatToolbar={setShowFormatToolbar}
             showCreatePoll={showCreatePoll}
             setShowCreatePoll={setShowCreatePoll}
             showEmojiPicker={showEmojiPicker}
@@ -1281,7 +1234,6 @@ const MobileOptimizedInput = memo(
             isSending={isSending}
             onSubmit={handleSubmit}
             onEmojiSelect={handleEmojiSelect}
-            onFormat={handleFormat}
             currentServer={currentServer}
             showAttachButton={shouldCollapse}
             onAttachClick={() => setShowImageUpload(true)}
