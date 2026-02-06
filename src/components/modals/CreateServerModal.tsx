@@ -156,6 +156,8 @@ export const CreateServerModal = () => {
       const storeError = useServerStore.getState().error;
       if (storeError?.toLowerCase().includes('banned')) {
         setShowBannedModal(true);
+        // Refresh server list to ensure banned server is removed from sidebar
+        if (user) await useServerStore.getState().fetchServers(user.id);
         return;
       }
       
