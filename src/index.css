@@ -901,3 +901,12 @@
 .animate-highlight-message {
   animation: highlight-message 2s ease-out forwards;
 }
+
+/* Force message-input textarea placeholders to single-line with ellipsis */
+.message-input-textarea::placeholder {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  max-width: 100%;
+}
