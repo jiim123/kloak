@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { Loader2, Users, ArrowRight } from "lucide-react";
+import { Loader2, Users, ArrowRight, Frown } from "lucide-react";
 import { NavigationMenu } from "@/components/layout/NavigationMenu";
 import { Footer } from "@/components/ui/footer-section";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { initializeAuth, useAuthStore } from "@/stores/authStore";
@@ -37,6 +38,7 @@ const Invite = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isJoining, setIsJoining] = useState(false);
   const [isAuthReady, setIsAuthReady] = useState(false);
+  const [showBannedModal, setShowBannedModal] = useState(false);
 
   useEffect(() => {
     if (didInitAuth.current) return;
@@ -123,7 +125,11 @@ const Invite = () => {
       const joinedServer = await joinServer(inviteCode, activeUser.id);
       if (!joinedServer) {
         const storeError = useServerStore.getState().error;
-        toast.error(storeError || "Failed to join server");
+        if (storeError?.toLowerCase().includes('banned')) {
+          setShowBannedModal(true);
+        } else {
+          toast.error(storeError || "Failed to join server");
+        }
         return;
       }
 
@@ -138,6 +144,21 @@ const Invite = () => {
 
   return (
     <div className="relative min-h-screen overflow-hidden flex flex-col bg-background">
+      {/* Banned modal */}
+      <Dialog open={showBannedModal} onOpenChange={(open) => { if (!open) setShowBannedModal(false); }}>
+        <DialogContent className="sm:max-w-sm" hideCloseButton>
+          <div className="flex flex-col items-center justify-center gap-4 py-6">
+            <Frown className="w-16 h-16 text-muted-foreground" />
+            <p className="text-center text-lg font-medium text-foreground">
+              Uh oh, seems that you have been banned from this server
+            </p>
+            <Button variant="outline" onClick={() => setShowBannedModal(false)}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <SEO 
         title={server ? `Join ${server.name}` : SEO_CONFIG.invite.title}
         description={server?.about || SEO_CONFIG.invite.description}
