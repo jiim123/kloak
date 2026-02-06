@@ -1208,7 +1208,7 @@ const MobileOptimizedInput = memo(
             onBlur={() => setIsFocused(false)}
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
-            placeholder={canSendMessage ? (channelName.length > 20 ? `Message #${channelName.slice(0, 20)}…` : `Message #${channelName}`) : "You cannot send messages here"}
+            placeholder={canSendMessage ? (channelName.length > 17 ? `Message #${channelName.slice(0, 17)}…` : `Message #${channelName}`) : "You cannot send messages here"}
             disabled={!canSendMessage}
             rows={1}
             className={`flex-1 bg-transparent resize-none outline-none text-foreground placeholder:text-muted-foreground/60 py-2 px-1 min-w-0 min-h-[40px] overflow-y-auto font-[Inter,system-ui,sans-serif] ${
