@@ -13,16 +13,32 @@ export const usePreferencesSync = () => {
     theme,
     linkPreviewsEnabled,
     desktopNotificationsEnabled,
+    browserNotificationsEnabled,
     notificationSoundEnabled,
+    notificationSoundServerMentions,
+    notificationSoundUserMentions,
+    notificationSoundReplies,
+    notificationVolume,
     showMessagePreview,
+    showPreviewServerMentions,
+    showPreviewUserMentions,
+    showPreviewReplies,
     compactMode,
     showTimestamps,
     animateEmojis,
     setTheme,
     setLinkPreviewsEnabled,
     setDesktopNotificationsEnabled,
+    setBrowserNotificationsEnabled,
     setNotificationSoundEnabled,
+    setNotificationSoundServerMentions,
+    setNotificationSoundUserMentions,
+    setNotificationSoundReplies,
+    setNotificationVolume,
     setShowMessagePreview,
+    setShowPreviewServerMentions,
+    setShowPreviewUserMentions,
+    setShowPreviewReplies,
     setCompactMode,
     setShowTimestamps,
     setAnimateEmojis,
@@ -43,7 +59,7 @@ export const usePreferencesSync = () => {
         // OPTIMIZATION: Specify only required columns instead of select('*')
         const { data, error } = await supabase
           .from('user_preferences')
-          .select('theme, link_previews_enabled, desktop_notifications_enabled, notification_sound_enabled, show_message_preview, compact_mode, show_timestamps, animate_emojis')
+          .select('theme, link_previews_enabled, desktop_notifications_enabled, browser_notifications_enabled, notification_sound_enabled, notification_sound_server_mentions, notification_sound_user_mentions, notification_sound_replies, notification_volume, show_message_preview, show_preview_server_mentions, show_preview_user_mentions, show_preview_replies, compact_mode, show_timestamps, animate_emojis')
           .eq('user_id', user.id)
           .maybeSingle();
 
@@ -70,11 +86,35 @@ export const usePreferencesSync = () => {
           if (typeof data.desktop_notifications_enabled === 'boolean') {
             setDesktopNotificationsEnabled(data.desktop_notifications_enabled);
           }
+          if (typeof data.browser_notifications_enabled === 'boolean') {
+            setBrowserNotificationsEnabled(data.browser_notifications_enabled);
+          }
           if (typeof data.notification_sound_enabled === 'boolean') {
             setNotificationSoundEnabled(data.notification_sound_enabled);
           }
+          if (typeof data.notification_sound_server_mentions === 'boolean') {
+            setNotificationSoundServerMentions(data.notification_sound_server_mentions);
+          }
+          if (typeof data.notification_sound_user_mentions === 'boolean') {
+            setNotificationSoundUserMentions(data.notification_sound_user_mentions);
+          }
+          if (typeof data.notification_sound_replies === 'boolean') {
+            setNotificationSoundReplies(data.notification_sound_replies);
+          }
+          if (typeof data.notification_volume === 'number') {
+            setNotificationVolume(data.notification_volume);
+          }
           if (typeof data.show_message_preview === 'boolean') {
             setShowMessagePreview(data.show_message_preview);
+          }
+          if (typeof data.show_preview_server_mentions === 'boolean') {
+            setShowPreviewServerMentions(data.show_preview_server_mentions);
+          }
+          if (typeof data.show_preview_user_mentions === 'boolean') {
+            setShowPreviewUserMentions(data.show_preview_user_mentions);
+          }
+          if (typeof data.show_preview_replies === 'boolean') {
+            setShowPreviewReplies(data.show_preview_replies);
           }
 
           // Message display preferences
@@ -96,8 +136,16 @@ export const usePreferencesSync = () => {
             theme,
             link_previews_enabled: linkPreviewsEnabled,
             desktop_notifications_enabled: desktopNotificationsEnabled,
+            browser_notifications_enabled: browserNotificationsEnabled,
             notification_sound_enabled: notificationSoundEnabled,
+            notification_sound_server_mentions: notificationSoundServerMentions,
+            notification_sound_user_mentions: notificationSoundUserMentions,
+            notification_sound_replies: notificationSoundReplies,
+            notification_volume: notificationVolume,
             show_message_preview: showMessagePreview,
+            show_preview_server_mentions: showPreviewServerMentions,
+            show_preview_user_mentions: showPreviewUserMentions,
+            show_preview_replies: showPreviewReplies,
             compact_mode: compactMode,
             show_timestamps: showTimestamps,
             animate_emojis: animateEmojis,
@@ -128,8 +176,16 @@ export const usePreferencesSync = () => {
             theme,
             link_previews_enabled: linkPreviewsEnabled,
             desktop_notifications_enabled: desktopNotificationsEnabled,
+            browser_notifications_enabled: browserNotificationsEnabled,
             notification_sound_enabled: notificationSoundEnabled,
+            notification_sound_server_mentions: notificationSoundServerMentions,
+            notification_sound_user_mentions: notificationSoundUserMentions,
+            notification_sound_replies: notificationSoundReplies,
+            notification_volume: notificationVolume,
             show_message_preview: showMessagePreview,
+            show_preview_server_mentions: showPreviewServerMentions,
+            show_preview_user_mentions: showPreviewUserMentions,
+            show_preview_replies: showPreviewReplies,
             compact_mode: compactMode,
             show_timestamps: showTimestamps,
             animate_emojis: animateEmojis,
@@ -146,8 +202,16 @@ export const usePreferencesSync = () => {
     theme,
     linkPreviewsEnabled,
     desktopNotificationsEnabled,
+    browserNotificationsEnabled,
     notificationSoundEnabled,
+    notificationSoundServerMentions,
+    notificationSoundUserMentions,
+    notificationSoundReplies,
+    notificationVolume,
     showMessagePreview,
+    showPreviewServerMentions,
+    showPreviewUserMentions,
+    showPreviewReplies,
     compactMode,
     showTimestamps,
     animateEmojis,

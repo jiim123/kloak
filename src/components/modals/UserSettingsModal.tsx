@@ -13,10 +13,15 @@ import {
   Copy,
   Link,
   Bell,
+  Globe,
+  Monitor,
   MessageSquare,
   Clock,
   Sparkles,
   Volume2,
+  AtSign,
+  Reply,
+  Users,
   X,
   RefreshCw,
   AlertTriangle,
@@ -35,6 +40,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -45,6 +51,7 @@ import { DockNavigation } from "@/components/ui/dock-navigation";
 import { useUIStore, THEMES, type Theme } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useFriendStore } from "@/stores/friendStore";
+import { useNotificationSound } from "@/hooks/useNotificationSound";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -77,10 +84,26 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     setLinkPreviewsEnabled,
     desktopNotificationsEnabled,
     setDesktopNotificationsEnabled,
+    browserNotificationsEnabled,
+    setBrowserNotificationsEnabled,
     notificationSoundEnabled,
     setNotificationSoundEnabled,
+    notificationSoundServerMentions,
+    setNotificationSoundServerMentions,
+    notificationSoundUserMentions,
+    setNotificationSoundUserMentions,
+    notificationSoundReplies,
+    setNotificationSoundReplies,
+    notificationVolume,
+    setNotificationVolume,
     showMessagePreview,
     setShowMessagePreview,
+    showPreviewServerMentions,
+    setShowPreviewServerMentions,
+    showPreviewUserMentions,
+    setShowPreviewUserMentions,
+    showPreviewReplies,
+    setShowPreviewReplies,
     compactMode,
     setCompactMode,
     showTimestamps,
@@ -88,6 +111,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     animateEmojis,
     setAnimateEmojis,
   } = useUIStore();
+  const { playTestSound } = useNotificationSound();
   const { user, secretKey, updateUser, logout, resetSecretKey } = useAuthStore();
   const { blockedUsers, unblockUser, fetchFriends, isLoading: isFriendsLoading } = useFriendStore();
 
@@ -678,120 +702,240 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
   // Notifications Content
   const notificationsContent = (
-    <div className="space-y-2">
-      <SettingsToggle
-        icon={Bell}
-        label="Desktop Notifications"
-        description={
-          !isTauriApp && typeof Notification !== "undefined" && Notification.permission === "denied"
-            ? "Blocked in browser settings"
-            : typeof Notification === "undefined" && !isTauriApp
-              ? "Not supported on this device"
-              : "Show desktop alerts for new messages"
-        }
-        checked={desktopNotificationsEnabled}
-        disabled={!isTauriApp && (typeof Notification === "undefined" || Notification.permission === "denied")}
-        onCheckedChange={async (checked) => {
-          if (!checked) return setDesktopNotificationsEnabled(false);
-
-          if (isTauriApp) {
-            try {
-              const { isPermissionGranted, requestPermission } = await import("@tauri-apps/plugin-notification");
-              let granted = await isPermissionGranted();
-              if (!granted) {
-                const permission = await requestPermission();
-                granted = permission === "granted";
-              }
-              if (granted) {
-                setDesktopNotificationsEnabled(true);
-                toast.success("Desktop notifications enabled!");
-              } else {
-                setDesktopNotificationsEnabled(false);
-                toast.error("Notification permission denied. Enable in system settings.");
-              }
-            } catch {
-              setDesktopNotificationsEnabled(false);
-              toast.error("Unable to enable notifications on desktop.");
-            }
-            return;
-          }
-
-          // Check if Notification API is available (not on iOS Safari, etc.)
-          if (typeof Notification === "undefined") {
-            toast.error("Desktop notifications are not supported on this device.");
-            return;
-          }
-
-          if (Notification.permission === "default") {
-            try {
-              const permission = await Notification.requestPermission();
-              if (permission === "granted") {
-                setDesktopNotificationsEnabled(true);
-                toast.success("Desktop notifications enabled!");
-              } else if (permission === "denied") {
-                toast.error("Notification permission denied. Enable in browser settings.");
-              }
-            } catch {
-              toast.error("Unable to request notification permission.");
-            }
-            return;
-          }
-          setDesktopNotificationsEnabled(true);
-        }}
-      />
-
+    <div className="space-y-6">
+      {/* Desktop Notifications - Only for Tauri */}
       {isTauriApp && (
-        <div className="flex justify-end pt-1">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={async () => {
+        <div className="space-y-2">
+          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Desktop App</Label>
+          <SettingsToggle
+            icon={Monitor}
+            label="Desktop Notifications"
+            description="Show system notifications from the desktop app"
+            checked={desktopNotificationsEnabled}
+            onCheckedChange={async (checked) => {
+              if (!checked) return setDesktopNotificationsEnabled(false);
+
               try {
-                const { isPermissionGranted, requestPermission, sendNotification } =
-                  await import("@tauri-apps/plugin-notification");
+                const { isPermissionGranted, requestPermission } = await import("@tauri-apps/plugin-notification");
                 let granted = await isPermissionGranted();
                 if (!granted) {
                   const permission = await requestPermission();
                   granted = permission === "granted";
                 }
-                if (!granted) {
+                if (granted) {
+                  setDesktopNotificationsEnabled(true);
+                  toast.success("Desktop notifications enabled!");
+                } else {
+                  setDesktopNotificationsEnabled(false);
                   toast.error("Notification permission denied. Enable in system settings.");
-                  return;
                 }
-                sendNotification({
-                  title: "Kloak",
-                  body: "Test notification from the desktop app.",
-                });
               } catch {
-                toast.error("Failed to send a desktop notification.");
+                setDesktopNotificationsEnabled(false);
+                toast.error("Unable to enable notifications on desktop.");
               }
             }}
-          >
-            Send test notification
-          </Button>
+          />
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                try {
+                  const { isPermissionGranted, requestPermission, sendNotification } =
+                    await import("@tauri-apps/plugin-notification");
+                  let granted = await isPermissionGranted();
+                  if (!granted) {
+                    const permission = await requestPermission();
+                    granted = permission === "granted";
+                  }
+                  if (!granted) {
+                    toast.error("Notification permission denied. Enable in system settings.");
+                    return;
+                  }
+                  sendNotification({
+                    title: "Kloak",
+                    body: "Test notification from the desktop app.",
+                  });
+                } catch {
+                  toast.error("Failed to send a desktop notification.");
+                }
+              }}
+            >
+              Send test notification
+            </Button>
+          </div>
         </div>
       )}
 
-      <div className="border-t border-border/50" />
+      {/* Browser Notifications */}
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Browser</Label>
+        <SettingsToggle
+          icon={Globe}
+          label="Browser Notifications"
+          description={
+            typeof Notification !== "undefined" && Notification.permission === "denied"
+              ? "Blocked in browser settings"
+              : typeof Notification === "undefined"
+                ? "Not supported on this device"
+                : "Show browser notifications for new messages"
+          }
+          checked={browserNotificationsEnabled}
+          disabled={typeof Notification === "undefined" || Notification.permission === "denied"}
+          onCheckedChange={async (checked) => {
+            if (!checked) return setBrowserNotificationsEnabled(false);
 
-      <SettingsToggle
-        icon={Volume2}
-        label="Notification Sound"
-        description="Play a sound when you receive notifications"
-        checked={notificationSoundEnabled}
-        onCheckedChange={setNotificationSoundEnabled}
-      />
+            if (typeof Notification === "undefined") {
+              toast.error("Browser notifications are not supported on this device.");
+              return;
+            }
 
-      <div className="border-t border-border/50" />
+            if (Notification.permission === "default") {
+              try {
+                const permission = await Notification.requestPermission();
+                if (permission === "granted") {
+                  setBrowserNotificationsEnabled(true);
+                  toast.success("Browser notifications enabled!");
+                } else if (permission === "denied") {
+                  toast.error("Notification permission denied. Enable in browser settings.");
+                }
+              } catch {
+                toast.error("Unable to request notification permission.");
+              }
+              return;
+            }
+            setBrowserNotificationsEnabled(true);
+          }}
+        />
+      </div>
 
-      <SettingsToggle
-        icon={MessageSquare}
-        label="Message Preview"
-        description="Show message content in notifications"
-        checked={showMessagePreview}
-        onCheckedChange={setShowMessagePreview}
-      />
+      {/* Notification Sound */}
+      <div className="space-y-3">
+        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Sound</Label>
+        <SettingsToggle
+          icon={Volume2}
+          label="Notification Sound"
+          description="Play a sound when you receive notifications"
+          checked={notificationSoundEnabled}
+          onCheckedChange={setNotificationSoundEnabled}
+        />
+
+        {/* Sound sub-options when enabled */}
+        {notificationSoundEnabled && (
+          <div className="ml-14 space-y-3 pb-2">
+            {/* Volume Slider */}
+            <div className="space-y-3 p-4 rounded-xl bg-secondary/30 border border-border/50">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Volume</span>
+                <span className="text-sm text-muted-foreground">{notificationVolume}%</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Slider
+                  value={[notificationVolume]}
+                  onValueChange={([value]) => setNotificationVolume(value)}
+                  max={100}
+                  step={1}
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={playTestSound}
+                  className="flex-shrink-0"
+                >
+                  Test
+                </Button>
+              </div>
+            </div>
+
+            {/* Sound type toggles */}
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">Play sound for:</p>
+              <div className="flex items-center justify-between py-2">
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm">Server Mentions (@here, @everyone)</span>
+                </div>
+                <Switch
+                  checked={notificationSoundServerMentions}
+                  onCheckedChange={setNotificationSoundServerMentions}
+                />
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <div className="flex items-center gap-2">
+                  <AtSign className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm">User Mentions (@you)</span>
+                </div>
+                <Switch
+                  checked={notificationSoundUserMentions}
+                  onCheckedChange={setNotificationSoundUserMentions}
+                />
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <div className="flex items-center gap-2">
+                  <Reply className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm">Replies</span>
+                </div>
+                <Switch
+                  checked={notificationSoundReplies}
+                  onCheckedChange={setNotificationSoundReplies}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Message Preview */}
+      <div className="space-y-3">
+        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Previews</Label>
+        <SettingsToggle
+          icon={MessageSquare}
+          label="Message Preview"
+          description="Show message content in notifications"
+          checked={showMessagePreview}
+          onCheckedChange={setShowMessagePreview}
+        />
+
+        {/* Preview sub-options when enabled */}
+        {showMessagePreview && (
+          <div className="ml-14 space-y-2 pb-2">
+            <p className="text-xs text-muted-foreground">Show previews for:</p>
+            <div className="flex items-center justify-between py-2">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm">Server Mentions</span>
+              </div>
+              <Switch
+                checked={showPreviewServerMentions}
+                onCheckedChange={setShowPreviewServerMentions}
+              />
+            </div>
+            <div className="flex items-center justify-between py-2">
+              <div className="flex items-center gap-2">
+                <AtSign className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm">User Mentions</span>
+              </div>
+              <Switch
+                checked={showPreviewUserMentions}
+                onCheckedChange={setShowPreviewUserMentions}
+              />
+            </div>
+            <div className="flex items-center justify-between py-2">
+              <div className="flex items-center gap-2">
+                <Reply className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm">Replies</span>
+              </div>
+              <Switch
+                checked={showPreviewReplies}
+                onCheckedChange={setShowPreviewReplies}
+              />
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 
