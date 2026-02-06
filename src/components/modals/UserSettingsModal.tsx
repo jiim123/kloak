@@ -146,6 +146,41 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const [showAvatarDecorationModal, setShowAvatarDecorationModal] = useState(false);
   const [showProfileEffectModal, setShowProfileEffectModal] = useState(false);
   const [isBannerUploading, setIsBannerUploading] = useState(false);
+  const [browserPermissionStatus, setBrowserPermissionStatus] = useState<NotificationPermission | 'unsupported'>('default');
+
+  // Sync browser notification toggle with actual browser permission on mount
+  useEffect(() => {
+    if (typeof Notification === 'undefined') {
+      setBrowserPermissionStatus('unsupported');
+      return;
+    }
+
+    // Initial check
+    setBrowserPermissionStatus(Notification.permission);
+
+    // If permission is denied or unsupported, force the toggle off
+    if (Notification.permission === 'denied') {
+      setBrowserNotificationsEnabled(false);
+    }
+
+    // Listen for permission changes (some browsers support this)
+    const checkPermission = () => {
+      setBrowserPermissionStatus(Notification.permission);
+      if (Notification.permission === 'denied') {
+        setBrowserNotificationsEnabled(false);
+      }
+    };
+
+    // Check periodically when tab becomes visible (catches manual browser setting changes)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && typeof Notification !== 'undefined') {
+        checkPermission();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [setBrowserNotificationsEnabled]);
 
   // Profile form state
   const [displayName, setDisplayName] = useState(user?.display_name || "");
@@ -775,30 +810,38 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           icon={Globe}
           label="Browser Notifications"
           description={
-            typeof Notification !== "undefined" && Notification.permission === "denied"
-              ? "Blocked in browser settings"
-              : typeof Notification === "undefined"
-                ? "Not supported on this device"
-                : "Show browser notifications for new messages"
+            browserPermissionStatus === 'unsupported'
+              ? "Not supported on this device"
+              : browserPermissionStatus === 'denied'
+                ? "Blocked in browser settings. Please enable in your browser's site settings."
+                : browserPermissionStatus === 'default'
+                  ? "Click to enable browser notifications"
+                  : "Show browser notifications for new messages"
           }
-          checked={browserNotificationsEnabled}
-          disabled={typeof Notification === "undefined" || Notification.permission === "denied"}
+          checked={browserNotificationsEnabled && browserPermissionStatus === 'granted'}
+          disabled={browserPermissionStatus === 'unsupported' || browserPermissionStatus === 'denied'}
           onCheckedChange={async (checked) => {
             if (!checked) return setBrowserNotificationsEnabled(false);
 
-            if (typeof Notification === "undefined") {
+            if (browserPermissionStatus === 'unsupported') {
               toast.error("Browser notifications are not supported on this device.");
               return;
             }
 
-            if (Notification.permission === "default") {
+            if (browserPermissionStatus === 'denied') {
+              toast.error("Notifications are blocked. Please enable them in your browser's site settings.");
+              return;
+            }
+
+            if (browserPermissionStatus === 'default') {
               try {
                 const permission = await Notification.requestPermission();
-                if (permission === "granted") {
+                setBrowserPermissionStatus(permission);
+                if (permission === 'granted') {
                   setBrowserNotificationsEnabled(true);
                   toast.success("Browser notifications enabled!");
-                } else if (permission === "denied") {
-                  toast.error("Notification permission denied. Enable in browser settings.");
+                } else if (permission === 'denied') {
+                  toast.error("Notification permission denied. You can enable it later in your browser's site settings.");
                 }
               } catch {
                 toast.error("Unable to request notification permission.");
@@ -808,6 +851,11 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
             setBrowserNotificationsEnabled(true);
           }}
         />
+        {browserPermissionStatus === 'denied' && (
+          <p className="text-xs text-muted-foreground ml-14">
+            To enable notifications, click the lock/info icon in your browser's address bar and allow notifications for this site.
+          </p>
+        )}
       </div>
 
       {/* Notification Sound */}
