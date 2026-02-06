@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, memo } from 'react';
-import { Paperclip, Smile, Send, X, Type, Loader2, MoreHorizontal } from 'lucide-react';
+import { Paperclip, Smile, Send, X, Loader2, MoreHorizontal } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
   DropdownMenu,
@@ -12,7 +12,7 @@ import { useDMStore } from '@/stores/dmStore';
 import { saveDraft, getDraft, clearDraft } from '@/lib/storage';
 import { EmojiPicker } from '@/components/modals/EmojiPicker';
 import { ImageUploadDialog } from '@/components/modals/ImageUploadDialog';
-import { FormatToolbar, FORMAT_SYNTAX, getColorSyntax, getCodeBlockSyntax } from '@/components/chat/FormatToolbar';
+import { SelectionFormatToolbar, FORMAT_SYNTAX, getCodeBlockSyntax } from '@/components/chat/FormatToolbar';
 import { supabase } from '@/integrations/supabase/client';
 import { showSuccess } from '@/lib/errorHandler';
 import { cn } from '@/lib/utils';
@@ -31,8 +31,6 @@ const DRAFT_SAVE_DELAY = 500;
 
 // Memoized action buttons to prevent re-renders
 const ActionButtons = memo(({
-  showFormatToolbar,
-  setShowFormatToolbar,
   showEmojiPicker,
   setShowEmojiPicker,
   content,
@@ -42,8 +40,6 @@ const ActionButtons = memo(({
   showAttachButton,
   onAttachClick,
 }: {
-  showFormatToolbar: boolean;
-  setShowFormatToolbar: (show: boolean) => void;
   showEmojiPicker: boolean;
   setShowEmojiPicker: (show: boolean) => void;
   content: string;
@@ -87,10 +83,6 @@ const ActionButtons = memo(({
                   Upload image
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem onClick={() => setShowFormatToolbar(!showFormatToolbar)}>
-                <Type className="w-4 h-4 mr-2" />
-                Format text
-              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -111,36 +103,20 @@ const ActionButtons = memo(({
         </>
       ) : (
         <>
-          {/* Format button */}
-          <button
+        {/* Emoji button */}
+        <EmojiPicker
+          open={showEmojiPicker}
+          onOpenChange={setShowEmojiPicker}
+          onEmojiSelect={onEmojiSelect}
+        >
+          <button 
             type="button"
-            onClick={() => setShowFormatToolbar(!showFormatToolbar)}
-            className={cn(
-              'p-2 rounded-xl transition-colors duration-150',
-              showFormatToolbar 
-                ? 'text-primary bg-primary/10' 
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-            )}
+            className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-150"
             onMouseDown={(e) => e.preventDefault()}
-            title="Format text"
           >
-            <Type className="w-5 h-5" />
+            <Smile className="w-5 h-5" />
           </button>
-
-          {/* Emoji button */}
-          <EmojiPicker
-            open={showEmojiPicker}
-            onOpenChange={setShowEmojiPicker}
-            onEmojiSelect={onEmojiSelect}
-          >
-            <button 
-              type="button"
-              className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-150"
-              onMouseDown={(e) => e.preventDefault()}
-            >
-              <Smile className="w-5 h-5" />
-            </button>
-          </EmojiPicker>
+        </EmojiPicker>
         </>
       )}
 
@@ -176,7 +152,6 @@ export const DMMessageInput = ({
   const [isFocused, setIsFocused] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [showFormatToolbar, setShowFormatToolbar] = useState(false);
   const [showImageUpload, setShowImageUpload] = useState(false);
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -315,10 +290,6 @@ export const DMMessageInput = ({
           e.preventDefault();
           applyFormatShortcut('italic');
           return;
-        case 'u':
-          e.preventDefault();
-          applyFormatShortcut('underline');
-          return;
         case 'e':
           e.preventDefault();
           applyFormatShortcut('code');
@@ -373,9 +344,7 @@ export const DMMessageInput = ({
 
     let syntax: { prefix: string; suffix: string };
     
-    if (formatType === 'color' && value) {
-      syntax = getColorSyntax(value);
-    } else if (formatType === 'codeblock') {
+    if (formatType === 'codeblock') {
       syntax = getCodeBlockSyntax(value || '');
     } else {
       syntax = FORMAT_SYNTAX[formatType];
@@ -453,18 +422,15 @@ export const DMMessageInput = ({
 
   return (
     <div className="px-4 pb-4 sm:pb-6 relative">
-      {/* Format toolbar - inline above input */}
-      {showFormatToolbar && (
-        <FormatToolbar 
-          onFormat={handleFormat} 
-          onClose={() => setShowFormatToolbar(false)} 
-          onImageClick={() => setShowImageUpload(true)}
-        />
-      )}
+      {/* Selection-based format toolbar */}
+      <SelectionFormatToolbar
+        textareaRef={textareaRef}
+        onFormat={handleFormat}
+      />
 
       {/* Reply preview */}
       {replyingTo && (
-        <div className={`flex items-center gap-2 px-3 sm:px-4 py-2 bg-muted/40 border-b border-border/50 font-[Inter,system-ui,sans-serif] ${!showFormatToolbar ? 'rounded-t-2xl' : ''}`}>
+        <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-muted/40 border-b border-border/50 font-[Inter,system-ui,sans-serif] rounded-t-2xl">
           <span className="text-[12px] sm:text-[13px] leading-[1.5] text-muted-foreground">
             Replying to <span className="font-medium text-primary">@{replyingTo.sender?.username}</span>
           </span>
@@ -522,8 +488,6 @@ export const DMMessageInput = ({
 
           {/* Action buttons */}
           <ActionButtons
-            showFormatToolbar={showFormatToolbar}
-            setShowFormatToolbar={setShowFormatToolbar}
             showEmojiPicker={showEmojiPicker}
             setShowEmojiPicker={setShowEmojiPicker}
             content={content}
