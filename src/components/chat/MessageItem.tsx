@@ -737,7 +737,7 @@ export const MessageItem = memo(function MessageItem({
               )}
 
               {/* Content */}
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 overflow-hidden">
                 {/* System Message - Special rendering */}
                 {message.is_system_message ? (
                   <div className="flex items-center gap-2 py-1">
@@ -882,7 +882,7 @@ export const MessageItem = memo(function MessageItem({
                         </div>
                       </div>
                     ) : (
-                      <div className="text-[14px] sm:text-[14px] font-normal leading-[1.5] font-[Inter,system-ui,sans-serif] [&>div]:flex [&>div]:items-center [&>div]:flex-wrap">
+                      <div className="text-[14px] sm:text-[14px] font-normal leading-[1.5] font-[Inter,system-ui,sans-serif] [&>div]:flex [&>div]:items-center [&>div]:flex-wrap overflow-hidden max-w-full">
                         {pollId ? (
                           <PollMessage pollId={pollId} />
                         ) : currentChannel?.type === "announcement" ? (
@@ -958,7 +958,7 @@ export const MessageItem = memo(function MessageItem({
                               <img
                                 src={attachment.file_url}
                                 alt={attachment.file_name}
-                                className="max-w-[400px] max-h-[300px] rounded-lg cursor-pointer hover:opacity-90"
+                                className="max-w-full sm:max-w-[400px] max-h-[300px] rounded-lg cursor-pointer hover:opacity-90"
                                 loading="lazy"
                               />
                             ) : (

@@ -130,7 +130,7 @@ export const LinkPreview = ({ url, disabled, messageId }: LinkPreviewProps) => {
         <img
           src={preview.image}
           alt="Linked image"
-          className="max-w-[400px] max-h-[300px] rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+          className="max-w-full sm:max-w-[400px] max-h-[300px] rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
           onError={(e) => {
             (e.target as HTMLImageElement).style.display = "none";
           }}
@@ -520,7 +520,7 @@ export const LinkPreview = ({ url, disabled, messageId }: LinkPreviewProps) => {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="mt-2 block rounded-lg border border-border bg-secondary/50 overflow-hidden max-w-[400px] hover:bg-secondary/70 transition-colors group"
+      className="mt-2 block rounded-lg border border-border bg-secondary/50 overflow-hidden max-w-full sm:max-w-[400px] hover:bg-secondary/70 transition-colors group"
     >
       {preview.image && (
         <div className="relative">
