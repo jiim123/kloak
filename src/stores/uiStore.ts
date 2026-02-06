@@ -61,8 +61,16 @@ interface UIState {
 
   // Notification preferences
   desktopNotificationsEnabled: boolean;
+  browserNotificationsEnabled: boolean;
   notificationSoundEnabled: boolean;
+  notificationSoundServerMentions: boolean;
+  notificationSoundUserMentions: boolean;
+  notificationSoundReplies: boolean;
+  notificationVolume: number;
   showMessagePreview: boolean;
+  showPreviewServerMentions: boolean;
+  showPreviewUserMentions: boolean;
+  showPreviewReplies: boolean;
 
   // Message display preferences
   compactMode: boolean;
@@ -100,8 +108,16 @@ interface UIState {
 
   // Notification preference actions
   setDesktopNotificationsEnabled: (enabled: boolean) => void;
+  setBrowserNotificationsEnabled: (enabled: boolean) => void;
   setNotificationSoundEnabled: (enabled: boolean) => void;
+  setNotificationSoundServerMentions: (enabled: boolean) => void;
+  setNotificationSoundUserMentions: (enabled: boolean) => void;
+  setNotificationSoundReplies: (enabled: boolean) => void;
+  setNotificationVolume: (volume: number) => void;
   setShowMessagePreview: (enabled: boolean) => void;
+  setShowPreviewServerMentions: (enabled: boolean) => void;
+  setShowPreviewUserMentions: (enabled: boolean) => void;
+  setShowPreviewReplies: (enabled: boolean) => void;
 
   // Message display preference actions
   setCompactMode: (enabled: boolean) => void;
@@ -138,8 +154,16 @@ export const useUIStore = create<UIState>()(
 
       // Notification preferences
       desktopNotificationsEnabled: true,
+      browserNotificationsEnabled: true,
       notificationSoundEnabled: true,
+      notificationSoundServerMentions: true,
+      notificationSoundUserMentions: true,
+      notificationSoundReplies: true,
+      notificationVolume: 50,
       showMessagePreview: true,
+      showPreviewServerMentions: true,
+      showPreviewUserMentions: true,
+      showPreviewReplies: true,
 
       // Message display preferences
       compactMode: false,
@@ -240,12 +264,44 @@ export const useUIStore = create<UIState>()(
         set({ desktopNotificationsEnabled: enabled });
       },
 
+      setBrowserNotificationsEnabled: (enabled) => {
+        set({ browserNotificationsEnabled: enabled });
+      },
+
       setNotificationSoundEnabled: (enabled) => {
         set({ notificationSoundEnabled: enabled });
       },
 
+      setNotificationSoundServerMentions: (enabled) => {
+        set({ notificationSoundServerMentions: enabled });
+      },
+
+      setNotificationSoundUserMentions: (enabled) => {
+        set({ notificationSoundUserMentions: enabled });
+      },
+
+      setNotificationSoundReplies: (enabled) => {
+        set({ notificationSoundReplies: enabled });
+      },
+
+      setNotificationVolume: (volume) => {
+        set({ notificationVolume: Math.max(0, Math.min(100, volume)) });
+      },
+
       setShowMessagePreview: (enabled) => {
         set({ showMessagePreview: enabled });
+      },
+
+      setShowPreviewServerMentions: (enabled) => {
+        set({ showPreviewServerMentions: enabled });
+      },
+
+      setShowPreviewUserMentions: (enabled) => {
+        set({ showPreviewUserMentions: enabled });
+      },
+
+      setShowPreviewReplies: (enabled) => {
+        set({ showPreviewReplies: enabled });
       },
 
       // Message display preference actions
@@ -269,8 +325,16 @@ export const useUIStore = create<UIState>()(
         linkPreviewsEnabled: state.linkPreviewsEnabled,
         linkPreviewNoticeDismissed: state.linkPreviewNoticeDismissed,
         desktopNotificationsEnabled: state.desktopNotificationsEnabled,
+        browserNotificationsEnabled: state.browserNotificationsEnabled,
         notificationSoundEnabled: state.notificationSoundEnabled,
+        notificationSoundServerMentions: state.notificationSoundServerMentions,
+        notificationSoundUserMentions: state.notificationSoundUserMentions,
+        notificationSoundReplies: state.notificationSoundReplies,
+        notificationVolume: state.notificationVolume,
         showMessagePreview: state.showMessagePreview,
+        showPreviewServerMentions: state.showPreviewServerMentions,
+        showPreviewUserMentions: state.showPreviewUserMentions,
+        showPreviewReplies: state.showPreviewReplies,
         compactMode: state.compactMode,
         showTimestamps: state.showTimestamps,
         animateEmojis: state.animateEmojis,
