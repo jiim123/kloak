@@ -1847,13 +1847,21 @@ export type Database = {
       user_preferences: {
         Row: {
           animate_emojis: boolean
+          browser_notifications_enabled: boolean | null
           compact_mode: boolean
           created_at: string
           desktop_notifications_enabled: boolean
           id: string
           link_previews_enabled: boolean
           notification_sound_enabled: boolean
+          notification_sound_replies: boolean | null
+          notification_sound_server_mentions: boolean | null
+          notification_sound_user_mentions: boolean | null
+          notification_volume: number | null
           show_message_preview: boolean
+          show_preview_replies: boolean | null
+          show_preview_server_mentions: boolean | null
+          show_preview_user_mentions: boolean | null
           show_timestamps: boolean
           theme: string
           updated_at: string
@@ -1861,13 +1869,21 @@ export type Database = {
         }
         Insert: {
           animate_emojis?: boolean
+          browser_notifications_enabled?: boolean | null
           compact_mode?: boolean
           created_at?: string
           desktop_notifications_enabled?: boolean
           id?: string
           link_previews_enabled?: boolean
           notification_sound_enabled?: boolean
+          notification_sound_replies?: boolean | null
+          notification_sound_server_mentions?: boolean | null
+          notification_sound_user_mentions?: boolean | null
+          notification_volume?: number | null
           show_message_preview?: boolean
+          show_preview_replies?: boolean | null
+          show_preview_server_mentions?: boolean | null
+          show_preview_user_mentions?: boolean | null
           show_timestamps?: boolean
           theme?: string
           updated_at?: string
@@ -1875,13 +1891,21 @@ export type Database = {
         }
         Update: {
           animate_emojis?: boolean
+          browser_notifications_enabled?: boolean | null
           compact_mode?: boolean
           created_at?: string
           desktop_notifications_enabled?: boolean
           id?: string
           link_previews_enabled?: boolean
           notification_sound_enabled?: boolean
+          notification_sound_replies?: boolean | null
+          notification_sound_server_mentions?: boolean | null
+          notification_sound_user_mentions?: boolean | null
+          notification_volume?: number | null
           show_message_preview?: boolean
+          show_preview_replies?: boolean | null
+          show_preview_server_mentions?: boolean | null
+          show_preview_user_mentions?: boolean | null
           show_timestamps?: boolean
           theme?: string
           updated_at?: string
