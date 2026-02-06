@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Upload, Plus, Users, ArrowLeft, X, Sparkles, Frown } from "lucide-react";
+import { Loader2, Upload, Plus, Users, ArrowLeft, X, Sparkles } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,28 +21,16 @@ const createServerSchema = z.object({
   name: z.string().trim().min(1, "Server name is required").max(50, "Server name must be less than 50 characters"),
 });
 
-const joinServerSchema = z.object({
-  inviteCode: z
-    .string()
-    .trim()
-    .min(1, "Invite code is required")
-    .max(8, "Invite code must be 8 characters")
-    .regex(/^[A-Z0-9]+$/i, "Invalid invite code format"),
-});
-
 type CreateServerForm = z.infer<typeof createServerSchema>;
-type JoinServerForm = z.infer<typeof joinServerSchema>;
-type ModalView = "choose" | "create" | "join";
+type ModalView = "choose" | "create";
 
 export const CreateServerModal = () => {
   const navigate = useNavigate();
-  const { activeModal, closeModal } = useUIStore();
-  const { createServer, updateServer, joinServer, servers, setCurrentServer, fetchChannels } = useServerStore();
+  const { activeModal, closeModal, openModal } = useUIStore();
+  const { createServer, updateServer, setCurrentServer, fetchChannels } = useServerStore();
   const { user } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
   const [view, setView] = useState<ModalView>("choose");
-  const [joinError, setJoinError] = useState<string | null>(null);
-  const [showBannedModal, setShowBannedModal] = useState(false);
 
   // Icon upload state
   const [iconFile, setIconFile] = useState<File | null>(null);
@@ -52,11 +40,6 @@ export const CreateServerModal = () => {
   const createForm = useForm<CreateServerForm>({
     resolver: zodResolver(createServerSchema),
     defaultValues: { name: "" },
-  });
-
-  const joinForm = useForm<JoinServerForm>({
-    resolver: zodResolver(joinServerSchema),
-    defaultValues: { inviteCode: "" },
   });
 
   const isOpen = activeModal === "create-server";
@@ -71,7 +54,7 @@ export const CreateServerModal = () => {
     }
 
     if (file.size > MAX_ICON_SIZE) {
-      toast.error("Image must be less than 5MB");
+      toast.error("Image must be less than 1MB");
       return;
     }
 
@@ -115,7 +98,6 @@ export const CreateServerModal = () => {
     try {
       const server = await createServer(data.name, user.id);
       if (server) {
-        // Upload icon if selected
         if (iconFile) {
           const iconUrl = await uploadIcon(server.id, iconFile);
           if (iconUrl) {
@@ -123,10 +105,8 @@ export const CreateServerModal = () => {
           }
         }
 
-        // Set default banner for new servers
         await updateServer(server.id, user.id, { banner_url: "/default_server_banner.png" });
 
-        // Create server object with default banner
         const serverWithBanner = { ...server, banner_url: "/default_server_banner.png" };
 
         toast.success(`Server "${server.name}" created!`);
@@ -142,90 +122,25 @@ export const CreateServerModal = () => {
     }
   };
 
-  const onJoinSubmit = async (data: JoinServerForm) => {
-    if (!user) return;
-
-    setIsLoading(true);
-    setJoinError(null);
-    useServerStore.setState({ error: null });
-
-    try {
-      const result = await joinServer(data.inviteCode.toUpperCase(), user.id);
-      
-      // Always check for banned error first, even if result is truthy
-      const storeError = useServerStore.getState().error;
-      if (storeError?.toLowerCase().includes('banned')) {
-        setShowBannedModal(true);
-        // Refresh server list to ensure banned server is removed from sidebar
-        if (user) await useServerStore.getState().fetchServers(user.id);
-        return;
-      }
-      
-      if (result) {
-        toast.success("Successfully joined server!");
-        const newServer = servers.find((s) => s.invite_code === data.inviteCode.toUpperCase());
-        if (newServer) {
-          setCurrentServer(newServer);
-          await fetchChannels(newServer.id);
-          navigate(`/app/servers/${newServer.id}`);
-        }
-        handleClose();
-      } else {
-        if (storeError) {
-          setJoinError(storeError);
-        } else {
-          setJoinError("Invalid invite code or you may already be a member");
-        }
-      }
-    } catch (error) {
-      setJoinError("Failed to join server");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleClose = () => {
     createForm.reset();
-    joinForm.reset();
     setView("choose");
-    setJoinError(null);
-    setShowBannedModal(false);
     clearIcon();
     closeModal();
   };
 
-  const handleInviteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-      .toUpperCase()
-      .replace(/[^A-Z0-9]/g, "")
-      .slice(0, 8);
-    joinForm.setValue("inviteCode", value);
+  const handleJoinClick = () => {
+    closeModal();
+    openModal("join-server");
   };
 
   const handleBack = () => {
     setView("choose");
-    setJoinError(null);
     clearIcon();
   };
 
   return (
-    <>
-      {/* Banned modal */}
-      <Dialog open={showBannedModal} onOpenChange={(open) => { if (!open) { setShowBannedModal(false); handleClose(); } }}>
-        <DialogContent className="sm:max-w-sm" hideCloseButton>
-          <div className="flex flex-col items-center justify-center gap-4 py-6">
-            <Frown className="w-16 h-16 text-muted-foreground" />
-            <p className="text-center text-lg font-medium text-foreground">
-              Uh oh, seems that you have been banned from this server
-            </p>
-            <Button variant="outline" onClick={() => { setShowBannedModal(false); handleClose(); }}>
-              Close
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isOpen && !showBannedModal} onOpenChange={(open) => !open && handleClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="sm:max-w-md max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-hidden bg-background/95 backdrop-blur-xl border-border/50 rounded-2xl p-0">
         {/* Hidden file input */}
         <input
@@ -268,7 +183,7 @@ export const CreateServerModal = () => {
               </button>
 
               <button
-                onClick={() => setView("join")}
+                onClick={handleJoinClick}
                 className="w-full p-4 rounded-xl border-2 border-border/50 bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-all duration-200 flex items-center gap-4 group"
               >
                 <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-primary/15 flex items-center justify-center group-hover:bg-primary/25 transition-colors flex-shrink-0">
@@ -374,86 +289,7 @@ export const CreateServerModal = () => {
             </form>
           </div>
         )}
-
-        {/* Join View */}
-        {view === "join" && (
-          <div className="p-4 sm:p-6">
-            <DialogHeader className="pb-4">
-              <div className="flex items-center gap-3">
-                <Button variant="ghost" size="icon" onClick={handleBack} className="h-9 w-9 rounded-xl flex-shrink-0">
-                  <ArrowLeft className="w-4 h-4" />
-                </Button>
-                <div>
-                  <DialogTitle className="text-lg font-semibold">Join a Server</DialogTitle>
-                  <DialogDescription className="text-sm text-muted-foreground">
-                    Enter an invite code to join
-                  </DialogDescription>
-                </div>
-              </div>
-            </DialogHeader>
-
-            <form onSubmit={joinForm.handleSubmit(onJoinSubmit)} className="space-y-5">
-              {/* Icon */}
-              <div className="flex justify-center py-2">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-primary/10 flex items-center justify-center">
-                  <Users className="w-8 h-8 sm:w-10 sm:h-10 text-primary" />
-                </div>
-              </div>
-
-              {/* Invite Code Input */}
-              <div className="space-y-2">
-                <Label
-                  htmlFor="inviteCode"
-                  className="text-xs font-semibold uppercase text-muted-foreground tracking-wide"
-                >
-                  Invite Code
-                </Label>
-                <Input
-                  id="inviteCode"
-                  placeholder="ABC12XYZ"
-                  {...joinForm.register("inviteCode")}
-                  onChange={handleInviteChange}
-                  className={`text-center font-mono text-lg tracking-widest rounded-xl ${
-                    joinForm.formState.errors.inviteCode || joinError
-                      ? "border-destructive focus-visible:ring-destructive"
-                      : ""
-                  }`}
-                  autoFocus
-                  maxLength={8}
-                />
-                {joinForm.formState.errors.inviteCode && (
-                  <p className="text-xs text-destructive text-center">{joinForm.formState.errors.inviteCode.message}</p>
-                )}
-                {joinError && <p className="text-xs text-destructive text-center">{joinError}</p>}
-              </div>
-
-              {/* Example */}
-              <div className="bg-secondary/30 backdrop-blur-sm rounded-xl p-3 border border-border/30">
-                <p className="text-xs text-muted-foreground">
-                  <span className="font-medium">Invites should look like:</span>
-                </p>
-                <p className="text-sm font-mono text-foreground mt-1">ABC12XYZ</p>
-              </div>
-
-              {/* Actions */}
-              <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 pt-2 border-t border-border/30">
-                <Button type="button" variant="ghost" onClick={handleBack} className="flex-1 sm:flex-none rounded-xl">
-                  Back
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  className="flex-1 sm:flex-none rounded-xl bg-primary hover:bg-primary/90"
-                >
-                  {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Join Server
-                </Button>
-              </div>
-            </form>
-          </div>
-        )}
       </DialogContent>
-      </Dialog>
-    </>
+    </Dialog>
   );
 };
