@@ -381,7 +381,7 @@ const AppLayout = () => {
           {/* Desktop layout */}
           <div className="hidden md:flex flex-col flex-1 overflow-hidden">
             {/* Horizontal Server Bar at top - hidden during full-screen settings */}
-            {!isServerSettingsOpen && <HorizontalServerSidebar />}
+            {!isServerSettingsOpen && activeModal !== 'user-settings' && activeModal !== 'edit-channel' && <HorizontalServerSidebar />}
 
             <div className="flex flex-1 overflow-hidden">
               {/* Full-screen settings pages - take full space */}
