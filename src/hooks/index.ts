@@ -23,6 +23,7 @@ export { useBackgroundSync } from './useBackgroundSync';
 export { useVirtualizedMessages } from './useVirtualizedMessages';
 export { useConnectionStatus } from './useConnectionStatus';
 export { usePreferencesSync } from './usePreferencesSync';
+export { useNotificationSound, playNotificationSound } from './useNotificationSound';
 export { useMemberPermissions } from './useMemberPermissions';
 export { useRealtimeOwnMembership } from './useRealtimeOwnMembership';
 export { useSwipeGesture, useSwipeGestureRef } from './useSwipeGesture';
