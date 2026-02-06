@@ -1,46 +1,41 @@
 
 
-## Fix: Banned Users Can Still Join Servers
+## Mobile Chat Area Responsiveness Fix
 
-### Root Cause
+### Problem
+The chat content area can overflow horizontally on mobile devices, allowing unwanted horizontal scrolling. Several elements lack proper width constraints causing content to break outside the viewport.
 
-There are **two copies** of `join_server_by_invite` in the database with different signatures:
-- **Old version** (2 params): `_invite_code text, _user_id uuid` 
-- **New version** (3 params): `_invite_code text, _user_id uuid, _join_source text DEFAULT 'invite_link'`
+### Changes
 
-When the frontend calls `supabase.rpc('join_server_by_invite', {...})` with 3 parameters, PostgREST may route to the wrong overload or encounter ambiguity due to the DEFAULT parameter. This can cause the ban check to be bypassed entirely.
+**1. ChatArea.tsx -- Add overflow containment to the root container**
+- Add `overflow-x-hidden` to the main chat area wrapper to prevent any horizontal scroll
+- Add `max-w-full` to ensure the container never exceeds viewport width
 
-Additionally, `get_server_channels` has **no membership or ban check** -- it returns all channels for any server ID, meaning if a banned user somehow reaches the server page, they see everything.
+**2. MessageItem.tsx -- Constrain content that can overflow**
+- Add `overflow-hidden` to the message content div (line 740: `flex-1 min-w-0`)
+- Cap image attachments with `max-w-full` instead of the fixed `max-w-[400px]` that can overflow on small screens (use `max-w-full sm:max-w-[400px]`)
+- Ensure the message content text wrapper at line 885 gets `overflow-hidden` and `max-w-full`
 
-### Fix (3 steps)
+**3. MessageContent.tsx -- Prevent long words/URLs from overflowing**
+- The root div already has `break-words` but add `overflow-hidden` to the container to catch edge cases (e.g. long unbroken URLs, wide inline images)
+- Add `max-w-full` to the inline image rendering so images respect container bounds
 
-**Step 1: Database migration**
-- DROP the old 2-parameter overload of `join_server_by_invite` to eliminate ambiguity
-- Update `get_server_channels` to verify the calling user is a non-banned member before returning channels (return empty array if banned or not a member)
-- Update `get_server_categories` similarly
+**4. CodeBlock.tsx -- Already has `overflow-x-auto` on the pre, which is correct**
+- No changes needed here; code blocks scroll internally
 
-**Step 2: Add server-level ban guard in `serverStore.ts`**
-- In the `joinServer` function, add a secondary safeguard: after the RPC returns successfully, verify the user is NOT banned before returning the server object
-- This is a defense-in-depth measure in case the RPC somehow returns data for a banned user
+**5. LinkPreview.tsx -- Ensure previews respect mobile width**
+- Add `max-w-full` to the link preview container if it uses fixed widths
 
-**Step 3: Add route-level guard in `AppLayout.tsx`**
-- When a server is selected via URL (`urlServerId`), add a check: fetch the user's membership status for that server and redirect to `/app` if banned
-- This prevents direct URL navigation to a banned server
+**6. ChatArea.tsx pinned message bar -- Add `overflow-hidden` to prevent long pin snippets from causing overflow**
+- Already has `min-w-0` and `truncate` on the text span, but the outer bar needs `overflow-hidden`
 
 ### Technical Details
 
-```text
-Database Changes:
-  1. DROP FUNCTION public.join_server_by_invite(text, uuid)  -- remove old overload
-  2. ALTER get_server_channels to check membership + ban status
-  3. ALTER get_server_categories to check membership + ban status
+Files to modify:
+- `src/components/layout/ChatArea.tsx` -- Add `overflow-x-hidden` to root div
+- `src/components/chat/MessageItem.tsx` -- Add `overflow-hidden` to content wrapper, make attachment images responsive
+- `src/components/chat/MessageContent.tsx` -- Add `overflow-hidden max-w-full` to root div
+- `src/components/chat/MessageList.tsx` -- Add `overflow-x-hidden` to scroll container
 
-Frontend Changes:
-  1. serverStore.ts - add post-RPC ban verification in joinServer()
-  2. AppLayout.tsx - add membership verification when loading server from URL
-```
+All changes are CSS class additions only -- no logic changes required.
 
-### Result
-- Only one version of the join function exists, eliminating routing ambiguity
-- Banned users are blocked at the database level (RPC exception), store level (post-check), and route level (URL guard)
-- Even if somehow bypassed, `get_server_channels` returns no data for banned users
