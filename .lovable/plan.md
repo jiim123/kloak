@@ -1,31 +1,30 @@
 
 
-## Fix: Banned User Toast in Create/Join Server Modal
+## Consolidate Server Join Flow to Single Component
 
 ### Problem
-The `CreateServerModal.tsx` component (used by the horizontal server sidebar's "Create or Join Server" flow) was never updated with the banned-user detection logic. When a banned user tries to join, the `joinServer` store function returns `null` and sets a "banned" error, but `CreateServerModal` doesn't check for it -- it just shows a generic error message. Worse, there may be cases where the idempotent RPC returns data, causing a false "Successfully joined server!" toast.
-
-### Root Cause
-When the banned modal was added to `JoinServerModal.tsx` and `Invite.tsx`, the `CreateServerModal.tsx` was missed. Its `onJoinSubmit` function (lines 144-168) has no banned-state handling.
+There are two issues:
+1. The `CreateServerModal` has its own duplicate join-server logic that is buggy -- banned users can still see/access the server after joining because the store's `joinServer` function refreshes the server list internally before returning, and the error-checking logic has race conditions.
+2. Multiple components have independent join flows, making it hard to maintain consistent behavior.
 
 ### Solution
-Apply the same banned-modal pattern from `JoinServerModal.tsx` to `CreateServerModal.tsx`:
+Remove the join-server functionality entirely from `CreateServerModal` and instead have it open the existing `JoinServerModal` (which already handles bans correctly). This eliminates all duplicate code and ensures a single source of truth for join logic.
 
-1. **Add state**: Add a `showBannedModal` boolean state variable.
-2. **Add banned check in `onJoinSubmit`**: After `joinServer` returns `null`, read `useServerStore.getState().error` and check if it contains "banned". If so, set `showBannedModal(true)` instead of showing a generic error.
-3. **Add the banned Dialog**: Render the same Frown icon + message modal used in the other components.
-4. **Suppress the join dialog while banned modal is open**: Ensure the join form dialog doesn't show behind the banned modal.
+### Changes
 
-### Technical Details
+**1. `src/components/modals/CreateServerModal.tsx`**
+- Remove all join-related code: `joinServerSchema`, `JoinServerForm` type, `joinForm`, `joinError`, `showBannedModal`, `onJoinSubmit`, `handleInviteChange`, the banned modal JSX, and the entire "join" view
+- Remove unused imports (`Frown`, `Users` for join icon, `joinServer` from store)
+- Change the "Join a Server" button in the "choose" view to call `openModal('join-server')` instead of `setView("join")`, then close the create-server modal
+- Remove `"join"` from the `ModalView` type (becomes `"choose" | "create"` only)
 
-**File: `src/components/modals/CreateServerModal.tsx`**
+**2. `src/components/home/HomeLanding.tsx`**
+- Already correct -- the "Join Server" button calls `openModal('join-server')` which opens the `JoinServerModal`. No changes needed.
 
-- Import `Frown` from lucide-react and `Dialog`/`DialogContent` (already imported).
-- Add `const [showBannedModal, setShowBannedModal] = useState(false)`.
-- Update `onJoinSubmit` (around line 151-163):
-  - After `joinServer` returns falsy, check `useServerStore.getState().error` for "banned".
-  - If banned, call `setShowBannedModal(true)` instead of setting `joinError`.
-- Add the banned modal JSX (Frown icon + text + Close button), same as in `JoinServerModal.tsx`.
-- Reset `showBannedModal` in `handleClose`.
+**3. `src/components/modals/JoinServerModal.tsx`**
+- Already handles banned users correctly (checks after `joinServer` returns null). No changes needed.
 
-No other files need changes -- the store already handles the error correctly.
+### Result
+- All server-join flows (vertical sidebar, horizontal sidebar, HomeLanding) will use the single `JoinServerModal` component
+- Banned users will always see only the banned modal and never be navigated to the server
+- The `CreateServerModal` becomes a focused create-only component with an option to open the join modal
