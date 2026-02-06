@@ -1,103 +1,188 @@
+import { useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SmokeRing } from "@paper-design/shaders-react";
+import promoVideo from "@/assets/kloak-promo.mp4";
 
 export const HeroImage = () => {
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start start", "end start"],
+  });
+
+  // Video frame: scale up and fade in as user scrolls down
+  const videoScale = useTransform(scrollYProgress, [0.15, 0.45], [0.85, 1]);
+  const videoOpacity = useTransform(scrollYProgress, [0.1, 0.35], [0, 1]);
+  const videoY = useTransform(scrollYProgress, [0.15, 0.45], [60, 0]);
+
+  // Autoplay when video scrolls into view
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          video.play().catch(() => {});
+        } else {
+          video.pause();
+        }
+      },
+      { threshold: 0.3 }
+    );
+
+    observer.observe(video);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <section className="relative min-h-screen overflow-hidden bg-[hsl(var(--neutral-0))]">
-      {/* Shader background */}
-      <div className="absolute inset-0">
-        <SmokeRing
-          style={{ width: "100%", height: "100%" }}
-          colors={["#4d4d4d"]}
-          colorBack="#0f0f0f"
-          noiseScale={3}
-          noiseIterations={3}
-          radius={0.95}
-          thickness={0.85}
-          innerShape={0.9}
-          speed={0.46}
-          scale={2.24}
-          offsetY={0.46}
-        />
-      </div>
+    <section ref={sectionRef} className="relative overflow-hidden bg-[hsl(var(--neutral-0))]">
+      {/* Top hero area — full viewport */}
+      <div className="relative min-h-screen">
+        {/* Shader background */}
+        <div className="absolute inset-0">
+          <SmokeRing
+            style={{ width: "100%", height: "100%" }}
+            colors={["#4d4d4d"]}
+            colorBack="#0f0f0f"
+            noiseScale={3}
+            noiseIterations={3}
+            radius={0.95}
+            thickness={0.85}
+            innerShape={0.9}
+            speed={0.46}
+            scale={2.24}
+            offsetY={0.46}
+          />
+        </div>
 
-      {/* Main content - with blend mode */}
-      <div className="relative z-10 w-full min-h-screen flex flex-col items-center justify-center px-6 mix-blend-difference">
-        <div className="max-w-4xl mx-auto text-center">
-          {/* Pre-title */}
-          <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-xs uppercase tracking-[0.3em] text-white mb-12"
-          >
-            Privacy-first communication
-          </motion.p>
+        {/* Main content - with blend mode */}
+        <div className="relative z-10 w-full min-h-screen flex flex-col items-center justify-center px-6 mix-blend-difference">
+          <div className="max-w-4xl mx-auto text-center">
+            {/* Pre-title */}
+            <motion.p
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="text-xs uppercase tracking-[0.3em] text-white mb-12"
+            >
+              Privacy-first communication
+            </motion.p>
 
-          {/* Main title */}
-          <div className="mb-12">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            {/* Main title */}
+            <div className="mb-12">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              >
+                <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tight text-white leading-[1.1]">
+                  Communication without
+                </h1>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              >
+                <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tight text-white leading-[1.1]">
+                  compromise.
+                </h1>
+              </motion.div>
+            </div>
+
+            {/* Subtitle */}
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.8, delay: 0.8 }}
+              className="text-base md:text-lg text-white/70 max-w-xl mx-auto leading-relaxed font-light"
             >
-              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tight text-white leading-[1.1]">
-                Communication without
-              </h1>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tight text-white leading-[1.1]">
-                compromise.
-              </h1>
-            </motion.div>
+              End-to-end encrypted messaging, voice, and community spaces. Built on infrastructure designed for privacy,
+              not profit.
+            </motion.p>
           </div>
+        </div>
 
-          {/* Subtitle */}
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.8 }}
-            className="text-base md:text-lg text-white/70 max-w-xl mx-auto leading-relaxed font-light"
+        {/* CTA - outside blend mode container so buttons render normally */}
+        <div className="absolute bottom-0 left-0 right-0 z-20 flex justify-center pb-24">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 1 }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-4"
           >
-            End-to-end encrypted messaging, voice, and community spaces. Built on infrastructure designed for privacy,
-            not profit.
-          </motion.p>
+            <Link to="/app">
+              <Button
+                size="lg"
+                className="rounded-full px-8 h-12 text-sm font-normal tracking-wide bg-white hover:bg-neutral-200 text-black border-0 group"
+              >
+                Open Kloak
+                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
+            <Link to="/philosophy">
+              <Button
+                variant="ghost"
+                size="lg"
+                className="rounded-full px-8 h-12 text-sm font-normal tracking-wide text-white/80 hover:text-white hover:bg-white/10"
+              >
+                Our Philosophy
+              </Button>
+            </Link>
+          </motion.div>
         </div>
       </div>
 
-      {/* CTA - outside blend mode container so buttons render normally */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 flex justify-center pb-24">
+      {/* Video showcase — revealed on scroll */}
+      <div className="relative px-6 lg:px-16 pb-24 md:pb-32 pt-8 md:pt-16">
+        {/* Ambient glow */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] rounded-full bg-primary/[0.04] blur-[100px]" />
+        </div>
+
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 1 }}
-          className="flex flex-col sm:flex-row items-center justify-center gap-4"
+          style={{ scale: videoScale, opacity: videoOpacity, y: videoY }}
+          className="max-w-5xl mx-auto relative z-10"
         >
-          <Link to="/app">
-            <Button
-              size="lg"
-              className="rounded-full px-8 h-12 text-sm font-normal tracking-wide bg-white hover:bg-neutral-200 text-black border-0 group"
-            >
-              Open Kloak
-              <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-            </Button>
-          </Link>
-          <Link to="/philosophy">
-            <Button
-              variant="ghost"
-              size="lg"
-              className="rounded-full px-8 h-12 text-sm font-normal tracking-wide text-white/80 hover:text-white hover:bg-white/10"
-            >
-              Our Philosophy
-            </Button>
-          </Link>
+          {/* Browser frame */}
+          <div className="rounded-xl overflow-hidden border border-border/30 bg-[hsl(var(--neutral-50))] shadow-2xl shadow-black/50">
+            {/* Top bar */}
+            <div className="flex items-center gap-2 px-4 py-3 bg-[hsl(var(--neutral-100))] border-b border-border/20">
+              <div className="flex gap-1.5">
+                <div className="w-3 h-3 rounded-full bg-[hsl(var(--neutral-300))]" />
+                <div className="w-3 h-3 rounded-full bg-[hsl(var(--neutral-300))]" />
+                <div className="w-3 h-3 rounded-full bg-[hsl(var(--neutral-300))]" />
+              </div>
+              <div className="flex-1 flex justify-center">
+                <div className="px-4 py-1 rounded-md bg-[hsl(var(--neutral-200))] text-xs text-muted-foreground font-mono">
+                  kloak.app
+                </div>
+              </div>
+              <div className="w-[54px]" />
+            </div>
+
+            {/* Video */}
+            <div className="relative aspect-video bg-black">
+              <video
+                ref={videoRef}
+                src={promoVideo}
+                muted
+                playsInline
+                loop
+                preload="metadata"
+                className="w-full h-full object-cover"
+              />
+            </div>
+          </div>
+
+          {/* Reflection glow */}
+          <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 w-3/4 h-12 bg-primary/[0.05] blur-3xl rounded-full pointer-events-none" />
         </motion.div>
       </div>
     </section>
