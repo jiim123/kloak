@@ -1348,7 +1348,7 @@ export type Database = {
       server_members: {
         Row: {
           id: string
-          is_banned: boolean | null
+          is_banned: boolean
           is_muted: boolean | null
           join_invite_code: string | null
           join_source: string | null
@@ -1360,7 +1360,7 @@ export type Database = {
         }
         Insert: {
           id?: string
-          is_banned?: boolean | null
+          is_banned?: boolean
           is_muted?: boolean | null
           join_invite_code?: string | null
           join_source?: string | null
@@ -1372,7 +1372,7 @@ export type Database = {
         }
         Update: {
           id?: string
-          is_banned?: boolean | null
+          is_banned?: boolean
           is_muted?: boolean | null
           join_invite_code?: string | null
           join_source?: string | null
