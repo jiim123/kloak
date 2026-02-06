@@ -20,6 +20,7 @@ import {
 import { Footer } from "@/components/ui/footer-section";
 import { NavigationMenu } from "@/components/layout/NavigationMenu";
 import HeroAscii from "@/components/landing/HeroAscii";
+import PromoVideoSection from "@/components/landing/PromoVideoSection";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SEO } from "@/components/seo";
 import { SEO_CONFIG } from "@/lib/seo";
@@ -84,6 +85,9 @@ const Index = () => {
         <main className="pt-10">
           {/* Hero Section */}
           <HeroAscii />
+
+          {/* Promo Video Section */}
+          <PromoVideoSection />
 
           {/* What is Kloak Section */}
           <section className="relative py-32 md:py-48 px-8 lg:px-16 border-t border-border/20 overflow-hidden">
