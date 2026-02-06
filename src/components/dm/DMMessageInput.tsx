@@ -476,7 +476,7 @@ export const DMMessageInput = ({
             onKeyDown={handleKeyDown}
             placeholder={otherUsername.length > (isMobile ? 12 : 17) ? `Message @${otherUsername.slice(0, isMobile ? 12 : 17)}…` : `Message @${otherUsername}`}
             rows={1}
-            className="flex-1 bg-transparent resize-none outline-none text-foreground placeholder:text-muted-foreground/60 py-2 px-1 min-w-0 min-h-[40px] overflow-y-auto font-[Inter,system-ui,sans-serif]"
+            className="message-input-textarea flex-1 bg-transparent resize-none outline-none text-foreground placeholder:text-muted-foreground/60 py-2 px-1 min-w-0 min-h-[40px] overflow-y-auto font-[Inter,system-ui,sans-serif]"
             style={{
               // Prevent iOS zoom on focus by using 16px minimum
               fontSize: isMobile ? '16px' : '15px',

@@ -1211,7 +1211,7 @@ const MobileOptimizedInput = memo(
             placeholder={canSendMessage ? (channelName.length > (isMobile ? 12 : 17) ? `Message #${channelName.slice(0, isMobile ? 12 : 17)}…` : `Message #${channelName}`) : "You cannot send messages here"}
             disabled={!canSendMessage}
             rows={1}
-            className={`flex-1 bg-transparent resize-none outline-none text-foreground placeholder:text-muted-foreground/60 py-2 px-1 min-w-0 min-h-[40px] overflow-y-auto font-[Inter,system-ui,sans-serif] ${
+            className={`message-input-textarea flex-1 bg-transparent resize-none outline-none text-foreground placeholder:text-muted-foreground/60 py-2 px-1 min-w-0 min-h-[40px] overflow-y-auto font-[Inter,system-ui,sans-serif] ${
               !canSendMessage ? "cursor-not-allowed opacity-50" : ""
             }`}
             style={{
