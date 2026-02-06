@@ -1,30 +1,46 @@
 
 
-## Consolidate Server Join Flow to Single Component
+## Fix: Banned Users Can Still Join Servers
 
-### Problem
-There are two issues:
-1. The `CreateServerModal` has its own duplicate join-server logic that is buggy -- banned users can still see/access the server after joining because the store's `joinServer` function refreshes the server list internally before returning, and the error-checking logic has race conditions.
-2. Multiple components have independent join flows, making it hard to maintain consistent behavior.
+### Root Cause
 
-### Solution
-Remove the join-server functionality entirely from `CreateServerModal` and instead have it open the existing `JoinServerModal` (which already handles bans correctly). This eliminates all duplicate code and ensures a single source of truth for join logic.
+There are **two copies** of `join_server_by_invite` in the database with different signatures:
+- **Old version** (2 params): `_invite_code text, _user_id uuid` 
+- **New version** (3 params): `_invite_code text, _user_id uuid, _join_source text DEFAULT 'invite_link'`
 
-### Changes
+When the frontend calls `supabase.rpc('join_server_by_invite', {...})` with 3 parameters, PostgREST may route to the wrong overload or encounter ambiguity due to the DEFAULT parameter. This can cause the ban check to be bypassed entirely.
 
-**1. `src/components/modals/CreateServerModal.tsx`**
-- Remove all join-related code: `joinServerSchema`, `JoinServerForm` type, `joinForm`, `joinError`, `showBannedModal`, `onJoinSubmit`, `handleInviteChange`, the banned modal JSX, and the entire "join" view
-- Remove unused imports (`Frown`, `Users` for join icon, `joinServer` from store)
-- Change the "Join a Server" button in the "choose" view to call `openModal('join-server')` instead of `setView("join")`, then close the create-server modal
-- Remove `"join"` from the `ModalView` type (becomes `"choose" | "create"` only)
+Additionally, `get_server_channels` has **no membership or ban check** -- it returns all channels for any server ID, meaning if a banned user somehow reaches the server page, they see everything.
 
-**2. `src/components/home/HomeLanding.tsx`**
-- Already correct -- the "Join Server" button calls `openModal('join-server')` which opens the `JoinServerModal`. No changes needed.
+### Fix (3 steps)
 
-**3. `src/components/modals/JoinServerModal.tsx`**
-- Already handles banned users correctly (checks after `joinServer` returns null). No changes needed.
+**Step 1: Database migration**
+- DROP the old 2-parameter overload of `join_server_by_invite` to eliminate ambiguity
+- Update `get_server_channels` to verify the calling user is a non-banned member before returning channels (return empty array if banned or not a member)
+- Update `get_server_categories` similarly
+
+**Step 2: Add server-level ban guard in `serverStore.ts`**
+- In the `joinServer` function, add a secondary safeguard: after the RPC returns successfully, verify the user is NOT banned before returning the server object
+- This is a defense-in-depth measure in case the RPC somehow returns data for a banned user
+
+**Step 3: Add route-level guard in `AppLayout.tsx`**
+- When a server is selected via URL (`urlServerId`), add a check: fetch the user's membership status for that server and redirect to `/app` if banned
+- This prevents direct URL navigation to a banned server
+
+### Technical Details
+
+```text
+Database Changes:
+  1. DROP FUNCTION public.join_server_by_invite(text, uuid)  -- remove old overload
+  2. ALTER get_server_channels to check membership + ban status
+  3. ALTER get_server_categories to check membership + ban status
+
+Frontend Changes:
+  1. serverStore.ts - add post-RPC ban verification in joinServer()
+  2. AppLayout.tsx - add membership verification when loading server from URL
+```
 
 ### Result
-- All server-join flows (vertical sidebar, horizontal sidebar, HomeLanding) will use the single `JoinServerModal` component
-- Banned users will always see only the banned modal and never be navigated to the server
-- The `CreateServerModal` becomes a focused create-only component with an option to open the join modal
+- Only one version of the join function exists, eliminating routing ambiguity
+- Banned users are blocked at the database level (RPC exception), store level (post-check), and route level (URL guard)
+- Even if somehow bypassed, `get_server_channels` returns no data for banned users
