@@ -1,44 +1,31 @@
-# User Settings Modal - Profile Tab Audit and Redesign
 
-## ✅ COMPLETED - February 6, 2026
 
-All tasks from the original plan have been implemented:
+## Fix: Banned User Toast in Create/Join Server Modal
 
-### Changes Made
+### Problem
+The `CreateServerModal.tsx` component (used by the horizontal server sidebar's "Create or Join Server" flow) was never updated with the banned-user detection logic. When a banned user tries to join, the `joinServer` store function returns `null` and sets a "banned" error, but `CreateServerModal` doesn't check for it -- it just shows a generic error message. Worse, there may be cases where the idempotent RPC returns data, causing a false "Successfully joined server!" toast.
 
-1. **Display Name Validation** ✅
-   - Added regex validation: `/^[\p{L}\p{N}\s\-_.]+$/u`
-   - Blocks emojis and special symbols
-   - Supports international characters (Unicode letters/numbers)
+### Root Cause
+When the banned modal was added to `JoinServerModal.tsx` and `Invite.tsx`, the `CreateServerModal.tsx` was missed. Its `onJoinSubmit` function (lines 144-168) has no banned-state handling.
 
-2. **Bio Character Limit and Counter** ✅
-   - Added `maxLength={400}` to textarea
-   - Character counter shows `{current}/400`
-   - Visual feedback: amber at 350+, red at 400
+### Solution
+Apply the same banned-modal pattern from `JoinServerModal.tsx` to `CreateServerModal.tsx`:
 
-3. **Pronouns Removed** ✅
-   - Deleted state variable
-   - Removed from handleSaveProfile
-   - Removed UI section
+1. **Add state**: Add a `showBannedModal` boolean state variable.
+2. **Add banned check in `onJoinSubmit`**: After `joinServer` returns `null`, read `useServerStore.getState().error` and check if it contains "banned". If so, set `showBannedModal(true)` instead of showing a generic error.
+3. **Add the banned Dialog**: Render the same Frown icon + message modal used in the other components.
+4. **Suppress the join dialog while banned modal is open**: Ensure the join form dialog doesn't show behind the banned modal.
 
-4. **New EditableProfilePreview Component** ✅
-   - Created `src/components/modals/EditableProfilePreview.tsx`
-   - Discord-style editable profile card
-   - Clickable banner zone with hover overlay
-   - Avatar dropdown menu (upload, remove, decoration)
-   - Inline editable display name with validation
-   - Inline editable bio with character counter
-   - Collapsible theme color pickers
-   - Profile effect button
-   - Member since and mutual servers info
+### Technical Details
 
-5. **UserSettingsModal Refactored** ✅
-   - Replaced split editor/preview layout with unified EditableProfilePreview
-   - Added handleAvatarRemove function
-   - Cleaned up unused imports
-   - Reset button to restore original values
-   - Save Changes button to persist edits
+**File: `src/components/modals/CreateServerModal.tsx`**
 
-### Files Modified
-- `src/components/modals/UserSettingsModal.tsx` - Refactored profile tab
-- `src/components/modals/EditableProfilePreview.tsx` - NEW component
+- Import `Frown` from lucide-react and `Dialog`/`DialogContent` (already imported).
+- Add `const [showBannedModal, setShowBannedModal] = useState(false)`.
+- Update `onJoinSubmit` (around line 151-163):
+  - After `joinServer` returns falsy, check `useServerStore.getState().error` for "banned".
+  - If banned, call `setShowBannedModal(true)` instead of setting `joinError`.
+- Add the banned modal JSX (Frown icon + text + Close button), same as in `JoinServerModal.tsx`.
+- Reset `showBannedModal` in `handleClose`.
+
+No other files need changes -- the store already handles the error correctly.
