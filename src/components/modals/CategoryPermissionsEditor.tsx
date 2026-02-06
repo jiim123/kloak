@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Save, RefreshCw } from 'lucide-react';
 import { useServerStore } from '@/stores/serverStore';
@@ -213,7 +212,7 @@ export const CategoryPermissionsEditor = ({ categoryId, serverId, onClose }: Cat
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Sync to Channels */}
       <div className="p-3 rounded-xl bg-secondary/30 border border-border/50">
         <div className="flex items-center justify-between gap-4">
@@ -240,190 +239,150 @@ export const CategoryPermissionsEditor = ({ categoryId, serverId, onClose }: Cat
         </div>
       </div>
 
-      <div className="flex gap-0 border border-border/50 rounded-xl overflow-hidden max-w-4xl" style={{ height: 'calc(85vh - 220px)', minHeight: '500px' }}>
-        {/* Role List Sidebar */}
-        <div className="w-48 border-r border-border/50 bg-secondary/20 flex-shrink-0">
-          <div className="px-3 pt-3 pb-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Roles</span>
-          </div>
-          <ScrollArea className="h-[calc(100%-2.5rem)]">
-            <div className="space-y-0.5 px-2 pb-2">
-              {allRoles.map((role) => {
-                const roleKey = role.id || role.name!;
-                const isSelected = selectedRoleKey === roleKey;
-                const overrideCount = getRoleOverrideCount(roleKey);
+      {/* Role selector */}
+      <div className="flex gap-2 flex-wrap">
+        {allRoles.map((role) => {
+          const roleKey = role.id || role.name!;
+          const isSelected = selectedRoleKey === roleKey;
+          const overrideCount = getRoleOverrideCount(roleKey);
 
-                return (
-                  <button
-                    key={roleKey}
-                    onClick={() => setSelectedRoleKey(roleKey)}
-                    className={cn(
-                      "w-full flex items-center justify-between gap-2 px-3 py-2 rounded-md text-sm transition-colors",
-                      isSelected
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-secondary/60 text-foreground"
-                    )}
-                  >
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <div
-                        className="w-3 h-3 rounded-full flex-shrink-0"
-                        style={
-                          role.color.startsWith('linear-gradient')
-                            ? { background: role.color }
-                            : { backgroundColor: role.color }
-                        }
-                      />
-                      <span className="truncate font-medium">{role.label}</span>
-                    </div>
-                    {overrideCount > 0 && !isSelected && (
-                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 flex-shrink-0">
-                        {overrideCount}
-                      </Badge>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </ScrollArea>
-        </div>
-
-        {/* Permissions Panel */}
-        <div className="flex-1 min-w-0 flex flex-col">
-          {selectedRole ? (
-            <>
-              <ScrollArea className="flex-1">
-                <div className="p-4 space-y-6">
-                  {/* Role Header */}
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-4 h-4 rounded-full flex-shrink-0"
-                      style={
-                        selectedRole.color.startsWith('linear-gradient')
-                          ? { background: selectedRole.color }
-                          : { backgroundColor: selectedRole.color }
-                      }
-                    />
-                    <h4 className="font-semibold text-sm">{selectedRole.label}</h4>
-                    {selectedRole.id && (
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-medium text-muted-foreground border-muted-foreground/30">
-                        Custom
-                      </Badge>
-                    )}
-                  </div>
-
-                  {/* Permission Groups */}
-                  {PERMISSION_GROUPS.map((group) => (
-                    <div key={group.label} className="space-y-1">
-                      <div className="mb-3">
-                        <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">
-                          {group.label}
-                        </h4>
-                        <p className="text-xs text-muted-foreground mt-0.5">{group.description}</p>
-                      </div>
-                      <div className="space-y-0.5">
-                        {group.permissions.map((permission) => {
-                          const meta = PERMISSION_META[permission];
-                          const state = getPermissionState(selectedRoleKey!, permission);
-                          const isDisabled = !meta.enabled;
-
-                          return (
-                            <div
-                              key={permission}
-                              className={cn(
-                                "flex items-center justify-between p-3 rounded-lg transition-colors",
-                                isDisabled ? "opacity-50" : "hover:bg-secondary/50"
-                              )}
-                            >
-                              <div className="flex-1 min-w-0 mr-4">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-medium">{meta.label}</span>
-                                  {isDisabled && (
-                                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 font-medium text-muted-foreground border-muted-foreground/30">
-                                      Coming soon
-                                    </Badge>
-                                  )}
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                                  {meta.description}
-                                </p>
-                              </div>
-                              <div className={cn(
-                                "flex bg-secondary/80 rounded-lg p-0.5 border border-border/50 flex-shrink-0",
-                                isDisabled && "pointer-events-none"
-                              )}>
-                                <button
-                                  onClick={() => handlePermissionChange(selectedRoleKey!, permission, false)}
-                                  disabled={isDisabled}
-                                  className={cn(
-                                    "px-2.5 py-1 text-[10px] font-bold rounded-md transition-all",
-                                    state === false
-                                      ? "bg-destructive text-destructive-foreground shadow-sm"
-                                      : "text-muted-foreground hover:text-foreground"
-                                  )}
-                                >
-                                  ✕
-                                </button>
-                                <button
-                                  onClick={() => handlePermissionChange(selectedRoleKey!, permission, null)}
-                                  disabled={isDisabled}
-                                  className={cn(
-                                    "px-2.5 py-1 text-[10px] font-bold rounded-md transition-all",
-                                    state === null
-                                      ? "bg-background text-foreground shadow-sm border border-border"
-                                      : "text-muted-foreground hover:text-foreground"
-                                  )}
-                                >
-                                  /
-                                </button>
-                                <button
-                                  onClick={() => handlePermissionChange(selectedRoleKey!, permission, true)}
-                                  disabled={isDisabled}
-                                  className={cn(
-                                    "px-2.5 py-1 text-[10px] font-bold rounded-md transition-all",
-                                    state === true
-                                      ? "bg-emerald-600 text-white shadow-sm"
-                                      : "text-muted-foreground hover:text-foreground"
-                                  )}
-                                >
-                                  ✓
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-
-              {/* Sticky Save Bar */}
-              <div className="border-t border-border/50 bg-background/95 backdrop-blur-sm px-4 py-3 flex items-center justify-between">
-                <p className="text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground">✕</span> Deny · <span className="font-medium text-foreground">/</span> Inherit · <span className="font-medium text-foreground">✓</span> Allow
-                </p>
-                <Button onClick={handleSave} disabled={isSaving} size="sm">
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4 mr-2" />
-                      Save Permissions
-                    </>
-                  )}
-                </Button>
-              </div>
-            </>
-          ) : (
-            <div className="flex items-center justify-center h-full text-muted-foreground">
-              Select a role to view permissions
-            </div>
-          )}
-        </div>
+          return (
+            <button
+              key={roleKey}
+              onClick={() => setSelectedRoleKey(roleKey)}
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors border",
+                isSelected
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "hover:bg-secondary/60 text-foreground border-border/50"
+              )}
+            >
+              <div
+                className="w-3 h-3 rounded-full flex-shrink-0"
+                style={
+                  role.color.startsWith('linear-gradient')
+                    ? { background: role.color }
+                    : { backgroundColor: role.color }
+                }
+              />
+              <span className="font-medium">{role.label}</span>
+              {overrideCount > 0 && !isSelected && (
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 flex-shrink-0">
+                  {overrideCount}
+                </Badge>
+              )}
+            </button>
+          );
+        })}
       </div>
+
+      {/* Permissions list */}
+      {selectedRole && (
+        <div className="space-y-6">
+          {PERMISSION_GROUPS.map((group) => (
+            <div key={group.label} className="space-y-1">
+              <div className="mb-3">
+                <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">
+                  {group.label}
+                </h4>
+                <p className="text-xs text-muted-foreground mt-0.5">{group.description}</p>
+              </div>
+              <div className="space-y-0.5">
+                {group.permissions.map((permission) => {
+                  const meta = PERMISSION_META[permission];
+                  const state = getPermissionState(selectedRoleKey!, permission);
+                  const isDisabled = !meta.enabled;
+
+                  return (
+                    <div
+                      key={permission}
+                      className={cn(
+                        "flex items-center justify-between p-3 rounded-lg transition-colors",
+                        isDisabled ? "opacity-50" : "hover:bg-secondary/50"
+                      )}
+                    >
+                      <div className="flex-1 min-w-0 mr-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">{meta.label}</span>
+                          {isDisabled && (
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 font-medium text-muted-foreground border-muted-foreground/30">
+                              Coming soon
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                          {meta.description}
+                        </p>
+                      </div>
+                      <div className={cn(
+                        "flex bg-secondary/80 rounded-lg p-0.5 border border-border/50 flex-shrink-0",
+                        isDisabled && "pointer-events-none"
+                      )}>
+                        <button
+                          onClick={() => handlePermissionChange(selectedRoleKey!, permission, false)}
+                          disabled={isDisabled}
+                          className={cn(
+                            "px-2.5 py-1 text-[10px] font-bold rounded-md transition-all",
+                            state === false
+                              ? "bg-destructive text-destructive-foreground shadow-sm"
+                              : "text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          ✕
+                        </button>
+                        <button
+                          onClick={() => handlePermissionChange(selectedRoleKey!, permission, null)}
+                          disabled={isDisabled}
+                          className={cn(
+                            "px-2.5 py-1 text-[10px] font-bold rounded-md transition-all",
+                            state === null
+                              ? "bg-background text-foreground shadow-sm border border-border"
+                              : "text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          /
+                        </button>
+                        <button
+                          onClick={() => handlePermissionChange(selectedRoleKey!, permission, true)}
+                          disabled={isDisabled}
+                          className={cn(
+                            "px-2.5 py-1 text-[10px] font-bold rounded-md transition-all",
+                            state === true
+                              ? "bg-emerald-600 text-white shadow-sm"
+                              : "text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          ✓
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+
+          {/* Save bar */}
+          <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm py-3 flex items-center justify-between border-t border-border/50 -mx-1 px-1">
+            <p className="text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">✕</span> Deny · <span className="font-medium text-foreground">/</span> Inherit · <span className="font-medium text-foreground">✓</span> Allow
+            </p>
+            <Button onClick={handleSave} disabled={isSaving} size="sm">
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Permissions
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -629,7 +629,7 @@ export const ChannelSettingsPage = () => {
               {activeTab === "permissions" && (isCategory ? "Control category access and abilities" : "Control channel access and abilities")}
             </p>
 
-            <div className="max-w-2xl">
+            <div className="max-w-3xl">
               {/* Tab Content */}
               {isCategory ? renderCategoryContent() : renderChannelContent()}
 
