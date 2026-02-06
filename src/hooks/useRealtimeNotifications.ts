@@ -3,8 +3,23 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNotificationStore } from '@/stores/notificationStore';
 import { useServerStore } from '@/stores/serverStore';
 import { useUIStore } from '@/stores/uiStore';
-import type { Notification } from '@/types';
+import type { Notification, NotificationType as DBNotificationType } from '@/types';
 import { isTauri } from '@/lib/tauriRuntime';
+import { playNotificationSound, type NotificationType as SoundNotificationType } from './useNotificationSound';
+
+// Map database notification types to sound notification types
+const mapNotificationTypeToSoundType = (dbType: DBNotificationType): SoundNotificationType => {
+  switch (dbType) {
+    case 'mention':
+      return 'user_mention';
+    case 'dm':
+      return 'dm';
+    case 'friend_request':
+    case 'server_invite':
+    default:
+      return 'general';
+  }
+};
 
 export const useRealtimeNotifications = (userId: string | null) => {
   const { fetchNotifications, addNotification, removeNotification } = useNotificationStore();
@@ -34,6 +49,10 @@ export const useRealtimeNotifications = (userId: string | null) => {
             // Refresh servers list to remove the server user was kicked/banned from
             useServerStore.getState().fetchServers(userId);
           }
+          
+          // Play notification sound based on type
+          const soundType = mapNotificationTypeToSoundType(notification.type);
+          playNotificationSound(soundType);
           
           // Show desktop notification if permitted
           void showDesktopNotification(notification);
