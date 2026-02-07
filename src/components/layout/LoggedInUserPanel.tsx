@@ -9,6 +9,17 @@ import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { useAuthStore } from "@/stores/authStore";
 import { useVoiceStore } from "@/stores/voiceStore";
 
+const InvisibleIndicator = ({ className }: { className?: string }) => (
+  <div
+    className={cn(
+      "w-3.5 h-3.5 rounded-full border-2 bg-transparent",
+      className,
+    )}
+    style={{ borderColor: "hsl(var(--muted-foreground))" }}
+    title="Invisible"
+  />
+);
+
 interface LoggedInUserPanelProps {
   containerClassName?: string;
   statusBorderClassName?: string;
@@ -18,7 +29,7 @@ export const LoggedInUserPanel = ({
   containerClassName,
   statusBorderClassName = "border-layout-sidebar",
 }: LoggedInUserPanelProps) => {
-  const { user } = useAuthStore();
+  const { user, manualStatus } = useAuthStore();
   const connection = useVoiceStore((s) => s.connection);
   const joinedVoiceChannelId = useVoiceStore((s) => s.joinedChannelId);
   const controls = useVoiceStore((s) => s.controls);
@@ -58,16 +69,22 @@ export const LoggedInUserPanel = ({
           >
             <AvatarWithDecoration user={user} className="w-8 h-8" active={isUserAvatarHovered} />
           </motion.div>
-          <div
-            className={cn(
-              "absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 transition-colors",
-              statusBorderClassName,
-              user?.status === "online" && "bg-kloak-online",
-              user?.status === "idle" && "bg-kloak-idle",
-              user?.status === "dnd" && "bg-kloak-dnd",
-              user?.status === "offline" && "bg-kloak-offline",
-            )}
-          />
+          {manualStatus === "offline" ? (
+            <div className={cn("absolute -bottom-0.5 -right-0.5", statusBorderClassName)}>
+              <InvisibleIndicator />
+            </div>
+          ) : (
+            <div
+              className={cn(
+                "absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 transition-colors",
+                statusBorderClassName,
+                user?.status === "online" && "bg-kloak-online",
+                user?.status === "idle" && "bg-kloak-idle",
+                user?.status === "dnd" && "bg-kloak-dnd",
+                user?.status === "offline" && "bg-kloak-offline",
+              )}
+            />
+          )}
         </button>
       </StatusSelector>
 
@@ -76,13 +93,15 @@ export const LoggedInUserPanel = ({
         <p className="text-sm font-semibold text-foreground truncate">{user?.display_name || user?.username}</p>
         <p className="text-xs text-muted-foreground truncate">
           {user?.custom_status ||
-            (user?.status === "online"
-              ? "Online"
-              : user?.status === "idle"
-                ? "Idle"
-                : user?.status === "dnd"
-                  ? "Do Not Disturb"
-                  : "Offline")}
+            (manualStatus === "offline"
+              ? "Invisible"
+              : user?.status === "online"
+                ? "Online"
+                : user?.status === "idle"
+                  ? "Idle"
+                  : user?.status === "dnd"
+                    ? "Do Not Disturb"
+                    : "Offline")}
         </p>
       </div>
 

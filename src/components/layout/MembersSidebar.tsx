@@ -44,7 +44,17 @@ const getMemberPresence = (member: ServerMember) => {
 
 // Memoized Status indicator component
 const StatusIndicator = memo(
-  ({ status, isStale, className }: { status?: string; isStale?: boolean; className?: string }) => {
+  ({ status, isStale, isInvisible, className }: { status?: string; isStale?: boolean; isInvisible?: boolean; className?: string }) => {
+    // Show hollow circle for the current user when invisible
+    if (isInvisible) {
+      return (
+        <div
+          className={cn("w-2.5 h-2.5 rounded-full border-[1.5px] bg-transparent", className)}
+          style={{ borderColor: "hsl(var(--muted-foreground))" }}
+        />
+      );
+    }
+
     if (isStale) {
       return <div className={cn("w-2.5 h-2.5 rounded-full bg-zinc-500", className)} />;
     }
@@ -324,7 +334,11 @@ export const MembersSidebar = () => {
             className={cn("w-8 h-8 rounded-full", memberIsOffline && "opacity-40 grayscale-[30%]")}
           />
           <div className="absolute -bottom-0.5 -right-0.5 p-[2px] bg-background rounded-full">
-            <StatusIndicator status={presence.status} isStale={presence.isOffline && presence.isStale} />
+            <StatusIndicator
+              status={presence.status}
+              isStale={presence.isOffline && presence.isStale}
+              isInvisible={isSelf && useAuthStore.getState().manualStatus === "offline"}
+            />
           </div>
         </div>
 
