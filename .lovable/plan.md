@@ -1,229 +1,121 @@
 
-# Harden Server-Side Permission Enforcement
 
-## Problem
+# Fix Channel and Role Permission Syncing Across Devices in Real Time
 
-All RLS policies currently use `USING (true)` / `WITH CHECK (true)` -- meaning any user with the Supabase anon key can directly read, insert, update, or delete any row in any table. Since Kloak uses custom authentication (secret key hashing, not Supabase Auth), `auth.uid()` is always null, so traditional RLS cannot be used.
+## Summary
 
-The critical message RPCs (`send_message`, `edit_message`, `delete_message`, `toggle_pin_message`, reactions, polls) already use the `check_user_permission()` function -- these are protected. However, many other operations bypass RPCs and hit tables directly from the client.
+The realtime subscription infrastructure for channels already exists and works (`useRealtimeServer.ts` subscribes to INSERT/UPDATE/DELETE on `channels` and `channel_categories`). The core issues are missing behaviors around those events and missing subscriptions for permission-related tables.
 
-## Current Risk Assessment
+## Issues Found
 
-**Already Protected (via SECURITY DEFINER RPCs with permission checks):**
-- Send/edit/delete messages
-- Pin/unpin messages
-- Add/remove reactions
-- Create/vote on polls
-- Join/leave servers
-- Register/login
-
-**NOT Protected (direct table mutations, no permission checks):**
-- Create/update/delete channels (direct `.from('channels')`)
-- Create/update/delete server roles (direct `.from('server_roles')`)
-- Assign/remove member roles (direct `.from('server_member_roles')`)
-- Update server members (role changes, mute, ban -- direct `.from('server_members')`)
-- Update/delete servers (direct `.from('servers')`)
-- Manage channel/role/category permissions (direct `.from('channel_permissions')`)
-- Insert/delete media items
-- Insert/update/delete announcement comments and reactions
-- Insert/update/delete thread messages
-- Insert/delete server emojis
-- Delete notifications (any user's)
-
-## Solution Strategy
-
-Since `auth.uid()` is always null (custom auth), we cannot use RLS for enforcement. The approach is:
-
-1. **Create SECURITY DEFINER RPCs** for all unprotected mutations, with permission checks
-2. **Update the client** to call these RPCs instead of direct table operations
-3. **Lock down RLS** on write operations to `false` on the most critical tables, forcing all writes through RPCs
-
-We will prioritize by risk level and tackle the most dangerous gaps first.
+1. **Channel INSERT blindly adds all channels** -- does not check if the channel is private and if the user has access
+2. **Channel DELETE sets currentChannel to null but does not navigate** -- user sees a blank screen instead of being redirected
+3. **No toast notification** when a channel the user is viewing gets deleted
+4. **No reconnection recovery** -- after a disconnect/reconnect, channels are not re-fetched to catch missed events
+5. **No realtime subscription for permission tables** -- changes to `channel_permissions`, `role_permissions`, `channel_members`, or `server_member_roles` do not trigger a re-evaluation of which channels the user can see
+6. **No handling when user loses channel access** -- if a role change or permission override removes a user's access to a private channel, it stays in their sidebar
 
 ## Implementation Plan
 
-### Phase 1: Highest Priority -- Channel & Server Management RPCs
+### 1. Fix Channel INSERT Handler -- Private Channel Filtering
 
-**Migration: Create protected RPCs for channel CRUD**
+**File: `src/hooks/useRealtimeServer.ts`**
 
-```text
-create_channel(server_id, name, type, category_id, ...)
-  -> check_user_permission(user_id, server_id, 'manage_channels')
+When a channel INSERT event arrives and the channel's `is_private` flag is true, check whether the current user is in the `channel_members` table for that channel before adding it to the store. If the user is not a member, skip adding the channel.
 
-update_channel(channel_id, user_id, name, topic, ...)
-  -> check_user_permission(user_id, channel_id, 'manage_channels')
+- Query `channel_members` table for (channel_id, user_id) match
+- Only add the channel to state if the user has access
+- Non-private channels continue to be added immediately (current behavior)
 
-delete_channel(channel_id, user_id)
-  -> check_user_permission(user_id, channel_id, 'manage_channels')
-```
+### 2. Fix Channel DELETE Handler -- Navigation and Toast
 
-**Migration: Create protected RPCs for server management**
+**File: `src/hooks/useRealtimeServer.ts`**
 
-```text
-update_server(server_id, user_id, name, icon_url, ...)
-  -> check_user_server_permission(user_id, server_id, 'manage_server')
+When the current channel is deleted:
+- Show a toast: "The channel you were viewing has been deleted"
+- Navigate to the first available channel in the server, or the server overview if no channels remain
+- This requires passing a navigate callback or using a ref pattern
 
-delete_server(server_id, user_id)
-  -> verify user is owner
-```
+Implementation approach:
+- Add a `useNavigate` import and pass it through, or use a callback ref pattern
+- After setting `currentChannel: null`, find the next available channel from the remaining list and navigate to it
 
-**Client changes:**
-- `src/stores/serverStore.ts`: Replace all direct `.from('channels')`, `.from('servers')` mutations with RPC calls
+### 3. Add Reconnection Recovery
 
-### Phase 2: Role Management RPCs
+**File: `src/hooks/useRealtimeServer.ts`**
 
-**Migration: Create protected RPCs for role operations**
+When the `isConnected` state transitions from `false` to `true` (reconnection), trigger a full re-fetch of channels and categories for the current server to catch any changes missed during the disconnect.
 
-```text
-create_server_role(server_id, user_id, name, color, icon)
-  -> check_user_server_permission(user_id, server_id, 'manage_roles')
+- Track previous connection state with a ref
+- On reconnect (wasDisconnected -> isConnected), call `fetchChannels(serverId)` and `fetchRolePermissions(serverId)`
 
-update_server_role(role_id, user_id, name, color, icon, position)
-  -> check_user_server_permission(user_id, server_id, 'manage_roles')
+### 4. Add Realtime Subscriptions for Permission Tables
 
-delete_server_role(role_id, user_id)
-  -> check_user_server_permission(user_id, server_id, 'manage_roles')
+**File: `src/hooks/useRealtimeServer.ts`**
 
-assign_member_role(member_id, role_id, user_id)
-  -> check_user_server_permission(user_id, server_id, 'manage_roles')
+Add subscriptions for tables that affect channel visibility and user permissions:
 
-remove_member_role(member_id, role_id, user_id)
-  -> check_user_server_permission(user_id, server_id, 'manage_roles')
-```
+- `channel_permissions` (INSERT/UPDATE/DELETE filtered by channels in this server)
+- `role_permissions` (INSERT/UPDATE/DELETE filtered by server_id)
+- `server_member_roles` (INSERT/UPDATE/DELETE for the current user)
+- `channel_members` (INSERT/DELETE for the current user)
 
-**Client changes:**
-- `src/stores/serverStore.ts`: Replace `createRole`, `updateRole`, `deleteRole`, `assignRole`, `removeRole` to use RPCs
+When any of these change, trigger a lightweight refresh:
+- Re-fetch `fetchChannels(serverId)` to get the filtered channel list (the RPC already handles private channel filtering)
+- Re-fetch `fetchRolePermissions(serverId)` to update permission state
 
-### Phase 3: Member Management RPCs
+This is simpler and more reliable than trying to incrementally update permissions client-side.
 
-**Migration: Create protected RPCs for member operations**
+### 5. Handle Permission/Access Revocation
 
-```text
-update_member(member_id, actor_user_id, updates)
-  -> check role hierarchy (actor must outrank target)
-  -> check relevant permission (kick_members, ban_members, mute_members, manage_nicknames)
+**File: `src/hooks/useRealtimeServer.ts`**
 
-update_member_role(member_id, actor_user_id, new_role)
-  -> verify actor can assign roles and outranks target
-```
+After re-fetching channels due to a permission change:
+- Compare the new channel list with the current one
+- If the user's `currentChannel` is no longer in the list (access revoked), redirect them to the first available channel
+- Show a toast: "You no longer have access to that channel"
 
-**Client changes:**
-- `src/stores/serverStore.ts`: Replace direct `server_members` updates with RPCs
+### 6. Ensure Realtime Publication for Permission Tables
 
-### Phase 4: Permission Management RPCs
+**Migration file** (if needed):
 
-**Migration: Create protected RPCs for permission operations**
+Check that `channel_permissions`, `role_permissions`, `server_member_roles`, and `channel_members` are in the `supabase_realtime` publication with `REPLICA IDENTITY FULL`. Based on the audit:
+- `role_permissions` and `channel_permissions` -- already in publication
+- `server_member_roles` -- already in publication  
+- `channel_members` -- already has `REPLICA IDENTITY FULL`
+- Need to verify `channel_members` is in `supabase_realtime` publication
 
-```text
-set_role_permission(server_id, user_id, permission, role_name/role_id, allowed)
-  -> check_user_server_permission(user_id, server_id, 'manage_roles')
+### 7. Background Sync Enhancement
 
-set_channel_permission(channel_id, user_id, permission, target_role/target_user, allowed)
-  -> check_user_permission(user_id, channel_id, 'manage_channels')
+**File: `src/hooks/useBackgroundSync.ts`**
 
-delete_role_permission(permission_id, user_id)
-  -> same checks
+On reconnection (the `attemptReconnect` success path), also call `fetchChannels` for the current server to ensure stale state is resolved.
 
-delete_channel_permission(permission_id, user_id)
-  -> same checks
-```
+## Technical Details
 
-**Client changes:**
-- `src/stores/serverStore.ts`: Replace direct `role_permissions`, `channel_permissions`, `category_permissions` mutations with RPCs
+### Files to Modify
 
-### Phase 5: Content Tables (Media, Announcements, Threads)
+| File | Changes |
+|------|---------|
+| `src/hooks/useRealtimeServer.ts` | Add private channel filtering on INSERT, navigation on DELETE, reconnection recovery, permission table subscriptions |
+| `src/hooks/useBackgroundSync.ts` | Add channel re-fetch on reconnection |
+| One migration file (if needed) | Ensure `channel_members` is in realtime publication |
 
-**Migration: Create protected RPCs**
+### Subscription Architecture After Changes
 
-```text
-insert_media_item(channel_id, user_id, ...)
-  -> check_user_permission(user_id, channel_id, 'send_messages')
-  -> check_user_permission(user_id, channel_id, 'attach_files')
+The `useRealtimeServer` hook will subscribe to one Supabase channel (`server:{serverId}`) with these postgres_changes listeners:
 
-delete_media_item(item_id, user_id)
-  -> verify ownership or manage_messages permission
+- `servers` UPDATE/DELETE (existing)
+- `channels` INSERT/UPDATE/DELETE (existing, enhanced handlers)
+- `channel_categories` INSERT/UPDATE/DELETE (existing)
+- `channel_permissions` INSERT/UPDATE/DELETE (new -- triggers permission refresh)
+- `role_permissions` INSERT/UPDATE/DELETE (new -- triggers permission refresh)
+- `server_member_roles` INSERT/DELETE (new -- triggers permission refresh)
+- `channel_members` INSERT/DELETE (new -- triggers channel list refresh)
 
-insert_announcement_comment(message_id, user_id, content)
-  -> check send_messages permission on the announcement's channel
+Permission-change listeners will be debounced (500ms) to avoid excessive re-fetches when multiple permission rows change at once (e.g., bulk role permission updates).
 
-delete_announcement_comment(comment_id, user_id)
-  -> verify ownership or manage_messages permission
+### No Database Changes Required
 
-send_thread_message(thread_id, user_id, content)
-  -> check send_messages permission on the thread's channel
+All the necessary realtime publications and table configurations are already in place. The fix is entirely client-side logic in the realtime event handlers.
 
-edit_thread_message(message_id, user_id, content)
-  -> verify ownership + send_messages permission
-
-delete_thread_message(message_id, user_id)
-  -> verify ownership or manage_messages permission
-```
-
-**Client changes:**
-- `src/components/media/MediaChannelArea.tsx`
-- `src/components/media/MediaComments.tsx`
-- `src/components/announcement/AnnouncementView.tsx`
-- `src/components/forum/ForumChannelArea.tsx`
-
-### Phase 6: Server Emoji RPCs
-
-**Migration:**
-
-```text
-upload_server_emoji(server_id, user_id, name, file_path)
-  -> check_user_server_permission(user_id, server_id, 'manage_emojis')
-
-delete_server_emoji(emoji_id, user_id)
-  -> check_user_server_permission(user_id, server_id, 'manage_emojis')
-```
-
-**Client changes:**
-- `src/components/modals/ServerSettingsModal.tsx`
-- `src/components/settings/ServerSettingsPage.tsx`
-- `src/components/modals/ImportEmojiPackModal.tsx`
-
-### Phase 7: Lock Down RLS Policies
-
-After all mutations go through RPCs, update RLS on the most critical tables to deny direct writes:
-
-```text
--- Messages: deny direct INSERT/UPDATE/DELETE (force through RPCs)
-CREATE POLICY "Deny direct message writes" ON messages
-  FOR INSERT WITH CHECK (false);
-
--- Similar for: channels, servers, server_members, server_roles,
--- role_permissions, channel_permissions, server_member_roles
-```
-
-SELECT policies can remain `USING (true)` since reads are not sensitive in this context (users already need the anon key and all data is server-scoped).
-
-### Phase 8: Client Error Handling
-
-**File: `src/lib/errorHandler.ts`**
-
-Update to detect permission errors from RPCs (errors containing "Permission denied" or "do not have permission") and show clear messages. Add a permission cache refresh trigger.
-
-**Files: All stores and components making RPC calls**
-
-Wrap RPC calls with proper error handling that surfaces permission denials to the user.
-
-## Files to Modify
-
-- 6-8 new migration files (one per phase of RPCs)
-- `src/stores/serverStore.ts` (major refactor: replace ~20 direct mutations with RPCs)
-- `src/components/media/MediaChannelArea.tsx`
-- `src/components/media/MediaComments.tsx`
-- `src/components/announcement/AnnouncementView.tsx`
-- `src/components/forum/ForumChannelArea.tsx`
-- `src/components/modals/ServerSettingsModal.tsx`
-- `src/components/settings/ServerSettingsPage.tsx`
-- `src/components/modals/ImportEmojiPackModal.tsx`
-- `src/lib/errorHandler.ts`
-
-## Important Notes
-
-- All new RPCs will be `SECURITY DEFINER` with `SET search_path = public` to bypass permissive RLS
-- Every RPC will validate the acting user is a non-banned server member before any operation
-- The `check_user_permission` and `check_user_server_permission` functions are already battle-tested and handle the full permission hierarchy
-- This is a large change -- we should implement in phases and test after each phase
-- SELECT/read operations remain open since the custom auth model requires it for realtime subscriptions
