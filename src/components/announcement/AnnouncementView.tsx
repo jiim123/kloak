@@ -602,33 +602,13 @@ export const AnnouncementView = ({ message, onClose }: AnnouncementViewProps) =>
     if (!user) return;
     
     try {
-      // Check if reaction already exists
-      const { data: existing } = await supabase
-        .from("announcement_comment_reactions")
-        .select("*")
-        .eq("comment_id", commentId)
-        .eq("user_id", user.id)
-        .eq("emoji", emoji)
-        .maybeSingle();
+      const { error } = await (supabase.rpc as any)('toggle_announcement_comment_reaction', {
+        _comment_id: commentId,
+        _user_id: user.id,
+        _emoji: emoji
+      });
 
-      if (existing) {
-        // Remove reaction
-        await supabase
-          .from("announcement_comment_reactions")
-          .delete()
-          .eq("comment_id", commentId)
-          .eq("user_id", user.id)
-          .eq("emoji", emoji);
-      } else {
-        // Add reaction
-        await supabase
-          .from("announcement_comment_reactions")
-          .insert({
-            comment_id: commentId,
-            user_id: user.id,
-            emoji: emoji,
-          });
-      }
+      if (error) throw error;
       
       setShowEmojiPicker(null);
     } catch (error) {

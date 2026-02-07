@@ -274,21 +274,20 @@ export const MediaChannelArea = () => {
         return;
       }
 
-      // Insert media item
-      const { error: insertError } = await supabase
-        .from('media_items' as any)
-        .insert({
-          channel_id: currentChannel.id,
-          user_id: user.id,
-          title: title.trim() || null,
-          description: description.trim() || null,
-          media_url: mediaUrl,
-          media_type: mediaType,
-          thumbnail_url: thumbnailUrl,
-          youtube_video_id: youtubeVideoId,
-          width,
-          height,
-        });
+      // Insert media item via RPC
+      const { error: insertError } = await (supabase.rpc as any)('insert_media_item', {
+        _channel_id: currentChannel.id,
+        _user_id: user.id,
+        _title: title.trim() || null,
+        _description: description.trim() || null,
+        _media_url: mediaUrl,
+        _media_type: mediaType,
+        _thumbnail_url: thumbnailUrl,
+        _youtube_video_id: youtubeVideoId,
+        _width: width,
+        _height: height,
+        _file_size: selectedFile?.size || 0
+      });
       
       if (insertError) throw insertError;
       
@@ -306,10 +305,10 @@ export const MediaChannelArea = () => {
   // Handle delete
   const handleDelete = async (itemId: string) => {
     try {
-      const { error } = await supabase
-        .from('media_items' as any)
-        .delete()
-        .eq('id', itemId);
+      const { error } = await (supabase.rpc as any)('delete_media_item', {
+        _item_id: itemId,
+        _user_id: user?.id
+      });
       
       if (error) throw error;
       toast.success('Media deleted');

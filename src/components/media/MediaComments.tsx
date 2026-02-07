@@ -468,16 +468,12 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
       setReplyingToComment(null);
 
       try {
-        const { data, error } = await supabase
-          .from("media_comments" as any)
-          .insert({
-            media_id: mediaId,
-            user_id: user.id,
-            content: content,
-            reply_to_id: replyToId,
-          } as any)
-          .select(`*, user:users (*)`)
-          .single();
+        const { data, error } = await (supabase.rpc as any)('insert_media_comment', {
+          _media_id: mediaId,
+          _user_id: user.id,
+          _content: content,
+          _reply_to_id: replyToId
+        });
 
         if (error) throw error;
         // Real-time sync is handled by postgres_changes subscription
@@ -497,13 +493,11 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
 
     const content = editContent.trim();
     try {
-      const { error } = await supabase
-        .from("media_comments" as any)
-        .update({ 
-          content,
-          edited_at: new Date().toISOString(),
-        } as any)
-        .eq("id", editingCommentId);
+      const { error } = await (supabase.rpc as any)('edit_media_comment', {
+        _comment_id: editingCommentId,
+        _user_id: user?.id,
+        _content: content
+      });
 
       if (error) throw error;
       // Real-time sync is handled by postgres_changes subscription
@@ -517,20 +511,11 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
 
   const handleDelete = useCallback(async (commentId: string) => {
     try {
-      if (canManageMessages) {
-        const { error } = await supabase
-          .from("media_comments" as any)
-          .delete()
-          .eq("id", commentId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("media_comments" as any)
-          .delete()
-          .eq("id", commentId)
-          .eq("user_id", user?.id);
-        if (error) throw error;
-      }
+      const { error } = await (supabase.rpc as any)('delete_media_comment', {
+        _comment_id: commentId,
+        _user_id: user?.id
+      });
+      if (error) throw error;
       // Real-time sync is handled by postgres_changes subscription
     } catch (error) {
       handleError(error, "Failed to delete comment");
@@ -592,24 +577,13 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
     );
 
     try {
-      if (hasReacted) {
-        const { error } = await supabase
-          .from("media_comment_reactions" as any)
-          .delete()
-          .eq("comment_id", commentId)
-          .eq("user_id", user.id)
-          .eq("emoji", emoji);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("media_comment_reactions" as any)
-          .insert({
-            comment_id: commentId,
-            user_id: user.id,
-            emoji,
-          } as any);
-        if (error) throw error;
-      }
+      const { error } = await (supabase.rpc as any)('toggle_media_comment_reaction', {
+        _comment_id: commentId,
+        _user_id: user.id,
+        _emoji: emoji
+      });
+
+      if (error) throw error;
     } catch (error) {
       console.error("Failed to toggle reaction:", error);
       // Revert optimistic update on error by refetching
