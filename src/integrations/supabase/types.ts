@@ -1354,6 +1354,7 @@ export type Database = {
           join_source: string | null
           joined_at: string | null
           nickname: string | null
+          position: number | null
           role: Database["public"]["Enums"]["server_role"] | null
           server_id: string
           user_id: string
@@ -1366,6 +1367,7 @@ export type Database = {
           join_source?: string | null
           joined_at?: string | null
           nickname?: string | null
+          position?: number | null
           role?: Database["public"]["Enums"]["server_role"] | null
           server_id: string
           user_id: string
@@ -1378,6 +1380,7 @@ export type Database = {
           join_source?: string | null
           joined_at?: string | null
           nickname?: string | null
+          position?: number | null
           role?: Database["public"]["Enums"]["server_role"] | null
           server_id?: string
           user_id?: string
@@ -2550,6 +2553,10 @@ export type Database = {
       remove_role_from_member: {
         Args: { _member_id: string; _role_id: string; _user_id: string }
         Returns: boolean
+      }
+      reorder_user_servers: {
+        Args: { _server_ids: string[]; _user_id: string }
+        Returns: undefined
       }
       reset_user_secret_key:
         | { Args: { _new_key_hash: string; _user_id: string }; Returns: Json }
