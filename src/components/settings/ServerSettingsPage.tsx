@@ -1066,11 +1066,11 @@ export const ServerSettingsPage = () => {
 
       if (uploadError) throw uploadError;
 
-      const { error: insertError } = await supabase.from('server_emojis').insert({
-        server_id: server.id,
-        name: normalized,
-        file_path: filePath,
-        created_by: user.id,
+      const { error: insertError } = await (supabase.rpc as any)('upload_server_emoji', {
+        _server_id: server.id,
+        _user_id: user.id,
+        _name: normalized,
+        _file_path: filePath
       });
 
       if (insertError) throw insertError;
@@ -1110,8 +1110,15 @@ export const ServerSettingsPage = () => {
     if (!confirm(`Delete emoji "${emoji.name}"?`)) return;
 
     try {
-      await supabase.from('server_emojis').delete().eq('id', emoji.id);
-      await supabase.storage.from('server-emojis').remove([emoji.file_path]);
+      const { data: filePath, error } = await (supabase.rpc as any)('delete_server_emoji', {
+        _emoji_id: emoji.id,
+        _user_id: user.id
+      });
+      
+      if (error) throw error;
+      if (filePath) {
+        await supabase.storage.from('server-emojis').remove([filePath as string]);
+      }
 
       setServerEmojis((prev) => prev.filter((e) => e.id !== emoji.id));
       invalidateServerEmojis(server.id);

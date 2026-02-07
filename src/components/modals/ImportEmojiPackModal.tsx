@@ -199,12 +199,12 @@ export const ImportEmojiPackModal = () => {
 
           if (uploadError) throw uploadError;
 
-          // Insert to database
-          const { error: insertError } = await supabase.from("server_emojis").insert({
-            server_id: currentServer.id,
-            name: uniqueName,
-            file_path: filePath,
-            created_by: user.id,
+          // Insert to database via RPC
+          const { error: insertError } = await (supabase.rpc as any)('upload_server_emoji', {
+            _server_id: currentServer.id,
+            _user_id: user.id,
+            _name: uniqueName,
+            _file_path: filePath
           });
 
           if (insertError) {

@@ -2239,6 +2239,10 @@ export type Database = {
         Args: { _friendship_id: string; _user_id: string }
         Returns: boolean
       }
+      delete_announcement_comment: {
+        Args: { _comment_id: string; _user_id: string }
+        Returns: boolean
+      }
       delete_category: {
         Args: { _category_id: string; _user_id: string }
         Returns: boolean
@@ -2255,6 +2259,14 @@ export type Database = {
         Args: { _message_id: string; _sender_id: string }
         Returns: boolean
       }
+      delete_media_comment: {
+        Args: { _comment_id: string; _user_id: string }
+        Returns: boolean
+      }
+      delete_media_item: {
+        Args: { _item_id: string; _user_id: string }
+        Returns: boolean
+      }
       delete_message: {
         Args: { _message_id: string; _user_id: string }
         Returns: boolean
@@ -2266,6 +2278,10 @@ export type Database = {
       delete_server: {
         Args: { _server_id: string; _user_id: string }
         Returns: boolean
+      }
+      delete_server_emoji: {
+        Args: { _emoji_id: string; _user_id: string }
+        Returns: string
       }
       delete_server_role: {
         Args: { _role_id: string; _user_id: string }
@@ -2284,9 +2300,17 @@ export type Database = {
         Returns: boolean
       }
       delete_user_account: { Args: { _user_id: string }; Returns: boolean }
+      edit_announcement_comment: {
+        Args: { _comment_id: string; _content: string; _user_id: string }
+        Returns: boolean
+      }
       edit_dm: {
         Args: { _content: string; _message_id: string; _sender_id: string }
         Returns: Json
+      }
+      edit_media_comment: {
+        Args: { _comment_id: string; _content: string; _user_id: string }
+        Returns: boolean
       }
       edit_message: {
         Args: { _content: string; _message_id: string; _user_id: string }
@@ -2427,6 +2451,40 @@ export type Database = {
       get_user_server_folders: { Args: { _user_id: string }; Returns: Json }
       get_user_server_tabs: { Args: { _user_id: string }; Returns: string[] }
       get_user_servers: { Args: { _user_id: string }; Returns: Json }
+      insert_announcement_comment: {
+        Args: {
+          _content: string
+          _message_id: string
+          _reply_to_id?: string
+          _user_id: string
+        }
+        Returns: Json
+      }
+      insert_media_comment: {
+        Args: {
+          _content: string
+          _media_id: string
+          _reply_to_id?: string
+          _user_id: string
+        }
+        Returns: Json
+      }
+      insert_media_item: {
+        Args: {
+          _channel_id: string
+          _description?: string
+          _file_size?: number
+          _height?: number
+          _media_type?: string
+          _media_url?: string
+          _thumbnail_url?: string
+          _title?: string
+          _user_id: string
+          _width?: number
+          _youtube_video_id?: string
+        }
+        Returns: Json
+      }
       is_dm_participant: {
         Args: { _conversation_id: string; _user_id: string }
         Returns: boolean
@@ -2691,6 +2749,14 @@ export type Database = {
         }
         Returns: Json
       }
+      toggle_announcement_comment_reaction: {
+        Args: { _comment_id: string; _emoji: string; _user_id: string }
+        Returns: boolean
+      }
+      toggle_media_comment_reaction: {
+        Args: { _comment_id: string; _emoji: string; _user_id: string }
+        Returns: boolean
+      }
       toggle_mute_member: {
         Args: {
           _muted: boolean
@@ -2785,6 +2851,15 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      upload_server_emoji: {
+        Args: {
+          _file_path: string
+          _name: string
+          _server_id: string
+          _user_id: string
+        }
+        Returns: Json
       }
       vote_poll: {
         Args: { _option_indexes: number[]; _poll_id: string; _user_id: string }
