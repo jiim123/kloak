@@ -31,8 +31,18 @@ export function classifyError(error: any): ErrorInfo {
     };
   }
 
+  // Permission errors (from SECURITY DEFINER RPCs)
+  if (errorMessage.includes('permission denied') || errorMessage.includes('do not have permission') || errorMessage.includes('you cannot modify')) {
+    return {
+      type: 'permission',
+      message: "You don't have permission to do that",
+      details: error?.message || 'Contact an admin if you think this is a mistake.',
+      retryable: false,
+    };
+  }
+
   // Auth errors
-  if (errorCode === 401 || errorCode === 403 || errorMessage.includes('unauthorized') || errorMessage.includes('unauthenticated')) {
+  if (errorCode === 401 || errorCode === 403 || errorMessage.includes('unauthorized') || errorMessage.includes('unauthenticated') || errorMessage.includes('not authenticated')) {
     return {
       type: 'auth',
       message: 'Authentication error',
@@ -41,7 +51,7 @@ export function classifyError(error: any): ErrorInfo {
     };
   }
 
-  // Permission errors
+  // Permission errors (generic)
   if (errorMessage.includes('permission') || errorMessage.includes('forbidden') || errorMessage.includes('not allowed')) {
     return {
       type: 'permission',

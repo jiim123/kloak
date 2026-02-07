@@ -2705,7 +2705,11 @@ export type Database = {
         Returns: Json
       }
       transfer_ownership: {
-        Args: { _new_owner_id: string; _server_id: string; _user_id: string }
+        Args: {
+          _current_owner_id: string
+          _new_owner_id: string
+          _server_id: string
+        }
         Returns: boolean
       }
       unassign_task_users: {
