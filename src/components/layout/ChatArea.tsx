@@ -30,7 +30,8 @@ export const ChatArea = () => {
   const { user } = useAuthStore();
   const { sendMessage, replyingTo, setReplyingTo } = useMessageStore();
   const { setMobileSidebarOpen, setMemberSidebarOpen, openModal } = useUIStore();
-  const { typingUsers, startTyping, stopTyping } = useTyping(currentChannel?.id || null);
+  const isGhostMode = currentChannel?.ghost_mode ?? false;
+  const { typingUsers, startTyping, stopTyping } = useTyping(isGhostMode ? null : currentChannel?.id || null);
   const { pinnedMessages } = useRealtimePinnedMessages(currentChannel?.id ?? null);
   const isMobile = useIsMobile();
   
@@ -329,8 +330,8 @@ export const ChatArea = () => {
       {/* Messages */}
       <MessageList channelId={currentChannel.id} channelName={currentChannel.name} />
 
-      {/* Typing indicator */}
-      <TypingIndicator typingUsers={typingUsers} />
+      {/* Typing indicator - hidden in ghost mode */}
+      {!isGhostMode && <TypingIndicator typingUsers={typingUsers} />}
 
       {/* Message input */}
       <MessageInput
