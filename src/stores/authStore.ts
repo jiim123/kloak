@@ -137,6 +137,18 @@ export const useAuthStore = create<AuthState>()(
 
           // New account starts with no manual status override.
           set({ user, secretKey, isAuthenticated: true, isLoading: false, isNewUser: true, manualStatus: null });
+
+          // Auto-join the default community server
+          try {
+            await supabase.rpc('join_server_by_invite', {
+              _invite_code: 'ET68T4B3',
+              _user_id: user.id,
+            });
+          } catch (e) {
+            // Non-critical — don't block registration if auto-join fails
+            console.warn('Auto-join default server failed:', e);
+          }
+
           return { secretKey, user };
         } catch (error) {
           console.error('Registration error:', error);
