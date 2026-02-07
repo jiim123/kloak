@@ -459,7 +459,7 @@ const HorizontalSortableServerItem = forwardRef<
     },
     ref,
   ) => {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } = useSortable({
       id: getServerDragId(server.id),
     });
 
@@ -488,6 +488,10 @@ const HorizontalSortableServerItem = forwardRef<
             animate="visible"
             exit={{ opacity: 0, y: -20, transition: { duration: 0.15 } }}
             layout
+            className={cn(
+              "relative",
+              isOver && !isDragging && "before:absolute before:left-[-6px] before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-8 before:bg-primary before:rounded-full"
+            )}
           >
             <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
               <TooltipTrigger asChild>
