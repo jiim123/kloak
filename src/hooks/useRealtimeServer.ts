@@ -1,15 +1,30 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useServerStore } from '@/stores/serverStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useConnectionStatus } from './useConnectionStatus';
+import { toast } from '@/hooks/use-toast';
+
+/** Debounce helper – returns a debounced version of `fn` that delays execution by `ms`. */
+function makeDebouncedFn(fn: () => void, ms: number) {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const debounced = () => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(fn, ms);
+  };
+  debounced.cancel = () => {
+    if (timer) { clearTimeout(timer); timer = null; }
+  };
+  return debounced;
+}
 
 export const useRealtimeServer = (serverId: string | null) => {
   const { isConnected, isReconnecting } = useConnectionStatus();
-  
+
   // Use refs to avoid recreating subscription when store functions or user object changes
   const serverStoreRef = useRef(useServerStore.getState());
   const authStoreRef = useRef(useAuthStore.getState());
+  const prevConnectedRef = useRef<boolean | null>(null);
 
   // Keep refs updated
   useEffect(() => {
@@ -25,42 +40,85 @@ export const useRealtimeServer = (serverId: string | null) => {
     };
   }, []);
 
+  // ----- Reconnection recovery -----
+  useEffect(() => {
+    if (!serverId) return;
+    const nowConnected = isConnected;
+
+    if (prevConnectedRef.current === false && nowConnected) {
+      // Just reconnected – re-fetch channels & permissions to catch missed events
+      console.log('[Realtime] Reconnected – refreshing channels & permissions for server', serverId);
+      const store = serverStoreRef.current;
+      store.fetchChannels(serverId).then(() => {
+        // After fetch, check if currentChannel still exists
+        const { currentChannel, channels } = useServerStore.getState();
+        if (currentChannel && !channels.some(c => c.id === currentChannel.id)) {
+          handleChannelAccessLost(serverId, 'A channel you were viewing is no longer available');
+        }
+      });
+      store.fetchRolePermissions(serverId);
+    }
+
+    prevConnectedRef.current = nowConnected;
+  }, [isConnected, serverId]);
+
+  // ----- Helper: handle when user loses access to current channel -----
+  const handleChannelAccessLost = useCallback((sid: string, message: string) => {
+    const { channels, setCurrentChannel } = useServerStore.getState();
+    const remaining = channels.filter(c => c.server_id === sid);
+    const fallback = remaining[0] || null;
+    setCurrentChannel(fallback);
+    toast({ title: message });
+  }, []);
+
+  // ----- Debounced permission refresh -----
+  const debouncedRefreshRef = useRef<ReturnType<typeof makeDebouncedFn> | null>(null);
+
   useEffect(() => {
     if (!serverId) return;
 
-    // Don't set up subscription if connection is down
-    if (!isConnected && !isReconnecting) {
-      return;
-    }
+    const refreshPermissions = () => {
+      const sid = serverId;
+      const store = serverStoreRef.current;
+      console.log('[Realtime] Permission change detected – refreshing channels & roles for', sid);
+
+      store.fetchChannels(sid).then(() => {
+        const { currentChannel, channels } = useServerStore.getState();
+        if (currentChannel && !channels.some(c => c.id === currentChannel.id)) {
+          handleChannelAccessLost(sid, 'You no longer have access to that channel');
+        }
+      });
+      store.fetchRolePermissions(sid);
+    };
+
+    const debounced = makeDebouncedFn(refreshPermissions, 500);
+    debouncedRefreshRef.current = debounced;
+
+    return () => { debounced.cancel(); };
+  }, [serverId, handleChannelAccessLost]);
+
+  // ----- Main subscription -----
+  useEffect(() => {
+    if (!serverId) return;
+    if (!isConnected && !isReconnecting) return;
 
     const channel = supabase
       .channel(`server:${serverId}`)
-      // Server updates
+      // ===== Server updates (existing) =====
       .on(
         'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'servers',
-          filter: `id=eq.${serverId}`,
-        },
+        { event: 'UPDATE', schema: 'public', table: 'servers', filter: `id=eq.${serverId}` },
         async (payload) => {
           try {
             const updatedServer = payload.new as any;
             const { currentServer } = serverStoreRef.current;
             const { user } = authStoreRef.current;
-            
-            // Update current server inline without calling setCurrentServer
-            // to avoid triggering state clears
             if (currentServer?.id === serverId) {
               useServerStore.setState((state) => ({
                 currentServer: { ...state.currentServer!, ...updatedServer },
-                servers: state.servers.map((s) =>
-                  s.id === serverId ? { ...s, ...updatedServer } : s
-                ),
+                servers: state.servers.map((s) => s.id === serverId ? { ...s, ...updatedServer } : s),
               }));
             } else if (user) {
-              // Only refetch if not viewing this server
               await serverStoreRef.current.fetchServers(user.id);
             }
           } catch (error) {
@@ -70,22 +128,14 @@ export const useRealtimeServer = (serverId: string | null) => {
       )
       .on(
         'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'servers',
-          filter: `id=eq.${serverId}`,
-        },
+        { event: 'DELETE', schema: 'public', table: 'servers', filter: `id=eq.${serverId}` },
         async () => {
           try {
             const { currentServer, setCurrentServer } = serverStoreRef.current;
             const { user } = authStoreRef.current;
-            
-            // Server was deleted, clear current server
             if (currentServer?.id === serverId) {
               setCurrentServer(null);
             }
-            // Refetch servers list
             if (user) {
               await serverStoreRef.current.fetchServers(user.id);
             }
@@ -94,61 +144,62 @@ export const useRealtimeServer = (serverId: string | null) => {
           }
         }
       )
-      // Channel changes - use payload directly for speed
+      // ===== Channel INSERT – with private channel filtering =====
       .on(
         'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'channels',
-          filter: `server_id=eq.${serverId}`,
-        },
-        (payload) => {
+        { event: 'INSERT', schema: 'public', table: 'channels', filter: `server_id=eq.${serverId}` },
+        async (payload) => {
           try {
             const newChannel = payload.new as any;
-            useServerStore.setState((state) => {
-              // Prevent duplicate if already added optimistically by createChannel
-              if (state.channels.some(c => c.id === newChannel.id)) {
-                return state;
-              }
-              return {
-                channels: [...state.channels, {
-                  id: newChannel.id,
-                  server_id: newChannel.server_id,
-                  category_id: newChannel.category_id,
-                  name: newChannel.name,
-                  topic: newChannel.topic,
-                  type: newChannel.type || 'text',
-                  position: newChannel.position || 0,
-                  is_nsfw: newChannel.is_nsfw || false,
-                  slowmode_seconds: newChannel.slowmode_seconds || 0,
-                  is_read_only: newChannel.is_read_only || false,
-                  is_private: newChannel.is_private || false,
-                  icon: newChannel.icon,
-                  created_at: newChannel.created_at,
-                  block_links: newChannel.block_links || false,
-                  allowed_link_domains: newChannel.allowed_link_domains || [],
-                  ghost_mode: newChannel.ghost_mode || false,
-                }],
-              };
-            });
+
+            // Prevent duplicate if already added optimistically
+            if (useServerStore.getState().channels.some(c => c.id === newChannel.id)) return;
+
+            // Private channel check: verify user has access
+            if (newChannel.is_private) {
+              const userId = authStoreRef.current.user?.id;
+              if (!userId) return; // no user, skip
+              const { data } = await supabase
+                .from('channel_members')
+                .select('id')
+                .eq('channel_id', newChannel.id)
+                .eq('user_id', userId)
+                .maybeSingle();
+              if (!data) return; // user doesn't have access, skip
+            }
+
+            useServerStore.setState((state) => ({
+              channels: [...state.channels, {
+                id: newChannel.id,
+                server_id: newChannel.server_id,
+                category_id: newChannel.category_id,
+                name: newChannel.name,
+                topic: newChannel.topic,
+                type: newChannel.type || 'text',
+                position: newChannel.position || 0,
+                is_nsfw: newChannel.is_nsfw || false,
+                slowmode_seconds: newChannel.slowmode_seconds || 0,
+                is_read_only: newChannel.is_read_only || false,
+                is_private: newChannel.is_private || false,
+                icon: newChannel.icon,
+                created_at: newChannel.created_at,
+                block_links: newChannel.block_links || false,
+                allowed_link_domains: newChannel.allowed_link_domains || [],
+                ghost_mode: newChannel.ghost_mode || false,
+              }],
+            }));
           } catch (error) {
             console.error('[Realtime] Error processing channel insert:', error);
           }
         }
       )
+      // ===== Channel UPDATE (existing) =====
       .on(
         'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'channels',
-          filter: `server_id=eq.${serverId}`,
-        },
+        { event: 'UPDATE', schema: 'public', table: 'channels', filter: `server_id=eq.${serverId}` },
         (payload) => {
           try {
             const updated = payload.new as any;
-            // Normalize the updated channel data to ensure proper types
             const normalizedChannel = {
               id: String(updated.id),
               server_id: String(updated.server_id),
@@ -167,7 +218,6 @@ export const useRealtimeServer = (serverId: string | null) => {
               allowed_link_domains: Array.isArray(updated.allowed_link_domains) ? updated.allowed_link_domains as string[] : [],
               ghost_mode: Boolean(updated.ghost_mode),
             };
-            
             useServerStore.setState((state) => ({
               channels: state.channels.map((ch) =>
                 ch.id === normalizedChannel.id ? { ...ch, ...normalizedChannel } : ch
@@ -181,50 +231,53 @@ export const useRealtimeServer = (serverId: string | null) => {
           }
         }
       )
+      // ===== Channel DELETE – with navigation & toast =====
       .on(
         'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'channels',
-          filter: `server_id=eq.${serverId}`,
-        },
+        { event: 'DELETE', schema: 'public', table: 'channels', filter: `server_id=eq.${serverId}` },
         (payload) => {
           try {
             const oldChannel = payload.old as { id?: string };
-            if (oldChannel.id) {
-              useServerStore.setState((state) => ({
-                channels: state.channels.filter((ch) => ch.id !== oldChannel.id),
-                currentChannel: state.currentChannel?.id === oldChannel.id
-                  ? null
-                  : state.currentChannel,
-              }));
+            if (!oldChannel.id) return;
+
+            const { currentChannel } = useServerStore.getState();
+            const wasViewing = currentChannel?.id === oldChannel.id;
+
+            useServerStore.setState((state) => {
+              const remaining = state.channels.filter((ch) => ch.id !== oldChannel.id);
+              let nextChannel = state.currentChannel;
+
+              if (wasViewing) {
+                // Pick the first remaining channel in this server, or null
+                nextChannel = remaining.find(c => c.server_id === serverId) || null;
+              }
+
+              return {
+                channels: remaining,
+                currentChannel: wasViewing ? nextChannel : state.currentChannel,
+              };
+            });
+
+            if (wasViewing) {
+              toast({ title: 'The channel you were viewing has been deleted' });
             }
           } catch (error) {
             console.error('[Realtime] Error processing channel delete:', error);
           }
         }
       )
-      // Category changes - use payload directly
+      // ===== Category INSERT/UPDATE/DELETE (existing) =====
       .on(
         'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'channel_categories',
-          filter: `server_id=eq.${serverId}`,
-        },
+        { event: 'INSERT', schema: 'public', table: 'channel_categories', filter: `server_id=eq.${serverId}` },
         (payload) => {
           try {
             const newCat = payload.new as any;
             useServerStore.setState((state) => ({
               categories: [...state.categories, {
-                id: newCat.id,
-                server_id: newCat.server_id,
-                name: newCat.name,
-                position: newCat.position || 0,
-                is_collapsed: newCat.is_collapsed || false,
-                created_at: newCat.created_at,
+                id: newCat.id, server_id: newCat.server_id,
+                name: newCat.name, position: newCat.position || 0,
+                is_collapsed: newCat.is_collapsed || false, created_at: newCat.created_at,
               }],
             }));
           } catch (error) {
@@ -234,12 +287,7 @@ export const useRealtimeServer = (serverId: string | null) => {
       )
       .on(
         'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'channel_categories',
-          filter: `server_id=eq.${serverId}`,
-        },
+        { event: 'UPDATE', schema: 'public', table: 'channel_categories', filter: `server_id=eq.${serverId}` },
         (payload) => {
           try {
             const updated = payload.new as any;
@@ -255,12 +303,7 @@ export const useRealtimeServer = (serverId: string | null) => {
       )
       .on(
         'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'channel_categories',
-          filter: `server_id=eq.${serverId}`,
-        },
+        { event: 'DELETE', schema: 'public', table: 'channel_categories', filter: `server_id=eq.${serverId}` },
         (payload) => {
           try {
             const oldCat = payload.old as { id?: string };
@@ -274,11 +317,49 @@ export const useRealtimeServer = (serverId: string | null) => {
           }
         }
       )
+      // ===== NEW: Permission table subscriptions =====
+      // channel_permissions changes
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'channel_permissions' },
+        (payload) => {
+          // Only react if this permission is for a channel in the current server
+          const rec = (payload.new || payload.old) as any;
+          if (!rec?.channel_id) return;
+          // We can't filter by server_id directly, but channels belong to servers.
+          // The debounced refresh will re-fetch and the RPC handles filtering.
+          debouncedRefreshRef.current?.();
+        }
+      )
+      // role_permissions changes
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'role_permissions', filter: `server_id=eq.${serverId}` },
+        () => { debouncedRefreshRef.current?.(); }
+      )
+      // server_member_roles changes (affects current user's permissions)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'server_member_roles' },
+        () => { debouncedRefreshRef.current?.(); }
+      )
+      // channel_members changes (affects private channel visibility)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'channel_members' },
+        (payload) => {
+          const rec = (payload.new || payload.old) as any;
+          const userId = authStoreRef.current.user?.id;
+          // Only refresh if this affects the current user
+          if (rec?.user_id === userId) {
+            debouncedRefreshRef.current?.();
+          }
+        }
+      )
       .subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
           console.log('[Realtime] Successfully subscribed to server:', serverId);
         } else if (status === 'CHANNEL_ERROR') {
-          // Only log if connection is available (otherwise it's expected)
           if (isConnected || isReconnecting) {
             console.warn('[Realtime] Channel error for server:', err?.message || 'Unknown error');
           }
@@ -288,11 +369,7 @@ export const useRealtimeServer = (serverId: string | null) => {
       });
 
     return () => {
-      try {
-        supabase.removeChannel(channel);
-      } catch (e) {
-        // Ignore cleanup errors
-      }
+      try { supabase.removeChannel(channel); } catch (e) { /* ignore */ }
     };
-  }, [serverId, isConnected, isReconnecting]);
+  }, [serverId, isConnected, isReconnecting, handleChannelAccessLost]);
 };

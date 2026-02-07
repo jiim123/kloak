@@ -122,8 +122,12 @@ export function useBackgroundSync() {
         // Sync queued messages
         await processQueue();
         
-        // Refresh current channel
-        await refreshData();
+        // Re-fetch channels for current server to catch missed changes
+        const { currentServer } = useServerStore.getState();
+        if (currentServer) {
+          await useServerStore.getState().fetchChannels(currentServer.id);
+          await useServerStore.getState().fetchRolePermissions(currentServer.id);
+        }
         
         return;
       }
