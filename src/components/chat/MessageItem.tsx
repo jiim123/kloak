@@ -592,16 +592,21 @@ export const MessageItem = memo(function MessageItem({
     return `${base} ${padding} ${animation}`.trim();
   }, [compactMode, isGrouped, shouldAnimate]);
 
+  const isAnnouncementChannel = currentChannel?.type === "announcement";
+
   const innerClassName = useMemo(() => {
     const classes = [
       "group relative flex px-3 rounded-lg transition-colors duration-200 hover:bg-muted/40",
       compactMode ? "gap-2 py-0.5" : isGrouped ? "gap-3 py-0.5" : "gap-3 py-1.5",
     ];
+    if (isAnnouncementChannel && !isGrouped) {
+      classes.push("bg-primary/5 border-l-2 border-l-primary/50 ml-1");
+    }
     if (isMentioned) classes.push("bg-amber-950/50 border-l-2 border-l-amber-500");
     if (isHighlighted) classes.push("animate-highlight-message bg-primary/20 ring-2 ring-primary/50");
     if (isPending) classes.push("opacity-70");
     return classes.join(" ");
-  }, [compactMode, isMentioned, isHighlighted, isPending]);
+  }, [compactMode, isMentioned, isHighlighted, isPending, isAnnouncementChannel, isGrouped]);
 
   const topCustomRoleColor = useMemo(() => {
     const memberRoles = messageMember?.roles ?? [];
@@ -1071,7 +1076,7 @@ export const MessageItem = memo(function MessageItem({
                   )}
 
                   {/* Reply - Hide for announcement channels */}
-                  {currentChannel?.type !== "announcement" && (
+                  {(
                     <button
                       className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
                       onClick={() => setReplyingTo(message)}
@@ -1082,18 +1087,11 @@ export const MessageItem = memo(function MessageItem({
                     </button>
                   )}
 
-                  {/* Edit (own messages) - For announcements, trigger full edit box */}
+                  {/* Edit (own messages) */}
                   {isOwnMessage && (
                     <button
                       className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                      onClick={() => {
-                        if (currentChannel?.type === "announcement") {
-                          // Trigger edit in AnnouncementChannelArea
-                          window.dispatchEvent(new CustomEvent("startEditAnnouncement", { detail: { message } }));
-                        } else {
-                          handleStartEditing();
-                        }
-                      }}
+                      onClick={() => handleStartEditing()}
                       aria-label="Edit"
                       title="Edit"
                     >
@@ -1104,7 +1102,7 @@ export const MessageItem = memo(function MessageItem({
                   <div className="w-px h-5 bg-border mx-0.5" />
 
                   {/* Pin - Hide for announcement channels */}
-                  {canPinMessages && currentChannel?.type !== "announcement" && (
+                  {canPinMessages && (
                     <button
                       className={cn(
                         "p-2 rounded-lg bg-transparent hover:bg-muted transition-colors",

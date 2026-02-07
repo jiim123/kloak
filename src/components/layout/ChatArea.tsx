@@ -4,7 +4,6 @@ import { MessageList } from "@/components/chat/MessageList";
 import { MessageInput } from "@/components/chat/MessageInput";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { ForumChannelArea } from "@/components/forum/ForumChannelArea";
-import { AnnouncementChannelArea } from "@/components/announcement/AnnouncementChannelArea";
 import { MediaChannelArea } from "@/components/media/MediaChannelArea";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -259,10 +258,7 @@ export const ChatArea = () => {
     return <ForumChannelArea />;
   }
 
-  if (currentChannel.type === "announcement") {
-    // Announcement channels use a different UI
-    return <AnnouncementChannelArea />;
-  }
+  // Announcement channels now use the same UI as text channels (handled below)
 
   if (currentChannel.type === "media") {
     // Media channels use a gallery-style UI

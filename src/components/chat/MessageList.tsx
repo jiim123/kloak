@@ -20,10 +20,8 @@ interface MessageListProps {
 }
 
 // Group messages from same user within 1 minute
-const shouldGroupMessages = (current: Message, previous: Message | null, isAnnouncementChannel: boolean): boolean => {
+const shouldGroupMessages = (current: Message, previous: Message | null): boolean => {
   if (!previous) return false;
-  // Never group messages in announcement channels - each announcement should be separate
-  if (isAnnouncementChannel) return false;
   if (current.user_id !== previous.user_id) return false;
   if (current.reply_to_id) return false; // Don't group replies
 
@@ -57,7 +55,6 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   const { isLoading, fetchMessages, setCurrentChannel, messagesByChannel } = useMessageStore();
   const visibilityBlockedUserIds = useFriendStore((s) => s.visibilityBlockedUserIds);
   const { currentChannel } = useServerStore();
-  const isAnnouncementChannel = currentChannel?.type === "announcement";
 
   // Polls realtime + auto-close expired (best effort)
   useRealtimePolls(channelId);
@@ -112,22 +109,16 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   useEffect(() => {
     setCurrentChannel(channelId);
     fetchMessages(channelId).then(() => {
-      // For announcement channels, scroll to top (newest); for others, scroll to bottom
       setTimeout(() => {
-        if (isAnnouncementChannel) {
-          containerRef.current?.scrollTo({ top: 0, behavior: "instant" });
-          isNearBottomRef.current = false;
-        } else {
-          bottomRef.current?.scrollIntoView({ behavior: "instant" });
-          isNearBottomRef.current = true;
-        }
+        bottomRef.current?.scrollIntoView({ behavior: "instant" });
+        isNearBottomRef.current = true;
         setShowJumpToPresent(false);
       }, 50);
     });
     hasMarkedAsReadRef.current = false;
     prevMessagesLengthRef.current = 0;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [channelId, isAnnouncementChannel]);
+  }, [channelId]);
 
   // Reconcile after sleep/background: refetch latest when app regains focus/visibility.
   // This ensures we catch any messages that realtime subscriptions might have missed
@@ -185,48 +176,29 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
 
     // Only react to actual new messages (not initial load or temp→real replacement)
     if (currentLength > prevLength && prevLength > 0) {
-      if (isAnnouncementChannel) {
-        // For announcement channels, scroll to top (newest) if near top
-        if (isNearBottomRef.current === false && containerRef.current) {
-          containerRef.current.scrollTo({ top: 0, behavior: "smooth" });
-          setNewMessageCount(0);
-        } else {
-          setNewMessageCount((prev) => prev + (currentLength - prevLength));
-        }
+      if (isNearBottomRef.current && bottomRef.current) {
+        bottomRef.current.scrollIntoView({ behavior: "smooth" });
+        setNewMessageCount(0);
       } else {
-        // For regular channels, scroll to bottom if near bottom
-        if (isNearBottomRef.current && bottomRef.current) {
-          bottomRef.current.scrollIntoView({ behavior: "smooth" });
-          setNewMessageCount(0);
-        } else {
-          setNewMessageCount((prev) => prev + (currentLength - prevLength));
-        }
+        setNewMessageCount((prev) => prev + (currentLength - prevLength));
       }
     }
 
     prevMessagesLengthRef.current = currentLength;
-  }, [messages.length, isAnnouncementChannel]);
+  }, [messages.length]);
 
   // Mark as read when viewing channel (automatic)
   useEffect(() => {
     if (messages.length > 0 && !hasMarkedAsReadRef.current) {
-      // For announcement channels, mark as read when viewing top (newest)
-      // For regular channels, mark as read when viewing bottom (newest)
-      const shouldMarkAsRead = isAnnouncementChannel 
-        ? !isNearBottomRef.current // Near top = viewing newest
-        : isNearBottomRef.current; // Near bottom = viewing newest
-      
-      if (shouldMarkAsRead) {
-        const latestMessage = isAnnouncementChannel 
-          ? messages[0] // First in array = newest
-          : messages[messages.length - 1]; // Last in array = newest
+      if (isNearBottomRef.current) {
+        const latestMessage = messages[messages.length - 1];
         if (latestMessage && !latestMessage.id.startsWith("temp-")) {
           markAsRead(channelId, latestMessage.id);
           hasMarkedAsReadRef.current = true;
         }
       }
     }
-  }, [messages, channelId, markAsRead, isAnnouncementChannel]);
+  }, [messages, channelId, markAsRead]);
 
   // Handle scroll events
   const handleScroll = useCallback(() => {
@@ -236,59 +208,26 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
     const { scrollTop, scrollHeight, clientHeight } = container;
     const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
 
-    if (isAnnouncementChannel) {
-      // For announcement channels: top = newest, bottom = oldest
-      // "Near bottom" means viewing older messages
-      isNearBottomRef.current = distanceFromBottom < 100;
-      // "Jump to present" = jump to top (newest)
-      setShowJumpToPresent(scrollTop > 100 && messages.length > 0);
+    isNearBottomRef.current = distanceFromBottom < 100;
+    setShowJumpToPresent(!isNearBottomRef.current && messages.length > 0);
 
-      // Load more older messages when scrolling to bottom
-      if (distanceFromBottom < 100 && hasMore && !isLoading) {
-        const oldestMessage = messages[messages.length - 1]; // Last in array = oldest
-        if (oldestMessage) {
-          fetchMessages(channelId, 50, oldestMessage.created_at);
-        }
-      }
-    } else {
-      // For regular channels: top = oldest, bottom = newest
-      isNearBottomRef.current = distanceFromBottom < 100;
-      setShowJumpToPresent(!isNearBottomRef.current && messages.length > 0);
-
-      // Load more when scrolling to top
-      if (scrollTop < 100 && hasMore && !isLoading) {
-        const oldestMessage = messages[0];
-        if (oldestMessage) {
-          fetchMessages(channelId, 50, oldestMessage.created_at);
-        }
+    // Load more when scrolling to top
+    if (scrollTop < 100 && hasMore && !isLoading) {
+      const oldestMessage = messages[0];
+      if (oldestMessage) {
+        fetchMessages(channelId, 50, oldestMessage.created_at);
       }
     }
-  }, [channelId, hasMore, isLoading, messages, fetchMessages, isAnnouncementChannel]);
+  }, [channelId, hasMore, isLoading, messages, fetchMessages]);
 
   const scrollToBottom = () => {
-    if (isAnnouncementChannel) {
-      // For announcement channels, "present" = top (newest)
-      containerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
-      setShowJumpToPresent(false);
-      setNewMessageCount(0);
-      // Mark as read when jumping to present (newest message)
-      if (messages.length > 0) {
-        const latestMessage = messages[0]; // First in array = newest
-        if (!latestMessage.id.startsWith("temp-")) {
-          markAsRead(channelId, latestMessage.id);
-        }
-      }
-    } else {
-      // For regular channels, "present" = bottom (newest)
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-      setShowJumpToPresent(false);
-      setNewMessageCount(0);
-      // Mark as read when jumping to present
-      if (messages.length > 0) {
-        const latestMessage = messages[messages.length - 1];
-        if (!latestMessage.id.startsWith("temp-")) {
-          markAsRead(channelId, latestMessage.id);
-        }
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    setShowJumpToPresent(false);
+    setNewMessageCount(0);
+    if (messages.length > 0) {
+      const latestMessage = messages[messages.length - 1];
+      if (!latestMessage.id.startsWith("temp-")) {
+        markAsRead(channelId, latestMessage.id);
       }
     }
   };
@@ -335,9 +274,9 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
     return Array.from(seen.values()).sort((a, b) => {
       const timeA = new Date(a.created_at).getTime();
       const timeB = new Date(b.created_at).getTime();
-      return isAnnouncementChannel ? timeB - timeA : timeA - timeB;
+      return timeA - timeB;
     });
-  }, [messages, isAnnouncementChannel]);
+  }, [messages]);
 
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
@@ -391,7 +330,7 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
         <div className="py-4">
           {deduplicatedMessages.map((message, index) => {
             const previousMessage = index > 0 ? deduplicatedMessages[index - 1] : null;
-            const isGrouped = shouldGroupMessages(message, previousMessage, isAnnouncementChannel);
+            const isGrouped = shouldGroupMessages(message, previousMessage);
             const showNewDivider = index === newMessagesDividerIndex && !hasMarkedAsReadRef.current;
 
             return (
