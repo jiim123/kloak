@@ -461,21 +461,14 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   toggleServerMute: async (serverId: string, userId: string) => {
     try {
-      // Get current mute state from servers list
-      const { servers } = get();
-      const server = servers.find(s => s.id === serverId);
-      if (!server) return;
-
-      const newMuteState = !server.is_muted;
-
-      // Update in database
-      const { error } = await supabase
-        .from('server_members')
-        .update({ is_muted: newMuteState })
-        .eq('server_id', serverId)
-        .eq('user_id', userId);
+      const { data, error } = await (supabase.rpc as any)('toggle_server_mute', {
+        _server_id: serverId,
+        _user_id: userId,
+      });
 
       if (error) throw error;
+
+      const newMuteState = data as unknown as boolean;
 
       // Update local state
       set((state) => ({
@@ -490,10 +483,13 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   deleteServer: async (serverId: string) => {
     try {
-      const { error } = await supabase
-        .from('servers')
-        .delete()
-        .eq('id', serverId);
+      const userId = useAuthStore.getState().user?.id;
+      if (!userId) throw new Error('Not authenticated');
+
+      const { error } = await supabase.rpc('delete_server', {
+        _server_id: serverId,
+        _user_id: userId,
+      });
 
       if (error) throw error;
 
@@ -928,15 +924,17 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   reorderCategories: async (categoryIds: string[]) => {
     try {
-      // Update positions in database
-      const updates = categoryIds.map((id, index) =>
-        supabase
-          .from('channel_categories')
-          .update({ position: index })
-          .eq('id', id)
-      );
+      const { currentServer } = get();
+      const userId = useAuthStore.getState().user?.id;
+      if (!currentServer || !userId) return;
 
-      await Promise.all(updates);
+      const { error } = await (supabase.rpc as any)('reorder_categories', {
+        _server_id: currentServer.id,
+        _user_id: userId,
+        _category_ids: categoryIds,
+      });
+
+      if (error) throw error;
 
       // Update local state
       set((state) => ({
@@ -954,27 +952,19 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   reorderChannels: async (channelId: string, newCategoryId: string | null, newPosition: number) => {
     try {
-      const { channels } = get();
-      const channel = channels.find(c => c.id === channelId);
-      if (!channel) return;
+      const { currentServer } = get();
+      const userId = useAuthStore.getState().user?.id;
+      if (!currentServer || !userId) return;
 
-      // Get channels in the target category
-      const targetChannels = channels
-        .filter(c => c.category_id === newCategoryId && c.id !== channelId)
-        .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+      const { error } = await (supabase.rpc as any)('reorder_channels', {
+        _server_id: currentServer.id,
+        _user_id: userId,
+        _channel_id: channelId,
+        _new_category_id: newCategoryId,
+        _new_position: newPosition,
+      });
 
-      // Insert at new position
-      targetChannels.splice(newPosition, 0, { ...channel, category_id: newCategoryId });
-
-      // Update all positions in target category
-      const updates = targetChannels.map((c, index) =>
-        supabase
-          .from('channels')
-          .update({ position: index, category_id: newCategoryId })
-          .eq('id', c.id)
-      );
-
-      await Promise.all(updates);
+      if (error) throw error;
 
       // Update local state
       set((state) => ({
@@ -982,13 +972,12 @@ export const useServerStore = create<ServerState>((set, get) => ({
           if (c.id === channelId) {
             return { ...c, category_id: newCategoryId, position: newPosition };
           }
-          const idx = targetChannels.findIndex(tc => tc.id === c.id);
-          if (idx !== -1 && c.category_id === newCategoryId) {
-            return { ...c, position: idx };
-          }
           return c;
         }),
       }));
+
+      // Refresh to get accurate positions
+      await get().fetchChannels(currentServer.id);
     } catch (error) {
       console.error('Failed to reorder channels:', error);
     }
@@ -996,16 +985,21 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   moveChannelToCategory: async (channelId: string, categoryId: string | null) => {
     try {
-      const { channels } = get();
-      const targetChannels = channels.filter(c => c.category_id === categoryId);
-      const newPosition = targetChannels.length;
+      const { currentServer, channels } = get();
+      const userId = useAuthStore.getState().user?.id;
+      if (!currentServer || !userId) return;
 
-      const { error } = await supabase
-        .from('channels')
-        .update({ category_id: categoryId, position: newPosition })
-        .eq('id', channelId);
+      const { error } = await (supabase.rpc as any)('move_channel_to_category', {
+        _server_id: currentServer.id,
+        _user_id: userId,
+        _channel_id: channelId,
+        _category_id: categoryId,
+      });
 
       if (error) throw error;
+
+      const targetChannels = channels.filter(c => c.category_id === categoryId);
+      const newPosition = targetChannels.length;
 
       set((state) => ({
         channels: state.channels.map((c) =>
@@ -1115,10 +1109,18 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   updateMember: async (memberId: string, updates: Partial<ServerMember>) => {
     try {
-      const { error } = await supabase
-        .from('server_members')
-        .update(updates)
-        .eq('id', memberId);
+      const { currentServer } = get();
+      const userId = useAuthStore.getState().user?.id;
+      if (!currentServer || !userId) throw new Error('Not authenticated or no server selected');
+
+      const { error } = await (supabase.rpc as any)('update_member', {
+        _server_id: currentServer.id,
+        _actor_user_id: userId,
+        _member_id: memberId,
+        _nickname: updates.nickname ?? null,
+        _is_muted: updates.is_muted ?? null,
+        _role: updates.role ?? null,
+      });
 
       if (error) throw error;
 
@@ -1129,6 +1131,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
       }));
     } catch (error) {
       console.error('Failed to update member:', error);
+      throw error;
     }
   },
 
@@ -1180,43 +1183,23 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   transferOwnership: async (serverId: string, currentOwnerId: string, newOwnerId: string) => {
     try {
+      const { error } = await supabase.rpc('transfer_ownership', {
+        _server_id: serverId,
+        _current_owner_id: currentOwnerId,
+        _new_owner_id: newOwnerId,
+      });
+
+      if (error) throw error;
+
       const { members } = get();
       const currentOwnerMember = members.find(m => m.user_id === currentOwnerId && m.server_id === serverId);
       const newOwnerMember = members.find(m => m.user_id === newOwnerId && m.server_id === serverId);
 
-      if (!currentOwnerMember || !newOwnerMember) {
-        throw new Error('Member not found');
-      }
-
-      // Update the new owner's role to owner
-      const { error: newOwnerError } = await supabase
-        .from('server_members')
-        .update({ role: 'owner' })
-        .eq('id', newOwnerMember.id);
-
-      if (newOwnerError) throw newOwnerError;
-
-      // Update the current owner's role to admin
-      const { error: currentOwnerError } = await supabase
-        .from('server_members')
-        .update({ role: 'admin' })
-        .eq('id', currentOwnerMember.id);
-
-      if (currentOwnerError) throw currentOwnerError;
-
-      // Update the server's owner_id
-      const { error: serverError } = await supabase
-        .from('servers')
-        .update({ owner_id: newOwnerId })
-        .eq('id', serverId);
-
-      if (serverError) throw serverError;
-
       // Update local state
       set((state) => ({
         members: state.members.map((m) => {
-          if (m.id === newOwnerMember.id) return { ...m, role: 'owner' as const };
-          if (m.id === currentOwnerMember.id) return { ...m, role: 'admin' as const };
+          if (newOwnerMember && m.id === newOwnerMember.id) return { ...m, role: 'owner' as const };
+          if (currentOwnerMember && m.id === currentOwnerMember.id) return { ...m, role: 'admin' as const };
           return m;
         }),
         currentServer: state.currentServer?.id === serverId
@@ -1249,27 +1232,13 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   createRole: async (serverId: string, userId: string, name: string, color: string, icon?: string | null) => {
     try {
-      // Get the max position for this server
-      const { data: existingRoles } = await supabase
-        .from('server_roles')
-        .select('position')
-        .eq('server_id', serverId)
-        .order('position', { ascending: false })
-        .limit(1);
-
-      const nextPosition = existingRoles && existingRoles.length > 0 ? existingRoles[0].position + 1 : 0;
-
-      const { data, error } = await supabase
-        .from('server_roles')
-        .insert({
-          server_id: serverId,
-          name,
-          color,
-          icon: icon ?? null,
-          position: nextPosition,
-        })
-        .select()
-        .single();
+      const { data, error } = await supabase.rpc('create_server_role', {
+        _server_id: serverId,
+        _user_id: userId,
+        _name: name,
+        _color: color,
+        _icon: icon ?? null,
+      });
 
       if (error) {
         console.error('Failed to create role - error:', error);
@@ -1290,17 +1259,13 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   updateRole: async (roleId: string, userId: string, updates: { name?: string; color?: string; icon?: string | null }) => {
     try {
-      const updateData: Record<string, string | null> = {};
-      if (updates.name) updateData.name = updates.name;
-      if (updates.color) updateData.color = updates.color;
-      if (updates.icon !== undefined) updateData.icon = updates.icon;
-
-      const { data, error } = await supabase
-        .from('server_roles')
-        .update(updateData)
-        .eq('id', roleId)
-        .select()
-        .single();
+      const { data, error } = await supabase.rpc('update_server_role', {
+        _role_id: roleId,
+        _user_id: userId,
+        _name: updates.name ?? null,
+        _color: updates.color ?? null,
+        _icon: updates.icon !== undefined ? updates.icon : null,
+      });
 
       if (error) throw error;
 
@@ -1316,10 +1281,10 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   deleteRole: async (roleId: string, userId: string) => {
     try {
-      const { error } = await supabase
-        .from('server_roles')
-        .delete()
-        .eq('id', roleId);
+      const { error } = await supabase.rpc('delete_server_role', {
+        _role_id: roleId,
+        _user_id: userId,
+      });
 
       if (error) throw error;
 
@@ -1352,18 +1317,13 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }));
 
     try {
-      // Update each row (safer than upsert: avoids accidental inserts needing required columns)
-      const updates = sanitized.map((roleId, position) =>
-        supabase
-          .from('server_roles')
-          .update({ position })
-          .eq('id', roleId)
-          .eq('server_id', serverId),
-      );
+      const { error } = await (supabase.rpc as any)('reorder_server_roles', {
+        _server_id: serverId,
+        _user_id: userId,
+        _ordered_role_ids: sanitized,
+      });
 
-      const results = await Promise.all(updates);
-      const firstError = results.find((r) => r.error)?.error;
-      if (firstError) throw firstError;
+      if (error) throw error;
     } catch (error) {
       console.error('Failed to reorder roles:', error);
       // Re-sync from server if persistence fails
@@ -1374,24 +1334,20 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   assignRoleToMember: async (memberId: string, roleId: string, userId: string) => {
     try {
-      const { error } = await supabase
-        .from('server_member_roles')
-        .insert({
-          member_id: memberId,
-          role_id: roleId,
-        });
+      const { currentServer } = get();
+      if (!currentServer) throw new Error('No server selected');
+
+      const { error } = await (supabase.rpc as any)('assign_role_to_member', {
+        _server_id: currentServer.id,
+        _user_id: userId,
+        _member_id: memberId,
+        _role_id: roleId,
+      });
 
       if (error) throw error;
 
       // Refresh members to get updated roles
-      const { members } = get();
-      const member = members.find((m) => m.id === memberId);
-      if (member) {
-        const { currentServer } = get();
-        if (currentServer) {
-          await get().fetchMembers(currentServer.id);
-        }
-      }
+      await get().fetchMembers(currentServer.id);
     } catch (error) {
       console.error('Failed to assign role:', error);
       throw error;
@@ -1400,23 +1356,20 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   removeRoleFromMember: async (memberId: string, roleId: string, userId: string) => {
     try {
-      const { error } = await supabase
-        .from('server_member_roles')
-        .delete()
-        .eq('member_id', memberId)
-        .eq('role_id', roleId);
+      const { currentServer } = get();
+      if (!currentServer) throw new Error('No server selected');
+
+      const { error } = await (supabase.rpc as any)('remove_role_from_member', {
+        _server_id: currentServer.id,
+        _user_id: userId,
+        _member_id: memberId,
+        _role_id: roleId,
+      });
 
       if (error) throw error;
 
       // Refresh members to get updated roles
-      const { members } = get();
-      const member = members.find((m) => m.id === memberId);
-      if (member) {
-        const { currentServer } = get();
-        if (currentServer) {
-          await get().fetchMembers(currentServer.id);
-        }
-      }
+      await get().fetchMembers(currentServer.id);
     } catch (error) {
       console.error('Failed to remove role:', error);
       throw error;
@@ -1546,23 +1499,17 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   deleteRolePermission: async (permissionId: string, userId: string) => {
     try {
-      // Get the permission first to know which server to refresh
-      const { rolePermissions } = get();
-      const toDelete = rolePermissions.find((p) => p.id === permissionId);
-
-      const { error } = await supabase
-        .from('role_permissions')
-        .delete()
-        .eq('id', permissionId);
+      const { error } = await (supabase.rpc as any)('delete_role_permission', {
+        _permission_id: permissionId,
+        _user_id: userId,
+      });
 
       if (error) throw error;
 
       // Refresh role permissions
-      if (toDelete) {
-        const { currentServer } = get();
-        if (currentServer) {
-          await get().fetchRolePermissions(currentServer.id);
-        }
+      const { currentServer } = get();
+      if (currentServer) {
+        await get().fetchRolePermissions(currentServer.id);
       }
     } catch (error) {
       console.error('Failed to delete role permission:', error);
@@ -1572,14 +1519,13 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   deleteChannelPermission: async (permissionId: string, userId: string) => {
     try {
-      // Get the permission first to know which channel to refresh
       const { channelPermissions } = get();
       const toDelete = channelPermissions.find((p) => p.id === permissionId);
 
-      const { error } = await supabase
-        .from('channel_permissions')
-        .delete()
-        .eq('id', permissionId);
+      const { error } = await (supabase.rpc as any)('delete_channel_permission', {
+        _permission_id: permissionId,
+        _user_id: userId,
+      });
 
       if (error) throw error;
 
@@ -1633,49 +1579,17 @@ export const useServerStore = create<ServerState>((set, get) => ({
     targetUserId?: string
   ) => {
     try {
-      // Build the filter for finding existing permission
-      let query = (supabase as any)
-        .from('category_permissions')
-        .select('id')
-        .eq('category_id', categoryId)
-        .eq('permission', permission);
+      const { error } = await (supabase.rpc as any)('set_category_permission', {
+        _category_id: categoryId,
+        _user_id: userId,
+        _permission: permission,
+        _allowed: allowed,
+        _role_id: roleId || null,
+        _role_name: roleName || null,
+        _target_user_id: targetUserId || null,
+      });
 
-      if (roleId) {
-        query = query.eq('role_id', roleId);
-      } else if (roleName) {
-        query = query.eq('role_name', roleName).is('role_id', null);
-      } else if (targetUserId) {
-        query = query.eq('user_id', targetUserId);
-      }
-
-      const { data: existing } = await query.maybeSingle();
-
-      if (existing) {
-        // Update existing
-        const { error } = await (supabase as any)
-          .from('category_permissions')
-          .update({ allowed })
-          .eq('id', existing.id);
-
-        if (error) throw error;
-      } else {
-        // Insert new
-        const insertData: Record<string, any> = {
-          category_id: categoryId,
-          permission,
-          allowed,
-        };
-
-        if (roleId) insertData.role_id = roleId;
-        else if (roleName) insertData.role_name = roleName;
-        else if (targetUserId) insertData.user_id = targetUserId;
-
-        const { error } = await (supabase as any)
-          .from('category_permissions')
-          .insert(insertData);
-
-        if (error) throw error;
-      }
+      if (error) throw error;
 
       // Refresh category permissions
       await get().fetchCategoryPermissions(categoryId);
@@ -1687,14 +1601,13 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   deleteCategoryPermission: async (permissionId: string, userId: string) => {
     try {
-      // Get the permission first to know which category to refresh
       const { categoryPermissions } = get();
       const toDelete = categoryPermissions.find((p) => p.id === permissionId);
 
-      const { error } = await (supabase as any)
-        .from('category_permissions')
-        .delete()
-        .eq('id', permissionId);
+      const { error } = await (supabase.rpc as any)('delete_category_permission', {
+        _permission_id: permissionId,
+        _user_id: userId,
+      });
 
       if (error) throw error;
 
@@ -1710,43 +1623,12 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   syncCategoryPermissionsToChannels: async (categoryId: string, userId: string) => {
     try {
-      const { channels, categoryPermissions } = get();
-      
-      // Get all channels in this category
-      const categoryChannels = channels.filter(c => c.category_id === categoryId);
-      
-      if (categoryChannels.length === 0) {
-        return;
-      }
+      const { error } = await (supabase.rpc as any)('sync_category_permissions_to_channels', {
+        _category_id: categoryId,
+        _user_id: userId,
+      });
 
-      // For each channel, delete existing permissions and copy from category
-      for (const channel of categoryChannels) {
-        // Delete existing channel permissions
-        await supabase
-          .from('channel_permissions')
-          .delete()
-          .eq('channel_id', channel.id);
-
-        // Copy category permissions to channel
-        if (categoryPermissions.length > 0) {
-          const channelPerms = categoryPermissions.map(cp => ({
-            channel_id: channel.id,
-            role_id: cp.role_id,
-            role_name: cp.role_name,
-            user_id: cp.user_id,
-            permission: cp.permission,
-            allowed: cp.allowed,
-          }));
-
-          const { error } = await supabase
-            .from('channel_permissions')
-            .insert(channelPerms);
-
-          if (error) {
-            console.error(`Failed to sync permissions to channel ${channel.id}:`, error);
-          }
-        }
-      }
+      if (error) throw error;
     } catch (error) {
       console.error('Failed to sync category permissions to channels:', error);
       throw error;
