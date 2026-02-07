@@ -32,13 +32,20 @@ import {
   DndContext,
   DragEndEvent,
   DragStartEvent,
-  DragCancelEvent,
+  DragOverEvent,
   PointerSensor,
   useSensor,
   useSensors,
   DragOverlay,
+  closestCenter,
 } from "@dnd-kit/core";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  horizontalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
   Dialog,
@@ -408,7 +415,7 @@ const HorizontalFolderItem = ({
   );
 };
 
-const HorizontalDraggableServerItem = forwardRef<
+const HorizontalSortableServerItem = forwardRef<
   HTMLDivElement,
   {
     server: ServerWithMembership;
@@ -452,11 +459,14 @@ const HorizontalDraggableServerItem = forwardRef<
     },
     ref,
   ) => {
-    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
       id: getServerDragId(server.id),
     });
 
-    const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined;
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+    };
     const isOwner = server.role === "owner";
 
     return (
@@ -592,7 +602,7 @@ const HorizontalDraggableServerItem = forwardRef<
   },
 );
 
-HorizontalDraggableServerItem.displayName = "HorizontalDraggableServerItem";
+HorizontalSortableServerItem.displayName = "HorizontalSortableServerItem";
 
 export const HorizontalServerSidebar = () => {
   const navigate = useNavigate();
@@ -916,6 +926,38 @@ export const HorizontalServerSidebar = () => {
     setActiveDragServerId(null);
   }, []);
 
+  // Local ordered server IDs (for drag-drop reordering)
+  const [orderedServerIds, setOrderedServerIds] = useState<string[]>([]);
+
+  // Initialize orderedServerIds from servers (sorted by position if available)
+  useEffect(() => {
+    if (servers.length === 0) {
+      setOrderedServerIds([]);
+      return;
+    }
+    // Sort by position if available, otherwise maintain existing order
+    const sorted = [...servers].sort((a, b) => {
+      const posA = (a as any).position ?? Infinity;
+      const posB = (b as any).position ?? Infinity;
+      if (posA === posB) return 0;
+      return posA - posB;
+    });
+    setOrderedServerIds(sorted.map(s => s.id));
+  }, [servers]);
+
+  // Save server order to database
+  const saveServerOrder = useCallback(async (newOrderIds: string[]) => {
+    if (!user?.id) return;
+    try {
+      await supabase.rpc('reorder_user_servers' as any, {
+        _user_id: user.id,
+        _server_ids: newOrderIds,
+      });
+    } catch (err) {
+      console.error("Failed to save server order:", err);
+    }
+  }, [user?.id]);
+
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const activeId = String(event.active.id);
@@ -933,22 +975,62 @@ export const HorizontalServerSidebar = () => {
         return;
       }
 
+      // Handle folder drop
       if (overId === "root") {
         moveServerToFolder(serverId, null);
+        setActiveDragServerId(null);
+        return;
       } else if (overId.startsWith("folder:")) {
         const folderId = overId.slice("folder:".length);
         moveServerToFolder(serverId, folderId);
+        setActiveDragServerId(null);
+        return;
+      }
+
+      // Handle reordering within root servers
+      if (overId.startsWith("server:")) {
+        const overServerId = overId.slice("server:".length);
+        if (serverId !== overServerId) {
+          setOrderedServerIds((prev) => {
+            const oldIndex = prev.indexOf(serverId);
+            const newIndex = prev.indexOf(overServerId);
+            if (oldIndex === -1 || newIndex === -1) return prev;
+            const newOrder = arrayMove(prev, oldIndex, newIndex);
+            // Save to database
+            saveServerOrder(newOrder);
+            return newOrder;
+          });
+        }
       }
 
       setActiveDragServerId(null);
     },
-    [moveServerToFolder],
+    [moveServerToFolder, saveServerOrder],
   );
 
   const folderById = useMemo(() => new Map(folderState.folders.map((f) => [f.id, f])), [folderState.folders]);
+  
+  // Filter and order root servers based on orderedServerIds
   const rootServers = useMemo(() => {
-    return servers.filter((s) => !folderById.has(folderState.serverToFolder[s.id] || ""));
-  }, [servers, folderState.serverToFolder, folderById]);
+    const notInFolder = servers.filter((s) => !folderById.has(folderState.serverToFolder[s.id] || ""));
+    const serversMap = new Map(notInFolder.map(s => [s.id, s]));
+    // Return servers in orderedServerIds order, filtering to only those not in folders
+    const ordered: ServerWithMembership[] = [];
+    for (const id of orderedServerIds) {
+      const server = serversMap.get(id);
+      if (server) ordered.push(server);
+    }
+    // Add any servers not yet in orderedServerIds (newly joined)
+    for (const server of notInFolder) {
+      if (!orderedServerIds.includes(server.id)) {
+        ordered.push(server);
+      }
+    }
+    return ordered;
+  }, [servers, folderState.serverToFolder, folderById, orderedServerIds]);
+
+  // IDs for SortableContext
+  const sortableServerIds = useMemo(() => rootServers.map(s => getServerDragId(s.id)), [rootServers]);
 
   const serversById = useMemo(() => new Map(servers.map((s) => [s.id, s])), [servers]);
 
@@ -970,6 +1052,7 @@ export const HorizontalServerSidebar = () => {
     <div className="w-full h-14 flex items-center px-3 gap-2 bg-background/20 border-b border-border/30">
       <DndContext
         sensors={sensors}
+        collisionDetection={closestCenter}
         onDragStart={handleDragStart}
         onDragCancel={handleDragCancel}
         onDragEnd={handleDragEnd}
@@ -1118,65 +1201,67 @@ export const HorizontalServerSidebar = () => {
                 />
               ))}
 
-              {/* Root servers (not in folders) */}
-              <AnimatePresence mode="popLayout">
-                {rootServers.map((server, index) => {
-                  const isActive = currentServer?.id === server.id;
-                  const channelIds = serverChannels[server.id] || [];
-                  const { hasUnread, totalMentions } = getServerUnreadInfo(channelIds);
+              {/* Root servers (not in folders) - sortable */}
+              <SortableContext items={sortableServerIds} strategy={horizontalListSortingStrategy}>
+                <AnimatePresence mode="popLayout">
+                  {rootServers.map((server, index) => {
+                    const isActive = currentServer?.id === server.id;
+                    const channelIds = serverChannels[server.id] || [];
+                    const { hasUnread, totalMentions } = getServerUnreadInfo(channelIds);
 
-                  return (
-                    <HorizontalDraggableServerItem
-                      key={server.id}
-                      server={server}
-                      index={index}
-                      isActive={isActive}
-                      isHovered={hoveredServer === server.id}
-                      hasUnread={hasUnread}
-                      totalMentions={totalMentions}
-                      tooltipsEnabled={tooltipsEnabled}
-                      getPillState={getPillState}
-                      getServerColor={getServerColor}
-                      getServerInitials={getServerInitials}
-                      onHover={() => setHoveredServer(server.id)}
-                      onLeave={() => setHoveredServer(null)}
-                      onClick={() => {
-                        setCurrentServer(server);
-                        setCurrentConversation(null);
-                        closeServerSettings();
-                        closeModal();
-                        navigate(`/app/servers/${server.id}`);
-                      }}
-                      onLeaveServer={async (serverId) => {
-                        if (user?.id) {
-                          try {
-                            await leaveServer(serverId, user.id);
-                            if (currentServer?.id === serverId) {
-                              navigate("/app");
+                    return (
+                      <HorizontalSortableServerItem
+                        key={server.id}
+                        server={server}
+                        index={index}
+                        isActive={isActive}
+                        isHovered={hoveredServer === server.id}
+                        hasUnread={hasUnread}
+                        totalMentions={totalMentions}
+                        tooltipsEnabled={tooltipsEnabled}
+                        getPillState={getPillState}
+                        getServerColor={getServerColor}
+                        getServerInitials={getServerInitials}
+                        onHover={() => setHoveredServer(server.id)}
+                        onLeave={() => setHoveredServer(null)}
+                        onClick={() => {
+                          setCurrentServer(server);
+                          setCurrentConversation(null);
+                          closeServerSettings();
+                          closeModal();
+                          navigate(`/app/servers/${server.id}`);
+                        }}
+                        onLeaveServer={async (serverId) => {
+                          if (user?.id) {
+                            try {
+                              await leaveServer(serverId, user.id);
+                              if (currentServer?.id === serverId) {
+                                navigate("/app");
+                              }
+                            } catch (error) {
+                              console.error("Failed to leave server:", error);
                             }
-                          } catch (error) {
-                            console.error("Failed to leave server:", error);
                           }
-                        }
-                      }}
-                      onOpenSettings={() => {
-                        setCurrentServer(server);
-                        openServerSettings();
-                      }}
-                      onMarkAsRead={() => {
-                        if (channelIds.length > 0) {
-                          markServerAsRead(channelIds);
-                        }
-                      }}
-                      onToggleMute={() => {
-                        if (user?.id) {
-                          toggleServerMute(server.id, user.id);
-                        }
-                      }}
-                    />
-                  );
-                })}
-              </AnimatePresence>
+                        }}
+                        onOpenSettings={() => {
+                          setCurrentServer(server);
+                          openServerSettings();
+                        }}
+                        onMarkAsRead={() => {
+                          if (channelIds.length > 0) {
+                            markServerAsRead(channelIds);
+                          }
+                        }}
+                        onToggleMute={() => {
+                          if (user?.id) {
+                            toggleServerMute(server.id, user.id);
+                          }
+                        }}
+                      />
+                    );
+                  })}
+                </AnimatePresence>
+              </SortableContext>
 
               {/* Add Server button - inline with servers */}
               <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>

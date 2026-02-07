@@ -137,6 +137,7 @@ export interface ServerWithMembership extends Server {
   nickname: string | null;
   joined_at: string;
   is_muted: boolean;
+  position?: number | null;
   unread_count?: number;
   mention_count?: number;
 }

@@ -143,6 +143,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         nickname: string | null;
         joined_at: string;
         is_muted?: boolean;
+        position?: number | null;
       }>;
 
       const servers: ServerWithMembership[] = serverData.map((item) => ({
@@ -163,6 +164,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
           nickname: item.nickname,
           joined_at: item.joined_at,
           is_muted: item.is_muted ?? false,
+          position: item.position ?? null,
         }));
 
       const { currentServer } = get();
