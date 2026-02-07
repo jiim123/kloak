@@ -364,9 +364,10 @@ export const MembersSidebar = () => {
           {member.user?.custom_status && (
             <p
               className={cn(
-                "text-[11px] truncate mt-0.5",
+                "text-[11px] truncate mt-0.5 max-w-[140px]",
                 memberIsOffline ? "text-muted-foreground/50" : "text-muted-foreground",
               )}
+              title={member.user.custom_status}
             >
               {member.user.custom_status}
             </p>
