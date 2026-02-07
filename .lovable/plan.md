@@ -1,76 +1,229 @@
 
-
-# Fix Invisible Status Leaking as Online to Other Users
+# Harden Server-Side Permission Enforcement
 
 ## Problem
 
-When a user sets their status to Invisible, other users still see them as Online. This happens because:
+All RLS policies currently use `USING (true)` / `WITH CHECK (true)` -- meaning any user with the Supabase anon key can directly read, insert, update, or delete any row in any table. Since Kloak uses custom authentication (secret key hashing, not Supabase Auth), `auth.uid()` is always null, so traditional RLS cannot be used.
 
-1. The database function `update_user_status` always updates `last_seen = now()` -- even when setting status to `offline` (Invisible)
-2. The presence logic (`getEffectivePresence`) sees "status is offline but last_seen is recent" and assumes the status is stale, overriding it to Online
-3. This means Invisible is purely cosmetic -- it only affects the local user's UI
+The critical message RPCs (`send_message`, `edit_message`, `delete_message`, `toggle_pin_message`, reactions, polls) already use the `check_user_permission()` function -- these are protected. However, many other operations bypass RPCs and hit tables directly from the client.
 
-## Solution
+## Current Risk Assessment
 
-### 1. Fix the database RPC: Don't update `last_seen` when going offline/invisible
+**Already Protected (via SECURITY DEFINER RPCs with permission checks):**
+- Send/edit/delete messages
+- Pin/unpin messages
+- Add/remove reactions
+- Create/vote on polls
+- Join/leave servers
+- Register/login
 
-**New migration file**: Create a migration that updates `update_user_status` to skip updating `last_seen` when the new status is `'offline'`. This ensures invisible users' `last_seen` stays stale, so `getEffectivePresence` correctly treats them as offline.
+**NOT Protected (direct table mutations, no permission checks):**
+- Create/update/delete channels (direct `.from('channels')`)
+- Create/update/delete server roles (direct `.from('server_roles')`)
+- Assign/remove member roles (direct `.from('server_member_roles')`)
+- Update server members (role changes, mute, ban -- direct `.from('server_members')`)
+- Update/delete servers (direct `.from('servers')`)
+- Manage channel/role/category permissions (direct `.from('channel_permissions')`)
+- Insert/delete media items
+- Insert/update/delete announcement comments and reactions
+- Insert/update/delete thread messages
+- Insert/delete server emojis
+- Delete notifications (any user's)
 
-```sql
-CREATE OR REPLACE FUNCTION public.update_user_status(
-  _user_id uuid, _status user_status
-) RETURNS boolean
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-BEGIN
-  IF _status = 'offline' THEN
-    UPDATE users SET status = _status WHERE id = _user_id;
-  ELSE
-    UPDATE users SET status = _status, last_seen = now() WHERE id = _user_id;
-  END IF;
-  RETURN true;
-END;
-$$;
+## Solution Strategy
+
+Since `auth.uid()` is always null (custom auth), we cannot use RLS for enforcement. The approach is:
+
+1. **Create SECURITY DEFINER RPCs** for all unprotected mutations, with permission checks
+2. **Update the client** to call these RPCs instead of direct table operations
+3. **Lock down RLS** on write operations to `false` on the most critical tables, forcing all writes through RPCs
+
+We will prioritize by risk level and tackle the most dangerous gaps first.
+
+## Implementation Plan
+
+### Phase 1: Highest Priority -- Channel & Server Management RPCs
+
+**Migration: Create protected RPCs for channel CRUD**
+
+```text
+create_channel(server_id, name, type, category_id, ...)
+  -> check_user_permission(user_id, server_id, 'manage_channels')
+
+update_channel(channel_id, user_id, name, topic, ...)
+  -> check_user_permission(user_id, channel_id, 'manage_channels')
+
+delete_channel(channel_id, user_id)
+  -> check_user_permission(user_id, channel_id, 'manage_channels')
 ```
 
-### 2. Fix the login RPC: Don't set status to online (let the client decide)
+**Migration: Create protected RPCs for server management**
 
-**Same migration**: Update `login_user` to NOT force `status = 'online'` in the database. The client already re-applies persisted `manualStatus` after login, but there's a brief window where the DB says "online" and other users see it. Instead, the login RPC should only update `last_seen` without changing status, and the client will set the correct status afterward.
+```text
+update_server(server_id, user_id, name, icon_url, ...)
+  -> check_user_server_permission(user_id, server_id, 'manage_server')
 
-Actually, on closer look, login should set to online for normal users. The client re-applies invisible/DND right after. The brief flash is acceptable. We'll leave `login_user` as-is but ensure the client re-apply happens quickly (it already does).
-
-### 3. Add distinct "Invisible" indicator for the local user
-
-**File: `src/components/layout/LoggedInUserPanel.tsx`**
-
-When the current user's `manualStatus === 'offline'`, show a distinct hollow/outlined gray circle instead of the solid gray offline dot. This lets the user know they're invisible (not truly offline).
-
-```
-- Invisible: hollow gray circle (ring only, no fill)
-- Offline: solid gray circle (current behavior)
+delete_server(server_id, user_id)
+  -> verify user is owner
 ```
 
-### 4. Update StatusSelector invisible icon for clarity
+**Client changes:**
+- `src/stores/serverStore.ts`: Replace all direct `.from('channels')`, `.from('servers')` mutations with RPC calls
 
-**File: `src/components/StatusSelector.tsx`**
+### Phase 2: Role Management RPCs
 
-The Invisible option already uses an Eye icon, which is fine. No change needed here.
+**Migration: Create protected RPCs for role operations**
 
-### 5. Update MembersSidebar StatusIndicator for invisible (self only)
+```text
+create_server_role(server_id, user_id, name, color, icon)
+  -> check_user_server_permission(user_id, server_id, 'manage_roles')
 
-**File: `src/components/layout/MembersSidebar.tsx`**
+update_server_role(role_id, user_id, name, color, icon, position)
+  -> check_user_server_permission(user_id, server_id, 'manage_roles')
 
-When the current user views their own entry in the member list while invisible, show the hollow circle. Other users will see them as offline (gray dot) thanks to the DB fix. Add a check: if `member.user_id === currentUserId && manualStatus === 'offline'`, render the hollow invisible indicator.
+delete_server_role(role_id, user_id)
+  -> check_user_server_permission(user_id, server_id, 'manage_roles')
 
-### 6. Ensure MessageInput activity doesn't leak presence while invisible
+assign_member_role(member_id, role_id, user_id)
+  -> check_user_server_permission(user_id, server_id, 'manage_roles')
 
-**File: `src/components/chat/MessageInput.tsx`** (check if similar pattern exists)
+remove_member_role(member_id, role_id, user_id)
+  -> check_user_server_permission(user_id, server_id, 'manage_roles')
+```
 
-The `DMMessageInput.tsx` already checks `manualStatus !== 'offline'` before updating `last_seen` on send. Verify the same guard exists in `MessageInput.tsx`.
+**Client changes:**
+- `src/stores/serverStore.ts`: Replace `createRole`, `updateRole`, `deleteRole`, `assignRole`, `removeRole` to use RPCs
 
-## Technical Details
+### Phase 3: Member Management RPCs
 
-- **No new database columns or enums needed** -- we keep using `'offline'` in the DB for invisible; the distinction is client-side only via `manualStatus`
-- **No changes to realtime subscriptions** -- other clients already read `status` from the DB and run `getEffectivePresence`, which will now correctly show offline because `last_seen` won't be freshly updated
-- **The `usePresence` hook already stops heartbeating `last_seen` when invisible** -- this is correct and stays unchanged
-- **Files to modify**: 1 new migration, `LoggedInUserPanel.tsx`, `MembersSidebar.tsx`, and verify `MessageInput.tsx`
+**Migration: Create protected RPCs for member operations**
 
+```text
+update_member(member_id, actor_user_id, updates)
+  -> check role hierarchy (actor must outrank target)
+  -> check relevant permission (kick_members, ban_members, mute_members, manage_nicknames)
+
+update_member_role(member_id, actor_user_id, new_role)
+  -> verify actor can assign roles and outranks target
+```
+
+**Client changes:**
+- `src/stores/serverStore.ts`: Replace direct `server_members` updates with RPCs
+
+### Phase 4: Permission Management RPCs
+
+**Migration: Create protected RPCs for permission operations**
+
+```text
+set_role_permission(server_id, user_id, permission, role_name/role_id, allowed)
+  -> check_user_server_permission(user_id, server_id, 'manage_roles')
+
+set_channel_permission(channel_id, user_id, permission, target_role/target_user, allowed)
+  -> check_user_permission(user_id, channel_id, 'manage_channels')
+
+delete_role_permission(permission_id, user_id)
+  -> same checks
+
+delete_channel_permission(permission_id, user_id)
+  -> same checks
+```
+
+**Client changes:**
+- `src/stores/serverStore.ts`: Replace direct `role_permissions`, `channel_permissions`, `category_permissions` mutations with RPCs
+
+### Phase 5: Content Tables (Media, Announcements, Threads)
+
+**Migration: Create protected RPCs**
+
+```text
+insert_media_item(channel_id, user_id, ...)
+  -> check_user_permission(user_id, channel_id, 'send_messages')
+  -> check_user_permission(user_id, channel_id, 'attach_files')
+
+delete_media_item(item_id, user_id)
+  -> verify ownership or manage_messages permission
+
+insert_announcement_comment(message_id, user_id, content)
+  -> check send_messages permission on the announcement's channel
+
+delete_announcement_comment(comment_id, user_id)
+  -> verify ownership or manage_messages permission
+
+send_thread_message(thread_id, user_id, content)
+  -> check send_messages permission on the thread's channel
+
+edit_thread_message(message_id, user_id, content)
+  -> verify ownership + send_messages permission
+
+delete_thread_message(message_id, user_id)
+  -> verify ownership or manage_messages permission
+```
+
+**Client changes:**
+- `src/components/media/MediaChannelArea.tsx`
+- `src/components/media/MediaComments.tsx`
+- `src/components/announcement/AnnouncementView.tsx`
+- `src/components/forum/ForumChannelArea.tsx`
+
+### Phase 6: Server Emoji RPCs
+
+**Migration:**
+
+```text
+upload_server_emoji(server_id, user_id, name, file_path)
+  -> check_user_server_permission(user_id, server_id, 'manage_emojis')
+
+delete_server_emoji(emoji_id, user_id)
+  -> check_user_server_permission(user_id, server_id, 'manage_emojis')
+```
+
+**Client changes:**
+- `src/components/modals/ServerSettingsModal.tsx`
+- `src/components/settings/ServerSettingsPage.tsx`
+- `src/components/modals/ImportEmojiPackModal.tsx`
+
+### Phase 7: Lock Down RLS Policies
+
+After all mutations go through RPCs, update RLS on the most critical tables to deny direct writes:
+
+```text
+-- Messages: deny direct INSERT/UPDATE/DELETE (force through RPCs)
+CREATE POLICY "Deny direct message writes" ON messages
+  FOR INSERT WITH CHECK (false);
+
+-- Similar for: channels, servers, server_members, server_roles,
+-- role_permissions, channel_permissions, server_member_roles
+```
+
+SELECT policies can remain `USING (true)` since reads are not sensitive in this context (users already need the anon key and all data is server-scoped).
+
+### Phase 8: Client Error Handling
+
+**File: `src/lib/errorHandler.ts`**
+
+Update to detect permission errors from RPCs (errors containing "Permission denied" or "do not have permission") and show clear messages. Add a permission cache refresh trigger.
+
+**Files: All stores and components making RPC calls**
+
+Wrap RPC calls with proper error handling that surfaces permission denials to the user.
+
+## Files to Modify
+
+- 6-8 new migration files (one per phase of RPCs)
+- `src/stores/serverStore.ts` (major refactor: replace ~20 direct mutations with RPCs)
+- `src/components/media/MediaChannelArea.tsx`
+- `src/components/media/MediaComments.tsx`
+- `src/components/announcement/AnnouncementView.tsx`
+- `src/components/forum/ForumChannelArea.tsx`
+- `src/components/modals/ServerSettingsModal.tsx`
+- `src/components/settings/ServerSettingsPage.tsx`
+- `src/components/modals/ImportEmojiPackModal.tsx`
+- `src/lib/errorHandler.ts`
+
+## Important Notes
+
+- All new RPCs will be `SECURITY DEFINER` with `SET search_path = public` to bypass permissive RLS
+- Every RPC will validate the acting user is a non-banned server member before any operation
+- The `check_user_permission` and `check_user_server_permission` functions are already battle-tested and handle the full permission hierarchy
+- This is a large change -- we should implement in phases and test after each phase
+- SELECT/read operations remain open since the custom auth model requires it for realtime subscriptions
