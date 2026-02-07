@@ -329,7 +329,7 @@ export const MembersSidebar = () => {
         </div>
 
         {/* Name and info */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 overflow-hidden">
           <div className="flex items-center gap-1.5">
             {isServerOwner && <Crown className="w-3 h-3 text-amber-400 flex-shrink-0" />}
             <span
