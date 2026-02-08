@@ -367,14 +367,15 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
               </div>
             )}
 
-            {/* Participant grid - 5 per row when screen sharing, otherwise dynamic */}
+            {/* Participant grid - 4 per row when screen sharing, otherwise dynamic */}
             <div 
               className={cn(
                 "grid gap-2",
                 hasScreenShare 
-                  ? "grid-cols-5 h-20 flex-shrink-0" 
+                  ? "grid-cols-4 flex-shrink-0 overflow-x-auto pb-1" 
                   : "flex-1 auto-rows-fr grid-cols-2 md:grid-cols-3"
               )}
+              style={hasScreenShare ? { gridAutoRows: '80px' } : undefined}
             >
               {filteredParticipants.map((p) => (
                 <ParticipantTile
