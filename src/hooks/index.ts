@@ -33,3 +33,4 @@ export { usePushToTalk } from './usePushToTalk';
 export { useHideVoiceActivity, shouldShowSpeakingIndicator, useParticipantSpeaking } from './useHideVoiceActivity';
 export { useAudioDevices } from './useAudioDevices';
 export { useAudioLevel } from './useAudioLevel';
+export { useAutoDisconnect } from './useAutoDisconnect';

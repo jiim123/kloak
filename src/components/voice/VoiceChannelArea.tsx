@@ -9,38 +9,11 @@ import { useVoiceStore } from "@/stores/voiceStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { useLiveKitRoom, LiveKitParticipant } from "@/hooks/useLiveKitRoom";
 import { ScreenShareQualityModal, ScreenShareQuality } from "@/components/voice/ScreenShareQualityModal";
+import { ParticipantAudioPlayer } from "@/components/voice/ParticipantAudioPlayer";
+import { UserVolumeControl, VolumeIndicator } from "@/components/voice/UserVolumeControl";
+import { useAutoDisconnect } from "@/hooks/useAutoDisconnect";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { Channel, ServerMember } from "@/types";
-
-// Audio player for remote participant audio
-function AudioPlayer({ track, muted }: { track: MediaStreamTrack; muted: boolean }) {
-  const ref = useRef<HTMLAudioElement | null>(null);
-
-  useEffect(() => {
-    if (!ref.current || !track) return;
-    const stream = new MediaStream([track]);
-    ref.current.srcObject = stream;
-    ref.current.muted = muted;
-
-    const tryPlay = () => {
-      const p = ref.current?.play();
-      if (p && typeof p.catch === "function") p.catch(() => {});
-    };
-
-    tryPlay();
-    ref.current.addEventListener("canplay", tryPlay);
-    return () => {
-      ref.current?.removeEventListener("canplay", tryPlay);
-    };
-  }, [track]);
-
-  useEffect(() => {
-    if (ref.current) {
-      ref.current.muted = muted;
-    }
-  }, [muted]);
-
-  return <audio ref={ref} autoPlay playsInline muted={muted} />;
-}
 
 // Video player for screen share
 function VideoPlayer({ track }: { track: MediaStreamTrack }) {
@@ -71,13 +44,15 @@ type TileProps = {
 
 function ParticipantTile({ participant, member, isYou, isDeafened }: TileProps) {
   const name = getMemberDisplayName(member, participant);
-  const speaking = participant.isSpeaking;
+  const speaking = participant.isSpeaking && !participant.hideVoiceActivity;
+  const [volumeOpen, setVolumeOpen] = useState(false);
 
-  return (
+  const tileContent = (
     <div
       className={cn(
-        "relative rounded-xl border bg-card/30 overflow-hidden",
+        "relative rounded-xl border bg-card/30 overflow-hidden cursor-pointer transition-colors",
         speaking ? "border-primary/70" : "border-border/60",
+        !isYou && "hover:bg-card/50"
       )}
     >
       <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent pointer-events-none" />
@@ -94,12 +69,38 @@ function ParticipantTile({ participant, member, isYou, isDeafened }: TileProps) 
           <div className="text-xs text-muted-foreground truncate">{isYou ? "You" : "Member"}</div>
         </div>
         <div className="flex items-center gap-1 text-muted-foreground">
+          {!isYou && <VolumeIndicator userId={participant.identity} />}
           {isDeafened && isYou ? <VolumeX className="w-4 h-4" /> : null}
           {participant.isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
           {participant.isScreenSharing ? <MonitorUp className="w-4 h-4" /> : null}
         </div>
       </div>
     </div>
+  );
+
+  // Only wrap in popover for other users (not yourself)
+  if (isYou) {
+    return tileContent;
+  }
+
+  return (
+    <Popover open={volumeOpen} onOpenChange={setVolumeOpen}>
+      <PopoverTrigger asChild>
+        {tileContent}
+      </PopoverTrigger>
+      <PopoverContent 
+        className="w-56 p-0" 
+        side="top" 
+        align="center"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <UserVolumeControl
+          userId={participant.identity}
+          userName={name}
+          onClose={() => setVolumeOpen(false)}
+        />
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -113,6 +114,17 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
     channelId: channel.id,
     userId: user?.id || null,
     displayName: user?.display_name || user?.username,
+  });
+
+  // Check if local user is speaking (for auto-disconnect)
+  const localParticipant = voice.participants.find((p) => p.identity === user?.id);
+  const isLocalSpeaking = localParticipant?.isSpeaking ?? false;
+
+  // Auto-disconnect timer
+  useAutoDisconnect({
+    isJoined: voice.isJoined,
+    isSpeaking: isLocalSpeaking,
+    onDisconnect: voice.leave,
   });
   
   const handleStartScreenShare = (quality: ScreenShareQuality) => {
@@ -295,11 +307,16 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
             </div>
           )}
 
-          {/* Remote audio elements (hidden) */}
+          {/* Remote audio elements (hidden) - using Web Audio API with per-user volume */}
           {filteredParticipants
             .filter((p) => p.identity !== user?.id && p.audioTrack)
             .map((p) => (
-              <AudioPlayer key={p.identity} track={p.audioTrack!} muted={voice.localState.deafened} />
+              <ParticipantAudioPlayer
+                key={p.identity}
+                participantId={p.identity}
+                track={p.audioTrack!}
+                muted={voice.localState.deafened}
+              />
             ))}
         </div>
       </div>
