@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams, useLocation, useParams, Outlet } from 're
 import { useAuthStore, initializeAuth } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
+import { useVoiceSettingsStore } from '@/stores/voiceSettingsStore';
 import { getLastChannel } from '@/lib/storage';
 import { ServerSidebar } from '@/components/layout/ServerSidebar';
 import { HorizontalServerSidebar } from '@/components/layout/HorizontalServerSidebar';
@@ -62,6 +63,7 @@ const AppLayout = () => {
   const params = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, isLoading } = useAuthStore();
+  const { loadSettings: loadVoiceSettings } = useVoiceSettingsStore();
   const { isMemberSidebarOpen, isServerSettingsOpen, closeMobileSidebars, activeModal } = useUIStore();
   const { 
     currentServer, 
@@ -320,6 +322,13 @@ const AppLayout = () => {
       return () => clearTimeout(timer);
     }
   }, [user, isLoading, navigate]);
+
+  // Load voice settings when user is authenticated
+  useEffect(() => {
+    if (user?.id) {
+      loadVoiceSettings(user.id);
+    }
+  }, [user?.id, loadVoiceSettings]);
 
   // Close mobile sidebars when navigating
   useEffect(() => {

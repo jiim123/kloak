@@ -19,6 +19,7 @@ import {
   Clock,
   Sparkles,
   Volume2,
+  Mic,
   AtSign,
   Reply,
   Users,
@@ -58,6 +59,7 @@ import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { isTauri } from "@/lib/tauriRuntime";
+import { VoiceSettingsPanel } from "@/components/voice/VoiceSettingsPanel";
 import type { User as UserType } from "@/types";
 
 // Theme preview colors for the selector
@@ -206,6 +208,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const navItems = [
     { id: "account", label: "Account", icon: Key },
     { id: "profile", label: "Profile", icon: User },
+    { id: "voice", label: "Voice & Audio", icon: Mic },
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "appearance", label: "Appearance", icon: Palette },
     { id: "blocked", label: "Blocked", icon: UserX },
@@ -518,6 +521,8 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         return accountContent;
       case "profile":
         return profileContent;
+      case "voice":
+        return voiceContent;
       case "notifications":
         return notificationsContent;
       case "appearance":
@@ -733,6 +738,11 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         </Button>
       </div>
     </div>
+  );
+
+  // Voice & Audio Content
+  const voiceContent = (
+    <VoiceSettingsPanel />
   );
 
   // Notifications Content
@@ -1097,6 +1107,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {activeTab === "account" && "Manage your account"}
                   {activeTab === "profile" && "Customize your profile"}
+                  {activeTab === "voice" && "Audio and voice settings"}
                   {activeTab === "notifications" && "Notification settings"}
                   {activeTab === "appearance" && "Personalize your app"}
                   {activeTab === "blocked" && "Manage blocked users"}
@@ -1192,6 +1203,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
               <p className="text-sm text-muted-foreground mb-6">
                 {activeTab === "account" && "Manage your account credentials and security"}
                 {activeTab === "profile" && "Customize how others see you"}
+                {activeTab === "voice" && "Configure your audio input, output, and voice settings"}
                 {activeTab === "notifications" && "Control how you receive notifications"}
                 {activeTab === "appearance" && "Personalize your app experience"}
                 {activeTab === "blocked" && "View and unblock users"}

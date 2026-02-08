@@ -13,6 +13,7 @@ import {
 } from "livekit-client";
 import { supabase } from "@/integrations/supabase/client";
 import { useVoiceStore } from "@/stores/voiceStore";
+import { useVoiceSettingsStore } from "@/stores/voiceSettingsStore";
 import { pauseVoicePresenceWatch, resumeVoicePresenceWatch } from "@/hooks/useVoicePresenceWatchers";
 import type { ScreenShareQuality } from "@/components/voice/ScreenShareQualityModal";
 
@@ -47,6 +48,9 @@ export function useLiveKitRoom(opts: UseLiveKitRoomOptions) {
   const setConnection = useVoiceStore((s) => s.setConnection);
   const setControls = useVoiceStore((s) => s.setControls);
   const setPresence = useVoiceStore((s) => s.setPresence);
+  
+  // Get voice settings
+  const voiceSettings = useVoiceSettingsStore((s) => s.settings);
 
   const [status, setStatus] = useState<"idle" | "joining" | "joined" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -137,13 +141,22 @@ export function useLiveKitRoom(opts: UseLiveKitRoomOptions) {
         throw new Error(fnError?.message || "Failed to get LiveKit token");
       }
 
+      // Create room with user's voice settings
       const room = new Room({
         adaptiveStream: true,
         dynacast: true,
         audioCaptureDefaults: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
+          deviceId: voiceSettings.inputDeviceId || undefined,
+          echoCancellation: voiceSettings.echoCancellation,
+          noiseSuppression: voiceSettings.noiseSuppression,
+          autoGainControl: voiceSettings.autoGainControl,
+          channelCount: voiceSettings.monoAudio ? 1 : undefined,
+        },
+        audioOutput: {
+          deviceId: voiceSettings.outputDeviceId || undefined,
+        },
+        publishDefaults: {
+          dtx: true, // Discontinuous transmission for bandwidth savings
         },
       });
 
@@ -173,14 +186,15 @@ export function useLiveKitRoom(opts: UseLiveKitRoomOptions) {
       // Connect to the room with audio enabled
       await room.connect(data.url, data.token);
 
-      // Enable microphone
-      await room.localParticipant.setMicrophoneEnabled(true);
+      // Enable microphone based on muteOnJoin setting
+      const shouldStartMuted = voiceSettings.muteOnJoin;
+      await room.localParticipant.setMicrophoneEnabled(!shouldStartMuted);
 
       setStatus("joined");
       setConnection({ channelId, status: "joined", error: null });
       setJoinedChannelId(channelId);
-      setIsMuted(false);
-      setControls({ muted: false, deafened: false });
+      setIsMuted(shouldStartMuted);
+      setControls({ muted: shouldStartMuted, deafened: false });
       updateParticipants();
     } catch (err) {
       console.error("Failed to join LiveKit room:", err);
