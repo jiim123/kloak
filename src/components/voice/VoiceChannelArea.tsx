@@ -7,13 +7,7 @@ import {
   PhoneOff, 
   Volume2, 
   VolumeX,
-  Video,
-  VideoOff,
-  Users,
-  LayoutGrid,
-  ExternalLink,
   Maximize2,
-  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -68,14 +62,15 @@ function AudioPlayer({ track, muted }: { track: MediaStreamTrack; muted: boolean
 }
 
 // Video player for screen share
-function VideoPlayer({ track, className }: { track: MediaStreamTrack; className?: string }) {
-  const ref = useRef<HTMLVideoElement | null>(null);
+function VideoPlayer({ track, className, videoRef }: { track: MediaStreamTrack; className?: string; videoRef?: React.RefObject<HTMLVideoElement> }) {
+  const internalRef = useRef<HTMLVideoElement | null>(null);
+  const ref = videoRef || internalRef;
 
   useEffect(() => {
     if (!ref.current || !track) return;
     const stream = new MediaStream([track]);
     ref.current.srcObject = stream;
-  }, [track]);
+  }, [track, ref]);
 
   return <video ref={ref} autoPlay playsInline className={cn("w-full h-full object-contain", className)} />;
 }
@@ -92,68 +87,37 @@ type TileProps = {
   member: ServerMember | undefined;
   isYou: boolean;
   isDeafened: boolean;
-  onWatchStream?: () => void;
+  compact?: boolean;
 };
 
 // Discord-style participant tile
-function ParticipantTile({ participant, member, isYou, isDeafened, onWatchStream }: TileProps) {
+function ParticipantTile({ participant, member, isYou, isDeafened, compact }: TileProps) {
   const name = getMemberDisplayName(member, participant);
   const speaking = participant.isSpeaking;
   const bgColor = useMemo(() => stringToColor(participant.identity), [participant.identity]);
 
-  // If participant is screen sharing, show that instead
-  if (participant.isScreenSharing && participant.screenTrack && !isYou) {
-    return (
-      <div
-        className={cn(
-          "relative rounded-lg overflow-hidden aspect-video",
-          "ring-2 ring-transparent transition-all",
-          speaking && "ring-primary"
-        )}
-      >
-        <VideoPlayer track={participant.screenTrack} />
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity">
-          <Button
-            variant="secondary"
-            size="sm"
-            className="gap-2"
-            onClick={onWatchStream}
-          >
-            <MonitorUp className="w-4 h-4" />
-            Watch Stream
-          </Button>
-        </div>
-        <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
-          <div className="flex items-center gap-2">
-            <MonitorUp className="w-3 h-3 text-white" />
-            <span className="text-xs font-medium text-white truncate">{name}</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div
       className={cn(
-        "relative rounded-lg overflow-hidden aspect-video flex items-center justify-center",
+        "relative rounded-lg overflow-hidden flex items-center justify-center",
         "ring-2 ring-transparent transition-all",
-        speaking && "ring-primary ring-offset-2 ring-offset-background"
+        speaking && "ring-primary ring-offset-2 ring-offset-background",
+        compact ? "aspect-square" : "aspect-video"
       )}
       style={{ backgroundColor: bgColor }}
     >
-      {/* Large centered avatar */}
+      {/* Centered avatar */}
       <div className={cn(
         "transition-transform",
         speaking && "scale-105"
       )}>
-        <AvatarWithDecoration user={member?.user} size={80} />
+        <AvatarWithDecoration user={member?.user} size={compact ? 40 : 80} />
       </div>
 
       {/* Username badge - bottom left */}
-      <div className="absolute bottom-2 left-2">
+      <div className="absolute bottom-1 left-1">
         <div className={cn(
-          "px-2 py-1 rounded text-xs font-medium",
+          "px-1.5 py-0.5 rounded text-xs font-medium truncate max-w-[80px]",
           speaking ? "bg-primary text-primary-foreground" : "bg-black/60 text-white"
         )}>
           {name}
@@ -161,15 +125,15 @@ function ParticipantTile({ participant, member, isYou, isDeafened, onWatchStream
       </div>
 
       {/* Status icons - bottom right */}
-      <div className="absolute bottom-2 right-2 flex items-center gap-1">
+      <div className="absolute bottom-1 right-1 flex items-center gap-0.5">
         {isDeafened && isYou && (
-          <div className="w-6 h-6 rounded bg-black/60 flex items-center justify-center">
-            <VolumeX className="w-3.5 h-3.5 text-white" />
+          <div className="w-5 h-5 rounded bg-black/60 flex items-center justify-center">
+            <VolumeX className="w-3 h-3 text-white" />
           </div>
         )}
         {participant.isMuted && (
-          <div className="w-6 h-6 rounded bg-black/60 flex items-center justify-center">
-            <MicOff className="w-3.5 h-3.5 text-white" />
+          <div className="w-5 h-5 rounded bg-black/60 flex items-center justify-center">
+            <MicOff className="w-3 h-3 text-white" />
           </div>
         )}
       </div>
@@ -184,14 +148,12 @@ function ControlButton({
   destructive,
   label,
   onClick,
-  hasDropdown,
 }: { 
   icon: React.ComponentType<{ className?: string }>;
   active?: boolean;
   destructive?: boolean;
   label: string;
   onClick: () => void;
-  hasDropdown?: boolean;
 }) {
   return (
     <button
@@ -207,11 +169,6 @@ function ControlButton({
       )}
     >
       <Icon className="w-5 h-5" />
-      {hasDropdown && (
-        <div className="absolute -bottom-0.5 right-1/2 translate-x-1/2">
-          <ChevronDown className="w-3 h-3" />
-        </div>
-      )}
     </button>
   );
 }
@@ -222,7 +179,8 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
   const setJoinedChannel = useVoiceStore((s) => s.setJoinedChannel);
 
   const [showQualityModal, setShowQualityModal] = useState(false);
-  const [focusedScreenShare, setFocusedScreenShare] = useState<string | null>(null);
+  const screenShareContainerRef = useRef<HTMLDivElement>(null);
+  const screenVideoRef = useRef<HTMLVideoElement>(null);
 
   const voice = useLiveKitRoom({
     channelId: channel.id,
@@ -295,11 +253,8 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
       }));
   }, [filteredParticipants, memberByUserId, user?.id]);
 
-  // The screen share being watched in full view
-  const watchedScreenShare = useMemo(() => {
-    if (!focusedScreenShare) return screenSharers[0] || null;
-    return screenSharers.find((s) => s.identity === focusedScreenShare) || screenSharers[0] || null;
-  }, [focusedScreenShare, screenSharers]);
+  // The main screen share being watched
+  const watchedScreenShare = screenSharers[0] || null;
 
   const handleScreenShareClick = useCallback(() => {
     if (voice.localState.sharing) {
@@ -314,33 +269,31 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
     voice.startScreenShare(quality);
   }, [voice]);
 
-  const isReady = !!user;
+  const handleFullscreen = useCallback(() => {
+    if (!screenShareContainerRef.current) return;
+    
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      screenShareContainerRef.current.requestFullscreen().catch(() => {
+        // Fallback: try the video element directly
+        if (screenVideoRef.current) {
+          screenVideoRef.current.requestFullscreen?.();
+        }
+      });
+    }
+  }, []);
 
-  // Calculate grid columns based on participant count
-  const gridCols = useMemo(() => {
-    const count = filteredParticipants.length;
-    if (count <= 1) return 1;
-    if (count <= 2) return 2;
-    if (count <= 4) return 2;
-    if (count <= 6) return 3;
-    return 3;
-  }, [filteredParticipants.length]);
+  const isReady = !!user;
+  const hasScreenShare = !!watchedScreenShare;
 
   return (
-    <div className="h-full flex flex-col min-w-0 bg-[hsl(var(--background))]">
-      {/* Top bar - Discord style */}
+    <div className="h-full flex flex-col min-w-0 bg-background">
+      {/* Top bar */}
       <div className="h-12 px-4 flex items-center justify-between border-b border-border/40 bg-background/80 backdrop-blur">
         <div className="flex items-center gap-2 min-w-0">
           <Volume2 className="w-4 h-4 text-muted-foreground flex-shrink-0" />
           <span className="text-sm font-semibold truncate">{channel.name}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="w-8 h-8">
-            <Users className="w-4 h-4 text-muted-foreground" />
-          </Button>
-          <Button variant="ghost" size="icon" className="w-8 h-8">
-            <LayoutGrid className="w-4 h-4 text-muted-foreground" />
-          </Button>
         </div>
       </div>
 
@@ -385,42 +338,43 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
           </div>
         ) : (
           /* Connected view */
-          <div className="flex-1 min-h-0 flex flex-col p-4 gap-4">
-            {/* Screen share stage (if someone is sharing) */}
+          <div className="flex-1 min-h-0 flex flex-col p-4 gap-3">
+            {/* Screen share stage */}
             {watchedScreenShare && (
-              <div className="flex-shrink-0 max-h-[50vh] rounded-lg overflow-hidden bg-black/90 border border-border/40">
-                <div className="relative w-full h-full aspect-video max-h-[50vh]">
-                  <VideoPlayer track={watchedScreenShare.track} />
-                  <div className="absolute bottom-3 left-3 px-3 py-1.5 rounded bg-black/70 text-white text-sm font-medium flex items-center gap-2">
-                    <MonitorUp className="w-4 h-4" />
-                    {watchedScreenShare.isLocal ? "Your Screen" : watchedScreenShare.name}
-                    {voice.localState.shareQuality && watchedScreenShare.isLocal && (
-                      <span className="text-xs text-white/70">
-                        • {voice.localState.shareQuality.resolution} @ {voice.localState.shareQuality.frameRate}fps
-                      </span>
-                    )}
-                  </div>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="absolute top-3 right-3 w-8 h-8"
-                    title="Fullscreen"
-                  >
-                    <Maximize2 className="w-4 h-4" />
-                  </Button>
+              <div 
+                ref={screenShareContainerRef}
+                className="flex-1 min-h-0 rounded-lg overflow-hidden bg-black/90 border border-border/40 relative"
+              >
+                <VideoPlayer track={watchedScreenShare.track} videoRef={screenVideoRef} />
+                <div className="absolute bottom-3 left-3 px-3 py-1.5 rounded bg-black/70 text-white text-sm font-medium flex items-center gap-2">
+                  <MonitorUp className="w-4 h-4" />
+                  {watchedScreenShare.isLocal ? "Your Screen" : watchedScreenShare.name}
+                  {voice.localState.shareQuality && watchedScreenShare.isLocal && (
+                    <span className="text-xs text-white/70">
+                      • {voice.localState.shareQuality.resolution} @ {voice.localState.shareQuality.frameRate}fps
+                    </span>
+                  )}
                 </div>
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="absolute top-3 right-3 w-8 h-8"
+                  title="Fullscreen"
+                  onClick={handleFullscreen}
+                >
+                  <Maximize2 className="w-4 h-4" />
+                </Button>
               </div>
             )}
 
-            {/* Participant grid - Discord style */}
+            {/* Participant grid - 5 per row when screen sharing, otherwise dynamic */}
             <div 
               className={cn(
-                "flex-1 min-h-0 grid gap-2 auto-rows-fr overflow-y-auto",
-                watchedScreenShare && "max-h-[30vh]"
+                "grid gap-2",
+                hasScreenShare 
+                  ? "grid-cols-5 h-20 flex-shrink-0" 
+                  : "flex-1 auto-rows-fr grid-cols-2 md:grid-cols-3"
               )}
-              style={{
-                gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))`,
-              }}
             >
               {filteredParticipants.map((p) => (
                 <ParticipantTile
@@ -429,7 +383,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
                   member={memberByUserId.get(p.identity)}
                   isYou={p.identity === user?.id}
                   isDeafened={p.identity === user?.id ? voice.localState.deafened : false}
-                  onWatchStream={() => setFocusedScreenShare(p.identity)}
+                  compact={hasScreenShare}
                 />
               ))}
             </div>
@@ -448,34 +402,17 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
         )}
       </div>
 
-      {/* Bottom control bar - Discord style */}
+      {/* Bottom control bar */}
       {voice.isJoined && (
         <div className="h-16 border-t border-border/40 bg-background/90 backdrop-blur flex items-center justify-center px-4 gap-2">
-          {/* Left spacer for symmetry */}
-          <div className="flex-1 flex items-center justify-start">
-            <Button variant="ghost" size="sm" className="text-muted-foreground">
-              <Users className="w-4 h-4 mr-1" />
-              {filteredParticipants.length}
-            </Button>
-          </div>
-
           {/* Center controls */}
           <div className="flex items-center gap-2">
-            {/* Camera button (placeholder - not functional yet) */}
-            <ControlButton
-              icon={VideoOff}
-              label="Camera"
-              onClick={() => {}}
-              hasDropdown
-            />
-
             {/* Screen share button */}
             <ControlButton
               icon={voice.localState.sharing ? MonitorOff : MonitorUp}
               active={voice.localState.sharing}
               label={voice.localState.sharing ? "Stop sharing" : "Share screen"}
               onClick={handleScreenShareClick}
-              hasDropdown={!voice.localState.sharing}
             />
 
             {/* Microphone button */}
@@ -484,7 +421,14 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
               active={!voice.localState.muted}
               label={voice.localState.muted ? "Unmute" : "Mute"}
               onClick={voice.toggleMute}
-              hasDropdown
+            />
+
+            {/* Deafen button */}
+            <ControlButton
+              icon={voice.localState.deafened ? VolumeX : Volume2}
+              active={!voice.localState.deafened}
+              label={voice.localState.deafened ? "Undeafen" : "Deafen"}
+              onClick={voice.toggleDeafen}
             />
 
             {/* Disconnect button */}
@@ -494,19 +438,6 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
               label="Disconnect"
               onClick={() => voice.leave()}
             />
-          </div>
-
-          {/* Right controls */}
-          <div className="flex-1 flex items-center justify-end gap-2">
-            <Button variant="ghost" size="icon" className="w-8 h-8">
-              <Volume2 className="w-4 h-4 text-muted-foreground" />
-            </Button>
-            <Button variant="ghost" size="icon" className="w-8 h-8">
-              <ExternalLink className="w-4 h-4 text-muted-foreground" />
-            </Button>
-            <Button variant="ghost" size="icon" className="w-8 h-8">
-              <Maximize2 className="w-4 h-4 text-muted-foreground" />
-            </Button>
           </div>
         </div>
       )}
