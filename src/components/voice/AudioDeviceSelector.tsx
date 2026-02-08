@@ -151,7 +151,7 @@ export function AudioDeviceSelector({
                 {!inputDeviceId && <Check className="h-3 w-3 text-primary" />}
               </span>
             </SelectItem>
-            {inputDevices.map((device) => (
+            {inputDevices.filter(d => d.deviceId).map((device) => (
               <SelectItem key={device.deviceId} value={device.deviceId}>
                 {device.label}
               </SelectItem>
@@ -219,7 +219,7 @@ export function AudioDeviceSelector({
                   {!outputDeviceId && <Check className="h-3 w-3 text-primary" />}
                 </span>
               </SelectItem>
-              {outputDevices.map((device) => (
+              {outputDevices.filter(d => d.deviceId).map((device) => (
                 <SelectItem key={device.deviceId} value={device.deviceId}>
                   {device.label}
                 </SelectItem>

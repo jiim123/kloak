@@ -102,6 +102,30 @@ export type Database = {
           },
         ]
       }
+      badges: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          icon_url: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          icon_url: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          icon_url?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       category_permissions: {
         Row: {
           allowed: boolean
@@ -1847,6 +1871,42 @@ export type Database = {
           },
         ]
       }
+      user_badges: {
+        Row: {
+          awarded_at: string | null
+          badge_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          awarded_at?: string | null
+          badge_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          awarded_at?: string | null
+          badge_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_badges_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "badges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_badges_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_preferences: {
         Row: {
           animate_emojis: boolean
@@ -1972,6 +2032,38 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "user_server_tabs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_voice_settings: {
+        Row: {
+          created_at: string
+          id: string
+          settings: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          settings?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          settings?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_voice_settings_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
             referencedRelation: "users"
@@ -2451,6 +2543,7 @@ export type Database = {
       get_user_server_folders: { Args: { _user_id: string }; Returns: Json }
       get_user_server_tabs: { Args: { _user_id: string }; Returns: string[] }
       get_user_servers: { Args: { _user_id: string }; Returns: Json }
+      get_user_voice_settings: { Args: { p_user_id: string }; Returns: Json }
       insert_announcement_comment: {
         Args: {
           _content: string
@@ -2859,6 +2952,10 @@ export type Database = {
           _server_id: string
           _user_id: string
         }
+        Returns: Json
+      }
+      upsert_user_voice_settings: {
+        Args: { p_settings: Json; p_user_id: string }
         Returns: Json
       }
       vote_poll: {
