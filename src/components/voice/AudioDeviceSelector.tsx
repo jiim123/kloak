@@ -137,23 +137,20 @@ export function AudioDeviceSelector({
         </div>
 
         <Select
-          value={inputDeviceId || 'default'}
-          onValueChange={(v) => onInputDeviceChange(v === 'default' ? null : v)}
+          value={inputDeviceId || (inputDevices.length > 0 ? inputDevices[0].deviceId : 'default')}
+          onValueChange={(v) => onInputDeviceChange(v)}
           disabled={isLoading || !hasPermission}
         >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Select microphone" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="default">
-              <span className="flex items-center gap-2">
-                Default
-                {!inputDeviceId && <Check className="h-3 w-3 text-primary" />}
-              </span>
-            </SelectItem>
             {inputDevices.filter(d => d.deviceId).map((device) => (
               <SelectItem key={device.deviceId} value={device.deviceId}>
-                {device.label}
+                <span className="flex items-center gap-2">
+                  {device.isDefault && <Check className="h-3.5 w-3.5 text-green-500" />}
+                  {device.label}
+                </span>
               </SelectItem>
             ))}
           </SelectContent>
@@ -205,23 +202,20 @@ export function AudioDeviceSelector({
 
         {supportsOutputSelection ? (
           <Select
-            value={outputDeviceId || 'default'}
-            onValueChange={(v) => onOutputDeviceChange(v === 'default' ? null : v)}
+            value={outputDeviceId || (outputDevices.length > 0 ? outputDevices[0].deviceId : 'default')}
+            onValueChange={(v) => onOutputDeviceChange(v)}
             disabled={isLoading || !hasPermission}
           >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select speaker" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="default">
-                <span className="flex items-center gap-2">
-                  Default
-                  {!outputDeviceId && <Check className="h-3 w-3 text-primary" />}
-                </span>
-              </SelectItem>
               {outputDevices.filter(d => d.deviceId).map((device) => (
                 <SelectItem key={device.deviceId} value={device.deviceId}>
-                  {device.label}
+                  <span className="flex items-center gap-2">
+                    {device.isDefault && <Check className="h-3.5 w-3.5 text-green-500" />}
+                    {device.label}
+                  </span>
                 </SelectItem>
               ))}
             </SelectContent>
