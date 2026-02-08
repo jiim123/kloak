@@ -179,6 +179,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
   const setJoinedChannel = useVoiceStore((s) => s.setJoinedChannel);
 
   const [showQualityModal, setShowQualityModal] = useState(false);
+  const [watchingStreamId, setWatchingStreamId] = useState<string | null>(null);
   const screenShareContainerRef = useRef<HTMLDivElement>(null);
   const screenVideoRef = useRef<HTMLVideoElement>(null);
 
@@ -253,8 +254,31 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
       }));
   }, [filteredParticipants, memberByUserId, user?.id]);
 
-  // The main screen share being watched
-  const watchedScreenShare = screenSharers[0] || null;
+  // Auto-watch your own stream
+  useEffect(() => {
+    const myStream = screenSharers.find((s) => s.isLocal);
+    if (myStream && watchingStreamId !== myStream.identity) {
+      setWatchingStreamId(myStream.identity);
+    }
+  }, [screenSharers, watchingStreamId]);
+
+  // Clear watching state if stream ends
+  useEffect(() => {
+    if (watchingStreamId && !screenSharers.find((s) => s.identity === watchingStreamId)) {
+      setWatchingStreamId(null);
+    }
+  }, [screenSharers, watchingStreamId]);
+
+  // The screen share being watched (only if user opted in)
+  const watchedScreenShare = useMemo(() => {
+    if (!watchingStreamId) return null;
+    return screenSharers.find((s) => s.identity === watchingStreamId) || null;
+  }, [watchingStreamId, screenSharers]);
+
+  // Available streams to watch (not currently watching)
+  const availableStreams = useMemo(() => {
+    return screenSharers.filter((s) => s.identity !== watchingStreamId && !s.isLocal);
+  }, [screenSharers, watchingStreamId]);
 
   const handleScreenShareClick = useCallback(() => {
     if (voice.localState.sharing) {
@@ -284,8 +308,11 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
     }
   }, []);
 
+  const handleStopWatching = useCallback(() => {
+    setWatchingStreamId(null);
+  }, []);
+
   const isReady = !!user;
-  const hasScreenShare = !!watchedScreenShare;
 
   return (
     <div className="h-full flex flex-col min-w-0 bg-background">
@@ -297,8 +324,8 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="flex-1 min-h-0 flex flex-col">
+      {/* Main content - scrollable */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
         {voice.error && (
           <div className="mx-4 mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
             {voice.error}
@@ -307,7 +334,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
 
         {!voice.isJoined ? (
           /* Join card */
-          <div className="flex-1 flex items-center justify-center p-4">
+          <div className="h-full flex items-center justify-center p-4">
             <div className="max-w-md w-full rounded-2xl border border-border/70 bg-card/60 backdrop-blur p-6 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent pointer-events-none" />
               <div className="relative">
@@ -338,12 +365,32 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
           </div>
         ) : (
           /* Connected view */
-          <div className="flex-1 min-h-0 flex flex-col p-4 gap-3">
-            {/* Screen share stage */}
+          <div className="flex flex-col p-4 gap-3">
+            {/* Available streams notification */}
+            {availableStreams.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {availableStreams.map((stream) => (
+                  <button
+                    key={stream.identity}
+                    onClick={() => setWatchingStreamId(stream.identity)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/30 hover:bg-primary/20 transition-colors"
+                  >
+                    <MonitorUp className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-medium text-foreground">
+                      {stream.name} is sharing
+                    </span>
+                    <span className="text-xs text-primary font-semibold">Watch Stream</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Screen share stage - only shown if user opted in */}
             {watchedScreenShare && (
               <div 
                 ref={screenShareContainerRef}
-                className="flex-1 min-h-0 rounded-lg overflow-hidden bg-black/90 border border-border/40 relative"
+                className="rounded-lg overflow-hidden bg-black/90 border border-border/40 relative"
+                style={{ aspectRatio: '16/9' }}
               >
                 <VideoPlayer track={watchedScreenShare.track} videoRef={screenVideoRef} />
                 <div className="absolute bottom-3 left-3 px-3 py-1.5 rounded bg-black/70 text-white text-sm font-medium flex items-center gap-2">
@@ -355,27 +402,39 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
                     </span>
                   )}
                 </div>
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  className="absolute top-3 right-3 w-8 h-8"
-                  title="Fullscreen"
-                  onClick={handleFullscreen}
-                >
-                  <Maximize2 className="w-4 h-4" />
-                </Button>
+                <div className="absolute top-3 right-3 flex items-center gap-2">
+                  {!watchedScreenShare.isLocal && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="h-8"
+                      onClick={handleStopWatching}
+                    >
+                      Stop Watching
+                    </Button>
+                  )}
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="w-8 h-8"
+                    title="Fullscreen"
+                    onClick={handleFullscreen}
+                  >
+                    <Maximize2 className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             )}
 
-            {/* Participant grid - 4 per row when screen sharing, otherwise dynamic */}
+            {/* Participant grid - 4 per row when watching stream, otherwise dynamic */}
             <div 
               className={cn(
                 "grid gap-2",
-                hasScreenShare 
-                  ? "grid-cols-4 flex-shrink-0 overflow-x-auto pb-1" 
-                  : "flex-1 auto-rows-fr grid-cols-2 md:grid-cols-3"
+                watchedScreenShare 
+                  ? "grid-cols-4" 
+                  : "grid-cols-2 md:grid-cols-3"
               )}
-              style={hasScreenShare ? { gridAutoRows: '80px' } : undefined}
+              style={watchedScreenShare ? { gridAutoRows: '80px' } : { gridAutoRows: 'minmax(120px, 1fr)' }}
             >
               {filteredParticipants.map((p) => (
                 <ParticipantTile
@@ -384,7 +443,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
                   member={memberByUserId.get(p.identity)}
                   isYou={p.identity === user?.id}
                   isDeafened={p.identity === user?.id ? voice.localState.deafened : false}
-                  compact={hasScreenShare}
+                  compact={!!watchedScreenShare}
                 />
               ))}
             </div>
@@ -405,7 +464,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
 
       {/* Bottom control bar */}
       {voice.isJoined && (
-        <div className="h-16 border-t border-border/40 bg-background/90 backdrop-blur flex items-center justify-center px-4 gap-2">
+        <div className="h-16 border-t border-border/40 bg-background/90 backdrop-blur flex items-center justify-center px-4 gap-2 flex-shrink-0">
           {/* Center controls */}
           <div className="flex items-center gap-2">
             {/* Screen share button */}
