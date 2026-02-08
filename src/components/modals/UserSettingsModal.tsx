@@ -747,11 +747,14 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
   // Notifications Content
   const notificationsContent = (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Desktop Notifications - Only for Tauri */}
       {isTauriApp && (
-        <div className="space-y-2">
-          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Desktop App</Label>
+        <div className="p-4 rounded-xl bg-secondary/30 border border-border/50 space-y-2">
+          <div className="flex items-center gap-2 mb-1">
+            <Monitor className="w-4 h-4 text-muted-foreground" />
+            <h3 className="text-sm font-semibold">Desktop App</h3>
+          </div>
           <SettingsToggle
             icon={Monitor}
             label="Desktop Notifications"
@@ -814,8 +817,11 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       )}
 
       {/* Browser Notifications */}
-      <div className="space-y-2">
-        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Browser</Label>
+      <div className="p-4 rounded-xl bg-secondary/30 border border-border/50 space-y-2">
+        <div className="flex items-center gap-2 mb-1">
+          <Globe className="w-4 h-4 text-muted-foreground" />
+          <h3 className="text-sm font-semibold">Browser Notifications</h3>
+        </div>
         <SettingsToggle
           icon={Globe}
           label="Browser Notifications"
@@ -869,8 +875,11 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       </div>
 
       {/* Notification Sound */}
-      <div className="space-y-3">
-        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Sound</Label>
+      <div className="p-4 rounded-xl bg-secondary/30 border border-border/50 space-y-2">
+        <div className="flex items-center gap-2 mb-1">
+          <Volume2 className="w-4 h-4 text-muted-foreground" />
+          <h3 className="text-sm font-semibold">Sound</h3>
+        </div>
         <SettingsToggle
           icon={Volume2}
           label="Notification Sound"
@@ -881,9 +890,9 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
         {/* Sound sub-options when enabled */}
         {notificationSoundEnabled && (
-          <div className="ml-14 space-y-3 pb-2">
+          <div className="space-y-3 pt-2">
             {/* Volume Slider */}
-            <div className="space-y-3 p-4 rounded-xl bg-secondary/30 border border-border/50">
+            <div className="space-y-3 p-3 rounded-lg bg-background/50 border border-border/30">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Volume</span>
                 <span className="text-sm text-muted-foreground">{notificationVolume}%</span>
@@ -909,9 +918,9 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
             </div>
 
             {/* Sound type toggles */}
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">Play sound for:</p>
-              <div className="flex items-center justify-between py-2">
+            <div className="space-y-1 p-3 rounded-lg bg-background/50 border border-border/30">
+              <p className="text-xs text-muted-foreground mb-2">Play sound for:</p>
+              <div className="flex items-center justify-between py-1.5">
                 <div className="flex items-center gap-2">
                   <Users className="w-4 h-4 text-muted-foreground" />
                   <span className="text-sm">Server Mentions (@here, @everyone)</span>
@@ -921,7 +930,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                   onCheckedChange={setNotificationSoundServerMentions}
                 />
               </div>
-              <div className="flex items-center justify-between py-2">
+              <div className="flex items-center justify-between py-1.5">
                 <div className="flex items-center gap-2">
                   <AtSign className="w-4 h-4 text-muted-foreground" />
                   <span className="text-sm">User Mentions (@you)</span>
@@ -931,7 +940,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                   onCheckedChange={setNotificationSoundUserMentions}
                 />
               </div>
-              <div className="flex items-center justify-between py-2">
+              <div className="flex items-center justify-between py-1.5">
                 <div className="flex items-center gap-2">
                   <Reply className="w-4 h-4 text-muted-foreground" />
                   <span className="text-sm">Replies</span>
@@ -947,8 +956,11 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       </div>
 
       {/* Message Preview */}
-      <div className="space-y-3">
-        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Previews</Label>
+      <div className="p-4 rounded-xl bg-secondary/30 border border-border/50 space-y-2">
+        <div className="flex items-center gap-2 mb-1">
+          <MessageSquare className="w-4 h-4 text-muted-foreground" />
+          <h3 className="text-sm font-semibold">Message Previews</h3>
+        </div>
         <SettingsToggle
           icon={MessageSquare}
           label="Message Preview"
@@ -959,9 +971,9 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
         {/* Preview sub-options when enabled */}
         {showMessagePreview && (
-          <div className="ml-14 space-y-2 pb-2">
-            <p className="text-xs text-muted-foreground">Show previews for:</p>
-            <div className="flex items-center justify-between py-2">
+          <div className="space-y-1 p-3 rounded-lg bg-background/50 border border-border/30">
+            <p className="text-xs text-muted-foreground mb-2">Show previews for:</p>
+            <div className="flex items-center justify-between py-1.5">
               <div className="flex items-center gap-2">
                 <Users className="w-4 h-4 text-muted-foreground" />
                 <span className="text-sm">Server Mentions</span>
@@ -971,7 +983,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 onCheckedChange={setShowPreviewServerMentions}
               />
             </div>
-            <div className="flex items-center justify-between py-2">
+            <div className="flex items-center justify-between py-1.5">
               <div className="flex items-center gap-2">
                 <AtSign className="w-4 h-4 text-muted-foreground" />
                 <span className="text-sm">User Mentions</span>
@@ -981,7 +993,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 onCheckedChange={setShowPreviewUserMentions}
               />
             </div>
-            <div className="flex items-center justify-between py-2">
+            <div className="flex items-center justify-between py-1.5">
               <div className="flex items-center gap-2">
                 <Reply className="w-4 h-4 text-muted-foreground" />
                 <span className="text-sm">Replies</span>
