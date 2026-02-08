@@ -62,7 +62,7 @@ const roles: RoleData[] = [
     mindset:
       "You write code that respects the user. You question whether a feature needs to exist before building it. You understand that simplicity and reliability beat complexity and feature bloat every time. You're comfortable working in a fast-moving indie environment where you wear multiple hats.",
     requirements: [
-      { text: "Strong proficiency in React and TypeScript — our entire frontend is built on this foundation" },
+      { text: "Strong proficiency in React and TypeScript." },
       { text: "Working knowledge of Tailwind CSS for styling and component design" },
       {
         text: "Experience with Supabase or PostgreSQL — our backend runs on Supabase, so understanding of Row Level Security policies, PostgreSQL functions, triggers, real-time subscriptions, and database design is highly valued",
