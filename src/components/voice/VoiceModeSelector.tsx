@@ -142,7 +142,7 @@ function ModeCard({ icon, title, description, isSelected, onClick }: ModeCardPro
     <button
       onClick={onClick}
       className={cn(
-        'flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-colors',
+        'flex items-center gap-3 p-3 rounded-xl border-2 transition-colors text-left',
         'hover:bg-secondary/50',
         isSelected
           ? 'border-primary bg-primary/10'
@@ -151,13 +151,13 @@ function ModeCard({ icon, title, description, isSelected, onClick }: ModeCardPro
     >
       <div
         className={cn(
-          'p-2 rounded-lg transition-colors',
+          'p-2 rounded-lg transition-colors shrink-0',
           isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
         )}
       >
         {icon}
       </div>
-      <div className="text-center">
+      <div className="min-w-0">
         <p className={cn('text-sm font-medium', isSelected && 'text-primary')}>
           {title}
         </p>
