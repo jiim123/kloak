@@ -142,8 +142,8 @@ function ModeCard({ icon, title, description, isSelected, onClick }: ModeCardPro
     <button
       onClick={onClick}
       className={cn(
-        'relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200',
-        'hover:bg-white/5',
+        'flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-colors',
+        'hover:bg-secondary/50',
         isSelected
           ? 'border-primary bg-primary/10'
           : 'border-border/50 bg-transparent'
@@ -165,12 +165,6 @@ function ModeCard({ icon, title, description, isSelected, onClick }: ModeCardPro
           {description}
         </p>
       </div>
-      {isSelected && (
-        <motion.div
-          layoutId="voice-mode-indicator"
-          className="absolute inset-0 rounded-xl border-2 border-primary pointer-events-none"
-        />
-      )}
     </button>
   );
 }
