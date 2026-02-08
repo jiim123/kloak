@@ -26,7 +26,18 @@ export type LiveKitParticipant = {
   audioTrack: MediaStreamTrack | null;
   screenTrack: MediaStreamTrack | null;
   joinedAt: number;
+  hideVoiceActivity: boolean; // Added: whether this participant hides their speaking indicator
 };
+
+// Parse participant metadata safely
+function parseParticipantMetadata(participant: Participant): { hideVoiceActivity?: boolean } {
+  try {
+    if (!participant.metadata) return {};
+    return JSON.parse(participant.metadata);
+  } catch {
+    return {};
+  }
+}
 
 type UseLiveKitRoomOptions = {
   channelId: string | null;
@@ -84,6 +95,9 @@ export function useLiveKitRoom(opts: UseLiveKitRoomOptions) {
         }
       });
 
+      // Parse metadata to check hideVoiceActivity
+      const metadata = parseParticipantMetadata(p);
+
       return {
         identity: p.identity,
         name: p.name || p.identity,
@@ -93,6 +107,7 @@ export function useLiveKitRoom(opts: UseLiveKitRoomOptions) {
         audioTrack,
         screenTrack,
         joinedAt: p.joinedAt?.getTime() ?? Date.now(),
+        hideVoiceActivity: metadata.hideVoiceActivity ?? false,
       };
     };
 
@@ -172,6 +187,7 @@ export function useLiveKitRoom(opts: UseLiveKitRoomOptions) {
       room.on(RoomEvent.LocalTrackPublished, updateParticipants);
       room.on(RoomEvent.LocalTrackUnpublished, updateParticipants);
       room.on(RoomEvent.ActiveSpeakersChanged, updateParticipants);
+      room.on(RoomEvent.ParticipantMetadataChanged, updateParticipants); // Listen for metadata changes (hideVoiceActivity)
       room.on(RoomEvent.ConnectionStateChanged, (state: ConnectionState) => {
         if (state === ConnectionState.Disconnected) {
           setStatus("idle");
@@ -186,8 +202,20 @@ export function useLiveKitRoom(opts: UseLiveKitRoomOptions) {
       // Connect to the room with audio enabled
       await room.connect(data.url, data.token);
 
-      // Enable microphone based on muteOnJoin setting
-      const shouldStartMuted = voiceSettings.muteOnJoin;
+      // Set initial hideVoiceActivity metadata
+      if (voiceSettings.hideVoiceActivity) {
+        try {
+          await room.localParticipant.setMetadata(JSON.stringify({ hideVoiceActivity: true }));
+        } catch (err) {
+          console.error('Failed to set initial metadata:', err);
+        }
+      }
+
+      // Determine if mic should start enabled
+      // For PTT mode, always start muted (user must press key to talk)
+      // For Voice Activity mode, respect muteOnJoin setting
+      const isPTTMode = voiceSettings.voiceMode === 'push_to_talk';
+      const shouldStartMuted = isPTTMode || voiceSettings.muteOnJoin;
       await room.localParticipant.setMicrophoneEnabled(!shouldStartMuted);
 
       setStatus("joined");

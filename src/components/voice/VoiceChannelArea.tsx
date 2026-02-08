@@ -16,7 +16,9 @@ import { useServerStore } from "@/stores/serverStore";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { useFriendStore } from "@/stores/friendStore";
+import { useVoiceSettingsStore } from "@/stores/voiceSettingsStore";
 import { useLiveKitRoom, LiveKitParticipant } from "@/hooks/useLiveKitRoom";
+import { usePushToTalk } from "@/hooks/usePushToTalk";
 import { ScreenShareQualityModal, ScreenShareQuality } from "./ScreenShareQualityModal";
 import type { Channel, ServerMember } from "@/types";
 
@@ -93,7 +95,13 @@ type TileProps = {
 // Discord-style participant tile
 function ParticipantTile({ participant, member, isYou, isDeafened, compact }: TileProps) {
   const name = getMemberDisplayName(member, participant);
-  const speaking = participant.isSpeaking;
+  
+  // Respect hideVoiceActivity: hide speaking indicator for others if they've enabled it
+  // Local user can always see their own indicator
+  const speaking = isYou 
+    ? participant.isSpeaking 
+    : (participant.isSpeaking && !participant.hideVoiceActivity);
+  
   const bgColor = useMemo(() => stringToColor(participant.identity), [participant.identity]);
 
   return (
@@ -177,6 +185,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
   const { user } = useAuthStore();
   const { members } = useServerStore();
   const setJoinedChannel = useVoiceStore((s) => s.setJoinedChannel);
+  const voiceSettings = useVoiceSettingsStore((s) => s.settings);
 
   const [showQualityModal, setShowQualityModal] = useState(false);
   const [watchingStreamId, setWatchingStreamId] = useState<string | null>(null);
@@ -188,6 +197,37 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
     userId: user?.id || null,
     displayName: user?.display_name || user?.username,
   });
+
+  // Push to Talk keyboard handler
+  const handlePTTMuteChange = useCallback((muted: boolean) => {
+    // Update the local mute state in sync with PTT
+    voice.room?.localParticipant && voice.room.localParticipant.isMicrophoneEnabled !== !muted;
+  }, [voice.room]);
+
+  usePushToTalk({
+    room: voice.room,
+    isConnected: voice.isJoined,
+    onMuteChange: handlePTTMuteChange,
+  });
+
+  // Sync hideVoiceActivity metadata when setting changes
+  useEffect(() => {
+    if (!voice.isJoined || !voice.room?.localParticipant) return;
+    
+    const updateMetadata = async () => {
+      try {
+        const currentMetadata = voice.room?.localParticipant.metadata 
+          ? JSON.parse(voice.room.localParticipant.metadata) 
+          : {};
+        const newMetadata = { ...currentMetadata, hideVoiceActivity: voiceSettings.hideVoiceActivity };
+        await voice.room?.localParticipant.setMetadata(JSON.stringify(newMetadata));
+      } catch (err) {
+        console.error('Failed to update hideVoiceActivity metadata:', err);
+      }
+    };
+    
+    updateMetadata();
+  }, [voice.isJoined, voice.room, voiceSettings.hideVoiceActivity]);
 
   // Persist the joined voice channel metadata
   useEffect(() => {

@@ -29,3 +29,7 @@ export { useRealtimeOwnMembership } from './useRealtimeOwnMembership';
 export { useSwipeGesture, useSwipeGestureRef } from './useSwipeGesture';
 export { useServerEmojis } from './useServerEmojis';
 export { useLiveKitRoom } from './useLiveKitRoom';
+export { usePushToTalk } from './usePushToTalk';
+export { useHideVoiceActivity, shouldShowSpeakingIndicator, useParticipantSpeaking } from './useHideVoiceActivity';
+export { useAudioDevices } from './useAudioDevices';
+export { useAudioLevel } from './useAudioLevel';
