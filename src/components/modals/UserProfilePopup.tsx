@@ -5,11 +5,13 @@ import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
+import { UserBadges } from "@/components/ui/user-badges";
 import { useUIStore } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { useDMStore } from "@/stores/dmStore";
+import { useUserBadges } from "@/hooks/useUserBadges";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -107,6 +109,9 @@ export const UserProfilePopup = () => {
 
   const isOpen = activeModal === "userProfile";
   const userId = modalData?.userId as string | undefined;
+  
+  // Fetch user badges
+  const { badges: userBadges } = useUserBadges(isOpen ? userId : undefined);
 
   // Check for cooldown from declined requests
   const checkCooldown = useCallback(async () => {
@@ -503,6 +508,9 @@ export const UserProfilePopup = () => {
                        <h2 className="text-xl font-semibold tracking-tight truncate">
                          {profileUser.display_name || profileUser.username}
                        </h2>
+                       {userBadges.length > 0 && (
+                         <UserBadges badges={userBadges} />
+                       )}
                        {profileUser.pronouns && (
                          <span className="text-sm text-[color:var(--profile-muted)] font-normal">
                            • {profileUser.pronouns}
@@ -521,6 +529,9 @@ export const UserProfilePopup = () => {
                      <h2 className="text-xl font-semibold tracking-tight">
                        {profileUser.display_name || profileUser.username}
                      </h2>
+                     {userBadges.length > 0 && (
+                       <UserBadges badges={userBadges} />
+                     )}
                      {profileUser.pronouns && (
                        <span className="text-sm text-[color:var(--profile-muted)] font-normal">
                          • {profileUser.pronouns}
