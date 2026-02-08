@@ -7,7 +7,7 @@ import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RotateCcw, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -65,7 +65,7 @@ export function VoiceSettingsPanel({ className }: VoiceSettingsPanelProps) {
   }
 
   return (
-    <div className={cn('space-y-6', className)}>
+    <div className={cn('space-y-4', className)}>
       {/* Saved Indicator */}
       <AnimatePresence>
         {showSaved && (
@@ -82,8 +82,8 @@ export function VoiceSettingsPanel({ className }: VoiceSettingsPanelProps) {
       </AnimatePresence>
 
       {/* Section: Audio Devices */}
-      <section className="p-4 rounded-xl bg-white/5 backdrop-blur-md border border-border/50">
-        <h2 className="text-base font-semibold text-foreground mb-4">Audio Devices</h2>
+      <section className="p-4 rounded-xl bg-secondary/30 border border-border/50">
+        <h2 className="text-sm font-semibold text-foreground mb-4">Audio Devices</h2>
         <AudioDeviceSelector
           inputDeviceId={settings.inputDeviceId}
           outputDeviceId={settings.outputDeviceId}
@@ -98,11 +98,9 @@ export function VoiceSettingsPanel({ className }: VoiceSettingsPanelProps) {
         />
       </section>
 
-      <Separator />
-
       {/* Section: Voice Mode */}
-      <section className="p-4 rounded-xl bg-white/5 backdrop-blur-md border border-border/50">
-        <h2 className="text-base font-semibold text-foreground mb-4">Voice Mode</h2>
+      <section className="p-4 rounded-xl bg-secondary/30 border border-border/50">
+        <h2 className="text-sm font-semibold text-foreground mb-4">Voice Mode</h2>
         <VoiceModeSelector
           voiceMode={settings.voiceMode}
           voiceActivityThreshold={settings.voiceActivityThreshold}
@@ -115,10 +113,8 @@ export function VoiceSettingsPanel({ className }: VoiceSettingsPanelProps) {
         />
       </section>
 
-      <Separator />
-
       {/* Section: Audio Processing */}
-      <section className="p-4 rounded-xl bg-white/5 backdrop-blur-md border border-border/50">
+      <section className="p-4 rounded-xl bg-secondary/30 border border-border/50">
         <AudioProcessingSection
           noiseSuppression={settings.noiseSuppression}
           echoCancellation={settings.echoCancellation}
@@ -129,10 +125,8 @@ export function VoiceSettingsPanel({ className }: VoiceSettingsPanelProps) {
         />
       </section>
 
-      <Separator />
-
       {/* Section: Notifications */}
-      <section className="p-4 rounded-xl bg-white/5 backdrop-blur-md border border-border/50">
+      <section className="p-4 rounded-xl bg-secondary/30 border border-border/50">
         <VoiceNotificationsSection
           joinLeaveSound={settings.joinLeaveSound}
           pttActivationSound={settings.pttActivationSound}
@@ -144,10 +138,8 @@ export function VoiceSettingsPanel({ className }: VoiceSettingsPanelProps) {
         />
       </section>
 
-      <Separator />
-
       {/* Section: Privacy */}
-      <section className="p-4 rounded-xl bg-white/5 backdrop-blur-md border border-border/50">
+      <section className="p-4 rounded-xl bg-secondary/30 border border-border/50">
         <VoicePrivacySection
           muteOnJoin={settings.muteOnJoin}
           autoDisconnectMinutes={settings.autoDisconnectMinutes}
@@ -158,10 +150,8 @@ export function VoiceSettingsPanel({ className }: VoiceSettingsPanelProps) {
         />
       </section>
 
-      <Separator />
-
       {/* Section: Accessibility */}
-      <section className="p-4 rounded-xl bg-white/5 backdrop-blur-md border border-border/50">
+      <section className="p-4 rounded-xl bg-secondary/30 border border-border/50">
         <VoiceAccessibilitySection
           visualVoiceIndicators={settings.visualVoiceIndicators}
           monoAudio={settings.monoAudio}
@@ -169,8 +159,6 @@ export function VoiceSettingsPanel({ className }: VoiceSettingsPanelProps) {
           onMonoAudioChange={(v) => update('monoAudio', v)}
         />
       </section>
-
-      <Separator />
 
       {/* Reset to Defaults */}
       <div className="flex justify-end pt-2">
