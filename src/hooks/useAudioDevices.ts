@@ -39,21 +39,37 @@ export function useAudioDevices(): UseAudioDevicesReturn {
       const hasLabels = devices.some(d => d.label && d.label.length > 0);
       setHasPermission(hasLabels);
 
+      // Clean device label: strip trailing hardware IDs like "(1b1c:0a69)"
+      const cleanLabel = (label: string): string =>
+        label.replace(/\s*\([0-9a-f]{4}:[0-9a-f]{4}\)\s*/gi, '').trim();
+
+      // Track seen labels to deduplicate
+      const seenInputLabels = new Set<string>();
+      const seenOutputLabels = new Set<string>();
+
       devices.forEach((device, index) => {
         if (device.kind === 'audioinput') {
-          inputs.push({
-            deviceId: device.deviceId,
-            label: device.label || `Microphone ${index + 1}`,
-            kind: 'audioinput',
-            isDefault: device.deviceId === 'default' || index === 0,
-          });
+          const label = cleanLabel(device.label) || `Microphone ${index + 1}`;
+          if (!seenInputLabels.has(label)) {
+            seenInputLabels.add(label);
+            inputs.push({
+              deviceId: device.deviceId,
+              label,
+              kind: 'audioinput',
+              isDefault: device.deviceId === 'default' || index === 0,
+            });
+          }
         } else if (device.kind === 'audiooutput') {
-          outputs.push({
-            deviceId: device.deviceId,
-            label: device.label || `Speaker ${index + 1}`,
-            kind: 'audiooutput',
-            isDefault: device.deviceId === 'default' || index === 0,
-          });
+          const label = cleanLabel(device.label) || `Speaker ${index + 1}`;
+          if (!seenOutputLabels.has(label)) {
+            seenOutputLabels.add(label);
+            outputs.push({
+              deviceId: device.deviceId,
+              label,
+              kind: 'audiooutput',
+              isDefault: device.deviceId === 'default' || index === 0,
+            });
+          }
         }
       });
 
