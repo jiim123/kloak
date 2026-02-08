@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { Mic, Volume2, AlertCircle, RefreshCw, Check } from 'lucide-react';
+import { Mic, Volume2, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -141,16 +141,13 @@ export function AudioDeviceSelector({
           onValueChange={(v) => onInputDeviceChange(v)}
           disabled={isLoading || !hasPermission}
         >
-          <SelectTrigger className="w-full">
+          <SelectTrigger className="w-full [&>span]:truncate [&>span]:max-w-[calc(100%-24px)]">
             <SelectValue placeholder="Select microphone" />
           </SelectTrigger>
           <SelectContent>
             {inputDevices.filter(d => d.deviceId).map((device) => (
               <SelectItem key={device.deviceId} value={device.deviceId}>
-                <span className="flex items-center gap-2">
-                  {device.isDefault && <Check className="h-3.5 w-3.5 text-green-500" />}
-                  {device.label}
-                </span>
+                <span className="truncate">{device.label}</span>
               </SelectItem>
             ))}
           </SelectContent>
@@ -206,16 +203,13 @@ export function AudioDeviceSelector({
             onValueChange={(v) => onOutputDeviceChange(v)}
             disabled={isLoading || !hasPermission}
           >
-            <SelectTrigger className="w-full">
+            <SelectTrigger className="w-full [&>span]:truncate [&>span]:max-w-[calc(100%-24px)]">
               <SelectValue placeholder="Select speaker" />
             </SelectTrigger>
             <SelectContent>
               {outputDevices.filter(d => d.deviceId).map((device) => (
                 <SelectItem key={device.deviceId} value={device.deviceId}>
-                  <span className="flex items-center gap-2">
-                    {device.isDefault && <Check className="h-3.5 w-3.5 text-green-500" />}
-                    {device.label}
-                  </span>
+                  <span className="truncate">{device.label}</span>
                 </SelectItem>
               ))}
             </SelectContent>
