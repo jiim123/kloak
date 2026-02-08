@@ -14,6 +14,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { pauseVoicePresenceWatch, resumeVoicePresenceWatch } from "@/hooks/useVoicePresenceWatchers";
+import type { ScreenShareQuality } from "@/components/voice/ScreenShareQualityModal";
 
 export type LiveKitParticipant = {
   identity: string;
@@ -30,6 +31,12 @@ type UseLiveKitRoomOptions = {
   channelId: string | null;
   userId: string | null;
   displayName?: string;
+};
+
+// Screen share quality presets
+const QUALITY_PRESETS: Record<string, { width: number; height: number }> = {
+  "720p": { width: 1280, height: 720 },
+  "1080p": { width: 1920, height: 1080 },
 };
 
 export function useLiveKitRoom(opts: UseLiveKitRoomOptions) {
@@ -49,6 +56,7 @@ export function useLiveKitRoom(opts: UseLiveKitRoomOptions) {
   const [isMuted, setIsMuted] = useState(false);
   const [isDeafened, setIsDeafened] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [screenShareQuality, setScreenShareQuality] = useState<ScreenShareQuality | null>(null);
 
   const updateParticipants = useCallback(() => {
     const room = roomRef.current;
@@ -203,6 +211,7 @@ export function useLiveKitRoom(opts: UseLiveKitRoomOptions) {
     setIsMuted(false);
     setIsDeafened(false);
     setIsScreenSharing(false);
+    setScreenShareQuality(null);
     setConnection({ channelId: null, status: "idle", error: null });
     setJoinedChannelId(null);
     setControls({ muted: false, deafened: false });
@@ -254,13 +263,50 @@ export function useLiveKitRoom(opts: UseLiveKitRoomOptions) {
     updateParticipants();
   }, [isDeafened, isMuted, setControls, updateParticipants]);
 
-  const startScreenShare = useCallback(async () => {
+  const startScreenShare = useCallback(async (quality: ScreenShareQuality) => {
     const room = roomRef.current;
     if (!room) return;
 
     try {
-      await room.localParticipant.setScreenShareEnabled(true);
+      const preset = QUALITY_PRESETS[quality.resolution];
+      
+      // Request screen share with specified quality
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          width: { ideal: preset.width, max: preset.width },
+          height: { ideal: preset.height, max: preset.height },
+          frameRate: { ideal: quality.frameRate, max: quality.frameRate },
+        },
+        audio: true,
+      });
+
+      // Publish tracks to LiveKit
+      const videoTrack = stream.getVideoTracks()[0];
+      const audioTrack = stream.getAudioTracks()[0];
+
+      if (videoTrack) {
+        await room.localParticipant.publishTrack(videoTrack, {
+          source: Track.Source.ScreenShare,
+          videoEncoding: {
+            maxBitrate: quality.resolution === "1080p" ? 3_000_000 : 1_500_000,
+            maxFramerate: quality.frameRate,
+          },
+        });
+
+        // Handle track ended (user clicked "Stop sharing" in browser UI)
+        videoTrack.onended = () => {
+          stopScreenShare();
+        };
+      }
+
+      if (audioTrack) {
+        await room.localParticipant.publishTrack(audioTrack, {
+          source: Track.Source.ScreenShareAudio,
+        });
+      }
+
       setIsScreenSharing(true);
+      setScreenShareQuality(quality);
       updateParticipants();
     } catch (err) {
       console.error("Failed to start screen share:", err);
@@ -271,8 +317,15 @@ export function useLiveKitRoom(opts: UseLiveKitRoomOptions) {
     const room = roomRef.current;
     if (!room) return;
 
-    await room.localParticipant.setScreenShareEnabled(false);
+    // Unpublish screen share tracks
+    room.localParticipant.trackPublications.forEach((pub) => {
+      if (pub.source === Track.Source.ScreenShare || pub.source === Track.Source.ScreenShareAudio) {
+        room.localParticipant.unpublishTrack(pub.track!);
+      }
+    });
+
     setIsScreenSharing(false);
+    setScreenShareQuality(null);
     updateParticipants();
   }, [updateParticipants]);
 
@@ -296,6 +349,7 @@ export function useLiveKitRoom(opts: UseLiveKitRoomOptions) {
       muted: isMuted,
       deafened: isDeafened,
       sharing: isScreenSharing,
+      shareQuality: screenShareQuality,
     },
     join,
     leave,
