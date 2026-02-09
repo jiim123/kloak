@@ -1191,7 +1191,7 @@ export const MessageItem = memo(function MessageItem({
                 </ContextMenuItem>
               </>
             )}
-            {hasEmbeddableUrls && !isEmbedHidden && (
+            {isOwnMessage && hasEmbeddableUrls && !isEmbedHidden && (
               <>
                 <ContextMenuSeparator />
                 <ContextMenuItem onClick={handleRemoveEmbed}>
@@ -1299,7 +1299,7 @@ export const MessageItem = memo(function MessageItem({
               )}
 
               {/* Remove Embed */}
-              {hasEmbeddableUrls && !isEmbedHidden && (
+              {isOwnMessage && hasEmbeddableUrls && !isEmbedHidden && (
                 <button
                   className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-accent active:bg-accent text-left transition-colors"
                   onClick={() => {
