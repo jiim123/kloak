@@ -222,11 +222,15 @@ const Auth = () => {
 
     try {
       recordRegistrationAttempt();
+      // Set modal flag BEFORE createAccount so the redirect useEffect
+      // won't navigate away when the user is set in the store.
+      setShowWelcomeModal(true);
       const result = await createAccount(username.trim().toLowerCase());
       if (result) {
         setGeneratedKey(result.secretKey);
-        // Show onboarding modal immediately (combines welcome + key display)
-        setShowWelcomeModal(true);
+      } else {
+        // Account creation failed — reset the modal flag
+        setShowWelcomeModal(false);
       }
     } catch (err) {
       console.error('Account creation error:', err);
