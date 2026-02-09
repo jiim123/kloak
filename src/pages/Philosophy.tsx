@@ -29,11 +29,13 @@ const manifestPoints = [
     title: "No greedy shareholders",
     content:
       "Shareholder-driven platforms don't work for you, they work for profit. That means maximizing 'engagement' through ads, tracking, and psychological manipulation. Your attention becomes the product they sell. Kloak operates on a simple principle: you pay us, we work for you. Some features require payment, but when you're the customer instead of the product, our success depends on your satisfaction—not your addiction.",
+  },
   {
     icon: Heart,
     title: "No micro-transactions. Ever.",
     content:
       "No premium emojis. No paid stickers. No server boosts or cosmetic gambling. These 'features' are designed by psychologists to exploit you—through FOMO, social pressure, and artificial scarcity. It's gross, and we're not doing it. You're not a slot machine.",
+  },
   {
     icon: Sparkles,
     title: "AI that helps, not surveils",
