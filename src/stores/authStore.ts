@@ -237,6 +237,8 @@ export const useAuthStore = create<AuthState>()(
         const { user } = get();
         if (!user) return;
 
+        console.log('[authStore] updateUser called with:', updates);
+
         try {
           // Normalize empty strings to null for custom_status
           const normalizedUpdates = { ...updates };
@@ -244,19 +246,28 @@ export const useAuthStore = create<AuthState>()(
             normalizedUpdates.custom_status = null;
           }
 
+          console.log('[authStore] Normalized updates:', normalizedUpdates);
+
           const { data, error } = await supabase.rpc('update_user_profile', {
             _user_id: user.id,
             _updates: normalizedUpdates,
           });
 
+          console.log('[authStore] RPC response - data:', data, 'error:', error);
+
           if (error) throw error;
           
           if (data) {
             const userData = data as Record<string, unknown>;
+            console.log('[authStore] userData from RPC:', userData);
+            console.log('[authStore] userData.custom_status:', userData.custom_status);
+            
             // Handle custom_status explicitly - if it was set to null/empty, ensure it becomes null
             const newCustomStatus = 'custom_status' in normalizedUpdates 
               ? (normalizedUpdates.custom_status === null ? null : (userData.custom_status as string | null))
               : (userData.custom_status as string | null) ?? user.custom_status;
+            
+            console.log('[authStore] newCustomStatus resolved to:', newCustomStatus);
             
             set({ 
               user: { 
@@ -274,7 +285,9 @@ export const useAuthStore = create<AuthState>()(
                 pronouns: (userData.pronouns as string | null) ?? user.pronouns,
               } 
             });
+            console.log('[authStore] State updated, final custom_status:', get().user?.custom_status);
           } else {
+            console.log('[authStore] No data returned, using normalizedUpdates directly');
             set({ user: { ...user, ...normalizedUpdates } });
           }
         } catch (error) {

@@ -159,6 +159,7 @@ export const StatusSelector = ({ children, side = 'right', align = 'start' }: St
   };
 
   const handleClearCustomStatus = async () => {
+    console.log('[StatusSelector] Clear button clicked, current custom_status:', user?.custom_status);
     // Clear local state first
     setCustomStatusText('');
     setSelectedEmoji('');
@@ -166,9 +167,10 @@ export const StatusSelector = ({ children, side = 'right', align = 'start' }: St
     if (clearTimeoutRef.current) {
       clearTimeout(clearTimeoutRef.current);
     }
-    // Persist to database - pass empty string to ensure it's recognized as "clear"
-    // The RPC will convert empty string to null
-    await updateUser({ custom_status: '' });
+    // Persist to database - pass null directly
+    console.log('[StatusSelector] Calling updateUser with custom_status: null');
+    await updateUser({ custom_status: null });
+    console.log('[StatusSelector] updateUser completed, new custom_status:', useAuthStore.getState().user?.custom_status);
     // Close the dropdown after clearing
     setIsOpen(false);
   };
