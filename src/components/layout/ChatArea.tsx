@@ -5,7 +5,6 @@ import { MessageInput } from "@/components/chat/MessageInput";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { ForumChannelArea } from "@/components/forum/ForumChannelArea";
 import { MediaChannelArea } from "@/components/media/MediaChannelArea";
-import { TasksChannelArea } from "@/components/tasks/TasksChannelArea";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useMessageStore } from "@/stores/messageStore";
@@ -265,11 +264,6 @@ export const ChatArea = () => {
   if (currentChannel.type === "media") {
     // Media channels use a gallery-style UI
     return <MediaChannelArea />;
-  }
-
-  if (currentChannel.type === "tasks") {
-    // Tasks channels use a list-based UI
-    return <TasksChannelArea />;
   }
 
   return (

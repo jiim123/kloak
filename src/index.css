@@ -15,7 +15,7 @@
 
 @layer base {
   /* ========================================
-     DEFAULT THEME
+     DEFAULT THEME (Orange/Amber brand)
      Dark mode by default
      ======================================== */
   :root,
@@ -27,7 +27,7 @@
     --brand-300: 0 0% 28%;
     --brand-400: 0 0% 42%;
     --brand-500: 0 0% 58%;
-    --brand-600: 48 100% 93%;
+    --brand-600: 0 0% 93%; /* Primary accent #EDEDED */
     --brand-700: 0 0% 96%; /* Hover #F5F5F5 */
     --brand-800: 0 0% 98%; /* Active #FAFAFA */
     --brand-900: 0 0% 100%;

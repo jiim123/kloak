@@ -66,14 +66,6 @@ const ROLE_PERMISSIONS: Record<ServerRole, Permission[]> = {
     'speak',
     'use_voice_activation',
     'use_application_commands',
-    // Task permissions
-    'view_tasks',
-    'create_tasks',
-    'edit_own_tasks',
-    'edit_all_tasks',
-    'assign_tasks',
-    'change_task_status',
-    'delete_tasks',
   ],
   admin: [
     'manage_channels',
@@ -104,14 +96,6 @@ const ROLE_PERMISSIONS: Record<ServerRole, Permission[]> = {
     'speak',
     'use_voice_activation',
     'use_application_commands',
-    // Task permissions
-    'view_tasks',
-    'create_tasks',
-    'edit_own_tasks',
-    'edit_all_tasks',
-    'assign_tasks',
-    'change_task_status',
-    'delete_tasks',
   ],
   moderator: [
     'kick_members',
@@ -136,11 +120,6 @@ const ROLE_PERMISSIONS: Record<ServerRole, Permission[]> = {
     'speak',
     'use_voice_activation',
     'use_application_commands',
-    // Task permissions
-    'view_tasks',
-    'create_tasks',
-    'edit_own_tasks',
-    'change_task_status',
   ],
   member: [
     'send_messages',
@@ -157,11 +136,6 @@ const ROLE_PERMISSIONS: Record<ServerRole, Permission[]> = {
     'speak',
     'use_voice_activation',
     'use_application_commands',
-    // Task permissions
-    'view_tasks',
-    'create_tasks',
-    'edit_own_tasks',
-    'change_task_status',
   ],
 };
 
@@ -478,13 +452,6 @@ export const getMemberPermissions = (
     'speak',
     'use_voice_activation',
     'use_application_commands',
-    'view_tasks',
-    'create_tasks',
-    'edit_own_tasks',
-    'edit_all_tasks',
-    'assign_tasks',
-    'change_task_status',
-    'delete_tasks',
   ];
 
   for (const permission of allPermissions) {
