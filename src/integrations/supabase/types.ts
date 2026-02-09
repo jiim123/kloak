@@ -1635,6 +1635,8 @@ export type Database = {
       tasks: {
         Row: {
           channel_id: string
+          completed_at: string | null
+          completed_by: string | null
           created_at: string | null
           created_by: string
           description: string | null
@@ -1643,11 +1645,14 @@ export type Database = {
           priority: Database["public"]["Enums"]["task_priority"] | null
           server_id: string
           status: Database["public"]["Enums"]["task_status"]
+          task_position: number
           title: string
           updated_at: string | null
         }
         Insert: {
           channel_id: string
+          completed_at?: string | null
+          completed_by?: string | null
           created_at?: string | null
           created_by: string
           description?: string | null
@@ -1656,11 +1661,14 @@ export type Database = {
           priority?: Database["public"]["Enums"]["task_priority"] | null
           server_id: string
           status?: Database["public"]["Enums"]["task_status"]
+          task_position?: number
           title: string
           updated_at?: string | null
         }
         Update: {
           channel_id?: string
+          completed_at?: string | null
+          completed_by?: string | null
           created_at?: string | null
           created_by?: string
           description?: string | null
@@ -1669,6 +1677,7 @@ export type Database = {
           priority?: Database["public"]["Enums"]["task_priority"] | null
           server_id?: string
           status?: Database["public"]["Enums"]["task_status"]
+          task_position?: number
           title?: string
           updated_at?: string | null
         }
@@ -1678,6 +1687,13 @@ export type Database = {
             columns: ["channel_id"]
             isOneToOne: false
             referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
@@ -2447,7 +2463,6 @@ export type Database = {
       get_channel_server_id: { Args: { _channel_id: string }; Returns: string }
       get_channel_tasks: {
         Args: {
-          _assignee_filter?: string
           _channel_id: string
           _sort_by?: string
           _sort_order?: string
@@ -2927,7 +2942,7 @@ export type Database = {
           _title?: string
           _user_id: string
         }
-        Returns: Json
+        Returns: undefined
       }
       update_task_comment: {
         Args: { _comment_id: string; _content: string; _user_id: string }
@@ -2973,7 +2988,12 @@ export type Database = {
         | "media"
       friendship_status: "pending" | "accepted" | "blocked"
       mention_type: "user" | "everyone" | "here" | "role"
-      notification_type: "mention" | "dm" | "friend_request" | "server_invite"
+      notification_type:
+        | "mention"
+        | "dm"
+        | "friend_request"
+        | "server_invite"
+        | "task_assignment"
       permission_type:
         | "manage_server"
         | "manage_roles"
@@ -3154,7 +3174,13 @@ export const Constants = {
       ],
       friendship_status: ["pending", "accepted", "blocked"],
       mention_type: ["user", "everyone", "here", "role"],
-      notification_type: ["mention", "dm", "friend_request", "server_invite"],
+      notification_type: [
+        "mention",
+        "dm",
+        "friend_request",
+        "server_invite",
+        "task_assignment",
+      ],
       permission_type: [
         "manage_server",
         "manage_roles",

@@ -137,7 +137,7 @@ const Philosophy = () => {
                       </div>
                       <div className="flex-1">
                         <h3 className="text-lg md:text-xl font-medium text-foreground mb-3">{point.title}</h3>
-                        <p className="text-muted-foreground text-sm md:text-base leading-relaxed">{point.content}</p>
+                        <p className="text-muted-foreground text-[17px] leading-[1.7]">{point.content}</p>
                       </div>
                     </div>
                   </motion.div>
