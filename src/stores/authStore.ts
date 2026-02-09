@@ -237,8 +237,6 @@ export const useAuthStore = create<AuthState>()(
         const { user } = get();
         if (!user) return;
 
-        console.log('[authStore] updateUser called with:', updates);
-
         try {
           // Normalize empty strings to null for custom_status
           const normalizedUpdates = { ...updates };
@@ -246,48 +244,34 @@ export const useAuthStore = create<AuthState>()(
             normalizedUpdates.custom_status = null;
           }
 
-          console.log('[authStore] Normalized updates:', normalizedUpdates);
-
           const { data, error } = await supabase.rpc('update_user_profile', {
             _user_id: user.id,
             _updates: normalizedUpdates,
           });
 
-          console.log('[authStore] RPC response - data:', data, 'error:', error);
-
           if (error) throw error;
           
           if (data) {
             const userData = data as Record<string, unknown>;
-            console.log('[authStore] userData from RPC:', userData);
-            console.log('[authStore] userData.custom_status:', userData.custom_status);
             
-            // Handle custom_status explicitly - if it was set to null/empty, ensure it becomes null
-            const newCustomStatus = 'custom_status' in normalizedUpdates 
-              ? (normalizedUpdates.custom_status === null ? null : (userData.custom_status as string | null))
-              : (userData.custom_status as string | null) ?? user.custom_status;
+            // Build the updated user object, respecting explicit null values from normalizedUpdates
+            const updatedUser = { 
+              ...user, 
+              display_name: 'display_name' in normalizedUpdates ? normalizedUpdates.display_name as string | null : (userData.display_name as string | null) ?? user.display_name,
+              bio: 'bio' in normalizedUpdates ? normalizedUpdates.bio as string | null : (userData.bio as string | null) ?? user.bio,
+              avatar_url: 'avatar_url' in normalizedUpdates ? normalizedUpdates.avatar_url as string | null : (userData.avatar_url as string | null) ?? user.avatar_url,
+              banner_url: 'banner_url' in normalizedUpdates ? normalizedUpdates.banner_url as string | null : (userData.banner_url as string | null) ?? user.banner_url,
+              avatar_decoration: 'avatar_decoration' in normalizedUpdates ? normalizedUpdates.avatar_decoration as string | null : (userData.avatar_decoration as string | null) ?? user.avatar_decoration,
+              profile_effect: 'profile_effect' in normalizedUpdates ? normalizedUpdates.profile_effect as string | null : (userData.profile_effect as string | null) ?? user.profile_effect,
+              banner_color: 'banner_color' in normalizedUpdates ? normalizedUpdates.banner_color as string : (userData.banner_color as string) || user.banner_color,
+              profile_theme_primary: 'profile_theme_primary' in normalizedUpdates ? normalizedUpdates.profile_theme_primary as string | null : (userData.profile_theme_primary as string | null) ?? user.profile_theme_primary,
+              profile_theme_accent: 'profile_theme_accent' in normalizedUpdates ? normalizedUpdates.profile_theme_accent as string | null : (userData.profile_theme_accent as string | null) ?? user.profile_theme_accent,
+              custom_status: 'custom_status' in normalizedUpdates ? normalizedUpdates.custom_status as string | null : (userData.custom_status as string | null) ?? user.custom_status,
+              pronouns: 'pronouns' in normalizedUpdates ? normalizedUpdates.pronouns as string | null : (userData.pronouns as string | null) ?? user.pronouns,
+            };
             
-            console.log('[authStore] newCustomStatus resolved to:', newCustomStatus);
-            
-            set({ 
-              user: { 
-                ...user, 
-                display_name: userData.display_name as string | null,
-                bio: userData.bio as string | null,
-                avatar_url: userData.avatar_url as string | null,
-                banner_url: (userData.banner_url as string | null) ?? user.banner_url,
-                avatar_decoration: userData.avatar_decoration as string | null,
-                profile_effect: (userData.profile_effect as string | null) ?? user.profile_effect,
-                banner_color: (userData.banner_color as string) || user.banner_color,
-                profile_theme_primary: (userData.profile_theme_primary as string | null) ?? user.profile_theme_primary,
-                profile_theme_accent: (userData.profile_theme_accent as string | null) ?? user.profile_theme_accent,
-                custom_status: newCustomStatus,
-                pronouns: (userData.pronouns as string | null) ?? user.pronouns,
-              } 
-            });
-            console.log('[authStore] State updated, final custom_status:', get().user?.custom_status);
+            set({ user: updatedUser });
           } else {
-            console.log('[authStore] No data returned, using normalizedUpdates directly');
             set({ user: { ...user, ...normalizedUpdates } });
           }
         } catch (error) {
