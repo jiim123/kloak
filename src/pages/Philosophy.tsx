@@ -10,32 +10,30 @@ const manifestPoints = [
     icon: Shield,
     title: "Privacy is the architecture",
     content:
-      "Most platforms treat privacy as a feature. A settings toggle. A checkbox in preferences. Something you turn on after they've already collected everything about you. At Kloak, privacy isn't a feature. It's a constraint we designed around from day one. We don't collect your email because the system doesn't need it. We don't track your location because the system doesn't ask for it. We built the walls without doors, so there's nothing to lock.",
+      "Most platforms make privacy a feature. A checkbox in your settings menu. Something you enable after they've gathered everything about you. Privacy isn't a feature at Kloak. It's a limitation we defined from the outset. We don't collect your email address because we don't need it. We don't track your location because our system doesn't require you to provide it.",
   },
   {
     icon: Lock,
-    title: "No email. No password. No problem.",
+    title: "No email. No password. No digital identity.",
     content:
-      "Your email address is the skeleton key to your digital identity. It links your shopping habits to your political views to your medical searches. Every company that has it can connect the dots. Every breach exposes the same identifier across a dozen services. We use cryptographic secret keys instead. The same technology securing billions of dollars in cryptocurrency. Your key is generated on your device, stays on your device, and proves you're you without telling us anything about who you actually are.",
+      "Your email address is your skeleton key to digital identity. Your buying patterns, your politics, and your medical questions are all tied together with your email address. All businesses with that information have access to the tools necessary to connect the dots on you. All hacks compromise the same identity for a dozen other locations. We use secret keys, cryptographic technology. The same technology that secures billions in cryptocurrency. Your key is generated on your device, stored on your device, and verifies you without ever telling us anything about who you really are.",
   },
   {
     icon: EyeOff,
     title: "Metadata is data",
     content:
-      "End-to-end encryption is necessary but not sufficient. Encrypted messages can't be read in transit. But most encrypted platforms still collect everything around the message. Who you talked to, when, how often, from where, on what device. They build social graphs. They analyze patterns. Real privacy means minimizing collection at every layer. Not just encrypting the payload while hoovering up everything else.",
+      "You may be encrypting your messages. But being encrypted doesn't necessarily make people private. Most messaging apps monitor all of the information around your conversations. They are aware of who you’re talking to, when, how frequently, and even where. They create profiles of your relationships and patterns, they are just unable to read the text. True privacy means not being tracked at all.",
   },
   {
     icon: Coins,
-    title: "You pay us. We work for you.",
+    title: "No greedy shareholders",
     content:
-      "When advertisers pay, the platform optimizes for advertiser interests: engagement, addiction, surveillance, manipulation. Your attention becomes the product being sold. Kloak is free to use, but some features may require payment. When you pay directly, we work for you. Our incentive is to make Kloak valuable enough that you choose to support it. We succeed when you're satisfied, not when you're manipulated.",
-  },
+      "Shareholder-driven platforms don't work for you, they work for profit. That means maximizing 'engagement' through ads, tracking, and psychological manipulation. Your attention becomes the product they sell. Kloak operates on a simple principle: you pay us, we work for you. Some features require payment, but when you're the customer instead of the product, our success depends on your satisfaction—not your addiction.",
   {
     icon: Heart,
     title: "No micro-transactions. Ever.",
     content:
-      "Micro-transactions, premium emojis, paid stickers, loot boxes, battle passes. These systems are designed by psychologists to extract maximum money from users. They exploit FOMO, social pressure, gambling instincts, and artificial scarcity. We find this gross. We're not going to do it. If you pay for Kloak, you get Kloak. All of it. Themes, customization, emojis. They're part of the product, not monetization vectors.",
-  },
+      "No premium emojis. No paid stickers. No server boosts or cosmetic gambling. These 'features' are designed by psychologists to exploit you—through FOMO, social pressure, and artificial scarcity. It's gross, and we're not doing it. You're not a slot machine.",
   {
     icon: Sparkles,
     title: "AI that helps, not surveils",
