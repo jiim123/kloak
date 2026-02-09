@@ -238,15 +238,26 @@ export const useAuthStore = create<AuthState>()(
         if (!user) return;
 
         try {
+          // Normalize empty strings to null for custom_status
+          const normalizedUpdates = { ...updates };
+          if ('custom_status' in normalizedUpdates && normalizedUpdates.custom_status === '') {
+            normalizedUpdates.custom_status = null;
+          }
+
           const { data, error } = await supabase.rpc('update_user_profile', {
             _user_id: user.id,
-            _updates: updates,
+            _updates: normalizedUpdates,
           });
 
           if (error) throw error;
           
           if (data) {
             const userData = data as Record<string, unknown>;
+            // Handle custom_status explicitly - if it was set to null/empty, ensure it becomes null
+            const newCustomStatus = 'custom_status' in normalizedUpdates 
+              ? (normalizedUpdates.custom_status === null ? null : (userData.custom_status as string | null))
+              : (userData.custom_status as string | null) ?? user.custom_status;
+            
             set({ 
               user: { 
                 ...user, 
@@ -259,12 +270,12 @@ export const useAuthStore = create<AuthState>()(
                 banner_color: (userData.banner_color as string) || user.banner_color,
                 profile_theme_primary: (userData.profile_theme_primary as string | null) ?? user.profile_theme_primary,
                 profile_theme_accent: (userData.profile_theme_accent as string | null) ?? user.profile_theme_accent,
-                custom_status: userData.custom_status as string | null,
-             pronouns: (userData.pronouns as string | null) ?? user.pronouns,
+                custom_status: newCustomStatus,
+                pronouns: (userData.pronouns as string | null) ?? user.pronouns,
               } 
             });
           } else {
-            set({ user: { ...user, ...updates } });
+            set({ user: { ...user, ...normalizedUpdates } });
           }
         } catch (error) {
           console.error('Failed to update user:', error);
@@ -282,13 +293,22 @@ export const useAuthStore = create<AuthState>()(
           });
 
           const source = options?.source ?? 'manual';
-          const manualStatus = get().manualStatus;
-          const nextManualStatus =
-            source === 'manual' && (status === 'offline' || status === 'dnd')
-              ? status
-              : source === 'manual' && status === 'online'
-                ? null
-                : manualStatus;
+          const currentManualStatus = get().manualStatus;
+          
+          // Track manual status for DND/Invisible so they persist across sessions
+          // Clear manualStatus when user explicitly goes online or idle
+          let nextManualStatus: UserStatus | null;
+          if (source === 'manual') {
+            if (status === 'offline' || status === 'dnd') {
+              nextManualStatus = status;
+            } else {
+              // User explicitly chose online or idle - clear any manual override
+              nextManualStatus = null;
+            }
+          } else {
+            // Auto status changes don't affect manualStatus
+            nextManualStatus = currentManualStatus;
+          }
 
           set({ user: { ...user, status }, manualStatus: nextManualStatus });
         } catch (error) {

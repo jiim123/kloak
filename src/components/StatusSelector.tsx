@@ -159,13 +159,18 @@ export const StatusSelector = ({ children, side = 'right', align = 'start' }: St
   };
 
   const handleClearCustomStatus = async () => {
+    // Clear local state first
     setCustomStatusText('');
     setSelectedEmoji('');
     setClearAfter('never');
     if (clearTimeoutRef.current) {
       clearTimeout(clearTimeoutRef.current);
     }
-    await updateUser({ custom_status: null });
+    // Persist to database - pass empty string to ensure it's recognized as "clear"
+    // The RPC will convert empty string to null
+    await updateUser({ custom_status: '' });
+    // Close the dropdown after clearing
+    setIsOpen(false);
   };
 
   const handleEmojiSelect = (emoji: string) => {
