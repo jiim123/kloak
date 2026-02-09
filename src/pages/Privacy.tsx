@@ -174,7 +174,7 @@ const Privacy = () => {
                         <AccordionTrigger className="text-left font-medium hover:no-underline py-6 text-base md:text-lg">
                           {item.q}
                         </AccordionTrigger>
-                        <AccordionContent className="text-muted-foreground leading-relaxed pb-6 text-sm md:text-base">
+                        <AccordionContent className="text-muted-foreground leading-[1.7] pb-6 text-[17px]">
                           {item.a}
                         </AccordionContent>
                       </AccordionItem>
