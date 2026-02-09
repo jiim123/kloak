@@ -114,12 +114,12 @@ const Index = () => {
                     <span className="text-primary/60">without being watched.</span>
                   </h2>
 
-                  <p className="text-lg md:text-xl text-primary leading-relaxed max-w-xl">
+                  <p className="text-[17px] text-neutral-600 leading-relaxed max-w-xl">
                     Kloak is a communication platform for communities, teams, and friends. Built from the ground up so
                     your conversations stay yours.
                   </p>
 
-                  <div className="flex flex-wrap gap-6 text-sm text-primary/50">
+                  <div className="flex flex-wrap gap-6 text-sm text-neutral-600">
                     <span className="flex items-center gap-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
                       No ads
@@ -162,7 +162,7 @@ const Index = () => {
                         <h3 className="text-2xl md:text-3xl font-medium text-foreground">
                           {audienceGroups[activeIndex].name}
                         </h3>
-                        <p className="text-primary/70 text-lg leading-relaxed">
+                        <p className="text-[17px] text-neutral-600 leading-relaxed">
                           {audienceGroups[activeIndex].description}
                         </p>
                       </motion.div>
@@ -193,18 +193,6 @@ const Index = () => {
                   </div>
                 </motion.div>
               </div>
-
-              {/* The Differentiator - Full Width Below */}
-              <motion.p
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.4, duration: 0.8 }}
-                className="text-center text-lg md:text-xl text-primary/60 max-w-2xl mx-auto mt-24"
-              >
-                Other platforms promise privacy in their terms of service. We built Kloak so we physically cannot access
-                your data - even if we wanted to.
-              </motion.p>
             </div>
           </section>
 
@@ -260,9 +248,7 @@ const Index = () => {
                         viewport={{ once: true }}
                         transition={{ duration: 0.4, delay: index * 0.05 }}
                       >
-                        <TableCell className="font-light text-foreground uppercase tracking-wider text-sm">
-                          {row.label}
-                        </TableCell>
+                        <TableCell className="font-light text-neutral-600 text-[17px]">{row.label}</TableCell>
                         <TableCell className="text-center">
                           {row.others ? (
                             <div className="w-8 h-8 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
@@ -292,7 +278,7 @@ const Index = () => {
               </motion.div>
 
               <motion.p
-                className="text-center landing-body text-muted-foreground mt-12"
+                className="text-center text-[17px] text-neutral-600 mt-12"
                 initial={{ opacity: 0 }}
                 whileInView={{ opacity: 1 }}
                 viewport={{ once: true }}
@@ -372,83 +358,7 @@ const Index = () => {
                       </div>
                       <div className="flex-1">
                         <h3 className="landing-card-title text-foreground mb-3 text-lg">{feature.title}</h3>
-                        <p className="landing-body text-muted-foreground text-sm leading-relaxed">
-                          {feature.description}
-                        </p>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* Principles Section */}
-          <section className="relative py-32 px-8 lg:px-16 bg-card/50 border-b border-border/20 overflow-hidden">
-            <div className="max-w-7xl mx-auto">
-              <motion.div
-                className="mb-20"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6 }}
-              >
-                {/* Section header */}
-                <div className="flex items-center gap-4 mb-4">
-                  <span className="text-xs font-mono text-primary tracking-widest uppercase">Our Principles</span>
-                </div>
-                <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
-                  Privacy isn't a feature.
-                  <br />
-                  <span className="text-primary/60">It's the architecture.</span>
-                </h2>
-              </motion.div>
-
-              <div className="grid md:grid-cols-2 gap-6">
-                {[
-                  {
-                    number: "01",
-                    title: "Your work stays yours",
-                    description:
-                      "Nothing you share on Kloak trains AI models. Your unreleased tracks, your concept art, your game designs.",
-                  },
-                  {
-                    number: "02",
-                    title: "No algorithmic gatekeeping",
-                    description:
-                      "When you post, your community sees it. No engagement optimization, no reach throttling, no mysterious shadowbans.",
-                  },
-                  {
-                    number: "03",
-                    title: "Cryptographic identity",
-                    description:
-                      "Your account lives in a 64-character key that only you possess. We can't reset it, we can't access it, we can't hand it over.",
-                  },
-                  {
-                    number: "04",
-                    title: "No paywalling",
-                    description:
-                      "No premium unlocks for basic features, no profile customization limits, no micro-transactions.",
-                  },
-                ].map((principle, index) => (
-                  <motion.div
-                    key={principle.number}
-                    className="group relative"
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: index * 0.1 }}
-                  >
-                    <div className="relative border border-border/30 p-8 bg-background hover:border-primary/30 transition-colors duration-300">
-                      <div className="flex items-start gap-4">
-                        <span className="text-4xl font-mono font-semibold text-primary/30 group-hover:text-primary/50 transition-colors duration-300">
-                          {principle.number}
-                        </span>
-                        <div className="w-px h-12 bg-gradient-to-b from-primary/20 to-transparent" />
-                        <div className="flex-1">
-                          <h3 className="landing-card-title text-foreground mb-3">{principle.title}</h3>
-                          <p className="landing-body text-muted-foreground text-sm">{principle.description}</p>
-                        </div>
+                        <p className="text-[17px] text-neutral-600 leading-relaxed">{feature.description}</p>
                       </div>
                     </div>
                   </motion.div>
@@ -458,7 +368,7 @@ const Index = () => {
           </section>
 
           {/* Built For Creators Section */}
-          <section className="relative py-32 px-8 lg:px-16 border-b border-border/20 overflow-hidden">
+          <section className="relative py-32 px-8 lg:px-16 bg-card/50 border-b border-border/20 overflow-hidden">
             <div className="max-w-7xl mx-auto">
               <motion.div
                 className="mb-20"
@@ -476,7 +386,7 @@ const Index = () => {
                   <br />
                   <span className="text-primary/60">Built to have fun.</span>
                 </h2>
-                <p className="landing-body text-muted-foreground max-w-2xl">
+                <p className="text-[17px] text-neutral-600 max-w-2xl leading-relaxed">
                   Whether you're coordinating a raid, mixing a track, or simply just talking to friends and family,
                   Kloak is the space where your communication lives without being monetized.
                 </p>
@@ -536,7 +446,7 @@ const Index = () => {
                     {/* Content */}
                     <div className="relative">
                       <h3 className="landing-card-title text-foreground mb-2 text-base">{card.title}</h3>
-                      <p className="landing-body text-muted-foreground text-sm">{card.description}</p>
+                      <p className="text-[17px] text-neutral-600 leading-relaxed">{card.description}</p>
                     </div>
                   </motion.div>
                 ))}
@@ -545,7 +455,7 @@ const Index = () => {
           </section>
 
           {/* Simplicity Section */}
-          <section className="relative py-32 px-8 lg:px-16 bg-card/50 border-b border-border/20 overflow-hidden">
+          <section className="relative py-32 px-8 lg:px-16 border-b border-border/20 overflow-hidden">
             <div className="max-w-7xl mx-auto">
               <div className="grid lg:grid-cols-2 gap-16 items-center">
                 <motion.div
@@ -563,11 +473,11 @@ const Index = () => {
                     <br />
                     <span className="text-primary/60">feature.</span>
                   </h2>
-                  <p className="landing-body text-muted-foreground mb-6">
+                  <p className="text-[17px] text-neutral-600 leading-relaxed mb-6">
                     Most platforms bloat over time—adding features to justify subscription tiers, complexity to create
                     lock-in, dark patterns to maximize engagement.
                   </p>
-                  <p className="landing-body text-muted-foreground">
+                  <p className="text-[17px] text-neutral-600 leading-relaxed">
                     Kloak stays simple on purpose. Chat that works. Voice that's clear. Communities that make sense.
                     Nothing designed to manipulate you into spending more time or money.
                   </p>
@@ -597,8 +507,8 @@ const Index = () => {
                           viewport={{ once: true }}
                           transition={{ duration: 0.4, delay: 0.3 + index * 0.1 }}
                         >
-                          <X className="w-4 h-4 text-primary/50" />
-                          <span className="text-muted-foreground text-sm line-through decoration-primary/30">
+                          <X className="w-4 h-4 text-neutral-400" />
+                          <span className="text-neutral-600 text-[17px] line-through decoration-neutral-400">
                             {item.label}
                           </span>
                         </motion.div>
@@ -612,7 +522,9 @@ const Index = () => {
                           transition={{ duration: 0.4, delay: 0.8 }}
                         >
                           <Check className="w-4 h-4 text-primary" />
-                          <span className="text-foreground text-sm font-medium">Just communication that works.</span>
+                          <span className="text-foreground text-[17px] font-medium">
+                            Just communication that works.
+                          </span>
                         </motion.div>
                       </div>
                     </div>
@@ -644,7 +556,7 @@ const Index = () => {
                   <br />
                   <span className="text-primary/60">Your community.</span>
                 </h2>
-                <p className="landing-body text-muted-foreground mb-10 max-w-lg mx-auto">
+                <p className="text-[17px] text-neutral-600 mb-10 max-w-lg mx-auto leading-relaxed">
                   No signup forms. No email verification. Generate your cryptographic key and start building your space.
                 </p>
                 <Link to="/auth">
