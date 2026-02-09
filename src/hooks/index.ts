@@ -34,3 +34,4 @@ export { useHideVoiceActivity, shouldShowSpeakingIndicator, useParticipantSpeaki
 export { useAudioDevices } from './useAudioDevices';
 export { useAudioLevel } from './useAudioLevel';
 export { useAutoDisconnect } from './useAutoDisconnect';
+export { useRealtimeTasks } from './useRealtimeTasks';

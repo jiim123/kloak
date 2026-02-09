@@ -82,7 +82,15 @@ export type Permission =
   | 'connect'
   | 'speak'
   | 'use_voice_activation'
-  | 'use_application_commands';
+  | 'use_application_commands'
+  // Task permissions
+  | 'view_tasks'
+  | 'create_tasks'
+  | 'edit_own_tasks'
+  | 'edit_all_tasks'
+  | 'assign_tasks'
+  | 'change_task_status'
+  | 'delete_tasks';
 
 export interface RolePermission {
   id: string;
@@ -166,7 +174,7 @@ export interface ServerMember {
 // Channel Types
 // ============================================
 
-export type ChannelType = 'text' | 'voice' | 'announcement' | 'forum' | 'media';
+export type ChannelType = 'text' | 'voice' | 'announcement' | 'forum' | 'media' | 'tasks';
 
 export interface ChannelCategory {
   id: string;
@@ -516,4 +524,46 @@ export interface SendMessageForm {
   content: string;
   attachments?: File[];
   reply_to_id?: string;
+}
+
+// ============================================
+// Task Types
+// ============================================
+
+export type TaskPriority = 'low' | 'medium' | 'high';
+export type TaskStatus = 'open' | 'in_progress' | 'completed' | 'archived';
+
+export interface TaskAssignee {
+  id: string;
+  task_id: string;
+  user_id: string;
+  assigned_by: string;
+  assigned_at: string;
+  user?: User;
+}
+
+export interface Task {
+  id: string;
+  channel_id: string;
+  created_by: string;
+  title: string;
+  description: string | null;
+  priority: TaskPriority;
+  status: TaskStatus;
+  due_date: string | null;
+  position: number;
+  created_at: string;
+  updated_at: string;
+  creator?: User;
+  assignees?: TaskAssignee[];
+}
+
+export interface TaskComment {
+  id: string;
+  task_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  updated_at: string | null;
+  user?: User;
 }

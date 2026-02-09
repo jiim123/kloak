@@ -21,6 +21,7 @@ import {
   ArrowUpDown,
   Megaphone,
   Film,
+  ListTodo,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -206,6 +207,16 @@ const SortableChannel = ({
     if (channel.type === "media") {
       return (
         <Film
+          className={cn(
+            "w-4 h-4 flex-shrink-0 transition-colors",
+            isUnread && !isActive ? "text-foreground" : "text-muted-foreground",
+          )}
+        />
+      );
+    }
+    if (channel.type === "tasks") {
+      return (
+        <ListTodo
           className={cn(
             "w-4 h-4 flex-shrink-0 transition-colors",
             isUnread && !isActive ? "text-foreground" : "text-muted-foreground",

@@ -38,6 +38,14 @@ export const PERMISSION_META: Record<Permission, PermissionMeta> = {
   speak: { label: 'Speak', description: 'Allows members to speak in voice channels.', enabled: true },
   use_voice_activation: { label: 'Voice Activity', description: 'Allows members to use voice activity detection instead of push-to-talk.', enabled: false },
   use_application_commands: { label: 'Use Commands', description: 'Allows members to use bot and application slash commands.', enabled: false },
+  // Task permissions
+  view_tasks: { label: 'View Tasks', description: 'Allows members to view tasks in task channels.', enabled: true },
+  create_tasks: { label: 'Create Tasks', description: 'Allows members to create new tasks.', enabled: true },
+  edit_own_tasks: { label: 'Edit Own Tasks', description: 'Allows members to edit tasks they created.', enabled: true },
+  edit_all_tasks: { label: 'Edit All Tasks', description: 'Allows members to edit any task regardless of who created it.', enabled: true },
+  assign_tasks: { label: 'Assign Tasks', description: 'Allows members to assign or unassign users to tasks.', enabled: true },
+  change_task_status: { label: 'Change Task Status', description: 'Allows members to mark tasks as complete or change their status.', enabled: true },
+  delete_tasks: { label: 'Delete Tasks', description: 'Allows members to delete tasks.', enabled: true },
 };
 
 export const PERMISSION_GROUPS: Array<{
@@ -74,6 +82,11 @@ export const PERMISSION_GROUPS: Array<{
     label: 'Voice',
     description: 'Voice channel capabilities',
     permissions: ['connect', 'speak', 'use_voice_activation'],
+  },
+  {
+    label: 'Tasks',
+    description: 'Task channel management',
+    permissions: ['view_tasks', 'create_tasks', 'edit_own_tasks', 'edit_all_tasks', 'assign_tasks', 'change_task_status', 'delete_tasks'],
   },
   {
     label: 'Advanced',

@@ -10,3 +10,4 @@ export { useOfflineQueueStore } from './offlineQueueStore';
 export { useSyncStore } from './syncStore';
 export { useVoiceStore } from './voiceStore';
 export { useVoiceSettingsStore } from './voiceSettingsStore';
+export { useTaskStore } from './taskStore';
