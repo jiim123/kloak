@@ -1337,7 +1337,6 @@ export const useServerStore = create<ServerState>((set, get) => ({
       if (!currentServer) throw new Error('No server selected');
 
       const { error } = await (supabase.rpc as any)('assign_role_to_member', {
-        _server_id: currentServer.id,
         _user_id: userId,
         _member_id: memberId,
         _role_id: roleId,
