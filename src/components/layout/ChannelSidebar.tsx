@@ -650,7 +650,7 @@ export const ChannelSidebar = () => {
   // Fetch per-user channel settings (mute, hide, pin) when channels change
   const { fetchSettings, isHidden, isPinned } = useChannelSettingsStore();
   const channelIdsKey = channelIds.join(',');
-  useMemo(() => { fetchSettings(channelIds); }, [channelIdsKey]);
+  useEffect(() => { fetchSettings(channelIds); }, [channelIdsKey]);
 
   const voiceChannelIds = useMemo(() => channels.filter((c) => c.type === "voice").map((c) => c.id), [channels]);
 
