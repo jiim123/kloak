@@ -138,9 +138,11 @@ const SortableChannel = ({
   onEdit,
   onDelete,
   onCopyLink,
+  onMarkAsRead,
   isMobile,
   isDraggingAny,
   isSortingMode,
+  categories,
 }: {
   channel: Channel;
   isActive: boolean;
@@ -153,9 +155,11 @@ const SortableChannel = ({
   onEdit: () => void;
   onDelete: () => void;
   onCopyLink: () => void;
+  onMarkAsRead?: () => void;
   isMobile?: boolean;
   isDraggingAny?: boolean;
   isSortingMode?: boolean;
+  categories: ChannelCategory[];
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: channel.id,
