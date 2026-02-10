@@ -715,7 +715,7 @@ export const ChannelSidebar = () => {
         return (a.position ?? 0) - (b.position ?? 0);
       });
 
-    const sorted = [...categories].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+    const sorted = [...safeCategories].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
 
     return { uncategorizedChannels: uncategorized, sortedCategories: sorted, hiddenChannels: hidden };
   }, [channels, categories, channelSettings]);
