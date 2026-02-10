@@ -18,6 +18,7 @@ import { useVoiceSettingsStore } from "@/stores/voiceSettingsStore";
 import { pauseVoicePresenceWatch, resumeVoicePresenceWatch } from "@/hooks/useVoicePresenceWatchers";
 import { playJoinSound, playLeaveSound } from "@/lib/voiceSounds";
 import type { ScreenShareQuality } from "@/components/voice/ScreenShareQualityModal";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 
 export type LiveKitParticipant = {
   identity: string;
@@ -57,6 +58,8 @@ export function useLiveKitRoom(opts: UseLiveKitRoomOptions) {
   const { channelId, userId, displayName } = opts;
 
   const roomRef = useRef<Room | null>(null);
+  const presenceChannelRef = useRef<RealtimeChannel | null>(null);
+  const readyForSoundsRef = useRef(false);
   const setJoinedChannelId = useVoiceStore((s) => s.setJoinedChannelId);
   const setConnection = useVoiceStore((s) => s.setConnection);
   const setControls = useVoiceStore((s) => s.setControls);
@@ -180,20 +183,23 @@ export function useLiveKitRoom(opts: UseLiveKitRoomOptions) {
       roomRef.current = room;
 
       // Set up event listeners
-      room.on(RoomEvent.ParticipantConnected, (participant: RemoteParticipant) => {
+      room.on(RoomEvent.ParticipantConnected, () => {
         updateParticipants();
-        // Play join sound if enabled
-        const settings = useVoiceSettingsStore.getState().settings;
-        if (settings.joinLeaveSound && !settings.visualOnlyMode) {
-          playJoinSound();
+        // Only play join sound after initial connection is settled
+        if (readyForSoundsRef.current) {
+          const settings = useVoiceSettingsStore.getState().settings;
+          if (settings.joinLeaveSound && !settings.visualOnlyMode) {
+            playJoinSound();
+          }
         }
       });
-      room.on(RoomEvent.ParticipantDisconnected, (participant: RemoteParticipant) => {
+      room.on(RoomEvent.ParticipantDisconnected, () => {
         updateParticipants();
-        // Play leave sound if enabled
-        const settings = useVoiceSettingsStore.getState().settings;
-        if (settings.joinLeaveSound && !settings.visualOnlyMode) {
-          playLeaveSound();
+        if (readyForSoundsRef.current) {
+          const settings = useVoiceSettingsStore.getState().settings;
+          if (settings.joinLeaveSound && !settings.visualOnlyMode) {
+            playLeaveSound();
+          }
         }
       });
       room.on(RoomEvent.TrackSubscribed, updateParticipants);
@@ -240,6 +246,24 @@ export function useLiveKitRoom(opts: UseLiveKitRoomOptions) {
       setIsMuted(shouldStartMuted);
       setControls({ muted: shouldStartMuted, deafened: false });
       updateParticipants();
+
+      // Enable join/leave sounds after a short delay so existing participants don't trigger them
+      setTimeout(() => { readyForSoundsRef.current = true; }, 1500);
+
+      // Track presence on Supabase so sidebar watchers can see who's in the channel
+      try {
+        const presenceCh = supabase.channel(`voice:${channelId}`, {
+          config: { presence: { key: userId } },
+        });
+        presenceCh.subscribe(async (status) => {
+          if (status === "SUBSCRIBED") {
+            await presenceCh.track({ user_id: userId });
+          }
+        });
+        presenceChannelRef.current = presenceCh;
+      } catch {
+        // Non-critical — sidebar just won't show this user
+      }
     } catch (err) {
       console.error("Failed to join LiveKit room:", err);
       const message = err instanceof Error ? err.message : "Failed to connect";
@@ -253,6 +277,18 @@ export function useLiveKitRoom(opts: UseLiveKitRoomOptions) {
   }, [channelId, userId, displayName, updateParticipants, setConnection, setJoinedChannelId, setControls, setPresence]);
 
   const leave = useCallback(async () => {
+    readyForSoundsRef.current = false;
+
+    // Untrack Supabase presence
+    const presenceCh = presenceChannelRef.current;
+    if (presenceCh) {
+      try {
+        await presenceCh.untrack();
+        supabase.removeChannel(presenceCh);
+      } catch { /* ignore */ }
+      presenceChannelRef.current = null;
+    }
+
     const room = roomRef.current;
     if (room) {
       try {
@@ -390,6 +426,12 @@ export function useLiveKitRoom(opts: UseLiveKitRoomOptions) {
   // Cleanup on unmount or channelId change
   useEffect(() => {
     return () => {
+      readyForSoundsRef.current = false;
+      const presenceCh = presenceChannelRef.current;
+      if (presenceCh) {
+        try { presenceCh.untrack(); supabase.removeChannel(presenceCh); } catch { /* ignore */ }
+        presenceChannelRef.current = null;
+      }
       const room = roomRef.current;
       if (room) {
         room.disconnect();
