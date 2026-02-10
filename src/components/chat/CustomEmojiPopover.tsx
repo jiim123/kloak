@@ -1,7 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { ResolvedEmoji } from '@/lib/globalEmojiResolver';
-import { supabase } from '@/integrations/supabase/client';
 
 interface CustomEmojiPopoverProps {
   emoji: ResolvedEmoji;
@@ -11,22 +10,6 @@ interface CustomEmojiPopoverProps {
 
 export function CustomEmojiPopover({ emoji, anchorRect, onClose }: CustomEmojiPopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
-  const [memberCount, setMemberCount] = useState<number | null>(null);
-
-  // Fetch member count for published servers
-  useEffect(() => {
-    if (!emoji.isPublished) return;
-
-    let cancelled = false;
-    (async () => {
-      const { count } = await supabase
-        .from('server_members')
-        .select('*', { count: 'exact', head: true })
-        .eq('server_id', emoji.serverId);
-      if (!cancelled && count !== null) setMemberCount(count);
-    })();
-    return () => { cancelled = true; };
-  }, [emoji.serverId, emoji.isPublished]);
 
   // Close on click outside
   useEffect(() => {
@@ -102,8 +85,6 @@ export function CustomEmojiPopover({ emoji, anchorRect, onClose }: CustomEmojiPo
             <div className="min-w-0">
               <p className="text-sm font-semibold text-foreground truncate">{emoji.serverName}</p>
               <p className="text-xs text-muted-foreground">
-                {memberCount !== null ? `${memberCount.toLocaleString()} Member${memberCount !== 1 ? 's' : ''}` : '...'}
-                {' · '}
                 Discoverable Server
               </p>
             </div>
