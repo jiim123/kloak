@@ -986,20 +986,18 @@ export const useServerStore = create<ServerState>((set, get) => ({
   moveChannelToCategory: async (channelId: string, categoryId: string | null) => {
     try {
       const { currentServer, channels } = get();
-      const userId = useAuthStore.getState().user?.id;
-      if (!currentServer || !userId) return;
-
-      const { error } = await (supabase.rpc as any)('move_channel_to_category', {
-        _server_id: currentServer.id,
-        _user_id: userId,
-        _channel_id: channelId,
-        _category_id: categoryId,
-      });
-
-      if (error) throw error;
+      if (!currentServer) return;
 
       const targetChannels = channels.filter(c => c.category_id === categoryId);
       const newPosition = targetChannels.length;
+
+      const { error } = await supabase
+        .from('channels')
+        .update({ category_id: categoryId, position: newPosition })
+        .eq('id', channelId)
+        .eq('server_id', currentServer.id);
+
+      if (error) throw error;
 
       set((state) => ({
         channels: state.channels.map((c) =>
@@ -1008,6 +1006,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
       }));
     } catch (error) {
       console.error('Failed to move channel:', error);
+      throw error;
     }
   },
 
