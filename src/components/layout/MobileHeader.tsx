@@ -68,7 +68,9 @@ export const MobileHeader = ({ isDMView, showFriends, showExplore }: MobileHeade
 
         {/* Right: Action buttons */}
         <div className="flex items-center gap-1 shrink-0">
-          <NotificationBell />
+          <div className="w-11 h-11 flex items-center justify-center rounded-xl hover:bg-accent active:scale-95 transition-transform">
+            <NotificationBell />
+          </div>
 
           {!isDMView && currentServer && (
             <Button
