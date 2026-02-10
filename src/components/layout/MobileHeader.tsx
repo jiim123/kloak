@@ -45,7 +45,7 @@ export const MobileHeader = ({ isDMView, showFriends, showExplore }: MobileHeade
 
   return (
     <header
-      className="sticky top-0 z-40 md:hidden bg-background/80 backdrop-blur-lg border-b border-border/50"
+      className="sticky top-0 z-40 md:hidden bg-background/80 backdrop-blur-lg border-b border-border/50 rounded-b-2xl"
       style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
     >
       <div className="flex items-center justify-between gap-3 px-3 h-14">
