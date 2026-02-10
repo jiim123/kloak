@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, type ReactNode } from "react";
+import { useState, useMemo, useCallback, useEffect, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   ChevronDown,
@@ -54,6 +54,7 @@ import { useVoicePresenceWatchers } from "@/hooks/useVoicePresenceWatchers";
 import { useUIStore } from "@/stores/uiStore";
 import { useUnread } from "@/hooks/useUnread";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
+import { useChannelSettingsStore } from "@/stores/channelSettingsStore";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { LoggedInUserPanel } from "@/components/layout/LoggedInUserPanel";

@@ -147,7 +147,7 @@ export const useChannelSettingsStore = create<ChannelSettingsState>((set, get) =
     const userId = useAuthStore.getState().user?.id;
     if (!userId) return;
 
-    const { error } = await (supabase as any).from('channel_user_settings').upsert(
+    const { error } = await supabase.from('channel_user_settings').upsert(
       { channel_id: channelId, user_id: userId, notification_level: level },
       { onConflict: 'channel_id,user_id' }
     );
