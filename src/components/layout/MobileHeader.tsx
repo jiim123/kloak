@@ -1,9 +1,9 @@
-import { Menu, Hash, Users, Volume2 } from 'lucide-react';
-import { useServerStore } from '@/stores/serverStore';
-import { useUIStore } from '@/stores/uiStore';
-import { useDMStore } from '@/stores/dmStore';
-import { NotificationBell } from '@/components/notifications/NotificationBell';
-import { Button } from '@/components/ui/button';
+import { Menu, Hash, Users, Volume2 } from "lucide-react";
+import { useServerStore } from "@/stores/serverStore";
+import { useUIStore } from "@/stores/uiStore";
+import { useDMStore } from "@/stores/dmStore";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { Button } from "@/components/ui/button";
 
 interface MobileHeaderProps {
   isDMView: boolean;
@@ -18,73 +18,71 @@ export const MobileHeader = ({ isDMView, showFriends, showExplore }: MobileHeade
 
   const getTitle = () => {
     if (isDMView) {
-      if (showFriends) return 'Friends';
-      if (showExplore) return 'Explore';
+      if (showFriends) return "Friends";
+      if (showExplore) return "Explore";
       if (currentConversation?.other_user) {
         return currentConversation.other_user.display_name || currentConversation.other_user.username;
       }
-      return 'Home';
+      return "Home";
     }
-    
+
     if (currentChannel) {
       return currentChannel.name;
     }
-    
-    return currentServer?.name || 'Kloak';
+
+    return currentServer?.name || "Kloak";
   };
 
   const getChannelIcon = () => {
     if (isDMView) return null;
     if (!currentChannel) return null;
-    
-    if (currentChannel.type === 'voice') {
-      return <Volume2 className="w-4 h-4 text-muted-foreground" />;
+
+    if (currentChannel.type === "voice") {
+      return <Volume2 className="w-5 h-5 text-muted-foreground shrink-0" />;
     }
-    return <Hash className="w-4 h-4 text-muted-foreground" />;
+    return <Hash className="w-5 h-5 text-muted-foreground shrink-0" />;
   };
 
   return (
-    <div className="sticky top-0 z-40 px-4 pt-4 pb-2 md:hidden bg-background">
-      <div className="flex items-center gap-2">
-        {/* Section 1: Sidebar Toggle */}
-        <div className="p-1 rounded-2xl bg-secondary">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="w-8 h-8"
-            onClick={() => setMobileSidebarOpen(true)}
-          >
-            <Menu className="w-4 h-4" />
-          </Button>
-        </div>
+    <header
+      className="sticky top-0 z-40 md:hidden bg-background/80 backdrop-blur-lg border-b border-border/50"
+      style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
+    >
+      <div className="flex items-center justify-between gap-3 px-3 h-14">
+        {/* Left: Sidebar toggle */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="w-11 h-11 shrink-0 rounded-xl active:scale-95 transition-transform"
+          onClick={() => setMobileSidebarOpen(true)}
+          aria-label="Open sidebar"
+        >
+          <Menu className="w-5 h-5" />
+        </Button>
 
-        {/* Section 2: Current Channel/View */}
-        <div className="flex-1 flex items-center gap-2 min-w-0 p-2 bg-secondary rounded-2xl">
+        {/* Center: Current channel / view title */}
+        <div className="flex-1 flex items-center justify-center gap-1.5 min-w-0 px-2">
           {getChannelIcon()}
-          <span className="font-medium text-foreground truncate text-[15px]">
-            {getTitle()}
-          </span>
+          <h1 className="font-semibold text-foreground truncate text-base leading-tight">{getTitle()}</h1>
         </div>
 
-        {/* Section 3: Notifications */}
-        <div className="p-1 rounded-2xl bg-secondary">
+        {/* Right: Action buttons */}
+        <div className="flex items-center gap-1 shrink-0">
           <NotificationBell />
-        </div>
 
-        {/* Section 4: Members Toggle (only for server view) */}
-        {!isDMView && currentServer && (
-          <div className="p-1 rounded-2xl bg-secondary">
+          {!isDMView && currentServer && (
             <Button
               variant="ghost"
               size="icon"
-              className="w-8 h-8"
+              className="w-11 h-11 rounded-xl active:scale-95 transition-transform"
               onClick={toggleMemberSidebar}
+              aria-label="Toggle member list"
             >
-              <Users className="w-4 h-4" />
+              <Users className="w-5 h-5" />
             </Button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
+    </header>
   );
 };
