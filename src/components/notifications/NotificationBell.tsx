@@ -325,10 +325,14 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
                       </div>
 
                       {/* Content */}
-                      <div className="flex-1 min-w-0 pt-0.5">
-                        <p className={cn("text-sm line-clamp-2", isUnread && "font-medium")}>{notification.title}</p>
+                      <div className="flex-1 min-w-0 pt-0.5 overflow-hidden">
+                        <p className={cn("text-sm line-clamp-2 break-words", isUnread && "font-medium")}>
+                          {notification.title}
+                        </p>
                         {notification.body && (
-                          <p className="text-xs text-muted-foreground line-clamp-1 mt-1">{notification.body}</p>
+                          <p className="text-xs text-muted-foreground line-clamp-1 mt-1 break-all">
+                            {notification.body}
+                          </p>
                         )}
                         <p className="text-xs text-muted-foreground/70 mt-1.5">
                           {notification.created_at &&
