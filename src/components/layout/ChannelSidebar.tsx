@@ -73,6 +73,7 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { ChannelContextMenu } from "@/components/layout/ChannelContextMenu";
 import type { Channel, ChannelCategory, ServerRole } from "@/types";
 
 // Ghost Icon Component
