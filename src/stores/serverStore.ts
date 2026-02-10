@@ -1332,10 +1332,29 @@ export const useServerStore = create<ServerState>((set, get) => ({
   },
 
   assignRoleToMember: async (memberId: string, roleId: string, userId: string) => {
-    try {
-      const { currentServer } = get();
-      if (!currentServer) throw new Error('No server selected');
+    const { currentServer, members, roles: allRoles } = get();
+    if (!currentServer) throw new Error('No server selected');
 
+    // Optimistic update: add the role to the member locally
+    const role = allRoles.find((r) => r.id === roleId);
+    const prevMembers = members;
+    if (role) {
+      set({
+        members: members.map((m) =>
+          m.id === memberId
+            ? {
+                ...m,
+                roles: [
+                  ...(m.roles || []).filter((r) => r.id !== roleId),
+                  { ...role, position: role.position ?? 0 } as CustomServerRole,
+                ],
+              }
+            : m
+        ),
+      });
+    }
+
+    try {
       const { error } = await (supabase.rpc as any)('assign_role_to_member', {
         _user_id: userId,
         _member_id: memberId,
@@ -1344,19 +1363,31 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
       if (error) throw error;
 
-      // Refresh members to get updated roles
+      // Refresh members to get authoritative data
       await get().fetchMembers(currentServer.id);
     } catch (error) {
+      // Rollback on failure
+      set({ members: prevMembers });
       console.error('Failed to assign role:', error);
       throw error;
     }
   },
 
   removeRoleFromMember: async (memberId: string, roleId: string, userId: string) => {
-    try {
-      const { currentServer } = get();
-      if (!currentServer) throw new Error('No server selected');
+    const { currentServer, members } = get();
+    if (!currentServer) throw new Error('No server selected');
 
+    // Optimistic update: remove the role from the member locally
+    const prevMembers = members;
+    set({
+      members: members.map((m) =>
+        m.id === memberId
+          ? { ...m, roles: (m.roles || []).filter((r) => r.id !== roleId) }
+          : m
+      ),
+    });
+
+    try {
       const { error } = await (supabase.rpc as any)('remove_role_from_member', {
         _user_id: userId,
         _member_id: memberId,
@@ -1365,9 +1396,11 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
       if (error) throw error;
 
-      // Refresh members to get updated roles
+      // Refresh members to get authoritative data
       await get().fetchMembers(currentServer.id);
     } catch (error) {
+      // Rollback on failure
+      set({ members: prevMembers });
       console.error('Failed to remove role:', error);
       throw error;
     }
