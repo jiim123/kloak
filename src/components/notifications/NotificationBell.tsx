@@ -286,7 +286,7 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
         </div>
 
         {/* Notifications List */}
-        <ScrollArea className="max-h-[420px] overflow-y-auto">
+        <ScrollArea className="max-h-[420px] overflow-y-auto overflow-x-hidden">
           {notifications.length > 0 ? (
             <div className="p-2 space-y-1">
               {notifications.map((notification, index) => {
