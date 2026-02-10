@@ -991,7 +991,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
       const targetChannels = channels.filter(c => c.category_id === categoryId);
       const newPosition = targetChannels.length;
 
-      const { error } = await supabase.rpc('move_channel_to_category', {
+      const { error } = await (supabase.rpc as any)('move_channel_to_category', {
         _channel_id: channelId,
         _server_id: currentServer.id,
         _category_id: categoryId,
