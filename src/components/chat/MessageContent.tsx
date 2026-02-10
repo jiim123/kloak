@@ -4,9 +4,11 @@ import { CodeBlock, InlineCode } from './CodeBlock';
 import { LinkPreview } from './LinkPreview';
 import { InviteLinkPreview } from './InviteLinkPreview';
 import { ImageLightbox } from '@/components/modals/ImageLightbox';
+import { CustomEmojiPopover } from './CustomEmojiPopover';
 import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
 import { fetchServerEmojis } from '@/lib/serverEmojis';
+import { getGlobalEmojiMap, type ResolvedEmoji } from '@/lib/globalEmojiResolver';
 
 interface UserInfo {
   id: string;
@@ -172,7 +174,8 @@ export const parseTextContent = (
   currentUserId?: string,
   usersMap?: Map<string, UserInfo>,
   customEmojiMap?: Map<string, string>,
-  channelsMap?: Map<string, ChannelInfo>
+  channelsMap?: Map<string, ChannelInfo>,
+  globalEmojiMap?: Map<string, ResolvedEmoji>
 ): string => {
   // Process separator - use a unique placeholder that won't be escaped
   const SEPARATOR_PLACEHOLDER = '___SEPARATOR_DOTS_PLACEHOLDER___';
@@ -276,16 +279,24 @@ export const parseTextContent = (
     }
   );
 
-  // Custom emojis :name: (server scope)
-  if (customEmojiMap && customEmojiMap.size > 0) {
-    parsed = parsed.replace(/:([a-z0-9_]{2,32}):/g, (full, name: string) => {
-      const url = customEmojiMap.get(name);
-      if (!url) return full;
-      const safeUrl = escapeHtml(url);
+  // Custom emojis :name: — check current server first, then global (cross-server)
+  parsed = parsed.replace(/:([a-z0-9_]{2,32}):/g, (full, name: string) => {
+    // 1. Current server emoji (no popup needed)
+    const localUrl = customEmojiMap?.get(name);
+    if (localUrl) {
+      const safeUrl = escapeHtml(localUrl);
       const safeName = escapeHtml(name);
       return `<img src="${safeUrl}" alt=":${safeName}:" title=":${safeName}:" class="inline-block w-8 h-8 align-middle object-contain" loading="lazy" />`;
-    });
-  }
+    }
+    // 2. Cross-server emoji (clickable, shows popup)
+    const global = globalEmojiMap?.get(name);
+    if (global) {
+      const safeUrl = escapeHtml(global.url);
+      const safeName = escapeHtml(name);
+      return `<img src="${safeUrl}" alt=":${safeName}:" title=":${safeName}:" class="inline-block w-8 h-8 align-middle object-contain cursor-pointer hover:scale-110 transition-transform" loading="lazy" data-cross-emoji="${safeName}" />`;
+    }
+    return full;
+  });
   
   // Convert newlines to <br>
   parsed = parsed.replace(/\n/g, '<br>');
@@ -299,6 +310,8 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
   const { members, currentServer, channels, setCurrentChannel } = useServerStore();
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
+  const [globalEmojiMap, setGlobalEmojiMap] = useState<Map<string, ResolvedEmoji>>(new Map());
+  const [emojiPopover, setEmojiPopover] = useState<{ emoji: ResolvedEmoji; rect: DOMRect } | null>(null);
   const segments = useMemo(() => parseMessageSegments(content), [content]);
 
   // Load server emoji map for :name: rendering (server context only)
@@ -340,6 +353,15 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
       if (retryTimer) clearTimeout(retryTimer);
     };
   }, [currentServer?.id]);
+
+  // Load global cross-server emoji map
+  useEffect(() => {
+    let cancelled = false;
+    getGlobalEmojiMap().then((map) => {
+      if (!cancelled) setGlobalEmojiMap(map);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [currentServer?.id]); // re-resolve when server changes
   
   // Build a map of userId -> user info for quick lookup
   const usersMap = useMemo(() => {
@@ -427,6 +449,18 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
       setLightboxImage(target.dataset.imageUrl);
       return;
     }
+
+    // Handle cross-server emoji clicks
+    if (target.tagName === 'IMG' && target.dataset.crossEmoji) {
+      e.preventDefault();
+      e.stopPropagation();
+      const emojiName = target.dataset.crossEmoji;
+      const resolved = globalEmojiMap.get(emojiName);
+      if (resolved) {
+        setEmojiPopover({ emoji: resolved, rect: target.getBoundingClientRect() });
+      }
+      return;
+    }
     
     if (target.classList.contains('mention-clickable') && target.dataset.userId) {
       e.preventDefault();
@@ -443,7 +477,7 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
         navigate(`/app/servers/${currentServer.id}/channels/${channelId}`);
       }
     }
-  }, [openModal, channels, currentServer, setCurrentChannel, navigate, setLightboxImage]);
+  }, [openModal, channels, currentServer, setCurrentChannel, navigate, setLightboxImage, globalEmojiMap]);
 
   // Handle keyboard activation for accessibility
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -486,7 +520,7 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
                 <span
                   key={index}
                   dangerouslySetInnerHTML={{
-                    __html: parseTextContent(segment.content, currentUserId, usersMap, customEmojiMap, channelsMap),
+                    __html: parseTextContent(segment.content, currentUserId, usersMap, customEmojiMap, channelsMap, globalEmojiMap),
                   }}
                 />
               );
@@ -525,6 +559,15 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
         imageUrls={imageUrls}
         onClose={() => setLightboxImage(null)}
       />
+
+      {/* Cross-server emoji info popover */}
+      {emojiPopover && (
+        <CustomEmojiPopover
+          emoji={emojiPopover.emoji}
+          anchorRect={emojiPopover.rect}
+          onClose={() => setEmojiPopover(null)}
+        />
+      )}
     </div>
   );
 };
@@ -538,6 +581,7 @@ interface ReplyPreviewProps {
 export const ReplyPreview = ({ content, maxLength = 50, usersMap }: ReplyPreviewProps) => {
   const { currentServer, members } = useServerStore();
   const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
+  const [globalEmojis, setGlobalEmojis] = useState<Map<string, ResolvedEmoji>>(new Map());
 
   // Build users map from members if not provided
   const resolvedUsersMap = useMemo(() => {
@@ -584,6 +628,15 @@ export const ReplyPreview = ({ content, maxLength = 50, usersMap }: ReplyPreview
     return () => {
       cancelled = true;
     };
+  }, [currentServer?.id]);
+
+  // Load global emoji map for cross-server rendering in replies
+  useEffect(() => {
+    let cancelled = false;
+    getGlobalEmojiMap().then((map) => {
+      if (!cancelled) setGlobalEmojis(map);
+    }).catch(() => {});
+    return () => { cancelled = true; };
   }, [currentServer?.id]);
 
   // Strip markdown and prepare content
@@ -635,9 +688,9 @@ export const ReplyPreview = ({ content, maxLength = 50, usersMap }: ReplyPreview
         parts.push(stripped.slice(lastIndex, match.index));
       }
       
-      // Add emoji if found
+      // Add emoji if found (check local first, then global)
       const emojiName = match[1];
-      const emojiUrl = customEmojiMap.get(emojiName);
+      const emojiUrl = customEmojiMap.get(emojiName) || globalEmojis.get(emojiName)?.url;
       if (emojiUrl) {
         parts.push(
           <img
@@ -662,7 +715,7 @@ export const ReplyPreview = ({ content, maxLength = 50, usersMap }: ReplyPreview
     }
     
     return parts.length > 0 ? parts : stripped;
-  }, [stripped, customEmojiMap]);
+  }, [stripped, customEmojiMap, globalEmojis]);
 
   return <>{rendered}</>;
 };
