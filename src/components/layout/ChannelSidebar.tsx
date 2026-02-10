@@ -162,7 +162,7 @@ const SortableChannel = ({
   isMobile?: boolean;
   isDraggingAny?: boolean;
   isSortingMode?: boolean;
-  categories: ChannelCategory[];
+  categories?: ChannelCategory[];
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: channel.id,
@@ -375,11 +375,13 @@ const CategoryContent = ({
   onEditChannel,
   onDeleteChannel,
   onCopyChannelLink,
+  onMarkAsRead,
   voicePresenceByChannel,
   resolveUser,
   isMobile,
   isDraggingAny,
   isSortingMode,
+  categories,
 }: {
   channels: Channel[];
   currentChannelId: string | undefined;
@@ -389,11 +391,13 @@ const CategoryContent = ({
   onEditChannel: (channelId: string) => void;
   onDeleteChannel: (channelId: string) => void;
   onCopyChannelLink: (channelId: string) => void;
+  onMarkAsRead?: (channelId: string) => void;
   voicePresenceByChannel: Record<string, string[]>;
   resolveUser: (userId: string) => { avatarUser?: any; label: string };
   isMobile?: boolean;
   isDraggingAny?: boolean;
   isSortingMode?: boolean;
+  categories?: ChannelCategory[];
 }) => {
   return (
     <div className="space-y-0.5 ml-1 animate-fade-in">
@@ -414,6 +418,7 @@ const CategoryContent = ({
               onEdit={() => onEditChannel(channel.id)}
               onDelete={() => onDeleteChannel(channel.id)}
               onCopyLink={() => onCopyChannelLink(channel.id)}
+              onMarkAsRead={onMarkAsRead ? () => onMarkAsRead(channel.id) : undefined}
               isMobile={isMobile}
               isDraggingAny={isDraggingAny}
               isSortingMode={isSortingMode}
@@ -441,12 +446,14 @@ const SortableCategory = ({
   onDeleteCategory,
   onDeleteChannel,
   onCopyChannelLink,
+  onMarkAsRead,
   isDragOver,
   voicePresenceByChannel,
   resolveUser,
   isMobile,
   isDraggingAny,
   isSortingMode,
+  allCategories,
 }: {
   category: ChannelCategory;
   channels: Channel[];
@@ -462,12 +469,14 @@ const SortableCategory = ({
   onDeleteCategory: () => void;
   onDeleteChannel: (channelId: string) => void;
   onCopyChannelLink: (channelId: string) => void;
+  onMarkAsRead?: (channelId: string) => void;
   isDragOver?: boolean;
   voicePresenceByChannel: Record<string, string[]>;
   resolveUser: (userId: string) => { avatarUser?: any; label: string };
   isMobile?: boolean;
   isDraggingAny?: boolean;
   isSortingMode?: boolean;
+  allCategories?: ChannelCategory[];
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: category.id,
