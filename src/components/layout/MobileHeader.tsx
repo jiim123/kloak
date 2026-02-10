@@ -1,3 +1,4 @@
+import { memo, useMemo, useCallback } from "react";
 import { Menu, Hash, Users, Volume2 } from "lucide-react";
 import { useServerStore } from "@/stores/serverStore";
 import { useUIStore } from "@/stores/uiStore";
@@ -11,12 +12,14 @@ interface MobileHeaderProps {
   showExplore: boolean;
 }
 
-export const MobileHeader = ({ isDMView, showFriends, showExplore }: MobileHeaderProps) => {
+const safeAreaStyle = { paddingTop: "env(safe-area-inset-top, 0px)" } as const;
+
+export const MobileHeader = memo(({ isDMView, showFriends, showExplore }: MobileHeaderProps) => {
   const { currentServer, currentChannel } = useServerStore();
   const { currentConversation } = useDMStore();
   const { setMobileSidebarOpen, toggleMemberSidebar } = useUIStore();
 
-  const getTitle = () => {
+  const title = useMemo(() => {
     if (isDMView) {
       if (showFriends) return "Friends";
       if (showExplore) return "Explore";
@@ -31,22 +34,26 @@ export const MobileHeader = ({ isDMView, showFriends, showExplore }: MobileHeade
     }
 
     return currentServer?.name || "Kloak";
-  };
+  }, [isDMView, showFriends, showExplore, currentConversation, currentChannel, currentServer]);
 
-  const getChannelIcon = () => {
-    if (isDMView) return null;
-    if (!currentChannel) return null;
+  const channelIcon = useMemo(() => {
+    if (isDMView || !currentChannel) return null;
 
-    if (currentChannel.type === "voice") {
-      return <Volume2 className="w-5 h-5 text-muted-foreground shrink-0" />;
-    }
-    return <Hash className="w-5 h-5 text-muted-foreground shrink-0" />;
-  };
+    return currentChannel.type === "voice" ? (
+      <Volume2 className="w-5 h-5 text-muted-foreground shrink-0" />
+    ) : (
+      <Hash className="w-5 h-5 text-muted-foreground shrink-0" />
+    );
+  }, [isDMView, currentChannel]);
+
+  const openSidebar = useCallback(() => setMobileSidebarOpen(true), [setMobileSidebarOpen]);
+
+  const showMembersToggle = !isDMView && currentServer;
 
   return (
     <header
-      className="sticky top-0 z-40 md:hidden bg-background/80 backdrop-blur-lg border-b border-border/50 rounded-b-2xl"
-      style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
+      className="sticky top-0 z-40 md:hidden bg-background/90 backdrop-blur-sm border-b border-border/50 rounded-b-2xl"
+      style={safeAreaStyle}
     >
       <div className="flex items-center justify-between gap-3 px-3 h-14">
         {/* Left: Sidebar toggle */}
@@ -54,7 +61,7 @@ export const MobileHeader = ({ isDMView, showFriends, showExplore }: MobileHeade
           variant="ghost"
           size="icon"
           className="w-11 h-11 shrink-0 rounded-xl active:scale-95 transition-transform"
-          onClick={() => setMobileSidebarOpen(true)}
+          onClick={openSidebar}
           aria-label="Open sidebar"
         >
           <Menu className="w-5 h-5" />
@@ -62,8 +69,8 @@ export const MobileHeader = ({ isDMView, showFriends, showExplore }: MobileHeade
 
         {/* Center: Current channel / view title */}
         <div className="flex-1 flex items-center justify-center gap-1.5 min-w-0 px-2">
-          {getChannelIcon()}
-          <h1 className="font-semibold text-foreground truncate text-base leading-tight">{getTitle()}</h1>
+          {channelIcon}
+          <h1 className="font-semibold text-foreground truncate text-base leading-tight">{title}</h1>
         </div>
 
         {/* Right: Action buttons */}
@@ -72,7 +79,7 @@ export const MobileHeader = ({ isDMView, showFriends, showExplore }: MobileHeade
             <NotificationBell />
           </div>
 
-          {!isDMView && currentServer && (
+          {showMembersToggle && (
             <Button
               variant="ghost"
               size="icon"
@@ -87,4 +94,6 @@ export const MobileHeader = ({ isDMView, showFriends, showExplore }: MobileHeade
       </div>
     </header>
   );
-};
+});
+
+MobileHeader.displayName = "MobileHeader";
