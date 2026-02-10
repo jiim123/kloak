@@ -601,11 +601,13 @@ const SortableCategory = ({
           onEditChannel={onEditChannel}
           onDeleteChannel={onDeleteChannel}
           onCopyChannelLink={onCopyChannelLink}
+          onMarkAsRead={onMarkAsRead}
           voicePresenceByChannel={voicePresenceByChannel}
           resolveUser={resolveUser}
           isMobile={isMobile}
           isDraggingAny={isDraggingAny}
           isSortingMode={isSortingMode}
+          categories={allCategories}
         />
       )}
     </div>
