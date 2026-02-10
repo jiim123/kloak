@@ -323,16 +323,6 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
                       handleNotificationClick(notification.id, notification.link, notification.type)
                     }
                   >
-                    {/* Unread indicator */}
-                    {isUnread && (
-                      <div
-                        className={cn(
-                          "absolute left-1 top-1/2 -translate-y-1/2 w-1 h-8 rounded-full",
-                          colors.indicator,
-                        )}
-                      />
-                    )}
-
                     <div className="flex items-start gap-3">
                       {/* Icon container */}
                       <div
