@@ -1157,36 +1157,34 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange, serve
                 Server Emojis
               </span>
             </div>
-            <ScrollArea className="max-h-[120px]">
-              <div ref={serverScrollRef} className="flex flex-wrap gap-1.5 pb-0.5">
-                {servers.map((server) => (
-                  <button
-                    key={server.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedServerForEmoji(server.id);
-                      setActiveCategory(""); // Deselect native category
-                    }}
-                    className={cn(
-                      "flex-shrink-0 w-9 h-9 rounded-lg transition-all duration-200",
-                      selectedServerForEmoji === server.id
-                        ? "ring-2 ring-primary ring-offset-1 ring-offset-card"
-                        : "hover:opacity-80",
-                    )}
-                    title={server.name}
-                  >
-                    <Avatar className="w-full h-full rounded-lg">
-                      {server.icon_url ? (
-                        <AvatarImage src={server.icon_url} alt={server.name} className="object-cover" />
-                      ) : null}
-                      <AvatarFallback className="rounded-lg bg-muted text-xs font-medium">
-                        {server.name.slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                  </button>
-                ))}
-              </div>
-            </ScrollArea>
+            <div ref={serverScrollRef} className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5">
+              {servers.map((server) => (
+                <button
+                  key={server.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedServerForEmoji(server.id);
+                    setActiveCategory(""); // Deselect native category
+                  }}
+                  className={cn(
+                    "flex-shrink-0 w-9 h-9 rounded-lg transition-all duration-200",
+                    selectedServerForEmoji === server.id
+                      ? "ring-2 ring-primary ring-offset-1 ring-offset-card"
+                      : "hover:opacity-80",
+                  )}
+                  title={server.name}
+                >
+                  <Avatar className="w-full h-full rounded-lg">
+                    {server.icon_url ? (
+                      <AvatarImage src={server.icon_url} alt={server.name} className="object-cover" />
+                    ) : null}
+                    <AvatarFallback className="rounded-lg bg-muted text-xs font-medium">
+                      {server.name.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </PopoverContent>
