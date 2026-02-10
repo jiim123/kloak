@@ -698,8 +698,10 @@ export const ChannelSidebar = () => {
   const isOwner = userRole === "owner";
 
   const channelSettings = useChannelSettingsStore((s) => s.settings);
+  const [showHidden, setShowHidden] = useState(false);
 
-  const { uncategorizedChannels, sortedCategories } = useMemo(() => {
+  const { uncategorizedChannels, sortedCategories, hiddenChannels } = useMemo(() => {
+    const hidden = channels.filter((channel) => isHidden(channel.id));
     const uncategorized = channels
       .filter((channel) => !channel.category_id && !isHidden(channel.id))
       .sort((a, b) => {
@@ -711,7 +713,7 @@ export const ChannelSidebar = () => {
 
     const sorted = [...categories].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
 
-    return { uncategorizedChannels: uncategorized, sortedCategories: sorted };
+    return { uncategorizedChannels: uncategorized, sortedCategories: sorted, hiddenChannels: hidden };
   }, [channels, categories, channelSettings]);
 
   const getChannelsForCategory = useCallback(
