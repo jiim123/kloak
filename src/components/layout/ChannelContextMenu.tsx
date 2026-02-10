@@ -151,10 +151,6 @@ export const ChannelContextMenu = ({
       {isAdmin && (
         <>
           <ContextMenuLabel className="text-xs text-muted-foreground">Channel Management</ContextMenuLabel>
-          <ContextMenuItem onClick={onEdit}>
-            <Edit2 className="w-4 h-4 mr-2" />
-            Edit Channel
-          </ContextMenuItem>
           <ContextMenuItem onClick={() => openModal("edit-channel", { channelId: channel.id })}>
             <Settings className="w-4 h-4 mr-2" />
             Channel Settings
