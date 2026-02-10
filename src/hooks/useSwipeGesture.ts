@@ -3,60 +3,77 @@ import { useRef, useCallback, useEffect } from 'react';
 interface SwipeGestureOptions {
   onSwipeLeft?: () => void;
   onSwipeRight?: () => void;
-  threshold?: number; // Minimum distance to trigger swipe
+  threshold?: number;
   enabled?: boolean;
 }
 
 export const useSwipeGesture = ({
   onSwipeLeft,
   onSwipeRight,
-  threshold = 50,
+  threshold = 70,
   enabled = true,
 }: SwipeGestureOptions) => {
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
+  const touchEndY = useRef<number | null>(null);
+  const isVerticalScroll = useRef(false);
 
   const handleTouchStart = useCallback((e: TouchEvent) => {
     if (!enabled) return;
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
     touchEndX.current = null;
+    touchEndY.current = null;
+    isVerticalScroll.current = false;
   }, [enabled]);
 
   const handleTouchMove = useCallback((e: TouchEvent) => {
-    if (!enabled || touchStartX.current === null) return;
+    if (!enabled || touchStartX.current === null || touchStartY.current === null) return;
+
     touchEndX.current = e.touches[0].clientX;
+    touchEndY.current = e.touches[0].clientY;
+
+    // Once we detect a primarily vertical gesture, lock it out
+    if (!isVerticalScroll.current) {
+      const dx = Math.abs(e.touches[0].clientX - touchStartX.current);
+      const dy = Math.abs(e.touches[0].clientY - touchStartY.current);
+      if (dy > 10 && dy > dx * 1.5) {
+        isVerticalScroll.current = true;
+      }
+    }
   }, [enabled]);
 
   const handleTouchEnd = useCallback(() => {
     if (!enabled) return;
-    
-    if (touchStartX.current === null || touchEndX.current === null) {
+
+    if (touchStartX.current === null || touchEndX.current === null || isVerticalScroll.current) {
       touchStartX.current = null;
       touchStartY.current = null;
       touchEndX.current = null;
+      touchEndY.current = null;
+      isVerticalScroll.current = false;
       return;
     }
 
     const deltaX = touchEndX.current - touchStartX.current;
     const absDeltaX = Math.abs(deltaX);
+    const absDeltaY = Math.abs((touchEndY.current ?? touchStartY.current!) - touchStartY.current!);
 
-    // Only trigger if horizontal swipe is significant
-    if (absDeltaX >= threshold) {
+    // Only trigger if horizontal distance exceeds threshold AND is dominant over vertical
+    if (absDeltaX >= threshold && absDeltaX > absDeltaY * 2) {
       if (deltaX > 0 && onSwipeRight) {
-        // Swiped right
         onSwipeRight();
       } else if (deltaX < 0 && onSwipeLeft) {
-        // Swiped left
         onSwipeLeft();
       }
     }
 
-    // Reset
     touchStartX.current = null;
     touchStartY.current = null;
     touchEndX.current = null;
+    touchEndY.current = null;
+    isVerticalScroll.current = false;
   }, [enabled, threshold, onSwipeLeft, onSwipeRight]);
 
   const bindSwipeHandlers = useCallback((element: HTMLElement | null) => {
