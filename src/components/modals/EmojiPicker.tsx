@@ -1157,7 +1157,16 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange, serve
                 Server Emojis
               </span>
             </div>
-            <div ref={serverScrollRef} className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5">
+            <div
+              ref={serverScrollRef}
+              className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5"
+              onWheel={(e) => {
+                if (serverScrollRef.current && e.deltaY !== 0) {
+                  e.preventDefault();
+                  serverScrollRef.current.scrollLeft += e.deltaY;
+                }
+              }}
+            >
               {servers.map((server) => (
                 <button
                   key={server.id}
