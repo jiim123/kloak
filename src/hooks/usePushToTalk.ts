@@ -101,8 +101,8 @@ export function usePushToTalk({ room, isConnected, onMuteChange }: UsePushToTalk
           setMicEnabled(isPTTActiveRef.current);
         }
       } else {
-        // Hold mode: key down = mic on
-        if (!isHoldingRef.current) {
+        // Hold mode: key down = mic on (ignore key repeats)
+        if (!event.repeat && !isHoldingRef.current) {
           isHoldingRef.current = true;
           setMicEnabled(true);
         }
