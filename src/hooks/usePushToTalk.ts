@@ -53,20 +53,22 @@ export function usePushToTalk({ room, isConnected, onMuteChange }: UsePushToTalk
   const isPTTActiveRef = useRef(false);
   const isHoldingRef = useRef(false);
 
-  const setMicEnabled = useCallback(async (enabled: boolean) => {
+  const setMicEnabled = useCallback(async (enabled: boolean, silent = false) => {
     if (!room?.localParticipant) return;
     
     try {
       await room.localParticipant.setMicrophoneEnabled(enabled);
       onMuteChange?.(!enabled);
 
-      // Play PTT activation/deactivation sound if enabled
-      const settings = useVoiceSettingsStore.getState().settings;
-      if (settings.pttActivationSound && !settings.visualOnlyMode) {
-        if (enabled) {
-          playPTTActivateSound();
-        } else {
-          playPTTDeactivateSound();
+      // Play PTT activation/deactivation sound if enabled (skip if silent)
+      if (!silent) {
+        const settings = useVoiceSettingsStore.getState().settings;
+        if (settings.pttActivationSound && !settings.visualOnlyMode) {
+          if (enabled) {
+            playPTTActivateSound();
+          } else {
+            playPTTDeactivateSound();
+          }
         }
       }
     } catch (err) {
@@ -117,9 +119,9 @@ export function usePushToTalk({ room, isConnected, onMuteChange }: UsePushToTalk
       }
     };
 
-    // When entering PTT mode while connected, ensure mic starts muted
+    // When entering PTT mode while connected, ensure mic starts muted (silently)
     if (isPTTMode && !isPTTActiveRef.current && !isHoldingRef.current) {
-      setMicEnabled(false);
+      setMicEnabled(false, true);
     }
 
     window.addEventListener('keydown', handleKeyDown);

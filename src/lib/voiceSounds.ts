@@ -32,14 +32,23 @@ function playTone(frequency: number, duration: number, type: OscillatorType = 's
   }
 }
 
+let lastJoinLeaveTime = 0;
+const JOIN_LEAVE_COOLDOWN = 500; // ms
+
 /** Two rising tones — user joined */
 export function playJoinSound() {
+  const now = Date.now();
+  if (now - lastJoinLeaveTime < JOIN_LEAVE_COOLDOWN) return;
+  lastJoinLeaveTime = now;
   playTone(440, 0.12, 'sine', 0.12);
   setTimeout(() => playTone(587, 0.15, 'sine', 0.12), 80);
 }
 
 /** Two falling tones — user left */
 export function playLeaveSound() {
+  const now = Date.now();
+  if (now - lastJoinLeaveTime < JOIN_LEAVE_COOLDOWN) return;
+  lastJoinLeaveTime = now;
   playTone(587, 0.12, 'sine', 0.1);
   setTimeout(() => playTone(440, 0.15, 'sine', 0.1), 80);
 }
