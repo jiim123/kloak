@@ -3,6 +3,7 @@ import {
   Room,
   RoomEvent,
   Track,
+  RemoteTrack,
   Participant,
   RemoteParticipant,
   LocalParticipant,
@@ -23,10 +24,10 @@ export type LiveKitParticipant = {
   isSpeaking: boolean;
   isMuted: boolean;
   isScreenSharing: boolean;
-  audioTrack: MediaStreamTrack | null;
+  audioTrack: RemoteTrack | null;
   screenTrack: MediaStreamTrack | null;
   joinedAt: number;
-  hideVoiceActivity: boolean; // Added: whether this participant hides their speaking indicator
+  hideVoiceActivity: boolean;
 };
 
 // Parse participant metadata safely
@@ -81,14 +82,14 @@ export function useLiveKitRoom(opts: UseLiveKitRoomOptions) {
     }
 
     const buildParticipant = (p: Participant, isLocal: boolean): LiveKitParticipant => {
-      let audioTrack: MediaStreamTrack | null = null;
+      let audioTrack: RemoteTrack | null = null;
       let screenTrack: MediaStreamTrack | null = null;
 
       p.trackPublications.forEach((pub: TrackPublication) => {
         const track = pub.track;
         if (!track) return;
-        if (pub.source === Track.Source.Microphone && track.kind === "audio") {
-          audioTrack = track.mediaStreamTrack;
+        if (pub.source === Track.Source.Microphone && track.kind === "audio" && !isLocal) {
+          audioTrack = track as unknown as RemoteTrack;
         }
         if (pub.source === Track.Source.ScreenShare && track.kind === "video") {
           screenTrack = track.mediaStreamTrack;

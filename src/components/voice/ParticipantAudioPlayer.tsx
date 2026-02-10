@@ -1,15 +1,16 @@
 /**
- * Participant Audio Player with Per-User Volume Control
- * Uses a standard <audio> element for reliable cross-browser playback
- * and controls volume via the HTMLAudioElement.volume property.
+ * Participant Audio Player using LiveKit's track.attach() API
+ * Uses LiveKit's built-in audio element creation for reliable playback
+ * and setVolume() for per-user volume control.
  */
 
 import { useEffect, useRef, useCallback } from 'react';
+import type { RemoteTrack } from 'livekit-client';
 import { useVoiceSettingsStore } from '@/stores/voiceSettingsStore';
 
 interface ParticipantAudioPlayerProps {
   participantId: string;
-  track: MediaStreamTrack;
+  track: RemoteTrack;
   muted: boolean; // Global deafen state
 }
 
@@ -18,52 +19,38 @@ export function ParticipantAudioPlayer({
   track,
   muted,
 }: ParticipantAudioPlayerProps) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const elementRef = useRef<HTMLMediaElement | null>(null);
 
-  // Get per-user volume from settings store
   const userVolume = useVoiceSettingsStore((s) => s.getUserVolume(participantId));
   const outputVolume = useVoiceSettingsStore((s) => s.settings.outputVolume);
 
-  // Calculate the final volume (0-1 range for HTMLAudioElement)
   const calculateVolume = useCallback(() => {
     if (muted) return 0;
-    // Both values are 0-200 percentages; cap the result at 1.0 for the audio element
-    // (values above 100% are best-effort – browsers clamp volume to 1.0)
     return Math.min(1, (userVolume / 100) * (outputVolume / 100));
   }, [userVolume, outputVolume, muted]);
 
-  // Attach the track to the audio element
+  // Attach/detach the LiveKit track
   useEffect(() => {
     if (!track) return;
 
-    const audio = new Audio();
-    audio.autoplay = true;
-    // Some browsers need the element in the DOM to play
-    audio.style.display = 'none';
-    document.body.appendChild(audio);
-
-    const stream = new MediaStream([track]);
-    audio.srcObject = stream;
-    audio.volume = calculateVolume();
-    audio.play().catch(() => {});
-
-    audioRef.current = audio;
+    // LiveKit's attach() creates an <audio> element and handles playback
+    const element = track.attach();
+    element.volume = calculateVolume();
+    elementRef.current = element;
 
     return () => {
-      audio.pause();
-      audio.srcObject = null;
-      audio.remove();
-      audioRef.current = null;
+      track.detach(element);
+      element.remove();
+      elementRef.current = null;
     };
   }, [track]);
 
-  // Update volume when settings change
+  // Update volume reactively
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = calculateVolume();
+    if (elementRef.current) {
+      elementRef.current.volume = calculateVolume();
     }
   }, [calculateVolume]);
 
-  // This component doesn't render anything visible
   return null;
 }
