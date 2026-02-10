@@ -5,6 +5,7 @@
 
 import { useEffect, useCallback, useRef } from 'react';
 import { useVoiceSettingsStore } from '@/stores/voiceSettingsStore';
+import { playPTTActivateSound, playPTTDeactivateSound } from '@/lib/voiceSounds';
 import type { Room } from 'livekit-client';
 
 interface UsePushToTalkOptions {
@@ -58,6 +59,16 @@ export function usePushToTalk({ room, isConnected, onMuteChange }: UsePushToTalk
     try {
       await room.localParticipant.setMicrophoneEnabled(enabled);
       onMuteChange?.(!enabled);
+
+      // Play PTT activation/deactivation sound if enabled
+      const settings = useVoiceSettingsStore.getState().settings;
+      if (settings.pttActivationSound && !settings.visualOnlyMode) {
+        if (enabled) {
+          playPTTActivateSound();
+        } else {
+          playPTTDeactivateSound();
+        }
+      }
     } catch (err) {
       console.error('Failed to set microphone state:', err);
     }

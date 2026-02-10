@@ -6,8 +6,11 @@ import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { useVoiceStore } from "@/stores/voiceStore";
+import { useVoiceSettingsStore } from "@/stores/voiceSettingsStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { useLiveKitRoom, LiveKitParticipant } from "@/hooks/useLiveKitRoom";
+import { usePushToTalk } from "@/hooks/usePushToTalk";
+import { useHideVoiceActivity } from "@/hooks/useHideVoiceActivity";
 import { ScreenShareQualityModal, ScreenShareQuality } from "@/components/voice/ScreenShareQualityModal";
 import { ParticipantAudioPlayer } from "@/components/voice/ParticipantAudioPlayer";
 import { UserVolumeControl, VolumeIndicator } from "@/components/voice/UserVolumeControl";
@@ -44,7 +47,8 @@ type TileProps = {
 
 function ParticipantTile({ participant, member, isYou, isDeafened }: TileProps) {
   const name = getMemberDisplayName(member, participant);
-  const speaking = participant.isSpeaking && !participant.hideVoiceActivity;
+  const visualVoiceIndicators = useVoiceSettingsStore((s) => s.settings.visualVoiceIndicators);
+  const speaking = participant.isSpeaking && !participant.hideVoiceActivity && visualVoiceIndicators;
   const [volumeOpen, setVolumeOpen] = useState(false);
 
   const tileContent = (
@@ -114,6 +118,22 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
     channelId: channel.id,
     userId: user?.id || null,
     displayName: user?.display_name || user?.username,
+  });
+
+  // Connect Push-to-Talk hook
+  usePushToTalk({
+    room: voice.room,
+    isConnected: voice.isJoined,
+    onMuteChange: (muted) => {
+      // Sync mute state from PTT to voice controls
+      useVoiceStore.getState().setControls({ muted });
+    },
+  });
+
+  // Connect hide voice activity hook (syncs setting to LiveKit metadata)
+  useHideVoiceActivity({
+    room: voice.room,
+    isConnected: voice.isJoined,
   });
 
   // Check if local user is speaking (for auto-disconnect)

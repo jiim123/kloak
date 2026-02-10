@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { useVoiceSettingsStore } from "@/stores/voiceSettingsStore";
 import { pauseVoicePresenceWatch, resumeVoicePresenceWatch } from "@/hooks/useVoicePresenceWatchers";
+import { playJoinSound, playLeaveSound } from "@/lib/voiceSounds";
 import type { ScreenShareQuality } from "@/components/voice/ScreenShareQualityModal";
 
 export type LiveKitParticipant = {
@@ -179,8 +180,22 @@ export function useLiveKitRoom(opts: UseLiveKitRoomOptions) {
       roomRef.current = room;
 
       // Set up event listeners
-      room.on(RoomEvent.ParticipantConnected, updateParticipants);
-      room.on(RoomEvent.ParticipantDisconnected, updateParticipants);
+      room.on(RoomEvent.ParticipantConnected, (participant: RemoteParticipant) => {
+        updateParticipants();
+        // Play join sound if enabled
+        const settings = useVoiceSettingsStore.getState().settings;
+        if (settings.joinLeaveSound && !settings.visualOnlyMode) {
+          playJoinSound();
+        }
+      });
+      room.on(RoomEvent.ParticipantDisconnected, (participant: RemoteParticipant) => {
+        updateParticipants();
+        // Play leave sound if enabled
+        const settings = useVoiceSettingsStore.getState().settings;
+        if (settings.joinLeaveSound && !settings.visualOnlyMode) {
+          playLeaveSound();
+        }
+      });
       room.on(RoomEvent.TrackSubscribed, updateParticipants);
       room.on(RoomEvent.TrackUnsubscribed, updateParticipants);
       room.on(RoomEvent.TrackMuted, updateParticipants);
@@ -382,6 +397,47 @@ export function useLiveKitRoom(opts: UseLiveKitRoomOptions) {
       }
     };
   }, []);
+
+  // Sync audio device changes mid-call
+  useEffect(() => {
+    const room = roomRef.current;
+    if (!room || status !== "joined") return;
+
+    // Switch input device
+    if (voiceSettings.inputDeviceId) {
+      room.switchActiveDevice("audioinput", voiceSettings.inputDeviceId).catch(() => {});
+    }
+  }, [voiceSettings.inputDeviceId, status]);
+
+  useEffect(() => {
+    const room = roomRef.current;
+    if (!room || status !== "joined") return;
+
+    // Switch output device
+    if (voiceSettings.outputDeviceId) {
+      room.switchActiveDevice("audiooutput", voiceSettings.outputDeviceId).catch(() => {});
+    }
+  }, [voiceSettings.outputDeviceId, status]);
+
+  // Sync audio processing options mid-call
+  useEffect(() => {
+    const room = roomRef.current;
+    if (!room || status !== "joined") return;
+
+    // Re-publish mic with updated audio processing constraints
+    const localPub = Array.from(room.localParticipant.trackPublications.values()).find(
+      (pub) => pub.source === Track.Source.Microphone
+    ) as LocalTrackPublication | undefined;
+
+    if (localPub?.track?.mediaStreamTrack) {
+      localPub.track.mediaStreamTrack.applyConstraints({
+        echoCancellation: voiceSettings.echoCancellation,
+        noiseSuppression: voiceSettings.noiseSuppression,
+        autoGainControl: voiceSettings.autoGainControl,
+        channelCount: voiceSettings.monoAudio ? 1 : undefined,
+      }).catch(() => {});
+    }
+  }, [voiceSettings.echoCancellation, voiceSettings.noiseSuppression, voiceSettings.autoGainControl, voiceSettings.monoAudio, status]);
 
   return {
     status,
