@@ -1302,6 +1302,48 @@ export const ChannelSidebar = () => {
                   ))}
                 </SortableContext>
 
+                {/* Hidden Channels section */}
+                {hiddenChannels.length > 0 && (
+                  <div className="mt-4 border-t border-border/30 pt-2">
+                    <button
+                      onClick={() => setShowHidden(!showHidden)}
+                      className="w-full flex items-center gap-1.5 px-2 py-1 text-xs font-semibold uppercase text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showHidden ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                      <EyeOff className="w-3 h-3" />
+                      <span>Hidden Channels ({hiddenChannels.length})</span>
+                    </button>
+                    {showHidden && (
+                      <div className="mt-1 space-y-0.5 opacity-60">
+                        {hiddenChannels.map((channel) => {
+                          const { unreadCount, mentionCount } = getChannelUnread(channel.id);
+                          return (
+                            <SortableChannel
+                              key={channel.id}
+                              channel={channel}
+                              isActive={currentChannel?.id === channel.id}
+                              unreadCount={unreadCount}
+                              mentionCount={mentionCount}
+                              onSelect={(ch) => handleSelectChannel(ch)}
+                              onEdit={() => openModal("edit-channel", { channelId: channel.id })}
+                              onDelete={() => handleDeleteChannel(channel.id)}
+                              onCopyLink={() => handleCopyChannelLink(channel.id)}
+                              onMarkAsRead={() => markAsRead(channel.id)}
+                              isAdmin={isAdmin}
+                              voicePresence={voicePresenceByChannel[channel.id]}
+                              resolveUser={resolveUser}
+                              isMobile={isMobile}
+                              isDraggingAny={isDraggingAny}
+                              isSortingMode={isSortingMode}
+                              categories={sortedCategories}
+                            />
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Empty state */}
                 {channels.length === 0 && categories.length === 0 && (
                   <div className="flex flex-col items-center justify-center py-12 text-center animate-fade-in">
