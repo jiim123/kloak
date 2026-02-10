@@ -168,8 +168,6 @@ export const StatusSelector = ({ children, side = 'right', align = 'start' }: St
     }
     // Persist to database - pass null directly
     await updateUser({ custom_status: null });
-    // Close the dropdown after clearing
-    setIsOpen(false);
   };
 
   const handleEmojiSelect = (emoji: string) => {
@@ -258,7 +256,7 @@ export const StatusSelector = ({ children, side = 'right', align = 'start' }: St
               value={customStatusText}
               onChange={(e) => setCustomStatusText(e.target.value)}
               className="h-9 text-sm flex-1"
-              maxLength={128}
+              maxLength={20}
             />
           </div>
           
