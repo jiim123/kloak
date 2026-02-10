@@ -1324,7 +1324,7 @@ export const ChannelSidebar = () => {
                               isActive={currentChannel?.id === channel.id}
                               unreadCount={unreadCount}
                               mentionCount={mentionCount}
-                              onSelect={(ch) => handleSelectChannel(ch)}
+                              onSelect={() => handleSelectChannel(channel)}
                               onEdit={() => openModal("edit-channel", { channelId: channel.id })}
                               onDelete={() => handleDeleteChannel(channel.id)}
                               onCopyLink={() => handleCopyChannelLink(channel.id)}
