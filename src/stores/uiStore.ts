@@ -72,6 +72,12 @@ interface UIState {
   showPreviewUserMentions: boolean;
   showPreviewReplies: boolean;
 
+  // Per-type notification visibility
+  enableMentionNotifications: boolean;
+  enableDMNotifications: boolean;
+  enableFriendRequestNotifications: boolean;
+  enableServerInviteNotifications: boolean;
+
   // Message display preferences
   compactMode: boolean;
   showTimestamps: boolean;
@@ -119,6 +125,12 @@ interface UIState {
   setShowPreviewUserMentions: (enabled: boolean) => void;
   setShowPreviewReplies: (enabled: boolean) => void;
 
+  // Per-type notification visibility actions
+  setEnableMentionNotifications: (enabled: boolean) => void;
+  setEnableDMNotifications: (enabled: boolean) => void;
+  setEnableFriendRequestNotifications: (enabled: boolean) => void;
+  setEnableServerInviteNotifications: (enabled: boolean) => void;
+
   // Message display preference actions
   setCompactMode: (enabled: boolean) => void;
   setShowTimestamps: (enabled: boolean) => void;
@@ -164,6 +176,12 @@ export const useUIStore = create<UIState>()(
       showPreviewServerMentions: true,
       showPreviewUserMentions: true,
       showPreviewReplies: true,
+
+      // Per-type notification visibility
+      enableMentionNotifications: true,
+      enableDMNotifications: true,
+      enableFriendRequestNotifications: true,
+      enableServerInviteNotifications: true,
 
       // Message display preferences
       compactMode: false,
@@ -304,6 +322,20 @@ export const useUIStore = create<UIState>()(
         set({ showPreviewReplies: enabled });
       },
 
+      // Per-type notification visibility actions
+      setEnableMentionNotifications: (enabled) => {
+        set({ enableMentionNotifications: enabled });
+      },
+      setEnableDMNotifications: (enabled) => {
+        set({ enableDMNotifications: enabled });
+      },
+      setEnableFriendRequestNotifications: (enabled) => {
+        set({ enableFriendRequestNotifications: enabled });
+      },
+      setEnableServerInviteNotifications: (enabled) => {
+        set({ enableServerInviteNotifications: enabled });
+      },
+
       // Message display preference actions
       setCompactMode: (enabled) => {
         set({ compactMode: enabled });
@@ -335,6 +367,10 @@ export const useUIStore = create<UIState>()(
         showPreviewServerMentions: state.showPreviewServerMentions,
         showPreviewUserMentions: state.showPreviewUserMentions,
         showPreviewReplies: state.showPreviewReplies,
+        enableMentionNotifications: state.enableMentionNotifications,
+        enableDMNotifications: state.enableDMNotifications,
+        enableFriendRequestNotifications: state.enableFriendRequestNotifications,
+        enableServerInviteNotifications: state.enableServerInviteNotifications,
         compactMode: state.compactMode,
         showTimestamps: state.showTimestamps,
         animateEmojis: state.animateEmojis,
