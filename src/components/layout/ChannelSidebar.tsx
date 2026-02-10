@@ -333,25 +333,15 @@ const SortableChannel = ({
           <ContextMenuTrigger asChild disabled={isDraggingAny}>
             {buttonContent}
           </ContextMenuTrigger>
-          <ContextMenuContent>
-            {isAdmin && (
-              <>
-                <ContextMenuItem onClick={onEdit}>
-                  <Edit2 className="w-4 h-4 mr-2" />
-                  Edit Channel
-                </ContextMenuItem>
-                <ContextMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete Channel
-                </ContextMenuItem>
-                <ContextMenuSeparator />
-              </>
-            )}
-            <ContextMenuItem onClick={onCopyLink}>
-              <Copy className="w-4 h-4 mr-2" />
-              Copy Channel Link
-            </ContextMenuItem>
-          </ContextMenuContent>
+          <ChannelContextMenu
+            channel={channel}
+            isAdmin={isAdmin}
+            categories={categories}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onCopyLink={onCopyLink}
+            onMarkAsRead={onMarkAsRead}
+          />
         </ContextMenu>
       )}
 
