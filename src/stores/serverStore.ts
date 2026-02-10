@@ -1263,8 +1263,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         _user_id: userId,
         _name: updates.name ?? null,
         _color: updates.color ?? null,
-        _icon: updates.icon !== undefined ? updates.icon : null,
-      });
+      } as any);
 
       if (error) throw error;
 
