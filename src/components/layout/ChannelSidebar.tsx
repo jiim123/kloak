@@ -1268,12 +1268,14 @@ export const ChannelSidebar = () => {
                       onDeleteCategory={() => handleDeleteCategory(category.id)}
                       onDeleteChannel={handleDeleteChannel}
                       onCopyChannelLink={handleCopyChannelLink}
+                      onMarkAsRead={(channelId) => markAsRead(channelId)}
                       isDragOver={overCategoryId === category.id && activeType === "channel"}
                       voicePresenceByChannel={voicePresenceByChannel}
                       resolveUser={resolveUser}
                       isMobile={isMobile}
                       isDraggingAny={isDraggingAny}
                       isSortingMode={isSortingMode}
+                      allCategories={sortedCategories}
                     />
                   ))}
                 </SortableContext>
