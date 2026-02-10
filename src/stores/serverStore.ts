@@ -1237,8 +1237,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         _user_id: userId,
         _name: name,
         _color: color,
-        _icon: icon ?? null,
-      });
+      } as any);
 
       if (error) {
         console.error('Failed to create role - error:', error);
