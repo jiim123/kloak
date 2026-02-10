@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, setKeyHashHeader } from '@/integrations/supabase/client';
 import { generateSecretKey, hashSecretKey, isValidSecretKey } from '@/lib/crypto';
 import { authRateLimiter, accountCreationRateLimiter, validateUsername } from '@/lib/security';
 import type { User, UserStatus } from '@/types';
@@ -57,11 +57,19 @@ export const useAuthStore = create<AuthState>()(
         const { secretKey, login } = get();
         if (!secretKey || !isValidSecretKey(secretKey)) {
           set({ isAuthenticated: false, user: null });
+          setKeyHashHeader(null);
           return false;
         }
         
+        // Set the key_hash header before login so RPCs can verify identity
+        const keyHash = await hashSecretKey(secretKey);
+        setKeyHashHeader(keyHash);
+        
         set({ isLoading: true });
         const success = await login(secretKey);
+        if (!success) {
+          setKeyHashHeader(null);
+        }
         set({ isLoading: false });
         return success;
       },
@@ -136,6 +144,8 @@ export const useAuthStore = create<AuthState>()(
           };
 
           // New account starts with no manual status override.
+          const newKeyHash = await hashSecretKey(secretKey);
+          setKeyHashHeader(newKeyHash);
           set({ user, secretKey, isAuthenticated: true, isLoading: false, isNewUser: true, manualStatus: null });
 
           // Auto-join the default community server
@@ -175,6 +185,9 @@ export const useAuthStore = create<AuthState>()(
 
         try {
           const keyHash = await hashSecretKey(secretKey);
+          
+          // Set the key_hash header for identity verification on all subsequent requests
+          setKeyHashHeader(keyHash);
 
           // Use RPC function to login (bypasses RLS)
           const { data, error } = await supabase.rpc('login_user', {
@@ -182,6 +195,7 @@ export const useAuthStore = create<AuthState>()(
           });
 
           if (error || !data) {
+            setKeyHashHeader(null);
             set({ error: 'Invalid secret key', isLoading: false, isAuthenticated: false });
             return false;
           }
@@ -230,6 +244,7 @@ export const useAuthStore = create<AuthState>()(
             _status: 'offline',
           }).then(() => {});
         }
+        setKeyHashHeader(null);
         set({ user: null, secretKey: null, isAuthenticated: false, error: null });
       },
 

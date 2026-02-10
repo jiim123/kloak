@@ -613,13 +613,12 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
           const mentions = extractMentions(contentToSend);
           Promise.resolve()
             .then(async () => {
+              // Collect all mentions into a batch array
+              const mentionBatch: { user_id: string; mention_type: string }[] = [];
+              
               for (const mention of mentions) {
                 if (mention.type === "user" && mention.id && mention.id !== user.id) {
-                  await supabase.from("mentions").insert({
-                    message_id: message.id,
-                    user_id: mention.id,
-                    mention_type: "user",
-                  });
+                  mentionBatch.push({ user_id: mention.id, mention_type: "user" });
                 } else if (mention.type === "everyone" || mention.type === "here") {
                   const targetMembers =
                     mention.type === "here"
@@ -627,13 +626,17 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
                       : members.filter((m) => m.user_id !== user.id);
 
                   for (const member of targetMembers.slice(0, 50)) {
-                    await supabase.from("mentions").insert({
-                      message_id: message.id,
-                      user_id: member.user_id,
-                      mention_type: mention.type,
-                    });
+                    mentionBatch.push({ user_id: member.user_id, mention_type: mention.type });
                   }
                 }
+              }
+              
+              // Insert all mentions via secure RPC (bypasses RLS lockdown)
+              if (mentionBatch.length > 0) {
+                await supabase.rpc('insert_mentions' as any, {
+                  _message_id: message.id,
+                  _mentions: mentionBatch,
+                });
               }
             })
             .catch((err) => console.error("Failed to process mentions:", err));

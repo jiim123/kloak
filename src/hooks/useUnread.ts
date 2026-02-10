@@ -150,32 +150,9 @@ export const useUnread = (serverChannelIds: string[] = []) => {
         });
 
         if (rpcError) {
-          // Back-compat fallback (in case migration hasn't been applied yet).
-          const { data: existing } = await supabase
-            .from('channel_reads')
-            .select('id')
-            .eq('user_id', user.id)
-            .eq('channel_id', channelId)
-            .maybeSingle();
-
-          if (existing) {
-            await supabase
-              .from('channel_reads')
-              .update({
-                last_read_message_id: messageId,
-                last_read_at: now,
-                mention_count: 0,
-              })
-              .eq('id', existing.id);
-          } else {
-            await supabase.from('channel_reads').insert({
-              user_id: user.id,
-              channel_id: channelId,
-              last_read_message_id: messageId,
-              last_read_at: now,
-              mention_count: 0,
-            });
-          }
+          // RPC not available yet — log warning but don't fallback to direct writes
+          // Direct table writes are blocked by RLS for security
+          console.warn('mark_channel_read RPC failed:', rpcError.message);
         }
 
         setUnreadState((prev) => ({

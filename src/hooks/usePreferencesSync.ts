@@ -129,25 +129,27 @@ export const usePreferencesSync = () => {
           
           isUpdating.current = false;
         } else {
-          // Create initial preferences record with current local values
-          await supabase.from('user_preferences').insert({
-            user_id: user.id,
-            theme,
-            link_previews_enabled: linkPreviewsEnabled,
-            desktop_notifications_enabled: desktopNotificationsEnabled,
-            browser_notifications_enabled: browserNotificationsEnabled,
-            notification_sound_enabled: notificationSoundEnabled,
-            notification_sound_server_mentions: notificationSoundServerMentions,
-            notification_sound_user_mentions: notificationSoundUserMentions,
-            notification_sound_replies: notificationSoundReplies,
-            notification_volume: notificationVolume,
-            show_message_preview: showMessagePreview,
-            show_preview_server_mentions: showPreviewServerMentions,
-            show_preview_user_mentions: showPreviewUserMentions,
-            show_preview_replies: showPreviewReplies,
-            compact_mode: compactMode,
-            show_timestamps: showTimestamps,
-            animate_emojis: animateEmojis,
+          // Create initial preferences record via secure RPC
+          await supabase.rpc('upsert_user_preferences' as any, {
+            _user_id: user.id,
+            _prefs: {
+              theme,
+              link_previews_enabled: linkPreviewsEnabled,
+              desktop_notifications_enabled: desktopNotificationsEnabled,
+              browser_notifications_enabled: browserNotificationsEnabled,
+              notification_sound_enabled: notificationSoundEnabled,
+              notification_sound_server_mentions: notificationSoundServerMentions,
+              notification_sound_user_mentions: notificationSoundUserMentions,
+              notification_sound_replies: notificationSoundReplies,
+              notification_volume: notificationVolume,
+              show_message_preview: showMessagePreview,
+              show_preview_server_mentions: showPreviewServerMentions,
+              show_preview_user_mentions: showPreviewUserMentions,
+              show_preview_replies: showPreviewReplies,
+              compact_mode: compactMode,
+              show_timestamps: showTimestamps,
+              animate_emojis: animateEmojis,
+            },
           });
         }
 
@@ -168,10 +170,9 @@ export const usePreferencesSync = () => {
 
     const savePreferences = async () => {
       try {
-        await supabase
-          .from('user_preferences')
-          .upsert({
-            user_id: user.id,
+        await supabase.rpc('upsert_user_preferences' as any, {
+          _user_id: user.id,
+          _prefs: {
             theme,
             link_previews_enabled: linkPreviewsEnabled,
             desktop_notifications_enabled: desktopNotificationsEnabled,
@@ -188,9 +189,8 @@ export const usePreferencesSync = () => {
             compact_mode: compactMode,
             show_timestamps: showTimestamps,
             animate_emojis: animateEmojis,
-          }, {
-            onConflict: 'user_id',
-          });
+          },
+        });
       } catch (err) {
         console.error('Failed to save preferences:', err);
       }

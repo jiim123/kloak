@@ -5,6 +5,26 @@ import type { Database } from './types';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+/**
+ * Mutable headers object passed by reference to the Supabase client.
+ * Mutations to this object are reflected in all subsequent requests.
+ * Used to inject the x-key-hash header for server-side identity verification.
+ */
+const dynamicHeaders: Record<string, string> = {};
+
+/**
+ * Set or clear the key_hash header for identity verification.
+ * Called after login/checkAuth to attach the user's key_hash to every request.
+ * RPCs can then verify the caller's identity via verify_request_identity().
+ */
+export function setKeyHashHeader(keyHash: string | null) {
+  if (keyHash) {
+    dynamicHeaders['x-key-hash'] = keyHash;
+  } else {
+    delete dynamicHeaders['x-key-hash'];
+  }
+}
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
@@ -13,5 +33,8 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
-  }
+  },
+  global: {
+    headers: dynamicHeaders,
+  },
 });
