@@ -323,6 +323,20 @@ const SortableChannel = ({
           </div>
         )}
       </button>
+
+      {/* Drag handle for admins - desktop only, OUTSIDE the button */}
+      {isAdmin && !isMobile && (
+        <div
+          {...attributes}
+          {...listeners}
+          className="p-1 -mr-1 opacity-0 group-hover:opacity-50 hover:!opacity-100 cursor-grab active:cursor-grabbing flex-shrink-0"
+        >
+          <div className="w-1 h-3 flex flex-col gap-0.5 justify-center">
+            <div className="w-1 h-1 rounded-full bg-muted-foreground" />
+            <div className="w-1 h-1 rounded-full bg-muted-foreground" />
+          </div>
+        </div>
+      )}
     </div>
   );
 
