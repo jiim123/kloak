@@ -688,21 +688,34 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange, serve
     }
   }, [open, serverId, loadServerEmojis]);
 
-  // Pre-load all server emojis when picker opens (for recent custom emojis)
+  // Lazily load other server emojis in the background (staggered, not all at once)
   useEffect(() => {
-    if (!open) return;
-    
-    // Check if there are any custom emojis in recents that need to be loaded
-    const recent = getRecentEmojis();
-    const hasCustomEmojis = recent.some((e) => e.startsWith(":") && e.endsWith(":") && e.length > 2);
-    
-    if (hasCustomEmojis && servers.length > 0) {
-      // Load emojis from all servers to find recent custom emojis
-      servers.forEach((server) => {
-        loadServerEmojis(server.id);
-      });
-    }
-  }, [open, servers, loadServerEmojis]);
+    if (!open || servers.length === 0) return;
+
+    // Determine which servers still need loading (exclude current server, already loaded ones)
+    const unloaded = servers
+      .map((s) => s.id)
+      .filter((id) => id !== serverId && !serverEmojis[id]);
+
+    if (unloaded.length === 0) return;
+
+    // Stagger loads: 1 server every 150ms using requestIdleCallback (or setTimeout fallback)
+    const schedule = typeof requestIdleCallback === "function" ? requestIdleCallback : (cb: () => void) => setTimeout(cb, 0);
+    const timers: number[] = [];
+
+    unloaded.forEach((id, idx) => {
+      const timerId = window.setTimeout(() => {
+        schedule(() => loadServerEmojis(id));
+      }, idx * 150);
+      timers.push(timerId);
+    });
+
+    return () => {
+      timers.forEach((t) => clearTimeout(t));
+    };
+    // Only run once when picker opens — intentionally omit serverEmojis from deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, servers, serverId]);
 
   // Load emojis when selecting a different server
   useEffect(() => {
