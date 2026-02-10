@@ -1322,16 +1322,16 @@ export const ChannelSidebar = () => {
                               key={channel.id}
                               channel={channel}
                               isActive={currentChannel?.id === channel.id}
-                              unreadCount={unreadCount}
+                              isUnread={unreadCount > 0}
                               mentionCount={mentionCount}
+                              isAdmin={isAdmin}
+                              voiceUserIds={voicePresenceByChannel[channel.id]}
+                              resolveUser={resolveUser}
                               onSelect={() => handleSelectChannel(channel)}
                               onEdit={() => openModal("edit-channel", { channelId: channel.id })}
                               onDelete={() => handleDeleteChannel(channel.id)}
                               onCopyLink={() => handleCopyChannelLink(channel.id)}
                               onMarkAsRead={() => markAsRead(channel.id)}
-                              isAdmin={isAdmin}
-                              voicePresence={voicePresenceByChannel[channel.id]}
-                              resolveUser={resolveUser}
                               isMobile={isMobile}
                               isDraggingAny={isDraggingAny}
                               isSortingMode={isSortingMode}
