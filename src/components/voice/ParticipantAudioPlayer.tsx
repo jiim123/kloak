@@ -1,6 +1,7 @@
 /**
  * Participant Audio Player with Per-User Volume Control
- * Uses Web Audio API GainNode to apply individual volume overrides
+ * Uses a standard <audio> element for reliable cross-browser playback
+ * and controls volume via the HTMLAudioElement.volume property.
  */
 
 import { useEffect, useRef, useCallback } from 'react';
@@ -17,94 +18,52 @@ export function ParticipantAudioPlayer({
   track,
   muted,
 }: ParticipantAudioPlayerProps) {
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const gainNodeRef = useRef<GainNode | null>(null);
-  const sourceNodeRef = useRef<MediaStreamAudioSourceNode | null>(null);
-  const audioElementRef = useRef<HTMLAudioElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Get per-user volume from settings store
   const userVolume = useVoiceSettingsStore((s) => s.getUserVolume(participantId));
   const outputVolume = useVoiceSettingsStore((s) => s.settings.outputVolume);
 
-  // Calculate the final gain value (both per-user and global output volume)
-  const calculateGain = useCallback(() => {
+  // Calculate the final volume (0-1 range for HTMLAudioElement)
+  const calculateVolume = useCallback(() => {
     if (muted) return 0;
-    // Both values are 0-200 percentages, so normalize to 0-2 and multiply
-    return (userVolume / 100) * (outputVolume / 100);
+    // Both values are 0-200 percentages; cap the result at 1.0 for the audio element
+    // (values above 100% are best-effort – browsers clamp volume to 1.0)
+    return Math.min(1, (userVolume / 100) * (outputVolume / 100));
   }, [userVolume, outputVolume, muted]);
 
-  // Set up Web Audio API pipeline
+  // Attach the track to the audio element
   useEffect(() => {
     if (!track) return;
 
-    // Create audio context
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    audioContextRef.current = audioContext;
+    const audio = new Audio();
+    audio.autoplay = true;
+    // Some browsers need the element in the DOM to play
+    audio.style.display = 'none';
+    document.body.appendChild(audio);
 
-    // Create stream from track
     const stream = new MediaStream([track]);
+    audio.srcObject = stream;
+    audio.volume = calculateVolume();
+    audio.play().catch(() => {});
 
-    // Create source node from stream
-    const sourceNode = audioContext.createMediaStreamSource(stream);
-    sourceNodeRef.current = sourceNode;
-
-    // Create gain node for volume control
-    const gainNode = audioContext.createGain();
-    gainNode.gain.value = calculateGain();
-    gainNodeRef.current = gainNode;
-
-    // Connect: source -> gain -> destination
-    sourceNode.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-
-    // Resume context if suspended (browsers require user interaction)
-    if (audioContext.state === 'suspended') {
-      audioContext.resume().catch(() => {});
-    }
+    audioRef.current = audio;
 
     return () => {
-      // Cleanup
-      try {
-        sourceNode.disconnect();
-        gainNode.disconnect();
-        audioContext.close();
-      } catch {
-        // Ignore cleanup errors
-      }
-      audioContextRef.current = null;
-      gainNodeRef.current = null;
-      sourceNodeRef.current = null;
+      audio.pause();
+      audio.srcObject = null;
+      audio.remove();
+      audioRef.current = null;
     };
   }, [track]);
 
-  // Update gain when volume changes
+  // Update volume when settings change
   useEffect(() => {
-    const gainNode = gainNodeRef.current;
-    if (!gainNode) return;
+    if (audioRef.current) {
+      audioRef.current.volume = calculateVolume();
+    }
+  }, [calculateVolume]);
 
-    const newGain = calculateGain();
-    
-    // Smooth transition to avoid clicks
-    gainNode.gain.setTargetAtTime(
-      newGain,
-      audioContextRef.current?.currentTime ?? 0,
-      0.015 // 15ms time constant for smooth transition
-    );
-  }, [calculateGain]);
-
-  // Handle mute state changes
-  useEffect(() => {
-    const gainNode = gainNodeRef.current;
-    if (!gainNode) return;
-
-    const newGain = calculateGain();
-    gainNode.gain.setTargetAtTime(
-      newGain,
-      audioContextRef.current?.currentTime ?? 0,
-      0.015
-    );
-  }, [muted, calculateGain]);
-
-  // This component doesn't render anything visible - it just processes audio
+  // This component doesn't render anything visible
   return null;
 }
