@@ -70,7 +70,7 @@ export const ChannelContextMenu = ({
   const notifLevel = getNotificationLevel(channel.id);
 
   const otherCategories = useMemo(
-    () => categories.filter((c) => c.id !== channel.category_id),
+    () => (categories ?? []).filter((c) => c.id !== channel.category_id),
     [categories, channel.category_id],
   );
 
