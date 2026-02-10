@@ -7,6 +7,7 @@ import {
   CopyPlus,
   Archive,
   Pin,
+  PinOff,
   FolderInput,
   BellOff,
   Bell,
@@ -20,6 +21,8 @@ import {
   BookOpen,
   Clock,
   Check,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -34,6 +37,7 @@ import {
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useUIStore } from "@/stores/uiStore";
+import { useChannelSettingsStore } from "@/stores/channelSettingsStore";
 import type { Channel, ChannelCategory } from "@/types";
 
 interface ChannelContextMenuProps {
@@ -58,6 +62,12 @@ export const ChannelContextMenu = ({
   const { user } = useAuthStore();
   const { currentServer, createChannel, moveChannelToCategory } = useServerStore();
   const { openModal } = useUIStore();
+  const { isMuted, isHidden, isPinned, getNotificationLevel, toggleMute, toggleHide, togglePin, setNotificationLevel, muteFor } = useChannelSettingsStore();
+
+  const channelMuted = isMuted(channel.id);
+  const channelHidden = isHidden(channel.id);
+  const channelPinned = isPinned(channel.id);
+  const notifLevel = getNotificationLevel(channel.id);
 
   const otherCategories = useMemo(
     () => categories.filter((c) => c.id !== channel.category_id),
@@ -99,6 +109,38 @@ export const ChannelContextMenu = ({
     }
   };
 
+  const handleToggleMute = async () => {
+    await toggleMute(channel.id);
+    toast.success(channelMuted ? "Channel unmuted" : "Channel muted");
+  };
+
+  const handleToggleHide = async () => {
+    await toggleHide(channel.id);
+    toast.success(channelHidden ? "Channel unhidden" : "Channel hidden from sidebar");
+  };
+
+  const handleTogglePin = async () => {
+    await togglePin(channel.id);
+    toast.success(channelPinned ? "Channel unpinned" : "Channel pinned to top");
+  };
+
+  const handleSetNotifLevel = async (level: 'all' | 'mentions' | 'nothing') => {
+    await setNotificationLevel(channel.id, level);
+    const labels = { all: "All Messages", mentions: "@Mentions Only", nothing: "Nothing" };
+    toast.success(`Notifications set to: ${labels[level]}`);
+  };
+
+  const handleMuteFor = async (minutes: number | null) => {
+    await muteFor(channel.id, minutes);
+    if (minutes === null) {
+      toast.success("Channel muted until you turn it back on");
+    } else if (minutes < 60) {
+      toast.success(`Channel muted for ${minutes} minutes`);
+    } else {
+      toast.success(`Channel muted for ${minutes / 60} hours`);
+    }
+  };
+
   const handleNotImplemented = (feature: string) => {
     toast.info(`${feature} — coming soon!`);
   };
@@ -132,9 +174,9 @@ export const ChannelContextMenu = ({
 
           <ContextMenuSeparator />
           <ContextMenuLabel className="text-xs text-muted-foreground">Organization</ContextMenuLabel>
-          <ContextMenuItem onClick={() => handleNotImplemented("Pin Channel to Top")}>
-            <Pin className="w-4 h-4 mr-2" />
-            Pin Channel to Top
+          <ContextMenuItem onClick={handleTogglePin}>
+            {channelPinned ? <PinOff className="w-4 h-4 mr-2" /> : <Pin className="w-4 h-4 mr-2" />}
+            {channelPinned ? "Unpin Channel" : "Pin Channel to Top"}
           </ContextMenuItem>
 
           {(otherCategories.length > 0 || channel.category_id) && (
@@ -162,13 +204,19 @@ export const ChannelContextMenu = ({
 
           <ContextMenuSeparator />
           <ContextMenuLabel className="text-xs text-muted-foreground">Notifications & Visibility</ContextMenuLabel>
+          {onMarkAsRead && (
+            <ContextMenuItem onClick={onMarkAsRead}>
+              <Check className="w-4 h-4 mr-2" />
+              Mark as Read
+            </ContextMenuItem>
+          )}
           <ContextMenuItem onClick={() => handleNotImplemented("Mark as Unread")}>
             <BookOpen className="w-4 h-4 mr-2" />
             Mark as Unread
           </ContextMenuItem>
-          <ContextMenuItem onClick={() => handleNotImplemented("Mute Channel")}>
-            <BellOff className="w-4 h-4 mr-2" />
-            Mute Channel
+          <ContextMenuItem onClick={handleToggleMute}>
+            {channelMuted ? <Volume2 className="w-4 h-4 mr-2" /> : <BellOff className="w-4 h-4 mr-2" />}
+            {channelMuted ? "Unmute Channel" : "Mute Channel"}
           </ContextMenuItem>
 
           <ContextMenuSeparator />
@@ -196,13 +244,13 @@ export const ChannelContextMenu = ({
       {!isAdmin && (
         <>
           <ContextMenuLabel className="text-xs text-muted-foreground">Personal Organization</ContextMenuLabel>
-          <ContextMenuItem onClick={() => handleNotImplemented("Pin Channel")}>
-            <Pin className="w-4 h-4 mr-2" />
-            Pin Channel
+          <ContextMenuItem onClick={handleTogglePin}>
+            {channelPinned ? <PinOff className="w-4 h-4 mr-2" /> : <Pin className="w-4 h-4 mr-2" />}
+            {channelPinned ? "Unpin Channel" : "Pin Channel"}
           </ContextMenuItem>
-          <ContextMenuItem onClick={() => handleNotImplemented("Hide Channel")}>
-            <EyeOff className="w-4 h-4 mr-2" />
-            Hide Channel
+          <ContextMenuItem onClick={handleToggleHide}>
+            {channelHidden ? <Eye className="w-4 h-4 mr-2" /> : <EyeOff className="w-4 h-4 mr-2" />}
+            {channelHidden ? "Unhide Channel" : "Hide Channel"}
           </ContextMenuItem>
           {onMarkAsRead && (
             <ContextMenuItem onClick={onMarkAsRead}>
@@ -217,9 +265,9 @@ export const ChannelContextMenu = ({
 
           <ContextMenuSeparator />
           <ContextMenuLabel className="text-xs text-muted-foreground">Notifications</ContextMenuLabel>
-          <ContextMenuItem onClick={() => handleNotImplemented("Mute Channel")}>
-            <BellOff className="w-4 h-4 mr-2" />
-            Mute Channel
+          <ContextMenuItem onClick={handleToggleMute}>
+            {channelMuted ? <Volume2 className="w-4 h-4 mr-2" /> : <BellOff className="w-4 h-4 mr-2" />}
+            {channelMuted ? "Unmute Channel" : "Mute Channel"}
           </ContextMenuItem>
 
           <ContextMenuSub>
@@ -228,17 +276,20 @@ export const ChannelContextMenu = ({
               Notification Settings
             </ContextMenuSubTrigger>
             <ContextMenuSubContent className="w-48">
-              <ContextMenuItem onClick={() => handleNotImplemented("All Messages")}>
+              <ContextMenuItem onClick={() => handleSetNotifLevel('all')}>
                 <BellRing className="w-4 h-4 mr-2" />
                 All Messages
+                {notifLevel === 'all' && <Check className="w-3 h-3 ml-auto" />}
               </ContextMenuItem>
-              <ContextMenuItem onClick={() => handleNotImplemented("@Mentions Only")}>
+              <ContextMenuItem onClick={() => handleSetNotifLevel('mentions')}>
                 <Bell className="w-4 h-4 mr-2" />
                 @Mentions Only
+                {notifLevel === 'mentions' && <Check className="w-3 h-3 ml-auto" />}
               </ContextMenuItem>
-              <ContextMenuItem onClick={() => handleNotImplemented("Nothing")}>
+              <ContextMenuItem onClick={() => handleSetNotifLevel('nothing')}>
                 <BellOff className="w-4 h-4 mr-2" />
                 Nothing
+                {notifLevel === 'nothing' && <Check className="w-3 h-3 ml-auto" />}
               </ContextMenuItem>
             </ContextMenuSubContent>
           </ContextMenuSub>
@@ -249,12 +300,12 @@ export const ChannelContextMenu = ({
               Mute for Duration
             </ContextMenuSubTrigger>
             <ContextMenuSubContent className="w-44">
-              <ContextMenuItem onClick={() => handleNotImplemented("Mute 15min")}>15 Minutes</ContextMenuItem>
-              <ContextMenuItem onClick={() => handleNotImplemented("Mute 1hr")}>1 Hour</ContextMenuItem>
-              <ContextMenuItem onClick={() => handleNotImplemented("Mute 8hrs")}>8 Hours</ContextMenuItem>
-              <ContextMenuItem onClick={() => handleNotImplemented("Mute 24hrs")}>24 Hours</ContextMenuItem>
+              <ContextMenuItem onClick={() => handleMuteFor(15)}>15 Minutes</ContextMenuItem>
+              <ContextMenuItem onClick={() => handleMuteFor(60)}>1 Hour</ContextMenuItem>
+              <ContextMenuItem onClick={() => handleMuteFor(480)}>8 Hours</ContextMenuItem>
+              <ContextMenuItem onClick={() => handleMuteFor(1440)}>24 Hours</ContextMenuItem>
               <ContextMenuSeparator />
-              <ContextMenuItem onClick={() => handleNotImplemented("Mute until turned back on")}>Until I turn it back on</ContextMenuItem>
+              <ContextMenuItem onClick={() => handleMuteFor(null)}>Until I turn it back on</ContextMenuItem>
             </ContextMenuSubContent>
           </ContextMenuSub>
 
