@@ -21,40 +21,50 @@ export interface NotificationBellProps {
 }
 
 // Theme types and classes
-type NotificationTheme = 'amber' | 'emerald' | 'red' | 'blue' | 'violet' | 'default';
+type NotificationTheme = "amber" | "emerald" | "red" | "blue" | "violet" | "default";
 
 const themeClasses = {
-  amber: { bg: 'bg-amber-500/10', text: 'text-amber-500', indicator: 'bg-amber-500', bgUnread: 'bg-amber-500/5' },
-  emerald: { bg: 'bg-emerald-500/10', text: 'text-emerald-500', indicator: 'bg-emerald-500', bgUnread: 'bg-emerald-500/5' },
-  red: { bg: 'bg-red-500/10', text: 'text-red-500', indicator: 'bg-red-500', bgUnread: 'bg-red-500/5' },
-  blue: { bg: 'bg-blue-500/10', text: 'text-blue-500', indicator: 'bg-blue-500', bgUnread: 'bg-blue-500/5' },
-  violet: { bg: 'bg-violet-500/10', text: 'text-violet-500', indicator: 'bg-violet-500', bgUnread: 'bg-violet-500/5' },
-  default: { bg: 'bg-primary/10', text: 'text-primary', indicator: 'bg-primary', bgUnread: 'bg-primary/5' },
+  amber: { bg: "bg-amber-500/10", text: "text-amber-500", indicator: "bg-amber-500", bgUnread: "bg-amber-500/5" },
+  emerald: {
+    bg: "bg-emerald-500/10",
+    text: "text-emerald-500",
+    indicator: "bg-emerald-500",
+    bgUnread: "bg-emerald-500/5",
+  },
+  red: { bg: "bg-red-500/10", text: "text-red-500", indicator: "bg-red-500", bgUnread: "bg-red-500/5" },
+  blue: { bg: "bg-blue-500/10", text: "text-blue-500", indicator: "bg-blue-500", bgUnread: "bg-blue-500/5" },
+  violet: { bg: "bg-violet-500/10", text: "text-violet-500", indicator: "bg-violet-500", bgUnread: "bg-violet-500/5" },
+  default: { bg: "bg-primary/10", text: "text-primary", indicator: "bg-primary", bgUnread: "bg-primary/5" },
 };
 
 const getNotificationTheme = (notification: Notification): NotificationTheme => {
   // Check for warning (kick/ban) based on title
-  const title = notification.title?.toLowerCase() || '';
-  if (title.includes('kicked') || title.includes('banned')) {
-    return 'red';
+  const title = notification.title?.toLowerCase() || "";
+  if (title.includes("kicked") || title.includes("banned")) {
+    return "red";
   }
-  
+
   switch (notification.type) {
-    case 'mention': return 'amber';
-    case 'dm': return 'emerald';
-    case 'friend_request': return 'blue';
-    case 'server_invite': return 'violet';
-    default: return 'default';
+    case "mention":
+      return "amber";
+    case "dm":
+      return "emerald";
+    case "friend_request":
+      return "blue";
+    case "server_invite":
+      return "violet";
+    default:
+      return "default";
   }
 };
 
 const getNotificationIcon = (notification: Notification) => {
   // Check for warning first
-  const title = notification.title?.toLowerCase() || '';
-  if (title.includes('kicked') || title.includes('banned')) {
+  const title = notification.title?.toLowerCase() || "";
+  if (title.includes("kicked") || title.includes("banned")) {
     return <AlertTriangle className="w-4 h-4" />;
   }
-  
+
   switch (notification.type) {
     case "mention":
       return <AtSign className="w-4 h-4" />;
@@ -86,7 +96,8 @@ const sidebarIconVariants = {
 export const NotificationBell = ({ variant = "default" }: NotificationBellProps) => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { notifications, unreadCount, markAsRead, markAllAsRead, clearAllNotifications, deleteNotification } = useNotificationStore();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, clearAllNotifications, deleteNotification } =
+    useNotificationStore();
   const { pendingRequests, acceptRequest, declineRequest } = useFriendStore();
   const [isOpen, setIsOpen] = useState(false);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
@@ -115,16 +126,16 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
     if (link) {
       // Parse the link to extract server, channel, and message IDs
       const url = new URL(link, window.location.origin);
-      const serverId = url.searchParams.get('server');
-      const channelId = url.searchParams.get('channel');
-      const messageId = url.searchParams.get('message');
-      const conversationId = url.searchParams.get('conversation');
-      
+      const serverId = url.searchParams.get("server");
+      const channelId = url.searchParams.get("channel");
+      const messageId = url.searchParams.get("message");
+      const conversationId = url.searchParams.get("conversation");
+
       // For mentions, navigate to the proper server/channel route
-      if (notificationType === 'mention' && serverId && channelId) {
+      if (notificationType === "mention" && serverId && channelId) {
         // Clear current server state to force a fresh load
         useServerStore.getState().clearServerState();
-        
+
         // Navigate with message ID for scroll-to-message
         if (messageId) {
           navigate(`/app/servers/${serverId}/channels/${channelId}?message=${messageId}`);
@@ -212,11 +223,7 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
   );
 
   const renderSidebarTrigger = () => (
-    <MotionButton
-      className="relative group flex-shrink-0"
-      whileHover="hover"
-      whileTap="tap"
-    >
+    <MotionButton className="relative group flex-shrink-0" whileHover="hover" whileTap="tap">
       <motion.div
         variants={sidebarIconVariants}
         initial="animate"
@@ -242,9 +249,7 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>
-        {variant === "sidebar" ? renderSidebarTrigger() : renderDefaultTrigger()}
-      </PopoverTrigger>
+      <PopoverTrigger asChild>{variant === "sidebar" ? renderSidebarTrigger() : renderDefaultTrigger()}</PopoverTrigger>
 
       <PopoverContent
         className="w-96 p-0 rounded-xl border-border/50 bg-popover/95 backdrop-blur-xl shadow-xl"
@@ -291,7 +296,7 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
         </div>
 
         {/* Notifications List */}
-        <ScrollArea className="max-h-[420px]">
+        <ScrollArea className="max-h-[420px] overflow-y-auto">
           {notifications.length > 0 ? (
             <div className="p-2 space-y-1">
               {notifications.map((notification, index) => {
@@ -313,11 +318,19 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
                       animationDelay: `${index * 50}ms`,
                       animationFillMode: "both",
                     }}
-                    onClick={() => !showFriendActions && handleNotificationClick(notification.id, notification.link, notification.type)}
+                    onClick={() =>
+                      !showFriendActions &&
+                      handleNotificationClick(notification.id, notification.link, notification.type)
+                    }
                   >
                     {/* Unread indicator */}
                     {isUnread && (
-                      <div className={cn("absolute left-1 top-1/2 -translate-y-1/2 w-1 h-8 rounded-full", colors.indicator)} />
+                      <div
+                        className={cn(
+                          "absolute left-1 top-1/2 -translate-y-1/2 w-1 h-8 rounded-full",
+                          colors.indicator,
+                        )}
+                      />
                     )}
 
                     <div className="flex items-start gap-3">
