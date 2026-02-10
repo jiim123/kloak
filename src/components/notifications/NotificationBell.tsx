@@ -258,17 +258,7 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Bell className="w-4 h-4 text-primary" />
-            </div>
-            <h3 className="font-semibold">Notifications</h3>
-            {unreadCount > 0 && (
-              <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
-                {unreadCount}
-              </span>
-            )}
-          </div>
+          <h3 className="font-semibold">Notifications</h3>
           <div className="flex items-center gap-1">
             {unreadCount > 0 && (
               <Button
