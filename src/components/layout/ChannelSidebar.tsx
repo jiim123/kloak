@@ -647,7 +647,7 @@ export const ChannelSidebar = () => {
   const [overCategoryId, setOverCategoryId] = useState<string | null>(null);
   const [isSortingMode, setIsSortingMode] = useState(false);
 
-  const channelIds = useMemo(() => channels.map((c) => c.id), [channels]);
+  const channelIds = useMemo(() => (channels || []).map((c) => c.id), [channels]);
   const { getChannelUnread, markAsRead } = useUnread(channelIds);
 
   // Fetch per-user channel settings (mute, hide, pin) when channels change
@@ -655,7 +655,7 @@ export const ChannelSidebar = () => {
   const channelIdsKey = channelIds.join(',');
   useEffect(() => { fetchSettings(channelIds); }, [channelIdsKey]);
 
-  const voiceChannelIds = useMemo(() => channels.filter((c) => c.type === "voice").map((c) => c.id), [channels]);
+  const voiceChannelIds = useMemo(() => (channels || []).filter((c) => c.type === "voice").map((c) => c.id), [channels]);
 
   // IMPORTANT: don't watch the voice channel topic we are actively joined to, otherwise we can end up with
   // duplicate Realtime subscriptions to `voice:${channelId}` (watcher + voice join), which can cause
@@ -706,7 +706,7 @@ export const ChannelSidebar = () => {
     const safeChannels = channels || [];
     const safeCategories = categories || [];
     const hidden = safeChannels.filter((channel) => isHidden(channel.id));
-    const uncategorized = channels
+    const uncategorized = safeChannels
       .filter((channel) => !channel.category_id && !isHidden(channel.id))
       .sort((a, b) => {
         const aPinned = isPinned(a.id) ? 0 : 1;
