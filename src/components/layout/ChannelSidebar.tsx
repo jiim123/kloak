@@ -21,6 +21,8 @@ import {
   ArrowUpDown,
   Megaphone,
   Film,
+  EyeOff,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
