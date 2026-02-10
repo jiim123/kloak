@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import type { ResolvedEmoji } from '@/lib/globalEmojiResolver';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -55,7 +56,7 @@ export function CustomEmojiPopover({ emoji, anchorRect, onClose }: CustomEmojiPo
   const showAbove = top + 200 > window.innerHeight;
   const finalTop = showAbove ? anchorRect.top - 8 : top;
 
-  return (
+  return createPortal(
     <div
       ref={popoverRef}
       className="fixed z-[200] w-[320px] rounded-lg border border-border bg-popover shadow-xl animate-in fade-in-0 zoom-in-95 duration-150"
@@ -109,6 +110,7 @@ export function CustomEmojiPopover({ emoji, anchorRect, onClose }: CustomEmojiPo
           </div>
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   );
 }
