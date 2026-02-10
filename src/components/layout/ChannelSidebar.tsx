@@ -696,19 +696,33 @@ export const ChannelSidebar = () => {
   const canSeeServerSettings = canManageChannels || canManageServer || canManageRoles;
   const isOwner = userRole === "owner";
 
+  const channelSettings = useChannelSettingsStore((s) => s.settings);
+
   const { uncategorizedChannels, sortedCategories } = useMemo(() => {
     const uncategorized = channels
-      .filter((channel) => !channel.category_id)
-      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+      .filter((channel) => !channel.category_id && !isHidden(channel.id))
+      .sort((a, b) => {
+        const aPinned = isPinned(a.id) ? 0 : 1;
+        const bPinned = isPinned(b.id) ? 0 : 1;
+        if (aPinned !== bPinned) return aPinned - bPinned;
+        return (a.position ?? 0) - (b.position ?? 0);
+      });
 
     const sorted = [...categories].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
 
     return { uncategorizedChannels: uncategorized, sortedCategories: sorted };
-  }, [channels, categories]);
+  }, [channels, categories, channelSettings]);
 
   const getChannelsForCategory = useCallback(
     (categoryId: string) => {
-      return channels.filter((c) => c.category_id === categoryId).sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+      return channels
+        .filter((c) => c.category_id === categoryId && !isHidden(c.id))
+        .sort((a, b) => {
+          const aPinned = isPinned(a.id) ? 0 : 1;
+          const bPinned = isPinned(b.id) ? 0 : 1;
+          if (aPinned !== bPinned) return aPinned - bPinned;
+          return (a.position ?? 0) - (b.position ?? 0);
+        });
     },
     [channels],
   );
