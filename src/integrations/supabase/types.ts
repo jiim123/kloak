@@ -366,6 +366,60 @@ export type Database = {
           },
         ]
       }
+      channel_user_settings: {
+        Row: {
+          channel_id: string
+          created_at: string | null
+          id: string
+          is_hidden: boolean | null
+          is_muted: boolean | null
+          is_pinned: boolean | null
+          mute_until: string | null
+          notification_level: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          channel_id: string
+          created_at?: string | null
+          id?: string
+          is_hidden?: boolean | null
+          is_muted?: boolean | null
+          is_pinned?: boolean | null
+          mute_until?: string | null
+          notification_level?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          channel_id?: string
+          created_at?: string | null
+          id?: string
+          is_hidden?: boolean | null
+          is_muted?: boolean | null
+          is_pinned?: boolean | null
+          mute_until?: string | null
+          notification_level?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "channel_user_settings_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "channel_user_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       channels: {
         Row: {
           allowed_link_domains: string[] | null
@@ -2284,15 +2338,26 @@ export type Database = {
         }
         Returns: string
       }
-      create_server_role: {
-        Args: {
-          _color?: string
-          _name: string
-          _server_id: string
-          _user_id: string
-        }
-        Returns: Json
-      }
+      create_server_role:
+        | {
+            Args: {
+              _color?: string
+              _name: string
+              _server_id: string
+              _user_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _color: string
+              _icon?: string
+              _name: string
+              _server_id: string
+              _user_id: string
+            }
+            Returns: Json
+          }
       create_server_with_owner: {
         Args: { _name: string; _owner_id: string }
         Returns: Json
@@ -2331,6 +2396,7 @@ export type Database = {
         Args: { _channel_id: string; _user_id: string }
         Returns: Json
       }
+      debug_request_headers: { Args: never; Returns: Json }
       debug_server_system_messages: {
         Args: { _server_id: string }
         Returns: Json
@@ -2593,6 +2659,10 @@ export type Database = {
         }
         Returns: Json
       }
+      insert_mentions: {
+        Args: { _mentions: Json; _user_id: string }
+        Returns: undefined
+      }
       is_dm_participant: {
         Args: { _conversation_id: string; _user_id: string }
         Returns: boolean
@@ -2606,10 +2676,16 @@ export type Database = {
         Returns: boolean
       }
       is_username_blocked: { Args: { username: string }; Returns: boolean }
-      join_server_by_invite: {
-        Args: { _invite_code: string; _join_source?: string; _user_id: string }
-        Returns: Json
-      }
+      join_server_by_invite:
+        | { Args: { _invite_code: string; _user_id: string }; Returns: Json }
+        | {
+            Args: {
+              _invite_code: string
+              _join_source?: string
+              _user_id: string
+            }
+            Returns: Json
+          }
       kick_member: {
         Args: { _server_id: string; _target_user_id: string; _user_id: string }
         Returns: boolean
@@ -2650,6 +2726,10 @@ export type Database = {
       }
       mark_dm_read: {
         Args: { _conversation_id: string; _user_id: string }
+        Returns: boolean
+      }
+      move_channel_to_category: {
+        Args: { _category_id?: string; _channel_id: string; _server_id: string }
         Returns: boolean
       }
       open_dm_conversation: {
@@ -2726,10 +2806,7 @@ export type Database = {
       }
       reset_user_secret_key:
         | { Args: { _new_key_hash: string; _user_id: string }; Returns: Json }
-        | {
-            Args: { _new_key_hash: string; _user_id: string }
-            Returns: undefined
-          }
+        | { Args: { _new_key_hash: string; _user_id: string }; Returns: Json }
       revoke_server_invite: {
         Args: { _invite_id: string; _user_id: string }
         Returns: boolean
@@ -2969,10 +3046,19 @@ export type Database = {
         }
         Returns: Json
       }
+      upsert_channel_read: {
+        Args: { _channel_id: string; _last_read_at: string; _user_id: string }
+        Returns: undefined
+      }
+      upsert_user_preferences: {
+        Args: { _preferences: Json; _user_id: string }
+        Returns: undefined
+      }
       upsert_user_voice_settings: {
         Args: { p_settings: Json; p_user_id: string }
         Returns: Json
       }
+      verify_request_identity: { Args: { _user_id: string }; Returns: boolean }
       vote_poll: {
         Args: { _option_indexes: number[]; _poll_id: string; _user_id: string }
         Returns: Json
