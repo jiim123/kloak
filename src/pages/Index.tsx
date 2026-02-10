@@ -114,12 +114,12 @@ const Index = () => {
                     <span className="text-primary/60">without being watched.</span>
                   </h2>
 
-                  <p className="text-[17px] text-neutral-600 leading-relaxed max-w-xl">
+                  <p className="text-[17px] text-muted-foreground leading-[1.7] max-w-xl">
                     Kloak is a communication platform for communities, teams, and friends. Built from the ground up so
                     your conversations stay yours.
                   </p>
 
-                  <div className="flex flex-wrap gap-6 text-sm text-neutral-600">
+                  <div className="flex flex-wrap gap-6 text-sm text-muted-foreground">
                     <span className="flex items-center gap-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
                       No ads
@@ -162,7 +162,7 @@ const Index = () => {
                         <h3 className="text-2xl md:text-3xl font-medium text-foreground">
                           {audienceGroups[activeIndex].name}
                         </h3>
-                        <p className="text-[17px] text-neutral-600 leading-relaxed">
+                        <p className="text-[17px] text-muted-foreground leading-[1.7]">
                           {audienceGroups[activeIndex].description}
                         </p>
                       </motion.div>
@@ -248,7 +248,7 @@ const Index = () => {
                         viewport={{ once: true }}
                         transition={{ duration: 0.4, delay: index * 0.05 }}
                       >
-                        <TableCell className="font-light text-neutral-600 text-[17px]">{row.label}</TableCell>
+                        <TableCell className="font-light text-muted-foreground text-[17px]">{row.label}</TableCell>
                         <TableCell className="text-center">
                           {row.others ? (
                             <div className="w-8 h-8 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
@@ -278,7 +278,7 @@ const Index = () => {
               </motion.div>
 
               <motion.p
-                className="text-center text-[17px] text-neutral-600 mt-12"
+                className="text-center text-[17px] text-muted-foreground mt-12"
                 initial={{ opacity: 0 }}
                 whileInView={{ opacity: 1 }}
                 viewport={{ once: true }}
@@ -357,8 +357,8 @@ const Index = () => {
                         <feature.icon className="w-6 h-6 text-primary" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="landing-card-title text-foreground mb-3 text-lg">{feature.title}</h3>
-                        <p className="text-[17px] text-neutral-600 leading-relaxed">{feature.description}</p>
+                        <h3 className="text-lg font-semibold text-foreground mb-3">{feature.title}</h3>
+                        <p className="text-[17px] text-muted-foreground leading-[1.7]">{feature.description}</p>
                       </div>
                     </div>
                   </motion.div>
@@ -386,7 +386,7 @@ const Index = () => {
                   <br />
                   <span className="text-primary/60">Built to have fun.</span>
                 </h2>
-                <p className="text-[17px] text-neutral-600 max-w-2xl leading-relaxed">
+                <p className="text-[17px] text-muted-foreground max-w-2xl leading-[1.7]">
                   Whether you're coordinating a raid, mixing a track, or simply just talking to friends and family,
                   Kloak is the space where your communication lives without being monetized.
                 </p>
@@ -445,8 +445,8 @@ const Index = () => {
                     </div>
                     {/* Content */}
                     <div className="relative">
-                      <h3 className="landing-card-title text-foreground mb-2 text-base">{card.title}</h3>
-                      <p className="text-[17px] text-neutral-600 leading-relaxed">{card.description}</p>
+                      <h3 className="text-base font-semibold text-foreground mb-2">{card.title}</h3>
+                      <p className="text-[17px] text-muted-foreground leading-[1.7]">{card.description}</p>
                     </div>
                   </motion.div>
                 ))}
@@ -473,11 +473,11 @@ const Index = () => {
                     <br />
                     <span className="text-primary/60">feature.</span>
                   </h2>
-                  <p className="text-[17px] text-neutral-600 leading-relaxed mb-6">
-                    Most platforms bloat over time—adding features to justify subscription tiers, complexity to create
+                  <p className="text-[17px] text-muted-foreground leading-[1.7] mb-6">
+                    Most platforms bloat over time--adding features to justify subscription tiers, complexity to create
                     lock-in, dark patterns to maximize engagement.
                   </p>
-                  <p className="text-[17px] text-neutral-600 leading-relaxed">
+                  <p className="text-[17px] text-muted-foreground leading-[1.7]">
                     Kloak stays simple on purpose. Chat that works. Voice that's clear. Communities that make sense.
                     Nothing designed to manipulate you into spending more time or money.
                   </p>
@@ -507,8 +507,8 @@ const Index = () => {
                           viewport={{ once: true }}
                           transition={{ duration: 0.4, delay: 0.3 + index * 0.1 }}
                         >
-                          <X className="w-4 h-4 text-neutral-400" />
-                          <span className="text-neutral-600 text-[17px] line-through decoration-neutral-400">
+                          <X className="w-4 h-4 text-muted-foreground/60" />
+                          <span className="text-muted-foreground text-[17px] line-through decoration-muted-foreground/40">
                             {item.label}
                           </span>
                         </motion.div>
@@ -556,7 +556,7 @@ const Index = () => {
                   <br />
                   <span className="text-primary/60">Your community.</span>
                 </h2>
-                <p className="text-[17px] text-neutral-600 mb-10 max-w-lg mx-auto leading-relaxed">
+                <p className="text-[17px] text-muted-foreground mb-10 max-w-lg mx-auto leading-[1.7]">
                   No signup forms. No email verification. Generate your cryptographic key and start building your space.
                 </p>
                 <Link to="/auth">
