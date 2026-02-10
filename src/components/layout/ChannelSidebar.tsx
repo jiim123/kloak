@@ -722,7 +722,7 @@ export const ChannelSidebar = () => {
 
   const getChannelsForCategory = useCallback(
     (categoryId: string) => {
-      return channels
+      return (channels || [])
         .filter((c) => c.category_id === categoryId && !isHidden(c.id))
         .sort((a, b) => {
           const aPinned = isPinned(a.id) ? 0 : 1;
@@ -1349,7 +1349,7 @@ export const ChannelSidebar = () => {
                 )}
 
                 {/* Empty state */}
-                {channels.length === 0 && categories.length === 0 && (
+                {(channels || []).length === 0 && (categories || []).length === 0 && (
                   <div className="flex flex-col items-center justify-center py-12 text-center animate-fade-in">
                     <div className="w-12 h-12 rounded-xl bg-secondary/50 flex items-center justify-center mb-3">
                       <Hash className="w-6 h-6 text-muted-foreground/50" />
