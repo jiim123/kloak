@@ -647,6 +647,11 @@ export const ChannelSidebar = () => {
   const channelIds = useMemo(() => channels.map((c) => c.id), [channels]);
   const { getChannelUnread, markAsRead } = useUnread(channelIds);
 
+  // Fetch per-user channel settings (mute, hide, pin) when channels change
+  const { fetchSettings, isHidden, isPinned } = useChannelSettingsStore();
+  const channelIdsKey = channelIds.join(',');
+  useMemo(() => { fetchSettings(channelIds); }, [channelIdsKey]);
+
   const voiceChannelIds = useMemo(() => channels.filter((c) => c.type === "voice").map((c) => c.id), [channels]);
 
   // IMPORTANT: don't watch the voice channel topic we are actively joined to, otherwise we can end up with
