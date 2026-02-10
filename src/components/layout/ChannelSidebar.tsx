@@ -703,7 +703,9 @@ export const ChannelSidebar = () => {
   const [showHidden, setShowHidden] = useState(false);
 
   const { uncategorizedChannels, sortedCategories, hiddenChannels } = useMemo(() => {
-    const hidden = channels.filter((channel) => isHidden(channel.id));
+    const safeChannels = channels || [];
+    const safeCategories = categories || [];
+    const hidden = safeChannels.filter((channel) => isHidden(channel.id));
     const uncategorized = channels
       .filter((channel) => !channel.category_id && !isHidden(channel.id))
       .sort((a, b) => {
