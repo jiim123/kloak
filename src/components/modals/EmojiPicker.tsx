@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useServerStore } from "@/stores/serverStore";
 import { fetchServerEmojis, ServerEmoji } from "@/lib/serverEmojis";
+import { getGlobalEmojiDuplicates } from "@/lib/globalEmojiResolver";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface EmojiPickerProps {
@@ -742,16 +743,26 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange, serve
     [onEmojiSelect, onOpenChange],
   );
 
-  // Handle custom emoji selection
+  // Handle custom emoji selection — qualify with server name when duplicate
   const handleCustomEmojiSelect = useCallback(
     (emoji: ServerEmoji) => {
-      // Format as :name: for custom emoji
-      const customEmojiString = `:${emoji.name}:`;
+      const duplicates = getGlobalEmojiDuplicates();
+      const isDuplicate = duplicates.has(emoji.name);
+
+      // If duplicate, find which server this emoji belongs to and qualify it
+      let customEmojiString = `:${emoji.name}:`;
+      if (isDuplicate && selectedServerForEmoji) {
+        const server = servers.find((s) => s.id === selectedServerForEmoji);
+        if (server) {
+          customEmojiString = `:${emoji.name}~${server.name}:`;
+        }
+      }
+
       saveRecentEmoji(customEmojiString);
       onEmojiSelect(customEmojiString);
       onOpenChange?.(false);
     },
-    [onEmojiSelect, onOpenChange],
+    [onEmojiSelect, onOpenChange, selectedServerForEmoji, servers],
   );
 
   // Reset search and set category when picker opens/closes

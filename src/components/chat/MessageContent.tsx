@@ -280,7 +280,6 @@ export const parseTextContent = (
   );
 
   // Custom emojis :name: or :name~ServerName: — check current server first, then global (cross-server)
-  const duplicates = getGlobalEmojiDuplicates();
   parsed = parsed.replace(/:([a-z0-9_]{2,32})(?:~([^:]{1,50}))?:/g, (full, name: string, qualifier?: string) => {
     // 1. Current server emoji (no popup needed) — only for unqualified names
     if (!qualifier) {
@@ -302,16 +301,11 @@ export const parseTextContent = (
       }
       return full;
     }
-    // 3. Unqualified cross-server emoji — if duplicate, render with server name badge
+    // 3. Unqualified cross-server emoji
     const global = globalEmojiMap?.get(name);
     if (global) {
       const safeUrl = escapeHtml(global.url);
       const safeName = escapeHtml(name);
-      const isDuplicate = duplicates.has(name);
-      if (isDuplicate) {
-        const safeServer = escapeHtml(global.serverName);
-        return `<span class="inline-flex items-center align-middle"><img src="${safeUrl}" alt=":${safeName}~${safeServer}:" title=":${safeName}~${safeServer}:" class="inline-block w-8 h-8 object-contain cursor-pointer hover:scale-110 transition-transform" loading="lazy" data-cross-emoji="${safeName}" /><span class="text-[10px] text-muted-foreground ml-0.5 opacity-70">${safeServer}</span></span>`;
-      }
       return `<img src="${safeUrl}" alt=":${safeName}:" title=":${safeName}:" class="inline-block w-8 h-8 align-middle object-contain cursor-pointer hover:scale-110 transition-transform" loading="lazy" data-cross-emoji="${safeName}" />`;
     }
     return full;
