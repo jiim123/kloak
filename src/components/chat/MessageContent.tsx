@@ -8,7 +8,7 @@ import { CustomEmojiPopover } from './CustomEmojiPopover';
 import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
 import { fetchServerEmojis } from '@/lib/serverEmojis';
-import { getGlobalEmojiMap, type ResolvedEmoji } from '@/lib/globalEmojiResolver';
+import { getGlobalEmojiMap, getGlobalEmojiDuplicates, resolveQualifiedEmoji, type ResolvedEmoji } from '@/lib/globalEmojiResolver';
 
 interface UserInfo {
   id: string;
@@ -279,20 +279,39 @@ export const parseTextContent = (
     }
   );
 
-  // Custom emojis :name: — check current server first, then global (cross-server)
-  parsed = parsed.replace(/:([a-z0-9_]{2,32}):/g, (full, name: string) => {
-    // 1. Current server emoji (no popup needed)
-    const localUrl = customEmojiMap?.get(name);
-    if (localUrl) {
-      const safeUrl = escapeHtml(localUrl);
-      const safeName = escapeHtml(name);
-      return `<img src="${safeUrl}" alt=":${safeName}:" title=":${safeName}:" class="inline-block w-8 h-8 align-middle object-contain" loading="lazy" />`;
+  // Custom emojis :name: or :name~ServerName: — check current server first, then global (cross-server)
+  const duplicates = getGlobalEmojiDuplicates();
+  parsed = parsed.replace(/:([a-z0-9_]{2,32})(?:~([^:]{1,50}))?:/g, (full, name: string, qualifier?: string) => {
+    // 1. Current server emoji (no popup needed) — only for unqualified names
+    if (!qualifier) {
+      const localUrl = customEmojiMap?.get(name);
+      if (localUrl) {
+        const safeUrl = escapeHtml(localUrl);
+        const safeName = escapeHtml(name);
+        return `<img src="${safeUrl}" alt=":${safeName}:" title=":${safeName}:" class="inline-block w-8 h-8 align-middle object-contain" loading="lazy" />`;
+      }
     }
-    // 2. Cross-server emoji (clickable, shows popup)
+    // 2. Qualified name :name~ServerName: — look up specific server
+    if (qualifier) {
+      const resolved = resolveQualifiedEmoji(`${name}~${qualifier}`);
+      if (resolved) {
+        const safeUrl = escapeHtml(resolved.url);
+        const safeName = escapeHtml(name);
+        const safeServer = escapeHtml(qualifier);
+        return `<img src="${safeUrl}" alt=":${safeName}~${safeServer}:" title=":${safeName}~${safeServer}:" class="inline-block w-8 h-8 align-middle object-contain cursor-pointer hover:scale-110 transition-transform" loading="lazy" data-cross-emoji="${safeName}" data-cross-emoji-server="${safeServer}" />`;
+      }
+      return full;
+    }
+    // 3. Unqualified cross-server emoji — if duplicate, render with server name badge
     const global = globalEmojiMap?.get(name);
     if (global) {
       const safeUrl = escapeHtml(global.url);
       const safeName = escapeHtml(name);
+      const isDuplicate = duplicates.has(name);
+      if (isDuplicate) {
+        const safeServer = escapeHtml(global.serverName);
+        return `<span class="inline-flex items-center align-middle"><img src="${safeUrl}" alt=":${safeName}~${safeServer}:" title=":${safeName}~${safeServer}:" class="inline-block w-8 h-8 object-contain cursor-pointer hover:scale-110 transition-transform" loading="lazy" data-cross-emoji="${safeName}" /><span class="text-[10px] text-muted-foreground ml-0.5 opacity-70">${safeServer}</span></span>`;
+      }
       return `<img src="${safeUrl}" alt=":${safeName}:" title=":${safeName}:" class="inline-block w-8 h-8 align-middle object-contain cursor-pointer hover:scale-110 transition-transform" loading="lazy" data-cross-emoji="${safeName}" />`;
     }
     return full;
@@ -455,7 +474,14 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
       e.preventDefault();
       e.stopPropagation();
       const emojiName = target.dataset.crossEmoji;
-      const resolved = globalEmojiMap.get(emojiName);
+      const serverQualifier = target.dataset.crossEmojiServer;
+      let resolved: ResolvedEmoji | undefined;
+      if (serverQualifier) {
+        resolved = resolveQualifiedEmoji(`${emojiName}~${serverQualifier}`);
+      }
+      if (!resolved) {
+        resolved = globalEmojiMap.get(emojiName);
+      }
       if (resolved) {
         setEmojiPopover({ emoji: resolved, rect: target.getBoundingClientRect() });
       }
