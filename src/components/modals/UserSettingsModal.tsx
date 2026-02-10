@@ -23,6 +23,8 @@ import {
   AtSign,
   Reply,
   Users,
+  UserPlus,
+  Mail,
   X,
   RefreshCw,
   AlertTriangle,
@@ -106,6 +108,14 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     setShowPreviewUserMentions,
     showPreviewReplies,
     setShowPreviewReplies,
+    enableMentionNotifications,
+    setEnableMentionNotifications,
+    enableDMNotifications,
+    setEnableDMNotifications,
+    enableFriendRequestNotifications,
+    setEnableFriendRequestNotifications,
+    enableServerInviteNotifications,
+    setEnableServerInviteNotifications,
     compactMode,
     setCompactMode,
     showTimestamps,
@@ -748,6 +758,43 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   // Notifications Content
   const notificationsContent = (
     <div className="space-y-4">
+      {/* Notification Types */}
+      <div className="p-4 rounded-xl bg-secondary/30 border border-border/50 space-y-2">
+        <div className="flex items-center gap-2 mb-1">
+          <Bell className="w-4 h-4 text-muted-foreground" />
+          <h3 className="text-sm font-semibold">Notification Types</h3>
+        </div>
+        <p className="text-xs text-muted-foreground mb-2">Choose which notifications you want to receive</p>
+        <SettingsToggle
+          icon={AtSign}
+          label="@Mentions"
+          description="When someone mentions you in a channel"
+          checked={enableMentionNotifications}
+          onCheckedChange={setEnableMentionNotifications}
+        />
+        <SettingsToggle
+          icon={MessageSquare}
+          label="Direct Messages"
+          description="When you receive a direct message"
+          checked={enableDMNotifications}
+          onCheckedChange={setEnableDMNotifications}
+        />
+        <SettingsToggle
+          icon={UserPlus}
+          label="Friend Requests"
+          description="When someone sends you a friend request"
+          checked={enableFriendRequestNotifications}
+          onCheckedChange={setEnableFriendRequestNotifications}
+        />
+        <SettingsToggle
+          icon={Mail}
+          label="Server Invites"
+          description="When you're invited to a server"
+          checked={enableServerInviteNotifications}
+          onCheckedChange={setEnableServerInviteNotifications}
+        />
+      </div>
+
       {/* Desktop Notifications - Only for Tauri */}
       {isTauriApp && (
         <div className="p-4 rounded-xl bg-secondary/30 border border-border/50 space-y-2">

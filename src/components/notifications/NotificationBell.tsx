@@ -12,6 +12,7 @@ import { useNotificationStore } from "@/stores/notificationStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
+import { useUIStore } from "@/stores/uiStore";
 import { requestNotificationPermission } from "@/hooks/useRealtimeNotifications";
 import { cn } from "@/lib/utils";
 import type { Notification } from "@/types";
@@ -98,16 +99,35 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
   const { user } = useAuthStore();
   const { notifications, unreadCount, markAsRead, markAllAsRead, clearAllNotifications, deleteNotification } =
     useNotificationStore();
+  const { enableMentionNotifications, enableDMNotifications, enableFriendRequestNotifications, enableServerInviteNotifications } =
+    useUIStore();
   const { pendingRequests, acceptRequest, declineRequest } = useFriendStore();
   const [isOpen, setIsOpen] = useState(false);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
 
+  // Filter notifications based on user preferences
+  const filteredNotifications = notifications.filter((n) => {
+    switch (n.type) {
+      case "mention":
+        return enableMentionNotifications;
+      case "dm":
+        return enableDMNotifications;
+      case "friend_request":
+        return enableFriendRequestNotifications;
+      case "server_invite":
+        return enableServerInviteNotifications;
+      default:
+        return true; // Always show kick/ban and other system notifications
+    }
+  });
+  const filteredUnreadCount = filteredNotifications.filter((n) => !n.is_read).length;
+
   // Request permission on first interaction
   useEffect(() => {
-    if (isOpen && unreadCount > 0) {
+    if (isOpen && filteredUnreadCount > 0) {
       requestNotificationPermission();
     }
-  }, [isOpen, unreadCount]);
+  }, [isOpen, filteredUnreadCount]);
 
   const handleMarkAllAsRead = () => {
     if (user) {
@@ -211,12 +231,12 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
   const renderDefaultTrigger = () => (
     <Button variant="ghost" size="icon" className="relative w-8 h-8">
       <Bell className="w-4 h-4" />
-      {unreadCount > 0 && (
+      {filteredUnreadCount > 0 && (
         <Badge
           variant="destructive"
           className="absolute -top-1 -right-1 w-5 h-5 p-0 flex items-center justify-center text-[10px]"
         >
-          {unreadCount > 99 ? "99+" : unreadCount}
+          {filteredUnreadCount > 99 ? "99+" : filteredUnreadCount}
         </Badge>
       )}
     </Button>
@@ -235,13 +255,13 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
       >
         <Bell className="w-4 h-4" />
       </motion.div>
-      {unreadCount > 0 && (
+      {filteredUnreadCount > 0 && (
         <motion.span
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
         >
-          {unreadCount > 99 ? "99+" : unreadCount}
+          {filteredUnreadCount > 99 ? "99+" : filteredUnreadCount}
         </motion.span>
       )}
     </MotionButton>
@@ -260,7 +280,7 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
         <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
           <h3 className="font-semibold">Notifications</h3>
           <div className="flex items-center gap-1">
-            {unreadCount > 0 && (
+            {filteredUnreadCount > 0 && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -271,7 +291,7 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
                 <CheckCheck className="w-3.5 h-3.5" />
               </Button>
             )}
-            {notifications.length > 0 && (
+            {filteredNotifications.length > 0 && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -287,9 +307,9 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
 
         {/* Notifications List */}
         <ScrollArea className="max-h-[420px] overflow-y-auto overflow-x-hidden">
-          {notifications.length > 0 ? (
+          {filteredNotifications.length > 0 ? (
             <div className="p-2 space-y-1">
-              {notifications.map((notification, index) => {
+              {filteredNotifications.map((notification, index) => {
                 const isProcessing = processingIds.has(notification.id);
                 const showFriendActions = isFriendRequestPending(notification);
                 const isUnread = !notification.is_read;

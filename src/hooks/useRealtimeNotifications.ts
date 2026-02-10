@@ -7,6 +7,23 @@ import type { Notification, NotificationType as DBNotificationType } from '@/typ
 import { isTauri } from '@/lib/tauriRuntime';
 import { playNotificationSound, type NotificationType as SoundNotificationType } from './useNotificationSound';
 
+// Check if a notification type is enabled in user preferences
+const isNotificationTypeEnabled = (type: DBNotificationType): boolean => {
+  const state = useUIStore.getState();
+  switch (type) {
+    case 'mention':
+      return state.enableMentionNotifications;
+    case 'dm':
+      return state.enableDMNotifications;
+    case 'friend_request':
+      return state.enableFriendRequestNotifications;
+    case 'server_invite':
+      return state.enableServerInviteNotifications;
+    default:
+      return true;
+  }
+};
+
 // Map database notification types to sound notification types
 const mapNotificationTypeToSoundType = (dbType: DBNotificationType): SoundNotificationType => {
   switch (dbType) {
@@ -42,6 +59,12 @@ export const useRealtimeNotifications = (userId: string | null) => {
         },
         (payload) => {
           const notification = payload.new as Notification;
+          
+          // Check if this notification type is enabled by user preferences
+          if (!isNotificationTypeEnabled(notification.type)) {
+            return; // Silently discard — user doesn't want this type
+          }
+          
           addNotification(notification);
           
           // Handle kick/ban notifications - refresh server list immediately
