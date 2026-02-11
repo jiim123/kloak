@@ -37,7 +37,7 @@ import { EmojiPicker } from "@/components/modals/EmojiPicker";
 import type { CustomServerRole, Message, ServerRole } from "@/types";
 import { format } from "date-fns";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
-import { getGlobalEmojiMap, resolveQualifiedEmoji, type ResolvedEmoji } from "@/lib/globalEmojiResolver";
+import { getGlobalEmojiMap, resolveQualifiedEmoji, resolveEmojiByNameFallback, type ResolvedEmoji } from "@/lib/globalEmojiResolver";
 import { cn } from "@/lib/utils";
 import { getPollIdFromContent, isPollMessageContent } from "@/lib/poll";
 
@@ -288,11 +288,31 @@ export const MessageItem = memo(function MessageItem({
     [customEmojiMap, globalEmojiMap],
   );
 
+  // Fallback emoji component for emojis from servers the user isn't in
+  const FallbackEmojiImg = memo(({ emoji, className }: { emoji: string; className: string }) => {
+    const [url, setUrl] = useState<string | null>(null);
+    const nameMatch = emoji.match(/^:([a-z0-9_]{2,32}):$/i);
+    useEffect(() => {
+      if (!nameMatch) return;
+      let cancelled = false;
+      resolveEmojiByNameFallback(nameMatch[1]).then((u) => {
+        if (!cancelled && u) setUrl(u);
+      });
+      return () => { cancelled = true; };
+    }, [emoji]);
+    if (url) return <img src={url} alt={emoji} className={`${className} object-contain`} loading="lazy" />;
+    return <span className="text-sm leading-none text-muted-foreground">{emoji}</span>;
+  });
+
   const reactionEmojiNode = useCallback(
     (emoji: string) => {
       const url = resolveCustomEmojiUrl(emoji);
       if (url) {
         return <img src={url} alt={emoji} className="w-6 h-6 object-contain" loading="lazy" />;
+      }
+      // Check if it looks like a custom emoji that we can't resolve locally
+      if (/^:[a-z0-9_]{2,32}:$/i.test(emoji)) {
+        return <FallbackEmojiImg emoji={emoji} className="w-6 h-6" />;
       }
       return <span className="text-xl leading-none font-emoji">{emoji}</span>;
     },
@@ -304,6 +324,9 @@ export const MessageItem = memo(function MessageItem({
       const url = resolveCustomEmojiUrl(emoji);
       if (url) {
         return <img src={url} alt={emoji} className="w-8 h-8 object-contain" loading="lazy" />;
+      }
+      if (/^:[a-z0-9_]{2,32}:$/i.test(emoji)) {
+        return <FallbackEmojiImg emoji={emoji} className="w-8 h-8" />;
       }
       return <span className="text-2xl leading-none font-emoji">{emoji}</span>;
     },

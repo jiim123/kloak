@@ -152,3 +152,55 @@ export function resolveQualifiedEmoji(qualifiedName: string): ResolvedEmoji | un
 export function invalidateGlobalEmojiCache() {
   globalCache = null;
 }
+
+// ---------------------------------------------------------------------------
+// Fallback resolver: fetch emoji URL from DB when viewer isn't in the server
+// ---------------------------------------------------------------------------
+import { supabase } from '@/integrations/supabase/client';
+
+const fallbackCache = new Map<string, string | null>();
+const fallbackInFlight = new Map<string, Promise<string | null>>();
+
+/**
+ * Look up a custom emoji by name across ALL servers (not just user's).
+ * Returns the public URL or null. Results are cached for the session.
+ */
+export async function resolveEmojiByNameFallback(name: string): Promise<string | null> {
+  const cached = fallbackCache.get(name);
+  if (cached !== undefined) return cached;
+
+  const existing = fallbackInFlight.get(name);
+  if (existing) return existing;
+
+  const promise = (async () => {
+    try {
+      const { data, error } = await supabase
+        .from('server_emojis')
+        .select('file_path')
+        .eq('name', name)
+        .limit(1)
+        .maybeSingle();
+
+      if (error || !data) {
+        fallbackCache.set(name, null);
+        return null;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('server-emojis')
+        .getPublicUrl(data.file_path);
+
+      const url = urlData.publicUrl;
+      fallbackCache.set(name, url);
+      return url;
+    } catch {
+      fallbackCache.set(name, null);
+      return null;
+    } finally {
+      fallbackInFlight.delete(name);
+    }
+  })();
+
+  fallbackInFlight.set(name, promise);
+  return promise;
+}
