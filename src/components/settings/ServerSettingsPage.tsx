@@ -2181,22 +2181,26 @@ export const ServerSettingsPage = () => {
                           />
                         </div>
 
-                        {/* Delete Role */}
-                        <Separator />
-                        <div className="pb-8">
-                          <h4 className="text-sm font-semibold text-destructive mb-2">Delete Role</h4>
-                          <p className="text-xs text-muted-foreground mb-3">
-                            Permanently delete this role. It will be removed from all members who have it.
-                          </p>
-                          <Button 
-                            variant="destructive" 
-                            size="sm"
-                            onClick={() => handleDeleteRole(selectedRole)}
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete Role
-                          </Button>
-                        </div>
+                        {/* Delete Role - hidden for @everyone */}
+                        {selectedRole.name !== '@everyone' && (
+                          <>
+                            <Separator />
+                            <div className="pb-8">
+                              <h4 className="text-sm font-semibold text-destructive mb-2">Delete Role</h4>
+                              <p className="text-xs text-muted-foreground mb-3">
+                                Permanently delete this role. It will be removed from all members who have it.
+                              </p>
+                              <Button 
+                                variant="destructive" 
+                                size="sm"
+                                onClick={() => handleDeleteRole(selectedRole)}
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete Role
+                              </Button>
+                            </div>
+                          </>
+                        )}
                       </div>
                     ) : (
                       <div className="p-6 max-w-2xl">

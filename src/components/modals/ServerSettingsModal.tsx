@@ -372,16 +372,18 @@ export const ServerSettingsModal = () => {
           >
             <Edit2 className="w-3 h-3" />
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            rounded="xl"
-            onClick={() => handleDeleteRole(role)}
-            className="text-muted-foreground hover:text-destructive text-[10px] sm:text-xs h-8 px-2 sm:px-3"
-            title="Delete Role"
-          >
-            <Trash2 className="w-3 h-3" />
-          </Button>
+          {role.name !== '@everyone' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              rounded="xl"
+              onClick={() => handleDeleteRole(role)}
+              className="text-muted-foreground hover:text-destructive text-[10px] sm:text-xs h-8 px-2 sm:px-3"
+              title="Delete Role"
+            >
+              <Trash2 className="w-3 h-3" />
+            </Button>
+          )}
         </div>
       </div>
     );
@@ -1890,14 +1892,16 @@ export const ServerSettingsModal = () => {
                               >
                                 <Edit2 className="w-3 h-3" />
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteRole(role)}
-                                className="text-muted-foreground hover:text-destructive h-7 px-2 rounded-lg"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
+                              {role.name !== '@everyone' && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteRole(role)}
+                                  className="text-muted-foreground hover:text-destructive h-7 px-2 rounded-lg"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              )}
                             </div>
                           ))}
                         </div>
