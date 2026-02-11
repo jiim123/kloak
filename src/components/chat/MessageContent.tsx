@@ -421,8 +421,9 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
               img.src = url;
               img.alt = `:${name}:`;
               img.title = `:${name}:`;
-              img.className = 'inline-block w-8 h-8 align-middle object-contain';
+              img.className = 'inline-block w-8 h-8 align-middle object-contain cursor-pointer hover:scale-110 transition-transform';
               img.loading = 'lazy';
+              img.dataset.crossEmoji = name;
               frag.appendChild(img);
             }
             if (part) frag.appendChild(document.createTextNode(part));
@@ -534,6 +535,17 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
       }
       if (!resolved) {
         resolved = globalEmojiMap.get(emojiName);
+      }
+      // Fallback: build a minimal ResolvedEmoji from the img element itself (for DB-fallback resolved emojis)
+      if (!resolved && target instanceof HTMLImageElement && target.src) {
+        resolved = {
+          name: emojiName,
+          url: target.src,
+          serverId: '',
+          serverName: '',
+          serverIcon: null,
+          isPublished: false,
+        };
       }
       if (resolved) {
         setEmojiPopover({ emoji: resolved, rect: target.getBoundingClientRect() });
