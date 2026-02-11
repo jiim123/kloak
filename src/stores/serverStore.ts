@@ -296,14 +296,14 @@ export const useServerStore = create<ServerState>((set, get) => ({
         throw error;
       }
 
-      const result = data as { success: boolean; error?: string; server?: any };
-      if (!result.success) {
+      const result = data as { success: boolean; error?: string; server?: any } | null;
+      if (result && !result.success) {
         console.error('update_server failed:', result.error);
         throw new Error(result.error || 'Failed to update server');
       }
 
       // Use the server data returned from RPC if available, otherwise use updates
-      const serverUpdates = result.server ? {
+      const serverUpdates = result?.server ? {
         ...updates,
         system_channel_join_id: result.server.system_channel_join_id ?? null,
         system_channel_leave_id: result.server.system_channel_leave_id ?? null,
