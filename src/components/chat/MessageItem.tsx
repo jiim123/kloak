@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo, memo, forwardRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Smile, Reply, Pencil, Trash2, Pin, MoreHorizontal, CornerUpLeft, Copy, Eye, EyeOff } from "lucide-react";
+import { Smile, Reply, Pencil, Trash2, Pin, MoreHorizontal, CornerUpLeft, Copy, Eye, EyeOff, Paperclip } from "lucide-react";
 import { toast } from "sonner";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -916,19 +916,40 @@ export const MessageItem = memo(function MessageItem({
                         ) : (
                           <span className="font-medium text-primary italic flex-shrink-0">Anonymous</span>
                         )}
-                        {isPollMessageContent(message.reply_to.content) ? (
-                          <span className="italic flex-shrink-0">poll</span>
-                        ) : isImageOnlyMessage(message.reply_to.content) ? (
-                          <img
-                            src={message.reply_to.content.trim()}
-                            alt="Image"
-                            className="w-6 h-6 rounded object-cover flex-shrink-0"
-                          />
-                        ) : (
-                          <span className="truncate max-w-[120px] sm:max-w-[200px]">
-                            <ReplyPreview content={message.reply_to.content} maxLength={30} />
-                          </span>
-                        )}
+                        {(() => {
+                          const replyContent = message.reply_to.content;
+                          if (isPollMessageContent(replyContent)) {
+                            return <span className="italic flex-shrink-0">poll</span>;
+                          }
+                          if (isImageOnlyMessage(replyContent)) {
+                            return (
+                              <span className="italic flex-shrink-0 flex items-center gap-1">
+                                <Paperclip className="w-3 h-3" />
+                                attachment
+                              </span>
+                            );
+                          }
+                          // Strip attachment/image URLs from content for preview
+                          const attachmentUrlPattern = /https?:\/\/[^\s]*(?:supabase\.co\/storage\/v1\/|\.(?:jpg|jpeg|png|gif|webp|mp4|mov|pdf|zip|rar|doc|docx|xls|xlsx))(?:[^\s]*)/gi;
+                          const textOnly = replyContent
+                            .split('\n')
+                            .map(line => line.replace(attachmentUrlPattern, '').trim())
+                            .filter(line => line.length > 0)
+                            .join(' ');
+                          if (!textOnly) {
+                            return (
+                              <span className="italic flex-shrink-0 flex items-center gap-1">
+                                <Paperclip className="w-3 h-3" />
+                                attachment
+                              </span>
+                            );
+                          }
+                          return (
+                            <span className="truncate max-w-[120px] sm:max-w-[200px]">
+                              <ReplyPreview content={textOnly} maxLength={30} />
+                            </span>
+                          );
+                        })()}
                       </div>
                     )}
 
