@@ -2484,7 +2484,7 @@ export const ServerSettingsModal = () => {
                               </p>
                             </div>
 
-                            {canManageRoles && member.user_id !== user?.id && member.role !== "owner" && (
+                            {canManageRoles && member.user_id !== user?.id && (
                               <div className="flex items-center gap-1 flex-shrink-0">
                                 {roles.length > 0 && (
                                   <DropdownMenu>

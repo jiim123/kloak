@@ -313,7 +313,7 @@ export const MembersSidebar = () => {
     const canChangeNickname =
       checkPermission("manage_nicknames") && (canModerate(currentUserRole, member.role) || isSelf);
     const canTransfer = checkPermission("transfer_ownership") && !isSelf && member.role !== "owner";
-    const canManageRoles = checkPermission("manage_roles") && (canModerate(currentUserRole, member.role) || (isSelf && isServerOwner));
+    const canManageRoles = checkPermission("manage_roles") && (canModerate(currentUserRole, member.role) || (isSelf && isServerOwner) || (currentUserRole === 'owner'));
 
     const hasAdminActions =
       canKick || canBan || canChangeNickname || canTransfer || canManageRoles;
@@ -448,7 +448,7 @@ export const MembersSidebar = () => {
                   <Shield className="w-4 h-4" />
                   Roles
                 </ContextMenuSubTrigger>
-                <ContextMenuSubContent className="w-44 rounded-xl border-border/50 p-1.5">
+                <ContextMenuSubContent className="w-44 rounded-xl border-border/50 p-1.5" sideOffset={4}>
                   {/* Base role assignment */}
                   {(() => {
                     const assignable = getAssignableRoles(currentUserRole);
