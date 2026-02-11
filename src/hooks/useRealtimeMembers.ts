@@ -35,9 +35,9 @@ export const useRealtimeMembers = (serverId: string | null) => {
 
     const handleVisibility = () => {
       if (document.visibilityState !== 'visible') return;
-      // Throttle: only refresh if at least 10s since last fetch
+      // Throttle: only refresh if at least 30s since last fetch (increased from 10s)
       const now = Date.now();
-      if (now - lastRefresh < 10_000) return;
+      if (now - lastRefresh < 30_000) return;
       lastRefresh = now;
       fetchMembersRef.current(serverId);
     };
@@ -60,11 +60,17 @@ export const useRealtimeMembers = (serverId: string | null) => {
           filter: `server_id=eq.${serverId}`,
         },
         async (payload) => {
-          // Fetch the user info for the new member
+          // Fetch the new member's full data and add to store incrementally
+          const newMemberData = payload.new as { user_id: string; id: string; role: string; nickname: string | null; is_banned: boolean; is_muted: boolean; joined_at: string };
+          
+          // Skip banned members
+          if (newMemberData.is_banned) return;
+
+          // Fetch user info for the new member
           const { data: userData } = await supabase
             .from('users')
-            .select('username, display_name')
-            .eq('id', payload.new.user_id)
+            .select('id, username, display_name, avatar_url, avatar_decoration, banner_color, bio, status, custom_status, created_at, last_seen')
+            .eq('id', newMemberData.user_id)
             .single();
 
           if (userData) {
@@ -73,9 +79,27 @@ export const useRealtimeMembers = (serverId: string | null) => {
               title: `${displayName} has joined the server!`,
               duration: 3000,
             });
-          }
 
-          fetchMembersRef.current(serverId);
+            // Add member to store incrementally instead of full refetch
+            useServerStore.setState((state) => {
+              // Prevent duplicates
+              if (state.members.some(m => m.id === newMemberData.id)) return {};
+              return {
+                members: [...state.members, {
+                  id: newMemberData.id,
+                  server_id: serverId,
+                  user_id: newMemberData.user_id,
+                  role: newMemberData.role as any,
+                  nickname: newMemberData.nickname,
+                  is_banned: newMemberData.is_banned,
+                  is_muted: newMemberData.is_muted || false,
+                  joined_at: newMemberData.joined_at,
+                  user: userData as any,
+                  roles: [],
+                }],
+              };
+            });
+          }
         }
       )
       .on(
@@ -86,8 +110,33 @@ export const useRealtimeMembers = (serverId: string | null) => {
           table: 'server_members',
           filter: `server_id=eq.${serverId}`,
         },
-        () => {
-          fetchMembersRef.current(serverId);
+        (payload) => {
+          const updated = payload.new as any;
+          // Update member in-place instead of full refetch
+          useServerStore.setState((state) => {
+            let changed = false;
+            const members = state.members
+              .filter(m => {
+                // Remove if now banned
+                if (m.id === updated.id && updated.is_banned) {
+                  changed = true;
+                  return false;
+                }
+                return true;
+              })
+              .map(m => {
+                if (m.id !== updated.id) return m;
+                changed = true;
+                return {
+                  ...m,
+                  role: updated.role ?? m.role,
+                  nickname: updated.nickname ?? m.nickname,
+                  is_muted: updated.is_muted ?? m.is_muted,
+                  is_banned: updated.is_banned ?? m.is_banned,
+                };
+              });
+            return changed ? { members } : {};
+          });
         }
       )
       .on(
@@ -98,49 +147,27 @@ export const useRealtimeMembers = (serverId: string | null) => {
           table: 'server_members',
           filter: `server_id=eq.${serverId}`,
         },
-        () => {
-          fetchMembersRef.current(serverId);
+        (payload) => {
+          const deleted = payload.old as any;
+          // Remove member from store incrementally
+          useServerStore.setState((state) => {
+            const filtered = state.members.filter(m => m.id !== deleted.id);
+            if (filtered.length === state.members.length) return {};
+            return { members: filtered };
+          });
         }
       )
       // Listen for role changes (server_roles table)
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'server_roles',
           filter: `server_id=eq.${serverId}`,
         },
         () => {
-          // Refresh both roles and members when a role is created
-          fetchRolesRef.current(serverId);
-          fetchMembersRef.current(serverId);
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'server_roles',
-          filter: `server_id=eq.${serverId}`,
-        },
-        () => {
-          // Refresh both roles and members when a role is updated
-          fetchRolesRef.current(serverId);
-          fetchMembersRef.current(serverId);
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'server_roles',
-          filter: `server_id=eq.${serverId}`,
-        },
-        () => {
-          // Refresh both roles and members when a role is deleted
+          // Refresh roles when any role changes, then refresh members for role assignments
           fetchRolesRef.current(serverId);
           fetchMembersRef.current(serverId);
         }
@@ -154,12 +181,10 @@ export const useRealtimeMembers = (serverId: string | null) => {
           table: 'server_member_roles',
         },
         (payload) => {
-          // Check if this member belongs to this server using current members list
           const { members } = useServerStore.getState();
           const memberExists = members.some(m => m.id === payload.new.member_id);
-          
           if (memberExists) {
-            // Refresh members when a role is assigned
+            // Full refetch needed to get updated role data
             fetchMembersRef.current(serverId);
           }
         }
@@ -172,12 +197,9 @@ export const useRealtimeMembers = (serverId: string | null) => {
           table: 'server_member_roles',
         },
         (payload) => {
-          // Check if this member belongs to this server using current members list
           const { members } = useServerStore.getState();
           const memberExists = members.some(m => m.id === payload.old.member_id);
-          
           if (memberExists) {
-            // Refresh members when a role is removed
             fetchMembersRef.current(serverId);
           }
         }
