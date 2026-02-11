@@ -75,7 +75,7 @@ export const CreateServerModal = () => {
 
   const uploadIcon = async (serverId: string, file: File): Promise<string | null> => {
     const ext = file.name.split(".").pop() || "png";
-    const filePath = `${serverId}/icon.${ext}`;
+    const filePath = `${serverId}/icon-${Date.now()}.${ext}`;
 
     const { error: uploadError } = await supabase.storage.from("server-icons").upload(filePath, file, { upsert: true });
 
@@ -88,7 +88,7 @@ export const CreateServerModal = () => {
       data: { publicUrl },
     } = supabase.storage.from("server-icons").getPublicUrl(filePath);
 
-    return publicUrl;
+    return `${publicUrl}?v=${Date.now()}`;
   };
 
   const onCreateSubmit = async (data: CreateServerForm) => {

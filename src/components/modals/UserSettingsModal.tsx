@@ -277,7 +277,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     setIsLoading(true);
     try {
       const fileExt = file.name.split(".").pop();
-      const filePath = `${user.id}/avatar.${fileExt}`;
+      const filePath = `${user.id}/avatar-${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage.from("avatars").upload(filePath, file, { upsert: true });
 
@@ -287,9 +287,11 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         data: { publicUrl },
       } = supabase.storage.from("avatars").getPublicUrl(filePath);
 
+      // Cache-busted URL to avoid stale browser cache
+      const cacheBustedUrl = `${publicUrl}?v=${Date.now()}`;
       // Update preview immediately
-      setLocalAvatarUrl(publicUrl);
-      await updateUser({ avatar_url: publicUrl });
+      setLocalAvatarUrl(cacheBustedUrl);
+      await updateUser({ avatar_url: cacheBustedUrl });
       toast.success("Avatar updated!");
     } catch (error) {
       console.error("Upload error:", error);
@@ -317,7 +319,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     setIsBannerUploading(true);
     try {
       const fileExt = file.name.split(".").pop();
-      const filePath = `${user.id}/banner.${fileExt}`;
+      const filePath = `${user.id}/banner-${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage.from("avatars").upload(filePath, file, { upsert: true });
 
@@ -327,9 +329,11 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         data: { publicUrl },
       } = supabase.storage.from("avatars").getPublicUrl(filePath);
 
+      // Cache-busted URL
+      const cacheBustedUrl = `${publicUrl}?v=${Date.now()}`;
       // Update preview immediately
-      setLocalBannerUrl(publicUrl);
-      await updateUser({ banner_url: publicUrl });
+      setLocalBannerUrl(cacheBustedUrl);
+      await updateUser({ banner_url: cacheBustedUrl });
       toast.success("Banner updated!");
     } catch (error) {
       console.error("Banner upload error:", error);
