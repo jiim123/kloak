@@ -15,7 +15,7 @@ export const PERMISSION_META: Record<Permission, PermissionMeta> = {
   embed_links: { label: 'Embed Links', description: 'Allows members to post links with embedded previews.', enabled: true },
   mention_everyone: { label: 'Mention @everyone', description: 'Allows members to use @everyone to notify all members.', enabled: false },
   mention_roles: { label: 'Mention Roles', description: 'Allows members to mention roles to notify role members.', enabled: false },
-  use_external_emojis: { label: 'Use External Emojis', description: 'Allows members to use emojis from other servers.', enabled: false },
+  use_external_emojis: { label: 'Use External Emojis', description: 'Allows members to use emojis from other servers.', enabled: true },
   kick_members: { label: 'Kick Members', description: 'Allows members to remove other members from the server. They can rejoin with an invite.', enabled: true },
   ban_members: { label: 'Ban Members', description: 'Allows members to permanently ban other members from the server.', enabled: true },
   mute_members: { label: 'Mute Members', description: 'Allows members to mute other members, preventing them from sending messages.', enabled: true },
