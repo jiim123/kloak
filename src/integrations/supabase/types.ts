@@ -3054,11 +3054,11 @@ export type Database = {
         Returns: undefined
       }
       update_category: {
-        Args: { _category_id: string; _updates: Json; _user_id: string }
+        Args: { _category_id: string; _updates: string; _user_id: string }
         Returns: Json
       }
       update_channel: {
-        Args: { _channel_id: string; _updates: Json; _user_id: string }
+        Args: { _channel_id: string; _updates: string; _user_id: string }
         Returns: Json
       }
       update_group_dm_name: {
