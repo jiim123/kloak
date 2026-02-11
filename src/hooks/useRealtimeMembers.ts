@@ -27,6 +27,25 @@ export const useRealtimeMembers = (serverId: string | null) => {
     `server-member-users:${serverId || 'none'}`,
   );
 
+  // Re-fetch members when tab becomes visible (presence data goes stale in background)
+  useEffect(() => {
+    if (!serverId) return;
+
+    let lastRefresh = Date.now();
+
+    const handleVisibility = () => {
+      if (document.visibilityState !== 'visible') return;
+      // Throttle: only refresh if at least 10s since last fetch
+      const now = Date.now();
+      if (now - lastRefresh < 10_000) return;
+      lastRefresh = now;
+      fetchMembersRef.current(serverId);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [serverId]);
+
   useEffect(() => {
     if (!serverId) return;
 
