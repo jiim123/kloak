@@ -15,6 +15,7 @@ import {
   BellOff,
   Bell,
 } from "lucide-react";
+import { hasPermission as checkRolePermission } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -306,6 +307,7 @@ const HorizontalFolderItem = ({
               const { hasUnread, totalMentions } = getServerUnreadInfo(channelIds);
               const isActive = currentServer?.id === server.id;
               const isOwner = server.role === "owner";
+              const canManageServer = isOwner || checkRolePermission(server.role, 'manage_server') || checkRolePermission(server.role, 'manage_channels') || checkRolePermission(server.role, 'manage_roles');
 
               return (
                 <ContextMenu key={server.id}>
@@ -369,7 +371,7 @@ const HorizontalFolderItem = ({
                         </>
                       )}
                     </ContextMenuItem>
-                    {isOwner && (
+                    {canManageServer && (
                       <ContextMenuItem onSelect={() => onOpenSettings(server)}>
                         <Settings className="w-4 h-4 mr-2" />
                         Server Settings
@@ -468,6 +470,7 @@ const HorizontalSortableServerItem = forwardRef<
       transition,
     };
     const isOwner = server.role === "owner";
+    const canManageServer = isOwner || checkRolePermission(server.role, 'manage_server') || checkRolePermission(server.role, 'manage_channels') || checkRolePermission(server.role, 'manage_roles');
 
     return (
       <ContextMenu>
@@ -581,7 +584,7 @@ const HorizontalSortableServerItem = forwardRef<
               </>
             )}
           </ContextMenuItem>
-          {isOwner && onOpenSettings && (
+          {canManageServer && onOpenSettings && (
             <ContextMenuItem onSelect={() => onOpenSettings()}>
               <Settings className="w-4 h-4 mr-2" />
               Server Settings

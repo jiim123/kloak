@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useCallback, forwardRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Folder, Plus, Settings, Home, ChevronDown, ChevronRight, Trash2, Edit2, Palette, LogOut, CheckCheck, BellOff, Bell } from "lucide-react";
+import { hasPermission as checkRolePermission } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { MotionButton, MotionDiv } from "@/components/ui/motion-elements";
@@ -302,6 +303,7 @@ const DraggableServerItem = forwardRef<
     const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined;
 
     const isOwner = server.role === "owner";
+    const canManageServer = isOwner || checkRolePermission(server.role, 'manage_server') || checkRolePermission(server.role, 'manage_channels') || checkRolePermission(server.role, 'manage_roles');
 
     return (
       <ContextMenu>
@@ -421,7 +423,7 @@ const DraggableServerItem = forwardRef<
               </>
             )}
           </ContextMenuItem>
-          {isOwner && onOpenSettings && (
+          {canManageServer && onOpenSettings && (
             <ContextMenuItem
               onSelect={(e) => {
                 e.preventDefault();

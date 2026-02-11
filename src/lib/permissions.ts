@@ -68,6 +68,8 @@ const ROLE_PERMISSIONS: Record<ServerRole, Permission[]> = {
     'use_application_commands',
   ],
   admin: [
+    'manage_server',
+    'manage_roles',
     'manage_channels',
     'manage_emojis',
     'kick_members',
