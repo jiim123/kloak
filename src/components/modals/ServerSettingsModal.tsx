@@ -906,7 +906,17 @@ export const ServerSettingsModal = () => {
 
   const uploadIcon = async (serverId: string, file: File): Promise<string | null> => {
     const ext = file.name.split(".").pop() || "png";
-    const filePath = `${serverId}/icon.${ext}`;
+    // Use timestamp in path to avoid CDN/browser cache collisions after removal + re-upload
+    const filePath = `${serverId}/icon-${Date.now()}.${ext}`;
+
+    // Clean up old icon files first
+    try {
+      const { data: existingFiles } = await supabase.storage.from("server-icons").list(serverId, { search: "icon" });
+      if (existingFiles && existingFiles.length > 0) {
+        const oldFiles = existingFiles.filter(f => f.name.startsWith("icon")).map(f => `${serverId}/${f.name}`);
+        if (oldFiles.length > 0) await supabase.storage.from("server-icons").remove(oldFiles);
+      }
+    } catch { /* ignore cleanup errors */ }
 
     const { error: uploadError } = await supabase.storage.from("server-icons").upload(filePath, file, { upsert: true });
 
@@ -1056,10 +1066,14 @@ export const ServerSettingsModal = () => {
 
     setIsUploadingIcon(true);
     try {
-      // Delete icon files from storage (try common extensions)
-      const extensions = ["webp", "png", "jpg", "jpeg"];
-      const filesToRemove = extensions.map(ext => `${server.id}/icon.${ext}`);
-      await supabase.storage.from("server-icons").remove(filesToRemove);
+      // Delete all icon files from storage (handles timestamped filenames)
+      try {
+        const { data: existingFiles } = await supabase.storage.from("server-icons").list(server.id, { search: "icon" });
+        if (existingFiles && existingFiles.length > 0) {
+          const iconFiles = existingFiles.filter(f => f.name.startsWith("icon")).map(f => `${server.id}/${f.name}`);
+          if (iconFiles.length > 0) await supabase.storage.from("server-icons").remove(iconFiles);
+        }
+      } catch { /* ignore cleanup errors */ }
 
       // Update DB
       await updateServer(server.id, user.id, { icon_url: null });

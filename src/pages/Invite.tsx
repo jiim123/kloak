@@ -187,9 +187,11 @@ const Invite = () => {
             <div className="p-8 sm:p-10">
               <div className="mt-6 flex items-center gap-4">
                 <Avatar className="h-16 w-16 rounded-2xl">
-                  <AvatarImage src={server.icon_url || undefined} />
-                  <AvatarFallback className="rounded-2xl text-lg bg-transparent">
-                    {server.name?.[0]?.toUpperCase() || "?"}
+                  {server.icon_url ? (
+                    <AvatarImage src={server.icon_url} />
+                  ) : null}
+                  <AvatarFallback className="rounded-2xl text-lg bg-secondary text-foreground font-bold">
+                    {server.name?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || "?"}
                   </AvatarFallback>
                 </Avatar>
                 <div className="min-w-0">
