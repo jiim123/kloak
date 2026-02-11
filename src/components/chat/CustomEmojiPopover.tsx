@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useServerStore } from '@/stores/serverStore';
 import type { ResolvedEmoji } from '@/lib/globalEmojiResolver';
 
 interface CustomEmojiPopoverProps {
@@ -10,6 +11,8 @@ interface CustomEmojiPopoverProps {
 
 export function CustomEmojiPopover({ emoji, anchorRect, onClose }: CustomEmojiPopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
+  const servers = useServerStore((s) => s.servers);
+  const isInServer = emoji.serverId ? servers.some((s) => s.id === emoji.serverId) : false;
 
   // Close on click outside
   useEffect(() => {
@@ -39,6 +42,10 @@ export function CustomEmojiPopover({ emoji, anchorRect, onClose }: CustomEmojiPo
   const showAbove = top + 200 > window.innerHeight;
   const finalTop = showAbove ? anchorRect.top - 8 : top;
 
+  const description = isInServer
+    ? 'This emoji is from one of your servers. Type its name in the chat bar to use it.'
+    : 'This emoji is from a server you\'re not a member of.';
+
   return createPortal(
     <div
       ref={popoverRef}
@@ -59,7 +66,7 @@ export function CustomEmojiPopover({ emoji, anchorRect, onClose }: CustomEmojiPo
         <div className="min-w-0">
           <p className="font-semibold text-foreground text-sm">:{emoji.name}:</p>
           <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-            This emoji is from one of your servers. Type its name in the chat bar to use it.
+            {description}
           </p>
         </div>
       </div>
