@@ -86,7 +86,7 @@ export const ChannelSettingsPage = () => {
       ]
     : [
         { id: "overview", label: "Overview", icon: Hash },
-        { id: "settings", label: "Settings", icon: Settings },
+        ...(channel?.type !== "voice" ? [{ id: "settings", label: "Settings", icon: Settings }] : []),
         ...(channel?.is_private ? [{ id: "members", label: "Members", icon: Users }] : []),
         { id: "permissions", label: "Permissions", icon: Shield },
       ];
