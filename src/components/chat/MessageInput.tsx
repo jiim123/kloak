@@ -936,13 +936,34 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
                   <span className="font-medium text-primary italic">Anonymous</span>
                 )}
               </span>
-              {isImageOnlyMessage(replyingTo.content) ? (
-                <img src={replyingTo.content.trim()} alt="Image attachment" className="w-8 h-8 rounded object-cover flex-shrink-0" />
-              ) : (
-                <span className="text-[12px] sm:text-[13px] leading-[1.5] text-muted-foreground truncate flex-1 hidden sm:inline">
-                  <ReplyPreview content={readableReplyContent} maxLength={50} />
-                </span>
-              )}
+              {(() => {
+                const rc = replyingTo.content;
+                if (isImageOnlyMessage(rc)) {
+                  return (
+                    <span className="text-[12px] sm:text-[13px] leading-[1.5] text-muted-foreground italic flex items-center gap-1 flex-shrink-0">
+                      <Paperclip className="w-3 h-3" /> attachment
+                    </span>
+                  );
+                }
+                const attachmentUrlPattern = /https?:\/\/[^\s]*(?:supabase\.co\/storage\/v1\/|\.(?:jpg|jpeg|png|gif|webp|mp4|mov|pdf|zip|rar|doc|docx|xls|xlsx))(?:[^\s]*)/gi;
+                const textOnly = readableReplyContent
+                  .split('\n')
+                  .map(line => line.replace(attachmentUrlPattern, '').trim())
+                  .filter(line => line.length > 0)
+                  .join(' ');
+                if (!textOnly) {
+                  return (
+                    <span className="text-[12px] sm:text-[13px] leading-[1.5] text-muted-foreground italic flex items-center gap-1 flex-shrink-0">
+                      <Paperclip className="w-3 h-3" /> attachment
+                    </span>
+                  );
+                }
+                return (
+                  <span className="text-[12px] sm:text-[13px] leading-[1.5] text-muted-foreground truncate flex-1 hidden sm:inline">
+                    <ReplyPreview content={textOnly} maxLength={50} />
+                  </span>
+                );
+              })()}
               <button onClick={cancelReply} className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-150 ml-auto">
                 <X className="w-4 h-4" />
               </button>
