@@ -106,37 +106,96 @@ export const useRealtimeReactions = (channelId: string | null) => {
           },
           (payload) => {
             try {
-              console.log('[Realtime] Reaction DELETE payload:', JSON.stringify(payload.old));
               const oldReaction = payload.old as { id?: string; message_id?: string; user_id?: string; emoji?: string };
-              if (!oldReaction.message_id || !oldReaction.emoji) {
-                console.warn('[Realtime] DELETE payload missing message_id or emoji — REPLICA IDENTITY FULL may not be active. Got:', Object.keys(payload.old || {}));
-                return;
+              
+              // With REPLICA IDENTITY FULL we get all fields; without it we only get id.
+              // If we have the full data, process directly. Otherwise, scan local state
+              // to find and remove the reaction by its id.
+              if (oldReaction.message_id && oldReaction.emoji && oldReaction.user_id) {
+                // Full payload path
+                const currentUserId = useAuthStore.getState().user?.id;
+                const { messagesByChannel } = useMessageStore.getState();
+                const channelData = messagesByChannel[channelId];
+                if (!channelData) return;
+                
+                const message = channelData.messages.find(m => m.id === oldReaction.message_id);
+                if (!message) return;
+                
+                const reactions = (message.reactions || [])
+                  .map(r => {
+                    if (r.emoji !== oldReaction.emoji) return r;
+                    return {
+                      ...r,
+                      count: r.count - 1,
+                      users: r.users.filter(u => u !== oldReaction.user_id),
+                      hasReacted: oldReaction.user_id === currentUserId ? false : r.hasReacted,
+                    };
+                  })
+                  .filter(r => r.count > 0);
+                
+                useMessageStore.getState().updateMessage(oldReaction.message_id!, { reactions, channel_id: channelId } as any);
+              } else if (oldReaction.id) {
+                // Fallback: REPLICA IDENTITY DEFAULT — only id available.
+                // Re-fetch reactions for all messages in this channel that have reactions.
+                console.log('[Realtime] DELETE fallback: refetching reactions for channel', channelId);
+                const { messagesByChannel } = useMessageStore.getState();
+                const channelData = messagesByChannel[channelId];
+                if (!channelData) return;
+                
+                const messageIds = channelData.messages
+                  .filter(m => m.reactions && m.reactions.length > 0)
+                  .map(m => m.id);
+                
+                if (messageIds.length === 0) return;
+                
+                // Fetch current reactions for these messages
+                supabase
+                  .from('reactions')
+                  .select('message_id, user_id, emoji')
+                  .in('message_id', messageIds)
+                  .then(({ data, error }) => {
+                    if (error) {
+                      console.error('[Realtime] Failed to refetch reactions:', error);
+                      return;
+                    }
+                    
+                    const currentUserId = useAuthStore.getState().user?.id;
+                    
+                    // Group reactions by message
+                    const reactionsByMessage = new Map<string, { emoji: string; count: number; users: string[]; hasReacted: boolean }[]>();
+                    
+                    for (const msgId of messageIds) {
+                      reactionsByMessage.set(msgId, []);
+                    }
+                    
+                    for (const row of (data || [])) {
+                      let msgReactions = reactionsByMessage.get(row.message_id);
+                      if (!msgReactions) {
+                        msgReactions = [];
+                        reactionsByMessage.set(row.message_id, msgReactions);
+                      }
+                      const existing = msgReactions.find(r => r.emoji === row.emoji);
+                      if (existing) {
+                        existing.count++;
+                        existing.users.push(row.user_id);
+                        if (row.user_id === currentUserId) existing.hasReacted = true;
+                      } else {
+                        msgReactions.push({
+                          emoji: row.emoji,
+                          count: 1,
+                          users: [row.user_id],
+                          hasReacted: row.user_id === currentUserId,
+                        });
+                      }
+                    }
+                    
+                    // Update each message
+                    const store = useMessageStore.getState();
+                    for (const [msgId, reactions] of reactionsByMessage) {
+                      store.updateMessage(msgId, { reactions, channel_id: channelId } as any);
+                    }
+                  });
               }
-              
-              const currentUserId = useAuthStore.getState().user?.id;
-              
-              // Get current state directly from store
-              const { messagesByChannel } = useMessageStore.getState();
-              const channelData = messagesByChannel[channelId];
-              if (!channelData) return;
-              
-              const messageIndex = channelData.messages.findIndex(m => m.id === oldReaction.message_id);
-              if (messageIndex === -1) return;
-              
-              const message = channelData.messages[messageIndex];
-              const reactions = (message.reactions || [])
-                .map(r => {
-                  if (r.emoji !== oldReaction.emoji) return r;
-                  return {
-                    ...r,
-                    count: r.count - 1,
-                    users: r.users.filter(u => u !== oldReaction.user_id),
-                    hasReacted: oldReaction.user_id === currentUserId ? false : r.hasReacted,
-                  };
-                })
-                .filter(r => r.count > 0);
-              
-              useMessageStore.getState().updateMessage(oldReaction.message_id, { reactions, channel_id: channelId } as any);
             } catch (error) {
               console.error('[Realtime] Error processing reaction DELETE:', error);
             }
