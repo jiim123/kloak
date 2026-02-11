@@ -405,33 +405,27 @@ const AppLayout = () => {
             {/* Horizontal Server Bar at top - hidden during full-screen settings */}
             {!isServerSettingsOpen && activeModal !== 'user-settings' && activeModal !== 'edit-channel' && <HorizontalServerSidebar />}
 
-            <div className="flex flex-1 overflow-hidden">
-              {/* Full-screen settings pages - take full space */}
-              {isServerSettingsOpen ? (
-                <div className="flex-1 min-w-0 relative">
-                  {/* Keep voice alive offscreen during settings */}
-                  <div className="absolute left-[-9999px] top-[-9999px] w-px h-px overflow-hidden pointer-events-none" aria-hidden>
-                    <VoicePersistentHost />
-                  </div>
+            <div className="flex flex-1 overflow-hidden relative">
+              {/* Full-screen settings overlays - rendered on top, main layout stays mounted */}
+              {isServerSettingsOpen && (
+                <div className="absolute inset-0 z-20 bg-background">
                   <ServerSettingsPage />
                 </div>
-              ) : activeModal === 'user-settings' ? (
-                <div className="flex-1 min-w-0 relative">
-                  <div className="absolute left-[-9999px] top-[-9999px] w-px h-px overflow-hidden pointer-events-none" aria-hidden>
-                    <VoicePersistentHost />
-                  </div>
+              )}
+              {activeModal === 'user-settings' && (
+                <div className="absolute inset-0 z-20 bg-background">
                   <UserSettingsPage />
-              </div>
-            ) : activeModal === 'edit-channel' ? (
-              <div className="flex-1 min-w-0 relative">
-                <div className="absolute left-[-9999px] top-[-9999px] w-px h-px overflow-hidden pointer-events-none" aria-hidden>
-                  <VoicePersistentHost />
                 </div>
-                <ChannelSettingsPage />
-              </div>
-            ) : (
+              )}
+              {activeModal === 'edit-channel' && (
+                <div className="absolute inset-0 z-20 bg-background">
+                  <ChannelSettingsPage />
+                </div>
+              )}
+
+              {/* Main layout - ALWAYS mounted so VoicePersistentHost never unmounts */}
               <ResizablePanelGroup direction="horizontal" className="flex-1">
-                {/* Secondary sidebar - resizable, default 380px (~20% of typical 1920px viewport) */}
+                {/* Secondary sidebar - resizable */}
                 <ResizablePanel 
                   defaultSize={20} 
                   minSize={10} 
@@ -496,7 +490,6 @@ const AppLayout = () => {
                   </>
                 )}
               </ResizablePanelGroup>
-            )}
             </div>
           </div>
 
