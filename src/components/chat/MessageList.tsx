@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo } from "react";
 import { Ghost } from "lucide-react";
 import { ChevronDown, Loader2, Hash, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -76,6 +76,7 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   const isNearBottomRef = useRef(true);
   const hasMarkedAsReadRef = useRef(false);
   const prevMessagesLengthRef = useRef(0);
+  const pendingScrollRef = useRef(false);
 
   // Unread tracking
   const channelIds = useMemo(() => [channelId], [channelId]);
@@ -108,17 +109,28 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   // Set current channel and fetch messages (with caching)
   useEffect(() => {
     setCurrentChannel(channelId);
-    fetchMessages(channelId).then(() => {
-      setTimeout(() => {
-        bottomRef.current?.scrollIntoView({ behavior: "instant" });
-        isNearBottomRef.current = true;
-        setShowJumpToPresent(false);
-      }, 50);
-    });
-    hasMarkedAsReadRef.current = false;
+    pendingScrollRef.current = true;
     prevMessagesLengthRef.current = 0;
+    hasMarkedAsReadRef.current = false;
+    setShowJumpToPresent(false);
+    setNewMessageCount(0);
+    fetchMessages(channelId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelId]);
+
+  // Scroll to bottom AFTER messages render on channel switch
+  // useLayoutEffect fires synchronously after DOM mutations but before paint,
+  // so the user never sees the mid-conversation position.
+  useLayoutEffect(() => {
+    if (pendingScrollRef.current && messages.length > 0) {
+      const container = containerRef.current;
+      if (container) {
+        container.scrollTop = container.scrollHeight;
+      }
+      isNearBottomRef.current = true;
+      pendingScrollRef.current = false;
+    }
+  }, [messages]);
 
   // Reconcile after sleep/background: refetch latest when app regains focus/visibility.
   // This ensures we catch any messages that realtime subscriptions might have missed
