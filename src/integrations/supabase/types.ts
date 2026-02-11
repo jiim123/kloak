@@ -2840,6 +2840,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      reorder_server_roles: {
+        Args: {
+          _ordered_role_ids: string[]
+          _server_id: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
       reorder_user_servers: {
         Args: { _server_ids: string[]; _user_id: string }
         Returns: undefined
