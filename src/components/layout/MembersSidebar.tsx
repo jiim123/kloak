@@ -106,8 +106,14 @@ const SectionHeader = memo(
 SectionHeader.displayName = "SectionHeader";
 
 export const MembersSidebar = () => {
-  const { members, currentServer, roles, isLoading, fetchRolePermissions, assignRoleToMember, removeRoleFromMember } =
-    useServerStore();
+  // Use individual selectors to prevent re-renders on unrelated store changes (e.g. channel switch)
+  const members = useServerStore((s) => s.members);
+  const currentServer = useServerStore((s) => s.currentServer);
+  const roles = useServerStore((s) => s.roles);
+  const isMembersLoading = useServerStore((s) => s.isMembersLoading);
+  const fetchRolePermissions = useServerStore((s) => s.fetchRolePermissions);
+  const assignRoleToMember = useServerStore((s) => s.assignRoleToMember);
+  const removeRoleFromMember = useServerStore((s) => s.removeRoleFromMember);
   const { user } = useAuthStore();
   const { openModal } = useUIStore();
   const navigate = useNavigate();
@@ -204,8 +210,8 @@ export const MembersSidebar = () => {
     };
   }, [members, roles]);
 
-  // Show skeleton while loading
-  if (isLoading) {
+  // Show skeleton only while members are actually loading (not global isLoading)
+  if (isMembersLoading && members.length === 0) {
     return <MembersSidebarSkeleton />;
   }
 

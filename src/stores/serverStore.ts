@@ -26,6 +26,7 @@ interface ServerState {
   categories: ChannelCategory[];
   channels: Channel[];
   members: ServerMember[];
+  isMembersLoading: boolean;
   isLoading: boolean;
   error: string | null;
 
@@ -108,6 +109,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
   categories: [],
   channels: [],
   members: [],
+  isMembersLoading: false,
   roles: [],
   rolePermissions: [],
   channelPermissions: [],
@@ -533,6 +535,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         channels: [],
         categories: [],
         members: [],
+        isMembersLoading: true,
       });
     } else {
       // Going to DM view - just set server to null, keep channel data for when we return
@@ -1011,6 +1014,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
   },
 
   fetchMembers: async (serverId: string) => {
+    set({ isMembersLoading: true });
     try {
       // Fetch roles first if not already loaded
       const { roles: currentRoles } = get();
@@ -1098,11 +1102,11 @@ export const useServerStore = create<ServerState>((set, get) => ({
           roles: item.roles as any,
         }));
 
-      set({ members });
+      set({ members, isMembersLoading: false });
     } catch (error) {
       console.error('Failed to fetch members:', error);
       // Set empty array on error to prevent stale data
-      set({ members: [] });
+      set({ members: [], isMembersLoading: false });
     }
   },
 
