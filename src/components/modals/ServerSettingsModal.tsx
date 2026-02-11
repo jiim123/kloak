@@ -54,6 +54,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { invalidateServerEmojis } from "@/lib/serverEmojis";
 import type { ServerRole, ServerMember, CustomServerRole } from "@/types";
+import { BannerCropModal } from "./BannerCropModal";
 import { Badge } from "@/components/ui/badge";
 import { RolePermissionsEditor } from "./RolePermissionsEditor";
 import { RoleColorPicker } from "./RoleColorPicker";
@@ -202,6 +203,10 @@ export const ServerSettingsModal = () => {
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [isUploadingBanner, setIsUploadingBanner] = useState(false);
   const bannerInputRef = useRef<HTMLInputElement>(null);
+
+  // Banner crop modal state
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [showCropModal, setShowCropModal] = useState(false);
 
   // Custom emoji state (owner-only)
   const [emojiFile, setEmojiFile] = useState<File | null>(null);
@@ -846,9 +851,9 @@ export const ServerSettingsModal = () => {
     }
   };
 
-  const handleIconSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleIconSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !server || !user) return;
 
     if (!ALLOWED_ICON_TYPES.includes(file.type)) {
       toast.error("Please select a JPEG, PNG, or WebP image");
@@ -860,8 +865,28 @@ export const ServerSettingsModal = () => {
       return;
     }
 
-    setIconFile(file);
-    setIconPreview(URL.createObjectURL(file));
+    // Show local preview immediately
+    const preview = URL.createObjectURL(file);
+    setIconPreview(preview);
+    setIsUploadingIcon(true);
+
+    try {
+      const uploadedUrl = await uploadIcon(server.id, file);
+      if (!uploadedUrl) throw new Error("Upload returned null");
+
+      const cacheBustedUrl = `${uploadedUrl}?t=${Date.now()}`;
+      await updateServer(server.id, user.id, { icon_url: cacheBustedUrl });
+      setIconPreview(cacheBustedUrl);
+      toast.success("Server icon updated");
+    } catch (err) {
+      console.error("Failed to upload icon:", err);
+      toast.error("Failed to upload server icon");
+      URL.revokeObjectURL(preview);
+      setIconPreview(null);
+    } finally {
+      setIsUploadingIcon(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   const clearIcon = () => {
@@ -907,8 +932,54 @@ export const ServerSettingsModal = () => {
       return;
     }
 
-    setBannerFile(file);
-    setBannerPreview(URL.createObjectURL(file));
+    // Open crop modal with the selected image
+    const src = URL.createObjectURL(file);
+    setCropImageSrc(src);
+    setShowCropModal(true);
+
+    if (bannerInputRef.current) bannerInputRef.current.value = "";
+  };
+
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    if (!server || !user) return;
+
+    // Show local preview immediately
+    const preview = URL.createObjectURL(croppedBlob);
+    setBannerPreview(preview);
+    setIsUploadingBanner(true);
+
+    // Close crop modal
+    if (cropImageSrc) {
+      URL.revokeObjectURL(cropImageSrc);
+      setCropImageSrc(null);
+    }
+    setShowCropModal(false);
+
+    try {
+      const file = new File([croppedBlob], "banner.webp", { type: "image/webp" });
+      const uploadedUrl = await uploadBanner(server.id, file);
+      if (!uploadedUrl) throw new Error("Upload returned null");
+
+      const cacheBustedUrl = `${uploadedUrl}?t=${Date.now()}`;
+      await updateServer(server.id, user.id, { banner_url: cacheBustedUrl });
+      setBannerPreview(cacheBustedUrl);
+      toast.success("Server banner updated");
+    } catch (err) {
+      console.error("Failed to upload banner:", err);
+      toast.error("Failed to upload server banner");
+      URL.revokeObjectURL(preview);
+      setBannerPreview(null);
+    } finally {
+      setIsUploadingBanner(false);
+    }
+  };
+
+  const handleCropCancel = () => {
+    if (cropImageSrc) {
+      URL.revokeObjectURL(cropImageSrc);
+      setCropImageSrc(null);
+    }
+    setShowCropModal(false);
   };
 
   const clearBanner = () => {
@@ -923,7 +994,7 @@ export const ServerSettingsModal = () => {
   };
 
   const uploadBanner = async (serverId: string, file: File): Promise<string | null> => {
-    const ext = file.name.split(".").pop() || "png";
+    const ext = file.name.split(".").pop() || "webp";
     const filePath = `${serverId}/banner.${ext}`;
 
     const { error: uploadError } = await supabase.storage.from("server-icons").upload(filePath, file, { upsert: true });
@@ -973,34 +1044,13 @@ export const ServerSettingsModal = () => {
 
     setIsLoading(true);
     try {
-      let iconUrl = server.icon_url;
-      let bannerUrl = server.banner_url;
-
-      if (iconFile) {
-        setIsUploadingIcon(true);
-        const uploadedUrl = await uploadIcon(server.id, iconFile);
-        if (uploadedUrl) {
-          iconUrl = uploadedUrl;
-        }
-        setIsUploadingIcon(false);
-      }
-
-      if (bannerFile) {
-        setIsUploadingBanner(true);
-        const uploadedUrl = await uploadBanner(server.id, bannerFile);
-        if (uploadedUrl) {
-          bannerUrl = uploadedUrl;
-        }
-        setIsUploadingBanner(false);
-      }
-
       const aboutValue = (data.about || "").trim();
 
       // Publishing prerequisites: require icon, banner, and description
       let publishToSend = pendingIsPublished;
       if (isOwner && pendingIsPublished) {
-        const hasIcon = !!iconUrl;
-        const hasBanner = !!bannerUrl;
+        const hasIcon = !!(iconPreview || server.icon_url);
+        const hasBanner = !!(bannerPreview || server.banner_url);
         const hasAbout = !!aboutValue;
 
         if (!hasIcon || !hasBanner || !hasAbout) {
@@ -1012,15 +1062,11 @@ export const ServerSettingsModal = () => {
 
       await updateServer(server.id, user.id, {
         name: data.name,
-        icon_url: iconUrl,
-        banner_url: bannerUrl,
         about: aboutValue || null,
         ...(isOwner ? { is_published: publishToSend } : {}),
       });
 
       toast.success("Server settings updated!");
-      clearIcon();
-      clearBanner();
       closeModal();
     } catch (error) {
       toast.error("Failed to update server");
@@ -1036,8 +1082,8 @@ export const ServerSettingsModal = () => {
     // If trying to publish, require icon, banner, and description (or pending changes that will be saved)
     if (checked) {
       const aboutValue = (getValues("about") ?? "").trim();
-      const hasIcon = !!(iconFile || iconPreview || server.icon_url);
-      const hasBanner = !!(bannerFile || bannerPreview || server.banner_url);
+      const hasIcon = !!(iconPreview || server.icon_url);
+      const hasBanner = !!(bannerPreview || server.banner_url);
       const hasAbout = !!(aboutValue || (server.about ?? "").trim());
 
       const missing: string[] = [];
@@ -1054,6 +1100,7 @@ export const ServerSettingsModal = () => {
     // Don't publish immediately — only apply on "Save Changes"
     setPendingIsPublished(checked);
   };
+
 
   const handleDeleteServer = async () => {
     if (!server) return;
@@ -1098,6 +1145,12 @@ export const ServerSettingsModal = () => {
     setActiveTab("overview");
     clearIcon();
     clearBanner();
+    // Cleanup crop modal
+    if (cropImageSrc) {
+      URL.revokeObjectURL(cropImageSrc);
+      setCropImageSrc(null);
+    }
+    setShowCropModal(false);
     setEditingRole(null);
     setRoleName("");
     setRoleColor("#5865F2");
@@ -1254,7 +1307,17 @@ export const ServerSettingsModal = () => {
         className="hidden"
       />
 
-      {/* Mobile: Custom Dialog with Dock */}
+      {/* Banner Crop Modal */}
+      {showCropModal && cropImageSrc && (
+        <BannerCropModal
+          open={showCropModal}
+          imageSrc={cropImageSrc}
+          onClose={handleCropCancel}
+          onCropComplete={handleCropComplete}
+          isUploading={isUploadingBanner}
+        />
+      )}
+
       {isOpen && isMobile && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-end p-4 pb-6">
           {/* Backdrop */}
@@ -1294,16 +1357,21 @@ export const ServerSettingsModal = () => {
                     <div className="flex items-center gap-3">
                       <div className="relative">
                         <div
-                          onClick={() => canManageServer && fileInputRef.current?.click()}
+                          onClick={() => canManageServer && !isUploadingIcon && fileInputRef.current?.click()}
                           className={cn(
-                            "w-14 h-14 rounded-xl bg-secondary/50 flex items-center justify-center border border-border/30 transition-colors flex-shrink-0 overflow-hidden",
-                            canManageServer && "cursor-pointer hover:border-primary/50",
+                            "w-14 h-14 rounded-xl bg-secondary/50 flex items-center justify-center border border-border/30 transition-colors flex-shrink-0 overflow-hidden relative",
+                            canManageServer && !isUploadingIcon && "cursor-pointer hover:border-primary/50",
                           )}
                         >
                           {displayIconUrl ? (
                             <img src={displayIconUrl} alt={server.name} className="w-full h-full object-cover" />
                           ) : (
                             <Upload className="w-5 h-5 text-muted-foreground" />
+                          )}
+                          {isUploadingIcon && (
+                            <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
+                              <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                            </div>
                           )}
                         </div>
                         {canManageServer && displayIconUrl && (
@@ -1336,10 +1404,10 @@ export const ServerSettingsModal = () => {
                     <Label className="text-sm font-medium">Server Banner</Label>
                     <div className="relative">
                       <div
-                        onClick={() => canManageServer && bannerInputRef.current?.click()}
+                        onClick={() => canManageServer && !isUploadingBanner && bannerInputRef.current?.click()}
                         className={cn(
-                          "w-full h-24 rounded-xl bg-secondary/50 flex items-center justify-center border border-border/30 transition-colors overflow-hidden",
-                          canManageServer && "cursor-pointer hover:border-primary/50",
+                          "w-full h-24 rounded-xl bg-secondary/50 flex items-center justify-center border border-border/30 transition-colors overflow-hidden relative",
+                          canManageServer && !isUploadingBanner && "cursor-pointer hover:border-primary/50",
                         )}
                       >
                         {displayBannerUrl ? (
@@ -1348,6 +1416,11 @@ export const ServerSettingsModal = () => {
                           <div className="flex flex-col items-center gap-2 text-muted-foreground">
                             <Upload className="w-5 h-5" />
                             <span className="text-xs">Click to upload</span>
+                          </div>
+                        )}
+                        {isUploadingBanner && (
+                          <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
+                            <Loader2 className="w-5 h-5 animate-spin text-primary" />
                           </div>
                         )}
                       </div>
@@ -2127,16 +2200,21 @@ export const ServerSettingsModal = () => {
                       <div className="flex items-center gap-3 sm:gap-4">
                         <div className="relative">
                           <div
-                            onClick={() => canManageServer && fileInputRef.current?.click()}
+                            onClick={() => canManageServer && !isUploadingIcon && fileInputRef.current?.click()}
                             className={cn(
-                              "w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-secondary/50 flex items-center justify-center border border-border/30 transition-colors flex-shrink-0 overflow-hidden",
-                              canManageServer && "cursor-pointer hover:border-primary/50",
+                              "w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-secondary/50 flex items-center justify-center border border-border/30 transition-colors flex-shrink-0 overflow-hidden relative",
+                              canManageServer && !isUploadingIcon && "cursor-pointer hover:border-primary/50",
                             )}
                           >
                             {displayIconUrl ? (
                               <img src={displayIconUrl} alt={server.name} className="w-full h-full object-cover" />
                             ) : (
                               <Upload className="w-5 h-5 text-muted-foreground" />
+                            )}
+                            {isUploadingIcon && (
+                              <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
+                                <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                              </div>
                             )}
                           </div>
                           {canManageServer && displayIconUrl && (
@@ -2171,10 +2249,10 @@ export const ServerSettingsModal = () => {
                       <Label className="text-sm font-medium">Server Banner</Label>
                       <div className="relative">
                         <div
-                          onClick={() => canManageServer && bannerInputRef.current?.click()}
+                          onClick={() => canManageServer && !isUploadingBanner && bannerInputRef.current?.click()}
                           className={cn(
-                            "w-full h-24 sm:h-32 rounded-xl bg-secondary/50 flex items-center justify-center border border-border/30 transition-colors overflow-hidden",
-                            canManageServer && "cursor-pointer hover:border-primary/50",
+                            "w-full h-24 sm:h-32 rounded-xl bg-secondary/50 flex items-center justify-center border border-border/30 transition-colors overflow-hidden relative",
+                            canManageServer && !isUploadingBanner && "cursor-pointer hover:border-primary/50",
                           )}
                         >
                           {displayBannerUrl ? (
@@ -2183,6 +2261,11 @@ export const ServerSettingsModal = () => {
                             <div className="flex flex-col items-center gap-2 text-muted-foreground">
                               <Upload className="w-5 h-5" />
                               <span className="text-xs">Click to upload banner</span>
+                            </div>
+                          )}
+                          {isUploadingBanner && (
+                            <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
+                              <Loader2 className="w-5 h-5 animate-spin text-primary" />
                             </div>
                           )}
                         </div>
