@@ -102,6 +102,10 @@ const serverSettingsSchema = z.object({
 
 type ServerSettingsForm = z.infer<typeof serverSettingsSchema>;
 
+// Server initials helper
+const getServerInitials = (name: string) =>
+  name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+
 // Owner icon helper - shows crown for server owner
 const getOwnerIcon = (memberId: string, ownerId: string) => {
   if (memberId === ownerId) return <Crown className="w-4 h-4 text-yellow-500" />;
@@ -1400,7 +1404,7 @@ export const ServerSettingsModal = () => {
                           {displayIconUrl ? (
                             <img src={displayIconUrl} alt={server.name} className="w-full h-full object-cover" />
                           ) : (
-                            <Upload className="w-5 h-5 text-muted-foreground" />
+                            <span className="text-base font-bold text-muted-foreground">{getServerInitials(server.name)}</span>
                           )}
                           {isUploadingIcon && (
                             <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
@@ -2243,7 +2247,7 @@ export const ServerSettingsModal = () => {
                             {displayIconUrl ? (
                               <img src={displayIconUrl} alt={server.name} className="w-full h-full object-cover" />
                             ) : (
-                              <Upload className="w-5 h-5 text-muted-foreground" />
+                              <span className="text-base font-bold text-muted-foreground">{getServerInitials(server.name)}</span>
                             )}
                             {isUploadingIcon && (
                               <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
