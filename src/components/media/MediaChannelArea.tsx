@@ -179,6 +179,7 @@ export const MediaChannelArea = () => {
     }
     
     setSelectedFile(file);
+    if (filePreview) URL.revokeObjectURL(filePreview);
     setFilePreview(URL.createObjectURL(file));
   };
 
@@ -194,6 +195,7 @@ export const MediaChannelArea = () => {
   // Reset upload form
   const resetUploadForm = () => {
     setSelectedFile(null);
+    if (filePreview) URL.revokeObjectURL(filePreview);
     setFilePreview(null);
     setUrlInput('');
     setTitle('');
@@ -356,6 +358,7 @@ export const MediaChannelArea = () => {
       }
       
       setSelectedFile(mediaFile);
+      if (filePreview) URL.revokeObjectURL(filePreview);
       setFilePreview(URL.createObjectURL(mediaFile));
       setUploadType('file');
       setIsUploadModalOpen(true);
