@@ -37,6 +37,7 @@ import { EmojiPicker } from "@/components/modals/EmojiPicker";
 import type { CustomServerRole, Message, ServerRole } from "@/types";
 import { format } from "date-fns";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
+import { getGlobalEmojiMap, type ResolvedEmoji } from "@/lib/globalEmojiResolver";
 import { cn } from "@/lib/utils";
 import { getPollIdFromContent, isPollMessageContent } from "@/lib/poll";
 
@@ -113,6 +114,7 @@ export const MessageItem = memo(function MessageItem({
   const [showMobileEmojiPicker, setShowMobileEmojiPicker] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
+  const [globalEmojiMap, setGlobalEmojiMap] = useState<Map<string, ResolvedEmoji>>(new Map());
   const [hoveredRoleIcon, setHoveredRoleIcon] = useState(false);
   const [isRowHovered, setIsRowHovered] = useState(false);
   const [reactionDetailsEmoji, setReactionDetailsEmoji] = useState<string | null>(null);
@@ -212,6 +214,15 @@ export const MessageItem = memo(function MessageItem({
     };
   }, [currentServer?.id]);
 
+  // Load global emoji map for cross-server reaction rendering
+  useEffect(() => {
+    let cancelled = false;
+    getGlobalEmojiMap().then((map) => {
+      if (!cancelled) setGlobalEmojiMap(map);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [currentServer?.id]);
+
   const priorityRoleWithIcon = useMemo<Pick<CustomServerRole, "name" | "icon"> | null>(() => {
     const memberRoles = messageMember?.roles ?? [];
     if (memberRoles.length === 0) return null;
@@ -262,28 +273,29 @@ export const MessageItem = memo(function MessageItem({
     (emoji: string) => {
       const match = emoji.match(/^:([a-z0-9_]{2,32}):$/i);
       if (match) {
-        const url = customEmojiMap.get(match[1]);
+        // Try current server first, then global map for cross-server emojis
+        const url = customEmojiMap.get(match[1]) || globalEmojiMap.get(match[1])?.url;
         if (url) {
           return <img src={url} alt={emoji} className="w-6 h-6 object-contain" loading="lazy" />;
         }
       }
       return <span className="text-xl leading-none font-emoji">{emoji}</span>;
     },
-    [customEmojiMap],
+    [customEmojiMap, globalEmojiMap],
   );
 
   const reactionEmojiNodeLarge = useCallback(
     (emoji: string) => {
       const match = emoji.match(/^:([a-z0-9_]{2,32}):$/i);
       if (match) {
-        const url = customEmojiMap.get(match[1]);
+        const url = customEmojiMap.get(match[1]) || globalEmojiMap.get(match[1])?.url;
         if (url) {
           return <img src={url} alt={emoji} className="w-8 h-8 object-contain" loading="lazy" />;
         }
       }
       return <span className="text-2xl leading-none font-emoji">{emoji}</span>;
     },
-    [customEmojiMap],
+    [customEmojiMap, globalEmojiMap],
   );
 
   const memberNameById = useMemo(() => {
@@ -343,6 +355,7 @@ export const MessageItem = memo(function MessageItem({
   const canPinMessages = hasPermission("pin_messages");
   const canManageMessages = hasPermission("manage_messages");
   const canAddReactions = hasPermission("add_reactions");
+  const canUseExternalEmojis = hasPermission("use_external_emojis");
   const isAdmin = canManageMessages;
 
   const isMentioned = useMemo(() => {
@@ -489,25 +502,43 @@ export const MessageItem = memo(function MessageItem({
     }
   }, [user, message.id, message.is_pinned, pinMessage]);
 
+  const isExternalEmoji = useCallback(
+    (emoji: string): boolean => {
+      const match = emoji.match(/^:([a-z0-9_]{2,32}):$/i);
+      if (!match) return false; // native emoji
+      // If it exists in the current server's emoji map, it's not external
+      if (customEmojiMap.has(match[1])) return false;
+      return true;
+    },
+    [customEmojiMap],
+  );
+
   const handleReactionClick = useCallback(
     async (emoji: string, hasReacted: boolean) => {
       if (!user) return;
       if (hasReacted) {
         await removeReaction(message.id, user.id, emoji);
       } else {
+        if (isExternalEmoji(emoji) && !canUseExternalEmojis) {
+          toast.error("You don't have permission to use external emojis");
+          return;
+        }
         await addReaction(message.id, user.id, emoji);
       }
     },
-    [user, message.id, addReaction, removeReaction],
+    [user, message.id, addReaction, removeReaction, isExternalEmoji, canUseExternalEmojis],
   );
 
   const handleAddReaction = useCallback(
     (emoji: string) => {
-      if (user) {
-        addReaction(message.id, user.id, emoji);
+      if (!user) return;
+      if (isExternalEmoji(emoji) && !canUseExternalEmojis) {
+        toast.error("You don't have permission to use external emojis");
+        return;
       }
+      addReaction(message.id, user.id, emoji);
     },
-    [user, message.id, addReaction],
+    [user, message.id, addReaction, isExternalEmoji, canUseExternalEmojis],
   );
 
   const handleDesktopAddReaction = useCallback(

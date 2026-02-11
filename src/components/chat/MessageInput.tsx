@@ -253,6 +253,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const canSendInReadOnly = isReadOnlyChannel ? hasPermission("manage_messages") : true;
   const canSendMessage = !isMuted && canSendMessagesPermission && canSendInReadOnly;
   const isAdmin = hasPermission("manage_messages");
+  const canUseExternalEmojis = hasPermission("use_external_emojis");
 
   // Create a map of channel IDs to channel names for quick lookup
   const channelIdToNameMap = useMemo(() => {
@@ -862,6 +863,35 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
 
   const handleEmojiSelect = useCallback(
     (emoji: string) => {
+      // Check if this is a custom emoji and if it's external
+      const customMatch = emoji.match(/^:([a-z0-9_]{2,32}):$/i);
+      if (customMatch && !canUseExternalEmojis) {
+        // Check if the emoji belongs to the current server
+        const serverEmojis = useServerStore.getState().currentServer?.id;
+        if (serverEmojis) {
+          // Use the cached server emojis to check
+          import("@/lib/serverEmojis").then(({ fetchServerEmojis }) => {
+            fetchServerEmojis(serverEmojis).then((emojis) => {
+              const isLocal = emojis.some((e) => e.name === customMatch[1]);
+              if (!isLocal) {
+                showWarning("Permission denied", "You don't have permission to use external emojis");
+                return;
+              }
+              insertEmoji(emoji);
+            });
+          });
+          setShowEmojiPicker(false);
+          return;
+        }
+      }
+      insertEmoji(emoji);
+      setShowEmojiPicker(false);
+    },
+    [content, resizeTextarea, canUseExternalEmojis],
+  );
+
+  const insertEmoji = useCallback(
+    (emoji: string) => {
       const textarea = textareaRef.current;
       if (textarea) {
         const start = textarea.selectionStart;
@@ -881,7 +911,6 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
           setContent(newContent);
         }
       }
-      setShowEmojiPicker(false);
     },
     [content, resizeTextarea],
   );
