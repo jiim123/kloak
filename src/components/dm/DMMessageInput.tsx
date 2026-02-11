@@ -11,11 +11,12 @@ import { useAuthStore } from '@/stores/authStore';
 import { useDMStore } from '@/stores/dmStore';
 import { saveDraft, getDraft, clearDraft } from '@/lib/storage';
 import { EmojiPicker } from '@/components/modals/EmojiPicker';
-import { ImageUploadDialog } from '@/components/modals/ImageUploadDialog';
 import { SelectionFormatToolbar, FORMAT_SYNTAX, getCodeBlockSyntax } from '@/components/chat/FormatToolbar';
+import { AttachmentPreviewBar, PendingAttachment } from '@/components/chat/AttachmentPreviewBar';
 import { supabase } from '@/integrations/supabase/client';
 import { showSuccess } from '@/lib/errorHandler';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface DMMessageInputProps {
   conversationId: string;
@@ -28,13 +29,17 @@ const MAX_LENGTH = 2000;
 const MIN_TEXTAREA_HEIGHT = 40;
 const MAX_TEXTAREA_HEIGHT = 160;
 const DRAFT_SAVE_DELAY = 500;
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const MAX_IMAGE_FILE_SIZE = 1 * 1024 * 1024; // 1MB
+const MAX_ATTACHMENTS = 10;
 
-// Memoized action buttons to prevent re-renders
+// Memoized action buttons
 const ActionButtons = memo(({
   showEmojiPicker,
   setShowEmojiPicker,
   content,
   isSending,
+  hasAttachments,
   onSubmit,
   onEmojiSelect,
   showAttachButton,
@@ -44,6 +49,7 @@ const ActionButtons = memo(({
   setShowEmojiPicker: (show: boolean) => void;
   content: string;
   isSending: boolean;
+  hasAttachments: boolean;
   onSubmit: () => void;
   onEmojiSelect: (emoji: string) => void;
   showAttachButton?: boolean;
@@ -52,20 +58,18 @@ const ActionButtons = memo(({
   const showCharacterWarning = content.length > MAX_LENGTH - 200;
   const isMobile = useIsMobile();
   const shouldCollapse = isMobile && content.length > 10;
+  const canSend = (content.trim() || hasAttachments) && !isSending;
 
   return (
     <div className="flex items-center gap-1 mb-0.5 relative">
-      {/* Character count warning */}
       {showCharacterWarning && (
         <span className={`text-[13px] font-[Inter,system-ui,sans-serif] mr-1 ${content.length > MAX_LENGTH - 50 ? 'text-destructive' : 'text-muted-foreground'}`}>
           {MAX_LENGTH - content.length}
         </span>
       )}
 
-      {/* Collapsed mobile menu when typing */}
       {shouldCollapse ? (
         <>
-          {/* Collapsed actions dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
@@ -86,7 +90,6 @@ const ActionButtons = memo(({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Emoji button - always visible */}
           <EmojiPicker
             open={showEmojiPicker}
             onOpenChange={setShowEmojiPicker}
@@ -102,8 +105,6 @@ const ActionButtons = memo(({
           </EmojiPicker>
         </>
       ) : (
-        <>
-        {/* Emoji button */}
         <EmojiPicker
           open={showEmojiPicker}
           onOpenChange={setShowEmojiPicker}
@@ -117,16 +118,14 @@ const ActionButtons = memo(({
             <Smile className="w-5 h-5" />
           </button>
         </EmojiPicker>
-        </>
       )}
 
-      {/* Send button */}
       <button
         onClick={onSubmit}
-        disabled={!content.trim() || isSending}
+        disabled={!canSend}
         className={cn(
           'p-2 rounded-xl transition-all duration-150',
-          content.trim() && !isSending
+          canSend
             ? 'bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95'
             : 'bg-muted/50 text-muted-foreground/50 cursor-not-allowed'
         )}
@@ -152,43 +151,40 @@ export const DMMessageInput = ({
   const [isFocused, setIsFocused] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [showImageUpload, setShowImageUpload] = useState(false);
+  const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const draftSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load draft on mount and conversation change
   useEffect(() => {
     const draft = getDraft(`dm-${conversationId}`);
     setContent(draft);
-    // Reset textarea height
+    setPendingAttachments((prev) => {
+      prev.forEach((a) => URL.revokeObjectURL(a.preview));
+      return [];
+    });
     if (textareaRef.current) {
       textareaRef.current.style.height = `${MIN_TEXTAREA_HEIGHT}px`;
     }
   }, [conversationId]);
 
-  // Focus textarea when replying
   useEffect(() => {
     if (replyingTo && textareaRef.current) {
       textareaRef.current.focus();
     }
   }, [replyingTo]);
 
-  // Debounced draft save
   const saveDraftDebounced = useCallback((conversationId: string, content: string) => {
-    if (draftSaveTimeoutRef.current) {
-      clearTimeout(draftSaveTimeoutRef.current);
-    }
+    if (draftSaveTimeoutRef.current) clearTimeout(draftSaveTimeoutRef.current);
     draftSaveTimeoutRef.current = setTimeout(() => {
       saveDraft(`dm-${conversationId}`, content);
     }, DRAFT_SAVE_DELAY);
   }, []);
 
-  // Fixed auto-resize
   const resizeTextarea = useCallback(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
-
     textarea.style.height = '0px';
     const scrollHeight = textarea.scrollHeight;
     const newHeight = Math.min(Math.max(scrollHeight, MIN_TEXTAREA_HEIGHT), MAX_TEXTAREA_HEIGHT);
@@ -198,67 +194,156 @@ export const DMMessageInput = ({
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     if (value.length > MAX_LENGTH) return;
-
     setContent(value);
     saveDraftDebounced(conversationId, value);
     resizeTextarea();
   }, [conversationId, saveDraftDebounced, resizeTextarea]);
 
+  // ---- Attachment queue helpers ----
+  const addFilesToQueue = useCallback((files: File[]) => {
+    setPendingAttachments((prev) => {
+      const remaining = MAX_ATTACHMENTS - prev.length;
+      if (remaining <= 0) {
+        toast.warning("You can attach up to 10 files per message");
+        return prev;
+      }
+      const toAdd = files.slice(0, remaining);
+      if (files.length > remaining) {
+        toast.warning(`Only ${remaining} more file(s) can be added (max ${MAX_ATTACHMENTS})`);
+      }
+      const valid: PendingAttachment[] = [];
+      for (const file of toAdd) {
+        if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+          toast.warning("Only JPEG, PNG, GIF, and WebP images are allowed");
+          continue;
+        }
+        if (file.size > MAX_IMAGE_FILE_SIZE) {
+          toast.warning("File size must be less than 1MB");
+          continue;
+        }
+        valid.push({ file, preview: URL.createObjectURL(file) });
+      }
+      return [...prev, ...valid];
+    });
+  }, []);
+
+  const removeAttachment = useCallback((index: number) => {
+    setPendingAttachments((prev) => {
+      const next = [...prev];
+      URL.revokeObjectURL(next[index].preview);
+      next.splice(index, 1);
+      return next;
+    });
+  }, []);
+
+  const openFilePicker = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      addFilesToQueue(Array.from(e.target.files));
+    }
+    e.target.value = "";
+  }, [addFilesToQueue]);
+
+  const uploadAttachments = useCallback(async (): Promise<string[]> => {
+    if (!user || pendingAttachments.length === 0) return [];
+    setPendingAttachments((prev) => prev.map((a) => ({ ...a, uploading: true })));
+    const urls: string[] = [];
+    for (const att of pendingAttachments) {
+      const timestamp = Date.now();
+      const fileExt = att.file.name.split('.').pop() || 'png';
+      const fileName = `${user.id}/${timestamp}-${crypto.randomUUID()}.${fileExt}`;
+      const { data, error } = await supabase.storage.from('attachments').upload(fileName, att.file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from('attachments').getPublicUrl(data.path);
+      urls.push(urlData.publicUrl);
+    }
+    return urls;
+  }, [user, pendingAttachments]);
+
+  const clearAttachments = useCallback(() => {
+    setPendingAttachments((prev) => {
+      prev.forEach((a) => URL.revokeObjectURL(a.preview));
+      return [];
+    });
+  }, []);
+
   const handleSubmit = async () => {
-    if (!content.trim() || !user || isSending) return;
+    const hasText = content.trim().length > 0;
+    const hasAttachments = pendingAttachments.length > 0;
+    if ((!hasText && !hasAttachments) || !user || isSending) return;
 
     const messageContent = content.trim();
     
-    // Clear input immediately for instant feedback
     setContent('');
     clearDraft(`dm-${conversationId}`);
     const currentReplyTo = replyingTo;
     onCancelReply?.();
     
-    // Reset textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = `${MIN_TEXTAREA_HEIGHT}px`;
     }
     
     setIsSending(true);
     try {
-      const sent = await sendMessage(conversationId, user.id, messageContent, currentReplyTo?.id);
+      let finalContent = messageContent;
 
-      // Presence: sending a DM is explicit activity; refresh last_seen immediately.
+      if (hasAttachments) {
+        const urls = await uploadAttachments();
+        const urlBlock = urls.join('\n');
+        finalContent = finalContent ? `${finalContent}\n${urlBlock}` : urlBlock;
+        clearAttachments();
+      }
+
+      const sent = await sendMessage(conversationId, user.id, finalContent, currentReplyTo?.id);
+
       if (sent) {
         const auth = useAuthStore.getState();
-        if (auth.manualStatus !== 'offline') {
-          auth.updateLastSeen();
-        }
+        if (auth.manualStatus !== 'offline') auth.updateLastSeen();
         if (auth.manualStatus !== 'offline' && auth.manualStatus !== 'dnd') {
           auth.updateStatus('online', { source: 'auto' });
         }
       }
+    } catch (error) {
+      // Keep attachments on failure
     } finally {
       setIsSending(false);
     }
   };
 
-  // Apply formatting to selected text or insert format syntax
+  // Paste handler: queue images
+  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    if (!user || isSending) return;
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    const imageItem = Array.from(items).find((it) => it.type.startsWith('image/'));
+    if (!imageItem) {
+      requestAnimationFrame(() => resizeTextarea());
+      return;
+    }
+    const file = imageItem.getAsFile();
+    if (!file) return;
+    e.preventDefault();
+    e.stopPropagation();
+    addFilesToQueue([file]);
+  }, [user, isSending, addFilesToQueue, resizeTextarea]);
+
   const applyFormatShortcut = useCallback((formatType: string) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
-
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const selectedText = content.slice(start, end);
-
     const syntax = FORMAT_SYNTAX[formatType];
     if (!syntax) return;
-
     const { prefix, suffix } = syntax;
-    
     if (selectedText) {
-      const newContent = 
-        content.slice(0, start) + 
-        prefix + selectedText + suffix + 
-        content.slice(end);
-
+      const newContent = content.slice(0, start) + prefix + selectedText + suffix + content.slice(end);
       if (newContent.length <= MAX_LENGTH) {
         setContent(newContent);
         requestAnimationFrame(() => {
@@ -279,45 +364,28 @@ export const DMMessageInput = ({
   }, [content]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    // Format shortcuts (Ctrl/Cmd + key)
     if (e.ctrlKey || e.metaKey) {
       switch (e.key.toLowerCase()) {
-        case 'b':
-          e.preventDefault();
-          applyFormatShortcut('bold');
-          return;
-        case 'i':
-          e.preventDefault();
-          applyFormatShortcut('italic');
-          return;
-        case 'e':
-          e.preventDefault();
-          applyFormatShortcut('code');
-          return;
-        case 'p':
-          e.preventDefault();
-          applyFormatShortcut('spoiler');
-          return;
+        case 'b': e.preventDefault(); applyFormatShortcut('bold'); return;
+        case 'i': e.preventDefault(); applyFormatShortcut('italic'); return;
+        case 'e': e.preventDefault(); applyFormatShortcut('code'); return;
+        case 'p': e.preventDefault(); applyFormatShortcut('spoiler'); return;
       }
     }
-
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
     }
   }, [applyFormatShortcut, handleSubmit]);
 
-  // Handle emoji selection - insert at cursor position
   const handleEmojiSelect = useCallback((emoji: string) => {
     const textarea = textareaRef.current;
     if (textarea) {
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
       const newContent = content.slice(0, start) + emoji + content.slice(end);
-      
       if (newContent.length <= MAX_LENGTH) {
         setContent(newContent);
-        
         requestAnimationFrame(() => {
           const newCursorPos = start + emoji.length;
           textarea.setSelectionRange(newCursorPos, newCursorPos);
@@ -325,44 +393,29 @@ export const DMMessageInput = ({
       }
     } else {
       const newContent = content + emoji;
-      if (newContent.length <= MAX_LENGTH) {
-        setContent(newContent);
-      }
+      if (newContent.length <= MAX_LENGTH) setContent(newContent);
     }
-    
     setShowEmojiPicker(false);
   }, [content]);
 
-  // Handle format selection from toolbar
   const handleFormat = useCallback((formatType: string, value?: string) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
-
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const selectedText = content.slice(start, end);
-
     let syntax: { prefix: string; suffix: string };
-    
     if (formatType === 'codeblock') {
       syntax = getCodeBlockSyntax(value || '');
     } else {
       syntax = FORMAT_SYNTAX[formatType];
     }
-
     if (!syntax) return;
-
     const { prefix, suffix } = syntax;
-    
     const textToWrap = selectedText || 'text';
-    const newContent = 
-      content.slice(0, start) + 
-      prefix + textToWrap + suffix + 
-      content.slice(end);
-
+    const newContent = content.slice(0, start) + prefix + textToWrap + suffix + content.slice(end);
     if (newContent.length <= MAX_LENGTH) {
       setContent(newContent);
-      
       requestAnimationFrame(() => {
         if (selectedText) {
           const newPos = start + prefix.length + selectedText.length + suffix.length;
@@ -377,52 +430,21 @@ export const DMMessageInput = ({
     }
   }, [content]);
 
-  // Handle image upload
-  const handleImageUpload = async (file: File) => {
-    if (!user) throw new Error('Not authenticated');
-
-    // Generate unique filename with timestamp for 14-day cleanup tracking
-    const timestamp = Date.now();
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${user.id}/${timestamp}-${crypto.randomUUID()}.${fileExt}`;
-
-    // Upload to Supabase Storage
-    const { data, error } = await supabase.storage
-      .from('attachments')
-      .upload(fileName, file, {
-        cacheControl: '3600',
-        upsert: false,
-      });
-
-    if (error) throw error;
-
-    // Get public URL
-    const { data: urlData } = supabase.storage
-      .from('attachments')
-      .getPublicUrl(data.path);
-
-    // Send the image URL as a DM
-    await sendMessage(conversationId, user.id, urlData.publicUrl, replyingTo?.id);
-
-    // Presence: uploading/sending is activity.
-    const auth = useAuthStore.getState();
-    if (auth.manualStatus !== 'offline') {
-      auth.updateLastSeen();
-    }
-    if (auth.manualStatus !== 'offline' && auth.manualStatus !== 'dnd') {
-      auth.updateStatus('online', { source: 'auto' });
-    }
-
-    // Clear reply if any
-    onCancelReply?.();
-
-    showSuccess('Image uploaded successfully');
-  };
   const shouldCollapse = isMobile && content.length > 10;
+  const hasAttachments = pendingAttachments.length > 0;
 
   return (
     <div className="px-4 pb-4 sm:pb-6 relative">
-      {/* Selection-based format toolbar */}
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/gif,image/webp"
+        multiple
+        onChange={handleFileInputChange}
+        className="hidden"
+      />
+
       <SelectionFormatToolbar
         textareaRef={textareaRef}
         onFormat={handleFormat}
@@ -454,11 +476,21 @@ export const DMMessageInput = ({
           ${replyingTo ? 'rounded-t-none' : ''}
         `}
       >
+        {/* Attachment preview bar */}
+        {hasAttachments && (
+          <AttachmentPreviewBar
+            attachments={pendingAttachments}
+            onRemove={removeAttachment}
+            onAddMore={openFilePicker}
+            disabled={isSending}
+          />
+        )}
+
         <div className="flex items-end gap-1 sm:gap-2 p-2 sm:p-3">
           {/* Attachment button */}
           {!shouldCollapse && (
             <button 
-              onClick={() => setShowImageUpload(true)}
+              onClick={openFilePicker}
               className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-150 mb-0.5 flex-shrink-0"
               title="Upload image"
             >
@@ -474,11 +506,17 @@ export const DMMessageInput = ({
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             onKeyDown={handleKeyDown}
-            placeholder={otherUsername.length > (isMobile ? 12 : 17) ? `Message @${otherUsername.slice(0, isMobile ? 12 : 17)}…` : `Message @${otherUsername}`}
+            onPaste={handlePaste}
+            placeholder={
+              hasAttachments
+                ? 'Add a comment...'
+                : otherUsername.length > (isMobile ? 12 : 17)
+                  ? `Message @${otherUsername.slice(0, isMobile ? 12 : 17)}…`
+                  : `Message @${otherUsername}`
+            }
             rows={1}
             className="message-input-textarea flex-1 bg-transparent resize-none outline-none text-foreground placeholder:text-muted-foreground/60 py-2 px-1 min-w-0 min-h-[40px] overflow-y-auto font-[Inter,system-ui,sans-serif]"
             style={{
-              // Prevent iOS zoom on focus by using 16px minimum
               fontSize: isMobile ? '16px' : '15px',
               lineHeight: '1.5',
               fontWeight: 400,
@@ -492,20 +530,14 @@ export const DMMessageInput = ({
             setShowEmojiPicker={setShowEmojiPicker}
             content={content}
             isSending={isSending}
+            hasAttachments={hasAttachments}
             onSubmit={handleSubmit}
             onEmojiSelect={handleEmojiSelect}
             showAttachButton={shouldCollapse}
-            onAttachClick={() => setShowImageUpload(true)}
+            onAttachClick={openFilePicker}
           />
         </div>
       </div>
-
-      {/* Image upload dialog */}
-      <ImageUploadDialog
-        open={showImageUpload}
-        onOpenChange={setShowImageUpload}
-        onUpload={handleImageUpload}
-      />
     </div>
   );
 };
