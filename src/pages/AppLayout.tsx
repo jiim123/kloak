@@ -405,20 +405,28 @@ const AppLayout = () => {
             {/* Horizontal Server Bar at top - hidden during full-screen settings */}
             {!isServerSettingsOpen && activeModal !== 'user-settings' && activeModal !== 'edit-channel' && <HorizontalServerSidebar />}
 
-            <div className="flex flex-1 overflow-hidden relative">
-              {/* Voice persistent host - always rendered to prevent disconnects */}
-              <VoicePersistentHost />
+            <div className="flex flex-1 overflow-hidden">
               {/* Full-screen settings pages - take full space */}
               {isServerSettingsOpen ? (
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 relative">
+                  {/* Keep voice alive offscreen during settings */}
+                  <div className="absolute left-[-9999px] top-[-9999px] w-px h-px overflow-hidden pointer-events-none" aria-hidden>
+                    <VoicePersistentHost />
+                  </div>
                   <ServerSettingsPage />
                 </div>
               ) : activeModal === 'user-settings' ? (
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 relative">
+                  <div className="absolute left-[-9999px] top-[-9999px] w-px h-px overflow-hidden pointer-events-none" aria-hidden>
+                    <VoicePersistentHost />
+                  </div>
                   <UserSettingsPage />
               </div>
             ) : activeModal === 'edit-channel' ? (
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 relative">
+                <div className="absolute left-[-9999px] top-[-9999px] w-px h-px overflow-hidden pointer-events-none" aria-hidden>
+                  <VoicePersistentHost />
+                </div>
                 <ChannelSettingsPage />
               </div>
             ) : (
@@ -449,6 +457,7 @@ const AppLayout = () => {
                 {/* Main area - flexible */}
                 <ResizablePanel defaultSize={isMemberSidebarOpen && !isDMView && !isServerSpecialView ? 70 : 85}>
                   <div className="h-full bg-layout-chat relative overflow-hidden">
+                    <VoicePersistentHost />
                     {isDMView ? (
                       currentConversation ? (
                         <DMChatArea />
