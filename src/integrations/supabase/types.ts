@@ -2826,6 +2826,20 @@ export type Database = {
         Args: { _member_id: string; _role_id: string; _user_id: string }
         Returns: undefined
       }
+      reorder_categories: {
+        Args: { _category_ids: string[]; _server_id: string; _user_id: string }
+        Returns: undefined
+      }
+      reorder_channels: {
+        Args: {
+          _channel_id: string
+          _new_category_id: string
+          _new_position: number
+          _server_id: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
       reorder_user_servers: {
         Args: { _server_ids: string[]; _user_id: string }
         Returns: undefined
