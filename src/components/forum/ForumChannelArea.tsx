@@ -19,6 +19,16 @@ import { FormatToolbar, FORMAT_SYNTAX } from "@/components/chat/FormatToolbar";
 import { ImageUploadDialog } from "@/components/modals/ImageUploadDialog";
 import { EmojiGifPicker } from "@/components/modals/EmojiGifPicker";
 import { DeleteMessageModal } from "@/components/modals/DeleteMessageModal";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { handleError, showSuccess } from "@/lib/errorHandler";
 import { formatMessageTimestamp } from "@/lib/format";
@@ -70,6 +80,8 @@ export const ForumChannelArea = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState<Message | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
+  const [showDeleteThreadModal, setShowDeleteThreadModal] = useState(false);
+  const [threadToDelete, setThreadToDelete] = useState<Thread | null>(null);
   const createTopicTitleRef = useRef<HTMLInputElement>(null);
   const createTopicTextareaRef = useRef<HTMLTextAreaElement>(null);
   const editTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -1024,6 +1036,32 @@ export const ForumChannelArea = () => {
     }
   }, [user, selectedThreadId]);
 
+  const handleDeleteThread = useCallback(async (thread: Thread) => {
+    if (!user) return;
+
+    try {
+      const { error } = await (supabase.rpc as any)("delete_forum_thread", {
+        _thread_id: thread.id,
+        _user_id: user.id,
+      });
+
+      if (error) throw error;
+
+      // Update local state
+      setThreads((prev) => prev.filter((t) => t.id !== thread.id));
+      if (selectedThreadId === thread.id) {
+        setSelectedThreadId(null);
+        setReplyContent("");
+        setReplyingToThread(null);
+      }
+      setShowDeleteThreadModal(false);
+      setThreadToDelete(null);
+      showSuccess("Thread deleted successfully");
+    } catch (error) {
+      handleError(error, "Failed to delete thread");
+    }
+  }, [user, selectedThreadId]);
+
   const handleAddReaction = useCallback(async (messageId: string, emoji: string) => {
     if (!user || !selectedThreadId) {
       return;
@@ -1260,10 +1298,10 @@ export const ForumChannelArea = () => {
                 const lastAuthor = thread.last_message_author || opUser;
                 
                 return (
-                  <button
+                  <div
                     key={thread.id}
                     onClick={() => handleThreadClick(thread.id, thread.message_id)}
-                    className={`w-full relative text-left hover:bg-muted/30 transition-colors ${
+                    className={`w-full relative text-left hover:bg-muted/30 transition-colors cursor-pointer group/thread ${
                       isSelected ? "bg-muted/50" : ""
                     }`}
                   >
@@ -1370,7 +1408,21 @@ export const ForumChannelArea = () => {
                         )}
                       </div>
                     </div>
-                  </button>
+                    {/* Delete thread button */}
+                    {(user?.id === thread.created_by || canManageMessages) && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setThreadToDelete(thread);
+                          setShowDeleteThreadModal(true);
+                        }}
+                        className="absolute top-3 right-3 p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover/thread:opacity-100 transition-opacity"
+                        title="Delete thread"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -1397,17 +1449,35 @@ export const ForumChannelArea = () => {
                 <div className="flex-1 overflow-y-auto p-4">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold">{threadTitle}</h3>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedThreadId(null);
-                        setReplyContent("");
-                      }}
-                      className="h-8 w-8 p-0"
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      {(user?.id === selectedThread?.created_by || canManageMessages) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (selectedThread) {
+                              setThreadToDelete(selectedThread);
+                              setShowDeleteThreadModal(true);
+                            }
+                          }}
+                          className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          title="Delete thread"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedThreadId(null);
+                          setReplyContent("");
+                        }}
+                        className="h-8 w-8 p-0"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 
                 {/* Thread Description */}
@@ -1822,6 +1892,22 @@ export const ForumChannelArea = () => {
                       <ArrowLeft className="w-5 h-5" />
                     </Button>
                     <h3 className="text-lg font-semibold flex-1 truncate">{threadTitle}</h3>
+                    {(user?.id === selectedThread?.created_by || canManageMessages) && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          if (selectedThread) {
+                            setThreadToDelete(selectedThread);
+                            setShowDeleteThreadModal(true);
+                          }
+                        }}
+                        className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        title="Delete thread"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
 
                   {/* Thread content */}
@@ -2223,6 +2309,34 @@ export const ForumChannelArea = () => {
           messageContent={messageToDelete.content}
         />
       )}
+
+      {/* Delete Thread Confirmation Modal */}
+      <AlertDialog open={showDeleteThreadModal} onOpenChange={setShowDeleteThreadModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Thread</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this thread? This will remove the thread and all its replies. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {threadToDelete?.message?.content && (
+            <div className="my-2 p-3 bg-secondary rounded-lg border border-border">
+              <p className="text-sm text-muted-foreground line-clamp-3">
+                {threadToDelete.message.content.split('\n\n')[0] || "No content"}
+              </p>
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setThreadToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => threadToDelete && handleDeleteThread(threadToDelete)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
