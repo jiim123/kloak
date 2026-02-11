@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useEffect, useState } from 'react';
+import { useMemo, useCallback, useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CodeBlock, InlineCode } from './CodeBlock';
 import { LinkPreview } from './LinkPreview';
@@ -8,7 +8,7 @@ import { CustomEmojiPopover } from './CustomEmojiPopover';
 import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
 import { fetchServerEmojis } from '@/lib/serverEmojis';
-import { getGlobalEmojiMap, getGlobalEmojiDuplicates, resolveQualifiedEmoji, type ResolvedEmoji } from '@/lib/globalEmojiResolver';
+import { getGlobalEmojiMap, getGlobalEmojiDuplicates, resolveQualifiedEmoji, resolveEmojiByNameFallback, type ResolvedEmoji } from '@/lib/globalEmojiResolver';
 
 interface UserInfo {
   id: string;
@@ -325,6 +325,7 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
   const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
   const [globalEmojiMap, setGlobalEmojiMap] = useState<Map<string, ResolvedEmoji>>(new Map());
   const [emojiPopover, setEmojiPopover] = useState<{ emoji: ResolvedEmoji; rect: DOMRect } | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const segments = useMemo(() => parseMessageSegments(content), [content]);
 
   // Load server emoji map for :name: rendering (server context only)
@@ -375,6 +376,64 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
     }).catch(() => {});
     return () => { cancelled = true; };
   }, [currentServer?.id]); // re-resolve when server changes
+
+  // Fallback: resolve unresolved :emojiname: from DB for emojis from servers the viewer isn't in
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+
+    // Find all text nodes that still contain unresolved :emojiname: patterns
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
+    const emojiPattern = /:([a-z0-9_]{2,32}):/g;
+    const toResolve = new Map<string, Text[]>();
+
+    let node: Text | null;
+    while ((node = walker.nextNode() as Text | null)) {
+      const text = node.textContent || '';
+      let m: RegExpExecArray | null;
+      emojiPattern.lastIndex = 0;
+      while ((m = emojiPattern.exec(text)) !== null) {
+        const name = m[1];
+        if (!toResolve.has(name)) toResolve.set(name, []);
+        toResolve.get(name)!.push(node);
+      }
+    }
+
+    if (toResolve.size === 0) return;
+
+    let cancelled = false;
+
+    (async () => {
+      for (const [name, nodes] of toResolve) {
+        if (cancelled) return;
+        const url = await resolveEmojiByNameFallback(name);
+        if (cancelled || !url) continue;
+
+        for (const textNode of nodes) {
+          if (!textNode.parentNode) continue;
+          const parts = textNode.textContent!.split(`:${name}:`);
+          if (parts.length <= 1) continue;
+
+          const frag = document.createDocumentFragment();
+          parts.forEach((part, i) => {
+            if (i > 0) {
+              const img = document.createElement('img');
+              img.src = url;
+              img.alt = `:${name}:`;
+              img.title = `:${name}:`;
+              img.className = 'inline-block w-8 h-8 align-middle object-contain';
+              img.loading = 'lazy';
+              frag.appendChild(img);
+            }
+            if (part) frag.appendChild(document.createTextNode(part));
+          });
+          textNode.parentNode.replaceChild(frag, textNode);
+        }
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [content, customEmojiMap, globalEmojiMap]);
   
   // Build a map of userId -> user info for quick lookup
   const usersMap = useMemo(() => {
@@ -520,7 +579,7 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
   }, [openModal, channels, currentServer, setCurrentChannel, navigate]);
   
   return (
-    <div className="!block break-words overflow-hidden max-w-full" onClick={handleClick} onKeyDown={handleKeyDown} data-message-id={messageId}>
+    <div ref={contentRef} className="!block break-words overflow-hidden max-w-full" onClick={handleClick} onKeyDown={handleKeyDown} data-message-id={messageId}>
       {/* Message text content */}
       <span className="inline">
         {segments.map((segment, index) => {
