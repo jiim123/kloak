@@ -41,6 +41,13 @@ export const AttachmentPreviewBar = memo(({ attachments, onRemove, onAddMore, di
                 </div>
               )}
 
+              {/* Hover filename overlay */}
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent pt-4 pb-1 px-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none hidden sm:block">
+                <p className="text-[10px] text-white truncate text-center leading-tight">
+                  {att.file.name}
+                </p>
+              </div>
+
               {/* Upload spinner overlay */}
               {att.uploading && (
                 <div className="absolute inset-0 bg-background/60 backdrop-blur-sm flex items-center justify-center">
@@ -58,11 +65,6 @@ export const AttachmentPreviewBar = memo(({ attachments, onRemove, onAddMore, di
                 <X className="w-3 h-3 text-foreground" />
               </button>
             )}
-
-            {/* Filename */}
-            <p className="text-[10px] text-muted-foreground truncate w-[68px] mt-0.5 text-center">
-              {att.file.name}
-            </p>
           </div>
         ))}
 
