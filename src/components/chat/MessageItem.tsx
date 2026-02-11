@@ -37,7 +37,7 @@ import { EmojiPicker } from "@/components/modals/EmojiPicker";
 import type { CustomServerRole, Message, ServerRole } from "@/types";
 import { format } from "date-fns";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
-import { getGlobalEmojiMap, type ResolvedEmoji } from "@/lib/globalEmojiResolver";
+import { getGlobalEmojiMap, resolveQualifiedEmoji, type ResolvedEmoji } from "@/lib/globalEmojiResolver";
 import { cn } from "@/lib/utils";
 import { getPollIdFromContent, isPollMessageContent } from "@/lib/poll";
 
@@ -269,33 +269,45 @@ export const MessageItem = memo(function MessageItem({
     return <span className="text-sm leading-none font-emoji">{icon}</span>;
   }, [priorityRoleWithIcon?.icon, customEmojiMap]);
 
-  const reactionEmojiNode = useCallback(
-    (emoji: string) => {
-      const match = emoji.match(/^:([a-z0-9_]{2,32}):$/i);
-      if (match) {
-        // Try current server first, then global map for cross-server emojis
-        const url = customEmojiMap.get(match[1]) || globalEmojiMap.get(match[1])?.url;
-        if (url) {
-          return <img src={url} alt={emoji} className="w-6 h-6 object-contain" loading="lazy" />;
-        }
+  const resolveCustomEmojiUrl = useCallback(
+    (emoji: string): string | undefined => {
+      // Match unqualified :name: or qualified :name~ServerName:
+      const qualifiedMatch = emoji.match(/^:([a-z0-9_]{2,32})~(.+):$/i);
+      if (qualifiedMatch) {
+        const qualifiedKey = `${qualifiedMatch[1]}~${qualifiedMatch[2]}`;
+        const qualifiedResolved = resolveQualifiedEmoji(qualifiedKey);
+        if (qualifiedResolved) return qualifiedResolved.url;
+        return globalEmojiMap.get(qualifiedMatch[1])?.url;
       }
-      return <span className="text-xl leading-none font-emoji">{emoji}</span>;
+      const unqualifiedMatch = emoji.match(/^:([a-z0-9_]{2,32}):$/i);
+      if (unqualifiedMatch) {
+        return customEmojiMap.get(unqualifiedMatch[1]) || globalEmojiMap.get(unqualifiedMatch[1])?.url;
+      }
+      return undefined;
     },
     [customEmojiMap, globalEmojiMap],
   );
 
+  const reactionEmojiNode = useCallback(
+    (emoji: string) => {
+      const url = resolveCustomEmojiUrl(emoji);
+      if (url) {
+        return <img src={url} alt={emoji} className="w-6 h-6 object-contain" loading="lazy" />;
+      }
+      return <span className="text-xl leading-none font-emoji">{emoji}</span>;
+    },
+    [resolveCustomEmojiUrl],
+  );
+
   const reactionEmojiNodeLarge = useCallback(
     (emoji: string) => {
-      const match = emoji.match(/^:([a-z0-9_]{2,32}):$/i);
-      if (match) {
-        const url = customEmojiMap.get(match[1]) || globalEmojiMap.get(match[1])?.url;
-        if (url) {
-          return <img src={url} alt={emoji} className="w-8 h-8 object-contain" loading="lazy" />;
-        }
+      const url = resolveCustomEmojiUrl(emoji);
+      if (url) {
+        return <img src={url} alt={emoji} className="w-8 h-8 object-contain" loading="lazy" />;
       }
       return <span className="text-2xl leading-none font-emoji">{emoji}</span>;
     },
-    [customEmojiMap, globalEmojiMap],
+    [resolveCustomEmojiUrl],
   );
 
   const memberNameById = useMemo(() => {

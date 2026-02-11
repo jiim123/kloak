@@ -106,8 +106,12 @@ export const useRealtimeReactions = (channelId: string | null) => {
           },
           (payload) => {
             try {
-              const oldReaction = payload.old as { message_id?: string; user_id?: string; emoji?: string };
-              if (!oldReaction.message_id || !oldReaction.emoji) return;
+              console.log('[Realtime] Reaction DELETE payload:', JSON.stringify(payload.old));
+              const oldReaction = payload.old as { id?: string; message_id?: string; user_id?: string; emoji?: string };
+              if (!oldReaction.message_id || !oldReaction.emoji) {
+                console.warn('[Realtime] DELETE payload missing message_id or emoji — REPLICA IDENTITY FULL may not be active. Got:', Object.keys(payload.old || {}));
+                return;
+              }
               
               const currentUserId = useAuthStore.getState().user?.id;
               
