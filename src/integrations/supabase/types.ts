@@ -3092,7 +3092,7 @@ export type Database = {
           }
         | {
             Args: { _server_id: string; _updates: Json; _user_id: string }
-            Returns: Json
+            Returns: undefined
           }
       update_server_role: {
         Args: {
