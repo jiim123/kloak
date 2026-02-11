@@ -2239,7 +2239,7 @@ export type Database = {
       }
       assign_role_to_member: {
         Args: { _member_id: string; _role_id: string; _user_id: string }
-        Returns: boolean
+        Returns: undefined
       }
       assign_task_users: {
         Args: { _assignee_ids: string[]; _task_id: string; _user_id: string }
@@ -2247,7 +2247,7 @@ export type Database = {
       }
       ban_member: {
         Args: { _server_id: string; _target_user_id: string; _user_id: string }
-        Returns: boolean
+        Returns: undefined
       }
       block_user: {
         Args: { _blocked_user_id: string; _user_id: string }
@@ -2288,29 +2288,47 @@ export type Database = {
       }
       close_expired_polls: { Args: { _channel_id: string }; Returns: number }
       close_poll: { Args: { _poll_id: string }; Returns: boolean }
-      create_category: {
-        Args: {
-          _name: string
-          _position?: number
-          _server_id: string
-          _user_id: string
-        }
-        Returns: Json
-      }
-      create_channel: {
-        Args: {
-          _category_id?: string
-          _ghost_mode?: boolean
-          _icon?: string
-          _is_private?: boolean
-          _name: string
-          _position?: number
-          _server_id: string
-          _type?: string
-          _user_id?: string
-        }
-        Returns: Json
-      }
+      create_category:
+        | {
+            Args: { _name: string; _server_id: string; _user_id: string }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _name: string
+              _position?: number
+              _server_id: string
+              _user_id: string
+            }
+            Returns: Json
+          }
+      create_channel:
+        | {
+            Args: {
+              _category_id?: string
+              _ghost_mode?: boolean
+              _icon?: string
+              _is_private?: boolean
+              _name: string
+              _position?: number
+              _server_id: string
+              _type?: string
+              _user_id?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _category_id?: string
+              _is_private?: boolean
+              _name: string
+              _server_id: string
+              _topic?: string
+              _type?: string
+              _user_id: string
+            }
+            Returns: Json
+          }
       create_group_dm: {
         Args: {
           _creator_id: string
@@ -2419,18 +2437,22 @@ export type Database = {
       }
       delete_category: {
         Args: { _category_id: string; _user_id: string }
-        Returns: boolean
+        Returns: undefined
       }
       delete_channel: {
         Args: { _channel_id: string; _user_id: string }
-        Returns: boolean
+        Returns: undefined
       }
       delete_channel_permission: {
         Args: { _permission_id: string; _user_id: string }
-        Returns: boolean
+        Returns: undefined
       }
       delete_dm: {
         Args: { _message_id: string; _sender_id: string }
+        Returns: boolean
+      }
+      delete_forum_thread: {
+        Args: { _thread_id: string; _user_id: string }
         Returns: boolean
       }
       delete_media_comment: {
@@ -2443,11 +2465,11 @@ export type Database = {
       }
       delete_message: {
         Args: { _message_id: string; _user_id: string }
-        Returns: boolean
+        Returns: undefined
       }
       delete_role_permission: {
         Args: { _permission_id: string; _user_id: string }
-        Returns: boolean
+        Returns: undefined
       }
       delete_server: {
         Args: { _server_id: string; _user_id: string }
@@ -2459,7 +2481,7 @@ export type Database = {
       }
       delete_server_role: {
         Args: { _role_id: string; _user_id: string }
-        Returns: boolean
+        Returns: undefined
       }
       delete_task: {
         Args: { _task_id: string; _user_id: string }
@@ -2688,7 +2710,7 @@ export type Database = {
           }
       kick_member: {
         Args: { _server_id: string; _target_user_id: string; _user_id: string }
-        Returns: boolean
+        Returns: undefined
       }
       leave_group_dm: {
         Args: { _conversation_id: string; _user_id: string }
@@ -2732,13 +2754,17 @@ export type Database = {
         Args: { _category_id?: string; _channel_id: string; _server_id: string }
         Returns: boolean
       }
+      mute_member: {
+        Args: { _server_id: string; _target_user_id: string; _user_id: string }
+        Returns: undefined
+      }
       open_dm_conversation: {
         Args: { _other_user_id: string; _user_id: string }
         Returns: Json
       }
       pin_message: {
         Args: { _message_id: string; _pinned: boolean; _user_id: string }
-        Returns: boolean
+        Returns: undefined
       }
       post_system_message: {
         Args: { _channel_id: string; _content: string; _user_id: string }
@@ -2798,7 +2824,21 @@ export type Database = {
       }
       remove_role_from_member: {
         Args: { _member_id: string; _role_id: string; _user_id: string }
-        Returns: boolean
+        Returns: undefined
+      }
+      reorder_categories: {
+        Args: { _category_ids: string[]; _server_id: string; _user_id: string }
+        Returns: undefined
+      }
+      reorder_channels: {
+        Args: {
+          _channel_id: string
+          _new_category_id: string
+          _new_position: number
+          _server_id: string
+          _user_id: string
+        }
+        Returns: undefined
       }
       reorder_user_servers: {
         Args: { _server_ids: string[]; _user_id: string }
@@ -2903,21 +2943,55 @@ export type Database = {
             }
             Returns: Json
           }
+        | {
+            Args: {
+              _allowed?: boolean
+              _channel_id: string
+              _permission: Database["public"]["Enums"]["permission_type"]
+              _role_id?: string
+              _role_name?: string
+              _target_user_id?: string
+              _user_id: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              _allowed: boolean
+              _channel_id: string
+              _permission: Database["public"]["Enums"]["permission_type"]
+              _target_role_id?: string
+              _target_role_name?: string
+              _target_user_id?: string
+              _user_id: string
+            }
+            Returns: undefined
+          }
       set_message_embed_hidden: {
         Args: { _hidden: boolean; _message_id: string; _user_id: string }
         Returns: boolean
       }
-      set_role_permission: {
-        Args: {
-          _allowed?: boolean
-          _permission: Database["public"]["Enums"]["permission_type"]
-          _role_id?: string
-          _role_name?: Database["public"]["Enums"]["server_role"]
-          _server_id: string
-          _user_id: string
-        }
-        Returns: Json
-      }
+      set_role_permission:
+        | {
+            Args: {
+              _allowed?: boolean
+              _permission: Database["public"]["Enums"]["permission_type"]
+              _role_id?: string
+              _role_name?: string
+              _server_id: string
+              _user_id: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              _allowed: boolean
+              _permission: Database["public"]["Enums"]["permission_type"]
+              _role_id: string
+              _user_id: string
+            }
+            Returns: undefined
+          }
       shares_dm_with: {
         Args: { _other_user_id: string; _user_id: string }
         Returns: boolean
@@ -2975,12 +3049,16 @@ export type Database = {
         Args: { _blocked_user_id: string; _user_id: string }
         Returns: boolean
       }
+      unmute_member: {
+        Args: { _server_id: string; _target_user_id: string; _user_id: string }
+        Returns: undefined
+      }
       update_category: {
         Args: { _category_id: string; _updates: Json; _user_id: string }
         Returns: Json
       }
       update_channel: {
-        Args: { _channel_id: string; _updates: string; _user_id: string }
+        Args: { _channel_id: string; _updates: Json; _user_id: string }
         Returns: Json
       }
       update_group_dm_name: {
@@ -2996,13 +3074,30 @@ export type Database = {
         }
         Returns: boolean
       }
-      update_server: {
-        Args: { _server_id: string; _updates: Json; _user_id: string }
-        Returns: Json
-      }
+      update_server:
+        | {
+            Args: {
+              _about?: string
+              _banner_url?: string
+              _icon_url?: string
+              _is_published?: boolean
+              _name?: string
+              _server_id: string
+              _system_channel_id?: string
+              _system_channel_send_join?: boolean
+              _system_channel_send_leave?: boolean
+              _user_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: { _server_id: string; _updates: Json; _user_id: string }
+            Returns: undefined
+          }
       update_server_role: {
         Args: {
           _color?: string
+          _icon?: string
           _name?: string
           _role_id: string
           _user_id: string

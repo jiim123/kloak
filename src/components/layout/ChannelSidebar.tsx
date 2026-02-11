@@ -959,8 +959,10 @@ export const ChannelSidebar = () => {
         const targetCategoryId = overChannel.category_id;
 
         // If same category, reorder within category
-        if (activeChannel.category_id === targetCategoryId) {
-          const categoryChannels = getChannelsForCategory(activeChannel.category_id || "");
+        if ((activeChannel.category_id ?? null) === (targetCategoryId ?? null)) {
+          const categoryChannels = targetCategoryId
+            ? getChannelsForCategory(targetCategoryId)
+            : uncategorizedChannels;
           const oldIndex = categoryChannels.findIndex((c) => c.id === active.id);
           const newIndex = categoryChannels.findIndex((c) => c.id === over.id);
 
@@ -969,11 +971,13 @@ export const ChannelSidebar = () => {
           }
         } else {
           // Different category - move to that category at the position of the over channel
-          const targetChannels = getChannelsForCategory(targetCategoryId || "");
+          const targetChannels = targetCategoryId
+            ? getChannelsForCategory(targetCategoryId)
+            : uncategorizedChannels;
           const newIndex = targetChannels.findIndex((c) => c.id === over.id);
 
           if (newIndex !== -1) {
-            await reorderChannels(activeChannel.id, targetCategoryId, newIndex);
+            await reorderChannels(activeChannel.id, targetCategoryId ?? null, newIndex);
           }
         }
       }

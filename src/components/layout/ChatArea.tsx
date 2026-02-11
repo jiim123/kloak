@@ -13,31 +13,23 @@ import { useTyping } from "@/hooks/useTyping";
 import { useRealtimePinnedMessages } from "@/hooks/useRealtimePinnedMessages";
 import { useSwipeGestureRef } from "@/hooks/useSwipeGesture";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { MessageSquare, Hash, ImageIcon, Pin } from "lucide-react";
+import { MessageSquare, Hash, Pin } from "lucide-react";
 import { parseTextContent } from "@/components/chat/MessageContent";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "@/integrations/supabase/client";
-import { showSuccess, handleError } from "@/lib/errorHandler";
-
-const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1MB
+import { motion } from "framer-motion";
 
 export const ChatArea = () => {
   const { currentChannel, currentServer } = useServerStore();
   const { user } = useAuthStore();
-  const { sendMessage, replyingTo, setReplyingTo } = useMessageStore();
+  const { replyingTo, setReplyingTo } = useMessageStore();
   const { setMobileSidebarOpen, setMemberSidebarOpen, openModal } = useUIStore();
   const isGhostMode = currentChannel?.ghost_mode ?? false;
   const { typingUsers, startTyping, stopTyping } = useTyping(isGhostMode ? null : currentChannel?.id || null);
   const { pinnedMessages } = useRealtimePinnedMessages(currentChannel?.id ?? null);
   const isMobile = useIsMobile();
   
-  const [isDragging, setIsDragging] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const isProcessingPasteRef = useRef(false);
   const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
 
   // Load custom emoji map for pinned message rendering
@@ -74,155 +66,23 @@ export const ChatArea = () => {
     enabled: isMobile,
   });
 
-  const uploadImage = useCallback(async (file: File) => {
-    if (!user || !currentChannel) return;
-    
-    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-      handleError(new Error('Only JPEG, PNG, GIF, and WebP images are allowed'));
-      return;
-    }
-    
-    if (file.size > MAX_FILE_SIZE) {
-      handleError(new Error('File size must be less than 1MB'));
-      return;
-    }
-
-    setIsUploading(true);
-    try {
-      const replyToId = replyingTo?.id;
-      const timestamp = Date.now();
-      const fileExt = file.name.split('.').pop() || 'png';
-      const fileName = `${user.id}/${timestamp}-${crypto.randomUUID()}.${fileExt}`;
-
-      const { data, error } = await supabase.storage
-        .from('attachments')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: false,
-        });
-
-      if (error) throw error;
-
-      const { data: urlData } = supabase.storage
-        .from('attachments')
-        .getPublicUrl(data.path);
-
-      await sendMessage(currentChannel.id, user.id, urlData.publicUrl, replyToId);
-
-      // Clear reply (only if still replying to the same message)
-      if (replyToId && useMessageStore.getState().replyingTo?.id === replyToId) {
-        setReplyingTo(null);
-      }
-
-      showSuccess('Image uploaded successfully');
-    } catch (error) {
-      handleError(error, 'Failed to upload image');
-    } finally {
-      setIsUploading(false);
-    }
-  }, [user, currentChannel, sendMessage, replyingTo?.id, setReplyingTo]);
-
-  // Reset paste processing ref when upload completes
-  useEffect(() => {
-    if (!isUploading) {
-      // Reset after a short delay to prevent race conditions
-      const timeoutId = setTimeout(() => {
-        isProcessingPasteRef.current = false;
-      }, 100);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [isUploading]);
-
-  // Paste handler for clipboard images
-  useEffect(() => {
-    const handlePaste = (e: ClipboardEvent) => {
-      // Prevent duplicate processing
-      if (!currentChannel || !user || isUploading || isProcessingPasteRef.current) return;
-
-      // If the user is actively pasting into a textarea/contenteditable (e.g. MessageInput),
-      // let that component handle the paste so it can include any typed text/reply state.
-      const activeEl = document.activeElement as HTMLElement | null;
-      if (activeEl) {
-        const tag = activeEl.tagName?.toLowerCase();
-        if (tag === 'textarea' || tag === 'input' || activeEl.isContentEditable) {
-          return;
-        }
-      }
-      
-      const items = e.clipboardData?.items;
-      if (!items) return;
-
-      for (const item of items) {
-        if (item.type.startsWith('image/')) {
-          e.preventDefault();
-          e.stopPropagation();
-          e.stopImmediatePropagation();
-          const file = item.getAsFile();
-          if (file) {
-            isProcessingPasteRef.current = true;
-            uploadImage(file);
-          }
-          break;
-        }
-      }
-    };
-
-    document.addEventListener('paste', handlePaste, true); // Use capture phase
-    return () => document.removeEventListener('paste', handlePaste, true);
-  }, [currentChannel, user, uploadImage, isUploading]);
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.dataTransfer.types.includes('Files')) {
-      setIsDragging(true);
-    }
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.currentTarget === e.target) {
-      setIsDragging(false);
-    }
-  }, []);
-
-  const handleDrop = useCallback(async (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-
-    const files = Array.from(e.dataTransfer.files);
-    const imageFile = files.find(file => ALLOWED_IMAGE_TYPES.includes(file.type));
-
-    if (imageFile) {
-      uploadImage(imageFile);
-    }
-  }, [uploadImage]);
-
   if (!currentChannel) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-center px-4 bg-background relative overflow-hidden">
-        {/* Subtle background decoration */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent" />
 
-        {/* Animated icon container */}
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
           className="relative mb-6"
         >
-          {/* Outer glow ring */}
           <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 blur-xl" />
-
-          {/* Icon container */}
           <div className="relative w-24 h-24 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/10 flex items-center justify-center shadow-lg">
             <MessageSquare className="w-10 h-10 text-primary/70" />
           </div>
         </motion.div>
 
-        {/* Content */}
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -235,7 +95,6 @@ export const ChatArea = () => {
           </p>
         </motion.div>
 
-        {/* Optional: Quick action hint */}
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -250,19 +109,14 @@ export const ChatArea = () => {
   }
 
   if (currentChannel.type === "voice") {
-    // Voice UI is rendered by `VoicePersistentHost` so the connection can persist while navigating.
     return null;
   }
 
   if (currentChannel.type === "forum") {
-    // Forum channels use a different UI
     return <ForumChannelArea />;
   }
 
-  // Announcement channels now use the same UI as text channels (handled below)
-
   if (currentChannel.type === "media") {
-    // Media channels use a gallery-style UI
     return <MediaChannelArea />;
   }
 
@@ -270,26 +124,20 @@ export const ChatArea = () => {
     <div 
       ref={swipeRef}
       className="h-full flex flex-col min-w-0 max-w-full overflow-x-hidden bg-background relative"
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
     >
       {/* Channel header */}
       <ChannelHeader channel={currentChannel} />
 
-      {/* Pinned message bar - most recent pin in one line with See All Pins */}
+      {/* Pinned message bar */}
       {pinnedMessages.length > 0 && (() => {
         const latest = pinnedMessages[0];
-       // Parse content with custom emojis but strip formatting for snippet
-       const rawContent = (latest.content || "")
-         .replace(/```[\s\S]*?```/g, "[code]") // Replace code blocks
-         .replace(/`[^`]+`/g, "[code]") // Replace inline code
-         .replace(/\n/g, " ") // Replace newlines with spaces
-         .trim();
-       // Truncate before parsing to avoid processing huge messages
-       const truncatedContent = rawContent.slice(0, 100);
-       // Parse with custom emojis to render :emoji: as images
-       const parsedSnippet = parseTextContent(truncatedContent, user?.id, undefined, customEmojiMap);
+        const rawContent = (latest.content || "")
+          .replace(/```[\s\S]*?```/g, "[code]")
+          .replace(/`[^`]+`/g, "[code]")
+          .replace(/\n/g, " ")
+          .trim();
+        const truncatedContent = rawContent.slice(0, 100);
+        const parsedSnippet = parseTextContent(truncatedContent, user?.id, undefined, customEmojiMap);
         const hasAttachments = (latest.attachments?.length ?? 0) > 0;
         const isNew = latest.created_at && (Date.now() - new Date(latest.created_at).getTime() < 24 * 60 * 60 * 1000);
         return (
@@ -304,17 +152,15 @@ export const ChatArea = () => {
             {isNew && (
               <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-primary/20 text-primary flex-shrink-0">new</span>
             )}
-           <span 
-             className="text-sm text-muted-foreground truncate min-w-0 flex-1 inline-flex items-center gap-1 [&_img]:w-4 [&_img]:h-4 [&_img]:inline-block [&_img]:align-middle"
-             dangerouslySetInnerHTML={{ 
-               __html: parsedSnippet || "Pinned message" 
-             }}
-           />
-           {hasAttachments && (
-             <span className="text-sm text-muted-foreground/80 flex-shrink-0">
-               {latest.attachments!.length === 1 ? "1 attachment" : `${latest.attachments!.length} attachments`}
-             </span>
-           )}
+            <span 
+              className="text-sm text-muted-foreground truncate min-w-0 flex-1 inline-flex items-center gap-1 [&_img]:w-4 [&_img]:h-4 [&_img]:inline-block [&_img]:align-middle"
+              dangerouslySetInnerHTML={{ __html: parsedSnippet || "Pinned message" }}
+            />
+            {hasAttachments && (
+              <span className="text-sm text-muted-foreground/80 flex-shrink-0">
+                {latest.attachments!.length === 1 ? "1 attachment" : `${latest.attachments!.length} attachments`}
+              </span>
+            )}
             <Button
               variant="secondary"
               size="sm"
@@ -330,7 +176,7 @@ export const ChatArea = () => {
       {/* Messages */}
       <MessageList channelId={currentChannel.id} channelName={currentChannel.name} />
 
-      {/* Typing indicator - hidden in ghost mode */}
+      {/* Typing indicator */}
       {!isGhostMode && <TypingIndicator typingUsers={typingUsers} />}
 
       {/* Message input */}
@@ -340,32 +186,6 @@ export const ChatArea = () => {
         onTyping={startTyping}
         onStopTyping={stopTyping}
       />
-
-      {/* Drag overlay */}
-      <AnimatePresence>
-        {(isDragging || isUploading) && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-sm border-2 border-dashed border-primary rounded-lg pointer-events-none"
-          >
-            <div className="flex flex-col items-center gap-3 text-center">
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                <ImageIcon className="w-8 h-8 text-primary" />
-              </div>
-              <div>
-                <p className="text-lg font-medium text-foreground">
-                  {isUploading ? 'Uploading...' : 'Drop image to upload'}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Images are deleted after 14 days
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };
