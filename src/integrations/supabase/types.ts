@@ -2763,7 +2763,7 @@ export type Database = {
         Returns: Json
       }
       pin_message: {
-        Args: { _is_pinned: boolean; _message_id: string; _user_id: string }
+        Args: { _message_id: string; _pinned: boolean; _user_id: string }
         Returns: undefined
       }
       post_system_message: {
@@ -3053,15 +3053,10 @@ export type Database = {
         Args: { _server_id: string; _target_user_id: string; _user_id: string }
         Returns: undefined
       }
-      update_category:
-        | {
-            Args: { _category_id: string; _updates: Json; _user_id: string }
-            Returns: Json
-          }
-        | {
-            Args: { _category_id: string; _updates: Json; _user_id: string }
-            Returns: Json
-          }
+      update_category: {
+        Args: { _category_id: string; _updates: Json; _user_id: string }
+        Returns: Json
+      }
       update_channel: {
         Args: { _channel_id: string; _updates: Json; _user_id: string }
         Returns: Json
