@@ -35,6 +35,7 @@ import { SelectionFormatToolbar, FORMAT_SYNTAX, getCodeBlockSyntax } from "./For
 import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showWarning, handleError } from "@/lib/errorHandler";
 import { messageRateLimiter, validateMessageContent } from "@/lib/security";
+import { toast } from "sonner";
 
 interface MessageInputProps {
   channelId: string;
@@ -874,7 +875,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
             fetchServerEmojis(serverEmojis).then((emojis) => {
               const isLocal = emojis.some((e) => e.name === customMatch[1]);
               if (!isLocal) {
-                showWarning("Permission denied", "You don't have permission to use external emojis");
+                toast.error("You don't have permission to use external emojis");
                 return;
               }
               insertEmoji(emoji);
