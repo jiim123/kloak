@@ -2927,54 +2927,18 @@ export type Database = {
         }
         Returns: Json
       }
-      set_channel_permission:
-        | {
-            Args: {
-              _allowed: boolean
-              _channel_id: string
-              _permission: Database["public"]["Enums"]["permission_type"]
-              _role_id?: string
-              _role_name?: Database["public"]["Enums"]["server_role"]
-              _user_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              _allowed: boolean
-              _channel_id: string
-              _permission: Database["public"]["Enums"]["permission_type"]
-              _role_id?: string
-              _role_name?: Database["public"]["Enums"]["server_role"]
-              _target_user_id?: string
-              _user_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              _allowed?: boolean
-              _channel_id: string
-              _permission: Database["public"]["Enums"]["permission_type"]
-              _role_id?: string
-              _role_name?: string
-              _target_user_id?: string
-              _user_id: string
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              _allowed: boolean
-              _channel_id: string
-              _permission: Database["public"]["Enums"]["permission_type"]
-              _target_role_id?: string
-              _target_role_name?: string
-              _target_user_id?: string
-              _user_id: string
-            }
-            Returns: undefined
-          }
+      set_channel_permission: {
+        Args: {
+          _allowed: boolean
+          _channel_id: string
+          _permission: Database["public"]["Enums"]["permission_type"]
+          _role_id?: string
+          _role_name?: string
+          _target_user_id?: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
       set_message_embed_hidden: {
         Args: { _hidden: boolean; _message_id: string; _user_id: string }
         Returns: boolean
