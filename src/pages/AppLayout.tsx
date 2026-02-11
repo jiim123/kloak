@@ -405,7 +405,9 @@ const AppLayout = () => {
             {/* Horizontal Server Bar at top - hidden during full-screen settings */}
             {!isServerSettingsOpen && activeModal !== 'user-settings' && activeModal !== 'edit-channel' && <HorizontalServerSidebar />}
 
-            <div className="flex flex-1 overflow-hidden">
+            <div className="flex flex-1 overflow-hidden relative">
+              {/* Voice persistent host - always rendered to prevent disconnects */}
+              <VoicePersistentHost />
               {/* Full-screen settings pages - take full space */}
               {isServerSettingsOpen ? (
                 <div className="flex-1 min-w-0">
@@ -447,7 +449,6 @@ const AppLayout = () => {
                 {/* Main area - flexible */}
                 <ResizablePanel defaultSize={isMemberSidebarOpen && !isDMView && !isServerSpecialView ? 70 : 85}>
                   <div className="h-full bg-layout-chat relative overflow-hidden">
-                    <VoicePersistentHost />
                     {isDMView ? (
                       currentConversation ? (
                         <DMChatArea />
