@@ -654,11 +654,10 @@ export const HorizontalServerSidebar = () => {
     }
   }, [user?.id, fetchServers]);
 
-  // Subscribe to realtime server updates (icon, name, etc.) for ALL user servers
+  // Subscribe to realtime server updates (icon, name, banner, etc.) for ALL servers
   useEffect(() => {
-    if (!user?.id || servers.length === 0) return;
+    if (!user?.id) return;
 
-    const serverIds = servers.map((s) => s.id);
     const channel = supabase
       .channel('sidebar-server-updates')
       .on(
@@ -666,15 +665,18 @@ export const HorizontalServerSidebar = () => {
         { event: 'UPDATE', schema: 'public', table: 'servers' },
         (payload) => {
           const updated = payload.new as any;
-          if (!updated?.id || !serverIds.includes(updated.id)) return;
+          if (!updated?.id) return;
+          // Check membership at callback time to avoid stale closure
+          const currentServers = useServerStore.getState().servers;
+          if (!currentServers.some((s) => s.id === updated.id)) return;
           useServerStore.setState((state) => ({
             servers: state.servers.map((s) =>
               s.id === updated.id
-                ? { ...s, name: updated.name, icon_url: updated.icon_url, banner_url: updated.banner_url, about: updated.about, is_published: updated.is_published }
+                ? { ...s, name: updated.name, icon_url: updated.icon_url ?? null, banner_url: updated.banner_url ?? null, about: updated.about, is_published: updated.is_published }
                 : s
             ),
             currentServer: state.currentServer?.id === updated.id
-              ? { ...state.currentServer, name: updated.name, icon_url: updated.icon_url, banner_url: updated.banner_url, about: updated.about, is_published: updated.is_published }
+              ? { ...state.currentServer, name: updated.name, icon_url: updated.icon_url ?? null, banner_url: updated.banner_url ?? null, about: updated.about, is_published: updated.is_published }
               : state.currentServer,
           }));
         }
@@ -684,7 +686,7 @@ export const HorizontalServerSidebar = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, servers.length]);
+  }, [user?.id]);
 
   // Load folder state from database
   useEffect(() => {
