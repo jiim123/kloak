@@ -654,6 +654,38 @@ export const HorizontalServerSidebar = () => {
     }
   }, [user?.id, fetchServers]);
 
+  // Subscribe to realtime server updates (icon, name, etc.) for ALL user servers
+  useEffect(() => {
+    if (!user?.id || servers.length === 0) return;
+
+    const serverIds = servers.map((s) => s.id);
+    const channel = supabase
+      .channel('sidebar-server-updates')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'servers' },
+        (payload) => {
+          const updated = payload.new as any;
+          if (!updated?.id || !serverIds.includes(updated.id)) return;
+          useServerStore.setState((state) => ({
+            servers: state.servers.map((s) =>
+              s.id === updated.id
+                ? { ...s, name: updated.name, icon_url: updated.icon_url, banner_url: updated.banner_url, about: updated.about, is_published: updated.is_published }
+                : s
+            ),
+            currentServer: state.currentServer?.id === updated.id
+              ? { ...state.currentServer, name: updated.name, icon_url: updated.icon_url, banner_url: updated.banner_url, about: updated.about, is_published: updated.is_published }
+              : state.currentServer,
+          }));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, servers.length]);
+
   // Load folder state from database
   useEffect(() => {
     if (!user?.id || isFolderStateLoaded) return;
