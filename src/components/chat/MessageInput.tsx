@@ -1092,7 +1092,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
           const isGhostMode = currentChannel?.ghost_mode || false;
           const replyAuthorMember = replyingTo.user?.id ? members.find((m) => m.user_id === replyingTo.user?.id) : null;
           const replyAuthorIsAdmin = replyAuthorMember
-            ? replyAuthorMember.role === "owner" || replyAuthorMember.role === "admin"
+            ? (currentServer && replyAuthorMember.user_id === currentServer.owner_id) || (replyAuthorMember.roles || []).some(r => r.name === 'Admin' || r.name === 'Moderator')
             : false;
           const showReplyAuthorIdentity = !isGhostMode || replyAuthorIsAdmin;
 

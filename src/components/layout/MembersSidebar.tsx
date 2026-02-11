@@ -18,7 +18,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useDMStore } from "@/stores/dmStore";
 import { useRealtimeMembers } from "@/hooks/useRealtimeMembers";
-import { canModerate, getRoleInfo, getAssignableRoles } from "@/lib/permissions";
+import { canModerateByRoles } from "@/lib/permissions";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import {
   ContextMenu,
@@ -33,7 +33,7 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { MembersSidebarSkeleton } from "@/components/ui/skeletons";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
-import type { ServerMember, ServerRole, CustomServerRole, UserStatus } from "@/types";
+import type { ServerMember, CustomServerRole, UserStatus } from "@/types";
 import { getEffectivePresence } from "@/lib/presence";
 
 const getMemberPresence = (member: ServerMember) => {
@@ -124,13 +124,11 @@ export const MembersSidebar = () => {
     }
   }, [currentServer?.id, fetchRolePermissions]);
 
-  // Get current user's role in this server
-  const currentUserMember = members.find((m) => m.user_id === user?.id);
-  const currentUserRole = currentUserMember?.role;
-
   // Use database-backed permission checking
-  // Note: channelId is not needed for members sidebar permissions
-  const { hasPermission: checkPermission } = useMemberPermissions();
+  const { hasPermission: checkPermission, isOwner: currentUserIsOwner } = useMemberPermissions();
+
+  // Get current user's member for role comparison
+  const currentUserMember = members.find((m) => m.user_id === user?.id);
 
   // Calculate online count (all members not offline) - must be before early return
   const onlineCount = useMemo(() => {
@@ -147,12 +145,8 @@ export const MembersSidebar = () => {
       return typeof fromStore === "number" ? fromStore : role.position;
     };
 
-    // Sort by role hierarchy then alphabetically
+    // Sort by custom role position then alphabetically
     const sortMembers = (a: ServerMember, b: ServerMember) => {
-      const roleOrder = { owner: 0, admin: 1, moderator: 2, member: 3 };
-      const roleA = roleOrder[a.role as keyof typeof roleOrder] ?? 3;
-      const roleB = roleOrder[b.role as keyof typeof roleOrder] ?? 3;
-      if (roleA !== roleB) return roleA - roleB;
 
       const aPriorityPos =
         a.roles && a.roles.length > 0 ? Math.min(...a.roles.map(getResolvedRolePosition)) : Number.POSITIVE_INFINITY;
@@ -284,7 +278,7 @@ export const MembersSidebar = () => {
     const presence = getMemberPresence(member);
     const memberIsOffline = presence.isOffline;
     const isSelf = member.user_id === user?.id;
-    const isServerOwner = member.role === "owner";
+    const isServerOwner = currentServer?.owner_id === member.user_id;
 
     const priorityCustomRoleColor = useMemo(() => {
       const memberRoles = member.roles || [];
@@ -307,17 +301,17 @@ export const MembersSidebar = () => {
 
     const isGradientName = !!priorityCustomRoleColor && priorityCustomRoleColor.startsWith("linear-gradient");
 
-    // Permission checks
-    const canKick = checkPermission("kick_members") && canModerate(currentUserRole, member.role) && !isSelf;
-    const canBan = checkPermission("ban_members") && canModerate(currentUserRole, member.role) && !isSelf;
+    // Permission checks using role position comparison
+    const canMod = canModerateByRoles(currentUserIsOwner, currentUserMember?.roles, isServerOwner, member.roles);
+    const canKick = checkPermission("kick_members") && canMod && !isSelf;
+    const canBan = checkPermission("ban_members") && canMod && !isSelf;
     const canChangeNickname =
-      checkPermission("manage_nicknames") && (canModerate(currentUserRole, member.role) || isSelf);
-    const canTransfer = checkPermission("transfer_ownership") && !isSelf && member.role !== "owner";
-    const canManageRoles = checkPermission("manage_roles") && (canModerate(currentUserRole, member.role) || (isSelf && isServerOwner) || (currentUserRole === 'owner'));
+      checkPermission("manage_nicknames") && (canMod || isSelf);
+    const canTransfer = currentUserIsOwner && !isSelf && !isServerOwner;
+    const canManageRoles = checkPermission("manage_roles") && (canMod || (isSelf && isServerOwner) || currentUserIsOwner);
 
     const hasAdminActions =
       canKick || canBan || canChangeNickname || canTransfer || canManageRoles;
-    const roleInfo = getRoleInfo(member.role);
 
     const content = (
       <div
@@ -355,7 +349,7 @@ export const MembersSidebar = () => {
                     ? isGradientName
                       ? "font-medium"
                       : ""
-                    : roleInfo.color,
+                    : "text-foreground",
               )}
               style={
                 !memberIsOffline && priorityCustomRoleColor
@@ -449,41 +443,6 @@ export const MembersSidebar = () => {
                   Roles
                 </ContextMenuSubTrigger>
                 <ContextMenuSubContent className="w-44 rounded-xl border-border/50 p-1.5" sideOffset={4}>
-                  {/* Base role assignment */}
-                  {(() => {
-                    const assignable = getAssignableRoles(currentUserRole);
-                    if (assignable.length === 0) return null;
-                    const displayName = member.nickname || member.user?.display_name || member.user?.username || "Unknown";
-                    return (
-                      <>
-                        <div className="px-2 py-1 text-[10px] font-semibold uppercase text-muted-foreground tracking-wider">Base Role</div>
-                        {assignable.map((r) => {
-                          const info = getRoleInfo(r);
-                          const isCurrentRole = member.role === r;
-                          return (
-                            <ContextMenuItem
-                              key={r}
-                              disabled={isCurrentRole}
-                              onClick={() => {
-                                openModal("confirmAction", {
-                                  action: "changeRole",
-                                  member,
-                                  newRole: r,
-                                  title: `Change role to ${info.label}`,
-                                  message: `Change ${displayName}'s role to ${info.label}?`,
-                                });
-                              }}
-                              className="rounded-lg gap-3"
-                            >
-                              <span className={info.color}>{info.label}</span>
-                              {isCurrentRole && <span className="ml-auto text-xs text-muted-foreground">✓</span>}
-                            </ContextMenuItem>
-                          );
-                        })}
-                      </>
-                    );
-                  })()}
-
                   {/* Custom roles */}
                   {roles.length > 0 && (
                     <>

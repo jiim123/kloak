@@ -101,21 +101,10 @@ const serverSettingsSchema = z.object({
 
 type ServerSettingsForm = z.infer<typeof serverSettingsSchema>;
 
-const getRoleIcon = (role: ServerRole) => {
-  switch (role) {
-    case "owner":
-      return <Crown className="w-4 h-4 text-yellow-500" />;
-    case "admin":
-      return <ShieldCheck className="w-4 h-4 text-red-500" />;
-    case "moderator":
-      return <Shield className="w-4 h-4 text-blue-500" />;
-    default:
-      return <User className="w-4 h-4 text-muted-foreground" />;
-  }
-};
-
-const getRoleLabel = (role: ServerRole) => {
-  return role.charAt(0).toUpperCase() + role.slice(1);
+// Owner icon helper - shows crown for server owner
+const getOwnerIcon = (memberId: string, ownerId: string) => {
+  if (memberId === ownerId) return <Crown className="w-4 h-4 text-yellow-500" />;
+  return null;
 };
 
 // Gradient presets
@@ -414,7 +403,7 @@ export const ServerSettingsModal = () => {
   const canManageEmojis = hasPermission("manage_emojis");
 
   // For backward compatibility and specific checks
-  const isOwner = userRole === "owner";
+  const isOwner = !!user && !!server && server.owner_id === user.id;
   const isAdmin = canManageServer || canManageRoles || canManageChannels;
 
   // Navigation items for tabs with categories
@@ -1579,7 +1568,7 @@ export const ServerSettingsModal = () => {
                               <span className="text-sm font-medium truncate">
                                 {member.nickname || member.user?.display_name || member.user?.username}
                               </span>
-                              {getRoleIcon(member.role)}
+                              {server && getOwnerIcon(member.user_id, server.owner_id)}
                               {hasRoles && (
                                 <div className="flex items-center gap-1 flex-wrap">
                                   {memberRoles.map((role) => {
@@ -1603,10 +1592,10 @@ export const ServerSettingsModal = () => {
                               )}
                             </div>
                             <p className="text-xs text-muted-foreground truncate">
-                              {member.user?.username} • {getRoleLabel(member.role)}
+                              {member.user?.username}{server && member.user_id === server.owner_id ? ' • Owner' : ''}
                             </p>
                           </div>
-                          {canManageRoles && (member.user_id !== user?.id || member.role === "owner") && (
+                          {canManageRoles && (member.user_id !== user?.id || isOwner) && (
                             <div className="flex items-center gap-1 flex-shrink-0">
                               {roles.length > 0 && (
                                 <DropdownMenu>
@@ -2456,7 +2445,7 @@ export const ServerSettingsModal = () => {
                                 <span className="text-sm font-medium truncate">
                                   {member.nickname || member.user?.display_name || member.user?.username}
                                 </span>
-                                {getRoleIcon(member.role)}
+                                {server && getOwnerIcon(member.user_id, server.owner_id)}
                                 {hasRoles && (
                                   <div className="flex items-center gap-1 flex-wrap">
                                     {memberRoles.map((role) => {
@@ -2480,7 +2469,7 @@ export const ServerSettingsModal = () => {
                                 )}
                               </div>
                               <p className="text-xs text-muted-foreground truncate">
-                                {member.user?.username} • {getRoleLabel(member.role)}
+                                {member.user?.username}{server && member.user_id === server.owner_id ? ' • Owner' : ''}
                               </p>
                             </div>
 

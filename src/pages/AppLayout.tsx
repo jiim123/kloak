@@ -94,7 +94,7 @@ const AppLayout = () => {
     return servers.find((s) => s.id === currentServer.id) ?? null;
   }, [servers, currentServer]);
 
-  const isOwner = currentMembership?.role === 'owner';
+  const isOwner = !!user && !!currentServer && currentServer.owner_id === user.id;
   const canViewMembersPage = isOwner || hasPermission('manage_server');
   const isServerMembersViewAllowed = isServerMembersView && canViewMembersPage;
   const isServerSpecialView = isServerOverviewView || isServerMembersViewAllowed;

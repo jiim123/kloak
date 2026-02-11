@@ -92,9 +92,7 @@ const GhostIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-const isAdminRole = (role: ServerRole | undefined): boolean => {
-  return role === "owner" || role === "admin" || role === "moderator";
-};
+// isAdminRole is no longer needed - we use permission hooks instead
 
 // Uncategorized Drop Zone
 const UncategorizedDropZone = ({
@@ -711,16 +709,13 @@ export const ChannelSidebar = () => {
     [memberUserById],
   );
 
-  const userRole = currentMembership?.role;
-
   // Use permission system instead of hardcoded role checks
-  const { hasPermission } = useMemberPermissions();
+  const { hasPermission, isOwner } = useMemberPermissions();
   const canManageChannels = hasPermission("manage_channels");
   const canManageServer = hasPermission("manage_server");
   const canManageRoles = hasPermission("manage_roles");
   const isAdmin = canManageChannels; // For channel/category management
   const canSeeServerSettings = canManageChannels || canManageServer || canManageRoles;
-  const isOwner = userRole === "owner";
 
   const channelSettings = useChannelSettingsStore((s) => s.settings);
   const [showHidden, setShowHidden] = useState(false);

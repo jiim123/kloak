@@ -15,9 +15,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import type { ServerMember, ServerRole } from '@/types';
+import type { ServerMember } from '@/types';
 
-type ActionType = 'kick' | 'ban' | 'mute' | 'unmute' | 'changeRole' | 'transferOwnership';
+type ActionType = 'kick' | 'ban' | 'mute' | 'unmute' | 'transferOwnership';
 
 export const ConfirmActionModal = () => {
   const { activeModal, modalData, closeModal } = useUIStore();
@@ -30,7 +30,7 @@ export const ConfirmActionModal = () => {
   const member = modalData?.member as ServerMember | undefined;
   const title = modalData?.title as string | undefined;
   const message = modalData?.message as string | undefined;
-  const newRole = modalData?.newRole as ServerRole | undefined;
+  
 
   const handleClose = () => {
     closeModal();
@@ -63,12 +63,6 @@ export const ConfirmActionModal = () => {
           toast.success(`${member.nickname || member.user?.username} has been unmuted`);
           break;
           
-        case 'changeRole':
-          if (newRole) {
-            await updateMember(member.id, { role: newRole });
-            toast.success(`${member.nickname || member.user?.username}'s role has been changed to ${newRole}`);
-          }
-          break;
           
         case 'transferOwnership':
           if (user) {
@@ -106,7 +100,7 @@ export const ConfirmActionModal = () => {
       case 'ban': return 'Ban';
       case 'mute': return 'Mute';
       case 'unmute': return 'Unmute';
-      case 'changeRole': return 'Change Role';
+      
       case 'transferOwnership': return 'Transfer Ownership';
       default: return 'Confirm';
     }

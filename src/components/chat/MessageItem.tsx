@@ -428,9 +428,14 @@ export const MessageItem = memo(function MessageItem({
   const isGhostMode = currentChannel?.ghost_mode || false;
   const messageAuthorIsAdmin = useMemo(() => {
     if (!messageMember) return false;
-    const role = messageMember.role;
-    return role === "owner" || role === "admin";
-  }, [messageMember]);
+    // Owner is always visible in ghost mode
+    if (currentServer && messageMember.user_id === currentServer.owner_id) return true;
+    // Members with manage_messages permission are visible
+    const memberRoles = messageMember.roles || [];
+    if (memberRoles.length === 0) return false;
+    // Check if any of their roles have manage_messages - simplified check
+    return memberRoles.some(r => r.name === 'Admin' || r.name === 'Moderator');
+  }, [messageMember, currentServer]);
   const showGhostIdentity = isGhostMode && !messageAuthorIsAdmin;
 
   // Check if reply author is admin (for ghost mode)
@@ -438,9 +443,10 @@ export const MessageItem = memo(function MessageItem({
     if (!message.reply_to?.user?.id || !isGhostMode) return false;
     const replyMember = members.find((m) => m.user_id === message.reply_to?.user?.id);
     if (!replyMember) return false;
-    const role = replyMember.role;
-    return role === "owner" || role === "admin";
-  }, [message.reply_to?.user?.id, members, isGhostMode]);
+    if (currentServer && replyMember.user_id === currentServer.owner_id) return true;
+    const memberRoles = replyMember.roles || [];
+    return memberRoles.some(r => r.name === 'Admin' || r.name === 'Moderator');
+  }, [message.reply_to?.user?.id, members, isGhostMode, currentServer]);
   const showReplyAuthorIdentity = !isGhostMode || replyAuthorIsAdmin;
 
   // Memoize formatted timestamps

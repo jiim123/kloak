@@ -15,7 +15,7 @@ import {
   BellOff,
   Bell,
 } from "lucide-react";
-import { hasPermission as checkRolePermission } from "@/lib/permissions";
+import { evaluatePermission } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -306,8 +306,8 @@ const HorizontalFolderItem = ({
               const channelIds = serverChannels[server.id] || [];
               const { hasUnread, totalMentions } = getServerUnreadInfo(channelIds);
               const isActive = currentServer?.id === server.id;
-              const isOwner = server.role === "owner";
-              const canManageServer = isOwner || checkRolePermission(server.role, 'manage_server') || checkRolePermission(server.role, 'manage_channels') || checkRolePermission(server.role, 'manage_roles');
+              const isOwner = server.owner_id === useAuthStore.getState().user?.id;
+              const canManageServer = isOwner;
 
               return (
                 <ContextMenu key={server.id}>
@@ -469,8 +469,8 @@ const HorizontalSortableServerItem = forwardRef<
       transform: CSS.Transform.toString(transform),
       transition,
     };
-    const isOwner = server.role === "owner";
-    const canManageServer = isOwner || checkRolePermission(server.role, 'manage_server') || checkRolePermission(server.role, 'manage_channels') || checkRolePermission(server.role, 'manage_roles');
+    const isOwner = server.owner_id === useAuthStore.getState().user?.id;
+    const canManageServer = isOwner;
 
     return (
       <ContextMenu>

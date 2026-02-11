@@ -7,7 +7,7 @@ import { useDMStore } from "@/stores/dmStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useUIStore } from "@/stores/uiStore";
 import { cn } from "@/lib/utils";
-import { canModerate, getAssignableRoles, getRoleInfo } from "@/lib/permissions";
+import { canModerateByRoles } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -107,7 +107,7 @@ export const ServerMembersView = () => {
   if (!currentServer) return null;
 
   const currentUserMember = user ? members.find((m) => m.user_id === user.id) : undefined;
-  const currentUserRole = currentUserMember?.role;
+  const currentUserIsOwner = !!user && currentServer.owner_id === user.id;
 
   const canManageRoles = hasPermission("manage_roles");
   const canKick = hasPermission("kick_members");
@@ -218,12 +218,13 @@ export const ServerMembersView = () => {
                 const joinedKloak = member.user?.created_at ? new Date(member.user.created_at) : null;
                 const memberRoles = member.roles || [];
                 const isSelf = !!user && member.user_id === user.id;
-                const canModerateMember = canModerate(currentUserRole, member.role) && !isSelf && member.role !== "owner";
+                const targetIsOwner = member.user_id === currentServer.owner_id;
+                const canModerateMember = canModerateByRoles(currentUserIsOwner, currentUserMember?.roles, targetIsOwner, member.roles) && !isSelf;
                 const showRoleEditor = canManageRoles && canModerateMember;
                 const showKick = canKick && canModerateMember;
                 const showBan = canBan && canModerateMember;
                 const showMute = canMute && canModerateMember;
-                const showChangeNickname = canChangeNickname && (canModerate(currentUserRole, member.role) || isSelf);
+                const showChangeNickname = canChangeNickname && (canModerateByRoles(currentUserIsOwner, currentUserMember?.roles, targetIsOwner, member.roles) || isSelf);
 
                 return (
                   <TableRow key={member.id} className="hover:bg-secondary/30">
@@ -372,38 +373,6 @@ export const ServerMembersView = () => {
                                 Change nickname
                               </DropdownMenuItem>
                             )}
-                            {showRoleEditor && (() => {
-                              const assignable = getAssignableRoles(currentUserRole);
-                              return assignable.length > 0 ? (
-                                <DropdownMenuSub>
-                                  <DropdownMenuSubTrigger>Change role</DropdownMenuSubTrigger>
-                                  <DropdownMenuSubContent>
-                                    {assignable.map((r) => {
-                                      const info = getRoleInfo(r);
-                                      const isCurrentRole = member.role === r;
-                                      return (
-                                        <DropdownMenuItem
-                                          key={r}
-                                          disabled={isCurrentRole}
-                                          onClick={() => {
-                                            openModal("confirmAction", {
-                                              action: "changeRole",
-                                              member,
-                                              newRole: r,
-                                              title: `Change role to ${info.label}`,
-                                              message: `Change ${getDisplayName(member)}'s role to ${info.label}?`,
-                                            });
-                                          }}
-                                        >
-                                          <span className={info.color}>{info.label}</span>
-                                          {isCurrentRole && <span className="ml-auto text-xs text-muted-foreground">✓</span>}
-                                        </DropdownMenuItem>
-                                      );
-                                    })}
-                                  </DropdownMenuSubContent>
-                                </DropdownMenuSub>
-                              ) : null;
-                            })()}
                             {showMute && (
                               <DropdownMenuItem onClick={() => handleToggleMute(member)}>
                                 {member.is_muted ? "Unmute" : "Mute"}

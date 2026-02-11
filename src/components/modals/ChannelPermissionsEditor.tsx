@@ -5,7 +5,7 @@ import { Loader2, Save } from 'lucide-react';
 import { useServerStore } from '@/stores/serverStore';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
-import type { Permission, ServerRole, ChannelPermission } from '@/types';
+import type { Permission, ChannelPermission } from '@/types';
 import { cn } from '@/lib/utils';
 import { PERMISSION_META, PERMISSION_GROUPS } from '@/lib/permissionMeta';
 
@@ -15,10 +15,7 @@ interface ChannelPermissionsEditorProps {
   onClose: () => void;
 }
 
-const DEFAULT_ROLES: Array<{ name: ServerRole; label: string; color: string }> = [
-  { name: 'owner', label: 'Owner', color: '#ef4444' },
-  { name: 'member', label: 'Member', color: '#6b7280' },
-];
+// No more DEFAULT_ROLES - we use @everyone from server roles instead
 
 export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: ChannelPermissionsEditorProps) => {
   const { user } = useAuthStore();
@@ -36,21 +33,16 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Combine default roles and custom roles
+  // All roles = custom roles (including @everyone)
   const allRoles = useMemo(() => {
-    return [
-      ...DEFAULT_ROLES.map(r => ({ id: null, name: r.name, label: r.label, color: r.color, position: -1 })),
-      ...roles.map(r => ({ id: r.id, name: null, label: r.name, color: r.color, position: r.position })),
-    ].sort((a, b) => {
-      if (a.id === null && b.id === null) {
-        const aIndex = DEFAULT_ROLES.findIndex(dr => dr.name === a.name);
-        const bIndex = DEFAULT_ROLES.findIndex(dr => dr.name === b.name);
-        return aIndex - bIndex;
-      }
-      if (a.id === null) return -1;
-      if (b.id === null) return 1;
-      return a.position - b.position;
-    });
+    return roles
+      .map(r => ({ id: r.id, name: null as string | null, label: r.name, color: r.color, position: r.position }))
+      .sort((a, b) => {
+        // @everyone always last
+        if (a.label === '@everyone') return 1;
+        if (b.label === '@everyone') return -1;
+        return a.position - b.position;
+      });
   }, [roles]);
 
   // Auto-select first role when roles are loaded
@@ -155,7 +147,7 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
           if (state !== null) {
             if (!currentDb || currentDb.allowed !== state) {
               savePromises.push(
-                setChannelPermission(channelId, user.id, permission, state, role.id ? role.id : undefined, role.name ? role.name : undefined)
+                setChannelPermission(channelId, user.id, permission, state, role.id ? role.id : undefined, undefined)
               );
             }
           } else if (currentDb) {
