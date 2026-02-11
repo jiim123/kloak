@@ -143,13 +143,29 @@ export const EmojiGifPicker = ({
 
   const filteredEmojis = useMemo(() => {
     if (!emojiSearch.trim()) return null;
+    const q = emojiSearch.trim().toLowerCase();
     
+    // Build a simple name lookup by mapping each emoji to keywords
+    // Since we only have the emoji characters, filter by checking if the search
+    // term appears in any category name or do a basic character match
     const results: string[] = [];
     Object.values(EMOJI_CATEGORIES).forEach(category => {
       if (category.emojis) {
-        results.push(...category.emojis.slice(0, 16));
+        // If category name matches the search, include all its emojis
+        if (category.name.toLowerCase().includes(q)) {
+          results.push(...category.emojis);
+        }
       }
     });
+    
+    // If no category matched, return all emojis (user is searching by character)
+    if (results.length === 0) {
+      Object.values(EMOJI_CATEGORIES).forEach(category => {
+        if (category.emojis) {
+          results.push(...category.emojis.filter(e => e.includes(q)));
+        }
+      });
+    }
     
     return results.slice(0, 48);
   }, [emojiSearch]);
