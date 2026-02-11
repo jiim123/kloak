@@ -18,7 +18,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useDMStore } from "@/stores/dmStore";
 import { useRealtimeMembers } from "@/hooks/useRealtimeMembers";
-import { canModerate, getRoleInfo } from "@/lib/permissions";
+import { canModerate, getRoleInfo, getAssignableRoles } from "@/lib/permissions";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import {
   ContextMenu,
@@ -316,7 +316,7 @@ export const MembersSidebar = () => {
     const canManageRoles = checkPermission("manage_roles") && (canModerate(currentUserRole, member.role) || (isSelf && isServerOwner));
 
     const hasAdminActions =
-      canKick || canBan || canChangeNickname || canTransfer || (canManageRoles && roles.length > 0);
+      canKick || canBan || canChangeNickname || canTransfer || canManageRoles;
     const roleInfo = getRoleInfo(member.role);
 
     const content = (
@@ -440,34 +440,75 @@ export const MembersSidebar = () => {
           )}
 
           {/* Role management */}
-          {canManageRoles && roles.length > 0 && (
+          {canManageRoles && (
             <>
               <ContextMenuSeparator className="my-1.5" />
               <ContextMenuSub>
                 <ContextMenuSubTrigger className="rounded-lg gap-3">
                   <Shield className="w-4 h-4" />
-                  Change Roles
+                  Roles
                 </ContextMenuSubTrigger>
-                <ContextMenuSubContent className="w-40 rounded-xl border-border/50 p-1.5">
-                  {roles.map((role) => {
-                    const memberRoles = member.roles || [];
-                    const hasRole = memberRoles.some((r) => r.id === role.id);
-                    const isGradient = role.color.startsWith("linear-gradient");
+                <ContextMenuSubContent className="w-44 rounded-xl border-border/50 p-1.5">
+                  {/* Base role assignment */}
+                  {(() => {
+                    const assignable = getAssignableRoles(currentUserRole);
+                    if (assignable.length === 0) return null;
+                    const displayName = member.nickname || member.user?.display_name || member.user?.username || "Unknown";
                     return (
-                      <ContextMenuItem
-                        key={role.id}
-                        onClick={() => toggleServerRole(member, role.id)}
-                        className="rounded-lg gap-3"
-                      >
-                        <div
-                          className="w-3 h-3 rounded-full flex-shrink-0"
-                          style={isGradient ? { background: role.color } : { backgroundColor: role.color }}
-                        />
-                        <span className="flex-1 truncate">{role.name}</span>
-                        {hasRole && <span className="text-xs text-muted-foreground">✓</span>}
-                      </ContextMenuItem>
+                      <>
+                        <div className="px-2 py-1 text-[10px] font-semibold uppercase text-muted-foreground tracking-wider">Base Role</div>
+                        {assignable.map((r) => {
+                          const info = getRoleInfo(r);
+                          const isCurrentRole = member.role === r;
+                          return (
+                            <ContextMenuItem
+                              key={r}
+                              disabled={isCurrentRole}
+                              onClick={() => {
+                                openModal("confirmAction", {
+                                  action: "changeRole",
+                                  member,
+                                  newRole: r,
+                                  title: `Change role to ${info.label}`,
+                                  message: `Change ${displayName}'s role to ${info.label}?`,
+                                });
+                              }}
+                              className="rounded-lg gap-3"
+                            >
+                              <span className={info.color}>{info.label}</span>
+                              {isCurrentRole && <span className="ml-auto text-xs text-muted-foreground">✓</span>}
+                            </ContextMenuItem>
+                          );
+                        })}
+                      </>
                     );
-                  })}
+                  })()}
+
+                  {/* Custom roles */}
+                  {roles.length > 0 && (
+                    <>
+                      <div className="px-2 py-1 mt-1 text-[10px] font-semibold uppercase text-muted-foreground tracking-wider">Custom Roles</div>
+                      {roles.map((role) => {
+                        const memberRoles = member.roles || [];
+                        const hasRole = memberRoles.some((r) => r.id === role.id);
+                        const isGradient = role.color.startsWith("linear-gradient");
+                        return (
+                          <ContextMenuItem
+                            key={role.id}
+                            onClick={() => toggleServerRole(member, role.id)}
+                            className="rounded-lg gap-3"
+                          >
+                            <div
+                              className="w-3 h-3 rounded-full flex-shrink-0"
+                              style={isGradient ? { background: role.color } : { backgroundColor: role.color }}
+                            />
+                            <span className="flex-1 truncate">{role.name}</span>
+                            {hasRole && <span className="text-xs text-muted-foreground">✓</span>}
+                          </ContextMenuItem>
+                        );
+                      })}
+                    </>
+                  )}
                 </ContextMenuSubContent>
               </ContextMenuSub>
             </>
