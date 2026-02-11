@@ -20,6 +20,7 @@ export const useMemberPermissions = (channelId?: string) => {
     currentServer,
     rolePermissions,
     channelPermissions,
+    roles,
   } = useServerStore();
 
   const currentMember = useMemo(() => {
@@ -42,7 +43,8 @@ export const useMemberPermissions = (channelId?: string) => {
       rolePermissions,
       channelPermissions,
       channelId,
-      user.id
+      user.id,
+      roles
     );
   };
 
@@ -62,7 +64,8 @@ export const useMemberPermissions = (channelId?: string) => {
         rolePermissions,
         channelPermissions,
         effectiveChannelId,
-        user.id
+        user.id,
+        roles
       );
     },
   };

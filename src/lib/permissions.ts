@@ -34,22 +34,20 @@ export const evaluatePermission = (
   rolePermissions?: RolePermission[],
   channelPermissions?: ChannelPermission[],
   channelId?: string,
-  userId?: string
+  userId?: string,
+  allRoles?: CustomServerRole[]
 ): boolean => {
   // Owner always has all permissions
   if (isOwner) return true;
 
   const customRoleIds = new Set(customRoles?.map(r => r.id) ?? []);
   
-  // Find @everyone role from rolePermissions (role with name containing @everyone)
-  // @everyone perms are in rolePermissions but the role isn't in the member's customRoles
+  // Find @everyone role by name from the full roles array
   const everyoneRoleIds = new Set<string>();
-  if (rolePermissions) {
-    for (const rp of rolePermissions) {
-      if (rp.role_id && !customRoleIds.has(rp.role_id)) {
-        // This might be @everyone - we include it as fallback
-        everyoneRoleIds.add(rp.role_id);
-      }
+  if (allRoles) {
+    const everyoneRole = allRoles.find(r => r.name === '@everyone');
+    if (everyoneRole) {
+      everyoneRoleIds.add(everyoneRole.id);
     }
   }
 
@@ -187,7 +185,8 @@ export const getMemberPermissions = (
   rolePermissions: RolePermission[] | undefined,
   channelPermissions: ChannelPermission[] | undefined,
   channelId?: string,
-  userId?: string
+  userId?: string,
+  allRoles?: CustomServerRole[]
 ): Map<Permission, boolean> => {
   const permissions = new Map<Permission, boolean>();
 
@@ -206,7 +205,7 @@ export const getMemberPermissions = (
   for (const permission of allPermissions) {
     permissions.set(
       permission,
-      evaluatePermission(permission, isOwner, customRoles, rolePermissions, channelPermissions, channelId, userId)
+      evaluatePermission(permission, isOwner, customRoles, rolePermissions, channelPermissions, channelId, userId, allRoles)
     );
   }
 
@@ -222,10 +221,11 @@ export const getAllowedPermissions = (
   rolePermissions?: RolePermission[],
   channelPermissions?: ChannelPermission[],
   channelId?: string,
-  userId?: string
+  userId?: string,
+  allRoles?: CustomServerRole[]
 ): Permission[] => {
   const permissions = getMemberPermissions(
-    isOwner, customRoles, rolePermissions, channelPermissions, channelId, userId
+    isOwner, customRoles, rolePermissions, channelPermissions, channelId, userId, allRoles
   );
 
   const allowed: Permission[] = [];
