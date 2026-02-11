@@ -7,7 +7,7 @@ import { useDMStore } from "@/stores/dmStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useUIStore } from "@/stores/uiStore";
 import { cn } from "@/lib/utils";
-import { canModerate } from "@/lib/permissions";
+import { canModerate, getAssignableRoles, getRoleInfo } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -56,6 +59,7 @@ export const ServerMembersView = () => {
     roles,
     assignRoleToMember,
     removeRoleFromMember,
+    updateMember,
   } = useServerStore();
   const { openModal } = useUIStore();
   const { hasPermission } = useMemberPermissions();
@@ -368,6 +372,38 @@ export const ServerMembersView = () => {
                                 Change nickname
                               </DropdownMenuItem>
                             )}
+                            {showRoleEditor && (() => {
+                              const assignable = getAssignableRoles(currentUserRole);
+                              return assignable.length > 0 ? (
+                                <DropdownMenuSub>
+                                  <DropdownMenuSubTrigger>Change role</DropdownMenuSubTrigger>
+                                  <DropdownMenuSubContent>
+                                    {assignable.map((r) => {
+                                      const info = getRoleInfo(r);
+                                      const isCurrentRole = member.role === r;
+                                      return (
+                                        <DropdownMenuItem
+                                          key={r}
+                                          disabled={isCurrentRole}
+                                          onClick={() => {
+                                            openModal("confirmAction", {
+                                              action: "changeRole",
+                                              member,
+                                              newRole: r,
+                                              title: `Change role to ${info.label}`,
+                                              message: `Change ${getDisplayName(member)}'s role to ${info.label}?`,
+                                            });
+                                          }}
+                                        >
+                                          <span className={info.color}>{info.label}</span>
+                                          {isCurrentRole && <span className="ml-auto text-xs text-muted-foreground">✓</span>}
+                                        </DropdownMenuItem>
+                                      );
+                                    })}
+                                  </DropdownMenuSubContent>
+                                </DropdownMenuSub>
+                              ) : null;
+                            })()}
                             {showMute && (
                               <DropdownMenuItem onClick={() => handleToggleMute(member)}>
                                 {member.is_muted ? "Unmute" : "Mute"}
