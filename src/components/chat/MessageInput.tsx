@@ -210,6 +210,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const { members, currentServer, currentChannel, channels, fetchRolePermissions, fetchChannelPermissions } =
     useServerStore();
   const { getQueuedForChannel } = useOfflineQueueStore();
+  const isMobile = useIsMobile();
 
   const [content, setContent] = useState("");
   const [isFocused, setIsFocused] = useState(false);
@@ -700,7 +701,9 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
         }
       }
 
-      if (e.key === "Enter" && !e.shiftKey) {
+      // On mobile, Enter creates new line (use send button to submit)
+      // On desktop, Enter sends (Shift+Enter for new line)
+      if (e.key === "Enter" && !e.shiftKey && !isMobile) {
         e.preventDefault();
         handleSubmit();
       }
@@ -710,7 +713,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
         window.dispatchEvent(new CustomEvent("editLastMessage", { detail: { userId: user?.id, channelId } }));
       }
     },
-    [showMentions, showChannels, applyFormatShortcut, handleSubmit, content, user?.id, channelId, pendingAttachments.length],
+    [showMentions, showChannels, applyFormatShortcut, handleSubmit, content, user?.id, channelId, pendingAttachments.length, isMobile],
   );
 
   // Paste handler: queue images instead of sending immediately

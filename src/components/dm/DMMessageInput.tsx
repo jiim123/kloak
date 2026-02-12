@@ -376,11 +376,13 @@ export const DMMessageInput = ({
         case 'p': e.preventDefault(); applyFormatShortcut('spoiler'); return;
       }
     }
-    if (e.key === 'Enter' && !e.shiftKey) {
+    // On mobile, Enter creates new line (use send button to submit)
+    // On desktop, Enter sends (Shift+Enter for new line)
+    if (e.key === 'Enter' && !e.shiftKey && !isMobile) {
       e.preventDefault();
       handleSubmit();
     }
-  }, [applyFormatShortcut, handleSubmit]);
+  }, [applyFormatShortcut, handleSubmit, isMobile]);
 
   const handleEmojiSelect = useCallback((emoji: string) => {
     const textarea = textareaRef.current;
