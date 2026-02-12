@@ -108,10 +108,12 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   const [showJumpToPresent, setShowJumpToPresent] = useState(false);
   const [newMessageCount, setNewMessageCount] = useState(0);
   const isNearBottomRef = useRef(true);
-  const hasMarkedAsReadRef = useRef(false);
+  const lastMarkedMessageIdRef = useRef<string | null>(null); // Track last marked message ID instead of boolean
   const prevMessagesLengthRef = useRef(0);
   const needsScrollRef = useRef(true); // true on initial mount
   const prevChannelIdRef = useRef<string>(channelId);
+  const scrollRAFRef = useRef<number | null>(null); // For requestAnimationFrame
+  const refetchTimeoutRef = useRef<NodeJS.Timeout | null>(null); // For refetch timeout
 
   // Detect channel switch during RENDER PHASE (synchronous).
   // This must happen before useLayoutEffect so the flag is already
@@ -154,7 +156,7 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   useEffect(() => {
     setCurrentChannel(channelId);
     prevMessagesLengthRef.current = 0;
-    hasMarkedAsReadRef.current = false;
+    lastMarkedMessageIdRef.current = null; // Reset for new channel
     setShowJumpToPresent(false);
     setNewMessageCount(0);
     fetchMessages(channelId);
@@ -185,18 +187,34 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   const isRefetchingRef = useRef(false);
 
   useEffect(() => {
-    const handleFocus = () => {
-      // Always refetch when tab regains focus to catch missed realtime messages
-      // But only if we're not already refetching
-      if (!isRefetchingRef.current) {
-        isRefetchingRef.current = true;
-        // Silent refetch if we already have messages (no loading indicator)
-        const hasMessages = messages.length > 0;
-        fetchMessages(channelId, 50, undefined, true, hasMessages).finally(() => {
-          isRefetchingRef.current = false;
-        });
+    // Consolidated refetch handler with error recovery
+    const performRefetch = () => {
+      if (isRefetchingRef.current) return;
+
+      isRefetchingRef.current = true;
+
+      // Safety timeout: force-reset refetch flag after 5 seconds
+      if (refetchTimeoutRef.current) {
+        clearTimeout(refetchTimeoutRef.current);
       }
-      hiddenTimeRef.current = null;
+      refetchTimeoutRef.current = setTimeout(() => {
+        isRefetchingRef.current = false;
+        refetchTimeoutRef.current = null;
+      }, 5000);
+
+      // Silent refetch if we already have messages (no loading indicator)
+      const hasMessages = messages.length > 0;
+      fetchMessages(channelId, 50, undefined, true, hasMessages)
+        .catch((error) => {
+          console.error("Failed to refetch messages on focus/visibility:", error);
+        })
+        .finally(() => {
+          isRefetchingRef.current = false;
+          if (refetchTimeoutRef.current) {
+            clearTimeout(refetchTimeoutRef.current);
+            refetchTimeoutRef.current = null;
+          }
+        });
     };
 
     const handleVisibility = () => {
@@ -204,25 +222,32 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
         // Track when tab becomes hidden
         hiddenTimeRef.current = Date.now();
       } else if (document.visibilityState === "visible") {
-        // Always refetch when tab becomes visible to catch missed realtime messages
-        // This ensures users see all messages even if realtime subscriptions were paused
-        if (!isRefetchingRef.current) {
-          isRefetchingRef.current = true;
-          // Silent refetch if we already have messages (no loading indicator)
-          const hasMessages = messages.length > 0;
-          fetchMessages(channelId, 50, undefined, true, hasMessages).finally(() => {
-            isRefetchingRef.current = false;
-          });
-        }
+        // Refetch when tab becomes visible
+        performRefetch();
         hiddenTimeRef.current = null;
       }
     };
 
+    // Focus handler uses the same refetch logic
+    const handleFocus = () => {
+      performRefetch();
+      hiddenTimeRef.current = null;
+    };
+
     window.addEventListener("focus", handleFocus);
     document.addEventListener("visibilitychange", handleVisibility);
+
     return () => {
       window.removeEventListener("focus", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibility);
+      // Cleanup timeout on unmount
+      if (refetchTimeoutRef.current) {
+        clearTimeout(refetchTimeoutRef.current);
+      }
+      // Cleanup RAF on unmount
+      if (scrollRAFRef.current !== null) {
+        cancelAnimationFrame(scrollRAFRef.current);
+      }
     };
   }, [channelId, fetchMessages, messages.length]);
 
@@ -245,46 +270,71 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   }, [messages.length]);
 
   // Mark as read when viewing channel (automatic)
+  // Only mark as read if we're at the bottom and haven't already marked this message
   useEffect(() => {
-    if (messages.length > 0 && !hasMarkedAsReadRef.current) {
-      if (isNearBottomRef.current) {
-        const latestMessage = messages[messages.length - 1];
-        if (latestMessage && !latestMessage.id.startsWith("temp-")) {
-          markAsRead(channelId, latestMessage.id);
-          hasMarkedAsReadRef.current = true;
-        }
+    if (messages.length > 0 && isNearBottomRef.current) {
+      const latestMessage = messages[messages.length - 1];
+      if (
+        latestMessage &&
+        !latestMessage.id.startsWith("temp-") &&
+        lastMarkedMessageIdRef.current !== latestMessage.id
+      ) {
+        markAsRead(channelId, latestMessage.id);
+        lastMarkedMessageIdRef.current = latestMessage.id;
       }
     }
   }, [messages, channelId, markAsRead]);
 
-  // Handle scroll events
+  // Handle scroll events with RAF for better performance
   const handleScroll = useCallback(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const { scrollTop, scrollHeight, clientHeight } = container;
-    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-
-    isNearBottomRef.current = distanceFromBottom < 100;
-    setShowJumpToPresent(!isNearBottomRef.current && messages.length > 0);
-
-    // Load more when scrolling to top
-    if (scrollTop < 100 && hasMore && !isLoading) {
-      const oldestMessage = messages[0];
-      if (oldestMessage) {
-        fetchMessages(channelId, 50, oldestMessage.created_at);
-      }
+    // Cancel any pending RAF to debounce scroll updates
+    if (scrollRAFRef.current !== null) {
+      cancelAnimationFrame(scrollRAFRef.current);
     }
-  }, [channelId, hasMore, isLoading, messages, fetchMessages]);
+
+    scrollRAFRef.current = requestAnimationFrame(() => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+
+      const wasNearBottom = isNearBottomRef.current;
+      const isNearBottom = distanceFromBottom < 100;
+
+      isNearBottomRef.current = isNearBottom;
+
+      // Only update state if the near-bottom status changed
+      if (wasNearBottom !== isNearBottom) {
+        setShowJumpToPresent(!isNearBottom && deduplicatedMessages.length > 0);
+      }
+
+      // Load more when scrolling to top
+      if (scrollTop < 100 && hasMore && !isLoading) {
+        const oldestMessage = deduplicatedMessages[0];
+        if (oldestMessage) {
+          fetchMessages(channelId, 50, oldestMessage.created_at);
+        }
+      }
+
+      scrollRAFRef.current = null;
+    });
+  }, [channelId, hasMore, isLoading, deduplicatedMessages, fetchMessages]);
 
   const scrollToBottom = () => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     setShowJumpToPresent(false);
     setNewMessageCount(0);
+
+    // Mark as read, but only if different from last marked message
     if (messages.length > 0) {
       const latestMessage = messages[messages.length - 1];
-      if (!latestMessage.id.startsWith("temp-")) {
+      if (
+        !latestMessage.id.startsWith("temp-") &&
+        lastMarkedMessageIdRef.current !== latestMessage.id
+      ) {
         markAsRead(channelId, latestMessage.id);
+        lastMarkedMessageIdRef.current = latestMessage.id;
       }
     }
   };
@@ -357,7 +407,7 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
           {deduplicatedMessages.map((message, index) => {
             const previousMessage = index > 0 ? deduplicatedMessages[index - 1] : null;
             const isGrouped = shouldGroupMessages(message, previousMessage);
-            const showNewDivider = index === newMessagesDividerIndex && !hasMarkedAsReadRef.current;
+            const showNewDivider = index === newMessagesDividerIndex && lastMarkedMessageIdRef.current === null;
 
             return (
               <MessageItem

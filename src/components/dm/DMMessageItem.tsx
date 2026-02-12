@@ -51,9 +51,13 @@ const getStableAnimationKey = (message: DirectMessage): string => {
 
 export const DMMessageItem = memo(function DMMessageItem({ message, isFirst, onReply }: DMMessageItemProps) {
   const { user } = useAuthStore();
-  const { editMessage, deleteMessage, addReaction, removeReaction } = useDMStore();
+  // Extract each DM store function separately to avoid re-renders on unrelated changes
+  const editMessage = useDMStore((state) => state.editMessage);
+  const deleteMessage = useDMStore((state) => state.deleteMessage);
+  const addReaction = useDMStore((state) => state.addReaction);
+  const removeReaction = useDMStore((state) => state.removeReaction);
   const otherUser = useDMStore((state) => state.currentConversation?.other_user);
-  const { openModal } = useUIStore();
+  const openModal = useUIStore((state) => state.openModal);
   const isMobile = useIsMobile();
   
   const [isEditing, setIsEditing] = useState(false);

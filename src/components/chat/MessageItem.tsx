@@ -91,17 +91,23 @@ export const MessageItem = memo(function MessageItem({
   isHighlighted,
   onStartEdit,
 }: MessageItemProps) {
-  // Selectors
+  // Selectors - granular to prevent unnecessary re-renders
   const user = useAuthStore((state) => state.user);
-  const { setReplyingTo, editMessage, pinMessage, addReaction, removeReaction, setEmbedHidden } = useMessageStore();
+  // Extract each message store function separately to avoid re-renders on unrelated changes
+  const setReplyingTo = useMessageStore((state) => state.setReplyingTo);
+  const editMessage = useMessageStore((state) => state.editMessage);
+  const pinMessage = useMessageStore((state) => state.pinMessage);
+  const addReaction = useMessageStore((state) => state.addReaction);
+  const removeReaction = useMessageStore((state) => state.removeReaction);
+  const setEmbedHidden = useMessageStore((state) => state.setEmbedHidden);
   const members = useServerStore((state) => state.members);
   const roles = useServerStore((state) => state.roles);
   const currentServer = useServerStore((state) => state.currentServer);
   const currentChannel = useServerStore((state) => state.currentChannel);
   const compactMode = useUIStore((state) => state.compactMode);
   const showTimestamps = useUIStore((state) => state.showTimestamps);
-  const { openModal } = useUIStore();
-  const { getOptimisticStatus } = useSyncStore();
+  const openModal = useUIStore((state) => state.openModal);
+  const getOptimisticStatus = useSyncStore((state) => state.getOptimisticStatus);
   const [searchParams, setSearchParams] = useSearchParams();
   const isMobile = useIsMobile();
 
