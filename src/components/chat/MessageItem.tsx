@@ -701,16 +701,18 @@ export const MessageItem = memo(function MessageItem({
   }, [messageMember?.roles, roles]);
 
   const usernameColorClass = useMemo(() => {
+    if (showGhostIdentity) return "text-muted-foreground";
     if (!topCustomRoleColor) return getRoleColor(messageMember?.role);
     return isGradientColor(topCustomRoleColor) ? "text-transparent" : "text-foreground";
-  }, [topCustomRoleColor, messageMember?.role]);
+  }, [topCustomRoleColor, messageMember?.role, showGhostIdentity]);
 
   const usernameColorStyle = useMemo(() => {
+    if (showGhostIdentity) return undefined;
     if (!topCustomRoleColor) return undefined;
     return isGradientColor(topCustomRoleColor)
       ? getGradientTextStyle(topCustomRoleColor)
       : ({ color: topCustomRoleColor } as React.CSSProperties);
-  }, [topCustomRoleColor]);
+  }, [topCustomRoleColor, showGhostIdentity]);
 
   const displayName = showGhostIdentity
     ? "Anonymous"
@@ -1103,7 +1105,15 @@ export const MessageItem = memo(function MessageItem({
                               </span>
                             </HoverCardTrigger>
                             <HoverCardContent className="w-auto p-1.5" align="start" side="top">
-                              {(() => {
+                              {isGhostMode ? (
+                                <div className="flex items-center gap-1">
+                                  <div className="shrink-0">{reactionEmojiNodeLarge(reaction.emoji)}</div>
+                                  <div className="min-w-0 text-sm leading-tight text-muted-foreground">
+                                    {reaction.count} {reaction.count === 1 ? "person" : "people"} reacted
+                                  </div>
+                                </div>
+                              ) : (
+                              (() => {
                                 const names = getReactionUserNames(reaction.users);
                                 const preview = names.slice(0, 4);
                                 const remaining = Math.max(0, names.length - preview.length);
@@ -1137,7 +1147,8 @@ export const MessageItem = memo(function MessageItem({
                                     </div>
                                   </div>
                                 );
-                              })()}
+                              })()
+                              )}
                             </HoverCardContent>
                           </HoverCard>
                         ))}
@@ -1467,7 +1478,11 @@ export const MessageItem = memo(function MessageItem({
             </DialogTitle>
           </DialogHeader>
           <div className="max-h-[320px] overflow-auto space-y-1">
-            {selectedReactionNames.length > 0 ? (
+            {isGhostMode ? (
+              <div className="text-sm text-muted-foreground">
+                {selectedReaction ? selectedReaction.count : 0} {(selectedReaction?.count ?? 0) === 1 ? "person" : "people"} reacted
+              </div>
+            ) : selectedReactionNames.length > 0 ? (
               selectedReactionNames.map((name, idx) => (
                 <div key={`${reactionDetailsEmoji ?? "reaction"}-${idx}`} className="text-sm">
                   {name}
