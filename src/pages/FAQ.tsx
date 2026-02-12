@@ -104,7 +104,7 @@ const faqCategories = [
       },
       {
         q: "Do you sell or share my data?",
-        a: "No. We do not sell, trade, or share your data with advertisers, data brokers, or anyone else. The only exception is if legally required by Swedish law where our servers are hosted. Even then, we have collected so little data that there is almost nothing to hand over.",
+        a: "Your data is never sold or distributed to external parties. The only exception is for legal compliance, though our minimal data collection practices limit what is actually stored..",
       },
       {
         q: "What behavior is not allowed on Kloak?",
