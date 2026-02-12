@@ -204,7 +204,11 @@ export const useDMStore = create<DMState>((set, get) => ({
   },
 
   fetchMessages: async (conversationId: string, userId: string, limit = 50, before?: string) => {
-    set({ isLoading: true });
+    // Only show loading state if we have no cached messages for this conversation
+    const hasCached = (get().messagesByConversation[conversationId] || []).length > 0;
+    if (!hasCached) {
+      set({ isLoading: true });
+    }
 
     try {
       // Use RPC function to fetch messages

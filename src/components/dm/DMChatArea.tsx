@@ -49,12 +49,24 @@ export const DMChatArea = () => {
   });
 
   // Fetch messages and mark as read when conversation changes
+  // Only fetch if we don't already have cached messages for this conversation
+  const prevConversationIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (currentConversation?.id && user?.id) {
-      fetchMessages(currentConversation.id, user.id);
+      const cachedMessages = getMessages(currentConversation.id);
+      const isNewConversation = prevConversationIdRef.current !== currentConversation.id;
+      prevConversationIdRef.current = currentConversation.id;
+      
+      // Only fetch if switching to a new conversation with no cached messages
+      if (isNewConversation && cachedMessages.length === 0) {
+        fetchMessages(currentConversation.id, user.id);
+      } else if (isNewConversation) {
+        // Already have cached messages, just make sure we're not in loading state
+        // No need to re-fetch - realtime handles new messages
+      }
       markAsRead(currentConversation.id);
     }
-  }, [currentConversation?.id, user?.id, fetchMessages, markAsRead]);
+  }, [currentConversation?.id, user?.id, fetchMessages, markAsRead, getMessages]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
