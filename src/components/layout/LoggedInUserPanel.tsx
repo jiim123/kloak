@@ -109,41 +109,43 @@ export const LoggedInUserPanel = ({
 
       {/* Action buttons */}
       <div className="flex items-center gap-0.5">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              disabled={!isVoiceActive}
-              onClick={toggleMute}
-              className={cn(
-                "w-8 h-8",
-                controls.muted ? "text-destructive hover:text-destructive" : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {controls.muted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{!isVoiceActive ? "Not in voice" : controls.muted ? "Unmute" : "Mute"}</TooltipContent>
-        </Tooltip>
+        {isVoiceActive && (
+          <>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleMute}
+                  className={cn(
+                    "w-8 h-8",
+                    controls.muted ? "text-destructive hover:text-destructive" : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {controls.muted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{controls.muted ? "Unmute" : "Mute"}</TooltipContent>
+            </Tooltip>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              disabled={!isVoiceActive}
-              onClick={toggleDeafen}
-              className={cn(
-                "w-8 h-8",
-                controls.deafened ? "text-destructive hover:text-destructive" : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {controls.deafened ? <VolumeX className="w-4 h-4" /> : <Headphones className="w-4 h-4" />}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{!isVoiceActive ? "Not in voice" : controls.deafened ? "Undeafen" : "Deafen"}</TooltipContent>
-        </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleDeafen}
+                  className={cn(
+                    "w-8 h-8",
+                    controls.deafened ? "text-destructive hover:text-destructive" : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {controls.deafened ? <VolumeX className="w-4 h-4" /> : <Headphones className="w-4 h-4" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{controls.deafened ? "Undeafen" : "Deafen"}</TooltipContent>
+            </Tooltip>
+          </>
+        )}
 
         <Tooltip>
           <TooltipTrigger asChild>
