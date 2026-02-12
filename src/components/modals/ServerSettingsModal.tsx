@@ -219,6 +219,8 @@ export const ServerSettingsModal = () => {
   const [isUploadingEmoji, setIsUploadingEmoji] = useState(false);
   const [serverEmojis, setServerEmojis] = useState<Array<{ id: string; name: string; file_path: string }>>([]);
   const emojiInputRef = useRef<HTMLInputElement>(null);
+  const [editingEmojiId, setEditingEmojiId] = useState<string | null>(null);
+  const [editingEmojiName, setEditingEmojiName] = useState("");
 
   // Memoize emoji URLs to prevent regenerating on every render
   const serverEmojisWithUrls = useMemo(() => {
@@ -824,6 +826,43 @@ export const ServerSettingsModal = () => {
       }
     } finally {
       setIsUploadingEmoji(false);
+    }
+  };
+
+  const renameServerEmoji = async (emojiId: string, newName: string) => {
+    if (!server || !user) return;
+    if (!canManageEmojis) {
+      toast.error("You do not have permission to manage emojis");
+      return;
+    }
+    const trimmed = newName.trim().toLowerCase();
+    if (!EMOJI_NAME_REGEX.test(trimmed)) {
+      toast.error("Emoji name must be 2-32 lowercase letters, numbers, or underscores");
+      return;
+    }
+    // Check for duplicate name
+    if (serverEmojis.some((e) => e.name === trimmed && e.id !== emojiId)) {
+      toast.error("That emoji name is already taken");
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from("server_emojis")
+        .update({ name: trimmed })
+        .eq("id", emojiId)
+        .eq("server_id", server.id);
+      if (error) throw error;
+      setServerEmojis((prev) => prev.map((e) => (e.id === emojiId ? { ...e, name: trimmed } : e)));
+      invalidateServerEmojis(server.id);
+      setEditingEmojiId(null);
+      toast.success("Emoji renamed");
+    } catch (err: any) {
+      const msg = err?.message || "Failed to rename emoji";
+      if (msg.includes("server_emojis_server_id_name_key")) {
+        toast.error("That emoji name is already taken");
+      } else {
+        toast.error(msg);
+      }
     }
   };
 
@@ -2152,7 +2191,28 @@ export const ServerSettingsModal = () => {
                                   loading="lazy"
                                 />
                                 <div className="min-w-0 flex-1">
-                                  <div className="text-xs font-medium truncate">:{emoji.name}:</div>
+                                  {editingEmojiId === emoji.id ? (
+                                    <input
+                                      autoFocus
+                                      className="w-full text-xs font-medium bg-secondary/50 border border-border rounded px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-ring/50"
+                                      value={editingEmojiName}
+                                      onChange={(e) => setEditingEmojiName(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') renameServerEmoji(emoji.id, editingEmojiName);
+                                        if (e.key === 'Escape') setEditingEmojiId(null);
+                                      }}
+                                      onBlur={() => setEditingEmojiId(null)}
+                                      maxLength={32}
+                                    />
+                                  ) : (
+                                    <div
+                                      className="text-xs font-medium truncate cursor-pointer hover:text-primary transition-colors"
+                                      onClick={() => { setEditingEmojiId(emoji.id); setEditingEmojiName(emoji.name); }}
+                                      title="Click to rename"
+                                    >
+                                      :{emoji.name}:
+                                    </div>
+                                  )}
                                 </div>
                                 <Button
                                   variant="ghost"
@@ -3009,7 +3069,28 @@ export const ServerSettingsModal = () => {
                                     loading="lazy"
                                   />
                                   <div className="min-w-0 flex-1">
-                                    <div className="text-xs font-medium truncate">:{emoji.name}:</div>
+                                    {editingEmojiId === emoji.id ? (
+                                      <input
+                                        autoFocus
+                                        className="w-full text-xs font-medium bg-secondary/50 border border-border rounded px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-ring/50"
+                                        value={editingEmojiName}
+                                        onChange={(e) => setEditingEmojiName(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter') renameServerEmoji(emoji.id, editingEmojiName);
+                                          if (e.key === 'Escape') setEditingEmojiId(null);
+                                        }}
+                                        onBlur={() => setEditingEmojiId(null)}
+                                        maxLength={32}
+                                      />
+                                    ) : (
+                                      <div
+                                        className="text-xs font-medium truncate cursor-pointer hover:text-primary transition-colors"
+                                        onClick={() => { setEditingEmojiId(emoji.id); setEditingEmojiName(emoji.name); }}
+                                        title="Click to rename"
+                                      >
+                                        :{emoji.name}:
+                                      </div>
+                                    )}
                                   </div>
                                   <Button
                                     type="button"
