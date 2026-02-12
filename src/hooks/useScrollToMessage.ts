@@ -6,11 +6,39 @@ interface UseScrollToMessageOptions {
   isLoading: boolean;
 }
 
+/**
+ * Find the nearest scrollable ancestor of an element.
+ */
+function findScrollContainer(el: HTMLElement): HTMLElement | null {
+  let current = el.parentElement;
+  while (current) {
+    const style = window.getComputedStyle(current);
+    const overflowY = style.overflowY;
+    if (
+      (overflowY === 'auto' || overflowY === 'scroll') &&
+      current.scrollHeight > current.clientHeight
+    ) {
+      return current;
+    }
+    current = current.parentElement;
+  }
+  return null;
+}
+
 export const useScrollToMessage = ({ messages, isLoading }: UseScrollToMessageOptions) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const highlightedMessageId = searchParams.get('message');
   const hasScrolledRef = useRef(false);
-  const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevMessageIdRef = useRef<string | null>(null);
+
+  // Reset hasScrolled when the target message changes
+  useEffect(() => {
+    if (highlightedMessageId !== prevMessageIdRef.current) {
+      hasScrolledRef.current = false;
+      prevMessageIdRef.current = highlightedMessageId;
+    }
+  }, [highlightedMessageId]);
 
   // Clear the message param from URL after scrolling
   const clearMessageParam = useCallback(() => {
@@ -31,47 +59,49 @@ export const useScrollToMessage = ({ messages, isLoading }: UseScrollToMessageOp
     // Small delay to ensure DOM is ready
     const scrollTimeout = setTimeout(() => {
       const messageElement = document.getElementById(`message-${highlightedMessageId}`);
-      if (messageElement) {
-        // Find the scrollable container (parent with overflow-y-auto)
-        const scrollContainer = messageElement.closest('.overflow-y-auto') as HTMLElement | null;
-        
-        if (scrollContainer) {
-          // Manual scroll calculation for reliable mobile behavior
-          const containerRect = scrollContainer.getBoundingClientRect();
-          const messageRect = messageElement.getBoundingClientRect();
-          const offsetTop = messageRect.top - containerRect.top + scrollContainer.scrollTop;
-          const targetScroll = offsetTop - containerRect.height / 2 + messageRect.height / 2;
-          
-          scrollContainer.scrollTo({
-            top: targetScroll,
-            behavior: 'smooth',
-          });
-        } else {
-          // Fallback
-          messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
+      if (!messageElement) return;
 
-        hasScrolledRef.current = true;
+      const scrollContainer = findScrollContainer(messageElement);
 
-        // Clear the URL param after animation completes
-        highlightTimeoutRef.current = setTimeout(() => {
-          clearMessageParam();
-        }, 2500);
+      if (scrollContainer) {
+        // Calculate the target scroll position to center the message
+        const containerRect = scrollContainer.getBoundingClientRect();
+        const messageRect = messageElement.getBoundingClientRect();
+        const currentScrollTop = scrollContainer.scrollTop;
+        const messageTopRelative = messageRect.top - containerRect.top + currentScrollTop;
+        const targetScroll = messageTopRelative - (containerRect.height / 2) + (messageRect.height / 2);
+
+        scrollContainer.scrollTo({
+          top: Math.max(0, targetScroll),
+          behavior: 'smooth',
+        });
+      } else {
+        // Fallback for edge cases
+        messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
-    }, 100);
+
+      hasScrolledRef.current = true;
+
+      // Clear the URL param after animation completes
+      if (highlightTimeoutRef.current) {
+        clearTimeout(highlightTimeoutRef.current);
+      }
+      highlightTimeoutRef.current = setTimeout(() => {
+        clearMessageParam();
+      }, 2500);
+    }, 150);
 
     return () => clearTimeout(scrollTimeout);
   }, [highlightedMessageId, messages, isLoading, clearMessageParam]);
 
-  // Reset on unmount or when message param changes
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      hasScrolledRef.current = false;
       if (highlightTimeoutRef.current) {
         clearTimeout(highlightTimeoutRef.current);
       }
     };
-  }, [highlightedMessageId]);
+  }, []);
 
   return { highlightedMessageId };
 };
