@@ -103,6 +103,10 @@ npm run release 1.0.1
 
 The script handles everything automatically!
 
+## Complete Release Workflow
+
+For detailed step-by-step instructions, see [RELEASE_WORKFLOW.md](../RELEASE_WORKFLOW.md) in the project root.
+
 ## Troubleshooting
 
 **"GITHUB_TOKEN not found"**
