@@ -26,6 +26,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { EmojiPicker } from '@/components/modals/EmojiPicker';
 import { useDMStore } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useUIStore } from '@/stores/uiStore';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { formatMessageTimestamp } from '@/lib/format';
 import type { DirectMessage } from '@/types';
@@ -52,6 +53,7 @@ export const DMMessageItem = memo(function DMMessageItem({ message, isFirst, onR
   const { user } = useAuthStore();
   const { editMessage, deleteMessage, addReaction, removeReaction } = useDMStore();
   const otherUser = useDMStore((state) => state.currentConversation?.other_user);
+  const { openModal } = useUIStore();
   const isMobile = useIsMobile();
   
   const [isEditing, setIsEditing] = useState(false);
@@ -201,7 +203,7 @@ export const DMMessageItem = memo(function DMMessageItem({ message, isFirst, onR
 
   // Computed class names
   const outerClassName = useMemo(() => {
-    const base = 'px-2';
+    const base = 'px-0';
     const padding = isFirst ? 'py-1' : 'py-px';
     const animation = shouldAnimate ? 'animate-message-slide-in' : '';
     return `${base} ${padding} ${animation}`.trim();
@@ -234,9 +236,9 @@ export const DMMessageItem = memo(function DMMessageItem({ message, isFirst, onR
               onTouchMove={clearLongPress}
               onClick={(e) => {
                 // Click-to-reply: trigger reply when clicking on message body
-                // Don't trigger on interactive elements
+                // Don't trigger on interactive elements or avatar/username (those open profile)
                 const target = e.target as HTMLElement;
-                const isInteractive = target.closest('button, a, input, textarea, [role="button"], [contenteditable], img.cursor-pointer, .hover-actions-menu');
+                const isInteractive = target.closest('button, a, input, textarea, [role="button"], [contenteditable], img.cursor-pointer, .hover-actions-menu, .dm-avatar-click, .dm-username-click');
                 if (!isInteractive && !isEditing && onReply) {
                   onReply(message);
                 }
@@ -245,11 +247,19 @@ export const DMMessageItem = memo(function DMMessageItem({ message, isFirst, onR
               {/* Avatar / Timestamp column */}
               <div className="w-10 flex-shrink-0">
                 {isFirst && message.sender ? (
-                  <AvatarWithDecoration 
-                    user={message.sender} 
-                    className="w-10 h-10"
-                    active={isRowHovered}
-                  />
+                  <div 
+                    className="dm-avatar-click cursor-pointer" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openModal('userProfile', { userId: message.sender_id });
+                    }}
+                  >
+                    <AvatarWithDecoration 
+                      user={message.sender} 
+                      className="w-10 h-10"
+                      active={isRowHovered}
+                    />
+                  </div>
                 ) : (
                   <div className="h-full flex items-center justify-center">
                     <span className="text-[10px] font-[Inter,system-ui,sans-serif] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150">
@@ -263,7 +273,13 @@ export const DMMessageItem = memo(function DMMessageItem({ message, isFirst, onR
               <div className="flex-1 min-w-0">
                 {isFirst && (
                   <div className="flex items-baseline gap-2 mb-0.5 font-[Inter,system-ui,sans-serif]">
-                    <span className="text-[14px] sm:text-[15px] font-medium text-foreground leading-tight">
+                    <span 
+                      className="dm-username-click text-[14px] sm:text-[15px] font-medium text-foreground leading-tight cursor-pointer hover:underline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openModal('userProfile', { userId: message.sender_id });
+                      }}
+                    >
                       {message.sender?.display_name || message.sender?.username}
                     </span>
                     <span className="text-[11px] sm:text-[12px] text-muted-foreground leading-none">
