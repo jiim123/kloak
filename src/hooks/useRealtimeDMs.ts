@@ -40,18 +40,21 @@ export const useRealtimeDMs = ({
   const { addMessage, updateMessage, removeMessage, updateConversation, fetchConversations } = useDMStore();
   const conversationIdsRef = useRef<Set<string>>(new Set());
 
+  const onNewMessageRef = useRef(onNewMessage);
+  onNewMessageRef.current = onNewMessage;
+
   // Handle incoming message
   const handleNewMessage = useCallback(
     async (payload: any) => {
       const newMessageData = payload.new;
 
-      // Fetch complete message with sender info
+      // Fetch complete message with sender info (only needed columns)
       const { data } = await supabase
         .from('direct_messages')
         .select(`
           *,
-          sender:users (*),
-          reactions:dm_reactions (*)
+          sender:users (id, username, display_name, avatar_url, banner_url, avatar_decoration, profile_effect, banner_color, profile_theme_primary, profile_theme_accent, bio, status, custom_status, created_at, last_seen, pronouns),
+          reactions:dm_reactions (id, message_id, user_id, emoji)
         `)
         .eq('id', newMessageData.id)
         .single();
@@ -93,11 +96,11 @@ export const useRealtimeDMs = ({
       // Notify callback (for unread tracking)
       // Get the current conversation from store to check if we're viewing it
       const currentConvId = useDMStore.getState().currentConversation?.id;
-      if (onNewMessage && newMessageData.sender_id !== userId) {
-        onNewMessage(message, newMessageData.conversation_id);
+      if (onNewMessageRef.current && newMessageData.sender_id !== userId) {
+        onNewMessageRef.current(message, newMessageData.conversation_id);
       }
     },
-    [addMessage, updateConversation, onNewMessage, userId]
+    [addMessage, updateConversation, userId]
   );
 
   // Handle message updates (edits)

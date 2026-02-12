@@ -42,7 +42,7 @@ export const useUnread = (serverChannelIds: string[] = []) => {
     // Avoid refetching if channel IDs haven't changed
     const idsString = [...serverChannelIds].sort().join(',');
     const prevIdsString = [...channelIdsRef.current].sort().join(',');
-    if (!opts?.force && idsString === prevIdsString && Object.keys(unreadState).length > 0) return;
+    if (!opts?.force && idsString === prevIdsString) return;
     
     channelIdsRef.current = [...serverChannelIds];
     const seq = ++fetchSeqRef.current;
@@ -115,7 +115,7 @@ export const useUnread = (serverChannelIds: string[] = []) => {
         fetchUnreadCounts({ force: true });
       }
     }
-  }, [user, serverChannelIds, unreadState]);
+  }, [user, channelIdsKey]);
 
   // Mark channel as read
   const markAsRead = useCallback(

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams, useLocation, useParams, Outlet } from 'react-router-dom';
 import { useAuthStore, initializeAuth } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -190,15 +190,19 @@ const AppLayout = () => {
   // Real-time DMs at app level so messages are received even when not viewing DMs
   const unreadDMs = useUnreadDMs(user?.id || null);
   const { incrementUnread } = unreadDMs;
+  const currentConversationIdRef = useRef(currentConversation?.id);
+  currentConversationIdRef.current = currentConversation?.id;
+
+  const stableOnNewMessage = useCallback((message: any, conversationId: string) => {
+    if (conversationId !== currentConversationIdRef.current) {
+      incrementUnread(conversationId);
+    }
+  }, [incrementUnread]);
+
   useRealtimeDMs({
     userId: user?.id || null,
     currentConversationId: currentConversation?.id || null,
-    onNewMessage: (message, conversationId) => {
-      // Increment unread if not viewing that conversation
-      if (conversationId !== currentConversation?.id) {
-        incrementUnread(conversationId);
-      }
-    },
+    onNewMessage: stableOnNewMessage,
   });
 
   // Background sync (handles offline queue, reconnection, periodic refresh)
