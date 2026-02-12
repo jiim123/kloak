@@ -281,6 +281,10 @@ export const DMMessageInput = ({
     const messageContent = content.trim();
     
     setContent('');
+    if (draftSaveTimeoutRef.current) {
+      clearTimeout(draftSaveTimeoutRef.current);
+      draftSaveTimeoutRef.current = null;
+    }
     clearDraft(`dm-${conversationId}`);
     const currentReplyTo = replyingTo;
     onCancelReply?.();
