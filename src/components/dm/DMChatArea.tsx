@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo, useLayoutEffect } from 'react';
 import { ArrowDown, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StackedAvatars } from '@/components/ui/stacked-avatars';
@@ -36,10 +36,19 @@ export const DMChatArea = () => {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-  
+  const scrollRAFRef = useRef<number | null>(null);
+  const needsScrollRef = useRef(true);
+  const prevConversationIdRef = useRef<string | null>(null);
+
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [newMessageCount, setNewMessageCount] = useState(0);
   const [replyingTo, setReplyingTo] = useState<DirectMessage | null>(null);
+
+  // Detect conversation switch during render phase (synchronous)
+  if (prevConversationIdRef.current !== currentConversation?.id) {
+    prevConversationIdRef.current = currentConversation?.id || null;
+    needsScrollRef.current = true;
+  }
 
   // Swipe gesture for mobile - swipe right to open sidebar
   const swipeRef = useSwipeGestureRef({
@@ -53,8 +62,20 @@ export const DMChatArea = () => {
     if (currentConversation?.id && user?.id) {
       fetchMessages(currentConversation.id, user.id);
       markAsRead(currentConversation.id);
+      setNewMessageCount(0);
+      setIsAtBottom(true);
     }
   }, [currentConversation?.id, user?.id, fetchMessages, markAsRead]);
+
+  // Scroll to bottom AFTER messages render on conversation switch
+  // useLayoutEffect fires synchronously after DOM mutations but before paint
+  useLayoutEffect(() => {
+    if (needsScrollRef.current && messages.length > 0) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
+      setIsAtBottom(true);
+      needsScrollRef.current = false;
+    }
+  }, [messages.length, currentConversation?.id]);
 
   // Removed: visibility-change handler was redundant — realtime handles incoming messages
 
@@ -75,40 +96,63 @@ export const DMChatArea = () => {
     }
   }, [isAtBottom]);
 
-  // Check scroll position
-  const handleScroll = useCallback(() => {
-    const container = messagesContainerRef.current;
-    if (!container) return;
-
-    const { scrollTop, scrollHeight, clientHeight } = container;
-    const atBottom = scrollHeight - scrollTop - clientHeight < 100;
-    setIsAtBottom(atBottom);
+  // Cleanup RAF on unmount
+  useEffect(() => {
+    return () => {
+      if (scrollRAFRef.current !== null) {
+        cancelAnimationFrame(scrollRAFRef.current);
+      }
+    };
   }, []);
 
-  const scrollToBottom = () => {
+  // Check scroll position with RAF debouncing for better performance
+  const handleScroll = useCallback(() => {
+    // Cancel any pending RAF to debounce scroll updates
+    if (scrollRAFRef.current !== null) {
+      cancelAnimationFrame(scrollRAFRef.current);
+    }
+
+    scrollRAFRef.current = requestAnimationFrame(() => {
+      const container = messagesContainerRef.current;
+      if (!container) return;
+
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const atBottom = scrollHeight - scrollTop - clientHeight < 100;
+
+      // Only update state if value changed to prevent unnecessary re-renders
+      setIsAtBottom((prev) => {
+        if (prev !== atBottom) {
+          return atBottom;
+        }
+        return prev;
+      });
+
+      scrollRAFRef.current = null;
+    });
+  }, []);
+
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     setNewMessageCount(0);
     setIsAtBottom(true);
-  };
+  }, []);
 
-  // Group messages by sender within 5 minutes
-  const groupMessages = (msgs: DirectMessage[]) => {
+  // Group messages by sender within 5 minutes - memoized to prevent recalculation
+  const groupedMessages = useMemo(() => {
     const groups: { message: DirectMessage; isFirst: boolean }[] = [];
-    
-    msgs.forEach((msg, index) => {
-      const prevMsg = msgs[index - 1];
+
+    messages.forEach((msg, index) => {
+      const prevMsg = messages[index - 1];
       const isFirst =
         !prevMsg ||
         prevMsg.sender_id !== msg.sender_id ||
         new Date(msg.created_at || '').getTime() - new Date(prevMsg.created_at || '').getTime() > 5 * 60 * 1000;
-      
+
       groups.push({ message: msg, isFirst });
     });
 
     return groups;
-  };
-
-  const groupedMessages = groupMessages(messages);
+  }, [messages]);
 
   // Determine if this is a group conversation
   const isGroup = currentConversation?.is_group || false;

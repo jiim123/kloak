@@ -478,30 +478,37 @@ const AppLayout = () => {
                 <ResizablePanel defaultSize={isMemberSidebarOpen && !isDMView && !isServerSpecialView ? 70 : 85}>
                   <div className="h-full bg-layout-chat relative overflow-hidden">
                     <VoicePersistentHost />
-                    {isDMView ? (
-                      currentConversation ? (
+                    {/* Keep all views mounted, toggle visibility with CSS to prevent remount sluggishness */}
+                    {/* DM Chat Area - only render if conversation exists, keep mounted when switching to servers */}
+                    {currentConversation && (
+                      <div className={isDMView && currentConversation ? 'block h-full' : 'hidden'}>
                         <DMChatArea />
-                      ) : (
-                        <>
-                          <div className={showFriends ? 'block h-full' : 'hidden'}>
-                            <FriendsList onOpenDM={() => navigate('/app')} />
-                          </div>
-                          <div className={showExplore ? 'block h-full' : 'hidden'}>
-                            <ExploreServers />
-                          </div>
-                          <div className={!showFriends && !showExplore ? 'block h-full' : 'hidden'}>
-                            <HomeLanding />
-                          </div>
-                        </>
-                      )
-                    ) : (
-                      isServerOverviewView ? (
-                        <ServerOverviewView />
-                      ) : isServerMembersViewAllowed ? (
-                        <ServerMembersView />
-                      ) : (
-                        <ChatArea />
-                      )
+                      </div>
+                    )}
+                    {/* DM Landing Views */}
+                    {isDMView && !currentConversation && (
+                      <>
+                        <div className={showFriends ? 'block h-full' : 'hidden'}>
+                          <FriendsList onOpenDM={() => navigate('/app')} />
+                        </div>
+                        <div className={showExplore ? 'block h-full' : 'hidden'}>
+                          <ExploreServers />
+                        </div>
+                        <div className={!showFriends && !showExplore ? 'block h-full' : 'hidden'}>
+                          <HomeLanding />
+                        </div>
+                      </>
+                    )}
+                    {/* Server Views - only render if server exists, keep mounted when switching to DMs */}
+                    {currentServer && (
+                      <>
+                        {isServerOverviewView && <ServerOverviewView />}
+                        {isServerMembersViewAllowed && <ServerMembersView />}
+                        {/* Chat Area - keep mounted, toggle visibility */}
+                        <div className={!isServerOverviewView && !isServerMembersViewAllowed && !isDMView ? 'block h-full' : 'hidden'}>
+                          <ChatArea />
+                        </div>
+                      </>
                     )}
                   </div>
                 </ResizablePanel>
@@ -522,30 +529,37 @@ const AppLayout = () => {
           {/* Mobile layout */}
           <div className="flex-1 md:hidden overflow-hidden bg-layout-chat relative">
             <VoicePersistentHost />
-            {isDMView ? (
-              currentConversation ? (
+            {/* Keep all views mounted, toggle visibility with CSS to prevent remount sluggishness */}
+            {/* DM Chat Area - only render if conversation exists, keep mounted when switching to servers */}
+            {currentConversation && (
+              <div className={isDMView && currentConversation ? 'block h-full' : 'hidden'}>
                 <DMChatArea />
-              ) : (
-                <>
-                  <div className={showFriends ? 'block h-full' : 'hidden'}>
-                    <FriendsList onOpenDM={() => navigate('/app')} />
-                  </div>
-                  <div className={showExplore ? 'block h-full' : 'hidden'}>
-                    <ExploreServers />
-                  </div>
-                  <div className={!showFriends && !showExplore ? 'block h-full' : 'hidden'}>
-                    <HomeLanding />
-                  </div>
-                </>
-              )
-            ) : (
-              isServerOverviewView ? (
-                <ServerOverviewView />
-              ) : isServerMembersViewAllowed ? (
-                <ServerMembersView />
-              ) : (
-                <ChatArea />
-              )
+              </div>
+            )}
+            {/* DM Landing Views */}
+            {isDMView && !currentConversation && (
+              <>
+                <div className={showFriends ? 'block h-full' : 'hidden'}>
+                  <FriendsList onOpenDM={() => navigate('/app')} />
+                </div>
+                <div className={showExplore ? 'block h-full' : 'hidden'}>
+                  <ExploreServers />
+                </div>
+                <div className={!showFriends && !showExplore ? 'block h-full' : 'hidden'}>
+                  <HomeLanding />
+                </div>
+              </>
+            )}
+            {/* Server Views - only render if server exists, keep mounted when switching to DMs */}
+            {currentServer && (
+              <>
+                {isServerOverviewView && <ServerOverviewView />}
+                {isServerMembersViewAllowed && <ServerMembersView />}
+                {/* Chat Area - keep mounted, toggle visibility */}
+                <div className={!isServerOverviewView && !isServerMembersViewAllowed && !isDMView ? 'block h-full' : 'hidden'}>
+                  <ChatArea />
+                </div>
+              </>
             )}
           </div>
         </div>
