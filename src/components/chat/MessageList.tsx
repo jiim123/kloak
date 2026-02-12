@@ -138,7 +138,7 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   // We always refetch, but silently (no loading indicator) if we already have messages.
   const hiddenTimeRef = useRef<number | null>(null);
   const isRefetchingRef = useRef(false);
-  
+
   useEffect(() => {
     const handleFocus = () => {
       // Always refetch when tab regains focus to catch missed realtime messages
@@ -153,7 +153,7 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
       }
       hiddenTimeRef.current = null;
     };
-    
+
     const handleVisibility = () => {
       if (document.visibilityState === "hidden") {
         // Track when tab becomes hidden
@@ -305,7 +305,9 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
 
         {/* Channel welcome message - enhanced empty state */}
         {!isLoading && messages.length === 0 && (
-          <div className={`flex flex-col px-4 pt-16 pb-8 ${currentChannel?.ghost_mode ? 'items-center text-center' : 'items-start'}`}>
+          <div
+            className={`flex flex-col px-4 pt-16 pb-8 ${currentChannel?.ghost_mode ? "items-center text-center" : "items-start"}`}
+          >
             {currentChannel?.ghost_mode ? (
               <>
                 <div className="relative mb-6">
@@ -316,8 +318,8 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
                 </div>
                 <h2 className="text-2xl font-bold text-foreground mb-3">Anonymous Channel</h2>
                 <p className="text-muted-foreground max-w-sm leading-relaxed">
-                  Messages in <span className="font-semibold text-foreground">#{channelName}</span> are anonymous. 
-                  Your identity stays hidden from other members.
+                  Messages in <span className="font-semibold text-foreground">#{channelName}</span> are anonymous. Your
+                  identity stays hidden from other members.
                 </p>
               </>
             ) : (
