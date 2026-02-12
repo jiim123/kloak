@@ -6,7 +6,7 @@ import { useDMStore } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useFriendStore } from '@/stores/friendStore';
-import { useUnreadDMs } from '@/hooks/useUnreadDMs';
+import { useUnreadDMsContext } from '@/hooks/useUnreadDMsContext';
 import { useSwipeGestureRef } from '@/hooks/useSwipeGesture';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { DMMessageInput } from './DMMessageInput';
@@ -20,7 +20,7 @@ export const DMChatArea = () => {
   const { currentConversation, isLoading, fetchMessages, getMessages } = useDMStore();
   const { setMobileSidebarOpen } = useUIStore();
   const { blockedUsers, visibilityBlockedUserIds } = useFriendStore();
-  const { markAsRead } = useUnreadDMs(user?.id || null);
+  const { markAsRead } = useUnreadDMsContext();
   const isMobile = useIsMobile();
   
   // Get messages for current conversation from cache
@@ -56,17 +56,7 @@ export const DMChatArea = () => {
     }
   }, [currentConversation?.id, user?.id, fetchMessages, markAsRead]);
 
-  // Silently refresh messages when tab becomes visible (catches missed realtime events)
-  useEffect(() => {
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible' && currentConversation?.id && user?.id) {
-        fetchMessages(currentConversation.id, user.id);
-        markAsRead(currentConversation.id);
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [currentConversation?.id, user?.id, fetchMessages, markAsRead]);
+  // Removed: visibility-change handler was redundant — realtime handles incoming messages
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {

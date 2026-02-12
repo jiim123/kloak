@@ -71,7 +71,11 @@ export const useDMStore = create<DMState>((set, get) => ({
   isLoading: false,
 
   fetchConversations: async (userId: string) => {
-    set({ isLoading: true });
+    // Only show loading when we have no cached conversations (silent background refresh)
+    const hasCached = get().conversations.length > 0;
+    if (!hasCached) {
+      set({ isLoading: true });
+    }
 
     try {
       // Use RPC function to fetch conversations

@@ -49,6 +49,7 @@ import { useDMStore } from '@/stores/dmStore';
 import { useFriendStore } from '@/stores/friendStore';
 import { supabase } from '@/integrations/supabase/client';
 import { usePresence, useRealtimeFriendships, useRealtimeUsers, useRealtimeServer, useRealtimeNotifications, useRealtimeDMs, useUnreadDMs, useRealtimeMessages, useRealtimeReactions, useTauriNotificationActions, useRealtimeOwnMembership } from '@/hooks';
+import { UnreadDMsContext } from '@/hooks/useUnreadDMsContext';
 import { useMemberPermissions } from '@/hooks/useMemberPermissions';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useBackgroundSync } from '@/hooks/useBackgroundSync';
@@ -187,7 +188,8 @@ const AppLayout = () => {
   useRealtimeReactions(currentChannel?.id || null);
 
   // Real-time DMs at app level so messages are received even when not viewing DMs
-  const { incrementUnread } = useUnreadDMs(user?.id || null);
+  const unreadDMs = useUnreadDMs(user?.id || null);
+  const { incrementUnread } = unreadDMs;
   useRealtimeDMs({
     userId: user?.id || null,
     currentConversationId: currentConversation?.id || null,
@@ -348,6 +350,15 @@ const AppLayout = () => {
   // DM View (no server selected)
   const isDMView = currentServer === null;
 
+  const unreadDMsContextValue = useMemo(() => ({
+    getUnreadCount: unreadDMs.getUnreadCount,
+    markAsRead: unreadDMs.markAsRead,
+    incrementUnread: unreadDMs.incrementUnread,
+    totalUnread: unreadDMs.totalUnread,
+    hasUnread: unreadDMs.hasUnread,
+    refetch: unreadDMs.refetch,
+  }), [unreadDMs.getUnreadCount, unreadDMs.markAsRead, unreadDMs.incrementUnread, unreadDMs.totalUnread, unreadDMs.hasUnread, unreadDMs.refetch]);
+
   // Show loading state - AFTER all hooks
   // Only full-screen block when we truly don't have a user yet.
   if (isLoading && !user) {
@@ -382,7 +393,7 @@ const AppLayout = () => {
           : "Kloak";
 
   return (
-    <>
+    <UnreadDMsContext.Provider value={unreadDMsContextValue}>
       <SEO title={desktopTitle} noIndex />
       <div className="h-screen flex flex-col overflow-hidden">
         <DesktopTitleBar title={desktopTitle} />
@@ -562,7 +573,7 @@ const AppLayout = () => {
 
       {/* Nested route placeholder (AppLayout is the /app layout route) */}
       <Outlet />
-    </>
+    </UnreadDMsContext.Provider>
   );
 };
 

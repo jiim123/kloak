@@ -243,6 +243,15 @@ export const useRealtimeDMs = ({
     };
   }, [userId, handleReactionChange]);
 
+  // Debounced fetchConversations to batch rapid dm_participants events
+  const fetchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debouncedFetchConversations = useCallback((uid: string) => {
+    if (fetchDebounceRef.current) clearTimeout(fetchDebounceRef.current);
+    fetchDebounceRef.current = setTimeout(() => {
+      fetchConversations(uid);
+    }, 500);
+  }, [fetchConversations]);
+
   // Also listen for new conversations
   useEffect(() => {
     if (!userId) return;
@@ -263,8 +272,8 @@ export const useRealtimeDMs = ({
         if (newConvId) {
           conversationIdsRef.current.add(newConvId);
         }
-        // Background refresh for full conversation data
-        fetchConversations(userId);
+        // Debounced background refresh for full conversation data
+        debouncedFetchConversations(userId);
         }
       )
       .on(
@@ -281,8 +290,8 @@ export const useRealtimeDMs = ({
         if (removedConvId) {
           conversationIdsRef.current.delete(removedConvId);
         }
-        // Background refresh
-        fetchConversations(userId);
+        // Debounced background refresh
+        debouncedFetchConversations(userId);
         }
       )
       .subscribe();

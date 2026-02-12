@@ -176,7 +176,7 @@ export const useUnreadDMs = (userId: string | null) => {
     const interval = setInterval(() => {
       if (document.visibilityState !== 'visible') return;
       fetchUnreadCounts();
-    }, 30000);
+    }, 60000);
     return () => clearInterval(interval);
   }, [userId, fetchUnreadCounts]);
 

@@ -11,7 +11,7 @@ import { VoiceConnectedBanner } from "@/components/layout/VoiceConnectedBanner";
 import { CreateGroupModal } from "@/components/dm/CreateGroupModal";
 import { useDMStore } from "@/stores/dmStore";
 import { useAuthStore } from "@/stores/authStore";
-import { useUnreadDMs } from "@/hooks/useUnreadDMs";
+import { useUnreadDMsContext } from "@/hooks/useUnreadDMsContext";
 import { formatCompactTime } from "@/lib/format";
 import { getEffectivePresence } from "@/lib/presence";
 import { ConversationItemSkeleton } from "@/components/ui/skeletons";
@@ -28,7 +28,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { conversations, currentConversation, fetchConversations, setCurrentConversation, isLoading } = useDMStore();
-  const { getUnreadCount, markAsRead } = useUnreadDMs(user?.id || null);
+  const { getUnreadCount, markAsRead } = useUnreadDMsContext();
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateGroup, setShowCreateGroup] = useState(false);
 
@@ -39,17 +39,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
     }
   }, [user?.id, fetchConversations]);
 
-  // Refetch conversations when the tab becomes visible (user switches back to app)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible" && user?.id) {
-        fetchConversations(user.id);
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [user?.id, fetchConversations]);
+  // Removed: visibility-change handler was redundant with useRealtimeDMs subscription
 
   const filteredConversations = conversations.filter((conv) => {
     if (!searchQuery) return true;

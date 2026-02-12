@@ -80,7 +80,7 @@ export const patchUserAcrossStores = (updatedUser: Partial<User> & { id: string 
 
 // Reduced polling interval from 45s to 15s for better presence updates
 // Targeted realtime subscriptions handle most updates; this is fallback for friends list
-const PRESENCE_POLL_INTERVAL_MS = 15_000;
+const PRESENCE_POLL_INTERVAL_MS = 45_000;
 
 /**
  * Hook for targeted presence updates.
@@ -118,9 +118,9 @@ export const useRealtimeUsers = () => {
 
       if (userIds.size === 0) return;
 
-      // Throttle: don't poll more than once per 10 seconds
+      // Throttle: don't poll more than once per 30 seconds
       const now = Date.now();
-      if (now - lastPollRef.current < 10_000) return;
+      if (now - lastPollRef.current < 30_000) return;
       lastPollRef.current = now;
 
       // Fetch only the columns we need (optimized query)
