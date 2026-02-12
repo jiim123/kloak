@@ -26,6 +26,11 @@ export const useTyping = (channelId: string | null) => {
     return () => clearInterval(interval);
   }, []);
 
+  // Clear typing users when channel changes
+  useEffect(() => {
+    setTypingUsers([]);
+  }, [channelId]);
+
   // Subscribe to typing events
   useEffect(() => {
     if (!channelId || !user) return;
