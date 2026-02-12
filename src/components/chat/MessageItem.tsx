@@ -914,8 +914,11 @@ export const MessageItem = memo(function MessageItem({
                       <div
                         className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1 cursor-pointer hover:text-foreground flex-nowrap overflow-hidden"
                         onClick={handleReplyClick}
+                        onTouchStart={(e) => {
+                          // Stop parent long-press timer from starting when tapping reply preview
+                          e.stopPropagation();
+                        }}
                         onTouchEnd={(e) => {
-                          // Prevent parent long-press handler from intercepting taps on reply preview
                           e.stopPropagation();
                         }}
                       >
