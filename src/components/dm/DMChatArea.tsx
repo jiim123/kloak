@@ -224,7 +224,7 @@ export const DMChatArea = () => {
         )}
 
         {/* Messages */}
-        {isLoading ? (
+        {isLoading && messages.length === 0 ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-pulse-subtle text-muted-foreground">Loading messages...</div>
           </div>
