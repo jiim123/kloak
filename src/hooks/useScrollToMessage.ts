@@ -32,7 +32,25 @@ export const useScrollToMessage = ({ messages, isLoading }: UseScrollToMessageOp
     const scrollTimeout = setTimeout(() => {
       const messageElement = document.getElementById(`message-${highlightedMessageId}`);
       if (messageElement) {
-        messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Find the scrollable container (parent with overflow-y-auto)
+        const scrollContainer = messageElement.closest('.overflow-y-auto') as HTMLElement | null;
+        
+        if (scrollContainer) {
+          // Manual scroll calculation for reliable mobile behavior
+          const containerRect = scrollContainer.getBoundingClientRect();
+          const messageRect = messageElement.getBoundingClientRect();
+          const offsetTop = messageRect.top - containerRect.top + scrollContainer.scrollTop;
+          const targetScroll = offsetTop - containerRect.height / 2 + messageRect.height / 2;
+          
+          scrollContainer.scrollTo({
+            top: targetScroll,
+            behavior: 'smooth',
+          });
+        } else {
+          // Fallback
+          messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
         hasScrolledRef.current = true;
 
         // Clear the URL param after animation completes
