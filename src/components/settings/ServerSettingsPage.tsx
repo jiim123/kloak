@@ -2624,72 +2624,81 @@ export const ServerSettingsPage = () => {
 
                   {/* Emoji list */}
                   <div className="space-y-2">
-                    <h4 className="text-sm font-semibold">Server Emojis</h4>
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-semibold">Server Emojis</h4>
+                      <span className="text-xs text-muted-foreground">{serverEmojis.length}/{MAX_SERVER_EMOJIS} slots</span>
+                    </div>
                     {serverEmojis.length > 0 ? (
-                      <ScrollArea className="h-[calc(100vh-28rem)] pr-4">
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                          {serverEmojisWithUrls.map((emoji) => (
-                            <div
-                              key={emoji.id}
-                              className="flex items-center gap-3 p-2 rounded-lg border bg-background/40 h-14"
-                            >
-                              <img
-                                src={emoji.url}
-                                alt={emoji.name}
-                                className="w-10 h-10 flex-shrink-0 rounded-md object-contain bg-secondary"
-                                loading="lazy"
-                              />
-                              <div className="min-w-0 flex-1">
-                                {editingEmojiId === emoji.id ? (
-                                  <form onSubmit={(e) => { e.preventDefault(); renameServerEmoji(emoji.id, editingEmojiName); }}>
-                                    <input
-                                      autoFocus
-                                      className="w-full text-sm font-medium bg-secondary/50 border border-border rounded px-2 py-1 outline-none focus:ring-1 focus:ring-ring/50"
-                                      value={editingEmojiName}
-                                      onChange={(e) => setEditingEmojiName(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                                      onKeyDown={(e) => { if (e.key === 'Escape') setEditingEmojiId(null); }}
-                                      onBlur={() => setTimeout(() => setEditingEmojiId(null), 150)}
-                                      maxLength={32}
-                                    />
-                                  </form>
-                                ) : (
-                                  <>
-                                    <div className="text-sm font-medium truncate">:{emoji.name}:</div>
-                                    <div className="text-xs text-muted-foreground truncate">{emoji.name}</div>
-                                  </>
-                                )}
-                              </div>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => { setEditingEmojiId(emoji.id); setEditingEmojiName(emoji.name); }}
-                                className="text-muted-foreground hover:text-foreground h-8 px-2 flex-shrink-0"
-                                title="Rename emoji"
-                              >
-                                <Pencil className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => deleteServerEmoji(emoji)}
-                                className="text-muted-foreground hover:text-destructive h-8 px-2 flex-shrink-0"
-                                title="Delete emoji"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          ))}
+                      <div className="rounded-lg border border-border overflow-hidden">
+                        {/* Table header */}
+                        <div className="flex items-center gap-4 px-4 py-2 bg-secondary/40 border-b border-border text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          <span className="w-10">Image</span>
+                          <span className="flex-1">Name</span>
+                          <span className="w-20 text-right">Actions</span>
                         </div>
-                      </ScrollArea>
+                        {/* Table rows */}
+                        <ScrollArea className="max-h-[calc(100vh-28rem)]">
+                          <div className="divide-y divide-border">
+                            {serverEmojisWithUrls.map((emoji) => (
+                              <div
+                                key={emoji.id}
+                                className="group flex items-center gap-4 px-4 py-2.5 hover:bg-secondary/20 transition-colors"
+                              >
+                                <img
+                                  src={emoji.url}
+                                  alt={emoji.name}
+                                  className="w-10 h-10 flex-shrink-0 rounded object-contain"
+                                  loading="lazy"
+                                />
+                                <div className="min-w-0 flex-1">
+                                  {editingEmojiId === emoji.id ? (
+                                    <form onSubmit={(e) => { e.preventDefault(); renameServerEmoji(emoji.id, editingEmojiName); }}>
+                                      <input
+                                        autoFocus
+                                        className="w-full max-w-[200px] text-sm font-medium bg-secondary/50 border border-border rounded px-2 py-1 outline-none focus:ring-1 focus:ring-ring/50"
+                                        value={editingEmojiName}
+                                        onChange={(e) => setEditingEmojiName(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                                        onKeyDown={(e) => { if (e.key === 'Escape') setEditingEmojiId(null); }}
+                                        onBlur={() => setTimeout(() => setEditingEmojiId(null), 150)}
+                                        maxLength={32}
+                                      />
+                                    </form>
+                                  ) : (
+                                    <span className="text-sm font-medium">:{emoji.name}:</span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1 w-20 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => { setEditingEmojiId(emoji.id); setEditingEmojiName(emoji.name); }}
+                                    className="text-muted-foreground hover:text-foreground h-8 w-8 p-0"
+                                    title="Rename emoji"
+                                  >
+                                    <Pencil className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => deleteServerEmoji(emoji)}
+                                    className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
+                                    title="Delete emoji"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </ScrollArea>
+                      </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center py-8 text-center">
                         <Smile className="w-12 h-12 text-muted-foreground/50 mb-3" />
                         <p className="text-sm text-muted-foreground">No custom emojis yet</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Upload your first emoji above
-                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">Upload your first emoji above</p>
                       </div>
                     )}
                   </div>
