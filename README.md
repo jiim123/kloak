@@ -4,7 +4,7 @@ A privacy-first communication platform. An alternative to Discord that doesn't m
 
 **What is Kloak**
 
-Kloak is a messaging platform where privacy is built into the architecture, not bolted on as a feature. It is hosted in Sweden under Swedish privacy law, uses cryptographic secret keys instead of email and password logins, and is funded by subscriptions instead of ads or data harvesting.
+Kloak is a messaging platform where privacy is built into the architecture, not bolted on as a feature. It uses cryptographic secret keys instead of email and password logins, and is funded by subscriptions instead of ads or data harvesting.
 
 **Features**
 
