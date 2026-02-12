@@ -1,0 +1,556 @@
+---
+alwaysApply: true
+---
+
+Kloak - Complete Technical Documentation
+1. Project Overview and Core Philosophy
+What is Kloak?
+Kloak is a production-ready, privacy-first Discord clone built as a real-time communication platform. The fundamental philosophy that distinguishes Kloak from other chat platforms is its unwavering commitment to user privacy. The core principle is: "Privacy is not a feature. It's the architecture."
+
+Privacy-First Approach
+Unlike traditional platforms that require email addresses, phone numbers, or passwords, Kloak uses a revolutionary authentication system based entirely on cryptographically generated secret keys. Users receive a 64-character hexadecimal key upon account creation that serves as their sole means of authentication. This key is:
+
+Generated client-side using crypto.getRandomValues()
+Hashed with SHA-256 before being stored in the database
+Never transmitted in plain form after the initial display
+Unrecoverable if lost (by design)
+This approach eliminates the need for personal identifying information, making it impossible to track users across platforms or recover accounts through social engineering.
+
+2. Technology Stack
+Frontend Architecture
+The frontend is built on a modern React-based stack:
+
+React 18+ with TypeScript for type-safe component development
+Vite as the build tool for fast development and optimized production builds
+React Router v6 for client-side routing with nested route support
+Tailwind CSS for utility-first styling with a neutral color palette
+shadcn/ui components built on Radix UI primitives for accessible UI elements
+Framer Motion for animations and transitions
+Lucide React for consistent iconography
+State Management
+Zustand is used for global state management due to its simplicity and performance. The application maintains several interconnected stores:
+
+authStore: User authentication, session management, and presence status
+serverStore: Servers, channels, categories, members, roles, and permissions
+messageStore: Channel messages with per-channel caching
+dmStore: Direct message conversations and messages
+friendStore: Friendships, pending requests, and blocked users
+uiStore: Theme, modals, sidebar states, and preferences
+notificationStore: User notifications
+voiceStore: Voice channel presence and connection state
+offlineQueueStore: Queued operations for offline support
+syncStore: Connection and synchronization status
+Backend Infrastructure
+The backend is powered by Supabase:
+
+PostgreSQL database with comprehensive schema
+Row Level Security (RLS) policies (set to permissive due to custom auth)
+SECURITY DEFINER RPC functions for secure mutations
+Supabase Realtime for instant message delivery, reactions, and presence
+Supabase Storage for avatars, server icons, and attachments
+Edge Functions for server-side operations (link previews, Discord template import)
+Desktop Application
+Kloak also supports a native desktop experience through Tauri, providing:
+
+Native window management
+System tray integration
+Desktop notifications
+Cross-platform support (Windows, macOS, Linux)
+3. Authentication System
+Secret Key Generation
+When a user creates an account, the following process occurs:
+
+User enters a username (3-20 characters, alphanumeric + underscores)
+Username availability is checked via check_username_available RPC
+A 64-character hex secret key is generated using crypto.getRandomValues()
+The key is hashed using SHA-256 (with a pure JS fallback for non-HTTPS contexts)
+The register_user RPC creates the user record with the hashed key
+The plain key is displayed ONCE to the user with strong warnings to save it
+Login Process
+Authentication works by:
+
+User pastes their 64-character secret key
+Key format is validated (must be 64 hex characters)
+Key is hashed client-side using SHA-256
+login_user RPC searches for a matching key_hash in the database
+If found, user data is returned and session is established
+The plain key is stored in localStorage (persisted via Zustand's persist middleware)
+Session Persistence
+The auth store uses Zustand's persist middleware to maintain sessions:
+
+secretKey is stored encrypted in localStorage under kloak-auth
+manualStatus (for DND/Invisible) is also persisted
+On app load, checkAuth() validates the stored key against the database
+Rate Limiting
+Security measures include:
+
+Account creation: 3 attempts per 5 minutes
+Login attempts: 5 per minute
+Rate limiters use sliding window algorithm with automatic cleanup
+4. Database Architecture
+Core Tables
+Users Table
+
+id (UUID, primary key)
+username (unique, 20 char max)
+key_hash (64 char, SHA-256 hash of secret key)
+display_name, avatar_url, banner_url, banner_color
+avatar_decoration, profile_effect (customization)
+bio, custom_status
+status (online/idle/dnd/offline)
+created_at, last_seen timestamps
+Servers Table
+
+id, name, icon_url, banner_url
+owner_id (references users)
+invite_code (unique, 8 characters)
+is_published (for Explore feature)
+about (server description)
+System channel settings for join/leave messages
+Channels Table
+
+id, server_id, category_id
+name, topic, type (text/voice/announcement/forum/media)
+position, is_nsfw, slowmode_seconds
+is_read_only, is_private, ghost_mode
+block_links, allowed_link_domains[]
+Messages Table
+
+id, channel_id, user_id
+reply_to_id (self-reference for threading)
+content, is_pinned, is_system_message
+edited_at, created_at
+Relationship Tables
+server_members: Links users to servers with roles and metadata
+channel_categories: Organizes channels into collapsible groups
+message_attachments: File uploads linked to messages
+reactions: Emoji reactions on messages
+friendships: Bidirectional friend relationships with status
+dm_conversations + dm_participants: Direct messaging
+channel_reads: Unread tracking per user per channel
+notifications: User notification queue
+server_roles + server_member_roles: Custom role system
+role_permissions + channel_permissions: Permission overrides
+RPC Functions
+Due to the custom authentication (no Supabase Auth), RLS policies are permissive and sensitive operations use SECURITY DEFINER RPC functions:
+
+register_user, login_user, check_username_available
+create_server_with_owner, join_server_by_invite, leave_server
+send_message, edit_message, delete_message
+get_user_servers, get_server_channels, get_server_members
+get_all_channel_unread_counts (batch optimized)
+Friend request RPCs: send_friend_request, accept_friend_request, etc.
+5. State Management Architecture
+Store Design Patterns
+Each Zustand store follows consistent patterns:
+
+State Shape: Typed interface defining all state properties
+Actions: Methods that modify state or trigger side effects
+Selectors: Computed values derived from state
+Persistence: Optional localStorage persistence for session data
+Data Flow
+User Action → Store Action → Supabase RPC → Database
+                                  ↓
+                            Realtime Subscription
+                                  ↓
+                         Store Update → UI Re-render
+Caching Strategy
+The messageStore implements intelligent caching:
+
+Messages are cached per channel with 5-minute TTL
+Pagination is supported through before parameter
+Force refresh available for visibility changes
+Cache invalidation on channel switch
+Cross-Store Communication
+Stores can access each other through direct imports:
+
+useAuthStore.getState() for user data in any context
+useFriendStore.getState().visibilityBlockedUserIds for filtering blocked users
+6. Real-time System
+Supabase Realtime Configuration
+Tables are configured with REPLICA IDENTITY FULL and included in the supabase_realtime publication:
+
+messages, reactions, channels, categories
+direct_messages, dm_reactions
+notifications, friendships
+server_members, users
+Subscription Hooks
+Real-time subscriptions are managed at the AppLayout level for stability:
+
+useRealtimeMessages: Subscribes to message INSERT/UPDATE/DELETE for the current channel
+
+User data cached with 60-second TTL to prevent redundant fetches
+Blocked users filtered from incoming messages
+Handles replies by looking up existing messages
+useRealtimeReactions: Tracks reaction changes and triggers re-grouping
+
+useRealtimeDMs: Global subscription for direct messages across all conversations
+
+useRealtimeNotifications: Listens for new notifications to update badges
+
+useRealtimeFriendships: Tracks friend request changes
+
+Typing Indicators
+Implemented using Supabase Broadcast (ephemeral, not persisted):
+
+startTyping() broadcasts typing event, debounced to every 2 seconds
+stopTyping() broadcasts stop event after 2 seconds of inactivity
+Recipients display typing users with animated dots
+Connection Recovery
+The system handles connection drops gracefully:
+
+Visibility change events trigger subscription health checks
+Failed subscriptions retry with exponential backoff (max 2 retries)
+Reconnection fetches missed messages
+7. UI Component Architecture
+Layout Structure
+The application uses a four-column Discord-style layout:
+
+Server Sidebar (72px fixed): Server icons, home button, add server button
+Channel Sidebar (240px, resizable): Server header, channel list, user panel
+Chat Area (flexible): Channel header, messages, input
+Member Sidebar (240px, collapsible): Online/offline member lists
+Responsive Design
+Mobile breakpoints adapt the layout:
+
+Desktop (≥768px): Full four-column layout
+Mobile (<768px): Single column with slide-out sidebars
+Touch gestures: Swipe right for channel sidebar, left for members
+Modal System
+Modals are managed through uiStore:
+
+activeModal: Current modal type
+modalData: Context data for the modal
+openModal(type, data) / closeModal()
+Available modals include server creation/joining, channel management, user settings, search, quick switcher, and more.
+
+Component Library
+Built on shadcn/ui primitives:
+
+Dialog, Sheet, Dropdown, Context Menu
+Tabs, Accordion, Collapsible
+Form inputs with validation
+Toast notifications via Sonner
+8. Servers and Channels
+Server Creation
+When creating a server:
+
+create_server_with_owner RPC executes
+Server record created with generated invite code
+Owner added to server_members with 'owner' role
+Default category "Text Channels" created
+Default #general channel created
+Default role permissions initialized
+Invite System
+Server invites use 8-character codes:
+
+Characters: Unambiguous alphanumeric (excludes 0, O, 1, I, L)
+Generated by database function generate_invite_code()
+Rate limited to 5 attempts per minute
+Channel Types
+Kloak supports multiple channel types:
+
+Text: Standard chat channels
+Voice: Real-time voice communication (WebRTC-based)
+Announcement: Rich text posts with comment sections
+Forum: Threaded discussions (planned)
+Media: Gallery-style image sharing (planned)
+Channel Features
+Categories: Collapsible groups with drag-and-drop reordering
+Read-only: Only admins can post
+Private: Visible only to explicitly added members
+Ghost mode: Hides usernames/avatars (except admins)
+Link blocking: Whitelist domains for allowed links
+Slowmode: Rate limit messages per user
+9. Messages and Reactions
+Message Sending
+The message flow:
+
+Content validated (2000 char limit, rate limiting)
+Mentions extracted and converted to <@user-id> format
+send_message RPC called with channel_id, user_id, content
+Attachments uploaded to Supabase Storage if present
+Optimistic update adds message to local state
+Realtime broadcasts to other users
+Message Features
+Replies: Reference another message with preview
+Editing: Updates message with edited_at timestamp
+Deletion: Removes message (own messages or admin)
+Pinning: Highlights important messages (admin only)
+Attachments: Images and files up to 10MB
+Polls: Interactive voting with multiple choice
+Reactions
+Reactions are emoji-based:
+
+Click to add/remove reaction
+Grouped by emoji with user count
+Custom server emojis supported
+Blocked user reactions filtered
+Message Formatting
+Supported markdown:
+
+Bold: **text**
+Italic: *text*
+Underline: __text__
+Strikethrough: ~~text~~
+Code: `code`
+Code blocks with syntax highlighting (Prism.js)
+Spoilers: ||hidden||
+@mentions and #channel-links
+10. Direct Messages
+Conversation Management
+DM conversations are tracked through:
+
+dm_conversations: Container for participants
+dm_participants: Links users to conversations
+direct_messages: Actual message content
+Opening a DM:
+
+open_dm_conversation RPC finds or creates conversation
+Both users added as participants
+Conversation appears in DM sidebar
+DM Features
+Feature parity with channel messages:
+
+Real-time delivery via global subscription
+Edit and delete support
+Reactions
+Reply threading
+Unread tracking per conversation
+Unread Tracking
+The useUnreadDMs hook maintains:
+
+Per-conversation unread counts
+Badge display in sidebar
+Mark-as-read on conversation view
+11. Friend System
+Friendship States
+pending: Request sent, awaiting acceptance
+accepted: Mutual friends
+blocked: One user blocked the other
+Friend Operations
+sendRequest: By username, creates pending friendship
+acceptRequest: Moves to accepted state
+declineRequest: Deletes the friendship record
+removeFriend: Ends accepted friendship
+blockUser: Creates blocked relationship
+Visibility Blocking
+Blocked users are filtered from:
+
+Message lists
+Reaction displays
+Member lists
+Search results
+This uses visibilityBlockedUserIds array fetched on app load.
+
+12. Permission System
+Role Hierarchy
+Four built-in roles with numeric hierarchy:
+
+Owner (4): Full control, can delete server
+Admin (3): All permissions except ownership
+Moderator (2): Moderate content and members
+Member (1): Basic participation
+Permission Types
+30+ granular permissions including:
+
+manage_server, manage_channels, manage_roles
+kick_members, ban_members, mute_members
+send_messages, manage_messages, pin_messages
+view_channels, read_message_history
+attach_files, embed_links
+Voice: connect, speak, use_voice_activation
+Permission Evaluation
+The evaluatePermission() function follows Discord's model:
+
+Check user-specific channel overrides (highest priority)
+Check role-based channel overrides
+Check server-wide role permissions
+Fall back to default base role permissions
+DENY always takes precedence over ALLOW when multiple roles conflict.
+
+Custom Roles
+Servers can create custom roles with:
+
+Custom name and color
+Icon (optional)
+Position-based hierarchy
+Granular permission overrides
+13. Notifications
+Notification Types
+mention: User mentioned in a channel
+dm: New direct message
+friend_request: Incoming friend request
+server_invite: Invited to a server
+Delivery
+Notifications are:
+
+Created in the database
+Delivered via Realtime subscription
+Displayed in notification bell dropdown
+Optionally shown as browser/desktop notifications
+Desktop Notifications
+When enabled:
+
+Browser Notification API for web
+Tauri notifications for desktop app
+Configurable sound and preview settings
+14. Voice Channels
+Voice Architecture
+Voice channels use WebRTC for real-time audio:
+
+Peer-to-peer connections managed client-side
+Supabase Presence for participant tracking
+VoiceStore manages connection state
+Voice Controls
+Mute: Toggle microphone
+Deafen: Mute speakers
+Disconnect: Leave voice channel
+Voice Persistence
+The VoicePersistentHost component maintains voice connection while navigating between channels, rendered at the app layout level.
+
+15. User Presence
+Status Types
+Online: Active in app (green dot)
+Idle: Inactive for 5+ minutes (yellow)
+DND: Do Not Disturb (red)
+Offline/Invisible: Appears offline (gray)
+Presence Tracking
+The usePresence hook manages:
+
+Activity listeners (mouse, keyboard, scroll)
+Idle timeout after 5 minutes of inactivity
+last_seen heartbeat every 30 seconds
+Visibility-based status changes
+Manual Status
+Users can manually set DND or Invisible:
+
+Persisted in manualStatus field
+Survives app restarts
+Prevents auto-status changes
+16. Theming System
+Theme Architecture
+Themes are applied via CSS class on the document root:
+
+CSS variables define color values
+applyTheme() adds/removes theme classes
+Persisted in localStorage via uiStore
+Available Themes
+Default: Orange/Amber brand dark theme
+Nostalgia: Warm, muted, vintage feel
+Lo-fi: Bold, retro, high contrast anime aesthetic
+Cappuccino: Warm, cozy coffee house aesthetic
+Hokori: Stark, Japanese-inspired minimalism
+Theme Switching
+Toggle button in user settings
+cycleTheme() for keyboard shortcut rotation
+Instant application without page reload
+17. Offline Support
+Offline Queue
+When offline, operations are queued:
+
+Messages saved to offlineQueueStore
+Queue persisted in localStorage
+Operations replayed on reconnection
+Connection Status
+The useConnectionStatus hook monitors:
+
+Supabase client connectivity
+Browser online/offline events
+Latency measurements
+Sync System
+Background sync handles:
+
+Periodic reconnection attempts
+Queue processing on reconnect
+Full state refresh after extended offline periods
+18. Security Features
+Input Validation
+All user inputs are validated:
+
+Username format (3-20 chars, alphanumeric)
+Message length (max 2000 chars)
+File uploads (type, size, extension)
+Invite code format
+Reserved Usernames
+Certain usernames are blocked:
+
+Admin variations (admin, administrator, sysadmin)
+System accounts (system, kloak, bot, support)
+Common impersonation targets (owner, server, everyone)
+Rate Limiting
+Client-side rate limiters prevent abuse:
+
+Auth attempts: 5 per minute
+Messages: 10 per 10 seconds
+Invite lookups: 5 per minute
+Friend requests: 10 per minute
+Account creation: 3 per 5 minutes
+XSS Prevention
+Message content is sanitized:
+
+HTML entities escaped
+Script tags blocked
+URLs validated before link previews
+19. Search and Discovery
+Message Search
+Full-text search with filters:
+
+from:username - Messages by user
+in:channel - Messages in channel
+has:link, has:image, has:file
+before:date, after:date
+Uses PostgreSQL full-text search function search_messages.
+
+Server Discovery
+Published servers appear in Explore:
+
+is_published flag on servers
+Server about/description displayed
+Join directly from discovery page
+Quick Switcher
+Ctrl/Cmd+K opens quick navigation:
+
+Search servers, channels, DMs
+Keyboard navigation (arrow keys)
+Recent destinations prioritized
+20. Performance Optimizations
+Query Optimization
+Recent optimizations reduced PostgREST usage by 70-85%:
+
+Batch RPC for unread counts (get_all_channel_unread_counts)
+Batched search result enrichment
+Consolidated polling (heartbeat + latency)
+Specific column selection (no SELECT *)
+Increased polling intervals (15s → 45s)
+Caching
+Message cache with 5-minute TTL
+User cache in realtime hooks (60s TTL)
+Server/channel data persisted in localStorage
+Lazy Loading
+Messages paginated (50 per load)
+Infinite scroll for older messages
+Images lazy-loaded with placeholders
+
+All data that can change — messages, edits, deletions, user presence, role changes, channel updates, server settings, member lists, permissions — must use Supabase Realtime subscriptions to reflect changes instantly in the UI. Never build features that require the user to refresh the page or navigate away and back to see updated data.
+Implementation pattern:
+
+Use supabase.channel() with .on('postgres_changes', ...) to subscribe to INSERT, UPDATE, and DELETE events on relevant tables.
+Update Zustand store state directly from realtime event payloads so all subscribed components re-render automatically.
+Subscriptions should be established when a component mounts or a context is entered (e.g., joining a server/channel) and cleaned up on unmount/exit.
+Optimistic UI updates are encouraged for user-initiated actions (send message, edit, delete), but the realtime subscription must still handle the confirmed server event to ensure consistency across all connected clients.
+Never rely solely on refetching data after a mutation. The mutation confirms success; the realtime subscription propagates the change to all clients including the sender.
+
+This applies to all features including but not limited to:
+
+Messages (new, edited, deleted)
+Channel creation, editing, deletion
+Server settings and metadata changes
+Member joins, leaves, role assignments
+User profile updates and presence/status
+Permission and role changes
+Typing indicators
+File uploads and attachments
+Reactions and read receipts
+
+If a feature cannot use Supabase Realtime (e.g., external service data), implement polling with a reasonable interval and document why realtime isn't possible.

@@ -69,6 +69,40 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   }, [rawMessages, visibilityBlockedUserIds]);
   const hasMore = channelData?.hasMore ?? true;
 
+  // Deduplicate messages - prefer real messages over temp ones
+  // This must be defined early so it can be used in useLayoutEffect for scroll positioning
+  const deduplicatedMessages = useMemo(() => {
+    const seen = new Map<string, Message>();
+
+    // First pass: collect all messages by their stable key
+    for (const msg of messages) {
+      const stableKey = getStableMessageKey(msg);
+      const existing = seen.get(stableKey);
+
+      if (!existing) {
+        seen.set(stableKey, msg);
+      } else {
+        // Prefer real message over temp message
+        if (msg.id.startsWith("temp-") && !existing.id.startsWith("temp-")) {
+          // Keep existing (real message)
+        } else if (!msg.id.startsWith("temp-") && existing.id.startsWith("temp-")) {
+          // Replace with real message
+          seen.set(stableKey, msg);
+        }
+        // If both are same type, keep first one
+      }
+    }
+
+    // Convert back to array and sort by created_at
+    // For announcement channels, sort newest first (descending)
+    // For other channels, sort oldest first (ascending)
+    return Array.from(seen.values()).sort((a, b) => {
+      const timeA = new Date(a.created_at).getTime();
+      const timeB = new Date(b.created_at).getTime();
+      return timeA - timeB;
+    });
+  }, [messages]);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const [showJumpToPresent, setShowJumpToPresent] = useState(false);
@@ -132,16 +166,16 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   // so the user never sees the mid-conversation position.
   // `channelId` is in the deps so this re-fires even when switching back to a
   // cached channel whose `messages` reference hasn't changed.
+  // We use deduplicatedMessages.length to ensure we scroll after the actual
+  // rendered content is ready, not just when the raw messages are available.
   useLayoutEffect(() => {
-    if (needsScrollRef.current && messages.length > 0) {
-      const container = containerRef.current;
-      if (container) {
-        container.scrollTop = container.scrollHeight;
-      }
+    if (needsScrollRef.current && deduplicatedMessages.length > 0) {
+      // Use scrollIntoView for more reliable scrolling
+      bottomRef.current?.scrollIntoView({ behavior: "instant" });
       isNearBottomRef.current = true;
       needsScrollRef.current = false;
     }
-  }, [messages, channelId]);
+  }, [deduplicatedMessages.length, channelId]);
 
   // Reconcile after sleep/background: refetch latest when app regains focus/visibility.
   // This ensures we catch any messages that realtime subscriptions might have missed
@@ -267,39 +301,6 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
     }
     return -1;
   }, [messages, lastReadAt, firstUnreadMessageId]);
-
-  // Deduplicate messages - prefer real messages over temp ones
-  const deduplicatedMessages = useMemo(() => {
-    const seen = new Map<string, Message>();
-
-    // First pass: collect all messages by their stable key
-    for (const msg of messages) {
-      const stableKey = getStableMessageKey(msg);
-      const existing = seen.get(stableKey);
-
-      if (!existing) {
-        seen.set(stableKey, msg);
-      } else {
-        // Prefer real message over temp message
-        if (msg.id.startsWith("temp-") && !existing.id.startsWith("temp-")) {
-          // Keep existing (real message)
-        } else if (!msg.id.startsWith("temp-") && existing.id.startsWith("temp-")) {
-          // Replace with real message
-          seen.set(stableKey, msg);
-        }
-        // If both are same type, keep first one
-      }
-    }
-
-    // Convert back to array and sort by created_at
-    // For announcement channels, sort newest first (descending)
-    // For other channels, sort oldest first (ascending)
-    return Array.from(seen.values()).sort((a, b) => {
-      const timeA = new Date(a.created_at).getTime();
-      const timeB = new Date(b.created_at).getTime();
-      return timeA - timeB;
-    });
-  }, [messages]);
 
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
