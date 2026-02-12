@@ -10,9 +10,11 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "tauri": "tauri",
-    "dev:tauri": "tauri dev",
+    "dev:tauri": "node scripts/dev-local.js",
     "build:tauri": "npm run build && tauri build",
-    "release": "node scripts/release.js"
+    "build:local": "node scripts/build-local.js",
+    "release": "node scripts/release.js",
+    "init-repo": "node scripts/init-repo.js"
   },
   "repository": "https://github.com/kloakapp/kloak-clients",
   "dependencies": {

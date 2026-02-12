@@ -2,10 +2,14 @@ use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+  let context = tauri::generate_context!();
+  
   tauri::Builder::default()
     .plugin(tauri_plugin_notification::init())
-    .plugin(tauri_plugin_updater::Builder::new().build())
     .setup(|app| {
+      // Initialize updater plugin
+      let _ = app.handle().plugin(tauri_plugin_updater::Builder::new().build());
+      
       if cfg!(debug_assertions) {
         app.handle().plugin(
           tauri_plugin_log::Builder::default()
@@ -21,33 +25,27 @@ pub fn run() {
 
       Ok(())
     })
-    .invoke_handler(tauri::generate_handler![resize_window_for_app])
-    .run(tauri::generate_context!())
+    .invoke_handler(tauri::generate_handler![resize_window_for_app, get_app_data_dir])
+    .run(context)
     .expect("error while running tauri application");
 }
 
-/// Resizes the window after login to app size and enables resizing
+/// Maximizes the window after login and enables resizing
 #[tauri::command]
-async fn resize_window_for_app(app: tauri::AppHandle) -> Result<(), String> {
+async fn resize_window_for_app(app: tauri::AppHandle<tauri::Wry>) -> Result<(), String> {
   let window = app
     .get_webview_window("main")
     .ok_or_else(|| "Main window not found".to_string())?;
-
-  // Resize to app dimensions
-  window
-    .set_size(tauri::Size::Logical(tauri::LogicalSize {
-      width: 1200.0,
-      height: 800.0,
-    }))
-    .map_err(|e: tauri::Error| e.to_string())?;
 
   // Enable resizing
   window
     .set_resizable(true)
     .map_err(|e: tauri::Error| e.to_string())?;
 
-  // Center the resized window
-  window.center().map_err(|e: tauri::Error| e.to_string())?;
+  // Maximize the window (fullscreen)
+  window
+    .maximize()
+    .map_err(|e: tauri::Error| e.to_string())?;
 
   // Update title
   window
@@ -55,4 +53,13 @@ async fn resize_window_for_app(app: tauri::AppHandle) -> Result<(), String> {
     .map_err(|e: tauri::Error| e.to_string())?;
 
   Ok(())
+}
+
+/// Gets the app data directory path for debugging
+#[tauri::command]
+async fn get_app_data_dir(app: tauri::AppHandle<tauri::Wry>) -> Result<String, String> {
+  match app.path().app_data_dir() {
+    Ok(path) => Ok(path.to_string_lossy().to_string()),
+    Err(e) => Err(format!("Failed to get app data dir: {:?}", e)),
+  }
 }

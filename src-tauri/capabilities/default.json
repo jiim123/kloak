@@ -22,9 +22,12 @@
     "core:window:allow-set-size",
     "core:window:allow-set-resizable",
     "core:window:allow-set-title",
-    "notification:default",
-    "notification:allow-register-listener",
-    "notification:allow-register-action-types",
-    "notification:allow-notify"
-  ]
-}
+          "notification:default",
+          "notification:allow-register-listener",
+          "notification:allow-register-action-types",
+          "notification:allow-notify",
+          "updater:default",
+          "updater:allow-check",
+          "updater:allow-download-and-install"
+        ]
+      }

@@ -57,6 +57,7 @@ import { usePreferencesSync } from '@/hooks/usePreferencesSync';
 import type { User } from '@/types';
 import { PresenceDebugOverlay } from '@/components/debug/PresenceDebugOverlay';
 import { SEO } from '@/components/seo';
+import { resizeWindowForApp } from '@/lib/tauriRuntime';
 
 const AppLayout = () => {
   const navigate = useNavigate();
@@ -328,6 +329,16 @@ const AppLayout = () => {
       return () => clearTimeout(timer);
     }
   }, [user, isLoading, navigate]);
+
+  // Maximize window once when user is authenticated (for Tauri)
+  // Use a ref to ensure it only runs once
+  const hasResizedWindow = useRef(false);
+  useEffect(() => {
+    if (user && !hasResizedWindow.current) {
+      hasResizedWindow.current = true;
+      resizeWindowForApp();
+    }
+  }, [user]);
 
   // Load voice settings when user is authenticated
   useEffect(() => {

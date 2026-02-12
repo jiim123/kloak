@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { useAuthStore } from "@/stores/authStore";
+import { useAuthStore, initializeAuth } from "@/stores/authStore";
 import { supabase } from "@/integrations/supabase/client";
 import { markWelcomeSeen } from "@/lib/storage";
 import {
@@ -88,6 +88,42 @@ const Auth = () => {
   // Login state
   const [secretKey, setSecretKey] = useState("");
   const [showSecretKey, setShowSecretKey] = useState(false);
+
+  // Check for saved session on mount
+  useEffect(() => {
+    let cancelled = false;
+    
+    (async () => {
+      // Check if user is already authenticated
+      const currentState = useAuthStore.getState();
+      if (currentState.user && currentState.isAuthenticated) {
+        // Already logged in, resize window and redirect
+        if (!cancelled) {
+          await resizeWindowForApp();
+          navigate(redirectTo || "/app", { replace: true });
+        }
+        return;
+      }
+
+      // Check if there's a saved secret key in localStorage
+      if (currentState.secretKey) {
+        // Try to restore session using saved key
+        await initializeAuth();
+        if (!cancelled) {
+          const { user: restoredUser, isAuthenticated } = useAuthStore.getState();
+          if (restoredUser && isAuthenticated) {
+            // Session restored, resize window and redirect to app
+            await resizeWindowForApp();
+            navigate(redirectTo || "/app", { replace: true });
+          }
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate, redirectTo]);
 
   // Redirect if already logged in (but not during onboarding)
   useEffect(() => {

@@ -23,7 +23,7 @@ export function isTauri(): boolean {
 }
 
 /**
- * Resizes the Tauri window to app size after login
+ * Maximizes the Tauri window after login
  */
 export async function resizeWindowForApp(): Promise<void> {
   try {
