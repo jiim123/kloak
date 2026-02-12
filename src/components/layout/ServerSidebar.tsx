@@ -1185,42 +1185,9 @@ export const ServerSidebar = () => {
         </DragOverlay>
       </DndContext>
 
-      {/* Bottom actions */}
-      <div className="flex flex-col items-center gap-2 w-full px-3">
-        <div className="w-8 h-0.5 bg-border rounded-full shrink-0" />
-
-        <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
-          <TooltipTrigger asChild>
-            <MotionButton
-              className="relative group"
-              onMouseEnter={() => setHoveredServer(null)}
-              onMouseLeave={() => setHoveredServer(null)}
-              onClick={() => openModal("user-settings")}
-              whileHover="hover"
-              whileTap="tap"
-            >
-              <motion.div
-                variants={iconVariants}
-                initial="animate"
-                animate={activeModal === "user-settings" ? "active" : "animate"}
-                whileHover="hover"
-                whileTap="tap"
-                transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                className={cn(
-                  "w-12 h-12 flex items-center justify-center",
-                  activeModal === "user-settings"
-                    ? "bg-primary text-primary-foreground ring-2 ring-primary/50"
-                    : "bg-secondary hover:bg-primary/20 hover:text-neutral-200",
-                )}
-              >
-                <Settings className="w-5 h-5" />
-              </motion.div>
-            </MotionButton>
-          </TooltipTrigger>
-          <TooltipContent side="right" className="font-medium">
-            Settings
-          </TooltipContent>
-        </Tooltip>
+      {/* Bottom spacer */}
+      <div className="w-full px-3">
+        <div className="w-8 h-0.5 bg-border rounded-full shrink-0 mx-auto" />
       </div>
 
       <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>

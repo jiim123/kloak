@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Headphones, Mic, MicOff, VolumeX } from "lucide-react";
+import { Headphones, Mic, MicOff, Settings, VolumeX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -8,6 +8,7 @@ import { StatusSelector } from "@/components/StatusSelector";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { useAuthStore } from "@/stores/authStore";
 import { useVoiceStore } from "@/stores/voiceStore";
+import { useUIStore } from "@/stores/uiStore";
 
 const InvisibleIndicator = ({ className }: { className?: string }) => (
   <div
@@ -34,6 +35,7 @@ export const LoggedInUserPanel = ({
   const joinedVoiceChannelId = useVoiceStore((s) => s.joinedChannelId);
   const controls = useVoiceStore((s) => s.controls);
   const [isUserAvatarHovered, setIsUserAvatarHovered] = useState(false);
+  const openModal = useUIStore((s) => s.openModal);
 
   const activeChannelId = connection.channelId ?? joinedVoiceChannelId;
   const isVoiceActive = !!activeChannelId && connection.status !== "idle";
@@ -141,6 +143,20 @@ export const LoggedInUserPanel = ({
             </Button>
           </TooltipTrigger>
           <TooltipContent>{!isVoiceActive ? "Not in voice" : controls.deafened ? "Undeafen" : "Deafen"}</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => openModal("user-settings")}
+              className="w-8 h-8 text-muted-foreground hover:text-foreground"
+            >
+              <Settings className="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>User Settings</TooltipContent>
         </Tooltip>
       </div>
     </motion.div>
