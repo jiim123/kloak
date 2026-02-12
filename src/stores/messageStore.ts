@@ -1,8 +1,8 @@
-import { create } from 'zustand';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuthStore } from '@/stores/authStore';
-import { useFriendStore } from '@/stores/friendStore';
-import type { Message, MessageReply, ReactionGroup, User } from '@/types';
+import { create } from "zustand";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuthStore } from "@/stores/authStore";
+import { useFriendStore } from "@/stores/friendStore";
+import type { Message, MessageReply, ReactionGroup, User } from "@/types";
 
 interface ChannelMessages {
   messages: Message[];
@@ -15,6 +15,10 @@ interface MessageState {
   messagesByChannel: Record<string, ChannelMessages>;
   currentChannelId: string | null;
   isLoading: boolean;
+
+  // Track which channels are currently fetching (for pagination spinners)
+  fetchingChannels: Record<string, boolean>;
+
   replyingTo: Message | null;
 
   // Computed getter for current channel messages
@@ -25,7 +29,13 @@ interface MessageState {
   setCurrentChannel: (channelId: string | null) => void;
 
   // Fetch actions
-  fetchMessages: (channelId: string, limit?: number, before?: string, force?: boolean, silent?: boolean) => Promise<void>;
+  fetchMessages: (
+    channelId: string,
+    limit?: number,
+    before?: string,
+    force?: boolean,
+    silent?: boolean,
+  ) => Promise<void>;
 
   // Message actions
   sendMessage: (channelId: string, userId: string, content: string, replyToId?: string) => Promise<Message | null>;
@@ -87,6 +97,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
   messagesByChannel: {},
   currentChannelId: null,
   isLoading: false,
+  fetchingChannels: {},
   replyingTo: null,
 
   getMessages: () => {
@@ -112,7 +123,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
   fetchMessages: async (channelId: string, limit = 50, before?: string, force = false, silent = false) => {
     const { messagesByChannel } = get();
     const cached = messagesByChannel[channelId];
-    
+
     // If we have cached messages and they're fresh, don't refetch (unless paginating)
     if (!before && !force && cached && cached.messages.length > 0) {
       const isFresh = Date.now() - cached.lastFetched < CACHE_EXPIRY_MS;
@@ -121,33 +132,47 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       }
     }
 
-    // Only show loading indicator if not silent and (no messages yet or paginating)
-    if (!silent && (!cached || cached.messages.length === 0 || before)) {
+    // ─── KEY CHANGE: stale-while-revalidate ───
+    // Only show the full-screen skeleton if we have ZERO cached messages for this channel.
+    // If we have stale cached messages, show them immediately and fetch silently in background.
+    const hasCachedMessages = cached && cached.messages.length > 0;
+
+    if (!hasCachedMessages && !silent) {
+      // First-ever visit to this channel — show skeleton
       set({ isLoading: true });
+    }
+
+    // Track per-channel fetching (used for pagination spinner only)
+    if (before) {
+      set((state) => ({
+        fetchingChannels: { ...state.fetchingChannels, [channelId]: true },
+      }));
     }
 
     try {
       const blockedUserIds = useFriendStore.getState().visibilityBlockedUserIds;
-      const blockedIn = blockedUserIds.length > 0 ? `(${blockedUserIds.map((id) => `"${id}"`).join(',')})` : null;
+      const blockedIn = blockedUserIds.length > 0 ? `(${blockedUserIds.map((id) => `"${id}"`).join(",")})` : null;
 
       let query = supabase
-        .from('messages')
-        .select(`
+        .from("messages")
+        .select(
+          `
           *,
           user:users (*),
           attachments:message_attachments (*),
           reactions (*)
-        `)
-        .eq('channel_id', channelId)
-        .order('created_at', { ascending: false })
+        `,
+        )
+        .eq("channel_id", channelId)
+        .order("created_at", { ascending: false })
         .limit(limit);
 
       if (blockedIn) {
-        query = query.not('user_id', 'in', blockedIn);
+        query = query.not("user_id", "in", blockedIn);
       }
 
       if (before) {
-        query = query.lt('created_at', before);
+        query = query.lt("created_at", before);
       }
 
       const { data, error } = await query;
@@ -155,21 +180,15 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       if (error) throw error;
 
       // Get reply_to_ids that need to be fetched
-      const replyToIds = (data || [])
-        .filter((msg: any) => msg.reply_to_id)
-        .map((msg: any) => msg.reply_to_id);
+      const replyToIds = (data || []).filter((msg: any) => msg.reply_to_id).map((msg: any) => msg.reply_to_id);
 
       // Fetch reply messages separately if there are any
       let replyMap: Record<string, MessageReply> = {};
       if (replyToIds.length > 0) {
-        let replyQuery = supabase
-          .from('messages')
-          .select('id, content, user:users (*)')
-
-          .in('id', replyToIds);
+        let replyQuery = supabase.from("messages").select("id, content, user:users (*)").in("id", replyToIds);
 
         if (blockedIn) {
-          replyQuery = replyQuery.not('user_id', 'in', blockedIn);
+          replyQuery = replyQuery.not("user_id", "in", blockedIn);
         }
 
         const { data: replyData } = await replyQuery;
@@ -194,7 +213,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         reactions: groupReactions(
           blockedUserIds.length > 0
             ? (msg.reactions || []).filter((r: any) => !blockedUserIds.includes(r.user_id))
-            : (msg.reactions || []),
+            : msg.reactions || [],
           currentUserId,
         ),
       }));
@@ -203,7 +222,10 @@ export const useMessageStore = create<MessageState>((set, get) => ({
 
       set((state) => {
         const existingCache = state.messagesByChannel[channelId];
-        
+
+        // Clear per-channel fetching flag
+        const { [channelId]: _, ...restFetching } = state.fetchingChannels;
+
         if (before && existingCache) {
           // Prepend older messages to existing cache
           return {
@@ -215,32 +237,27 @@ export const useMessageStore = create<MessageState>((set, get) => ({
                 lastFetched: existingCache.lastFetched,
               },
             },
-            isLoading: silent ? state.isLoading : false,
+            isLoading: false,
+            fetchingChannels: restFetching,
           };
         } else if (force && existingCache && existingCache.messages.length > 0) {
           // Force refetch (e.g., on visibility change) - merge new messages intelligently
-          // Find the latest message timestamp in existing cache
-          const latestExistingTime = new Date(existingCache.messages[existingCache.messages.length - 1].created_at).getTime();
-          
-          // Filter out messages we already have and find truly new ones
-          const existingIds = new Set(existingCache.messages.map(m => m.id));
-          const newMessages = messages.filter(m => !existingIds.has(m.id));
-          
-          // If we have new messages, merge them; otherwise keep existing and update timestamp
+          const existingIds = new Set(existingCache.messages.map((m) => m.id));
+          const newMessages = messages.filter((m) => !existingIds.has(m.id));
+
           if (newMessages.length > 0) {
-            // Merge: combine existing with new, sort by created_at, remove duplicates
             const merged = [...existingCache.messages, ...newMessages];
             const uniqueById = new Map<string, Message>();
-            merged.forEach(msg => {
+            merged.forEach((msg) => {
               const existing = uniqueById.get(msg.id);
               if (!existing || new Date(msg.created_at).getTime() > new Date(existing.created_at).getTime()) {
                 uniqueById.set(msg.id, msg);
               }
             });
             const sorted = Array.from(uniqueById.values()).sort(
-              (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+              (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
             );
-            
+
             return {
               messagesByChannel: {
                 ...state.messagesByChannel,
@@ -250,7 +267,8 @@ export const useMessageStore = create<MessageState>((set, get) => ({
                   lastFetched: Date.now(),
                 },
               },
-              isLoading: silent ? state.isLoading : false,
+              isLoading: false,
+              fetchingChannels: restFetching,
             };
           } else {
             // No new messages, just update timestamp
@@ -262,7 +280,8 @@ export const useMessageStore = create<MessageState>((set, get) => ({
                   lastFetched: Date.now(),
                 },
               },
-              isLoading: silent ? state.isLoading : false,
+              isLoading: false,
+              fetchingChannels: restFetching,
             };
           }
         } else {
@@ -276,22 +295,23 @@ export const useMessageStore = create<MessageState>((set, get) => ({
                 lastFetched: Date.now(),
               },
             },
-            isLoading: silent ? state.isLoading : false,
+            isLoading: false,
+            fetchingChannels: restFetching,
           };
         }
       });
     } catch (error) {
-      console.error('Failed to fetch messages:', error);
-      // Only clear loading if we set it (not in silent mode)
-      if (!silent) {
-        set({ isLoading: false });
-      }
+      console.error("Failed to fetch messages:", error);
+      set((state) => {
+        const { [channelId]: _, ...restFetching } = state.fetchingChannels;
+        return { isLoading: false, fetchingChannels: restFetching };
+      });
     }
   },
 
   sendMessage: async (channelId: string, userId: string, content: string, replyToId?: string) => {
     try {
-      const { data, error } = await supabase.rpc('send_message', {
+      const { data, error } = await supabase.rpc("send_message", {
         _channel_id: channelId,
         _user_id: userId,
         _content: content,
@@ -299,112 +319,18 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       });
 
       if (error) {
-        if (error.message.includes('muted')) {
-          throw new Error('You are muted in this server');
+        if (error.message.includes("muted")) {
+          throw new Error("You are muted in this server");
         }
         throw error;
       }
 
-      // Prefer local auth user for immediate UI (includes latest avatar_decoration without waiting for RPC)
       const localUser = useAuthStore.getState().user;
-      const { data: userData } = localUser?.id === userId
-        ? { data: localUser }
-        : await supabase.rpc('get_user_by_id' as any, { _user_id: userId });
+      const { data: userData } =
+        localUser?.id === userId
+          ? { data: localUser }
+          : await supabase.rpc("get_user_by_id" as any, { _user_id: userId });
 
-      // If there's a reply_to_id, fetch the reply data separately
-      let replyData: MessageReply | undefined;
-      if (replyToId) {
-        const messages = get().getMessages();
-        const replyMsg = messages.find(m => m.id === replyToId);
-        if (replyMsg) {
-          replyData = {
-            id: replyMsg.id,
-            content: replyMsg.content,
-            user: replyMsg.user,
-          };
-        }
-      }
-
-      const msgData = data as any;
-      const userDataParsed = userData as unknown as User;
-      const message: Message = {
-        id: msgData.id,
-        channel_id: msgData.channel_id,
-        user_id: msgData.user_id,
-        reply_to_id: msgData.reply_to_id,
-        content: msgData.content,
-        is_pinned: msgData.is_pinned || false,
-        edited_at: msgData.edited_at,
-        created_at: msgData.created_at,
-        user: userDataParsed,
-        reply_to: replyData,
-        attachments: [],
-        reactions: [],
-      };
-
-      // Add message to channel cache
-      set((state) => {
-        const existingCache = state.messagesByChannel[channelId];
-        if (!existingCache) return { replyingTo: null };
-        
-        // Avoid duplicates
-        if (existingCache.messages.some((m) => m.id === message.id)) {
-          return { replyingTo: null };
-        }
-        
-        return {
-          messagesByChannel: {
-            ...state.messagesByChannel,
-            [channelId]: {
-              ...existingCache,
-              messages: [...existingCache.messages, message],
-            },
-          },
-          replyingTo: null,
-        };
-      });
-
-      return message;
-    } catch (error) {
-      console.error('Failed to send message:', error);
-      return null;
-    }
-  },
-
-  sendPoll: async (
-    channelId: string,
-    userId: string,
-    question: string,
-    options: string[],
-    allowMultiple: boolean,
-    durationSeconds: number,
-    replyToId?: string,
-  ) => {
-    try {
-      const { data, error } = await supabase.rpc('send_poll' as any, {
-        _channel_id: channelId,
-        _user_id: userId,
-        _question: question,
-        _options: options,
-        _allow_multiple: allowMultiple,
-        _duration_seconds: durationSeconds,
-        _reply_to_id: replyToId || null,
-      });
-
-      if (error) {
-        if (error.message.includes('muted')) {
-          throw new Error('You are muted in this server');
-        }
-        throw error;
-      }
-
-      // Prefer local auth user for immediate UI
-      const localUser = useAuthStore.getState().user;
-      const { data: userData } = localUser?.id === userId
-        ? { data: localUser }
-        : await supabase.rpc('get_user_by_id' as any, { _user_id: userId });
-
-      // If there's a reply_to_id, fetch the reply data separately
       let replyData: MessageReply | undefined;
       if (replyToId) {
         const messages = get().getMessages();
@@ -435,12 +361,10 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         reactions: [],
       };
 
-      // Add message to channel cache
       set((state) => {
         const existingCache = state.messagesByChannel[channelId];
         if (!existingCache) return { replyingTo: null };
 
-        // Avoid duplicates
         if (existingCache.messages.some((m) => m.id === message.id)) {
           return { replyingTo: null };
         }
@@ -459,14 +383,104 @@ export const useMessageStore = create<MessageState>((set, get) => ({
 
       return message;
     } catch (error) {
-      console.error('Failed to send poll:', error);
+      console.error("Failed to send message:", error);
+      return null;
+    }
+  },
+
+  sendPoll: async (
+    channelId: string,
+    userId: string,
+    question: string,
+    options: string[],
+    allowMultiple: boolean,
+    durationSeconds: number,
+    replyToId?: string,
+  ) => {
+    try {
+      const { data, error } = await supabase.rpc("send_poll" as any, {
+        _channel_id: channelId,
+        _user_id: userId,
+        _question: question,
+        _options: options,
+        _allow_multiple: allowMultiple,
+        _duration_seconds: durationSeconds,
+        _reply_to_id: replyToId || null,
+      });
+
+      if (error) {
+        if (error.message.includes("muted")) {
+          throw new Error("You are muted in this server");
+        }
+        throw error;
+      }
+
+      const localUser = useAuthStore.getState().user;
+      const { data: userData } =
+        localUser?.id === userId
+          ? { data: localUser }
+          : await supabase.rpc("get_user_by_id" as any, { _user_id: userId });
+
+      let replyData: MessageReply | undefined;
+      if (replyToId) {
+        const messages = get().getMessages();
+        const replyMsg = messages.find((m) => m.id === replyToId);
+        if (replyMsg) {
+          replyData = {
+            id: replyMsg.id,
+            content: replyMsg.content,
+            user: replyMsg.user,
+          };
+        }
+      }
+
+      const msgData = data as any;
+      const userDataParsed = userData as unknown as User;
+      const message: Message = {
+        id: msgData.id,
+        channel_id: msgData.channel_id,
+        user_id: msgData.user_id,
+        reply_to_id: msgData.reply_to_id,
+        content: msgData.content,
+        is_pinned: msgData.is_pinned || false,
+        edited_at: msgData.edited_at,
+        created_at: msgData.created_at,
+        user: userDataParsed,
+        reply_to: replyData,
+        attachments: [],
+        reactions: [],
+      };
+
+      set((state) => {
+        const existingCache = state.messagesByChannel[channelId];
+        if (!existingCache) return { replyingTo: null };
+
+        if (existingCache.messages.some((m) => m.id === message.id)) {
+          return { replyingTo: null };
+        }
+
+        return {
+          messagesByChannel: {
+            ...state.messagesByChannel,
+            [channelId]: {
+              ...existingCache,
+              messages: [...existingCache.messages, message],
+            },
+          },
+          replyingTo: null,
+        };
+      });
+
+      return message;
+    } catch (error) {
+      console.error("Failed to send poll:", error);
       return null;
     }
   },
 
   editMessage: async (messageId: string, content: string, userId: string) => {
     try {
-      const { error } = await supabase.rpc('edit_message', {
+      const { error } = await supabase.rpc("edit_message", {
         _message_id: messageId,
         _user_id: userId,
         _content: content,
@@ -487,22 +501,20 @@ export const useMessageStore = create<MessageState>((set, get) => ({
             [currentChannelId]: {
               ...existingCache,
               messages: existingCache.messages.map((m) =>
-                m.id === messageId
-                  ? { ...m, content, edited_at: new Date().toISOString() }
-                  : m
+                m.id === messageId ? { ...m, content, edited_at: new Date().toISOString() } : m,
               ),
             },
           },
         };
       });
     } catch (error) {
-      console.error('Failed to edit message:', error);
+      console.error("Failed to edit message:", error);
     }
   },
 
   deleteMessage: async (messageId: string, userId: string) => {
     try {
-      const { error } = await supabase.rpc('delete_message', {
+      const { error } = await supabase.rpc("delete_message", {
         _message_id: messageId,
         _user_id: userId,
       });
@@ -527,13 +539,13 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         };
       });
     } catch (error) {
-      console.error('Failed to delete message:', error);
+      console.error("Failed to delete message:", error);
     }
   },
 
   pinMessage: async (messageId: string, isPinned: boolean, userId: string) => {
     try {
-      const { error } = await supabase.rpc('pin_message', {
+      const { error } = await supabase.rpc("pin_message", {
         _message_id: messageId,
         _user_id: userId,
         _pinned: isPinned,
@@ -553,21 +565,19 @@ export const useMessageStore = create<MessageState>((set, get) => ({
             ...state.messagesByChannel,
             [currentChannelId]: {
               ...existingCache,
-              messages: existingCache.messages.map((m) =>
-                m.id === messageId ? { ...m, is_pinned: isPinned } : m
-              ),
+              messages: existingCache.messages.map((m) => (m.id === messageId ? { ...m, is_pinned: isPinned } : m)),
             },
           },
         };
       });
     } catch (error) {
-      console.error('Failed to pin message:', error);
+      console.error("Failed to pin message:", error);
     }
   },
 
   setEmbedHidden: async (messageId: string, userId: string, hidden: boolean) => {
     try {
-      const { data, error } = await supabase.rpc('set_message_embed_hidden', {
+      const { data, error } = await supabase.rpc("set_message_embed_hidden", {
         _message_id: messageId,
         _user_id: userId,
         _hidden: hidden,
@@ -575,40 +585,37 @@ export const useMessageStore = create<MessageState>((set, get) => ({
 
       if (error) throw error;
       if (!data) {
-        console.error('Failed to set embed hidden: not authorized or message not found');
+        console.error("Failed to set embed hidden: not authorized or message not found");
         return;
       }
 
-      // Update in all channel caches
       set((state) => {
         const updatedCaches = { ...state.messagesByChannel };
-        
+
         for (const channelId in updatedCaches) {
           const cache = updatedCaches[channelId];
           if (!cache) continue;
-          
-          const messageIndex = cache.messages.findIndex(m => m.id === messageId);
+
+          const messageIndex = cache.messages.findIndex((m) => m.id === messageId);
           if (messageIndex !== -1) {
             updatedCaches[channelId] = {
               ...cache,
-              messages: cache.messages.map(m =>
-                m.id === messageId ? { ...m, embed_hidden: hidden } : m
-              ),
+              messages: cache.messages.map((m) => (m.id === messageId ? { ...m, embed_hidden: hidden } : m)),
             };
             break;
           }
         }
-        
+
         return { messagesByChannel: updatedCaches };
       });
     } catch (error) {
-      console.error('Failed to set embed hidden:', error);
+      console.error("Failed to set embed hidden:", error);
     }
   },
 
   addReaction: async (messageId: string, userId: string, emoji: string) => {
     try {
-      const { error } = await supabase.rpc('add_reaction', {
+      const { error } = await supabase.rpc("add_reaction", {
         _message_id: messageId,
         _user_id: userId,
         _emoji: emoji,
@@ -635,8 +642,6 @@ export const useMessageStore = create<MessageState>((set, get) => ({
                 const existingGroup = reactions.find((r) => r.emoji === emoji);
 
                 if (existingGroup) {
-                  // Idempotency: if we already have this user's reaction (e.g. realtime update raced),
-                  // don't double-increment.
                   if (existingGroup.users.includes(userId)) {
                     existingGroup.hasReacted = true;
                     return { ...m, reactions };
@@ -660,13 +665,13 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         };
       });
     } catch (error) {
-      console.error('Failed to add reaction:', error);
+      console.error("Failed to add reaction:", error);
     }
   },
 
   removeReaction: async (messageId: string, userId: string, emoji: string) => {
     try {
-      const { error } = await supabase.rpc('remove_reaction', {
+      const { error } = await supabase.rpc("remove_reaction", {
         _message_id: messageId,
         _user_id: userId,
         _emoji: emoji,
@@ -692,7 +697,6 @@ export const useMessageStore = create<MessageState>((set, get) => ({
                 const reactions = (m.reactions || [])
                   .map((r) => {
                     if (r.emoji !== emoji) return r;
-                    // Idempotency: if we don't have this user's reaction, don't decrement.
                     if (!r.users.includes(userId)) return r;
                     return {
                       ...r,
@@ -710,7 +714,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         };
       });
     } catch (error) {
-      console.error('Failed to remove reaction:', error);
+      console.error("Failed to remove reaction:", error);
     }
   },
 
@@ -723,7 +727,6 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     set((state) => {
       const existingCache = state.messagesByChannel[channelId];
       if (!existingCache) {
-        // Create new cache for this channel
         return {
           messagesByChannel: {
             ...state.messagesByChannel,
@@ -736,7 +739,6 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         };
       }
 
-      // Avoid duplicates
       if (existingCache.messages.some((m) => m.id === message.id)) {
         return state;
       }
@@ -754,11 +756,9 @@ export const useMessageStore = create<MessageState>((set, get) => ({
   },
 
   updateMessage: (messageId, updates) => {
-    // Get channel_id from the updates if provided, otherwise search all channels
     const channelId = (updates as any).channel_id;
-    
+
     set((state) => {
-      // If we have a channel_id, update that specific channel
       if (channelId && state.messagesByChannel[channelId]) {
         const existingCache = state.messagesByChannel[channelId];
         return {
@@ -766,24 +766,19 @@ export const useMessageStore = create<MessageState>((set, get) => ({
             ...state.messagesByChannel,
             [channelId]: {
               ...existingCache,
-              messages: existingCache.messages.map((m) =>
-                m.id === messageId ? { ...m, ...updates } : m
-              ),
+              messages: existingCache.messages.map((m) => (m.id === messageId ? { ...m, ...updates } : m)),
             },
           },
         };
       }
-      
-      // Otherwise, search all channels for this message
+
       const newMessagesByChannel = { ...state.messagesByChannel };
       for (const [chId, cache] of Object.entries(newMessagesByChannel)) {
         const msgIndex = cache.messages.findIndex((m) => m.id === messageId);
         if (msgIndex !== -1) {
           newMessagesByChannel[chId] = {
             ...cache,
-            messages: cache.messages.map((m) =>
-              m.id === messageId ? { ...m, ...updates } : m
-            ),
+            messages: cache.messages.map((m) => (m.id === messageId ? { ...m, ...updates } : m)),
           };
           break;
         }
@@ -794,7 +789,6 @@ export const useMessageStore = create<MessageState>((set, get) => ({
 
   removeMessage: (messageId) => {
     set((state) => {
-      // Search all channels for this message
       const newMessagesByChannel = { ...state.messagesByChannel };
       for (const [chId, cache] of Object.entries(newMessagesByChannel)) {
         const msgIndex = cache.messages.findIndex((m) => m.id === messageId);
@@ -811,7 +805,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
   },
 
   clearMessages: () => set({ messagesByChannel: {}, replyingTo: null }),
-  
+
   clearChannelCache: (channelId: string) => {
     set((state) => {
       const { [channelId]: _, ...rest } = state.messagesByChannel;
@@ -822,13 +816,13 @@ export const useMessageStore = create<MessageState>((set, get) => ({
 
 // Legacy compatibility - expose messages as a computed value
 // Components should migrate to using getMessages() instead
-Object.defineProperty(useMessageStore.getState(), 'messages', {
+Object.defineProperty(useMessageStore.getState(), "messages", {
   get() {
     return this.getMessages();
   },
 });
 
-Object.defineProperty(useMessageStore.getState(), 'hasMore', {
+Object.defineProperty(useMessageStore.getState(), "hasMore", {
   get() {
     return this.getHasMore();
   },
