@@ -76,7 +76,17 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   const isNearBottomRef = useRef(true);
   const hasMarkedAsReadRef = useRef(false);
   const prevMessagesLengthRef = useRef(0);
-  const pendingScrollRef = useRef(false);
+  const needsScrollRef = useRef(true); // true on initial mount
+  const prevChannelIdRef = useRef<string>(channelId);
+
+  // Detect channel switch during RENDER PHASE (synchronous).
+  // This must happen before useLayoutEffect so the flag is already
+  // set when the layout effect reads it — fixing the stale-cache bug
+  // where switching back to a cached channel kept the scroll at the top.
+  if (prevChannelIdRef.current !== channelId) {
+    prevChannelIdRef.current = channelId;
+    needsScrollRef.current = true;
+  }
 
   // Unread tracking
   const channelIds = useMemo(() => [channelId], [channelId]);
@@ -109,7 +119,6 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   // Set current channel and fetch messages (with caching)
   useEffect(() => {
     setCurrentChannel(channelId);
-    pendingScrollRef.current = true;
     prevMessagesLengthRef.current = 0;
     hasMarkedAsReadRef.current = false;
     setShowJumpToPresent(false);
@@ -118,19 +127,21 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelId]);
 
-  // Scroll to bottom AFTER messages render on channel switch
+  // Scroll to bottom AFTER messages render on channel switch.
   // useLayoutEffect fires synchronously after DOM mutations but before paint,
   // so the user never sees the mid-conversation position.
+  // `channelId` is in the deps so this re-fires even when switching back to a
+  // cached channel whose `messages` reference hasn't changed.
   useLayoutEffect(() => {
-    if (pendingScrollRef.current && messages.length > 0) {
+    if (needsScrollRef.current && messages.length > 0) {
       const container = containerRef.current;
       if (container) {
         container.scrollTop = container.scrollHeight;
       }
       isNearBottomRef.current = true;
-      pendingScrollRef.current = false;
+      needsScrollRef.current = false;
     }
-  }, [messages]);
+  }, [messages, channelId]);
 
   // Reconcile after sleep/background: refetch latest when app regains focus/visibility.
   // This ensures we catch any messages that realtime subscriptions might have missed
