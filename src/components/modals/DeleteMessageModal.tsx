@@ -8,10 +8,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useUIStore } from "@/stores/uiStore";
 import { useMessageStore } from "@/stores/messageStore";
 import { useAuthStore } from "@/stores/authStore";
-import { getMessagePreview, isImageOnlyMessage } from "@/lib/message";
+import { getMessagePreview } from "@/lib/message";
 import type { Message } from "@/types";
 
 interface DeleteMessageModalProps {
@@ -23,44 +22,29 @@ interface DeleteMessageModalProps {
   messageContent?: string;
 }
 
-// Helper to extract image URLs from content
-const extractImageUrl = (content: string): string | null => {
-  const trimmed = content.trim();
-
-  // Check if it's a direct image URL
-  if (/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(trimmed)) {
-    return trimmed;
-  }
-
-  // Check for Supabase storage URLs (they might not have extensions)
-  if (/^https?:\/\/.*supabase.*\/storage\/.*$/i.test(trimmed)) {
-    return trimmed;
-  }
-
-  return null;
+// Helper to check if a line is an image URL
+const isImageUrl = (line: string): boolean => {
+  const trimmed = line.trim();
+  if (/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(trimmed)) return true;
+  if (/^https?:\/\/.*supabase.*\/storage\/.*$/i.test(trimmed)) return true;
+  return false;
 };
 
-// Helper to check if content contains an image (possibly with caption)
-const getImageFromContent = (content: string): { imageUrl: string | null; caption: string | null } => {
+// Parse content into caption text and image URLs
+const parseContentImages = (content: string): { images: string[]; caption: string } => {
   const lines = content.trim().split("\n");
+  const images: string[] = [];
+  const captionLines: string[] = [];
 
-  // Check last line for image URL (common pattern: caption + image)
-  for (let i = lines.length - 1; i >= 0; i--) {
-    const imageUrl = extractImageUrl(lines[i]);
-    if (imageUrl) {
-      const captionLines = lines.slice(0, i);
-      const caption = captionLines.join("\n").trim();
-      return { imageUrl, caption: caption || null };
+  for (const line of lines) {
+    if (isImageUrl(line)) {
+      images.push(line.trim());
+    } else if (line.trim()) {
+      captionLines.push(line);
     }
   }
 
-  // Check if the whole content is just an image
-  const directImage = extractImageUrl(content);
-  if (directImage) {
-    return { imageUrl: directImage, caption: null };
-  }
-
-  return { imageUrl: null, caption: null };
+  return { images, caption: captionLines.join("\n").trim() };
 };
 
 export const DeleteMessageModal = ({
@@ -99,10 +83,8 @@ export const DeleteMessageModal = ({
 
   const displayContent = messageContent || (message ? message.content : "");
   const displayUser = message?.user;
-
-  // Check if content contains an image
-  const { imageUrl, caption } = getImageFromContent(displayContent);
-  const isImageMessage = !!imageUrl;
+  const { images, caption } = parseContentImages(displayContent);
+  const hasImages = images.length > 0;
 
   return (
     <AlertDialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -124,29 +106,32 @@ export const DeleteMessageModal = ({
               </div>
             )}
 
-            {isImageMessage ? (
-              <div className="space-y-2">
-                {/* Show caption if present */}
-                {caption && (
-                  <p className="text-sm text-muted-foreground line-clamp-2">{getMessagePreview(caption, 150)}</p>
-                )}
-                {/* Show image preview */}
-                <div className="relative">
-                  <img
-                    src={imageUrl}
-                    alt="Message attachment"
-                    className="max-w-full max-h-40 rounded-md object-contain select-none pointer-events-none"
-                    onContextMenu={(e) => e.preventDefault()}
-                    draggable={false}
-                  />
-                  <span className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/60 text-white text-[10px] rounded">
-                    Image
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground line-clamp-3">{getMessagePreview(displayContent, 200)}</p>
+            {caption && (
+              <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{getMessagePreview(caption, 150)}</p>
             )}
+
+            {hasImages ? (
+              <div className="flex flex-wrap gap-1.5">
+                {images.slice(0, 4).map((url, i) => (
+                  <div key={i} className="relative">
+                    <img
+                      src={url}
+                      alt="Attachment"
+                      className="w-20 h-20 rounded-md object-cover select-none pointer-events-none"
+                      onContextMenu={(e) => e.preventDefault()}
+                      draggable={false}
+                    />
+                  </div>
+                ))}
+                {images.length > 4 && (
+                  <div className="w-20 h-20 rounded-md bg-muted flex items-center justify-center text-xs text-muted-foreground">
+                    +{images.length - 4} more
+                  </div>
+                )}
+              </div>
+            ) : !caption ? (
+              <p className="text-sm text-muted-foreground line-clamp-3">{getMessagePreview(displayContent, 200)}</p>
+            ) : null}
           </div>
         )}
 
