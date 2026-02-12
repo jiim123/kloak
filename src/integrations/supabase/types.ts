@@ -2826,6 +2826,10 @@ export type Database = {
         Args: { _member_id: string; _role_id: string; _user_id: string }
         Returns: undefined
       }
+      rename_server_emoji: {
+        Args: { _emoji_id: string; _new_name: string; _user_id: string }
+        Returns: undefined
+      }
       reorder_categories: {
         Args: { _category_ids: string[]; _server_id: string; _user_id: string }
         Returns: undefined

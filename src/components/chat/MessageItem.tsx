@@ -732,10 +732,16 @@ export const MessageItem = memo(function MessageItem({
   );
 
   const handleReplyClick = useCallback(
-    (e: React.MouseEvent) => {
+    (e: React.MouseEvent | React.TouchEvent) => {
       e.preventDefault();
       e.stopPropagation();
       if (message.reply_to?.id) {
+        // Check if the target message is in the loaded messages first
+        const targetEl = document.getElementById(`message-${message.reply_to.id}`);
+        if (!targetEl) {
+          toast.info("Scroll up to find the original message");
+          return;
+        }
         // Set URL param - useScrollToMessage hook will handle scrolling and highlighting
         const newParams = new URLSearchParams(searchParams);
         newParams.set("message", message.reply_to.id);
@@ -908,6 +914,10 @@ export const MessageItem = memo(function MessageItem({
                       <div
                         className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1 cursor-pointer hover:text-foreground flex-nowrap overflow-hidden"
                         onClick={handleReplyClick}
+                        onTouchEnd={(e) => {
+                          // Prevent parent long-press handler from intercepting taps on reply preview
+                          e.stopPropagation();
+                        }}
                       >
                         <CornerUpLeft className="w-3 h-3 flex-shrink-0" />
                         <span className="flex-shrink-0">Replying to</span>
