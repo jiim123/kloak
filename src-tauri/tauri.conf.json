@@ -1,7 +1,6 @@
 {
-  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Kloak",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "identifier": "com.kloak.desktop",
   "build": {
     "frontendDist": "../dist",
@@ -39,5 +38,12 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "updater": {
+    "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEI0MUU1OEY5MUNCQkUzQzEKUldUQjQ3c2MrVmdldENiTjhqZUp5NDN2cEdDaGlNMGp5VnRjZUk0RHh0OU9rL1cwM1R2TmdXT3MK",
+    "endpoints": [
+      "https://github.com/kloakapp/kloak-clients/releases/latest/download/latest.json"
+    ],
+    "dialog": true
   }
 }

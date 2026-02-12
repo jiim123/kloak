@@ -24,3 +24,8 @@ dist-ssr
 *.sw?
 /supabase/.temp
 .env
+
+# Tauri signing keys (NEVER commit these!)
+key.pem
+*.pem
+!key.pub
