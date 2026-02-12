@@ -847,11 +847,11 @@ export const ServerSettingsModal = () => {
       return;
     }
     try {
-      const { error } = await supabase
-        .from("server_emojis")
-        .update({ name: trimmed })
-        .eq("id", emojiId)
-        .eq("server_id", server.id);
+      const { error } = await (supabase.rpc as any)('rename_server_emoji', {
+        _emoji_id: emojiId,
+        _user_id: user.id,
+        _new_name: trimmed,
+      });
       if (error) throw error;
       setServerEmojis((prev) => prev.map((e) => (e.id === emojiId ? { ...e, name: trimmed } : e)));
       invalidateServerEmojis(server.id);
