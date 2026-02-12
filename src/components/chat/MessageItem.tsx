@@ -736,13 +736,8 @@ export const MessageItem = memo(function MessageItem({
       e.preventDefault();
       e.stopPropagation();
       if (message.reply_to?.id) {
-        // Check if the target message is in the loaded messages first
-        const targetEl = document.getElementById(`message-${message.reply_to.id}`);
-        if (!targetEl) {
-          toast.info("Scroll up to find the original message");
-          return;
-        }
-        // Set URL param - useScrollToMessage hook will handle scrolling and highlighting
+        // Set URL param - useScrollToMessage hook will handle scrolling, highlighting,
+        // and fetching older messages if the target isn't loaded yet
         const newParams = new URLSearchParams(searchParams);
         newParams.set("message", message.reply_to.id);
         setSearchParams(newParams, { replace: true });

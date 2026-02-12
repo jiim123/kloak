@@ -1,8 +1,9 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useMessageStore } from '@/stores/messageStore';
 
 interface UseScrollToMessageOptions {
-  messages: { id: string }[];
+  messages: { id: string; created_at: string }[];
   isLoading: boolean;
 }
 
@@ -31,11 +32,17 @@ export const useScrollToMessage = ({ messages, isLoading }: UseScrollToMessageOp
   const hasScrolledRef = useRef(false);
   const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevMessageIdRef = useRef<string | null>(null);
+  const fetchAttemptsRef = useRef(0);
+  const isFetchingRef = useRef(false);
+
+  const { fetchMessages, currentChannelId } = useMessageStore();
 
   // Reset hasScrolled when the target message changes
   useEffect(() => {
     if (highlightedMessageId !== prevMessageIdRef.current) {
       hasScrolledRef.current = false;
+      fetchAttemptsRef.current = 0;
+      isFetchingRef.current = false;
       prevMessageIdRef.current = highlightedMessageId;
     }
   }, [highlightedMessageId]);
@@ -48,6 +55,29 @@ export const useScrollToMessage = ({ messages, isLoading }: UseScrollToMessageOp
       setSearchParams(newParams, { replace: true });
     }
   }, [highlightedMessageId, searchParams, setSearchParams]);
+
+  // If the target message isn't loaded, fetch older messages to find it
+  useEffect(() => {
+    if (!highlightedMessageId || isLoading || hasScrolledRef.current || isFetchingRef.current) return;
+    if (!currentChannelId) return;
+
+    const messageExists = messages.some(m => m.id === highlightedMessageId);
+    if (messageExists) return; // Already loaded, the scroll effect below will handle it
+
+    // Give up after 5 attempts (250 messages back)
+    if (fetchAttemptsRef.current >= 5) return;
+
+    // Fetch older messages using the oldest loaded message as cursor
+    const oldestMessage = messages[0];
+    if (!oldestMessage) return;
+
+    isFetchingRef.current = true;
+    fetchAttemptsRef.current += 1;
+
+    fetchMessages(currentChannelId, 50, oldestMessage.created_at, true, true).finally(() => {
+      isFetchingRef.current = false;
+    });
+  }, [highlightedMessageId, messages, isLoading, currentChannelId, fetchMessages]);
 
   // Scroll to message when it's available
   useEffect(() => {
