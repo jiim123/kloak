@@ -74,10 +74,12 @@ export const CreateServerModal = () => {
   };
 
   const uploadIcon = async (serverId: string, file: File): Promise<string | null> => {
-    const ext = file.name.split(".").pop() || "png";
+    const { compressImage } = await import("@/lib/imageCompression");
+    const compressed = await compressImage(file, "server-icon");
+    const ext = compressed.name.split(".").pop() || "webp";
     const filePath = `${serverId}/icon-${Date.now()}.${ext}`;
 
-    const { error: uploadError } = await supabase.storage.from("server-icons").upload(filePath, file, { upsert: true });
+    const { error: uploadError } = await supabase.storage.from("server-icons").upload(filePath, compressed, { upsert: true, contentType: compressed.type });
 
     if (uploadError) {
       console.error("Failed to upload icon:", uploadError);

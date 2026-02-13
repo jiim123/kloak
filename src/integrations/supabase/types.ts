@@ -2595,6 +2595,7 @@ export type Database = {
         Returns: Json
       }
       get_pending_friend_requests: { Args: { _user_id: string }; Returns: Json }
+      get_request_user_id: { Args: never; Returns: string }
       get_role_permissions: { Args: { _server_id: string }; Returns: Json }
       get_server_by_invite_code: {
         Args: { _invite_code: string }
