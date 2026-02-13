@@ -55,7 +55,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useRealtimeMembers } from '@/hooks';
 import { useMemberPermissions } from '@/hooks/useMemberPermissions';
 import { supabase } from '@/integrations/supabase/client';
-import { secureUpload, secureDelete } from '@/lib/storageUpload';
+import { secureUpload, secureDelete, secureListAndDelete } from '@/lib/storageUpload';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { invalidateServerEmojis } from '@/lib/serverEmojis';
@@ -544,6 +544,10 @@ export const ServerSettingsPage = () => {
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [isUploadingBanner, setIsUploadingBanner] = useState(false);
   const bannerInputRef = useRef<HTMLInputElement>(null);
+  
+  // Track explicit removals so displayUrl becomes null immediately
+  const [iconRemoved, setIconRemoved] = useState(false);
+  const [bannerRemoved, setBannerRemoved] = useState(false);
 
   // Custom emoji state (owner-only)
   const [emojiFile, setEmojiFile] = useState<File | null>(null);
@@ -825,6 +829,8 @@ export const ServerSettingsPage = () => {
       }
       setEmojiPreview(null);
       setServerEmojis([]);
+      setIconRemoved(false);
+      setBannerRemoved(false);
       // Reset role form
       setEditingRole(null);
       setRoleName('');
@@ -1184,6 +1190,7 @@ export const ServerSettingsPage = () => {
 
     setIconFile(file);
     setIconPreview(URL.createObjectURL(file));
+    setIconRemoved(false);
   };
 
   const clearIcon = () => {
@@ -1226,6 +1233,7 @@ export const ServerSettingsPage = () => {
 
     setBannerFile(file);
     setBannerPreview(URL.createObjectURL(file));
+    setBannerRemoved(false);
   };
 
   const clearBanner = () => {
@@ -1257,7 +1265,17 @@ export const ServerSettingsPage = () => {
     
     setIsUploadingBanner(true);
     try {
+      // Delete banner files from storage
+      const extensions = ["webp", "png", "jpg", "jpeg"];
+      const filesToRemove = extensions.map(ext => `${server.id}/banner.${ext}`);
+      try { await secureDelete("server-icons", filesToRemove); } catch { /* ignore */ }
+
       await updateServer(server.id, user.id, { banner_url: null });
+
+      if (bannerPreview) URL.revokeObjectURL(bannerPreview);
+      setBannerPreview(null);
+      setBannerFile(null);
+      setBannerRemoved(true);
       toast.success('Server banner removed');
     } catch (error) {
       toast.error('Failed to remove banner');
@@ -1271,7 +1289,15 @@ export const ServerSettingsPage = () => {
     
     setIsUploadingIcon(true);
     try {
+      // Delete icon files from storage
+      try { await secureListAndDelete("server-icons", server.id, "icon"); } catch { /* ignore */ }
+
       await updateServer(server.id, user.id, { icon_url: null });
+
+      if (iconPreview) URL.revokeObjectURL(iconPreview);
+      setIconPreview(null);
+      setIconFile(null);
+      setIconRemoved(true);
       toast.success('Server icon removed');
     } catch (error) {
       toast.error('Failed to remove icon');
@@ -1285,8 +1311,8 @@ export const ServerSettingsPage = () => {
     
     setIsLoading(true);
     try {
-      let iconUrl = server.icon_url;
-      let bannerUrl = server.banner_url;
+      let iconUrl = iconRemoved ? null : server.icon_url;
+      let bannerUrl = bannerRemoved ? null : server.banner_url;
       
       // Upload new icon if selected
       if (iconFile) {
@@ -1554,9 +1580,9 @@ export const ServerSettingsPage = () => {
   }
 
   // Determine which icon to show
-  const displayIconUrl = iconPreview || server.icon_url;
+  const displayIconUrl = iconRemoved ? null : (iconPreview || server.icon_url);
   // Determine which banner to show
-  const displayBannerUrl = bannerPreview || server.banner_url;
+  const displayBannerUrl = bannerRemoved ? null : (bannerPreview || server.banner_url);
 
   return (
     <>
