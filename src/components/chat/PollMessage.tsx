@@ -166,7 +166,7 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
               className={`w-full text-left rounded-lg border px-3 py-2 flex items-center gap-3 transition-colors ${
                 selected.includes(idx) 
                   ? "border-primary bg-primary/10" 
-                  : "border-border bg-background/40 hover:bg-accent hover:border-accent"
+                  : "border-border bg-muted/30 hover:bg-muted/60 hover:border-muted-foreground/30"
               }`}
             >
               <Checkbox
@@ -185,7 +185,7 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
                 className={`w-full text-left rounded-lg border px-3 py-2 flex items-center gap-3 cursor-pointer transition-colors ${
                   selected[0] === idx 
                     ? "border-primary bg-primary/10" 
-                    : "border-border bg-background/40 hover:bg-accent hover:border-accent"
+                    : "border-border bg-muted/30 hover:bg-muted/60 hover:border-muted-foreground/30"
                 }`}
               >
                 <RadioGroupItem value={String(idx)} />
