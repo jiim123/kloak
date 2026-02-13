@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -19,6 +19,7 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
   const [isVoting, setIsVoting] = useState(false);
   const [fetchError, setFetchError] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
+  const isClosingRef = useRef(false);
 
   // Fetch poll with user votes on mount
   useEffect(() => {
@@ -40,20 +41,27 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
     return poll?.userVotes && poll.userVotes.length > 0;
   }, [poll?.userVotes]);
 
-  // Auto-close exactly at end time (best effort) so the UI updates to results via realtime.
+  // Auto-close exactly at end time (best effort)
   useEffect(() => {
     if (!poll || poll.is_closed) return;
     const endsAtMs = new Date(poll.ends_at).getTime();
     const msUntilEnd = endsAtMs - Date.now();
+
+    const doClose = () => {
+      if (isClosingRef.current) return;
+      isClosingRef.current = true;
+      closePoll(pollId)
+        .catch(() => undefined)
+        .finally(() => { isClosingRef.current = false; });
+    };
+
     if (msUntilEnd <= 0) {
-      closePoll(pollId).catch(() => undefined);
+      doClose();
       return;
     }
-    const t = setTimeout(() => {
-      closePoll(pollId).catch(() => undefined);
-    }, msUntilEnd + 250);
+    const t = setTimeout(doClose, msUntilEnd + 250);
     return () => clearTimeout(t);
-  }, [pollId, poll?.ends_at, poll?.is_closed, closePoll, poll]);
+  }, [pollId, poll?.ends_at, poll?.is_closed, closePoll]);
 
   const isClosed = useMemo(() => {
     if (!poll) return false;

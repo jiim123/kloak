@@ -117,9 +117,13 @@ export const usePollStore = create<PollState>((set, get) => ({
   closePoll: async (pollId) => {
     try {
       const { data, error } = await supabase.rpc("close_poll" as any, { _poll_id: pollId });
-      if (error) return false;
+      if (error) {
+        console.error("[closePoll] RPC error:", error.message, error);
+        return false;
+      }
       return !!data;
-    } catch {
+    } catch (e) {
+      console.error("[closePoll] exception:", e);
       return false;
     }
   },

@@ -878,28 +878,11 @@ export const MessageItem = memo(function MessageItem({
                           type="button"
                           className="text-left hover:underline cursor-pointer w-full"
                           onClick={() => {
-                            let el = targetId ? document.getElementById(`message-${targetId}`) : null;
-                            // Fallback: search backwards in DOM for the poll message
-                            if (!el) {
-                              const thisEl = document.getElementById(`message-${message.id}`);
-                              if (thisEl) {
-                                const allMessages = thisEl.parentElement?.querySelectorAll('[id^="message-"]');
-                                if (allMessages) {
-                                  const arr = Array.from(allMessages);
-                                  const thisIdx = arr.indexOf(thisEl);
-                                  for (let i = thisIdx - 1; i >= 0; i--) {
-                                    if (arr[i].querySelector('.rounded-xl.border')) {
-                                      el = arr[i] as HTMLElement;
-                                      break;
-                                    }
-                                  }
-                                }
-                              }
-                            }
+                            const el = targetId ? document.getElementById(`message-${targetId}`) : null;
                             if (el) {
                               el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                               el.classList.add('bg-primary/10');
-                              setTimeout(() => el!.classList.remove('bg-primary/10'), 2000);
+                              setTimeout(() => el.classList.remove('bg-primary/10'), 2000);
                             }
                           }}
                         >
