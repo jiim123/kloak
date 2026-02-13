@@ -212,9 +212,7 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
 
       client.on("user-published", async (user: IAgoraRTCRemoteUser, mediaType: "audio" | "video") => {
         await client.subscribe(user, mediaType);
-        if (mediaType === "audio" && user.audioTrack) {
-          user.audioTrack.play();
-        }
+        // Audio playback is managed by ParticipantAudioPlayer component
         updateParticipants();
       });
 
@@ -240,9 +238,63 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
         console.log(`[Agora] Connection: ${prevState} → ${curState}`);
       });
 
-      // Join channel
+      // Set up broadcast channel BEFORE joining Agora so identity mappings work immediately
+      let broadcastCh: RealtimeChannel | null = null;
+      try {
+        broadcastCh = supabase.channel(`voice-meta:${channelId}`);
+
+        broadcastCh.on("broadcast", { event: "uid-map" }, ({ payload }) => {
+          if (payload?.uid && payload?.identity) {
+            const isNew = !uidMapRef.current.has(payload.uid);
+            uidMapRef.current.set(payload.uid, payload.identity);
+            updateParticipants();
+            if (isNew && payload.identity !== userId) {
+              broadcastCh!.send({
+                type: "broadcast",
+                event: "uid-map",
+                payload: { uid: numericUid, identity: userId },
+              }).catch(() => {});
+            }
+          }
+        });
+
+        broadcastCh.on("broadcast", { event: "hide-activity" }, ({ payload }) => {
+          if (payload?.identity !== undefined && payload?.hide !== undefined) {
+            hideActivityRef.current.set(payload.identity, payload.hide);
+            updateParticipants();
+          }
+        });
+
+        // Wait for broadcast channel to be ready before joining Agora
+        await new Promise<void>((resolve) => {
+          broadcastCh!.subscribe((s) => {
+            if (s === "SUBSCRIBED") resolve();
+          });
+          setTimeout(resolve, 3000); // Timeout fallback
+        });
+
+        broadcastChannelRef.current = broadcastCh;
+      } catch { /* non-critical */ }
+
+      // Join channel (broadcast is ready, so identity mappings will work immediately)
       await client.join(data.appId, channelId, data.token, numericUid);
       console.log(`[Agora] Successfully joined channel ${channelId} as UID ${numericUid}`);
+
+      // Announce UID mapping now that both channels are ready
+      if (broadcastCh) {
+        broadcastCh.send({
+          type: "broadcast",
+          event: "uid-map",
+          payload: { uid: numericUid, identity: userId },
+        }).catch(() => {});
+        if (voiceSettings.hideVoiceActivity) {
+          broadcastCh.send({
+            type: "broadcast",
+            event: "hide-activity",
+            payload: { identity: userId, hide: true },
+          }).catch(() => {});
+        }
+      }
 
       // Create mic track with audio processing settings
       const micTrack = await AgoraRTC.createMicrophoneAudioTrack({
@@ -284,55 +336,6 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
           }
         });
         presenceChannelRef.current = presenceCh;
-      } catch { /* non-critical */ }
-
-      // Broadcast channel for hideVoiceActivity + UID mapping
-      try {
-        const broadcastCh = supabase.channel(`voice-meta:${channelId}`);
-
-        broadcastCh.on("broadcast", { event: "uid-map" }, ({ payload }) => {
-          if (payload?.uid && payload?.identity) {
-            const isNew = !uidMapRef.current.has(payload.uid);
-            uidMapRef.current.set(payload.uid, payload.identity);
-            updateParticipants();
-            // Handshake: if we learned a new peer, echo our own mapping so they learn ours
-            if (isNew && payload.identity !== userId) {
-              broadcastCh.send({
-                type: "broadcast",
-                event: "uid-map",
-                payload: { uid: numericUid, identity: userId },
-              }).catch(() => {});
-            }
-          }
-        });
-
-        broadcastCh.on("broadcast", { event: "hide-activity" }, ({ payload }) => {
-          if (payload?.identity !== undefined && payload?.hide !== undefined) {
-            hideActivityRef.current.set(payload.identity, payload.hide);
-            updateParticipants();
-          }
-        });
-
-        broadcastCh.subscribe(async (s) => {
-          if (s === "SUBSCRIBED") {
-            // Announce our UID mapping
-            await broadcastCh.send({
-              type: "broadcast",
-              event: "uid-map",
-              payload: { uid: numericUid, identity: userId },
-            });
-            // Announce hideVoiceActivity setting
-            if (voiceSettings.hideVoiceActivity) {
-              await broadcastCh.send({
-                type: "broadcast",
-                event: "hide-activity",
-                payload: { identity: userId, hide: true },
-              });
-            }
-          }
-        });
-
-        broadcastChannelRef.current = broadcastCh;
       } catch { /* non-critical */ }
     } catch (err) {
       console.error("Failed to join Agora channel:", err);
