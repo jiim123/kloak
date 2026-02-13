@@ -1,121 +1,142 @@
 
+# Storage Security and Image Compression Plan
 
-# Fix Channel and Role Permission Syncing Across Devices in Real Time
+## Build Errors to Fix First
 
-## Summary
+Two pre-existing build errors must be fixed before proceeding:
 
-The realtime subscription infrastructure for channels already exists and works (`useRealtimeServer.ts` subscribes to INSERT/UPDATE/DELETE on `channels` and `channel_categories`). The core issues are missing behaviors around those events and missing subscriptions for permission-related tables.
+1. **`src/lib/messageAnimation.ts`** imports from `@/types/dm` which doesn't exist. The `DirectMessage` type is exported from `@/types/index.ts`. Fix: change import to `@/types`.
 
-## Issues Found
+2. **`supabase/functions/livekit-token/index.ts`** references `npm:livekit-server-sdk` which can't resolve. This is a Deno edge function issue -- needs the import specifier fixed in the function file.
 
-1. **Channel INSERT blindly adds all channels** -- does not check if the channel is private and if the user has access
-2. **Channel DELETE sets currentChannel to null but does not navigate** -- user sees a blank screen instead of being redirected
-3. **No toast notification** when a channel the user is viewing gets deleted
-4. **No reconnection recovery** -- after a disconnect/reconnect, channels are not re-fetched to catch missed events
-5. **No realtime subscription for permission tables** -- changes to `channel_permissions`, `role_permissions`, `channel_members`, or `server_member_roles` do not trigger a re-evaluation of which channels the user can see
-6. **No handling when user loses channel access** -- if a role change or permission override removes a user's access to a private channel, it stays in their sidebar
+---
 
-## Implementation Plan
+## TASK 1: Storage Bucket RLS Policies
 
-### 1. Fix Channel INSERT Handler -- Private Channel Filtering
+### Critical Constraint: Custom Auth
 
-**File: `src/hooks/useRealtimeServer.ts`**
+This project does NOT use Supabase Auth. It uses a custom secret-key-based authentication system where `auth.uid()` is always `NULL`. This means **standard storage RLS policies that rely on `auth.uid()` will break all uploads**.
 
-When a channel INSERT event arrives and the channel's `is_private` flag is true, check whether the current user is in the `channel_members` table for that channel before adding it to the store. If the user is not a member, skip adding the channel.
+The current policies are intentionally permissive (role = `public`) because mutations are secured via SECURITY DEFINER RPC functions at the table level. Storage buckets don't have an equivalent RPC layer.
 
-- Query `channel_members` table for (channel_id, user_id) match
-- Only add the channel to state if the user has access
-- Non-private channels continue to be added immediately (current behavior)
+### Current State
 
-### 2. Fix Channel DELETE Handler -- Navigation and Toast
+Five buckets exist, all public:
+- `avatars` -- user avatars and profile banners (path: `{user_id}/...`)
+- `server-icons` -- server icons and server banners (path: `{server_id}/...`)  
+- `server-emojis` -- custom server emojis (path: `{server_id}/...`)
+- `attachments` -- message attachments (path: `{user_id}/...`)
+- `badges` -- badge icons
 
-**File: `src/hooks/useRealtimeServer.ts`**
+All have permissive INSERT/UPDATE/DELETE policies open to `public` role.
 
-When the current channel is deleted:
-- Show a toast: "The channel you were viewing has been deleted"
-- Navigate to the first available channel in the server, or the server overview if no channels remain
-- This requires passing a navigate callback or using a ref pattern
+### Approach
 
-Implementation approach:
-- Add a `useNavigate` import and pass it through, or use a callback ref pattern
-- After setting `currentChannel: null`, find the next available channel from the remaining list and navigate to it
+Since `auth.uid()` is always NULL, we cannot use it in storage policies. Instead, we will create a SECURITY DEFINER helper function in the `public` schema that extracts the user ID from the custom `x-key-hash` header (already sent with every request via the Supabase client's `dynamicHeaders`). This function will look up the `users` table to verify the key hash and return the user ID.
 
-### 3. Add Reconnection Recovery
+Then storage policies will use this function instead of `auth.uid()`.
 
-**File: `src/hooks/useRealtimeServer.ts`**
+**New function:**
+```sql
+CREATE OR REPLACE FUNCTION public.get_request_user_id()
+RETURNS uuid
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  _key_hash text;
+  _user_id uuid;
+BEGIN
+  _key_hash := current_setting('request.headers', true)::json->>'x-key-hash';
+  IF _key_hash IS NULL OR _key_hash = '' THEN
+    RETURN NULL;
+  END IF;
+  SELECT id INTO _user_id FROM users WHERE key_hash = _key_hash LIMIT 1;
+  RETURN _user_id;
+END;
+$$;
+```
 
-When the `isConnected` state transitions from `false` to `true` (reconnection), trigger a full re-fetch of channels and categories for the current server to catch any changes missed during the disconnect.
+**Policies for `avatars` bucket (user-owned):**
+- SELECT: keep public
+- INSERT: `WITH CHECK (bucket_id = 'avatars' AND (storage.foldername(name))[1] = public.get_request_user_id()::text)`
+- UPDATE: `USING (bucket_id = 'avatars' AND (storage.foldername(name))[1] = public.get_request_user_id()::text)`
+- DELETE: `USING (bucket_id = 'avatars' AND (storage.foldername(name))[1] = public.get_request_user_id()::text)`
 
-- Track previous connection state with a ref
-- On reconnect (wasDisconnected -> isConnected), call `fetchChannels(serverId)` and `fetchRolePermissions(serverId)`
+**Policies for `attachments` bucket (user-owned):**
+- Same pattern as avatars, scoped to user folder.
 
-### 4. Add Realtime Subscriptions for Permission Tables
+**Policies for `server-icons` bucket (server-owned):**
+- INSERT/UPDATE/DELETE: check that the user is the server owner or has admin/owner role in `server_members`, using the `get_request_user_id()` function and the first folder segment as server_id.
 
-**File: `src/hooks/useRealtimeServer.ts`**
+**Policies for `server-emojis` bucket (server-owned):**
+- Same pattern as server-icons.
 
-Add subscriptions for tables that affect channel visibility and user permissions:
+**Policies for `badges` bucket:**
+- Keep SELECT public. No INSERT/UPDATE/DELETE for regular users (admin-only, managed outside the app).
 
-- `channel_permissions` (INSERT/UPDATE/DELETE filtered by channels in this server)
-- `role_permissions` (INSERT/UPDATE/DELETE filtered by server_id)
-- `server_member_roles` (INSERT/UPDATE/DELETE for the current user)
-- `channel_members` (INSERT/DELETE for the current user)
+### Migration SQL
 
-When any of these change, trigger a lightweight refresh:
-- Re-fetch `fetchChannels(serverId)` to get the filtered channel list (the RPC already handles private channel filtering)
-- Re-fetch `fetchRolePermissions(serverId)` to update permission state
+A single migration will:
+1. Create `public.get_request_user_id()` function
+2. Drop all 12 existing insecure INSERT/UPDATE/DELETE policies
+3. Create new scoped policies for all 5 buckets
 
-This is simpler and more reliable than trying to incrementally update permissions client-side.
+---
 
-### 5. Handle Permission/Access Revocation
+## TASK 2: Client-Side Image Compression
 
-**File: `src/hooks/useRealtimeServer.ts`**
+### New Dependency
 
-After re-fetching channels due to a permission change:
-- Compare the new channel list with the current one
-- If the user's `currentChannel` is no longer in the list (access revoked), redirect them to the first available channel
-- Show a toast: "You no longer have access to that channel"
+Install `browser-image-compression`.
 
-### 6. Ensure Realtime Publication for Permission Tables
+### New Utility File
 
-**Migration file** (if needed):
+Create `src/lib/imageCompression.ts` with:
+- Type `ImageType = 'avatar' | 'profile-banner' | 'server-icon' | 'server-banner'`
+- Preset compression configs per type
+- `compressImage(file, type)` function that compresses to WebP
+- GIF files are NOT used for avatars/banners/icons (only emojis), so no special GIF handling needed
 
-Check that `channel_permissions`, `role_permissions`, `server_member_roles`, and `channel_members` are in the `supabase_realtime` publication with `REPLICA IDENTITY FULL`. Based on the audit:
-- `role_permissions` and `channel_permissions` -- already in publication
-- `server_member_roles` -- already in publication  
-- `channel_members` -- already has `REPLICA IDENTITY FULL`
-- Need to verify `channel_members` is in `supabase_realtime` publication
+### Files to Update (add compression before upload)
 
-### 7. Background Sync Enhancement
+1. **`src/components/modals/UserSettingsModal.tsx`**
+   - `handleAvatarUpload` -- compress with `'avatar'` preset before upload
+   - `handleBannerUpload` -- compress with `'profile-banner'` preset before upload
 
-**File: `src/hooks/useBackgroundSync.ts`**
+2. **`src/components/modals/ServerSettingsModal.tsx`**
+   - `uploadIcon` -- compress with `'server-icon'` preset before upload
+   - `uploadBanner` / `handleCropComplete` -- banner already produces a WebP blob from the crop modal, but add compression with `'server-banner'` preset for size reduction
 
-On reconnection (the `attemptReconnect` success path), also call `fetchChannels` for the current server to ensure stale state is resolved.
+3. **`src/components/modals/CreateServerModal.tsx`**
+   - Icon upload function -- compress with `'server-icon'` preset before upload
 
-## Technical Details
+4. **NOT compressing:** message attachments (arbitrary images from users, compressing could degrade quality unexpectedly), emoji uploads (they can be GIFs and are already small).
 
-### Files to Modify
+### Changes per upload site
 
-| File | Changes |
-|------|---------|
-| `src/hooks/useRealtimeServer.ts` | Add private channel filtering on INSERT, navigation on DELETE, reconnection recovery, permission table subscriptions |
-| `src/hooks/useBackgroundSync.ts` | Add channel re-fetch on reconnection |
-| One migration file (if needed) | Ensure `channel_members` is in realtime publication |
+- Call `compressImage(file, type)` before the `supabase.storage.from().upload()` call
+- The compressed file is already WebP with `.webp` extension
+- Update `contentType` to `'image/webp'` in upload options where not already set
+- File paths already use dynamic extensions from `file.name.split('.').pop()`, so they will naturally become `.webp`
 
-### Subscription Architecture After Changes
+### Edge Cases
 
-The `useRealtimeServer` hook will subscribe to one Supabase channel (`server:{serverId}`) with these postgres_changes listeners:
+- Compression failure falls back to original file (built into the utility)
+- File size limits remain as-is (5MB for avatars, 8MB for banners, 2MB for server icons) -- these are pre-compression limits
+- No animated GIF handling needed since GIFs are only accepted for emoji uploads, which are not being compressed
 
-- `servers` UPDATE/DELETE (existing)
-- `channels` INSERT/UPDATE/DELETE (existing, enhanced handlers)
-- `channel_categories` INSERT/UPDATE/DELETE (existing)
-- `channel_permissions` INSERT/UPDATE/DELETE (new -- triggers permission refresh)
-- `role_permissions` INSERT/UPDATE/DELETE (new -- triggers permission refresh)
-- `server_member_roles` INSERT/DELETE (new -- triggers permission refresh)
-- `channel_members` INSERT/DELETE (new -- triggers channel list refresh)
+---
 
-Permission-change listeners will be debounced (500ms) to avoid excessive re-fetches when multiple permission rows change at once (e.g., bulk role permission updates).
+## Summary of All File Changes
 
-### No Database Changes Required
-
-All the necessary realtime publications and table configurations are already in place. The fix is entirely client-side logic in the realtime event handlers.
-
+| File | Change |
+|------|--------|
+| `src/lib/messageAnimation.ts` | Fix import `@/types/dm` to `@/types` |
+| `src/lib/imageCompression.ts` | **New file** -- compression utility |
+| `src/components/modals/UserSettingsModal.tsx` | Add compression to avatar and banner uploads |
+| `src/components/modals/ServerSettingsModal.tsx` | Add compression to icon and banner uploads |
+| `src/components/modals/CreateServerModal.tsx` | Add compression to icon upload |
+| Database migration | Create `get_request_user_id()` function; drop old policies; create new scoped storage policies |
