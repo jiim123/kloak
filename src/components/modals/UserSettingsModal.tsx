@@ -279,10 +279,12 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
     setIsLoading(true);
     try {
-      const fileExt = file.name.split(".").pop();
+      const { compressImage } = await import("@/lib/imageCompression");
+      const compressed = await compressImage(file, "avatar");
+      const fileExt = compressed.name.split(".").pop();
       const filePath = `${user.id}/avatar-${Date.now()}.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage.from("avatars").upload(filePath, file, { upsert: true });
+      const { error: uploadError } = await supabase.storage.from("avatars").upload(filePath, compressed, { upsert: true, contentType: compressed.type });
 
       if (uploadError) throw uploadError;
 
@@ -290,9 +292,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         data: { publicUrl },
       } = supabase.storage.from("avatars").getPublicUrl(filePath);
 
-      // Cache-busted URL to avoid stale browser cache
       const cacheBustedUrl = `${publicUrl}?v=${Date.now()}`;
-      // Update preview immediately
       setLocalAvatarUrl(cacheBustedUrl);
       await updateUser({ avatar_url: cacheBustedUrl });
       toast.success("Avatar updated!");
@@ -313,7 +313,6 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       return;
     }
 
-    // Slightly larger than avatar (banners can be bigger)
     if (file.size > 8 * 1024 * 1024) {
       toast.error("Image must be less than 8MB");
       return;
@@ -321,10 +320,12 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
     setIsBannerUploading(true);
     try {
-      const fileExt = file.name.split(".").pop();
+      const { compressImage } = await import("@/lib/imageCompression");
+      const compressed = await compressImage(file, "profile-banner");
+      const fileExt = compressed.name.split(".").pop();
       const filePath = `${user.id}/banner-${Date.now()}.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage.from("avatars").upload(filePath, file, { upsert: true });
+      const { error: uploadError } = await supabase.storage.from("avatars").upload(filePath, compressed, { upsert: true, contentType: compressed.type });
 
       if (uploadError) throw uploadError;
 
@@ -332,9 +333,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         data: { publicUrl },
       } = supabase.storage.from("avatars").getPublicUrl(filePath);
 
-      // Cache-busted URL
       const cacheBustedUrl = `${publicUrl}?v=${Date.now()}`;
-      // Update preview immediately
       setLocalBannerUrl(cacheBustedUrl);
       await updateUser({ banner_url: cacheBustedUrl });
       toast.success("Banner updated!");
@@ -343,7 +342,6 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       toast.error("Failed to upload banner");
     } finally {
       setIsBannerUploading(false);
-      // Allow re-selecting the same file
       if (bannerInputRef.current) bannerInputRef.current.value = "";
     }
   };

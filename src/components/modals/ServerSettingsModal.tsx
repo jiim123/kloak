@@ -945,8 +945,9 @@ export const ServerSettingsModal = () => {
   };
 
   const uploadIcon = async (serverId: string, file: File): Promise<string | null> => {
-    const ext = file.name.split(".").pop() || "png";
-    // Use timestamp in path to avoid CDN/browser cache collisions after removal + re-upload
+    const { compressImage } = await import("@/lib/imageCompression");
+    const compressed = await compressImage(file, "server-icon");
+    const ext = compressed.name.split(".").pop() || "webp";
     const filePath = `${serverId}/icon-${Date.now()}.${ext}`;
 
     // Clean up old icon files first
@@ -958,7 +959,7 @@ export const ServerSettingsModal = () => {
       }
     } catch { /* ignore cleanup errors */ }
 
-    const { error: uploadError } = await supabase.storage.from("server-icons").upload(filePath, file, { upsert: true });
+    const { error: uploadError } = await supabase.storage.from("server-icons").upload(filePath, compressed, { upsert: true, contentType: compressed.type });
 
     if (uploadError) {
       console.error("Failed to upload icon:", uploadError);
@@ -1010,8 +1011,10 @@ export const ServerSettingsModal = () => {
     setShowCropModal(false);
 
     try {
-      const file = new File([croppedBlob], "banner.webp", { type: "image/webp" });
-      const uploadedUrl = await uploadBanner(server.id, file);
+      const rawFile = new File([croppedBlob], "banner.webp", { type: "image/webp" });
+      const { compressImage } = await import("@/lib/imageCompression");
+      const compressed = await compressImage(rawFile, "server-banner");
+      const uploadedUrl = await uploadBanner(server.id, compressed);
       if (!uploadedUrl) throw new Error("Upload returned null");
 
       const cacheBustedUrl = `${uploadedUrl}?t=${Date.now()}`;
