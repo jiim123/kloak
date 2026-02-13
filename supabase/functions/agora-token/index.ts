@@ -14,15 +14,18 @@ const PRIVILEGES = {
   publishVideoStream: 3,
   publishDataStream: 4,
 };
+const SERVICE_TYPE_RTC = 1;
 
-function encodeUint16(val: number): Uint8Array {
+// --- Packer functions (little-endian, matching official Agora SDK) ---
+
+function packUint16(val: number): Uint8Array {
   const buf = new Uint8Array(2);
   buf[0] = val & 0xff;
   buf[1] = (val >> 8) & 0xff;
   return buf;
 }
 
-function encodeUint32(val: number): Uint8Array {
+function packUint32(val: number): Uint8Array {
   const buf = new Uint8Array(4);
   buf[0] = val & 0xff;
   buf[1] = (val >> 8) & 0xff;
@@ -31,31 +34,28 @@ function encodeUint32(val: number): Uint8Array {
   return buf;
 }
 
-function encodeString(str: string): Uint8Array {
-  const encoded = new TextEncoder().encode(str);
-  const lenBytes = encodeUint16(encoded.length);
-  const result = new Uint8Array(lenBytes.length + encoded.length);
+function packString(str: Uint8Array | string): Uint8Array {
+  const data = typeof str === "string" ? new TextEncoder().encode(str) : str;
+  const lenBytes = packUint16(data.length);
+  const result = new Uint8Array(lenBytes.length + data.length);
   result.set(lenBytes);
-  result.set(encoded, lenBytes.length);
+  result.set(data, lenBytes.length);
   return result;
 }
 
-function encodeMapUint32(map: Record<number, number>): Uint8Array {
+function packMapUint32(map: Record<number, number>): Uint8Array {
+  // Sort by key (matching Python's OrderedDict sorted by key)
+  const entries = Object.entries(map)
+    .map(([k, v]) => [Number(k), v] as [number, number])
+    .sort((a, b) => a[0] - b[0]);
+
   const parts: Uint8Array[] = [];
-  const entries = Object.entries(map);
-  parts.push(encodeUint16(entries.length));
+  parts.push(packUint16(entries.length));
   for (const [k, v] of entries) {
-    parts.push(encodeUint16(Number(k)));
-    parts.push(encodeUint32(v));
+    parts.push(packUint16(k));
+    parts.push(packUint32(v));
   }
-  const total = parts.reduce((a, b) => a + b.length, 0);
-  const result = new Uint8Array(total);
-  let offset = 0;
-  for (const p of parts) {
-    result.set(p, offset);
-    offset += p.length;
-  }
-  return result;
+  return concatBytes(...parts);
 }
 
 function concatBytes(...arrays: Uint8Array[]): Uint8Array {
@@ -77,47 +77,78 @@ async function hmacSign(key: Uint8Array, data: Uint8Array): Promise<Uint8Array> 
   return new Uint8Array(sig);
 }
 
+// --- Zlib deflate using DecompressionStream/CompressionStream ---
+
+async function zlibCompress(data: Uint8Array): Promise<Uint8Array> {
+  const stream = new Blob([data]).stream().pipeThrough(new CompressionStream("deflate"));
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+  }
+  return concatBytes(...chunks);
+}
+
 function toBase64(bytes: Uint8Array): string {
   let binary = "";
   for (const b of bytes) binary += String.fromCharCode(b);
   return btoa(binary);
 }
 
+// --- Token builder matching official Agora AccessToken2 (Python reference) ---
+
 async function buildToken(
   appId: string, appCert: string, channelName: string, uid: number, expireSeconds: number
 ): Promise<string> {
-  const now = Math.floor(Date.now() / 1000);
-  const expireTs = expireSeconds > 0 ? now + expireSeconds : 0;
+  const issueTs = Math.floor(Date.now() / 1000);
+  const salt = Math.floor(Math.random() * 99999999) + 1;
+  const expireTs = expireSeconds > 0 ? issueTs + expireSeconds : 0;
 
+  // Step 1: Build signing key (double HMAC per official spec)
+  // signing = hmac(pack_uint32(issue_ts), app_cert)
+  // signing = hmac(pack_uint32(salt), signing)
+  const appCertBytes = new TextEncoder().encode(appCert);
+  let signingKey = await hmacSign(packUint32(issueTs), appCertBytes);
+  signingKey = await hmacSign(packUint32(salt), signingKey);
+
+  // Step 2: Build service pack
+  // ServiceRtc.pack() = pack_uint16(type) + pack_map_uint32(privileges) + pack_string(channel) + pack_string(uid)
   const privileges: Record<number, number> = {};
   privileges[PRIVILEGES.joinChannel] = expireTs;
   privileges[PRIVILEGES.publishAudioStream] = expireTs;
   privileges[PRIVILEGES.publishVideoStream] = expireTs;
   privileges[PRIVILEGES.publishDataStream] = expireTs;
 
-  const serviceContent = concatBytes(encodeString(channelName), encodeString(String(uid)));
-  const servicePrivileges = encodeMapUint32(privileges);
-  const serviceBytes = concatBytes(
-    encodeUint16(1),
-    encodeString("rtc"),
-    serviceContent,
-    servicePrivileges
+  const uidStr = uid === 0 ? "" : String(uid);
+  const servicePack = concatBytes(
+    packUint16(SERVICE_TYPE_RTC),
+    packMapUint32(privileges),
+    packString(channelName),
+    packString(uidStr)
   );
 
-  const salt = Math.floor(Math.random() * 0xffffffff);
-  const issueTs = now;
-  const message = concatBytes(
-    encodeUint32(salt), encodeUint32(issueTs), encodeUint32(expireSeconds), serviceBytes
+  // Step 3: Build signing_info
+  // signing_info = pack_string(app_id) + pack_uint32(issue_ts) + pack_uint32(expire) + pack_uint32(salt) + pack_uint16(service_count) + services
+  const signingInfo = concatBytes(
+    packString(appId),
+    packUint32(issueTs),
+    packUint32(expireSeconds),
+    packUint32(salt),
+    packUint16(1), // 1 service
+    servicePack
   );
 
-  const signing = concatBytes(
-    new TextEncoder().encode(appId), encodeUint32(issueTs), encodeUint32(salt), message
-  );
-  const key = await hmacSign(new TextEncoder().encode(appCert), signing);
+  // Step 4: Sign
+  const signature = await hmacSign(signingKey, signingInfo);
 
-  const compressedLen = encodeUint32(message.length);
-  const tokenBytes = concatBytes(key, compressedLen, message);
-  return VERSION + toBase64(tokenBytes);
+  // Step 5: Compress and encode
+  // token = "007" + base64(zlib.compress(pack_string(signature) + signing_info))
+  const raw = concatBytes(packString(signature), signingInfo);
+  const compressed = await zlibCompress(raw);
+
+  return VERSION + toBase64(compressed);
 }
 
 serve(async (req) => {
@@ -129,18 +160,11 @@ serve(async (req) => {
     const AGORA_APP_ID = (Deno.env.get("AGORA_APP_ID") || "").trim();
     const AGORA_APP_CERTIFICATE = (Deno.env.get("AGORA_APP_CERTIFICATE") || "").trim();
 
-    console.log(`[agora-token] APP_ID length: ${AGORA_APP_ID.length}, CERT length: ${AGORA_APP_CERTIFICATE.length}, APP_ID: "${AGORA_APP_ID}"`);
+    console.log(`[agora-token] APP_ID length: ${AGORA_APP_ID.length}, CERT length: ${AGORA_APP_CERTIFICATE.length}`);
 
     if (!AGORA_APP_ID || !AGORA_APP_CERTIFICATE) {
-      console.error("Missing Agora secrets. APP_ID exists:", !!AGORA_APP_ID, "CERT exists:", !!AGORA_APP_CERTIFICATE);
+      console.error("Missing Agora secrets.");
       throw new Error("Agora credentials not configured");
-    }
-
-    if (AGORA_APP_ID.length !== 32) {
-      console.error(`[agora-token] WARNING: App ID is ${AGORA_APP_ID.length} chars, expected 32`);
-    }
-    if (AGORA_APP_CERTIFICATE.length !== 32) {
-      console.error(`[agora-token] WARNING: Certificate is ${AGORA_APP_CERTIFICATE.length} chars, expected 32`);
     }
 
     const { channelName, uid } = await req.json();
