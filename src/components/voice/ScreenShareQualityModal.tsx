@@ -3,6 +3,7 @@ import { Monitor, ChevronDown, Check } from "lucide-react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -59,6 +60,7 @@ export function ScreenShareQualityModal({ open, onClose, onConfirm }: Props) {
             <Monitor className="w-5 h-5" />
             Screen Share Quality
           </DialogTitle>
+          <DialogDescription className="sr-only">Choose resolution and frame rate for screen sharing</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
