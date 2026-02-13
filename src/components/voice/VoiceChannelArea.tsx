@@ -8,7 +8,7 @@ import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { useVoiceSettingsStore } from "@/stores/voiceSettingsStore";
 import { useFriendStore } from "@/stores/friendStore";
-import { useLiveKitRoom, LiveKitParticipant } from "@/hooks/useLiveKitRoom";
+import { useAgoraRoom, AgoraParticipant } from "@/hooks/useAgoraRoom";
 import { usePushToTalk } from "@/hooks/usePushToTalk";
 import { useHideVoiceActivity } from "@/hooks/useHideVoiceActivity";
 import { ScreenShareQualityModal, ScreenShareQuality } from "@/components/voice/ScreenShareQualityModal";
@@ -31,7 +31,7 @@ function VideoPlayer({ track }: { track: MediaStreamTrack }) {
   return <video ref={ref} autoPlay playsInline className="max-w-full max-h-full w-auto h-auto" />;
 }
 
-function getMemberDisplayName(member: ServerMember | undefined, participant: LiveKitParticipant): string {
+function getMemberDisplayName(member: ServerMember | undefined, participant: AgoraParticipant): string {
   if (member) {
     return member.nickname || member.user?.display_name || member.user?.username || participant.name;
   }
@@ -39,7 +39,7 @@ function getMemberDisplayName(member: ServerMember | undefined, participant: Liv
 }
 
 type TileProps = {
-  participant: LiveKitParticipant;
+  participant: AgoraParticipant;
   member: ServerMember | undefined;
   isYou: boolean;
   isDeafened: boolean;
@@ -114,7 +114,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
   const setJoinedChannel = useVoiceStore((s) => s.setJoinedChannel);
   const [showQualityModal, setShowQualityModal] = useState(false);
 
-  const voice = useLiveKitRoom({
+  const voice = useAgoraRoom({
     channelId: channel.id,
     userId: user?.id || null,
     displayName: user?.display_name || user?.username,
@@ -291,7 +291,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
                   <div className="text-sm font-semibold truncate">
                     {stage.isLocal
                       ? "Your Screen"
-                      : `${getMemberDisplayName(memberByUserId.get(stage.identity), { identity: stage.identity, name: stage.identity } as LiveKitParticipant)} • Screen`}
+                      : `${getMemberDisplayName(memberByUserId.get(stage.identity), { identity: stage.identity, name: stage.identity } as AgoraParticipant)} • Screen`}
                   </div>
                   <div className="text-xs text-muted-foreground">Live</div>
                 </div>

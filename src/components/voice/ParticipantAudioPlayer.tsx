@@ -1,16 +1,15 @@
 /**
- * Participant Audio Player using LiveKit's track.attach() API
- * Uses LiveKit's built-in audio element creation for reliable playback
- * and setVolume() for per-user volume control.
+ * Participant Audio Player using Agora's IRemoteAudioTrack API
+ * Uses track.play() / track.stop() and track.setVolume() for per-user volume control.
  */
 
-import { useEffect, useRef, useCallback } from 'react';
-import type { RemoteTrack } from 'livekit-client';
+import { useEffect } from 'react';
+import type { IRemoteAudioTrack } from 'agora-rtc-sdk-ng';
 import { useVoiceSettingsStore } from '@/stores/voiceSettingsStore';
 
 interface ParticipantAudioPlayerProps {
   participantId: string;
-  track: RemoteTrack;
+  track: IRemoteAudioTrack;
   muted: boolean; // Global deafen state
 }
 
@@ -19,38 +18,20 @@ export function ParticipantAudioPlayer({
   track,
   muted,
 }: ParticipantAudioPlayerProps) {
-  const elementRef = useRef<HTMLMediaElement | null>(null);
-
   const userVolume = useVoiceSettingsStore((s) => s.getUserVolume(participantId));
   const outputVolume = useVoiceSettingsStore((s) => s.settings.outputVolume);
 
-  const calculateVolume = useCallback(() => {
-    if (muted) return 0;
-    return Math.min(1, (userVolume / 100) * (outputVolume / 100));
-  }, [userVolume, outputVolume, muted]);
-
-  // Attach/detach the LiveKit track
+  // Set volume reactively (Agora setVolume takes 0-100)
   useEffect(() => {
     if (!track) return;
-
-    // LiveKit's attach() creates an <audio> element and handles playback
-    const element = track.attach();
-    element.volume = calculateVolume();
-    elementRef.current = element;
-
-    return () => {
-      track.detach(element);
-      element.remove();
-      elementRef.current = null;
-    };
-  }, [track]);
-
-  // Update volume reactively
-  useEffect(() => {
-    if (elementRef.current) {
-      elementRef.current.volume = calculateVolume();
+    if (muted) {
+      track.setVolume(0);
+    } else {
+      const vol = Math.min(100, Math.round((userVolume / 100) * (outputVolume / 100) * 100));
+      track.setVolume(vol);
     }
-  }, [calculateVolume]);
+  }, [track, userVolume, outputVolume, muted]);
 
+  // Agora tracks are already playing from subscribe — we just manage volume here
   return null;
 }

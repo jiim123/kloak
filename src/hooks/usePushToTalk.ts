@@ -1,15 +1,19 @@
 /**
  * Push to Talk Hook
  * Handles global keyboard events for PTT functionality
+ * Uses a generic VoiceRoomHandle interface (works with any voice provider)
  */
 
 import { useEffect, useCallback, useRef } from 'react';
 import { useVoiceSettingsStore } from '@/stores/voiceSettingsStore';
 import { playPTTActivateSound, playPTTDeactivateSound } from '@/lib/voiceSounds';
-import type { Room } from 'livekit-client';
+
+export interface VoiceRoomHandle {
+  setMicEnabled: (enabled: boolean) => Promise<void>;
+}
 
 interface UsePushToTalkOptions {
-  room: Room | null;
+  room: VoiceRoomHandle | null;
   isConnected: boolean;
   onMuteChange?: (muted: boolean) => void;
 }
@@ -23,17 +27,14 @@ function matchesKeybind(event: KeyboardEvent, keybind: string): boolean {
   const needsShift = parts.includes('shift');
   const needsMeta = parts.includes('meta') || parts.includes('cmd') || parts.includes('command');
 
-  // Check modifiers
   if (needsCtrl !== event.ctrlKey) return false;
   if (needsAlt !== event.altKey) return false;
   if (needsShift !== event.shiftKey) return false;
   if (needsMeta !== event.metaKey) return false;
 
-  // Check key
   const eventKey = event.key.toLowerCase();
   const eventCode = event.code.toLowerCase();
   
-  // Handle special key names
   if (key === 'space') return eventCode === 'space' || eventKey === ' ';
   if (key === 'enter') return eventKey === 'enter';
   if (key === 'escape' || key === 'esc') return eventKey === 'escape';
@@ -49,18 +50,16 @@ export function usePushToTalk({ room, isConnected, onMuteChange }: UsePushToTalk
   const isToggleMode = settings.pttMode === 'toggle';
   const keybind = settings.pttKeybind;
   
-  // Track PTT state for toggle mode
   const isPTTActiveRef = useRef(false);
   const isHoldingRef = useRef(false);
 
   const setMicEnabled = useCallback(async (enabled: boolean, silent = false) => {
-    if (!room?.localParticipant) return;
+    if (!room) return;
     
     try {
-      await room.localParticipant.setMicrophoneEnabled(enabled);
+      await room.setMicEnabled(enabled);
       onMuteChange?.(!enabled);
 
-      // Play PTT activation/deactivation sound if enabled (skip if silent)
       if (!silent) {
         const settings = useVoiceSettingsStore.getState().settings;
         if (settings.pttActivationSound && !settings.visualOnlyMode) {
@@ -80,7 +79,6 @@ export function usePushToTalk({ room, isConnected, onMuteChange }: UsePushToTalk
     if (!isConnected || !isPTTMode || !room) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Ignore if typing in an input
       const target = event.target as HTMLElement;
       if (
         target.tagName === 'INPUT' ||
@@ -91,17 +89,14 @@ export function usePushToTalk({ room, isConnected, onMuteChange }: UsePushToTalk
       }
 
       if (!matchesKeybind(event, keybind)) return;
-
       event.preventDefault();
 
       if (isToggleMode) {
-        // Toggle mode: press to toggle on/off
         if (!event.repeat) {
           isPTTActiveRef.current = !isPTTActiveRef.current;
           setMicEnabled(isPTTActiveRef.current);
         }
       } else {
-        // Hold mode: key down = mic on (ignore key repeats)
         if (!event.repeat && !isHoldingRef.current) {
           isHoldingRef.current = true;
           setMicEnabled(true);
@@ -111,15 +106,12 @@ export function usePushToTalk({ room, isConnected, onMuteChange }: UsePushToTalk
 
     const handleKeyUp = (event: KeyboardEvent) => {
       if (!matchesKeybind(event, keybind)) return;
-
       if (!isToggleMode && isHoldingRef.current) {
-        // Hold mode: key up = mic off
         isHoldingRef.current = false;
         setMicEnabled(false);
       }
     };
 
-    // When entering PTT mode while connected, ensure mic starts muted (silently)
     if (isPTTMode && !isPTTActiveRef.current && !isHoldingRef.current) {
       setMicEnabled(false, true);
     }
@@ -130,12 +122,10 @@ export function usePushToTalk({ room, isConnected, onMuteChange }: UsePushToTalk
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
-      // Reset state on cleanup
       isHoldingRef.current = false;
     };
   }, [isConnected, isPTTMode, isToggleMode, keybind, room, setMicEnabled]);
 
-  // Reset PTT state when disconnecting
   useEffect(() => {
     if (!isConnected) {
       isPTTActiveRef.current = false;
