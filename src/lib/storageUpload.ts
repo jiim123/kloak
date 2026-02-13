@@ -17,7 +17,7 @@ export async function secureUpload(
   bucket: string,
   path: string,
   file: File | Blob,
-  options?: { contentType?: string; upsert?: boolean }
+  options?: { contentType?: string; upsert?: boolean },
 ): Promise<{ publicUrl: string; path: string }> {
   const keyHash = requireKeyHash();
 
@@ -48,14 +48,9 @@ export async function secureUpload(
 /**
  * Delete file(s) via the secure Edge Function proxy.
  */
-export async function secureDelete(
-  bucket: string,
-  pathOrPaths: string | string[]
-): Promise<void> {
+export async function secureDelete(bucket: string, pathOrPaths: string | string[]): Promise<void> {
   const keyHash = requireKeyHash();
-  const body = Array.isArray(pathOrPaths)
-    ? { bucket, paths: pathOrPaths }
-    : { bucket, path: pathOrPaths };
+  const body = Array.isArray(pathOrPaths) ? { bucket, paths: pathOrPaths } : { bucket, path: pathOrPaths };
 
   const res = await fetch(STORAGE_FUNCTION_URL, {
     method: "DELETE",
@@ -77,11 +72,7 @@ export async function secureDelete(
  * List and delete files matching a prefix/filter via the Edge Function.
  * Used for cleanup-before-upload patterns (e.g. old server icons).
  */
-export async function secureListAndDelete(
-  bucket: string,
-  prefix: string,
-  searchFilter?: string
-): Promise<void> {
+export async function secureListAndDelete(bucket: string, prefix: string, searchFilter?: string): Promise<void> {
   const keyHash = requireKeyHash();
 
   const res = await fetch(STORAGE_FUNCTION_URL, {
