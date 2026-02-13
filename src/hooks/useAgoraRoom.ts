@@ -234,8 +234,14 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
         if (changed) updateParticipants();
       });
 
+      // Log connection state changes for debugging
+      client.on("connection-state-change", (curState, prevState) => {
+        console.log(`[Agora] Connection: ${prevState} → ${curState}`);
+      });
+
       // Join channel
       await client.join(data.appId, channelId, data.token, numericUid);
+      console.log(`[Agora] Successfully joined channel ${channelId} as UID ${numericUid}`);
 
       // Create mic track with audio processing settings
       const micTrack = await AgoraRTC.createMicrophoneAudioTrack({
