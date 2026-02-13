@@ -3123,7 +3123,7 @@ export type Database = {
         Returns: undefined
       }
       upsert_user_preferences: {
-        Args: { _preferences: Json; _user_id: string }
+        Args: { _prefs: Json; _user_id: string }
         Returns: undefined
       }
       upsert_user_voice_settings: {
