@@ -126,12 +126,21 @@ serve(async (req) => {
   }
 
   try {
-    const AGORA_APP_ID = Deno.env.get("AGORA_APP_ID");
-    const AGORA_APP_CERTIFICATE = Deno.env.get("AGORA_APP_CERTIFICATE");
+    const AGORA_APP_ID = (Deno.env.get("AGORA_APP_ID") || "").trim();
+    const AGORA_APP_CERTIFICATE = (Deno.env.get("AGORA_APP_CERTIFICATE") || "").trim();
+
+    console.log(`[agora-token] APP_ID length: ${AGORA_APP_ID.length}, CERT length: ${AGORA_APP_CERTIFICATE.length}, APP_ID: "${AGORA_APP_ID}"`);
 
     if (!AGORA_APP_ID || !AGORA_APP_CERTIFICATE) {
       console.error("Missing Agora secrets. APP_ID exists:", !!AGORA_APP_ID, "CERT exists:", !!AGORA_APP_CERTIFICATE);
       throw new Error("Agora credentials not configured");
+    }
+
+    if (AGORA_APP_ID.length !== 32) {
+      console.error(`[agora-token] WARNING: App ID is ${AGORA_APP_ID.length} chars, expected 32`);
+    }
+    if (AGORA_APP_CERTIFICATE.length !== 32) {
+      console.error(`[agora-token] WARNING: Certificate is ${AGORA_APP_CERTIFICATE.length} chars, expected 32`);
     }
 
     const { channelName, uid } = await req.json();
@@ -149,6 +158,8 @@ serve(async (req) => {
     }
 
     const token = await buildToken(AGORA_APP_ID, AGORA_APP_CERTIFICATE, channelName, uid, 6 * 60 * 60);
+
+    console.log(`[agora-token] Token generated for channel: ${channelName}, uid: ${uid}`);
 
     return new Response(JSON.stringify({ token, appId: AGORA_APP_ID }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
