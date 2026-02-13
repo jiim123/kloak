@@ -57,7 +57,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { useNotificationSound } from "@/hooks/useNotificationSound";
 import { supabase } from "@/integrations/supabase/client";
-import { secureUpload } from "@/lib/storageUpload";
+import { secureUpload, secureListAndDelete } from "@/lib/storageUpload";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -355,6 +355,11 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     if (!user) return;
     setIsLoading(true);
     try {
+      // Delete avatar files from storage first
+      try {
+        await secureListAndDelete("avatars", user.id, "avatar");
+      } catch { /* ignore cleanup errors */ }
+
       setLocalAvatarUrl(null);
       await updateUser({ avatar_url: null });
       toast.success("Avatar removed!");

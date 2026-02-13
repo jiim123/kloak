@@ -210,6 +210,10 @@ export const ServerSettingsModal = () => {
   const [isUploadingBanner, setIsUploadingBanner] = useState(false);
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
+  // Removal tracking flags (prevent stale store fallback)
+  const [iconRemoved, setIconRemoved] = useState(false);
+  const [bannerRemoved, setBannerRemoved] = useState(false);
+
   // Banner crop modal state
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const [showCropModal, setShowCropModal] = useState(false);
@@ -548,9 +552,11 @@ export const ServerSettingsModal = () => {
       // Reset icon state
       setIconFile(null);
       setIconPreview(null);
+      setIconRemoved(false);
       // Reset banner state
       setBannerFile(null);
       setBannerPreview(null);
+      setBannerRemoved(false);
       // Reset emoji state
       setEmojiFile(null);
       setEmojiName("");
@@ -909,6 +915,7 @@ export const ServerSettingsModal = () => {
     // Show local preview immediately
     const preview = URL.createObjectURL(file);
     setIconPreview(preview);
+    setIconRemoved(false);
     setIsUploadingIcon(true);
 
     try {
@@ -985,6 +992,7 @@ export const ServerSettingsModal = () => {
     // Show local preview immediately
     const preview = URL.createObjectURL(croppedBlob);
     setBannerPreview(preview);
+    setBannerRemoved(false);
     setIsUploadingBanner(true);
 
     // Close crop modal
@@ -1066,6 +1074,7 @@ export const ServerSettingsModal = () => {
       if (bannerPreview) URL.revokeObjectURL(bannerPreview);
       setBannerPreview(null);
       setBannerFile(null);
+      setBannerRemoved(true);
 
       toast.success("Server banner removed");
     } catch (error) {
@@ -1092,6 +1101,7 @@ export const ServerSettingsModal = () => {
       if (iconPreview) URL.revokeObjectURL(iconPreview);
       setIconPreview(null);
       setIconFile(null);
+      setIconRemoved(true);
 
       toast.success("Server icon removed");
     } catch (error) {
@@ -1341,8 +1351,8 @@ export const ServerSettingsModal = () => {
     );
   }
 
-  const displayIconUrl = iconPreview || server.icon_url;
-  const displayBannerUrl = bannerPreview || server.banner_url;
+  const displayIconUrl = iconRemoved ? null : (iconPreview || server.icon_url);
+  const displayBannerUrl = bannerRemoved ? null : (bannerPreview || server.banner_url);
 
   return (
     <>
