@@ -48,10 +48,19 @@ export const useRealtimePolls = (channelId: string | null) => {
     if (!channelId) return;
 
     // Close any expired polls when entering a channel (best-effort)
-    usePollStore
-      .getState()
-      .closeExpiredPolls(channelId)
-      .catch(() => undefined);
+    const closeExpired = () => {
+      usePollStore
+        .getState()
+        .closeExpiredPolls(channelId)
+        .catch(() => undefined);
+    };
+
+    // Run immediately on channel entry
+    closeExpired();
+
+    // Also run every 30s to catch polls that expire while user is in the channel
+    // but the PollMessage component may have unmounted (e.g. scrolled away)
+    const interval = setInterval(closeExpired, 30_000);
 
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
@@ -92,6 +101,11 @@ export const useRealtimePolls = (channelId: string | null) => {
               const existingPoll = usePollStore.getState().pollsById[row.id];
               const existingUserVotes = existingPoll?.userVotes || [];
               usePollStore.getState().upsertPoll(normalizePollRow(row, existingUserVotes));
+
+              // If this poll just expired but wasn't closed yet, close it
+              if (!row.is_closed && row.ends_at && new Date(row.ends_at).getTime() <= Date.now()) {
+                usePollStore.getState().closePoll(row.id).catch(() => undefined);
+              }
             } catch {
               // ignore
             }
@@ -106,6 +120,7 @@ export const useRealtimePolls = (channelId: string | null) => {
 
     return () => {
       isSettingUpRef.current = false;
+      clearInterval(interval);
       if (channel) {
         try {
           supabase.removeChannel(channel);
