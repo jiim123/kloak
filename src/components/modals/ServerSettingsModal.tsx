@@ -597,8 +597,24 @@ export const ServerSettingsModal = () => {
       setServerEmojis((data ?? []) as Array<{ id: string; name: string; file_path: string }>);
     })();
 
+    const handleEmojisChanged = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.serverId === server?.id) {
+        (async () => {
+          const { data } = await supabase
+            .from("server_emojis")
+            .select("id,name,file_path")
+            .eq("server_id", server!.id)
+            .order("created_at", { ascending: true });
+          setServerEmojis((data ?? []) as Array<{ id: string; name: string; file_path: string }>);
+        })();
+      }
+    };
+    window.addEventListener("server-emojis-changed", handleEmojisChanged);
+
     return () => {
       cancelled = true;
+      window.removeEventListener("server-emojis-changed", handleEmojisChanged);
     };
   }, [isOpen, server?.id, canManageEmojis]);
 

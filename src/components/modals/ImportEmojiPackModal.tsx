@@ -222,6 +222,7 @@ export const ImportEmojiPackModal = () => {
       }
 
       invalidateServerEmojis(currentServer.id);
+      window.dispatchEvent(new CustomEvent("server-emojis-changed", { detail: { serverId: currentServer.id } }));
       setImportResult({ success: successCount, failed: failedCount });
 
       if (successCount > 0) {
