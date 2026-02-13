@@ -826,15 +826,26 @@ export const MessageItem = memo(function MessageItem({
               <div className="flex-1 min-w-0 overflow-hidden">
                 {/* System Message - Special rendering */}
                 {message.is_system_message ? (
-                  <div className="flex items-center gap-2 py-1">
-                    {messageUser && (
-                      <>
-                        <AvatarWithDecoration
-                          user={messageUser}
-                          className="w-5 h-5 cursor-pointer flex-shrink-0"
-                          active={isRowHovered}
-                          onClick={handleUsernameClick}
-                        />
+                  (() => {
+                    // Check if this is a poll result system message and extract the poll's message_id
+                    const isPollResult = message.content?.includes('📊');
+                    const pollMessageId = message.reply_to_id;
+
+                    const systemContent = (
+                      <div className="flex items-center gap-2 py-1">
+                        {messageUser && !isPollResult && (
+                          <AvatarWithDecoration
+                            user={messageUser}
+                            className="w-5 h-5 cursor-pointer flex-shrink-0"
+                            active={isRowHovered}
+                            onClick={handleUsernameClick}
+                          />
+                        )}
+                        {isPollResult && (
+                          <svg viewBox="0 0 24 24" className="w-4 h-4 fill-muted-foreground flex-shrink-0" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M11.7518706,1.99956021 C13.2716867,1.99956021 14.5037411,3.23161462 14.5037411,4.75143076 L14.5037411,19.2499651 C14.5037411,20.7697812 13.2716867,22.0018356 11.7518706,22.0018356 C10.2320544,22.0018356 9,20.7697812 9,19.2499651 L9,4.75143076 C9,3.23161462 10.2320544,1.99956021 11.7518706,1.99956021 Z M18.7518706,6.99956021 C20.2716867,6.99956021 21.5037411,8.23161462 21.5037411,9.75143076 L21.5037411,19.2499651 C21.5037411,20.7697812 20.2716867,22.0018356 18.7518706,22.0018356 C17.2320544,22.0018356 16,20.7697812 16,19.2499651 L16,9.75143076 C16,8.23161462 17.2320544,6.99956021 18.7518706,6.99956021 Z M4.75187055,11.9995602 C6.27168669,11.9995602 7.5037411,13.2316146 7.5037411,14.7514308 L7.5037411,19.2499651 C7.5037411,20.7697812 6.27168669,22.0018356 4.75187055,22.0018356 C3.23205441,22.0018356 2,20.7697812 2,19.2499651 L2,14.7514308 C2,13.2316146 3.23205441,11.9995602 4.75187055,11.9995602 Z" />
+                          </svg>
+                        )}
                         <span className="text-sm text-muted-foreground tracking-tight">
                           <MessageContent
                             content={message.content}
@@ -852,9 +863,29 @@ export const MessageItem = memo(function MessageItem({
                             }
                           />
                         </span>
-                      </>
-                    )}
-                  </div>
+                      </div>
+                    );
+
+                    if (isPollResult && pollMessageId) {
+                      return (
+                        <button
+                          type="button"
+                          className="text-left hover:underline cursor-pointer"
+                          onClick={() => {
+                            const el = document.getElementById(`message-${pollMessageId}`);
+                            if (el) {
+                              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                              el.classList.add('bg-primary/10');
+                              setTimeout(() => el.classList.remove('bg-primary/10'), 2000);
+                            }
+                          }}
+                        >
+                          {systemContent}
+                        </button>
+                      );
+                    }
+                    return systemContent;
+                  })()
                 ) : (
                   <>
                     {/* Header */}
