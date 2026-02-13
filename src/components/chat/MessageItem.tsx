@@ -827,9 +827,18 @@ export const MessageItem = memo(function MessageItem({
                 {/* System Message - Special rendering */}
                 {message.is_system_message ? (
                   (() => {
-                    // Check if this is a poll result system message and extract the poll's message_id
-                    const isPollResult = message.content?.includes('📊');
-                    const pollMessageId = message.reply_to_id;
+                    // Detect poll result system messages by content pattern
+                    const isPollResult = message.content?.includes('Poll ended');
+                    // Strip the 📊 emoji (and variants) from content for poll results
+                    const cleanedContent = isPollResult
+                      ? message.content.replace(/📊\s*/g, '').trim()
+                      : message.content;
+
+                    const pollIcon = (
+                      <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current flex-shrink-0" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M11.7518706,1.99956021 C13.2716867,1.99956021 14.5037411,3.23161462 14.5037411,4.75143076 L14.5037411,19.2499651 C14.5037411,20.7697812 13.2716867,22.0018356 11.7518706,22.0018356 C10.2320544,22.0018356 9,20.7697812 9,19.2499651 L9,4.75143076 C9,3.23161462 10.2320544,1.99956021 11.7518706,1.99956021 Z M18.7518706,6.99956021 C20.2716867,6.99956021 21.5037411,8.23161462 21.5037411,9.75143076 L21.5037411,19.2499651 C21.5037411,20.7697812 20.2716867,22.0018356 18.7518706,22.0018356 C17.2320544,22.0018356 16,20.7697812 16,19.2499651 L16,9.75143076 C16,8.23161462 17.2320544,6.99956021 18.7518706,6.99956021 Z M4.75187055,11.9995602 C6.27168669,11.9995602 7.5037411,13.2316146 7.5037411,14.7514308 L7.5037411,19.2499651 C7.5037411,20.7697812 6.27168669,22.0018356 4.75187055,22.0018356 C3.23205441,22.0018356 2,20.7697812 2,19.2499651 L2,14.7514308 C2,13.2316146 3.23205441,11.9995602 4.75187055,11.9995602 Z" />
+                      </svg>
+                    );
 
                     const systemContent = (
                       <div className="flex items-center gap-2 py-1">
@@ -842,13 +851,9 @@ export const MessageItem = memo(function MessageItem({
                           />
                         )}
                         <span className="text-sm text-muted-foreground tracking-tight inline-flex items-center gap-1.5">
-                          {isPollResult && (
-                            <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current inline-block flex-shrink-0" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M11.7518706,1.99956021 C13.2716867,1.99956021 14.5037411,3.23161462 14.5037411,4.75143076 L14.5037411,19.2499651 C14.5037411,20.7697812 13.2716867,22.0018356 11.7518706,22.0018356 C10.2320544,22.0018356 9,20.7697812 9,19.2499651 L9,4.75143076 C9,3.23161462 10.2320544,1.99956021 11.7518706,1.99956021 Z M18.7518706,6.99956021 C20.2716867,6.99956021 21.5037411,8.23161462 21.5037411,9.75143076 L21.5037411,19.2499651 C21.5037411,20.7697812 20.2716867,22.0018356 18.7518706,22.0018356 C17.2320544,22.0018356 16,20.7697812 16,19.2499651 L16,9.75143076 C16,8.23161462 17.2320544,6.99956021 18.7518706,6.99956021 Z M4.75187055,11.9995602 C6.27168669,11.9995602 7.5037411,13.2316146 7.5037411,14.7514308 L7.5037411,19.2499651 C7.5037411,20.7697812 6.27168669,22.0018356 4.75187055,22.0018356 C3.23205441,22.0018356 2,20.7697812 2,19.2499651 L2,14.7514308 C2,13.2316146 3.23205441,11.9995602 4.75187055,11.9995602 Z" />
-                            </svg>
-                          )}
+                          {isPollResult && pollIcon}
                           <MessageContent
-                            content={isPollResult ? message.content.replace('📊 ', '').replace('📊', '') : message.content}
+                            content={cleanedContent}
                             currentUserId={user?.id}
                             messageId={message.id}
                             hideEmbeds={isEmbedHidden}
@@ -866,17 +871,35 @@ export const MessageItem = memo(function MessageItem({
                       </div>
                     );
 
-                    if (isPollResult && pollMessageId) {
+                    if (isPollResult) {
+                      const targetId = message.reply_to_id;
                       return (
                         <button
                           type="button"
-                          className="text-left hover:underline cursor-pointer"
+                          className="text-left hover:underline cursor-pointer w-full"
                           onClick={() => {
-                            const el = document.getElementById(`message-${pollMessageId}`);
+                            let el = targetId ? document.getElementById(`message-${targetId}`) : null;
+                            // Fallback: search backwards in DOM for the poll message
+                            if (!el) {
+                              const thisEl = document.getElementById(`message-${message.id}`);
+                              if (thisEl) {
+                                const allMessages = thisEl.parentElement?.querySelectorAll('[id^="message-"]');
+                                if (allMessages) {
+                                  const arr = Array.from(allMessages);
+                                  const thisIdx = arr.indexOf(thisEl);
+                                  for (let i = thisIdx - 1; i >= 0; i--) {
+                                    if (arr[i].querySelector('.rounded-xl.border')) {
+                                      el = arr[i] as HTMLElement;
+                                      break;
+                                    }
+                                  }
+                                }
+                              }
+                            }
                             if (el) {
                               el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                               el.classList.add('bg-primary/10');
-                              setTimeout(() => el.classList.remove('bg-primary/10'), 2000);
+                              setTimeout(() => el!.classList.remove('bg-primary/10'), 2000);
                             }
                           }}
                         >
