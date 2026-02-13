@@ -291,8 +291,17 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
 
         broadcastCh.on("broadcast", { event: "uid-map" }, ({ payload }) => {
           if (payload?.uid && payload?.identity) {
+            const isNew = !uidMapRef.current.has(payload.uid);
             uidMapRef.current.set(payload.uid, payload.identity);
             updateParticipants();
+            // Handshake: if we learned a new peer, echo our own mapping so they learn ours
+            if (isNew && payload.identity !== userId) {
+              broadcastCh.send({
+                type: "broadcast",
+                event: "uid-map",
+                payload: { uid: numericUid, identity: userId },
+              }).catch(() => {});
+            }
           }
         });
 
