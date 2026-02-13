@@ -35,11 +35,12 @@ export const CreatePollModal = ({ open, onOpenChange, channelId }: CreatePollMod
   const [durationSeconds, setDurationSeconds] = useState<number>(DURATION_PRESETS[1].seconds);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const trimmedQuestion = useMemo(() => question.trim(), [question]);
   const trimmedAnswers = useMemo(() => answers.map((a) => a.trim()).filter((a) => a.length > 0), [answers]);
 
   const canSubmit = useMemo(() => {
-    return question.trim().length > 0 && trimmedAnswers.length >= 2 && trimmedAnswers.length <= 4 && !!user && !isSubmitting;
-  }, [question, trimmedAnswers.length, user, isSubmitting]);
+    return trimmedQuestion.length > 0 && trimmedQuestion.length <= 300 && trimmedAnswers.length >= 2 && trimmedAnswers.length <= 4 && trimmedAnswers.every((a) => a.length <= 100) && !!user && !isSubmitting;
+  }, [trimmedQuestion, trimmedAnswers, user, isSubmitting]);
 
   const reset = () => {
     setQuestion("");
@@ -103,13 +104,16 @@ export const CreatePollModal = ({ open, onOpenChange, channelId }: CreatePollMod
 
         <div className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="poll-question">Question</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="poll-question">Question</Label>
+              <span className="text-xs text-muted-foreground">{question.length}/300</span>
+            </div>
             <Input
               id="poll-question"
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               placeholder="Which coffee is better?"
-              maxLength={200}
+              maxLength={300}
             />
           </div>
 
