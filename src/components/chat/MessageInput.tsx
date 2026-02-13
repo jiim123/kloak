@@ -33,6 +33,7 @@ import { CreatePollModal } from "@/components/modals/CreatePollModal";
 import { SelectionFormatToolbar, FORMAT_SYNTAX, getCodeBlockSyntax } from "./FormatToolbar";
 import { AttachmentPreviewBar, PendingAttachment } from "./AttachmentPreviewBar";
 import { supabase } from "@/integrations/supabase/client";
+import { secureUpload } from "@/lib/storageUpload";
 import { showSuccess, showWarning, handleError } from "@/lib/errorHandler";
 import { messageRateLimiter, validateMessageContent } from "@/lib/security";
 import { toast } from "sonner";
@@ -509,15 +510,12 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       const fileExt = att.file.name.split(".").pop() || "png";
       const fileName = `${user.id}/${timestamp}-${crypto.randomUUID()}.${fileExt}`;
 
-      const { data, error } = await supabase.storage.from("attachments").upload(fileName, att.file, {
-        cacheControl: "3600",
+      const result = await secureUpload("attachments", fileName, att.file, {
+        contentType: att.file.type || "application/octet-stream",
         upsert: false,
       });
 
-      if (error) throw error;
-
-      const { data: urlData } = supabase.storage.from("attachments").getPublicUrl(data.path);
-      urls.push(urlData.publicUrl);
+      urls.push(result.publicUrl);
     }
     return urls;
   }, [user, pendingAttachments]);

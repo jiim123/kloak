@@ -51,6 +51,7 @@ import { useRealtimeMembers } from "@/hooks";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
+import { secureUpload, secureDelete, secureListAndDelete } from "@/lib/storageUpload";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { invalidateServerEmojis } from "@/lib/serverEmojis";
@@ -789,11 +790,7 @@ export const ServerSettingsModal = () => {
       const ext = (emojiFile.name.split(".").pop() || "png").toLowerCase();
       const filePath = `${server.id}/${normalized}-${crypto.randomUUID()}.${ext}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from("server-emojis")
-        .upload(filePath, emojiFile, { upsert: false, cacheControl: "3600" });
-
-      if (uploadError) throw uploadError;
+      await secureUpload("server-emojis", filePath, emojiFile, { contentType: emojiFile.type, upsert: false });
 
       const { error: insertError } = await (supabase.rpc as any)('upload_server_emoji', {
         _server_id: server.id,
@@ -883,7 +880,7 @@ export const ServerSettingsModal = () => {
       
       if (error) throw error;
       if (deletedPath) {
-        await supabase.storage.from("server-emojis").remove([deletedPath as string]);
+        await secureDelete("server-emojis", deletedPath as string);
       }
 
       setServerEmojis((prev) => prev.filter((e) => e.id !== emoji.id));
@@ -952,25 +949,12 @@ export const ServerSettingsModal = () => {
 
     // Clean up old icon files first
     try {
-      const { data: existingFiles } = await supabase.storage.from("server-icons").list(serverId, { search: "icon" });
-      if (existingFiles && existingFiles.length > 0) {
-        const oldFiles = existingFiles.filter(f => f.name.startsWith("icon")).map(f => `${serverId}/${f.name}`);
-        if (oldFiles.length > 0) await supabase.storage.from("server-icons").remove(oldFiles);
-      }
+      await secureListAndDelete("server-icons", serverId, "icon");
     } catch { /* ignore cleanup errors */ }
 
-    const { error: uploadError } = await supabase.storage.from("server-icons").upload(filePath, compressed, { upsert: true, contentType: compressed.type });
+    const result = await secureUpload("server-icons", filePath, file, { upsert: true });
 
-    if (uploadError) {
-      console.error("Failed to upload icon:", uploadError);
-      return null;
-    }
-
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from("server-icons").getPublicUrl(filePath);
-
-    return publicUrl;
+    return result.publicUrl;
   };
 
   const handleBannerSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1057,25 +1041,12 @@ export const ServerSettingsModal = () => {
 
     // Clean up old banner files first
     try {
-      const { data: existingFiles } = await supabase.storage.from("server-icons").list(serverId, { search: "banner" });
-      if (existingFiles && existingFiles.length > 0) {
-        const oldFiles = existingFiles.map(f => `${serverId}/${f.name}`);
-        await supabase.storage.from("server-icons").remove(oldFiles);
-      }
+      await secureListAndDelete("server-icons", serverId, "banner");
     } catch { /* ignore cleanup errors */ }
 
-    const { error: uploadError } = await supabase.storage.from("server-icons").upload(filePath, file, { upsert: true });
+    const result = await secureUpload("server-icons", filePath, file, { upsert: true });
 
-    if (uploadError) {
-      console.error("Failed to upload banner:", uploadError);
-      return null;
-    }
-
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from("server-icons").getPublicUrl(filePath);
-
-    return publicUrl;
+    return result.publicUrl;
   };
 
   const handleRemoveBanner = async () => {
@@ -1086,7 +1057,7 @@ export const ServerSettingsModal = () => {
       // Delete banner files from storage (try common extensions)
       const extensions = ["webp", "png", "jpg", "jpeg"];
       const filesToRemove = extensions.map(ext => `${server.id}/banner.${ext}`);
-      await supabase.storage.from("server-icons").remove(filesToRemove);
+      await secureDelete("server-icons", filesToRemove);
 
       // Update DB
       await updateServer(server.id, user.id, { banner_url: null });
@@ -1111,11 +1082,7 @@ export const ServerSettingsModal = () => {
     try {
       // Delete all icon files from storage (handles timestamped filenames)
       try {
-        const { data: existingFiles } = await supabase.storage.from("server-icons").list(server.id, { search: "icon" });
-        if (existingFiles && existingFiles.length > 0) {
-          const iconFiles = existingFiles.filter(f => f.name.startsWith("icon")).map(f => `${server.id}/${f.name}`);
-          if (iconFiles.length > 0) await supabase.storage.from("server-icons").remove(iconFiles);
-        }
+        await secureListAndDelete("server-icons", server.id, "icon");
       } catch { /* ignore cleanup errors */ }
 
       // Update DB

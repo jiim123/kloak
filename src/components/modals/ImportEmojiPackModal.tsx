@@ -10,6 +10,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
 import { supabase } from "@/integrations/supabase/client";
+import { secureUpload, secureDelete } from "@/lib/storageUpload";
 import { toast } from "sonner";
 import { invalidateServerEmojis } from "@/lib/serverEmojis";
 
@@ -193,11 +194,10 @@ export const ImportEmojiPackModal = () => {
           const filePath = `${currentServer.id}/${uniqueName}-${crypto.randomUUID()}.${ext}`;
 
           // Upload to storage
-          const { error: uploadError } = await supabase.storage
-            .from("server-emojis")
-            .upload(filePath, imgBlob, { upsert: false, cacheControl: "3600" });
-
-          if (uploadError) throw uploadError;
+          await secureUpload("server-emojis", filePath, imgBlob, {
+            contentType: imgBlob.type,
+            upsert: false,
+          });
 
           // Insert to database via RPC
           const { error: insertError } = await (supabase.rpc as any)('upload_server_emoji', {
@@ -209,7 +209,7 @@ export const ImportEmojiPackModal = () => {
 
           if (insertError) {
             // Try to clean up uploaded file
-            await supabase.storage.from("server-emojis").remove([filePath]);
+            await secureDelete("server-emojis", filePath);
             throw insertError;
           }
 

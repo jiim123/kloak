@@ -12,6 +12,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
 import { supabase } from "@/integrations/supabase/client";
+import { secureUpload } from "@/lib/storageUpload";
 import { toast } from "sonner";
 
 const MAX_ICON_SIZE = 1 * 1024 * 1024; // 1MB
@@ -79,18 +80,13 @@ export const CreateServerModal = () => {
     const ext = compressed.name.split(".").pop() || "webp";
     const filePath = `${serverId}/icon-${Date.now()}.${ext}`;
 
-    const { error: uploadError } = await supabase.storage.from("server-icons").upload(filePath, compressed, { upsert: true, contentType: compressed.type });
-
-    if (uploadError) {
-      console.error("Failed to upload icon:", uploadError);
+    try {
+      const result = await secureUpload("server-icons", filePath, file, { upsert: true });
+      return `${result.publicUrl}?v=${Date.now()}`;
+    } catch (err) {
+      console.error("Failed to upload icon:", err);
       return null;
     }
-
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from("server-icons").getPublicUrl(filePath);
-
-    return `${publicUrl}?v=${Date.now()}`;
   };
 
   const onCreateSubmit = async (data: CreateServerForm) => {

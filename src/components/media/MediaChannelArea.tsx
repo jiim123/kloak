@@ -29,6 +29,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { secureUpload } from "@/lib/storageUpload";
 import { formatRelativeTime } from "@/lib/format";
 import {
   DropdownMenu,
@@ -223,17 +224,12 @@ export const MediaChannelArea = () => {
         const fileName = `${Date.now()}-${crypto.randomUUID()}.${fileExt}`;
         const filePath = `${currentChannel.id}/${fileName}`;
         
-        const { error: uploadError } = await supabase.storage
-          .from('attachments')
-          .upload(filePath, selectedFile);
+        const { publicUrl } = await secureUpload('attachments', filePath, selectedFile, {
+          contentType: selectedFile.type,
+          upsert: false,
+        });
         
-        if (uploadError) throw uploadError;
-        
-        const { data: urlData } = supabase.storage
-          .from('attachments')
-          .getPublicUrl(filePath);
-        
-        mediaUrl = urlData.publicUrl;
+        mediaUrl = publicUrl;
         
         // Determine media type based on file type
         if (ALLOWED_VIDEO_TYPES.includes(selectedFile.type)) {

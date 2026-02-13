@@ -55,6 +55,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useRealtimeMembers } from '@/hooks';
 import { useMemberPermissions } from '@/hooks/useMemberPermissions';
 import { supabase } from '@/integrations/supabase/client';
+import { secureUpload, secureDelete } from '@/lib/storageUpload';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { invalidateServerEmojis } from '@/lib/serverEmojis';
@@ -1063,11 +1064,10 @@ export const ServerSettingsPage = () => {
       const ext = (emojiFile.name.split('.').pop() || 'png').toLowerCase();
       const filePath = `${server.id}/${normalized}-${crypto.randomUUID()}.${ext}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('server-emojis')
-        .upload(filePath, emojiFile, { upsert: false, cacheControl: '3600' });
-
-      if (uploadError) throw uploadError;
+      await secureUpload('server-emojis', filePath, emojiFile, {
+        contentType: emojiFile.type,
+        upsert: false,
+      });
 
       const { error: insertError } = await (supabase.rpc as any)('upload_server_emoji', {
         _server_id: server.id,
@@ -1156,7 +1156,7 @@ export const ServerSettingsPage = () => {
       
       if (error) throw error;
       if (filePath) {
-        await supabase.storage.from('server-emojis').remove([filePath as string]);
+        await secureDelete('server-emojis', filePath as string);
       }
 
       setServerEmojis((prev) => prev.filter((e) => e.id !== emoji.id));
@@ -1201,20 +1201,13 @@ export const ServerSettingsPage = () => {
     const ext = file.name.split('.').pop() || 'png';
     const filePath = `${serverId}/icon.${ext}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from('server-icons')
-      .upload(filePath, file, { upsert: true });
-
-    if (uploadError) {
-      console.error('Failed to upload icon:', uploadError);
+    try {
+      const result = await secureUpload('server-icons', filePath, file, { upsert: true });
+      return result.publicUrl;
+    } catch (err) {
+      console.error('Failed to upload icon:', err);
       return null;
     }
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('server-icons')
-      .getPublicUrl(filePath);
-
-    return publicUrl;
   };
 
   const handleBannerSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1250,20 +1243,13 @@ export const ServerSettingsPage = () => {
     const ext = file.name.split('.').pop() || 'png';
     const filePath = `${serverId}/banner.${ext}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from('server-icons')
-      .upload(filePath, file, { upsert: true });
-
-    if (uploadError) {
-      console.error('Failed to upload banner:', uploadError);
+    try {
+      const result = await secureUpload('server-icons', filePath, file, { upsert: true });
+      return result.publicUrl;
+    } catch (err) {
+      console.error('Failed to upload banner:', err);
       return null;
     }
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('server-icons')
-      .getPublicUrl(filePath);
-
-    return publicUrl;
   };
 
   const handleRemoveBanner = async () => {

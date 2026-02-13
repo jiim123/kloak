@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { secureUpload } from "@/lib/storageUpload";
 import { supabase } from "@/integrations/supabase/client";
 import { showWarning } from "@/lib/errorHandler";
 import { MAX_ATTACHMENTS, MAX_IMAGE_FILE_SIZE, ALLOWED_IMAGE_TYPES } from "@/lib/messageConstants";
@@ -142,19 +143,12 @@ export function useAttachmentQueue(
         const fileExt = att.file.name.split(".").pop() || "png";
         const fileName = `${userId}/${timestamp}-${crypto.randomUUID()}.${fileExt}`;
 
-        const { data, error } = await supabase.storage
-          .from("attachments")
-          .upload(fileName, att.file, {
-            cacheControl: "3600",
-            upsert: false,
-          });
+        const result = await secureUpload("attachments", fileName, att.file, {
+          contentType: att.file.type || "application/octet-stream",
+          upsert: false,
+        });
 
-        if (error) throw error;
-
-        const { data: urlData } = supabase.storage
-          .from("attachments")
-          .getPublicUrl(data.path);
-        urls.push(urlData.publicUrl);
+        urls.push(result.publicUrl);
       }
       return urls;
     },

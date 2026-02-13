@@ -25,6 +25,13 @@ export function setKeyHashHeader(keyHash: string | null) {
   }
 }
 
+/**
+ * Retrieve the current x-key-hash value (used by storageUpload helper).
+ */
+export function getKeyHash(): string | null {
+  return dynamicHeaders['x-key-hash'] ?? null;
+}
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 

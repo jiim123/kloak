@@ -30,6 +30,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
+import { secureUpload } from "@/lib/storageUpload";
 import { handleError, showSuccess } from "@/lib/errorHandler";
 import { formatMessageTimestamp } from "@/lib/format";
 import { formatDistanceToNow } from "date-fns";
@@ -682,15 +683,10 @@ export const ForumChannelArea = () => {
       const fileName = `${Math.random()}.${fileExt}`;
       const filePath = `forum/${fileName}`;
 
-      const { error: uploadError, data } = await supabase.storage
-        .from('attachments')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('attachments')
-        .getPublicUrl(filePath);
+      const { publicUrl } = await secureUpload('attachments', filePath, file, {
+        contentType: file.type,
+        upsert: false,
+      });
 
       // Insert image URL at cursor position
       const start = textarea.selectionStart;

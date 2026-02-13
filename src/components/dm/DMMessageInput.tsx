@@ -14,6 +14,7 @@ import { EmojiPicker } from '@/components/modals/EmojiPicker';
 import { SelectionFormatToolbar, FORMAT_SYNTAX, getCodeBlockSyntax } from '@/components/chat/FormatToolbar';
 import { AttachmentPreviewBar, PendingAttachment } from '@/components/chat/AttachmentPreviewBar';
 import { supabase } from '@/integrations/supabase/client';
+import { secureUpload } from '@/lib/storageUpload';
 import { showSuccess } from '@/lib/errorHandler';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -255,13 +256,13 @@ export const DMMessageInput = ({
       const timestamp = Date.now();
       const fileExt = att.file.name.split('.').pop() || 'png';
       const fileName = `${user.id}/${timestamp}-${crypto.randomUUID()}.${fileExt}`;
-      const { data, error } = await supabase.storage.from('attachments').upload(fileName, att.file, {
-        cacheControl: '3600',
+
+      const result = await secureUpload('attachments', fileName, att.file, {
+        contentType: att.file.type || 'application/octet-stream',
         upsert: false,
       });
-      if (error) throw error;
-      const { data: urlData } = supabase.storage.from('attachments').getPublicUrl(data.path);
-      urls.push(urlData.publicUrl);
+
+      urls.push(result.publicUrl);
     }
     return urls;
   }, [user, pendingAttachments]);

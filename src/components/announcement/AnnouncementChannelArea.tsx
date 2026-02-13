@@ -21,6 +21,7 @@ import { EmojiGifPicker } from "@/components/modals/EmojiGifPicker";
 import { DeleteMessageModal } from "@/components/modals/DeleteMessageModal";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
+import { secureUpload } from "@/lib/storageUpload";
 import { handleError, showSuccess } from "@/lib/errorHandler";
 import { formatDistanceToNow } from "date-fns";
 import type { Message, User, ServerMember, CustomServerRole } from "@/types";
@@ -450,15 +451,10 @@ export const AnnouncementChannelArea = () => {
       const fileName = `${Math.random()}.${fileExt}`;
       const filePath = `announcements/${fileName}`;
 
-      const { error: uploadError, data } = await supabase.storage
-        .from('attachments')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('attachments')
-        .getPublicUrl(filePath);
+      const { publicUrl } = await secureUpload('attachments', filePath, file, {
+        contentType: file.type,
+        upsert: false,
+      });
 
       // Insert image using Tiptap's image command with default alignment and size
       editor.chain().focus().setImage({ 

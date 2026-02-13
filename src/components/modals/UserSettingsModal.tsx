@@ -57,6 +57,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { useNotificationSound } from "@/hooks/useNotificationSound";
 import { supabase } from "@/integrations/supabase/client";
+import { secureUpload } from "@/lib/storageUpload";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -284,13 +285,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       const fileExt = compressed.name.split(".").pop();
       const filePath = `${user.id}/avatar-${Date.now()}.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage.from("avatars").upload(filePath, compressed, { upsert: true, contentType: compressed.type });
-
-      if (uploadError) throw uploadError;
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("avatars").getPublicUrl(filePath);
+      const { publicUrl } = await secureUpload("avatars", filePath, file, { upsert: true });
 
       const cacheBustedUrl = `${publicUrl}?v=${Date.now()}`;
       setLocalAvatarUrl(cacheBustedUrl);
@@ -325,13 +320,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       const fileExt = compressed.name.split(".").pop();
       const filePath = `${user.id}/banner-${Date.now()}.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage.from("avatars").upload(filePath, compressed, { upsert: true, contentType: compressed.type });
-
-      if (uploadError) throw uploadError;
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("avatars").getPublicUrl(filePath);
+      const { publicUrl } = await secureUpload("avatars", filePath, file, { upsert: true });
 
       const cacheBustedUrl = `${publicUrl}?v=${Date.now()}`;
       setLocalBannerUrl(cacheBustedUrl);
