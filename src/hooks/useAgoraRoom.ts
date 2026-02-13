@@ -61,6 +61,7 @@ const QUALITY_PRESETS: Record<string, { width: number; height: number }> = {
 
 // Disable Agora SDK logs in production
 AgoraRTC.setLogLevel(3); // WARN
+AgoraRTC.disableLogUpload(); // Prevent stats collector spam
 
 // ---------------------------------------------------------------------------
 // Hook
