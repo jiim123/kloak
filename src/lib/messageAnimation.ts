@@ -4,7 +4,7 @@
  */
 
 import type { Message } from "@/types";
-import type { DirectMessage } from "@/types/dm";
+import type { DirectMessage } from "@/types";
 
 // Track animations by a STABLE key that survives optimistic→real message replacement
 const animatedMessages = new Set<string>();
