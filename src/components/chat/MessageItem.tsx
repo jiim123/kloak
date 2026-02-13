@@ -876,7 +876,7 @@ export const MessageItem = memo(function MessageItem({
                       return (
                         <button
                           type="button"
-                          className="text-left hover:underline cursor-pointer w-full"
+                          className="text-left cursor-pointer w-full"
                           onClick={() => {
                             const el = targetId ? document.getElementById(`message-${targetId}`) : null;
                             if (el) {
