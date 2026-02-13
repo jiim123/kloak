@@ -2649,7 +2649,7 @@ export const ServerSettingsPage = () => {
                           <span className="w-20 text-right">Actions</span>
                         </div>
                         {/* Table rows */}
-                        <ScrollArea className="max-h-[calc(100vh-28rem)]">
+                        <div className="max-h-[400px] overflow-y-auto overscroll-contain">
                           <div className="divide-y divide-border">
                             {serverEmojisWithUrls.map((emoji) => (
                               <div
@@ -2704,7 +2704,7 @@ export const ServerSettingsPage = () => {
                               </div>
                             ))}
                           </div>
-                        </ScrollArea>
+                        </div>
                       </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center py-8 text-center">
