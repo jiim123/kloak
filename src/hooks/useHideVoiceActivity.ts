@@ -1,79 +1,33 @@
 /**
  * Hide Voice Activity Hook
- * Manages the hideVoiceActivity setting via LiveKit participant metadata
+ * Now a no-op shell — hideVoiceActivity is managed directly by useAgoraRoom
+ * via Supabase Broadcast. This hook is kept for backward compatibility.
  */
 
-import { useEffect, useCallback, useMemo } from 'react';
 import { useVoiceSettingsStore } from '@/stores/voiceSettingsStore';
-import type { Room, Participant } from 'livekit-client';
 
 interface UseHideVoiceActivityOptions {
-  room: Room | null;
+  room: unknown;
   isConnected: boolean;
 }
 
-interface VoiceMetadata {
-  hideVoiceActivity?: boolean;
-}
-
-// Parse participant metadata safely
-function parseMetadata(participant: Participant): VoiceMetadata {
-  try {
-    if (!participant.metadata) return {};
-    return JSON.parse(participant.metadata) as VoiceMetadata;
-  } catch {
-    return {};
-  }
-}
-
-export function useHideVoiceActivity({ room, isConnected }: UseHideVoiceActivityOptions) {
-  const hideVoiceActivity = useVoiceSettingsStore((s) => s.settings.hideVoiceActivity);
-
-  // Update local participant metadata when setting changes
-  const updateMetadata = useCallback(async () => {
-    if (!room?.localParticipant || !isConnected) return;
-
-    try {
-      const currentMetadata = parseMetadata(room.localParticipant);
-      const newMetadata: VoiceMetadata = {
-        ...currentMetadata,
-        hideVoiceActivity,
-      };
-      await room.localParticipant.setMetadata(JSON.stringify(newMetadata));
-    } catch (err) {
-      console.error('Failed to update voice activity metadata:', err);
-    }
-  }, [room, isConnected, hideVoiceActivity]);
-
-  // Update metadata when connected or when setting changes
-  useEffect(() => {
-    if (isConnected && room) {
-      updateMetadata();
-    }
-  }, [isConnected, hideVoiceActivity, updateMetadata]);
-
-  return { updateMetadata };
+export function useHideVoiceActivity(_opts: UseHideVoiceActivityOptions) {
+  // hideVoiceActivity sync is handled in useAgoraRoom via broadcast channel
+  return { updateMetadata: () => {} };
 }
 
 /**
  * Check if a participant has hidden their voice activity
+ * Now reads from the participant object's hideVoiceActivity field directly
  */
 export function shouldShowSpeakingIndicator(
-  participant: Participant,
+  participant: { identity?: string; isSpeaking?: boolean; hideVoiceActivity?: boolean } | null,
   isSpeaking: boolean,
   localUserId?: string
 ): boolean {
-  // Always show for the local user (they can see their own indicator)
-  if (participant.identity === localUserId) {
-    return isSpeaking;
-  }
-
-  // Check if participant has hidden their voice activity
-  const metadata = parseMetadata(participant);
-  if (metadata.hideVoiceActivity) {
-    return false;
-  }
-
+  if (!participant) return false;
+  if (participant.identity === localUserId) return isSpeaking;
+  if (participant.hideVoiceActivity) return false;
   return isSpeaking;
 }
 
@@ -81,11 +35,9 @@ export function shouldShowSpeakingIndicator(
  * Hook to get whether voice activity should be shown for a participant
  */
 export function useParticipantSpeaking(
-  participant: Participant | null,
+  participant: { identity?: string; isSpeaking?: boolean; hideVoiceActivity?: boolean; metadata?: string } | null,
   localUserId?: string
 ): boolean {
-  return useMemo(() => {
-    if (!participant) return false;
-    return shouldShowSpeakingIndicator(participant, participant.isSpeaking, localUserId);
-  }, [participant, participant?.isSpeaking, participant?.metadata, localUserId]);
+  if (!participant) return false;
+  return shouldShowSpeakingIndicator(participant, participant.isSpeaking ?? false, localUserId);
 }

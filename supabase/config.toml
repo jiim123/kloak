@@ -6,7 +6,7 @@ verify_jwt = false
 [functions.fetch-emoji-pack]
 verify_jwt = false
 
-[functions.livekit-token]
+[functions.agora-token]
 verify_jwt = false
 
 [functions.storage-upload]

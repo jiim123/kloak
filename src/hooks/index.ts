@@ -28,7 +28,7 @@ export { useMemberPermissions } from './useMemberPermissions';
 export { useRealtimeOwnMembership } from './useRealtimeOwnMembership';
 export { useSwipeGesture, useSwipeGestureRef } from './useSwipeGesture';
 export { useServerEmojis } from './useServerEmojis';
-export { useLiveKitRoom } from './useLiveKitRoom';
+export { useAgoraRoom } from './useAgoraRoom';
 export { usePushToTalk } from './usePushToTalk';
 export { useHideVoiceActivity, shouldShowSpeakingIndicator, useParticipantSpeaking } from './useHideVoiceActivity';
 export { useAudioDevices } from './useAudioDevices';
