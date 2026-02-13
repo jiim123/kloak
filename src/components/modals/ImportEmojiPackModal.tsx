@@ -1,10 +1,7 @@
-import { useState } from "react";
-import { Loader2, Package, AlertCircle, CheckCircle2, ExternalLink, Download } from "lucide-react";
+import { useState, useRef, useCallback } from "react";
+import { Loader2, Package, AlertCircle, CheckCircle2, ExternalLink, Download, Upload, FileArchive } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useUIStore } from "@/stores/uiStore";
 import { useServerStore } from "@/stores/serverStore";
@@ -13,21 +10,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { secureUpload, secureDelete } from "@/lib/storageUpload";
 import { toast } from "sonner";
 import { invalidateServerEmojis } from "@/lib/serverEmojis";
+import JSZip from "jszip";
 
 const MAX_SERVER_EMOJIS = 30;
+const MAX_ZIP_SIZE = 50 * 1024 * 1024; // 50MB
 const EMOJI_NAME_REGEX = /^[a-z0-9_]{2,32}$/;
+const IMAGE_EXTENSIONS = new Set(["png", "gif", "webp"]);
 
-type EmojiPackEmoji = {
+type ExtractedEmoji = {
   name: string;
-  imageUrl: string;
-  originalName: string;
-};
-
-type EmojiPackData = {
-  name: string;
-  slug: string;
-  emojiCount: number;
-  emojis: EmojiPackEmoji[];
+  fileName: string;
+  blob: Blob;
+  previewUrl: string;
+  ext: string;
 };
 
 export const ImportEmojiPackModal = () => {
@@ -35,103 +30,130 @@ export const ImportEmojiPackModal = () => {
   const { currentServer } = useServerStore();
   const { user } = useAuthStore();
 
-  const [packUrl, setPackUrl] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isExtracting, setIsExtracting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const [packData, setPackData] = useState<EmojiPackData | null>(null);
+  const [extractedEmojis, setExtractedEmojis] = useState<ExtractedEmoji[]>([]);
   const [selectedEmojis, setSelectedEmojis] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [importProgress, setImportProgress] = useState<{ current: number; total: number } | null>(null);
   const [importResult, setImportResult] = useState<{ success: number; failed: number } | null>(null);
+  const [zipName, setZipName] = useState<string | null>(null);
 
   const isOpen = activeModal === "import-emoji-pack";
 
+  const cleanupPreviews = useCallback(() => {
+    extractedEmojis.forEach((e) => URL.revokeObjectURL(e.previewUrl));
+  }, [extractedEmojis]);
+
   const handleClose = () => {
-    setPackUrl("");
-    setPackData(null);
+    cleanupPreviews();
+    setExtractedEmojis([]);
     setSelectedEmojis(new Set());
     setError(null);
     setImportProgress(null);
     setImportResult(null);
+    setZipName(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
     closeModal();
   };
 
-  const fetchPack = async () => {
-    if (!packUrl.trim()) {
-      setError("Please enter an emoji.gg pack URL");
+  const normalizeEmojiName = (fileName: string): string => {
+    // Strip extension
+    const base = fileName.replace(/\.[^.]+$/, "");
+    // Strip leading numeric ID prefix (e.g. "9563_" or "9563-")
+    const stripped = base.replace(/^\d+[-_]/, "");
+    // Slugify
+    const slug = (stripped || base).replace(/[^a-z0-9_]/gi, "_").toLowerCase().slice(0, 32);
+    return slug.length < 2 ? `emoji_${slug}` : slug;
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > MAX_ZIP_SIZE) {
+      setError("Zip file is too large (max 50MB)");
       return;
     }
 
-    setIsLoading(true);
+    setIsExtracting(true);
     setError(null);
-    setPackData(null);
+    cleanupPreviews();
+    setExtractedEmojis([]);
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke("fetch-emoji-pack", {
-        body: { packUrl: packUrl.trim() },
-      });
+      const zip = await JSZip.loadAsync(file);
+      const emojis: ExtractedEmoji[] = [];
 
-      if (fnError) throw fnError;
+      const entries = Object.entries(zip.files).filter(([, f]) => !f.dir);
 
-      if (data?.error) {
-        setError(data.error);
+      for (const [path, zipEntry] of entries) {
+        const fileName = path.split("/").pop() || path;
+        const ext = fileName.split(".").pop()?.toLowerCase() || "";
+        if (!IMAGE_EXTENSIONS.has(ext)) continue;
+
+        const blob = await zipEntry.async("blob");
+        const typedBlob = new Blob([blob], {
+          type: ext === "gif" ? "image/gif" : ext === "webp" ? "image/webp" : "image/png",
+        });
+        const previewUrl = URL.createObjectURL(typedBlob);
+        const name = normalizeEmojiName(fileName);
+
+        emojis.push({ name, fileName, blob: typedBlob, previewUrl, ext });
+      }
+
+      if (emojis.length === 0) {
+        setError("No image files (PNG, GIF, WebP) found in the zip");
         return;
       }
 
-      if (data?.pack) {
-        setPackData(data.pack);
-        // Auto-select all emojis by default
-        setSelectedEmojis(new Set(data.pack.emojis.map((e: EmojiPackEmoji) => e.name)));
-      }
+      setExtractedEmojis(emojis);
+      setSelectedEmojis(new Set(emojis.map((e) => e.fileName)));
+      setZipName(file.name);
     } catch (err: any) {
-      console.error("Error fetching pack:", err);
-      setError(err?.message || "Failed to fetch emoji pack");
+      console.error("Error extracting zip:", err);
+      setError("Failed to read zip file. Make sure it's a valid zip archive.");
     } finally {
-      setIsLoading(false);
+      setIsExtracting(false);
     }
   };
 
-  const toggleEmoji = (emojiName: string) => {
+  const toggleEmoji = (fileName: string) => {
     setSelectedEmojis((prev) => {
       const next = new Set(prev);
-      if (next.has(emojiName)) {
-        next.delete(emojiName);
-      } else {
-        next.add(emojiName);
-      }
+      if (next.has(fileName)) next.delete(fileName);
+      else next.add(fileName);
       return next;
     });
   };
 
   const toggleAll = () => {
-    if (!packData) return;
-
-    if (selectedEmojis.size === packData.emojis.length) {
+    if (selectedEmojis.size === extractedEmojis.length) {
       setSelectedEmojis(new Set());
     } else {
-      setSelectedEmojis(new Set(packData.emojis.map((e) => e.name)));
+      setSelectedEmojis(new Set(extractedEmojis.map((e) => e.fileName)));
     }
   };
 
   const importEmojis = async () => {
-    if (!currentServer || !user || !packData || selectedEmojis.size === 0) return;
+    if (!currentServer || !user || extractedEmojis.length === 0 || selectedEmojis.size === 0) return;
 
     setIsImporting(true);
     setImportProgress({ current: 0, total: selectedEmojis.size });
 
-    const emojisToImport = packData.emojis.filter((e) => selectedEmojis.has(e.name));
+    const emojisToImport = extractedEmojis.filter((e) => selectedEmojis.has(e.fileName));
     let successCount = 0;
     let failedCount = 0;
 
     try {
-      // Check current emoji count
       const { count: currentCount } = await supabase
         .from("server_emojis")
         .select("*", { count: "exact", head: true })
         .eq("server_id", currentServer.id);
 
       const availableSlots = MAX_SERVER_EMOJIS - (currentCount ?? 0);
-      
+
       if (availableSlots <= 0) {
         toast.error(`Server already has ${MAX_SERVER_EMOJIS} emojis. Delete some to import more.`);
         setIsImporting(false);
@@ -144,7 +166,6 @@ export const ImportEmojiPackModal = () => {
         toast.warning(`Only importing ${emojisToProcess.length} of ${emojisToImport.length} emojis due to limit`);
       }
 
-      // Get existing emoji names to avoid duplicates
       const { data: existingEmojis } = await supabase
         .from("server_emojis")
         .select("name")
@@ -157,19 +178,10 @@ export const ImportEmojiPackModal = () => {
         setImportProgress({ current: i + 1, total: emojisToProcess.length });
 
         try {
-          // Normalize name for storage
-          let normalizedName = emoji.name.replace(/[^a-z0-9_]/gi, "_").toLowerCase().slice(0, 32);
-          
-          // Ensure minimum length
-          if (normalizedName.length < 2) {
-            normalizedName = `emoji_${normalizedName}`;
-          }
-
-          // Make unique if exists
-          let uniqueName = normalizedName;
+          let uniqueName = emoji.name;
           let counter = 1;
           while (existingNames.has(uniqueName)) {
-            uniqueName = `${normalizedName.slice(0, 28)}_${counter}`;
+            uniqueName = `${emoji.name.slice(0, 28)}_${counter}`;
             counter++;
           }
 
@@ -179,36 +191,21 @@ export const ImportEmojiPackModal = () => {
             continue;
           }
 
-          // Fetch the image
-          const imgResponse = await fetch(emoji.imageUrl);
-          if (!imgResponse.ok) throw new Error("Failed to fetch image");
+          const filePath = `${currentServer.id}/${uniqueName}-${crypto.randomUUID()}.${emoji.ext}`;
 
-          const imgBlob = await imgResponse.blob();
-          
-          // Determine extension from content-type
-          const contentType = imgBlob.type;
-          let ext = "png";
-          if (contentType.includes("gif")) ext = "gif";
-          else if (contentType.includes("webp")) ext = "webp";
-
-          const filePath = `${currentServer.id}/${uniqueName}-${crypto.randomUUID()}.${ext}`;
-
-          // Upload to storage
-          await secureUpload("server-emojis", filePath, imgBlob, {
-            contentType: imgBlob.type,
+          await secureUpload("server-emojis", filePath, emoji.blob, {
+            contentType: emoji.blob.type,
             upsert: false,
           });
 
-          // Insert to database via RPC
-          const { error: insertError } = await (supabase.rpc as any)('upload_server_emoji', {
+          const { error: insertError } = await (supabase.rpc as any)("upload_server_emoji", {
             _server_id: currentServer.id,
             _user_id: user.id,
             _name: uniqueName,
-            _file_path: filePath
+            _file_path: filePath,
           });
 
           if (insertError) {
-            // Try to clean up uploaded file
             await secureDelete("server-emojis", filePath);
             throw insertError;
           }
@@ -225,12 +222,8 @@ export const ImportEmojiPackModal = () => {
       window.dispatchEvent(new CustomEvent("server-emojis-changed", { detail: { serverId: currentServer.id } }));
       setImportResult({ success: successCount, failed: failedCount });
 
-      if (successCount > 0) {
-        toast.success(`Imported ${successCount} emoji${successCount > 1 ? "s" : ""}`);
-      }
-      if (failedCount > 0) {
-        toast.error(`Failed to import ${failedCount} emoji${failedCount > 1 ? "s" : ""}`);
-      }
+      if (successCount > 0) toast.success(`Imported ${successCount} emoji${successCount > 1 ? "s" : ""}`);
+      if (failedCount > 0) toast.error(`Failed to import ${failedCount} emoji${failedCount > 1 ? "s" : ""}`);
     } catch (err: any) {
       console.error("Import error:", err);
       toast.error(err?.message || "Failed to import emojis");
@@ -252,7 +245,7 @@ export const ImportEmojiPackModal = () => {
               <div className="text-center">
                 <DialogTitle className="text-xl font-semibold">Import Emoji Pack</DialogTitle>
                 <DialogDescription className="text-sm text-muted-foreground mt-1">
-                  Import emojis from{" "}
+                  Upload a zip file downloaded from{" "}
                   <a
                     href="https://emoji.gg/packs"
                     target="_blank"
@@ -286,26 +279,38 @@ export const ImportEmojiPackModal = () => {
                 Close
               </Button>
             </div>
-          ) : !packData ? (
+          ) : extractedEmojis.length === 0 ? (
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="packUrl" className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">
-                  Emoji Pack URL
-                </Label>
-                <Input
-                  id="packUrl"
-                  value={packUrl}
-                  onChange={(e) => setPackUrl(e.target.value)}
-                  placeholder="https://emoji.gg/pack/1234-pack-name"
-                  className="rounded-xl"
-                  disabled={isLoading}
-                  onKeyDown={(e) => e.key === "Enter" && fetchPack()}
-                />
-              </div>
+              {/* File upload area */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".zip"
+                onChange={handleFileSelect}
+                className="hidden"
+                disabled={isExtracting}
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isExtracting}
+                className="w-full border-2 border-dashed border-border/50 hover:border-primary/50 rounded-xl p-8 flex flex-col items-center gap-3 transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50"
+              >
+                {isExtracting ? (
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                ) : (
+                  <FileArchive className="w-8 h-8" />
+                )}
+                <div className="text-center">
+                  <p className="text-sm font-medium">
+                    {isExtracting ? "Extracting emojis..." : "Click to select a zip file"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">Max 50MB</p>
+                </div>
+              </button>
 
               <div className="bg-secondary/30 backdrop-blur-sm rounded-xl p-3 border border-border/30">
                 <p className="text-xs text-muted-foreground">
-                  <span className="font-medium">How to get a pack URL:</span>
+                  <span className="font-medium">How to get a pack zip:</span>
                 </p>
                 <ol className="text-xs text-muted-foreground mt-1 list-decimal list-inside space-y-1">
                   <li>
@@ -319,9 +324,9 @@ export const ImportEmojiPackModal = () => {
                       emoji.gg/packs
                     </a>
                   </li>
-                  <li>Browse and select an emoji pack</li>
-                  <li>Copy the URL from your browser</li>
-                  <li>Paste it above</li>
+                  <li>Select an emoji pack</li>
+                  <li>Click the download button to get the zip</li>
+                  <li>Upload the zip file here</li>
                 </ol>
               </div>
 
@@ -340,18 +345,10 @@ export const ImportEmojiPackModal = () => {
                   type="button"
                   variant="ghost"
                   onClick={handleClose}
-                  disabled={isLoading}
+                  disabled={isExtracting}
                   className="flex-1 sm:flex-none rounded-xl"
                 >
                   Cancel
-                </Button>
-                <Button
-                  onClick={fetchPack}
-                  disabled={isLoading || !packUrl.trim()}
-                  className="flex-1 sm:flex-none rounded-xl"
-                >
-                  {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Fetch Pack
                 </Button>
               </div>
             </div>
@@ -361,16 +358,11 @@ export const ImportEmojiPackModal = () => {
               <div className="bg-secondary/30 backdrop-blur-sm rounded-xl p-3 border border-border/30">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="text-sm font-semibold">{packData.name}</h4>
-                    <p className="text-xs text-muted-foreground">{packData.emojiCount} emojis in pack</p>
+                    <h4 className="text-sm font-semibold">{zipName}</h4>
+                    <p className="text-xs text-muted-foreground">{extractedEmojis.length} emojis found</p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={toggleAll}
-                    className="text-xs rounded-xl"
-                  >
-                    {selectedEmojis.size === packData.emojis.length ? "Deselect All" : "Select All"}
+                  <Button variant="ghost" size="sm" onClick={toggleAll} className="text-xs rounded-xl">
+                    {selectedEmojis.size === extractedEmojis.length ? "Deselect All" : "Select All"}
                   </Button>
                 </div>
               </div>
@@ -378,27 +370,27 @@ export const ImportEmojiPackModal = () => {
               {/* Emoji Grid */}
               <ScrollArea className="flex-1 -mx-4 sm:-mx-6 px-4 sm:px-6">
                 <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                  {packData.emojis.map((emoji) => (
+                  {extractedEmojis.map((emoji) => (
                     <button
-                      key={emoji.name}
-                      onClick={() => toggleEmoji(emoji.name)}
+                      key={emoji.fileName}
+                      onClick={() => toggleEmoji(emoji.fileName)}
                       className={`
                         relative p-2 rounded-xl border transition-all
                         ${
-                          selectedEmojis.has(emoji.name)
+                          selectedEmojis.has(emoji.fileName)
                             ? "border-primary bg-primary/10"
                             : "border-border/30 bg-secondary/30 hover:border-primary/50"
                         }
                       `}
-                      title={emoji.originalName}
+                      title={emoji.name}
                     >
                       <img
-                        src={emoji.imageUrl}
-                        alt={emoji.originalName}
+                        src={emoji.previewUrl}
+                        alt={emoji.name}
                         className="w-8 h-8 mx-auto object-contain"
                         loading="lazy"
                       />
-                      {selectedEmojis.has(emoji.name) && (
+                      {selectedEmojis.has(emoji.fileName) && (
                         <div className="absolute top-1 right-1 w-4 h-4 bg-primary rounded-full flex items-center justify-center">
                           <CheckCircle2 className="w-3 h-3 text-primary-foreground" />
                         </div>
@@ -431,7 +423,13 @@ export const ImportEmojiPackModal = () => {
                 <Button
                   type="button"
                   variant="ghost"
-                  onClick={() => setPackData(null)}
+                  onClick={() => {
+                    cleanupPreviews();
+                    setExtractedEmojis([]);
+                    setSelectedEmojis(new Set());
+                    setZipName(null);
+                    if (fileInputRef.current) fileInputRef.current.value = "";
+                  }}
                   disabled={isImporting}
                   className="flex-1 sm:flex-none rounded-xl"
                 >
