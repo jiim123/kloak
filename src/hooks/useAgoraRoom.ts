@@ -350,6 +350,13 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
 
   // ------ LEAVE ------
   const leave = useCallback(async () => {
+    // Guard: only the instance that actually owns a client should perform
+    // the full leave sequence and reset the shared Zustand store.  Without
+    // this check, the always-mounted mobile VoicePersistentHost (which has
+    // no Agora client) would reset the store instantly, unmounting the
+    // desktop instance before its client.leave() completes → UID_CONFLICT.
+    const hadClient = !!clientRef.current;
+
     readyForSoundsRef.current = false;
 
     // Cleanup broadcast channel
@@ -395,6 +402,7 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
     speakingRef.current.clear();
     hideActivityRef.current.clear();
 
+    // Only reset local state unconditionally
     setStatus("idle");
     setError(null);
     setParticipants([]);
@@ -402,19 +410,24 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
     setIsDeafened(false);
     setIsScreenSharing(false);
     setScreenShareQuality(null);
-    setConnection({ channelId: null, status: "idle", error: null });
-    setJoinedChannelId(null);
-    setControls({ muted: false, deafened: false });
 
-    // Immediately remove ourselves from the sidebar presence list so the UI
-    // updates without waiting for the re-created watcher to receive a "leave" event.
-    if (channelId && userId) {
-      const current = useVoiceStore.getState().presenceByChannel[channelId] ?? [];
-      const without = current.filter((id) => id !== userId);
-      if (without.length > 0) {
-        setPresence(channelId, without);
-      } else {
-        clearPresence(channelId);
+    // Only the instance that actually had an active Agora client should
+    // reset the shared store – otherwise the non-connected twin resets
+    // the store before the connected twin finishes client.leave().
+    if (hadClient) {
+      setConnection({ channelId: null, status: "idle", error: null });
+      setJoinedChannelId(null);
+      setControls({ muted: false, deafened: false });
+
+      // Immediately remove ourselves from the sidebar presence list
+      if (channelId && userId) {
+        const current = useVoiceStore.getState().presenceByChannel[channelId] ?? [];
+        const without = current.filter((id) => id !== userId);
+        if (without.length > 0) {
+          setPresence(channelId, without);
+        } else {
+          clearPresence(channelId);
+        }
       }
     }
 
