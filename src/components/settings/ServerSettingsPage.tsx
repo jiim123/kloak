@@ -558,6 +558,9 @@ export const ServerSettingsPage = () => {
   const emojiInputRef = useRef<HTMLInputElement>(null);
   const [editingEmojiId, setEditingEmojiId] = useState<string | null>(null);
   const [editingEmojiName, setEditingEmojiName] = useState("");
+  const [selectedEmojiIds, setSelectedEmojiIds] = useState<Set<string>>(new Set());
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
+  const [isDeletingEmojis, setIsDeletingEmojis] = useState(false);
 
   // Memoize emoji URLs to prevent regenerating on every render
   const serverEmojisWithUrls = useMemo(() => {
@@ -1187,6 +1190,41 @@ export const ServerSettingsPage = () => {
     } catch (error) {
       console.error('Failed to delete emoji:', error);
       toast.error('Failed to delete emoji');
+    }
+  };
+
+  const bulkDeleteEmojis = async () => {
+    if (!server || !user || selectedEmojiIds.size === 0) return;
+    if (!confirm(`Delete ${selectedEmojiIds.size} emoji${selectedEmojiIds.size > 1 ? 's' : ''}? This cannot be undone.`)) return;
+
+    setIsDeletingEmojis(true);
+    let success = 0;
+    let failed = 0;
+
+    for (const emojiId of selectedEmojiIds) {
+      try {
+        const { data: filePath, error } = await (supabase.rpc as any)('delete_server_emoji', {
+          _emoji_id: emojiId,
+          _user_id: user.id
+        });
+        if (error) throw error;
+        if (filePath) await secureDelete('server-emojis', filePath as string);
+        success++;
+      } catch {
+        failed++;
+      }
+    }
+
+    setServerEmojis((prev) => prev.filter((e) => !selectedEmojiIds.has(e.id)));
+    invalidateServerEmojis(server.id);
+    setSelectedEmojiIds(new Set());
+    setIsMultiSelectMode(false);
+    setIsDeletingEmojis(false);
+
+    if (failed === 0) {
+      toast.success(`Deleted ${success} emoji${success > 1 ? 's' : ''}`);
+    } else {
+      toast.warning(`Deleted ${success}, failed ${failed}`);
     }
   };
 
@@ -2652,17 +2690,70 @@ export const ServerSettingsPage = () => {
 
                   {/* Emoji list */}
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
                       <h4 className="text-sm font-semibold">Server Emojis</h4>
-                      <span className="text-xs text-muted-foreground">{serverEmojis.length}/{MAX_SERVER_EMOJIS} slots</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">{serverEmojis.length}/{MAX_SERVER_EMOJIS} slots</span>
+                        {serverEmojis.length > 0 && (
+                          <Button
+                            type="button"
+                            variant={isMultiSelectMode ? "secondary" : "outline"}
+                            size="sm"
+                            onClick={() => {
+                              setIsMultiSelectMode(!isMultiSelectMode);
+                              setSelectedEmojiIds(new Set());
+                            }}
+                            className="text-xs h-7"
+                          >
+                            {isMultiSelectMode ? 'Cancel' : 'Select'}
+                          </Button>
+                        )}
+                      </div>
                     </div>
+                    {isMultiSelectMode && serverEmojis.length > 0 && (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-7"
+                          onClick={() => {
+                            if (selectedEmojiIds.size === serverEmojis.length) {
+                              setSelectedEmojiIds(new Set());
+                            } else {
+                              setSelectedEmojiIds(new Set(serverEmojis.map(e => e.id)));
+                            }
+                          }}
+                        >
+                          {selectedEmojiIds.size === serverEmojis.length ? 'Deselect All' : 'Select All'}
+                        </Button>
+                        {selectedEmojiIds.size > 0 && (
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            className="text-xs h-7"
+                            onClick={bulkDeleteEmojis}
+                            disabled={isDeletingEmojis}
+                          >
+                            {isDeletingEmojis ? (
+                              <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-3 h-3 mr-1.5" />
+                            )}
+                            Delete Selected ({selectedEmojiIds.size})
+                          </Button>
+                        )}
+                      </div>
+                    )}
                     {serverEmojis.length > 0 ? (
                       <div className="rounded-lg border border-border overflow-hidden">
                         {/* Table header */}
                         <div className="flex items-center gap-4 px-4 py-2 bg-secondary/40 border-b border-border text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          {isMultiSelectMode && <span className="w-6" />}
                           <span className="w-10">Image</span>
                           <span className="flex-1">Name</span>
-                          <span className="w-20 text-right">Actions</span>
+                          {!isMultiSelectMode && <span className="w-20 text-right">Actions</span>}
                         </div>
                         {/* Table rows */}
                         <div className="max-h-[400px] overflow-y-auto overscroll-contain">
@@ -2670,8 +2761,36 @@ export const ServerSettingsPage = () => {
                             {serverEmojisWithUrls.map((emoji) => (
                               <div
                                 key={emoji.id}
-                                className="group flex items-center gap-4 px-4 py-2.5 hover:bg-secondary/20 transition-colors"
+                                className={cn(
+                                  "group flex items-center gap-4 px-4 py-2.5 transition-colors",
+                                  isMultiSelectMode ? "cursor-pointer hover:bg-secondary/30" : "hover:bg-secondary/20",
+                                  isMultiSelectMode && selectedEmojiIds.has(emoji.id) && "bg-primary/10"
+                                )}
+                                onClick={isMultiSelectMode ? () => {
+                                  setSelectedEmojiIds(prev => {
+                                    const next = new Set(prev);
+                                    if (next.has(emoji.id)) next.delete(emoji.id);
+                                    else next.add(emoji.id);
+                                    return next;
+                                  });
+                                } : undefined}
                               >
+                                {isMultiSelectMode && (
+                                  <div className="w-6 flex items-center justify-center">
+                                    <Checkbox
+                                      checked={selectedEmojiIds.has(emoji.id)}
+                                      onCheckedChange={() => {
+                                        setSelectedEmojiIds(prev => {
+                                          const next = new Set(prev);
+                                          if (next.has(emoji.id)) next.delete(emoji.id);
+                                          else next.add(emoji.id);
+                                          return next;
+                                        });
+                                      }}
+                                      onClick={(e) => e.stopPropagation()}
+                                    />
+                                  </div>
+                                )}
                                 <img
                                   src={emoji.url}
                                   alt={emoji.name}
@@ -2679,7 +2798,7 @@ export const ServerSettingsPage = () => {
                                   loading="lazy"
                                 />
                                 <div className="min-w-0 flex-1">
-                                  {editingEmojiId === emoji.id ? (
+                                  {editingEmojiId === emoji.id && !isMultiSelectMode ? (
                                     <form onSubmit={(e) => { e.preventDefault(); renameServerEmoji(emoji.id, editingEmojiName); }}>
                                       <input
                                         autoFocus
@@ -2695,28 +2814,30 @@ export const ServerSettingsPage = () => {
                                     <span className="text-sm font-medium">:{emoji.name}:</span>
                                   )}
                                 </div>
-                                <div className="flex items-center gap-1 w-20 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => { setEditingEmojiId(emoji.id); setEditingEmojiName(emoji.name); }}
-                                    className="text-muted-foreground hover:text-foreground h-8 w-8 p-0"
-                                    title="Rename emoji"
-                                  >
-                                    <Pencil className="w-4 h-4" />
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => deleteServerEmoji(emoji)}
-                                    className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
-                                    title="Delete emoji"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
-                                </div>
+                                {!isMultiSelectMode && (
+                                  <div className="flex items-center gap-1 w-20 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => { setEditingEmojiId(emoji.id); setEditingEmojiName(emoji.name); }}
+                                      className="text-muted-foreground hover:text-foreground h-8 w-8 p-0"
+                                      title="Rename emoji"
+                                    >
+                                      <Pencil className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => deleteServerEmoji(emoji)}
+                                      className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
+                                      title="Delete emoji"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>
