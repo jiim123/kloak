@@ -122,7 +122,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
     set({ isLoading: true });
     try {
       // Use RPC function to bypass RLS (app uses custom auth, not Supabase Auth)
-      const { data, error } = await (supabase.rpc as any)('get_user_servers', {});
+      const { data, error } = await supabase.rpc('get_user_servers', { _user_id: userId });
 
       if (error) throw error;
 

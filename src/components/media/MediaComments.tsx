@@ -151,7 +151,7 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
         .from("media_comments" as any)
         .select(`
           *,
-          user:users (id, username, display_name, avatar_url, banner_url, avatar_decoration, profile_effect, banner_color, profile_theme_primary, profile_theme_accent, bio, status, custom_status, created_at, last_seen, pronouns)
+          user:users (*)
         `)
         .eq("media_id", mediaId)
         .order("created_at", { ascending: true });
@@ -258,10 +258,10 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
               return;
             }
 
-            // Fetch user data (explicit columns, avoids revoked key_hash)
+            // Fetch user data
             const { data: userData } = await supabase
               .from("users")
-              .select("id, username, display_name, avatar_url, avatar_decoration, banner_color, bio, status, custom_status, created_at, last_seen, pronouns")
+              .select("*")
               .eq("id", newComment.user_id)
               .single();
 
