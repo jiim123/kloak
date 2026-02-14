@@ -434,12 +434,8 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
       setControls({ muted: true, deafened: true });
     }
 
-    // Mute/unmute all remote audio tracks
-    for (const remoteUser of client.remoteUsers) {
-      if (remoteUser.audioTrack) {
-        remoteUser.audioTrack.setVolume(newDeafened ? 0 : 100);
-      }
-    }
+    // ParticipantAudioPlayer handles remote audio volume via the `muted` prop,
+    // so we don't manipulate remote track volumes here to preserve per-user overrides.
 
     updateParticipants();
   }, [isDeafened, isMuted, setControls, updateParticipants]);

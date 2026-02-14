@@ -171,7 +171,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
     };
     window.addEventListener("kloak:voice:leave", handler as EventListener);
     return () => window.removeEventListener("kloak:voice:leave", handler as EventListener);
-  }, [channel.id, voice]);
+  }, [channel.id, voice.leave]);
 
   // Listen for mute/deafen toggle from sidebar banner
   useEffect(() => {
@@ -191,7 +191,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
       window.removeEventListener("kloak:voice:toggleMute", onMute as EventListener);
       window.removeEventListener("kloak:voice:toggleDeafen", onDeafen as EventListener);
     };
-  }, [channel.id, voice]);
+  }, [channel.id, voice.toggleMute, voice.toggleDeafen]);
 
   const memberByUserId = useMemo(() => {
     const map = new Map<string, ServerMember>();
