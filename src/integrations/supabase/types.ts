@@ -48,13 +48,6 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "announcement_comment_reactions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       announcement_comments: {
@@ -105,13 +98,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "announcement_comments_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_public"
             referencedColumns: ["id"]
           },
         ]
@@ -193,13 +179,6 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "category_permissions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       channel_categories: {
@@ -268,13 +247,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "channel_members_added_by_fkey"
-            columns: ["added_by"]
-            isOneToOne: false
-            referencedRelation: "users_public"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "channel_members_channel_id_fkey"
             columns: ["channel_id"]
             isOneToOne: false
@@ -286,13 +258,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "channel_members_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_public"
             referencedColumns: ["id"]
           },
         ]
@@ -350,13 +315,6 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "channel_permissions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       channel_reads: {
@@ -404,13 +362,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "channel_reads_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_public"
             referencedColumns: ["id"]
           },
         ]
@@ -465,13 +416,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "channel_user_settings_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_public"
             referencedColumns: ["id"]
           },
         ]
@@ -576,24 +520,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "declined_friend_requests_addressee_id_fkey"
-            columns: ["addressee_id"]
-            isOneToOne: false
-            referencedRelation: "users_public"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "declined_friend_requests_requester_id_fkey"
             columns: ["requester_id"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "declined_friend_requests_requester_id_fkey"
-            columns: ["requester_id"]
-            isOneToOne: false
-            referencedRelation: "users_public"
             referencedColumns: ["id"]
           },
         ]
@@ -646,13 +576,6 @@ export type Database = {
             columns: ["sender_id"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "direct_messages_sender_id_fkey"
-            columns: ["sender_id"]
-            isOneToOne: false
-            referencedRelation: "users_public"
             referencedColumns: ["id"]
           },
         ]
@@ -728,13 +651,6 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "dm_conversations_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       dm_participants: {
@@ -769,13 +685,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "dm_participants_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_public"
             referencedColumns: ["id"]
           },
         ]
@@ -814,13 +723,6 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "dm_reactions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       friendships: {
@@ -854,24 +756,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "friendships_addressee_id_fkey"
-            columns: ["addressee_id"]
-            isOneToOne: false
-            referencedRelation: "users_public"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "friendships_requester_id_fkey"
             columns: ["requester_id"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "friendships_requester_id_fkey"
-            columns: ["requester_id"]
-            isOneToOne: false
-            referencedRelation: "users_public"
             referencedColumns: ["id"]
           },
         ]
@@ -911,13 +799,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "media_comment_reactions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_public"
             referencedColumns: ["id"]
           },
         ]
@@ -970,13 +851,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "media_comments_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_public"
             referencedColumns: ["id"]
           },
         ]
@@ -1042,13 +916,6 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "media_items_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       mentions: {
@@ -1083,13 +950,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mentions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_public"
             referencedColumns: ["id"]
           },
         ]
@@ -1194,13 +1054,6 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "messages_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       notifications: {
@@ -1242,13 +1095,6 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "notifications_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       poll_votes: {
@@ -1286,13 +1132,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "poll_votes_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_public"
             referencedColumns: ["id"]
           },
         ]
@@ -1356,13 +1195,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "polls_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users_public"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "polls_message_id_fkey"
             columns: ["message_id"]
             isOneToOne: true
@@ -1403,13 +1235,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "reactions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_public"
             referencedColumns: ["id"]
           },
         ]
@@ -1493,13 +1318,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "server_emojis_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users_public"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "server_emojis_server_id_fkey"
             columns: ["server_id"]
             isOneToOne: false
@@ -1554,24 +1372,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "server_invites_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users_public"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "server_invites_revoked_by_fkey"
             columns: ["revoked_by"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "server_invites_revoked_by_fkey"
-            columns: ["revoked_by"]
-            isOneToOne: false
-            referencedRelation: "users_public"
             referencedColumns: ["id"]
           },
           {
@@ -1674,13 +1478,6 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "server_members_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       server_roles: {
@@ -1776,13 +1573,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "servers_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "users_public"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "servers_system_channel_join_id_fkey"
             columns: ["system_channel_join_id"]
             isOneToOne: false
@@ -1829,13 +1619,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "task_assignees_assigned_by_fkey"
-            columns: ["assigned_by"]
-            isOneToOne: false
-            referencedRelation: "users_public"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "task_assignees_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
@@ -1847,13 +1630,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_assignees_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_public"
             referencedColumns: ["id"]
           },
         ]
@@ -1906,13 +1682,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_comments_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_public"
             referencedColumns: ["id"]
           },
         ]
@@ -1982,24 +1751,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "tasks_completed_by_fkey"
-            columns: ["completed_by"]
-            isOneToOne: false
-            referencedRelation: "users_public"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "tasks_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users_public"
             referencedColumns: ["id"]
           },
           {
@@ -2102,13 +1857,6 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "thread_messages_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       thread_reactions: {
@@ -2143,13 +1891,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "thread_reactions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_public"
             referencedColumns: ["id"]
           },
         ]
@@ -2189,13 +1930,6 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "threads_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users_public"
             referencedColumns: ["id"]
           },
           {
@@ -2239,13 +1973,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_badges_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_public"
             referencedColumns: ["id"]
           },
         ]
@@ -2325,13 +2052,6 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "user_preferences_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "users_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       user_server_folders: {
@@ -2356,13 +2076,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: true
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_server_folders_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "users_public"
             referencedColumns: ["id"]
           },
         ]
@@ -2392,13 +2105,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: true
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_server_tabs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "users_public"
             referencedColumns: ["id"]
           },
         ]
@@ -2431,13 +2137,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: true
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_voice_settings_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "users_public"
             referencedColumns: ["id"]
           },
         ]
@@ -2507,84 +2206,39 @@ export type Database = {
       }
     }
     Views: {
-      users_public: {
-        Row: {
-          avatar_decoration: string | null
-          avatar_url: string | null
-          banner_color: string | null
-          banner_url: string | null
-          bio: string | null
-          created_at: string | null
-          custom_status: string | null
-          display_name: string | null
-          id: string | null
-          last_seen: string | null
-          profile_effect: string | null
-          profile_theme_accent: string | null
-          profile_theme_primary: string | null
-          pronouns: string | null
-          status: Database["public"]["Enums"]["user_status"] | null
-          username: string | null
-        }
-        Insert: {
-          avatar_decoration?: string | null
-          avatar_url?: string | null
-          banner_color?: string | null
-          banner_url?: string | null
-          bio?: string | null
-          created_at?: string | null
-          custom_status?: string | null
-          display_name?: string | null
-          id?: string | null
-          last_seen?: string | null
-          profile_effect?: string | null
-          profile_theme_accent?: string | null
-          profile_theme_primary?: string | null
-          pronouns?: string | null
-          status?: Database["public"]["Enums"]["user_status"] | null
-          username?: string | null
-        }
-        Update: {
-          avatar_decoration?: string | null
-          avatar_url?: string | null
-          banner_color?: string | null
-          banner_url?: string | null
-          bio?: string | null
-          created_at?: string | null
-          custom_status?: string | null
-          display_name?: string | null
-          id?: string | null
-          last_seen?: string | null
-          profile_effect?: string | null
-          profile_theme_accent?: string | null
-          profile_theme_primary?: string | null
-          pronouns?: string | null
-          status?: Database["public"]["Enums"]["user_status"] | null
-          username?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
-      accept_friend_request: { Args: { _friendship_id: string }; Returns: Json }
+      accept_friend_request: {
+        Args: { _friendship_id: string; _user_id: string }
+        Returns: Json
+      }
       add_channel_member: {
-        Args: { _channel_id: string; _target_user_id: string }
+        Args: {
+          _added_by: string
+          _channel_id: string
+          _target_user_id: string
+        }
         Returns: boolean
       }
       add_dm_reaction: {
-        Args: { _emoji: string; _message_id: string }
+        Args: { _emoji: string; _message_id: string; _user_id: string }
         Returns: Json
       }
       add_group_dm_members: {
-        Args: { _conversation_id: string; _new_member_ids: string[] }
+        Args: {
+          _conversation_id: string
+          _new_member_ids: string[]
+          _user_id: string
+        }
         Returns: Json
       }
       add_reaction: {
-        Args: { _emoji: string; _message_id: string }
+        Args: { _emoji: string; _message_id: string; _user_id: string }
         Returns: Json
       }
       assign_role_to_member: {
-        Args: { _member_id: string; _role_id: string }
+        Args: { _member_id: string; _role_id: string; _user_id: string }
         Returns: undefined
       }
       assign_task_users: {
@@ -2592,10 +2246,13 @@ export type Database = {
         Returns: Json
       }
       ban_member: {
-        Args: { _server_id: string; _target_user_id: string }
+        Args: { _server_id: string; _target_user_id: string; _user_id: string }
         Returns: undefined
       }
-      block_user: { Args: { _blocked_user_id: string }; Returns: Json }
+      block_user: {
+        Args: { _blocked_user_id: string; _user_id: string }
+        Returns: Json
+      }
       can_access_channel: {
         Args: { _channel_id: string; _user_id: string }
         Returns: boolean
@@ -2631,25 +2288,53 @@ export type Database = {
       }
       close_expired_polls: { Args: { _channel_id: string }; Returns: number }
       close_poll: { Args: { _poll_id: string }; Returns: boolean }
-      create_category: {
-        Args: { _name: string; _position?: number; _server_id: string }
-        Returns: Json
-      }
-      create_channel: {
-        Args: {
-          _category_id?: string
-          _ghost_mode?: boolean
-          _icon?: string
-          _is_private?: boolean
-          _name: string
-          _position?: number
-          _server_id: string
-          _type?: string
-        }
-        Returns: Json
-      }
+      create_category:
+        | {
+            Args: { _name: string; _server_id: string; _user_id: string }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _name: string
+              _position?: number
+              _server_id: string
+              _user_id: string
+            }
+            Returns: Json
+          }
+      create_channel:
+        | {
+            Args: {
+              _category_id?: string
+              _ghost_mode?: boolean
+              _icon?: string
+              _is_private?: boolean
+              _name: string
+              _position?: number
+              _server_id: string
+              _type?: string
+              _user_id?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _category_id?: string
+              _is_private?: boolean
+              _name: string
+              _server_id: string
+              _topic?: string
+              _type?: string
+              _user_id: string
+            }
+            Returns: Json
+          }
       create_group_dm: {
-        Args: { _name?: string; _participant_ids: string[] }
+        Args: {
+          _creator_id: string
+          _name?: string
+          _participant_ids: string[]
+        }
         Returns: Json
       }
       create_notification: {
@@ -2667,19 +2352,34 @@ export type Database = {
           _expires_in_seconds?: number
           _max_uses?: number
           _server_id: string
+          _user_id: string
         }
         Returns: string
       }
-      create_server_role: {
-        Args: {
-          _color: string
-          _icon?: string
-          _name: string
-          _server_id: string
-        }
+      create_server_role:
+        | {
+            Args: {
+              _color?: string
+              _name: string
+              _server_id: string
+              _user_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _color: string
+              _icon?: string
+              _name: string
+              _server_id: string
+              _user_id: string
+            }
+            Returns: Json
+          }
+      create_server_with_owner: {
+        Args: { _name: string; _owner_id: string }
         Returns: Json
       }
-      create_server_with_owner: { Args: { _name: string }; Returns: Json }
       create_task: {
         Args: {
           _assignee_ids?: string[]
@@ -2728,20 +2428,29 @@ export type Database = {
         Returns: Json
       }
       decline_friend_request: {
-        Args: { _friendship_id: string }
+        Args: { _friendship_id: string; _user_id: string }
         Returns: boolean
       }
       delete_announcement_comment: {
         Args: { _comment_id: string; _user_id: string }
         Returns: boolean
       }
-      delete_category: { Args: { _category_id: string }; Returns: undefined }
-      delete_channel: { Args: { _channel_id: string }; Returns: undefined }
-      delete_channel_permission: {
-        Args: { _permission_id: string }
+      delete_category: {
+        Args: { _category_id: string; _user_id: string }
         Returns: undefined
       }
-      delete_dm: { Args: { _message_id: string }; Returns: boolean }
+      delete_channel: {
+        Args: { _channel_id: string; _user_id: string }
+        Returns: undefined
+      }
+      delete_channel_permission: {
+        Args: { _permission_id: string; _user_id: string }
+        Returns: undefined
+      }
+      delete_dm: {
+        Args: { _message_id: string; _sender_id: string }
+        Returns: boolean
+      }
       delete_forum_thread: {
         Args: { _thread_id: string; _user_id: string }
         Returns: boolean
@@ -2754,17 +2463,26 @@ export type Database = {
         Args: { _item_id: string; _user_id: string }
         Returns: boolean
       }
-      delete_message: { Args: { _message_id: string }; Returns: undefined }
-      delete_role_permission: {
-        Args: { _permission_id: string }
+      delete_message: {
+        Args: { _message_id: string; _user_id: string }
         Returns: undefined
       }
-      delete_server: { Args: { _server_id: string }; Returns: boolean }
+      delete_role_permission: {
+        Args: { _permission_id: string; _user_id: string }
+        Returns: undefined
+      }
+      delete_server: {
+        Args: { _server_id: string; _user_id: string }
+        Returns: boolean
+      }
       delete_server_emoji: {
         Args: { _emoji_id: string; _user_id: string }
         Returns: string
       }
-      delete_server_role: { Args: { _role_id: string }; Returns: undefined }
+      delete_server_role: {
+        Args: { _role_id: string; _user_id: string }
+        Returns: undefined
+      }
       delete_task: {
         Args: { _task_id: string; _user_id: string }
         Returns: Json
@@ -2783,7 +2501,7 @@ export type Database = {
         Returns: boolean
       }
       edit_dm: {
-        Args: { _content: string; _message_id: string }
+        Args: { _content: string; _message_id: string; _sender_id: string }
         Returns: Json
       }
       edit_media_comment: {
@@ -2791,7 +2509,7 @@ export type Database = {
         Returns: boolean
       }
       edit_message: {
-        Args: { _content: string; _message_id: string }
+        Args: { _content: string; _message_id: string; _user_id: string }
         Returns: Json
       }
       generate_invite_code: { Args: never; Returns: string }
@@ -2814,8 +2532,11 @@ export type Database = {
         Args: { _server_id: string; _user_id: string }
         Returns: Json
       }
-      get_blocked_user_ids_for_visibility: { Args: never; Returns: Json }
-      get_blocked_users: { Args: never; Returns: Json }
+      get_blocked_user_ids_for_visibility: {
+        Args: { _user_id: string }
+        Returns: Json
+      }
+      get_blocked_users: { Args: { _user_id: string }; Returns: Json }
       get_channel_members: { Args: { _channel_id: string }; Returns: Json }
       get_channel_messages: {
         Args: {
@@ -2841,7 +2562,12 @@ export type Database = {
       get_deletion_preview: { Args: { _user_id: string }; Returns: Json }
       get_dm_conversation_id: { Args: { _message_id: string }; Returns: string }
       get_dm_messages: {
-        Args: { _before_id?: string; _conversation_id: string; _limit?: number }
+        Args: {
+          _before_id?: string
+          _conversation_id: string
+          _limit?: number
+          _user_id: string
+        }
         Returns: Json
       }
       get_dm_unread_counts: {
@@ -2864,8 +2590,11 @@ export type Database = {
           name: string
         }[]
       }
-      get_outgoing_friend_requests: { Args: never; Returns: Json }
-      get_pending_friend_requests: { Args: never; Returns: Json }
+      get_outgoing_friend_requests: {
+        Args: { _user_id: string }
+        Returns: Json
+      }
+      get_pending_friend_requests: { Args: { _user_id: string }; Returns: Json }
       get_request_user_id: { Args: never; Returns: string }
       get_role_permissions: { Args: { _server_id: string }; Returns: Json }
       get_server_by_invite_code: {
@@ -2903,21 +2632,21 @@ export type Database = {
       }
       get_user_by_id: { Args: { _user_id: string }; Returns: Json }
       get_user_dm_conversations: {
-        Args: never
+        Args: { _user_id: string }
         Returns: {
           conversation: Json
           last_message: Json
           participants: Json
         }[]
       }
-      get_user_friends: { Args: never; Returns: Json }
+      get_user_friends: { Args: { _user_id: string }; Returns: Json }
       get_user_poll_votes: {
         Args: { _poll_id: string; _user_id: string }
         Returns: number[]
       }
-      get_user_server_folders: { Args: never; Returns: Json }
+      get_user_server_folders: { Args: { _user_id: string }; Returns: Json }
       get_user_server_tabs: { Args: { _user_id: string }; Returns: string[] }
-      get_user_servers: { Args: never; Returns: Json }
+      get_user_servers: { Args: { _user_id: string }; Returns: Json }
       get_user_voice_settings: { Args: { p_user_id: string }; Returns: Json }
       insert_announcement_comment: {
         Args: {
@@ -2970,16 +2699,28 @@ export type Database = {
         Returns: boolean
       }
       is_username_blocked: { Args: { username: string }; Returns: boolean }
-      join_server_by_invite: {
-        Args: { _invite_code: string; _join_source?: string }
-        Returns: Json
-      }
+      join_server_by_invite:
+        | { Args: { _invite_code: string; _user_id: string }; Returns: Json }
+        | {
+            Args: {
+              _invite_code: string
+              _join_source?: string
+              _user_id: string
+            }
+            Returns: Json
+          }
       kick_member: {
-        Args: { _server_id: string; _target_user_id: string }
+        Args: { _server_id: string; _target_user_id: string; _user_id: string }
         Returns: undefined
       }
-      leave_group_dm: { Args: { _conversation_id: string }; Returns: Json }
-      leave_server: { Args: { _server_id: string }; Returns: boolean }
+      leave_group_dm: {
+        Args: { _conversation_id: string; _user_id: string }
+        Returns: Json
+      }
+      leave_server: {
+        Args: { _server_id: string; _user_id: string }
+        Returns: boolean
+      }
       list_server_invites: {
         Args: { _server_id: string; _user_id: string }
         Returns: {
@@ -3018,9 +2759,12 @@ export type Database = {
         Args: { _server_id: string; _target_user_id: string; _user_id: string }
         Returns: undefined
       }
-      open_dm_conversation: { Args: { _other_user_id: string }; Returns: Json }
+      open_dm_conversation: {
+        Args: { _other_user_id: string; _user_id: string }
+        Returns: Json
+      }
       pin_message: {
-        Args: { _message_id: string; _pinned: boolean }
+        Args: { _message_id: string; _pinned: boolean; _user_id: string }
         Returns: undefined
       }
       post_system_message: {
@@ -3060,20 +2804,27 @@ export type Database = {
             Returns: Json
           }
       remove_channel_member: {
-        Args: { _channel_id: string; _target_user_id: string }
+        Args: {
+          _channel_id: string
+          _removed_by: string
+          _target_user_id: string
+        }
         Returns: boolean
       }
       remove_dm_reaction: {
-        Args: { _emoji: string; _message_id: string }
+        Args: { _emoji: string; _message_id: string; _user_id: string }
         Returns: boolean
       }
-      remove_friend: { Args: { _friendship_id: string }; Returns: boolean }
+      remove_friend: {
+        Args: { _friendship_id: string; _user_id: string }
+        Returns: boolean
+      }
       remove_reaction: {
-        Args: { _emoji: string; _message_id: string }
+        Args: { _emoji: string; _message_id: string; _user_id: string }
         Returns: boolean
       }
       remove_role_from_member: {
-        Args: { _member_id: string; _role_id: string }
+        Args: { _member_id: string; _role_id: string; _user_id: string }
         Returns: undefined
       }
       rename_server_emoji: {
@@ -3081,7 +2832,7 @@ export type Database = {
         Returns: undefined
       }
       reorder_categories: {
-        Args: { _category_ids: string[]; _server_id: string }
+        Args: { _category_ids: string[]; _server_id: string; _user_id: string }
         Returns: undefined
       }
       reorder_channels: {
@@ -3090,25 +2841,31 @@ export type Database = {
           _new_category_id: string
           _new_position: number
           _server_id: string
+          _user_id: string
         }
         Returns: undefined
       }
       reorder_server_roles: {
-        Args: { _ordered_role_ids: string[]; _server_id: string }
+        Args: {
+          _ordered_role_ids: string[]
+          _server_id: string
+          _user_id: string
+        }
         Returns: undefined
       }
       reorder_user_servers: {
-        Args: { _server_ids: string[] }
+        Args: { _server_ids: string[]; _user_id: string }
         Returns: undefined
       }
-      require_auth: { Args: never; Returns: string }
-      reset_user_secret_key: { Args: { _new_key_hash: string }; Returns: Json }
+      reset_user_secret_key:
+        | { Args: { _new_key_hash: string; _user_id: string }; Returns: Json }
+        | { Args: { _new_key_hash: string; _user_id: string }; Returns: Json }
       revoke_server_invite: {
         Args: { _invite_id: string; _user_id: string }
         Returns: boolean
       }
       save_user_server_folders: {
-        Args: { _folder_data: Json }
+        Args: { _folder_data: Json; _user_id: string }
         Returns: boolean
       }
       save_user_server_tabs: {
@@ -3137,15 +2894,21 @@ export type Database = {
           _content: string
           _conversation_id: string
           _reply_to_id?: string
+          _sender_id: string
         }
         Returns: Json
       }
       send_friend_request: {
-        Args: { _addressee_username: string }
+        Args: { _addressee_username: string; _requester_id: string }
         Returns: Json
       }
       send_message: {
-        Args: { _channel_id: string; _content: string; _reply_to_id?: string }
+        Args: {
+          _channel_id: string
+          _content: string
+          _reply_to_id?: string
+          _user_id: string
+        }
         Returns: Json
       }
       send_poll: {
@@ -3156,6 +2919,7 @@ export type Database = {
           _options: string[]
           _question: string
           _reply_to_id?: string
+          _user_id: string
         }
         Returns: Json
       }
@@ -3176,23 +2940,35 @@ export type Database = {
           _role_id?: string
           _role_name?: string
           _target_user_id?: string
+          _user_id: string
         }
         Returns: undefined
       }
       set_message_embed_hidden: {
-        Args: { _hidden: boolean; _message_id: string }
+        Args: { _hidden: boolean; _message_id: string; _user_id: string }
         Returns: boolean
       }
-      set_role_permission: {
-        Args: {
-          _allowed?: boolean
-          _permission: Database["public"]["Enums"]["permission_type"]
-          _role_id?: string
-          _role_name?: string
-          _server_id: string
-        }
-        Returns: undefined
-      }
+      set_role_permission:
+        | {
+            Args: {
+              _allowed?: boolean
+              _permission: Database["public"]["Enums"]["permission_type"]
+              _role_id?: string
+              _role_name?: string
+              _server_id: string
+              _user_id: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              _allowed: boolean
+              _permission: Database["public"]["Enums"]["permission_type"]
+              _role_id: string
+              _user_id: string
+            }
+            Returns: undefined
+          }
       shares_dm_with: {
         Args: { _other_user_id: string; _user_id: string }
         Returns: boolean
@@ -3231,7 +3007,11 @@ export type Database = {
         Returns: Json
       }
       transfer_ownership: {
-        Args: { _new_owner_id: string; _server_id: string }
+        Args: {
+          _current_owner_id: string
+          _new_owner_id: string
+          _server_id: string
+        }
         Returns: boolean
       }
       unassign_task_users: {
@@ -3242,21 +3022,24 @@ export type Database = {
         Args: { _server_id: string; _target_user_id: string; _user_id: string }
         Returns: boolean
       }
-      unblock_user: { Args: { _blocked_user_id: string }; Returns: boolean }
+      unblock_user: {
+        Args: { _blocked_user_id: string; _user_id: string }
+        Returns: boolean
+      }
       unmute_member: {
         Args: { _server_id: string; _target_user_id: string; _user_id: string }
         Returns: undefined
       }
       update_category: {
-        Args: { _category_id: string; _updates: string }
+        Args: { _category_id: string; _updates: string; _user_id: string }
         Returns: Json
       }
       update_channel: {
-        Args: { _channel_id: string; _updates: string }
+        Args: { _channel_id: string; _updates: string; _user_id: string }
         Returns: Json
       }
       update_group_dm_name: {
-        Args: { _conversation_id: string; _new_name: string }
+        Args: { _conversation_id: string; _new_name: string; _user_id: string }
         Returns: Json
       }
       update_member_nickname: {
@@ -3268,16 +3051,33 @@ export type Database = {
         }
         Returns: boolean
       }
-      update_server: {
-        Args: { _server_id: string; _updates: Json }
-        Returns: undefined
-      }
+      update_server:
+        | {
+            Args: {
+              _about?: string
+              _banner_url?: string
+              _icon_url?: string
+              _is_published?: boolean
+              _name?: string
+              _server_id: string
+              _system_channel_id?: string
+              _system_channel_send_join?: boolean
+              _system_channel_send_leave?: boolean
+              _user_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: { _server_id: string; _updates: Json; _user_id: string }
+            Returns: undefined
+          }
       update_server_role: {
         Args: {
           _color?: string
           _icon?: string
           _name?: string
           _role_id: string
+          _user_id: string
         }
         Returns: Json
       }
@@ -3297,10 +3097,16 @@ export type Database = {
         Args: { _comment_id: string; _content: string; _user_id: string }
         Returns: Json
       }
-      update_user_last_seen: { Args: never; Returns: boolean }
-      update_user_profile: { Args: { _updates: Json }; Returns: Json }
+      update_user_last_seen: { Args: { _user_id: string }; Returns: boolean }
+      update_user_profile: {
+        Args: { _updates: Json; _user_id: string }
+        Returns: Json
+      }
       update_user_status: {
-        Args: { _status: Database["public"]["Enums"]["user_status"] }
+        Args: {
+          _status: Database["public"]["Enums"]["user_status"]
+          _user_id: string
+        }
         Returns: boolean
       }
       upload_server_emoji: {

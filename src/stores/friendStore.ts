@@ -40,13 +40,12 @@ export const useFriendStore = create<FriendState>((set, get) => ({
 
     try {
       // Use RPC functions to fetch all friend data
-      const rpc = supabase.rpc as any;
       const [friendsRes, pendingRes, outgoingRes, blockedRes, visibilityBlockedRes] = await Promise.all([
-        rpc('get_user_friends', {}),
-        rpc('get_pending_friend_requests', {}),
-        rpc('get_outgoing_friend_requests', {}),
-        rpc('get_blocked_users', {}),
-        rpc('get_blocked_user_ids_for_visibility', {}),
+        supabase.rpc('get_user_friends', { _user_id: userId }),
+        supabase.rpc('get_pending_friend_requests', { _user_id: userId }),
+        supabase.rpc('get_outgoing_friend_requests', { _user_id: userId }),
+        supabase.rpc('get_blocked_users', { _user_id: userId }),
+        supabase.rpc('get_blocked_user_ids_for_visibility', { _user_id: userId }),
       ]);
 
       if (friendsRes.error) throw friendsRes.error;

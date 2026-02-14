@@ -176,7 +176,7 @@ export const ForumChannelArea = () => {
         .from("messages")
         .select(`
           *,
-          user:users (id, username, display_name, avatar_url, banner_url, avatar_decoration, profile_effect, banner_color, profile_theme_primary, profile_theme_accent, bio, status, custom_status, created_at, last_seen, pronouns),
+          user:users (*),
           attachments:message_attachments (*),
           reactions (*)
         `)
@@ -333,10 +333,10 @@ export const ForumChannelArea = () => {
 
             if (!shouldAdd) return;
 
-            // Fetch user data (explicit columns, avoids revoked key_hash)
+            // Fetch user data for the new message
             const { data: userData, error: userError } = await supabase
               .from("users")
-              .select("id, username, display_name, avatar_url, banner_url, avatar_decoration, profile_effect, banner_color, profile_theme_primary, profile_theme_accent, bio, status, custom_status, created_at, last_seen, pronouns")
+              .select("*")
               .eq("id", newMsg.user_id)
               .single();
 
@@ -355,7 +355,7 @@ export const ForumChannelArea = () => {
                   .single();
                 
                 if (!replyError && replyMsg) {
-                  // Fetch reply user (explicit columns)
+                  // Fetch reply user
                   const { data: replyUser } = await supabase
                     .from("users")
                     .select("id, username, display_name, avatar_url")
