@@ -112,6 +112,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
   const { user } = useAuthStore();
   const { members } = useServerStore();
   const setJoinedChannel = useVoiceStore((s) => s.setJoinedChannel);
+  const connectionStatus = useVoiceStore((s) => s.connection.status);
   const [showQualityModal, setShowQualityModal] = useState(false);
 
   const voice = useAgoraRoom({
@@ -121,9 +122,11 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
   });
 
   // Connect Push-to-Talk hook
+  const effectivelyJoined = voice.isJoined && connectionStatus === "joined";
+
   usePushToTalk({
     room: voice.room,
-    isConnected: voice.isJoined,
+    isConnected: effectivelyJoined,
     onMuteChange: (muted) => {
       // Sync mute state from PTT to voice controls
       useVoiceStore.getState().setControls({ muted });
@@ -133,7 +136,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
   // Connect hide voice activity hook (syncs setting to LiveKit metadata)
   useHideVoiceActivity({
     room: voice.room,
-    isConnected: voice.isJoined,
+    isConnected: effectivelyJoined,
   });
 
   // Check if local user is speaking (for auto-disconnect)
@@ -142,7 +145,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
 
   // Auto-disconnect timer
   useAutoDisconnect({
-    isJoined: voice.isJoined,
+    isJoined: effectivelyJoined,
     isSpeaking: isLocalSpeaking,
     onDisconnect: voice.leave,
   });
@@ -154,13 +157,13 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
 
   // Persist the joined voice channel metadata
   useEffect(() => {
-    if (voice.isJoined) {
+    if (effectivelyJoined) {
       setJoinedChannel(channel);
     } else {
       const prev = useVoiceStore.getState().joinedChannel;
       if (prev?.id === channel.id) setJoinedChannel(null);
     }
-  }, [channel, setJoinedChannel, voice.isJoined]);
+  }, [channel, setJoinedChannel, effectivelyJoined]);
 
   // Listen for disconnect request from sidebar banner
   useEffect(() => {
@@ -235,7 +238,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
           <div className="min-w-0">
             <div className="text-sm font-semibold truncate">{channel.name}</div>
             <div className="text-[11px] text-muted-foreground truncate">
-              {voice.isJoined ? "Voice connected" : "Not connected"}
+              {effectivelyJoined ? "Voice connected" : "Not connected"}
             </div>
           </div>
         </div>
@@ -247,7 +250,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
       {/* Main content */}
       <div className="flex-1 min-h-0">
         <div
-          className={cn("min-h-0 p-4", voice.isJoined ? "overflow-y-auto" : "h-full flex items-center justify-center")}
+          className={cn("min-h-0 p-4", effectivelyJoined ? "overflow-y-auto" : "h-full flex items-center justify-center")}
         >
           {voice.error && (
             <div className="mb-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
@@ -255,7 +258,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
             </div>
           )}
 
-          {!voice.isJoined ? (
+          {!effectivelyJoined ? (
             <div className="max-w-md w-full rounded-2xl border border-border/70 bg-background/60 backdrop-blur p-6 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent pointer-events-none" />
               <div className="relative">
@@ -342,7 +345,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
       </div>
 
       {/* Bottom control bar */}
-      {voice.isJoined && (
+      {effectivelyJoined && (
         <div className="h-14 border-t border-border/60 bg-background/60 backdrop-blur flex items-center justify-between px-3 gap-3">
           <div className="w-[140px] hidden sm:block" />
 
