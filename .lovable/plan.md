@@ -1,68 +1,36 @@
 
 
-## Voice Channel Audit -- Bugs Found
+## Fix: Voice Channel Area Not Updating After Sidebar Disconnect
 
-### Bug 1: Sidebar Disconnect Button Unreliable (CRITICAL)
+### Problem
+When the user clicks the sidebar disconnect button while viewing the voice channel, the Agora connection is actually terminated but the VoiceChannelArea UI still shows the connected state (participants, controls). The in-channel disconnect button works correctly.
 
-**Root cause:** In `VoiceChannelArea.tsx` (line 174), the `kloak:voice:leave` event listener depends on `voice` in its dependency array. But `useAgoraRoom` returns a **new object literal every render** (lines 579-597), so `voice` is a new reference on every render. This causes the `useEffect` to tear down and re-register the listener constantly, creating a race window where the event fires between removal and re-addition.
+### Root Cause
+The sidebar disconnect triggers a custom DOM event that calls `voice.leave()`. This updates the Zustand store (`connection.status = "idle"`, `joinedChannelId = null`) and the local React state (`status = "idle"`). However, a race condition between two `VoicePersistentHost` instances (desktop + mobile, both always mounted) and the async nature of `leave()` can cause the active `VoiceChannelArea` to unmount before its local state propagates, and the replacement instance may not render correctly.
 
-**Fix:** Replace `voice` in the dependency array with the stable `voice.leave` callback reference. Same fix needed for the mute/deafen listeners (line 194).
+### Solution
+Make `VoiceChannelArea` subscribe directly to the Zustand store's `connection.status` and use it as a secondary source of truth. If the store says "idle", treat the component as disconnected regardless of the local `voice.isJoined` state.
 
-```text
-Before: }, [channel.id, voice]);
-After:  }, [channel.id, voice.leave]);
-```
+### Changes
 
----
+**File: `src/components/voice/VoiceChannelArea.tsx`**
 
-### Bug 2: Per-User Volume Above 100% Has No Effect (CRITICAL)
-
-**Root cause:** In `ParticipantAudioPlayer.tsx` (line 33), the volume calculation is:
-
+1. Add a Zustand subscription to `connection.status`:
 ```typescript
-const vol = Math.min(100, Math.round((userVolume / 100) * (outputVolume / 100) * 100));
+const connectionStatus = useVoiceStore((s) => s.connection.status);
 ```
 
-Agora's `setVolume()` accepts 0-100. The `Math.min(100, ...)` hard-caps the result, so even if a user sets volume to 200%, the actual applied volume is still 100. The slider goes up to 200% but has zero effect above 100%.
-
-**Fix:** Agora remote audio tracks actually support `setVolume(0-100)` only. To support boost above 100%, we'd need to use the Web Audio API (GainNode) instead. However, the immediate fix is to expand the Agora range -- Agora's `setVolume` actually accepts **0-1000** on `IRemoteAudioTrack`, not 0-100 as documented for some older APIs. We should pass the computed percentage directly without capping at 100:
-
+2. Create a derived `effectivelyJoined` value:
 ```typescript
-// Map combined volume (0-400 theoretical max) to Agora's 0-1000 range
-const vol = Math.round((userVolume / 100) * (outputVolume / 100) * 100);
-track.setVolume(Math.min(vol, 400)); // cap at 4x boost for safety
+const effectivelyJoined = voice.isJoined && connectionStatus === "joined";
 ```
 
----
+3. Replace all references to `voice.isJoined` with `effectivelyJoined`:
+   - The "Voice connected" / "Not connected" header text (line 238)
+   - The join card vs participant grid conditional (line 258)
+   - The bottom control bar visibility (line 345)
+   - The `setJoinedChannel` effect (line 157)
+   - The auto-disconnect hook (line 145)
 
-### Bug 3: Deafen/Undeafen Bypasses Per-User Volume (MODERATE)
-
-**Root cause:** In `useAgoraRoom.ts` (lines 438-442), `toggleDeafen` directly calls `remoteUser.audioTrack.setVolume()` on all remote tracks. But `ParticipantAudioPlayer` is supposed to be the **single owner** of remote audio playback (as stated in its own documentation). When undeafening, `toggleDeafen` resets all volumes to `100`, wiping out any per-user volume overrides.
-
-```typescript
-// Current code in toggleDeafen -- conflicts with ParticipantAudioPlayer
-for (const remoteUser of client.remoteUsers) {
-  if (remoteUser.audioTrack) {
-    remoteUser.audioTrack.setVolume(newDeafened ? 0 : 100);  // <-- ignores per-user overrides
-  }
-}
-```
-
-**Fix:** Remove the direct volume manipulation from `toggleDeafen`. The `ParticipantAudioPlayer` component already reacts to the `deafened` state via the `muted` prop and applies volume correctly (including per-user overrides). The `toggleDeafen` code is redundant and harmful.
-
----
-
-### Bug 4: Event Listener Instability for Mute/Deafen (MINOR)
-
-Same issue as Bug 1 -- the mute/deafen event listeners (lines 177-194) also depend on `voice`, causing the same constant re-registration problem. Fix by depending on `voice.toggleMute` and `voice.toggleDeafen` respectively.
-
----
-
-### Summary of Changes
-
-| File | Change |
-|------|--------|
-| `src/components/voice/VoiceChannelArea.tsx` | Fix event listener deps: use `voice.leave`, `voice.toggleMute`, `voice.toggleDeafen` instead of `voice` |
-| `src/components/voice/ParticipantAudioPlayer.tsx` | Remove `Math.min(100, ...)` cap, allow volumes above 100 for Agora's `setVolume` |
-| `src/hooks/useAgoraRoom.ts` | Remove direct `setVolume` calls from `toggleDeafen` -- let ParticipantAudioPlayer handle it |
+This ensures that when `leave()` updates the Zustand store (which happens synchronously), the VoiceChannelArea immediately reflects the disconnected state, even if its own local `useAgoraRoom` hook state hasn't caught up due to async cleanup or component remounting.
 
