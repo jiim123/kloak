@@ -91,6 +91,7 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
   const setConnection = useVoiceStore((s) => s.setConnection);
   const setControls = useVoiceStore((s) => s.setControls);
   const setPresence = useVoiceStore((s) => s.setPresence);
+  const clearPresence = useVoiceStore((s) => s.clearPresence);
 
   const voiceSettings = useVoiceSettingsStore((s) => s.settings);
 
@@ -405,8 +406,20 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
     setJoinedChannelId(null);
     setControls({ muted: false, deafened: false });
 
+    // Immediately remove ourselves from the sidebar presence list so the UI
+    // updates without waiting for the re-created watcher to receive a "leave" event.
+    if (channelId && userId) {
+      const current = useVoiceStore.getState().presenceByChannel[channelId] ?? [];
+      const without = current.filter((id) => id !== userId);
+      if (without.length > 0) {
+        setPresence(channelId, without);
+      } else {
+        clearPresence(channelId);
+      }
+    }
+
     if (channelId) resumeVoicePresenceWatch(channelId);
-  }, [channelId, setConnection, setJoinedChannelId, setControls]);
+  }, [channelId, userId, setConnection, setJoinedChannelId, setControls, setPresence, clearPresence]);
 
   // ------ MUTE / DEAFEN ------
   const toggleMute = useCallback(async () => {
