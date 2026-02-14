@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
 import { useFriendStore } from "@/stores/friendStore";
+import { USER_FK_JOIN } from "@/lib/userColumns";
 import type { Message, MessageReply, ReactionGroup, User } from "@/types";
 
 interface ChannelMessages {
@@ -158,7 +159,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         .select(
           `
           *,
-          user:users (*),
+          ${USER_FK_JOIN},
           attachments:message_attachments (*),
           reactions (*)
         `,
@@ -185,7 +186,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       // Fetch reply messages separately if there are any
       let replyMap: Record<string, MessageReply> = {};
       if (replyToIds.length > 0) {
-        let replyQuery = supabase.from("messages").select("id, content, user:users (*)").in("id", replyToIds);
+        let replyQuery = supabase.from("messages").select(`id, content, ${USER_FK_JOIN}`).in("id", replyToIds);
 
         if (blockedIn) {
           replyQuery = replyQuery.not("user_id", "in", blockedIn);
