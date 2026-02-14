@@ -123,7 +123,7 @@ export const useRealtimeUsers = () => {
       if (now - lastPollRef.current < 30_000) return;
       lastPollRef.current = now;
 
-      // Fetch only the columns we need (optimized query)
+      // Fetch only the columns we need (optimized query, avoids revoked key_hash)
       const { data, error } = await supabase
         .from('users')
         .select('id, status, last_seen')

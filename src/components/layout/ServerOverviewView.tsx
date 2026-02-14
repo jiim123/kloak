@@ -58,7 +58,7 @@ export const ServerOverviewView = () => {
             content,
             created_at,
             channel_id,
-            user:users (*)
+            user:users (id, username, display_name, avatar_url, banner_color)
           `)
           .in('channel_id', channelIds)
           .order('created_at', { ascending: false })
