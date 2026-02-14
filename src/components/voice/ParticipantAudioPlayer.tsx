@@ -45,8 +45,9 @@ export function ParticipantAudioPlayer({
     if (muted) {
       track.setVolume(0);
     } else {
-      const vol = Math.min(100, Math.round((userVolume / 100) * (outputVolume / 100) * 100));
-      track.setVolume(vol);
+      // Agora IRemoteAudioTrack.setVolume accepts 0-1000; allow boost above 100
+      const vol = Math.round((userVolume / 100) * (outputVolume / 100) * 100);
+      track.setVolume(Math.min(vol, 400));
     }
   }, [track, userVolume, outputVolume, muted]);
 
