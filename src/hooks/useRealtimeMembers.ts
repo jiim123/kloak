@@ -66,10 +66,10 @@ export const useRealtimeMembers = (serverId: string | null) => {
           // Skip banned members
           if (newMemberData.is_banned) return;
 
-          // Fetch user info for the new member
+          // Fetch user info for the new member (explicit columns, avoids revoked key_hash)
           const { data: userData } = await supabase
             .from('users')
-            .select('id, username, display_name, avatar_url, avatar_decoration, banner_color, bio, status, custom_status, created_at, last_seen')
+            .select('id, username, display_name, avatar_url, avatar_decoration, banner_color, bio, status, custom_status, created_at, last_seen, pronouns')
             .eq('id', newMemberData.user_id)
             .single();
 

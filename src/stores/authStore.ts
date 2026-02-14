@@ -150,9 +150,8 @@ export const useAuthStore = create<AuthState>()(
 
           // Auto-join the default community server
           try {
-            await supabase.rpc('join_server_by_invite', {
+            await (supabase.rpc as any)('join_server_by_invite', {
               _invite_code: 'ET68T4B3',
-              _user_id: user.id,
             });
           } catch (e) {
             // Non-critical — don't block registration if auto-join fails
@@ -239,8 +238,7 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         const { user } = get();
         if (user) {
-          supabase.rpc('update_user_status', {
-            _user_id: user.id,
+          (supabase.rpc as any)('update_user_status', {
             _status: 'offline',
           }).then(() => {});
         }
@@ -259,8 +257,7 @@ export const useAuthStore = create<AuthState>()(
             normalizedUpdates.custom_status = null;
           }
 
-          const { data, error } = await supabase.rpc('update_user_profile', {
-            _user_id: user.id,
+          const { data, error } = await (supabase.rpc as any)('update_user_profile', {
             _updates: normalizedUpdates,
           });
 
@@ -299,8 +296,7 @@ export const useAuthStore = create<AuthState>()(
         if (!user) return;
 
         try {
-          await supabase.rpc('update_user_status', {
-            _user_id: user.id,
+          await (supabase.rpc as any)('update_user_status', {
             _status: status,
           });
 
@@ -333,9 +329,7 @@ export const useAuthStore = create<AuthState>()(
         if (!user) return;
 
         try {
-          await supabase.rpc('update_user_last_seen', {
-            _user_id: user.id,
-          });
+          await (supabase.rpc as any)('update_user_last_seen');
           // Don't update local state - this avoids triggering re-renders
           // The last_seen is only used for other users' presence display
         } catch (error) {
@@ -353,8 +347,7 @@ export const useAuthStore = create<AuthState>()(
           const newKeyHash = await hashSecretKey(newSecretKey);
 
           // Use the RPC function with cooldown enforcement
-          const { data, error } = await supabase.rpc('reset_user_secret_key', {
-            _user_id: user.id,
+          const { data, error } = await (supabase.rpc as any)('reset_user_secret_key', {
             _new_key_hash: newKeyHash,
           });
 

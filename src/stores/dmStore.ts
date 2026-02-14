@@ -79,9 +79,7 @@ export const useDMStore = create<DMState>((set, get) => ({
 
     try {
       // Use RPC function to fetch conversations
-      const { data, error } = await supabase.rpc('get_user_dm_conversations', {
-        _user_id: userId,
-      });
+      const { data, error } = await (supabase.rpc as any)('get_user_dm_conversations', {});
 
       if (error) throw error;
 
