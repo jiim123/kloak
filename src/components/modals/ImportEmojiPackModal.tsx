@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { invalidateServerEmojis } from "@/lib/serverEmojis";
 import JSZip from "jszip";
 
-const MAX_SERVER_EMOJIS = 30;
+const MAX_SERVER_EMOJIS = 1000;
 const MAX_ZIP_SIZE = 50 * 1024 * 1024; // 50MB
 const EMOJI_NAME_REGEX = /^[a-z0-9_]{2,32}$/;
 const IMAGE_EXTENSIONS = new Set(["png", "gif", "webp"]);
