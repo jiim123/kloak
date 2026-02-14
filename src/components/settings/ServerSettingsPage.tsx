@@ -103,7 +103,7 @@ const ALLOWED_BANNER_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gi
 const MAX_EMOJI_SIZE = 1 * 1024 * 1024; // 1MB
 const ALLOWED_EMOJI_TYPES = ['image/png', 'image/gif', 'image/webp', 'image/jpeg'];
 const EMOJI_NAME_REGEX = /^[a-z0-9_]{2,32}$/;
-const MAX_SERVER_EMOJIS = 30;
+const MAX_SERVER_EMOJIS = 1000;
 
 const serverSettingsSchema = z.object({
   name: z.string()
