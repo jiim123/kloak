@@ -230,18 +230,12 @@ export const SupportUsButton = ({
             onClick={() => setOpen((p) => !p)}
             aria-label="Support Us"
             className={cn(
-              "inline-flex items-center justify-center gap-1.5 rounded-md transition-all duration-200 text-emerald-400",
+              "w-10 h-10 inline-flex items-center justify-center rounded-[4px] transition-all duration-200 text-emerald-400",
               "hover:bg-emerald-500/10 hover:text-emerald-300",
-              open && "bg-emerald-500/10",
-              isMobile
-                ? "w-8 h-8 p-0"
-                : "h-8 px-2.5 text-xs font-semibold"
+              open && "bg-emerald-500/10"
             )}
           >
             <Heart className="w-4 h-4" />
-            {!isMobile && (
-              <span>Support Us</span>
-            )}
           </button>
         </TooltipTrigger>
         <TooltipContent side="bottom" className="font-medium">
