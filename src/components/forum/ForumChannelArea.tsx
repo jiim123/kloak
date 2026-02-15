@@ -1413,20 +1413,7 @@ export const ForumChannelArea = () => {
                         )}
                       </div>
                     </div>
-                    {/* Delete thread button */}
-                    {(user?.id === thread.created_by || canManageMessages) && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setThreadToDelete(thread);
-                          setShowDeleteThreadModal(true);
-                        }}
-                        className="absolute top-3 right-3 p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover/thread:opacity-100 transition-opacity"
-                        title="Delete thread"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
+                    {/* Delete thread button removed from list - only available when thread is opened */}
                   </div>
                 );
               })}
