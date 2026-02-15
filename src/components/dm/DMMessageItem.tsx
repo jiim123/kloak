@@ -215,7 +215,7 @@ export const DMMessageItem = memo(function DMMessageItem({ message, isFirst, onR
 
   const innerClassName = useMemo(() => {
     const classes = [
-      'group relative flex px-3 rounded-lg transition-colors duration-200 hover:bg-muted/40 cursor-pointer',
+      'group relative flex px-3 rounded-lg transition-colors duration-200 hover:bg-muted/40',
       isFirst ? 'gap-3 py-1.5' : 'gap-3 py-0.5',
     ];
     if (isMentioned) classes.push('bg-amber-950/50 border-l-2 border-l-amber-500');
