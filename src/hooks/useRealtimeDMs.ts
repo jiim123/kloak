@@ -61,8 +61,35 @@ export const useRealtimeDMs = ({
 
       if (!data) return;
 
+      // Fetch reply_to data if this message is a reply
+      let reply_to: DirectMessage | null = null;
+      if (data.reply_to_id) {
+        // Check local cache first
+        const cachedMessages = useDMStore.getState().messagesByConversation[newMessageData.conversation_id] || [];
+        const cachedReply = cachedMessages.find((m: any) => m.id === data.reply_to_id);
+        if (cachedReply) {
+          reply_to = cachedReply;
+        } else {
+          // Fetch from DB
+          const { data: replyData } = await supabase
+            .from('direct_messages')
+            .select('id, content, sender_id, sender:users!direct_messages_sender_id_fkey(username)')
+            .eq('id', data.reply_to_id)
+            .single();
+          if (replyData) {
+            reply_to = {
+              id: (replyData as any).id,
+              content: (replyData as any).content,
+              sender_id: (replyData as any).sender_id,
+              sender: (replyData as any).sender ? { username: (replyData as any).sender.username } as any : undefined,
+            } as DirectMessage;
+          }
+        }
+      }
+
       const message: DirectMessage = {
         ...data,
+        reply_to,
         sender: data.sender ? {
           id: data.sender.id,
           username: data.sender.username,

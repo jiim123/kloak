@@ -240,11 +240,58 @@ export const useDMStore = create<DMState>((set, get) => ({
         reactions = reactionData || [];
       }
 
-      const messages: DirectMessage[] = [...dataArray].reverse().map((msg: any) => {
+      const reversedData = [...dataArray].reverse();
+
+      // Collect reply_to_ids that need fetching
+      const replyToIds = reversedData
+        .map((msg: any) => msg.reply_to_id)
+        .filter((id: string | null): id is string => !!id);
+
+      // Batch-fetch replied-to messages with sender info
+      const replyToMap: Record<string, Partial<DirectMessage>> = {};
+      if (replyToIds.length > 0) {
+        const uniqueReplyIds = [...new Set(replyToIds)];
+        // First check if any are in the current batch
+        const batchMap = new Map(reversedData.map((m: any) => [m.id, m]));
+        const missingIds = uniqueReplyIds.filter(id => !batchMap.has(id));
+
+        // Map from batch
+        for (const id of uniqueReplyIds) {
+          const found = batchMap.get(id);
+          if (found) {
+            replyToMap[id] = {
+              id: found.id,
+              content: found.content,
+              sender_id: found.sender_id,
+              sender: found.sender ? { username: found.sender.username } as any : undefined,
+            };
+          }
+        }
+
+        // Fetch missing ones from DB
+        if (missingIds.length > 0) {
+          const { data: replyData } = await supabase
+            .from('direct_messages')
+            .select('id, content, sender_id, sender:users!direct_messages_sender_id_fkey(username)')
+            .in('id', missingIds);
+          if (replyData) {
+            for (const r of replyData as any[]) {
+              replyToMap[r.id] = {
+                id: r.id,
+                content: r.content,
+                sender_id: r.sender_id,
+                sender: r.sender ? { username: r.sender.username } as any : undefined,
+              };
+            }
+          }
+        }
+      }
+
+      const messages: DirectMessage[] = reversedData.map((msg: any) => {
         const msgReactions = reactions.filter((r) => r.message_id === msg.id);
         return {
           ...msg,
-          reply_to: null,
+          reply_to: msg.reply_to_id ? (replyToMap[msg.reply_to_id] as DirectMessage) || null : null,
           attachments: [],
           reactions: groupReactions(msgReactions, userId),
         };
@@ -299,8 +346,19 @@ export const useDMStore = create<DMState>((set, get) => ({
         ? { data: localUser }
         : await supabase.rpc('get_user_by_id', { _user_id: senderId });
 
+      // Look up reply_to from local cache if replyToId is provided
+      let reply_to: DirectMessage | null = null;
+      if (replyToId) {
+        const cachedMessages = get().messagesByConversation[conversationId] || [];
+        const replyMsg = cachedMessages.find((m) => m.id === replyToId);
+        if (replyMsg) {
+          reply_to = replyMsg;
+        }
+      }
+
       const message: DirectMessage = {
         ...msgData,
+        reply_to,
         sender: userData as unknown as User,
         attachments: [],
         reactions: [],
