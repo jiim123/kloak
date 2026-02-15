@@ -1,8 +1,29 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Plus, Users, Compass } from "lucide-react";
+import { Plus, Users, Compass, Heart } from "lucide-react";
 import { useUIStore, useAuthStore } from "@/stores";
+import { SupportUsButton } from "@/components/support/SupportUsButton";
 import kloakLogo from "@/assets/kloak-logo.svg";
+
+const SupportUsBox = () => (
+    <div className="p-4 sm:p-6 md:p-8 rounded-xl sm:rounded-2xl bg-card/50 border border-border/50 hover:bg-card hover:border-emerald-500/50 hover:shadow-lg hover:shadow-emerald-500/5 transition-all duration-200 text-left group w-full h-full relative">
+        <div className="flex flex-col items-center text-center gap-2 sm:gap-3 md:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-lg sm:rounded-xl bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
+                <Heart className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-emerald-400" />
+            </div>
+            <div className="space-y-0.5 sm:space-y-1 md:space-y-2">
+                <h3 className="font-semibold text-sm sm:text-base md:text-lg">Support Us</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground px-1">
+                    Help keep Kloak running
+                </p>
+            </div>
+        </div>
+        {/* Invisible SupportUsButton overlay that handles click + dropdown/sheet */}
+        <div className="absolute inset-0 flex items-center justify-center">
+            <SupportUsButton variant="overlay" />
+        </div>
+    </div>
+);
 
 export const HomeLanding = () => {
     const navigate = useNavigate();
@@ -105,7 +126,7 @@ export const HomeLanding = () => {
                     </motion.div>
 
                     {/* Action Boxes */}
-                    <motion.div variants={item} className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 md:gap-6 px-1 sm:px-2 md:px-0">
+                    <motion.div variants={item} className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 md:gap-6 px-1 sm:px-2 md:px-0">
                         <button
                             onClick={() => openModal('create-server')}
                             className="p-4 sm:p-6 md:p-8 rounded-xl sm:rounded-2xl bg-card/50 border border-border/50 hover:bg-card hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200 text-left group w-full"
@@ -142,7 +163,7 @@ export const HomeLanding = () => {
 
                         <button
                             onClick={() => navigate('/app/explore')}
-                            className="col-span-2 sm:col-span-1 p-4 sm:p-6 md:p-8 rounded-xl sm:rounded-2xl bg-card/50 border border-border/50 hover:bg-card hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200 text-left group w-full"
+                            className="p-4 sm:p-6 md:p-8 rounded-xl sm:rounded-2xl bg-card/50 border border-border/50 hover:bg-card hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200 text-left group w-full"
                         >
                             <div className="flex flex-col items-center text-center gap-2 sm:gap-3 md:gap-4">
                                 <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-lg sm:rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
@@ -156,6 +177,8 @@ export const HomeLanding = () => {
                                 </div>
                             </div>
                         </button>
+
+                        <SupportUsBox />
                     </motion.div>
                 </motion.div>
             </div>
