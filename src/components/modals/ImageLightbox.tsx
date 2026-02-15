@@ -373,12 +373,15 @@ export const ImageLightbox = ({ imageUrl, imageUrls = [], onClose }: ImageLightb
             <motion.img
               src={currentImage}
               alt="Full size image"
-              className="max-w-[95vw] max-h-[85vh] object-contain rounded-lg shadow-2xl select-none pointer-events-auto cursor-zoom-in"
+              className="max-w-[95vw] max-h-[85vh] object-contain rounded-lg shadow-2xl select-none pointer-events-auto"
               style={{ 
+                cursor: scale > 1 ? 'grab' : 'zoom-in',
+              }}
+              animate={{
                 scale,
+                opacity: 1,
                 x: position.x,
                 y: position.y,
-                cursor: scale > 1 ? 'grab' : 'zoom-in',
               }}
               drag={scale > 1 || scale === 1}
               dragControls={dragControls}
@@ -388,7 +391,6 @@ export const ImageLightbox = ({ imageUrl, imageUrls = [], onClose }: ImageLightb
               draggable={false}
               onContextMenu={handleContextMenu}
               initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ duration: 0.2 }}
               whileTap={{ cursor: 'grabbing' }}
