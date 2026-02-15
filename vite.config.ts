@@ -14,6 +14,7 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "libsignal-protocol": path.resolve(__dirname, "node_modules/libsignal-protocol/dist/libsignal-protocol.js"),
     },
   },
 }));

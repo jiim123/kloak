@@ -16,7 +16,6 @@ import { ServerOverviewView } from '@/components/layout/ServerOverviewView';
 import { ServerMembersView } from '@/components/layout/ServerMembersView';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { MobileSidebar } from '@/components/layout/MobileSidebar';
-import { MobileMembersSidebar } from '@/components/layout/MobileMembersSidebar';
 import { ConnectionStatus } from '@/components/ui/ConnectionStatus';
 import { DMSidebar, FriendsList, DMChatArea } from '@/components/dm';
 import { ServerSettingsPage, ChannelSettingsPage } from '@/components/settings';
@@ -513,8 +512,8 @@ const AppLayout = () => {
                   </div>
                 </ResizablePanel>
 
-                {/* Members sidebar - collapsible, only in server view */}
-                {!isDMView && !isServerSpecialView && isMemberSidebarOpen && (
+                {/* Members sidebar - collapsible, desktop only (mobile uses Sheet drawer) */}
+                {!isDMView && !isServerSpecialView && isMemberSidebarOpen && !isMobile && (
                   <>
                     <ResizableHandle className="w-1 bg-transparent hover:bg-primary/20 transition-colors" />
                     <ResizablePanel defaultSize={15} minSize={10} maxSize={25} className="bg-layout-members">
@@ -573,7 +572,8 @@ const AppLayout = () => {
         showExplore={showExplore}
         onShowExploreChange={(show: boolean) => navigate(show ? '/app/explore' : '/app')}
       />
-      <MobileMembersSidebar />
+      {/* Mobile members drawer — always mounted so Sheet close animation works */}
+      {!isDMView && !isServerSpecialView && isMobile && <MembersSidebar />}
 
       {/* Modals */}
       <CreateServerModal />

@@ -5,6 +5,7 @@ import { generateSecretKey, hashSecretKey, isValidSecretKey } from "@/lib/crypto
 import { authRateLimiter, accountCreationRateLimiter, validateUsername } from "@/lib/security";
 import type { User, UserStatus } from "@/types";
 
+
 interface AuthState {
   user: User | null;
   secretKey: string | null;

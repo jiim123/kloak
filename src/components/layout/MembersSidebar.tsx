@@ -17,6 +17,8 @@ import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useDMStore } from "@/stores/dmStore";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useRealtimeMembers } from "@/hooks/useRealtimeMembers";
 import { canModerateByRoles } from "@/lib/permissions";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
@@ -106,6 +108,7 @@ const SectionHeader = memo(
 SectionHeader.displayName = "SectionHeader";
 
 export const MembersSidebar = () => {
+  const isMobile = useIsMobile();
   // Use individual selectors to prevent re-renders on unrelated store changes (e.g. channel switch)
   const members = useServerStore((s) => s.members);
   const currentServer = useServerStore((s) => s.currentServer);
@@ -115,7 +118,7 @@ export const MembersSidebar = () => {
   const assignRoleToMember = useServerStore((s) => s.assignRoleToMember);
   const removeRoleFromMember = useServerStore((s) => s.removeRoleFromMember);
   const { user } = useAuthStore();
-  const { openModal } = useUIStore();
+  const { openModal, isMemberSidebarOpen, setMemberSidebarOpen } = useUIStore();
   const navigate = useNavigate();
   const { openConversation } = useDMStore();
   const [offlineExpanded, setOfflineExpanded] = useState(false);
@@ -501,8 +504,8 @@ export const MembersSidebar = () => {
 
   const totalCount = members.length;
 
-  return (
-    <div className="h-full flex flex-col bg-background/50 border-l border-border/50 w-60">
+  const sidebarContent = (
+    <div className="h-full flex flex-col bg-background/50 border-l border-border/50 w-full">
       {/* Header */}
       <div className="px-4 py-3 border-b border-border/50">
         <h3 className="text-sm font-semibold">Members</h3>
@@ -585,4 +588,37 @@ export const MembersSidebar = () => {
       </div>
     </div>
   );
+
+  // Mobile: render as a right-side drawer (Sheet)
+  if (isMobile) {
+    return (
+      <Sheet open={isMemberSidebarOpen} onOpenChange={setMemberSidebarOpen}>
+        <SheetContent
+          side="right"
+          className="p-0 w-60 max-w-[80vw]"
+          hideCloseButton
+          onInteractOutside={(event) => {
+            // Prevent closing when interacting with context menus or dropdowns
+            const target = event.target as HTMLElement | null;
+            if (
+              target?.closest('[data-radix-popper-content-wrapper]') ||
+              target?.closest('[role="menu"]')
+            ) {
+              event.preventDefault();
+            }
+          }}
+        >
+          <SheetHeader className="sr-only">
+            <SheetTitle>Members</SheetTitle>
+          </SheetHeader>
+          <div className="h-full bg-layout-members">
+            {sidebarContent}
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  // Desktop: render as inline panel
+  return sidebarContent;
 };
