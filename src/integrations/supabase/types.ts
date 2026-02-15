@@ -2439,6 +2439,10 @@ export type Database = {
         Args: { _category_id: string; _user_id: string }
         Returns: undefined
       }
+      delete_category_permission: {
+        Args: { _permission_id: string; _user_id: string }
+        Returns: undefined
+      }
       delete_channel: {
         Args: { _channel_id: string; _user_id: string }
         Returns: undefined
@@ -2932,6 +2936,18 @@ export type Database = {
         }
         Returns: Json
       }
+      set_category_permission: {
+        Args: {
+          _allowed: boolean
+          _category_id: string
+          _permission: string
+          _role_id?: string
+          _role_name?: string
+          _target_user_id?: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
       set_channel_permission: {
         Args: {
           _allowed: boolean
@@ -2976,6 +2992,10 @@ export type Database = {
       shares_server_with: {
         Args: { _other_user_id: string; _user_id: string }
         Returns: boolean
+      }
+      sync_category_permissions_to_channels: {
+        Args: { _category_id: string; _user_id: string }
+        Returns: undefined
       }
       test_channel_permission: {
         Args: {
