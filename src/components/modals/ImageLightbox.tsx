@@ -13,6 +13,7 @@ interface ImageLightboxProps {
 export const ImageLightbox = ({ imageUrl, imageUrls = [], onClose }: ImageLightboxProps) => {
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [resetKey, setResetKey] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLDivElement>(null);
@@ -249,6 +250,7 @@ export const ImageLightbox = ({ imageUrl, imageUrls = [], onClose }: ImageLightb
   const handleReset = useCallback(() => {
     setScale(1);
     setPosition({ x: 0, y: 0 });
+    setResetKey(k => k + 1);
   }, []);
 
   // Handle drag end - close if dragged far enough vertically
@@ -371,6 +373,7 @@ export const ImageLightbox = ({ imageUrl, imageUrls = [], onClose }: ImageLightb
             onClick={handleImageContainerClick}
           >
             <motion.img
+              key={`img-${currentIndex}-${resetKey}`}
               src={currentImage}
               alt="Full size image"
               className="max-w-[95vw] max-h-[85vh] object-contain rounded-lg shadow-2xl select-none pointer-events-auto"
