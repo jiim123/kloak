@@ -335,6 +335,7 @@ export const MembersSidebar = () => {
           <AvatarWithDecoration
             user={member.user}
             className={cn("w-8 h-8 rounded-full", memberIsOffline && "opacity-40 grayscale-[30%]")}
+            showDecoration={false}
           />
           <div className="absolute -bottom-0.5 -right-0.5 p-[2px] bg-background rounded-full">
             <StatusIndicator

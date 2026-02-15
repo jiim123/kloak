@@ -130,7 +130,7 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   const { lastReadAt, firstUnreadMessageId } = getChannelUnread(channelId);
 
   // Scroll to message from notification
-  const { highlightedMessageId } = useScrollToMessage({ messages, isLoading });
+  const { highlightedMessageId } = useScrollToMessage({ messages, isLoading, containerRef });
 
   // Listen for Up arrow edit event
   useEffect(() => {
