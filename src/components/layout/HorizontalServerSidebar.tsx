@@ -29,6 +29,7 @@ import { useUnreadDMs } from "@/hooks/useUnreadDMs";
 import { useDMStore } from "@/stores/dmStore";
 import { supabase } from "@/integrations/supabase/client";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { SupportUsButton } from "@/components/support/SupportUsButton";
 import {
   DndContext,
   DragEndEvent,
@@ -1387,6 +1388,9 @@ export const HorizontalServerSidebar = () => {
             Notifications
           </TooltipContent>
         </Tooltip>
+
+        {/* Support Us button */}
+        <SupportUsButton tooltipsEnabled={tooltipsEnabled} />
 
       </div>
 
