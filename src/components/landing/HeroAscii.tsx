@@ -62,20 +62,20 @@ export const HeroImage = () => {
         </div>
 
         {/* Main content - with blend mode */}
-        <div className="relative z-10 w-full min-h-screen flex flex-col items-center justify-center px-6 mix-blend-difference">
+        <div className="relative z-10 w-full min-h-screen flex flex-col items-center justify-center px-6 pt-20 md:pt-0 mix-blend-difference">
           <div className="max-w-4xl mx-auto text-center">
             {/* Pre-title */}
             <motion.p
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-xs uppercase tracking-[0.3em] text-white mb-12"
+              className="text-xs uppercase tracking-[0.3em] text-white mb-8 md:mb-12"
             >
               Privacy-first communication
             </motion.p>
 
             {/* Main title */}
-            <div className="mb-12">
+            <div className="mb-8 md:mb-12">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -110,7 +110,7 @@ export const HeroImage = () => {
         </div>
 
         {/* CTA - outside blend mode container so buttons render normally */}
-        <div className="absolute bottom-0 left-0 right-0 z-20 flex justify-center pb-24">
+        <div className="absolute bottom-0 left-0 right-0 z-20 flex justify-center pb-12 md:pb-24">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
