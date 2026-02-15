@@ -1,4 +1,4 @@
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 export type ErrorType = 
   | 'network'
@@ -104,20 +104,18 @@ export function classifyError(error: any): ErrorInfo {
 export function handleError(error: any, customMessage?: string): ErrorInfo {
   const errorInfo = classifyError(error);
 
-  const variantMap: Record<ErrorType, 'destructive' | 'warning' | 'info'> = {
-    network: 'warning',
-    auth: 'destructive',
-    permission: 'destructive',
-    validation: 'warning',
-    rate_limit: 'warning',
-    server: 'destructive',
-    unknown: 'destructive',
+  const toastFn: Record<ErrorType, typeof toast.error> = {
+    network: toast.warning,
+    auth: toast.error,
+    permission: toast.error,
+    validation: toast.warning,
+    rate_limit: toast.warning,
+    server: toast.error,
+    unknown: toast.error,
   };
 
-  toast({
-    title: customMessage || errorInfo.message,
+  toastFn[errorInfo.type](customMessage || errorInfo.message, {
     description: errorInfo.details,
-    variant: variantMap[errorInfo.type],
     duration: errorInfo.type === 'rate_limit' ? 5000 : undefined,
   });
 
@@ -126,30 +124,15 @@ export function handleError(error: any, customMessage?: string): ErrorInfo {
 
 // Success toast helper
 export function showSuccess(title: string, description?: string) {
-  toast({
-    title,
-    description,
-    variant: 'success',
-    duration: 3000,
-  });
+  toast.success(title, { description, duration: 3000 });
 }
 
 // Info toast helper  
 export function showInfo(title: string, description?: string) {
-  toast({
-    title,
-    description,
-    variant: 'info',
-    duration: 4000,
-  });
+  toast.info(title, { description, duration: 4000 });
 }
 
 // Warning toast helper
 export function showWarning(title: string, description?: string) {
-  toast({
-    title,
-    description,
-    variant: 'warning',
-    duration: 4000,
-  });
+  toast.warning(title, { description, duration: 4000 });
 }

@@ -91,6 +91,15 @@ export const ForumChannelArea = () => {
   const selectedThreadIdRef = useRef<string | null>(null);
   const threadMessagesRef = useRef<Record<string, Message[]>>({});
   
+  // Reset thread selection when channel changes
+  useEffect(() => {
+    setSelectedThreadId(null);
+    setReplyContent("");
+    setReplyingToThread(null);
+    setEditingMessageId(null);
+    setEditContent("");
+  }, [currentChannel?.id]);
+
   useEffect(() => {
     selectedThreadIdRef.current = selectedThreadId;
   }, [selectedThreadId]);
