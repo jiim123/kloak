@@ -157,10 +157,12 @@ function SupportRow({ item }: { item: SupportItem }) {
 
 interface SupportUsButtonProps {
   tooltipsEnabled?: boolean;
+  variant?: "default" | "overlay";
 }
 
 export const SupportUsButton = ({
   tooltipsEnabled = true,
+  variant = "default",
 }: SupportUsButtonProps) => {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -221,27 +223,35 @@ export const SupportUsButton = ({
       ref={containerRef}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      className="relative"
+      className={cn("relative", variant === "overlay" && "w-full h-full")}
     >
       {/* Trigger button */}
-      <Tooltip delayDuration={300} open={tooltipsEnabled && !open ? undefined : false}>
-        <TooltipTrigger asChild>
-          <button
-            onClick={() => setOpen((p) => !p)}
-            aria-label="Support Us"
-            className={cn(
-              "w-10 h-10 inline-flex items-center justify-center rounded-[4px] transition-all duration-200 text-emerald-400",
-              "hover:bg-emerald-500/10 hover:text-emerald-300",
-              open && "bg-emerald-500/10"
-            )}
-          >
-            <Heart className="w-4 h-4" />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom" className="font-medium">
-          Support Kloak
-        </TooltipContent>
-      </Tooltip>
+      {variant === "overlay" ? (
+        <button
+          onClick={() => setOpen((p) => !p)}
+          aria-label="Support Us"
+          className="w-full h-full absolute inset-0 cursor-pointer"
+        />
+      ) : (
+        <Tooltip delayDuration={300} open={tooltipsEnabled && !open ? undefined : false}>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => setOpen((p) => !p)}
+              aria-label="Support Us"
+              className={cn(
+                "w-10 h-10 inline-flex items-center justify-center rounded-[4px] transition-all duration-200 text-emerald-400",
+                "hover:bg-emerald-500/10 hover:text-emerald-300",
+                open && "bg-emerald-500/10"
+              )}
+            >
+              <Heart className="w-4 h-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="font-medium">
+            Support Kloak
+          </TooltipContent>
+        </Tooltip>
+      )}
 
       {/* MOBILE: bottom sheet */}
       {isMobile && (
