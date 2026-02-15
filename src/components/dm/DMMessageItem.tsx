@@ -238,15 +238,6 @@ export const DMMessageItem = memo(function DMMessageItem({ message, isFirst, onR
               onTouchStart={handleTouchStart}
               onTouchEnd={clearLongPress}
               onTouchMove={clearLongPress}
-              onClick={(e) => {
-                // Click-to-reply: trigger reply when clicking on message body
-                // Don't trigger on interactive elements or avatar/username (those open profile)
-                const target = e.target as HTMLElement;
-                const isInteractive = target.closest('button, a, input, textarea, [role="button"], [contenteditable], img.cursor-pointer, .hover-actions-menu, .dm-avatar-click, .dm-username-click');
-                if (!isInteractive && !isEditing && onReply) {
-                  onReply(message);
-                }
-              }}
             >
               {/* Avatar / Timestamp column */}
               <div className="w-10 flex-shrink-0">
@@ -294,7 +285,18 @@ export const DMMessageItem = memo(function DMMessageItem({ message, isFirst, onR
 
                 {/* Reply preview */}
                 {message.reply_to && (
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1 cursor-pointer hover:text-foreground flex-nowrap overflow-hidden">
+                  <div
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1 cursor-pointer hover:text-foreground flex-nowrap overflow-hidden"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const targetEl = document.getElementById(`dm-message-${message.reply_to!.id}`);
+                      if (targetEl) {
+                        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        targetEl.classList.add('animate-highlight-message');
+                        setTimeout(() => targetEl.classList.remove('animate-highlight-message'), 2000);
+                      }
+                    }}
+                  >
                     <CornerUpLeft className="w-3 h-3 flex-shrink-0" />
                     <span className="flex-shrink-0">Replying to</span>
                     <span className="font-medium text-primary flex-shrink-0">
