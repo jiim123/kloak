@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { ChannelHeader } from "@/components/chat/ChannelHeader";
 import { MessageList } from "@/components/chat/MessageList";
 import { MessageInput } from "@/components/chat/MessageInput";
@@ -137,8 +137,8 @@ const PinnedMessageBar = React.memo(function PinnedMessageBar({
   );
 });
 
-// ── Need the React import for React.memo ──
-import React from "react";
+
+// ── Main component ──
 
 // ── Main component ──
 
