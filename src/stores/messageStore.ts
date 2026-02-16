@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
 import { useFriendStore } from "@/stores/friendStore";
+import { bulkSetUsersInCache } from "@/lib/userCache";
 import type { Message, MessageReply, ReactionGroup, User } from "@/types";
 
 interface ChannelMessages {
@@ -217,6 +218,11 @@ export const useMessageStore = create<MessageState>((set, get) => ({
           currentUserId,
         ),
       }));
+
+      // Populate user cache with message authors
+      const uniqueUsers = new Map<string, User>();
+      messages.forEach((m) => { if (m.user) uniqueUsers.set(m.user.id, m.user); });
+      if (uniqueUsers.size > 0) bulkSetUsersInCache(Array.from(uniqueUsers.values()));
 
       const hasMore = messages.length === limit;
 
