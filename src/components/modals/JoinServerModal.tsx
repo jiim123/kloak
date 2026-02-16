@@ -8,7 +8,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -33,7 +32,7 @@ type JoinServerForm = z.infer<typeof joinServerSchema>;
 
 export const JoinServerModal = () => {
   const navigate = useNavigate();
-  const { activeModal, closeModal } = useUIStore();
+  const { activeModal, closeModal, openModal } = useUIStore();
   const { joinServer, setCurrentServer, fetchChannels } = useServerStore();
   const { user } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
@@ -99,23 +98,32 @@ export const JoinServerModal = () => {
     closeModal();
   };
 
+  const handleBack = () => {
+    handleClose();
+    openModal('create-server');
+  };
+
   // Auto-uppercase input
   const handleInviteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
     setValue('inviteCode', value);
   };
 
+  const modalContentClass = "sm:max-w-md max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-hidden bg-background/95 backdrop-blur-xl border-border/50 rounded-2xl p-0";
+
   return (
     <>
       {/* Banned modal */}
       <Dialog open={showBannedModal} onOpenChange={(open) => { if (!open) { setShowBannedModal(false); handleClose(); } }}>
-        <DialogContent className="sm:max-w-sm" hideCloseButton>
-          <div className="flex flex-col items-center justify-center gap-4 py-6">
-            <Frown className="w-16 h-16 text-muted-foreground" />
+        <DialogContent className={modalContentClass} hideCloseButton>
+          <div className="flex flex-col items-center justify-center gap-4 p-4 sm:p-6">
+            <div className="w-12 h-12 rounded-xl bg-destructive/15 flex items-center justify-center">
+              <Frown className="w-6 h-6 text-destructive" />
+            </div>
             <p className="text-center text-lg font-medium text-foreground">
               Uh oh, seems that you have been banned from this server
             </p>
-            <Button variant="outline" onClick={() => { setShowBannedModal(false); handleClose(); }}>
+            <Button variant="outline" onClick={() => { setShowBannedModal(false); handleClose(); }} className="rounded-xl">
               Close
             </Button>
           </div>
@@ -124,61 +132,68 @@ export const JoinServerModal = () => {
 
       {/* Join server modal */}
       <Dialog open={isOpen && !showBannedModal} onOpenChange={(open) => !open && handleClose()}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-center text-xl">Join a Server</DialogTitle>
-            <DialogDescription className="text-center">
-              Enter an invite code to join an existing server.
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            {/* Icon */}
-            <div className="flex justify-center">
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                <Users className="w-8 h-8 text-primary" />
+        <DialogContent className={modalContentClass}>
+          <div className="p-4 sm:p-6">
+            <DialogHeader className="pb-4">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Users className="w-6 h-6 text-primary" />
+                </div>
+                <div className="text-center">
+                  <DialogTitle className="text-xl font-semibold">Join a Server</DialogTitle>
+                  <DialogDescription className="text-sm text-muted-foreground mt-1">
+                    Enter an invite code to join an existing server
+                  </DialogDescription>
+                </div>
               </div>
-            </div>
+            </DialogHeader>
 
-            {/* Invite Code Input */}
-            <div className="space-y-2">
-              <Label htmlFor="inviteCode" className="text-xs font-bold uppercase text-muted-foreground">
-                Invite Code
-              </Label>
-              <Input
-                id="inviteCode"
-                placeholder="ABC12XYZ"
-                {...register('inviteCode')}
-                onChange={handleInviteChange}
-                className={`text-center font-mono text-lg tracking-widest ${errors.inviteCode || error ? 'border-destructive' : ''}`}
-                autoFocus
-                maxLength={8}
-              />
-              {errors.inviteCode && (
-                <p className="text-xs text-destructive text-center">{errors.inviteCode.message}</p>
-              )}
-              {error && (
-                <p className="text-xs text-destructive text-center">{error}</p>
-              )}
-            </div>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+              {/* Invite Code Input */}
+              <div className="space-y-2">
+                <Label htmlFor="inviteCode" className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">
+                  Invite Code
+                </Label>
+                <Input
+                  id="inviteCode"
+                  placeholder="ABC12XYZ"
+                  {...register('inviteCode')}
+                  onChange={handleInviteChange}
+                  className={`rounded-xl text-center font-mono text-lg tracking-widest ${errors.inviteCode || error ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                  autoFocus
+                  maxLength={8}
+                />
+                {errors.inviteCode && (
+                  <p className="text-xs text-destructive">{errors.inviteCode.message}</p>
+                )}
+                {error && (
+                  <p className="text-xs text-destructive">{error}</p>
+                )}
+              </div>
 
-            <div className="bg-secondary/50 rounded-lg p-3">
-              <p className="text-xs text-muted-foreground">
-                <strong>Invites should look like:</strong>
-              </p>
-              <p className="text-sm font-mono text-foreground mt-1">ABC12XYZ</p>
-            </div>
+              <div className="p-4 bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30">
+                <p className="text-xs text-muted-foreground">
+                  <strong>Invites should look like:</strong>
+                </p>
+                <p className="text-sm font-mono text-foreground mt-1">ABC12XYZ</p>
+              </div>
 
-            <DialogFooter className="flex gap-2 sm:justify-between">
-              <Button type="button" variant="ghost" onClick={handleClose}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Join Server
-              </Button>
-            </DialogFooter>
-          </form>
+              {/* Actions - same style as Create Server modal: Back left, primary right */}
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-2 sm:gap-3 pt-2 border-t border-border/30">
+                <Button type="button" variant="ghost" onClick={handleBack} className="flex-1 sm:flex-none rounded-xl">
+                  Back
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="flex-1 sm:flex-none rounded-xl bg-primary hover:bg-primary/90"
+                >
+                  {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  Join Server
+                </Button>
+              </div>
+            </form>
+          </div>
         </DialogContent>
       </Dialog>
     </>

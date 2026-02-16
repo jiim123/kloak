@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Upload, Plus, Users, ArrowLeft, X, Sparkles } from "lucide-react";
+import { Loader2, Upload, Plus, Users, X, Sparkles, Compass } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -132,6 +132,12 @@ export const CreateServerModal = () => {
     openModal("join-server");
   };
 
+  const handleExploreClick = () => {
+    handleClose();
+    setCurrentServer(null); // Switch to DM/home view so Explore content is visible
+    navigate("/app/explore");
+  };
+
   const handleBack = () => {
     setView("choose");
     clearIcon();
@@ -192,12 +198,19 @@ export const CreateServerModal = () => {
                   <p className="text-sm text-muted-foreground truncate">Enter an invite code to join</p>
                 </div>
               </button>
-            </div>
 
-            <div className="pt-4 border-t border-border/30 mt-4">
-              <Button variant="ghost" onClick={handleClose} className="w-full sm:w-auto rounded-xl">
-                Cancel
-              </Button>
+              <button
+                onClick={handleExploreClick}
+                className="w-full p-4 rounded-xl border-2 border-border/50 bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-all duration-200 flex items-center gap-4 group"
+              >
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[hsl(var(--kloak-warning))]/15 flex items-center justify-center group-hover:bg-[hsl(var(--kloak-warning))]/25 transition-colors flex-shrink-0">
+                  <Compass className="w-5 h-5 sm:w-6 sm:h-6 text-[hsl(var(--kloak-warning))]" />
+                </div>
+                <div className="text-left flex-1 min-w-0">
+                  <p className="font-semibold tracking-tight">Explore Servers</p>
+                  <p className="text-sm text-muted-foreground truncate">Discover and join public communities</p>
+                </div>
+              </button>
             </div>
           </div>
         )}
@@ -206,16 +219,11 @@ export const CreateServerModal = () => {
         {view === "create" && (
           <div className="p-4 sm:p-6">
             <DialogHeader className="pb-4">
-              <div className="flex items-center gap-3">
-                <Button variant="ghost" size="icon" onClick={handleBack} className="h-9 w-9 rounded-xl flex-shrink-0">
-                  <ArrowLeft className="w-4 h-4" />
-                </Button>
-                <div>
-                  <DialogTitle className="text-lg font-semibold">Create Your Server</DialogTitle>
-                  <DialogDescription className="text-sm text-muted-foreground">
-                    Make yours and start talking
-                  </DialogDescription>
-                </div>
+              <div className="text-center">
+                <DialogTitle className="text-xl font-semibold">Create Your Server</DialogTitle>
+                <DialogDescription className="text-sm text-muted-foreground mt-1">
+                  Make yours and start talking
+                </DialogDescription>
               </div>
             </DialogHeader>
 
@@ -271,7 +279,7 @@ export const CreateServerModal = () => {
               </p>
 
               {/* Actions */}
-              <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 pt-2 border-t border-border/30">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-2 sm:gap-3 pt-2 border-t border-border/30">
                 <Button type="button" variant="ghost" onClick={handleBack} className="flex-1 sm:flex-none rounded-xl">
                   Back
                 </Button>
