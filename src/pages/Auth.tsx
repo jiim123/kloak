@@ -432,13 +432,13 @@ const Auth = () => {
               </TabsList>
 
               {/* Backend maintenance notice */}
-              <div className="mb-4 p-3 rounded-lg bg-muted/60 border border-border flex items-start gap-2.5 text-muted-foreground">
+              {/*<div className="mb-4 p-3 rounded-lg bg-muted/60 border border-border flex items-start gap-2.5 text-muted-foreground">
                 <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
                 <p className="text-sm leading-relaxed">
                   We're running a backend process right now. Login or account creation may not work for a short
                   while—nothing to worry about, it's routine. If something fails, try again in a few minutes.
                 </p>
-              </div>
+              </div>*/}
 
               {/* Rate limit warning */}
               {rateLimitCooldown !== null && rateLimitCooldown > 0 && (
@@ -627,13 +627,13 @@ const Auth = () => {
               </TabsList>
 
               {/* Backend maintenance notice */}
-              <div className="mb-4 p-3 rounded-lg bg-muted/60 border border-border flex items-start gap-2.5 text-muted-foreground">
+              {/*<div className="mb-4 p-3 rounded-lg bg-muted/60 border border-border flex items-start gap-2.5 text-muted-foreground">
                 <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
                 <p className="text-sm leading-relaxed">
                   We're running a backend process right now. Login or account creation may not work for a short
                   while—nothing to worry about, it's routine. If something fails, try again in a few minutes.
                 </p>
-              </div>
+              </div>*/}
 
               {/* Rate limit warning */}
               {rateLimitCooldown !== null && rateLimitCooldown > 0 && (
