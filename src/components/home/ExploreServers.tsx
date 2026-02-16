@@ -71,6 +71,7 @@ export const ExploreServers = () => {
           return item;
         });
 
+        mapped.sort((a, b) => b.member_count - a.member_count);
         setItems(mapped);
       } catch (e: any) {
         console.error('Failed to load Explore servers:', e);
