@@ -225,7 +225,7 @@ export function AudioDeviceSelector({
           value={outputVolume}
           onChange={onOutputVolumeChange}
           min={0}
-          max={200}
+          max={100}
           label="Output Volume"
           description="Adjust the volume of other users"
         />

@@ -47,9 +47,10 @@ export function ParticipantAudioPlayer({
     if (muted) {
       track.setVolume(0);
     } else {
-      // LiveKit supports > 1.0 via WebAudio gain internally; allow boost to 200%
+      // LiveKit RemoteAudioTrack.setVolume ultimately drives HTMLMediaElement.volume (range 0..1).
+      // Clamp hard to avoid IndexSizeError crashes for users who set >100% volumes.
       const vol = (userVolume / 100) * (outputVolume / 100);
-      track.setVolume(Math.min(Math.max(vol, 0), 2));
+      track.setVolume(Math.min(Math.max(vol, 0), 1));
     }
   }, [track, userVolume, outputVolume, muted]);
 

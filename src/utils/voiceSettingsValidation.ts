@@ -33,7 +33,7 @@ export function validateVoiceSettings(settings: unknown): VoiceSettings {
       ? clamp(Math.round(raw.inputGain), 0, 200) 
       : DEFAULT_VOICE_SETTINGS.inputGain,
     outputVolume: typeof raw.outputVolume === 'number' 
-      ? clamp(Math.round(raw.outputVolume), 0, 200) 
+      ? clamp(Math.round(raw.outputVolume), 0, 100) 
       : DEFAULT_VOICE_SETTINGS.outputVolume,
 
     // Voice Mode
@@ -108,7 +108,7 @@ function validateUserVolumeOverrides(value: unknown): Record<string, number> {
   const raw = value as Record<string, unknown>;
 
   for (const [userId, volume] of Object.entries(raw)) {
-    if (typeof volume === 'number' && volume >= 0 && volume <= 200) {
+    if (typeof volume === 'number' && volume >= 0 && volume <= 100) {
       result[userId] = Math.round(volume);
     }
   }

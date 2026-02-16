@@ -62,7 +62,7 @@ export function UserVolumeControl({
         value={[localVolume]}
         onValueChange={([v]) => handleVolumeChange(v)}
         min={0}
-        max={200}
+        max={100}
         step={5}
         className="w-full"
       />
@@ -70,7 +70,6 @@ export function UserVolumeControl({
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span>0%</span>
         <span>100%</span>
-        <span>200%</span>
       </div>
 
       {isModified && (
@@ -105,7 +104,7 @@ export function VolumeIndicator({ userId, className }: VolumeIndicatorProps) {
 
   const isMuted = volume === 0;
   const isLow = volume < 100;
-  const isHigh = volume > 100;
+  const isHigh = false;
 
   return (
     <div
@@ -113,7 +112,6 @@ export function VolumeIndicator({ userId, className }: VolumeIndicatorProps) {
         'flex items-center gap-0.5 text-xs',
         isMuted && 'text-destructive',
         isLow && !isMuted && 'text-amber-500',
-        isHigh && 'text-primary',
         className
       )}
     >

@@ -13,7 +13,7 @@ export interface VoiceSettings {
 
   // Volume & Gain
   inputGain: number; // 0-200 (percentage), default 100
-  outputVolume: number; // 0-200 (percentage), default 100
+  outputVolume: number; // 0-100 (percentage), default 100
 
   // Voice Mode
   voiceMode: VoiceMode;
@@ -41,7 +41,7 @@ export interface VoiceSettings {
   monoAudio: boolean;
 
   // Per-user volume overrides
-  userVolumeOverrides: Record<string, number>; // userId -> volume 0-200
+  userVolumeOverrides: Record<string, number>; // userId -> volume 0-100
 }
 
 export const DEFAULT_VOICE_SETTINGS: VoiceSettings = {

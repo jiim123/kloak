@@ -110,7 +110,7 @@ export const useVoiceSettingsStore = create<VoiceSettingsStore>((set, get) => ({
 
   setUserVolume: (userId: string, volume: number) => {
     const { settings } = get();
-    const clampedVolume = Math.max(0, Math.min(200, Math.round(volume)));
+    const clampedVolume = Math.max(0, Math.min(100, Math.round(volume)));
     
     const newOverrides = { ...settings.userVolumeOverrides };
     
