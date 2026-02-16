@@ -92,7 +92,7 @@ const Auth = () => {
   // Check for saved session on mount
   useEffect(() => {
     let cancelled = false;
-    
+
     (async () => {
       // Check if user is already authenticated
       const currentState = useAuthStore.getState();
@@ -176,14 +176,14 @@ const Auth = () => {
     }
 
     const validation = validateUsernameComprehensive(username);
-    
+
     if (!validation.isValid) {
-      setUsernameError(validation.error || 'Invalid username');
+      setUsernameError(validation.error || "Invalid username");
       setUsernameErrorType(validation.errorType || null);
       setIsUsernameAvailable(null);
-      
+
       // Log blocked username attempts for security monitoring
-      if (validation.errorType === 'reserved' || validation.errorType === 'contains_restricted') {
+      if (validation.errorType === "reserved" || validation.errorType === "contains_restricted") {
         logBlockedUsernameAttempt(username, validation.errorType);
         // Generate suggestions for blocked usernames
         const suggestions = generateUsernameSuggestions(username, 4);
@@ -209,7 +209,7 @@ const Auth = () => {
 
         if (error) throw error;
         setIsUsernameAvailable(data === true);
-        
+
         // Generate suggestions if username is taken
         if (data !== true) {
           const suggestions = generateUsernameSuggestions(username, 4);
@@ -244,7 +244,7 @@ const Auth = () => {
 
     const validation = validateUsernameComprehensive(username);
     if (!validation.isValid) {
-      setUsernameError(validation.error || 'Invalid username');
+      setUsernameError(validation.error || "Invalid username");
       setUsernameErrorType(validation.errorType || null);
       recordRegistrationAttempt();
       return;
@@ -269,7 +269,7 @@ const Auth = () => {
         setShowWelcomeModal(false);
       }
     } catch (err) {
-      console.error('Account creation error:', err);
+      console.error("Account creation error:", err);
       // Error is already handled in authStore, but add extra logging for iOS debugging
       toast({
         variant: "destructive",
@@ -431,6 +431,15 @@ const Auth = () => {
                 </TabsTrigger>
               </TabsList>
 
+              {/* Backend maintenance notice */}
+              <div className="mb-4 p-3 rounded-lg bg-muted/60 border border-border flex items-start gap-2.5 text-muted-foreground">
+                <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <p className="text-sm leading-relaxed">
+                  We're running a backend process right now. Login or account creation may not work for a short
+                  while—nothing to worry about, it's routine. If something fails, try again in a few minutes.
+                </p>
+              </div>
+
               {/* Rate limit warning */}
               {rateLimitCooldown !== null && rateLimitCooldown > 0 && (
                 <div className="mb-4 p-3 rounded-lg bg-[hsl(var(--kloak-warning))]/10 border border-[hsl(var(--kloak-warning))]/20 flex items-center gap-2 text-[hsl(var(--kloak-warning))]">
@@ -467,12 +476,18 @@ const Auth = () => {
                             <TooltipProvider delayDuration={0}>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
+                                  <button
+                                    type="button"
+                                    className="text-muted-foreground hover:text-foreground transition-colors"
+                                  >
                                     <Info className="w-3.5 h-3.5" />
                                   </button>
                                 </TooltipTrigger>
                                 <TooltipContent side="top" className="max-w-[220px] text-xs">
-                                  <p>3-16 characters. Letters, numbers, underscores, and hyphens only. No offensive or impersonating names.</p>
+                                  <p>
+                                    3-16 characters. Letters, numbers, underscores, and hyphens only. No offensive or
+                                    impersonating names.
+                                  </p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
@@ -496,7 +511,12 @@ const Auth = () => {
                         <Button
                           type="submit"
                           className="w-full"
-                          disabled={isLoading || !!usernameError || isUsernameAvailable !== true || (rateLimitCooldown !== null && rateLimitCooldown > 0)}
+                          disabled={
+                            isLoading ||
+                            !!usernameError ||
+                            isUsernameAvailable !== true ||
+                            (rateLimitCooldown !== null && rateLimitCooldown > 0)
+                          }
                         >
                           {isLoading ? (
                             <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -606,6 +626,15 @@ const Auth = () => {
                 </TabsTrigger>
               </TabsList>
 
+              {/* Backend maintenance notice */}
+              <div className="mb-4 p-3 rounded-lg bg-muted/60 border border-border flex items-start gap-2.5 text-muted-foreground">
+                <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <p className="text-sm leading-relaxed">
+                  We're running a backend process right now. Login or account creation may not work for a short
+                  while—nothing to worry about, it's routine. If something fails, try again in a few minutes.
+                </p>
+              </div>
+
               {/* Rate limit warning */}
               {rateLimitCooldown !== null && rateLimitCooldown > 0 && (
                 <div className="mb-4 p-3 rounded-lg bg-[hsl(var(--kloak-warning))]/10 border border-[hsl(var(--kloak-warning))]/20 flex items-center gap-2 text-[hsl(var(--kloak-warning))]">
@@ -642,12 +671,18 @@ const Auth = () => {
                             <TooltipProvider delayDuration={0}>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
+                                  <button
+                                    type="button"
+                                    className="text-muted-foreground hover:text-foreground transition-colors"
+                                  >
                                     <Info className="w-3.5 h-3.5" />
                                   </button>
                                 </TooltipTrigger>
                                 <TooltipContent side="top" className="max-w-[220px] text-xs">
-                                  <p>3-16 characters. Letters, numbers, underscores, and hyphens only. No offensive or impersonating names.</p>
+                                  <p>
+                                    3-16 characters. Letters, numbers, underscores, and hyphens only. No offensive or
+                                    impersonating names.
+                                  </p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
@@ -671,7 +706,12 @@ const Auth = () => {
                         <Button
                           type="submit"
                           className="w-full"
-                          disabled={isLoading || !!usernameError || isUsernameAvailable !== true || (rateLimitCooldown !== null && rateLimitCooldown > 0)}
+                          disabled={
+                            isLoading ||
+                            !!usernameError ||
+                            isUsernameAvailable !== true ||
+                            (rateLimitCooldown !== null && rateLimitCooldown > 0)
+                          }
                         >
                           {isLoading ? (
                             <Loader2 className="w-4 h-4 animate-spin mr-2" />
