@@ -33,7 +33,7 @@ export const HeroImage = () => {
           video.pause();
         }
       },
-      { threshold: 0.3 }
+      { threshold: 0.3 },
     );
 
     observer.observe(video);
@@ -103,8 +103,7 @@ export const HeroImage = () => {
               transition={{ duration: 0.8, delay: 0.8 }}
               className="text-base md:text-lg text-white/70 max-w-xl mx-auto leading-relaxed font-light"
             >
-              End-to-end encrypted messaging, voice, and community spaces. Built on infrastructure designed for privacy,
-              not profit.
+              Where your conversations actually belong to you.
             </motion.p>
           </div>
         </div>
