@@ -1,18 +1,19 @@
 /**
- * Agora RTC Room Hook
- * Replaces useLiveKitRoom — same interface, powered by agora-rtc-sdk-ng
+ * LiveKit Room Hook (compat layer)
+ * Keeps the old `useAgoraRoom` name + interface so the UI doesn’t need big changes.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import AgoraRTC, {
-  IAgoraRTCClient,
-  IMicrophoneAudioTrack,
-  ILocalVideoTrack,
-  ILocalAudioTrack,
-  IRemoteAudioTrack,
-  IAgoraRTCRemoteUser,
-  UID,
-} from "agora-rtc-sdk-ng";
+import {
+  ConnectionState,
+  LogLevel,
+  ParticipantEvent,
+  Room,
+  RoomEvent,
+  Track,
+  RemoteAudioTrack,
+  setLogLevel,
+} from "livekit-client";
 import { supabase } from "@/integrations/supabase/client";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { useVoiceSettingsStore } from "@/stores/voiceSettingsStore";
@@ -31,7 +32,7 @@ export type AgoraParticipant = {
   isSpeaking: boolean;
   isMuted: boolean;
   isScreenSharing: boolean;
-  audioTrack: IRemoteAudioTrack | null;
+  audioTrack: RemoteAudioTrack | null;
   screenTrack: MediaStreamTrack | null;
   joinedAt: number;
   hideVoiceActivity: boolean;
@@ -47,21 +48,13 @@ type UseAgoraRoomOptions = {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Deterministic numeric UID from UUID (first 8 hex chars → int32, ensure non-zero) */
-function uuidToNumericUid(uuid: string): number {
-  const hex = uuid.replace(/-/g, "").slice(0, 8);
-  const num = parseInt(hex, 16) >>> 0; // unsigned 32-bit
-  return num === 0 ? 1 : num;
-}
-
 const QUALITY_PRESETS: Record<string, { width: number; height: number }> = {
   "720p": { width: 1280, height: 720 },
   "1080p": { width: 1920, height: 1080 },
 };
 
-// Disable Agora SDK logs in production
-AgoraRTC.setLogLevel(3); // WARN
-AgoraRTC.disableLogUpload(); // Prevent stats collector spam
+// Keep SDK logs quiet in production
+setLogLevel(import.meta.env.PROD ? LogLevel.warn : LogLevel.info);
 
 // ---------------------------------------------------------------------------
 // Hook
@@ -70,22 +63,13 @@ AgoraRTC.disableLogUpload(); // Prevent stats collector spam
 export function useAgoraRoom(opts: UseAgoraRoomOptions) {
   const { channelId, userId, displayName } = opts;
 
-  const clientRef = useRef<IAgoraRTCClient | null>(null);
-  const localAudioTrackRef = useRef<IMicrophoneAudioTrack | null>(null);
-  const screenVideoTrackRef = useRef<ILocalVideoTrack | null>(null);
-  const screenAudioTrackRef = useRef<ILocalAudioTrack | null>(null);
+  const roomRef = useRef<Room | null>(null);
   const presenceChannelRef = useRef<RealtimeChannel | null>(null);
   const broadcastChannelRef = useRef<RealtimeChannel | null>(null);
   const readyForSoundsRef = useRef(false);
 
-  // Map numeric UID → user UUID for identity resolution
-  const uidMapRef = useRef<Map<number, string>>(new Map());
-  // Map uid → joinedAt timestamp
-  const joinedAtRef = useRef<Map<number, number>>(new Map());
   // Map uid → hideVoiceActivity
   const hideActivityRef = useRef<Map<string, boolean>>(new Map());
-  // Speaking map from volume indicator
-  const speakingRef = useRef<Map<number, boolean>>(new Map());
 
   const setJoinedChannelId = useVoiceStore((s) => s.setJoinedChannelId);
   const setConnection = useVoiceStore((s) => s.setConnection);
@@ -105,8 +89,8 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
 
   // ------ participant rebuild ------
   const updateParticipants = useCallback(() => {
-    const client = clientRef.current;
-    if (!client) {
+    const room = roomRef.current;
+    if (!room) {
       setParticipants([]);
       return;
     }
@@ -115,34 +99,46 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
 
     // Local participant
     if (userId) {
-      const localUid = uuidToNumericUid(userId);
+      const lp = room.localParticipant;
+      const joinedAt = lp.joinedAt?.getTime?.() ?? Date.now();
+      const screenPub = lp.getTrackPublication(Track.Source.ScreenShare);
+      const screenTrackCandidate = (screenPub?.track as any)?.mediaStreamTrack ?? null;
+      const screenTrack =
+        isScreenSharing && screenTrackCandidate && screenTrackCandidate.readyState === "live"
+          ? screenTrackCandidate
+          : null;
       all.push({
         identity: userId,
         name: displayName || userId.slice(0, 8),
-        isSpeaking: speakingRef.current.get(localUid) ?? false,
-        isMuted: !(localAudioTrackRef.current?.enabled ?? false),
-        isScreenSharing: !!screenVideoTrackRef.current,
+        isSpeaking: !!lp.isSpeaking,
+        isMuted: !lp.isMicrophoneEnabled,
+        // Use our local state as source of truth; LiveKit can lag briefly after disable.
+        isScreenSharing,
         audioTrack: null, // local – no remote track
-        screenTrack: screenVideoTrackRef.current?.getMediaStreamTrack() ?? null,
-        joinedAt: joinedAtRef.current.get(localUid) ?? Date.now(),
+        screenTrack,
+        joinedAt,
         hideVoiceActivity: hideActivityRef.current.get(userId) ?? false,
       });
     }
 
     // Remote participants
-    for (const remoteUser of client.remoteUsers) {
-      const uid = remoteUser.uid as number;
-      const identity = uidMapRef.current.get(uid) ?? String(uid);
+    for (const [, rp] of room.remoteParticipants) {
+      const identity = rp.identity;
+      const joinedAt = rp.joinedAt?.getTime?.() ?? Date.now();
+      const micPub = rp.getTrackPublication(Track.Source.Microphone);
+      const audioTrack = (micPub?.track as RemoteAudioTrack) ?? null;
+      const screenPub = rp.getTrackPublication(Track.Source.ScreenShare);
+      const screenTrack = (screenPub?.track as any)?.mediaStreamTrack ?? null;
 
       all.push({
         identity,
         name: identity.length > 8 ? identity.slice(0, 8) : identity,
-        isSpeaking: speakingRef.current.get(uid) ?? false,
-        isMuted: !remoteUser.hasAudio,
-        isScreenSharing: remoteUser.hasVideo,
-        audioTrack: (remoteUser.audioTrack as IRemoteAudioTrack) ?? null,
-        screenTrack: remoteUser.videoTrack?.getMediaStreamTrack() ?? null,
-        joinedAt: joinedAtRef.current.get(uid) ?? Date.now(),
+        isSpeaking: !!rp.isSpeaking,
+        isMuted: !rp.isMicrophoneEnabled,
+        isScreenSharing: !!rp.isScreenShareEnabled,
+        audioTrack,
+        screenTrack,
+        joinedAt,
         hideVoiceActivity: hideActivityRef.current.get(identity) ?? false,
       });
     }
@@ -153,7 +149,7 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
     if (channelId) {
       setPresence(channelId, all.map((p) => p.identity));
     }
-  }, [channelId, userId, displayName, setPresence]);
+  }, [channelId, userId, displayName, isScreenSharing, setPresence]);
 
   // ------ JOIN ------
   const join = useCallback(async () => {
@@ -166,98 +162,24 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
 
     try {
       // Get token from edge function
-      const numericUid = uuidToNumericUid(userId);
-      const { data, error: fnError } = await supabase.functions.invoke("agora-token", {
-        body: { channelName: channelId, uid: numericUid },
+      const { data, error: fnError } = await supabase.functions.invoke("get-livekit-token", {
+        body: { room: channelId, identity: userId, name: displayName },
       });
 
-      if (fnError || !data?.token || !data?.appId) {
-        throw new Error(fnError?.message || "Failed to get Agora token");
+      if (fnError || !data?.token || !data?.url) {
+        throw new Error(fnError?.message || data?.error || "Failed to get LiveKit token");
       }
 
-      // Create client
-      const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
-      clientRef.current = client;
-
-      // Register UID mapping for local user
-      uidMapRef.current.set(numericUid, userId);
-      joinedAtRef.current.set(numericUid, Date.now());
-
-      // Enable volume indicator for speaking detection
-      client.enableAudioVolumeIndicator();
-
-      // ---- Event listeners ----
-      client.on("user-joined", (user: IAgoraRTCRemoteUser) => {
-        const uid = user.uid as number;
-        if (!joinedAtRef.current.has(uid)) {
-          joinedAtRef.current.set(uid, Date.now());
-        }
-        updateParticipants();
-        if (readyForSoundsRef.current) {
-          const s = useVoiceSettingsStore.getState().settings;
-          if (s.joinLeaveSound && !s.visualOnlyMode) playJoinSound();
-        }
+      const room = new Room({
+        adaptiveStream: true,
+        dynacast: true,
       });
+      roomRef.current = room;
 
-      client.on("user-left", (user: IAgoraRTCRemoteUser) => {
-        const uid = user.uid as number;
-        uidMapRef.current.delete(uid);
-        joinedAtRef.current.delete(uid);
-        speakingRef.current.delete(uid);
-        updateParticipants();
-        if (readyForSoundsRef.current) {
-          const s = useVoiceSettingsStore.getState().settings;
-          if (s.joinLeaveSound && !s.visualOnlyMode) playLeaveSound();
-        }
-      });
-
-      client.on("user-published", async (user: IAgoraRTCRemoteUser, mediaType: "audio" | "video") => {
-        await client.subscribe(user, mediaType);
-        // Audio playback is managed by ParticipantAudioPlayer component
-        updateParticipants();
-      });
-
-      client.on("user-unpublished", (_user: IAgoraRTCRemoteUser, _mediaType: "audio" | "video") => {
-        updateParticipants();
-      });
-
-      client.on("volume-indicator", (volumes) => {
-        let changed = false;
-        for (const v of volumes) {
-          const wasSpeaking = speakingRef.current.get(v.uid as number) ?? false;
-          const nowSpeaking = v.level > 5;
-          if (wasSpeaking !== nowSpeaking) {
-            speakingRef.current.set(v.uid as number, nowSpeaking);
-            changed = true;
-          }
-        }
-        if (changed) updateParticipants();
-      });
-
-      // Log connection state changes for debugging
-      client.on("connection-state-change", (curState, prevState) => {
-        console.log(`[Agora] Connection: ${prevState} → ${curState}`);
-      });
-
-      // Set up broadcast channel BEFORE joining Agora so identity mappings work immediately
+      // Set up broadcast channel BEFORE connecting so privacy metadata sync is ready
       let broadcastCh: RealtimeChannel | null = null;
       try {
         broadcastCh = supabase.channel(`voice-meta:${channelId}`);
-
-        broadcastCh.on("broadcast", { event: "uid-map" }, ({ payload }) => {
-          if (payload?.uid && payload?.identity) {
-            const isNew = !uidMapRef.current.has(payload.uid);
-            uidMapRef.current.set(payload.uid, payload.identity);
-            updateParticipants();
-            if (isNew && payload.identity !== userId) {
-              broadcastCh!.send({
-                type: "broadcast",
-                event: "uid-map",
-                payload: { uid: numericUid, identity: userId },
-              }).catch(() => {});
-            }
-          }
-        });
 
         broadcastCh.on("broadcast", { event: "hide-activity" }, ({ payload }) => {
           if (payload?.identity !== undefined && payload?.hide !== undefined) {
@@ -266,7 +188,7 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
           }
         });
 
-        // Wait for broadcast channel to be ready before joining Agora
+        // Wait for broadcast channel to be ready before connecting
         await new Promise<void>((resolve) => {
           broadcastCh!.subscribe((s) => {
             if (s === "SUBSCRIBED") resolve();
@@ -277,44 +199,57 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
         broadcastChannelRef.current = broadcastCh;
       } catch { /* non-critical */ }
 
-      // Join channel (broadcast is ready, so identity mappings will work immediately)
-      await client.join(data.appId, channelId, data.token, numericUid);
-      console.log(`[Agora] Successfully joined channel ${channelId} as UID ${numericUid}`);
+      // ---- Room event listeners ----
+      room
+        .on(RoomEvent.ParticipantConnected, () => {
+          updateParticipants();
+          if (readyForSoundsRef.current) {
+            const s = useVoiceSettingsStore.getState().settings;
+            if (s.joinLeaveSound && !s.visualOnlyMode) playJoinSound();
+          }
+        })
+        .on(RoomEvent.ParticipantDisconnected, () => {
+          updateParticipants();
+          if (readyForSoundsRef.current) {
+            const s = useVoiceSettingsStore.getState().settings;
+            if (s.joinLeaveSound && !s.visualOnlyMode) playLeaveSound();
+          }
+        })
+        .on(RoomEvent.TrackSubscribed, () => updateParticipants())
+        .on(RoomEvent.TrackUnsubscribed, () => updateParticipants())
+        .on(RoomEvent.TrackMuted, () => updateParticipants())
+        .on(RoomEvent.TrackUnmuted, () => updateParticipants())
+        .on(RoomEvent.LocalTrackUnpublished, (pub) => {
+          if (pub?.source === Track.Source.ScreenShare || pub?.source === Track.Source.ScreenShareAudio) {
+            setIsScreenSharing(false);
+            setScreenShareQuality(null);
+          }
+          updateParticipants();
+        })
+        .on(RoomEvent.ActiveSpeakersChanged, () => updateParticipants())
+        .on(RoomEvent.ConnectionStateChanged, (s: ConnectionState) => {
+          // Keep this log for debugging connectivity issues.
+          console.log(`[LiveKit] Connection state: ${s}`);
+        });
 
-      // Announce UID mapping now that both channels are ready
-      if (broadcastCh) {
-        broadcastCh.send({
-          type: "broadcast",
-          event: "uid-map",
-          payload: { uid: numericUid, identity: userId },
-        }).catch(() => {});
-        if (voiceSettings.hideVoiceActivity) {
-          broadcastCh.send({
-            type: "broadcast",
-            event: "hide-activity",
-            payload: { identity: userId, hide: true },
-          }).catch(() => {});
-        }
-      }
+      // Local participant events
+      room.localParticipant
+        .on(ParticipantEvent.IsSpeakingChanged, () => updateParticipants())
+        .on(ParticipantEvent.TrackMuted, () => updateParticipants())
+        .on(ParticipantEvent.TrackUnmuted, () => updateParticipants());
 
-      // Create mic track with audio processing settings
-      const micTrack = await AgoraRTC.createMicrophoneAudioTrack({
-        microphoneId: voiceSettings.inputDeviceId || undefined,
-        AEC: voiceSettings.echoCancellation,
-        ANS: voiceSettings.noiseSuppression,
-        AGC: voiceSettings.autoGainControl,
-        encoderConfig: voiceSettings.monoAudio ? { stereo: false } : undefined,
-      });
-      localAudioTrackRef.current = micTrack;
+      // Connect to LiveKit
+      await room.connect(data.url, data.token);
 
       // Determine initial mute state
       const isPTTMode = voiceSettings.voiceMode === "push_to_talk";
       const shouldStartMuted = isPTTMode || voiceSettings.muteOnJoin;
-      if (shouldStartMuted) {
-        micTrack.setEnabled(false);
-      }
-
-      await client.publish(micTrack);
+      await room.localParticipant.setMicrophoneEnabled(!shouldStartMuted, {
+        deviceId: voiceSettings.inputDeviceId || undefined,
+        echoCancellation: voiceSettings.echoCancellation,
+        noiseSuppression: voiceSettings.noiseSuppression,
+        autoGainControl: voiceSettings.autoGainControl,
+      });
 
       setStatus("joined");
       setConnection({ channelId, status: "joined", error: null });
@@ -338,8 +273,17 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
         });
         presenceChannelRef.current = presenceCh;
       } catch { /* non-critical */ }
+
+      // Publish hide-activity preference after connect
+      if (broadcastCh) {
+        broadcastCh.send({
+          type: "broadcast",
+          event: "hide-activity",
+          payload: { identity: userId, hide: voiceSettings.hideVoiceActivity },
+        }).catch(() => {});
+      }
     } catch (err) {
-      console.error("Failed to join Agora channel:", err);
+      console.error("Failed to join LiveKit room:", err);
       const message = err instanceof Error ? err.message : "Failed to connect";
       setError(message);
       setStatus("error");
@@ -350,12 +294,12 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
 
   // ------ LEAVE ------
   const leave = useCallback(async () => {
-    // Guard: only the instance that actually owns a client should perform
+    // Guard: only the instance that actually owns a room should perform
     // the full leave sequence and reset the shared Zustand store.  Without
     // this check, the always-mounted mobile VoicePersistentHost (which has
-    // no Agora client) would reset the store instantly, unmounting the
-    // desktop instance before its client.leave() completes → UID_CONFLICT.
-    const hadClient = !!clientRef.current;
+    // no room) would reset the store instantly, unmounting the desktop
+    // instance before its room.disconnect() completes.
+    const hadRoom = !!roomRef.current;
 
     readyForSoundsRef.current = false;
 
@@ -374,32 +318,14 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
     }
 
     // Cleanup screen share tracks
-    if (screenVideoTrackRef.current) {
-      screenVideoTrackRef.current.close();
-      screenVideoTrackRef.current = null;
-    }
-    if (screenAudioTrackRef.current) {
-      screenAudioTrackRef.current.close();
-      screenAudioTrackRef.current = null;
-    }
-
-    // Cleanup mic track
-    if (localAudioTrackRef.current) {
-      localAudioTrackRef.current.close();
-      localAudioTrackRef.current = null;
-    }
-
-    // Leave + destroy client
-    const client = clientRef.current;
-    if (client) {
-      try { await client.leave(); } catch { /* ignore */ }
-      clientRef.current = null;
+    // LiveKit manages local track cleanup; we simply disconnect.
+    const room = roomRef.current;
+    if (room) {
+      try { room.disconnect(); } catch { /* ignore */ }
+      roomRef.current = null;
     }
 
     // Reset maps
-    uidMapRef.current.clear();
-    joinedAtRef.current.clear();
-    speakingRef.current.clear();
     hideActivityRef.current.clear();
 
     // Only reset local state unconditionally
@@ -414,7 +340,7 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
     // Only the instance that actually had an active Agora client should
     // reset the shared store – otherwise the non-connected twin resets
     // the store before the connected twin finishes client.leave().
-    if (hadClient) {
+    if (hadRoom) {
       setConnection({ channelId: null, status: "idle", error: null });
       setJoinedChannelId(null);
       setControls({ muted: false, deafened: false });
@@ -436,18 +362,18 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
 
   // ------ MUTE / DEAFEN ------
   const toggleMute = useCallback(async () => {
-    const track = localAudioTrackRef.current;
-    if (!track) return;
+    const room = roomRef.current;
+    if (!room) return;
     const newMuted = !isMuted;
-    track.setEnabled(!newMuted);
+    await room.localParticipant.setMicrophoneEnabled(!newMuted);
     setIsMuted(newMuted);
     setControls({ muted: newMuted });
     updateParticipants();
   }, [isMuted, setControls, updateParticipants]);
 
   const toggleDeafen = useCallback(async () => {
-    const client = clientRef.current;
-    if (!client) return;
+    const room = roomRef.current;
+    if (!room) return;
 
     const newDeafened = !isDeafened;
     setIsDeafened(newDeafened);
@@ -455,7 +381,7 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
 
     // When deafening, also mute
     if (newDeafened && !isMuted) {
-      localAudioTrackRef.current?.setEnabled(false);
+      await room.localParticipant.setMicrophoneEnabled(false);
       setIsMuted(true);
       setControls({ muted: true, deafened: true });
     }
@@ -468,45 +394,16 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
 
   // ------ SCREEN SHARE ------
   const startScreenShare = useCallback(async (quality: ScreenShareQuality) => {
-    const client = clientRef.current;
-    if (!client) return;
+    const room = roomRef.current;
+    if (!room) return;
 
     try {
       const preset = QUALITY_PRESETS[quality.resolution];
-
-      const screenTracks = await AgoraRTC.createScreenVideoTrack(
-        {
-          encoderConfig: {
-            width: { ideal: preset.width, max: preset.width },
-            height: { ideal: preset.height, max: preset.height },
-            frameRate: { ideal: quality.frameRate, max: quality.frameRate },
-            bitrateMax: quality.resolution === "1080p" ? 3000 : 1500,
-          },
-        },
-        "auto" // captures system audio if available
-      );
-
-      // createScreenVideoTrack returns [video] or [video, audio]
-      let videoTrack: ILocalVideoTrack;
-      let audioTrack: ILocalAudioTrack | null = null;
-      if (Array.isArray(screenTracks)) {
-        videoTrack = screenTracks[0];
-        audioTrack = screenTracks[1] ?? null;
-      } else {
-        videoTrack = screenTracks;
-      }
-
-      screenVideoTrackRef.current = videoTrack;
-      screenAudioTrackRef.current = audioTrack;
-
-      // Listen for browser "Stop sharing" click
-      videoTrack.getMediaStreamTrack().onended = () => {
-        stopScreenShare();
-      };
-
-      const tracksToPublish: (ILocalVideoTrack | ILocalAudioTrack)[] = [videoTrack];
-      if (audioTrack) tracksToPublish.push(audioTrack);
-      await client.publish(tracksToPublish);
+      await room.localParticipant.setScreenShareEnabled(true, {
+        resolution: { width: preset.width, height: preset.height },
+        frameRate: quality.frameRate,
+        audio: true,
+      } as any);
 
       setIsScreenSharing(true);
       setScreenShareQuality(quality);
@@ -517,21 +414,13 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
   }, [updateParticipants]);
 
   const stopScreenShare = useCallback(async () => {
-    const client = clientRef.current;
-    if (!client) return;
-
-    const tracksToUnpublish: (ILocalVideoTrack | ILocalAudioTrack)[] = [];
-    if (screenVideoTrackRef.current) tracksToUnpublish.push(screenVideoTrackRef.current);
-    if (screenAudioTrackRef.current) tracksToUnpublish.push(screenAudioTrackRef.current);
-
-    if (tracksToUnpublish.length) {
-      try { await client.unpublish(tracksToUnpublish); } catch { /* ignore */ }
+    const room = roomRef.current;
+    if (!room) return;
+    try {
+      await room.localParticipant.setScreenShareEnabled(false);
+    } catch {
+      // ignore
     }
-
-    screenVideoTrackRef.current?.close();
-    screenVideoTrackRef.current = null;
-    screenAudioTrackRef.current?.close();
-    screenAudioTrackRef.current = null;
 
     setIsScreenSharing(false);
     setScreenShareQuality(null);
@@ -548,33 +437,26 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
       const pc = presenceChannelRef.current;
       if (pc) { try { pc.untrack(); supabase.removeChannel(pc); } catch {} }
       presenceChannelRef.current = null;
-      screenVideoTrackRef.current?.close();
-      screenAudioTrackRef.current?.close();
-      localAudioTrackRef.current?.close();
-      const c = clientRef.current;
-      if (c) { c.leave().catch(() => {}); }
-      clientRef.current = null;
+      const r = roomRef.current;
+      if (r) {
+        try { r.disconnect(); } catch {}
+      }
+      roomRef.current = null;
     };
   }, []);
 
   // ------ Sync input device mid-call ------
   useEffect(() => {
-    if (status !== "joined" || !localAudioTrackRef.current) return;
-    if (voiceSettings.inputDeviceId) {
-      localAudioTrackRef.current.setDevice(voiceSettings.inputDeviceId).catch(() => {});
-    }
+    const room = roomRef.current;
+    if (status !== "joined" || !room) return;
+    if (voiceSettings.inputDeviceId) room.switchActiveDevice("audioinput", voiceSettings.inputDeviceId).catch(() => {});
   }, [voiceSettings.inputDeviceId, status]);
 
   // ------ Sync output device mid-call ------
   useEffect(() => {
-    if (status !== "joined" || !clientRef.current) return;
-    if (voiceSettings.outputDeviceId) {
-      for (const user of clientRef.current.remoteUsers) {
-        if (user.audioTrack && "setPlaybackDevice" in user.audioTrack) {
-          (user.audioTrack as any).setPlaybackDevice(voiceSettings.outputDeviceId).catch(() => {});
-        }
-      }
-    }
+    const room = roomRef.current;
+    if (status !== "joined" || !room) return;
+    if (voiceSettings.outputDeviceId) room.switchActiveDevice("audiooutput", voiceSettings.outputDeviceId).catch(() => {});
   }, [voiceSettings.outputDeviceId, status]);
 
   // ------ Sync hideVoiceActivity setting ------
@@ -593,8 +475,9 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
   // ------ Expose room handle for PTT ------
   const roomHandle = useCallback(() => ({
     setMicEnabled: async (enabled: boolean) => {
-      const track = localAudioTrackRef.current;
-      if (track) track.setEnabled(enabled);
+      const room = roomRef.current;
+      if (!room) return;
+      await room.localParticipant.setMicrophoneEnabled(enabled);
     },
   }), []);
 

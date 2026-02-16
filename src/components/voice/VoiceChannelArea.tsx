@@ -218,11 +218,13 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
   // Local screen share
   const localScreenShare = useMemo(() => {
     const localP = filteredParticipants.find((p) => p.identity === user?.id);
-    if (localP?.isScreenSharing && localP.screenTrack) {
+    // Use local state as the source of truth so the stage disappears immediately
+    // when the user stops sharing (avoids a stale black stage).
+    if (voice.localState.sharing && localP?.screenTrack) {
       return { identity: localP.identity, track: localP.screenTrack, isLocal: true as const };
     }
     return null;
-  }, [filteredParticipants, user?.id]);
+  }, [filteredParticipants, user?.id, voice.localState.sharing]);
 
   const remoteScreenShare = screenSharers[0] ? { ...screenSharers[0], isLocal: false as const } : null;
 

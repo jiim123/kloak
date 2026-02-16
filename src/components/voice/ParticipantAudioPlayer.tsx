@@ -1,15 +1,15 @@
 /**
- * Participant Audio Player using Agora's IRemoteAudioTrack API
- * Single owner of remote audio playback — calls track.play()/stop() and setVolume().
+ * Participant Audio Player using LiveKit RemoteAudioTrack
+ * Single owner of remote audio playback — attaches/detaches an <audio> element and sets volume/output device.
  */
 
 import { useEffect, useRef } from 'react';
-import type { IRemoteAudioTrack } from 'agora-rtc-sdk-ng';
+import type { RemoteAudioTrack } from 'livekit-client';
 import { useVoiceSettingsStore } from '@/stores/voiceSettingsStore';
 
 interface ParticipantAudioPlayerProps {
   participantId: string;
-  track: IRemoteAudioTrack;
+  track: RemoteAudioTrack;
   muted: boolean; // Global deafen state
 }
 
@@ -20,36 +20,45 @@ export function ParticipantAudioPlayer({
 }: ParticipantAudioPlayerProps) {
   const userVolume = useVoiceSettingsStore((s) => s.getUserVolume(participantId));
   const outputVolume = useVoiceSettingsStore((s) => s.settings.outputVolume);
-  const playingRef = useRef(false);
+  const outputDeviceId = useVoiceSettingsStore((s) => s.settings.outputDeviceId);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Own audio playback lifecycle
   useEffect(() => {
     if (!track) return;
     try {
-      track.play();
-      playingRef.current = true;
+      const el = audioRef.current;
+      if (el) track.attach(el);
     } catch (e) {
       console.warn('[AudioPlayer] Failed to play track:', e);
     }
     return () => {
       try {
-        track.stop();
+        const el = audioRef.current;
+        if (el) track.detach(el);
+        else track.detach();
       } catch { /* track may already be cleaned up */ }
-      playingRef.current = false;
     };
   }, [track]);
 
-  // Set volume reactively (Agora setVolume takes 0-100)
+  // Set volume reactively
   useEffect(() => {
     if (!track) return;
     if (muted) {
       track.setVolume(0);
     } else {
-      // Agora IRemoteAudioTrack.setVolume accepts 0-1000; allow boost above 100
-      const vol = Math.round((userVolume / 100) * (outputVolume / 100) * 100);
-      track.setVolume(Math.min(vol, 400));
+      // LiveKit supports > 1.0 via WebAudio gain internally; allow boost to 200%
+      const vol = (userVolume / 100) * (outputVolume / 100);
+      track.setVolume(Math.min(Math.max(vol, 0), 2));
     }
   }, [track, userVolume, outputVolume, muted]);
 
-  return null;
+  // Route audio to the chosen output device when supported
+  useEffect(() => {
+    if (!track) return;
+    if (!outputDeviceId) return;
+    track.setSinkId(outputDeviceId).catch(() => {});
+  }, [track, outputDeviceId]);
+
+  return <audio ref={audioRef} autoPlay playsInline style={{ display: 'none' }} />;
 }
