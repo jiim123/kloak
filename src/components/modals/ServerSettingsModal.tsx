@@ -184,7 +184,6 @@ export const ServerSettingsModal = () => {
   type SettingsTabId = "overview" | "members" | "roles" | "bans" | "invites" | "emojis";
 
   const [isLoading, setIsLoading] = useState(false);
-  const [pendingIsPublished, setPendingIsPublished] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeTab, setActiveTab] = useState<SettingsTabId>("overview");
   const [editingRole, setEditingRole] = useState<CustomServerRole | null>(null);
@@ -551,7 +550,6 @@ export const ServerSettingsModal = () => {
       fetchMembers(server.id);
       fetchRoles(server.id);
       reset({ name: server.name, about: server.about || "" });
-      setPendingIsPublished(!!server.is_published);
       // Reset icon state
       setIconFile(null);
       setIconPreview(null);
@@ -1172,24 +1170,9 @@ export const ServerSettingsModal = () => {
     try {
       const aboutValue = (data.about || "").trim();
 
-      // Publishing prerequisites: require icon, banner, and description
-      let publishToSend = pendingIsPublished;
-      if (isOwner && pendingIsPublished) {
-        const hasIcon = !!(iconPreview || server.icon_url);
-        const hasBanner = !!(bannerPreview || server.banner_url);
-        const hasAbout = !!aboutValue;
-
-        if (!hasIcon || !hasBanner || !hasAbout) {
-          publishToSend = false;
-          setPendingIsPublished(false);
-          toast.error("Add a server icon, banner, and description before making this server public.");
-        }
-      }
-
       await updateServer(server.id, user.id, {
         name: data.name,
         about: aboutValue || null,
-        ...(isOwner ? { is_published: publishToSend } : {}),
       });
 
       toast.success("Server settings updated!");
@@ -1200,33 +1183,6 @@ export const ServerSettingsModal = () => {
       setIsLoading(false);
     }
   };
-
-  const handlePublishChange = (checked: boolean) => {
-    if (!server || !user) return;
-    if (!isOwner) return;
-
-    // If trying to publish, require icon, banner, and description (or pending changes that will be saved)
-    if (checked) {
-      const aboutValue = (getValues("about") ?? "").trim();
-      const hasIcon = !!(iconPreview || server.icon_url);
-      const hasBanner = !!(bannerPreview || server.banner_url);
-      const hasAbout = !!(aboutValue || (server.about ?? "").trim());
-
-      const missing: string[] = [];
-      if (!hasIcon) missing.push("server icon");
-      if (!hasBanner) missing.push("server banner");
-      if (!hasAbout) missing.push("server description");
-
-      if (missing.length > 0) {
-        toast.error(`Please add a ${missing.join(", ")} before making this server public.`);
-        return;
-      }
-    }
-
-    // Don't publish immediately — only apply on "Save Changes"
-    setPendingIsPublished(checked);
-  };
-
 
   const handleDeleteServer = async () => {
     if (!server) return;
@@ -1609,21 +1565,15 @@ export const ServerSettingsModal = () => {
                     </p>
                   </div>
 
-                  {/* Publish Server (owner-only) */}
+                  {/* Publish Server (owner-only) - temporarily disabled while rebuilding Explore */}
                   {isOwner && (
-                    <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 space-y-3">
+                    <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 space-y-3 opacity-75">
                       <Label className="text-sm font-medium">Publish Server</Label>
                       <div className="flex items-start gap-3 p-3 rounded-lg border bg-background/50">
-                        <Checkbox
-                          checked={pendingIsPublished}
-                          disabled={isLoading || isUploadingIcon || isUploadingBanner}
-                          onCheckedChange={(v) => handlePublishChange(v === true)}
-                          className="mt-0.5"
-                        />
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-foreground">Make this server public</p>
                           <p className="text-xs text-muted-foreground">
-                            Public servers appear on the Explore page so people can discover and join.
+                            We&apos;re rebuilding the Explore page, so publishing will be available soon.
                           </p>
                         </div>
                       </div>

@@ -499,7 +499,6 @@ export const ServerSettingsPage = () => {
   const { user } = useAuthStore();
   
   const [isLoading, setIsLoading] = useState(false);
-  const [pendingIsPublished, setPendingIsPublished] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [systemChannelJoinId, setSystemChannelJoinId] = useState<string>('');
@@ -812,8 +811,7 @@ export const ServerSettingsPage = () => {
       fetchMembers(server.id);
       fetchRoles(server.id);
       reset({ name: server.name, about: server.about || '' });
-      setPendingIsPublished(!!server.is_published);
-      
+
       // Initialize system message channel settings
       setSystemChannelJoinId(server.system_channel_join_id || '');
       setSystemChannelLeaveId(server.system_channel_leave_id || '');
@@ -1390,20 +1388,6 @@ export const ServerSettingsPage = () => {
       
       const aboutValue = (data.about || '').trim();
 
-      // Publishing prerequisites: require icon, banner, and description
-      let publishToSend = pendingIsPublished;
-      if (isOwner && pendingIsPublished) {
-        const hasIcon = !!iconUrl;
-        const hasBanner = !!bannerUrl;
-        const hasAbout = !!aboutValue;
-
-        if (!hasIcon || !hasBanner || !hasAbout) {
-          publishToSend = false;
-          setPendingIsPublished(false);
-          toast.error('Add a server icon, banner, and description before making this server public.');
-        }
-      }
-
       // Always include system message fields explicitly, even if null
       const updates: any = { 
         name: data.name,
@@ -1424,11 +1408,7 @@ export const ServerSettingsPage = () => {
       updates.system_channel_leave_id = systemChannelLeaveId || null;
       updates.enable_join_messages = !!systemChannelJoinId;
       updates.enable_leave_messages = !!systemChannelLeaveId;
-      
-      if (isOwner) {
-        updates.is_published = publishToSend;
-      }
-      
+
       await updateServer(server.id, user.id, updates);
        
        // Refresh server data to get updated fields
@@ -1449,32 +1429,6 @@ export const ServerSettingsPage = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handlePublishChange = (checked: boolean) => {
-    if (!server || !user) return;
-    if (!isOwner) return;
-
-    // If trying to publish, require icon, banner, and description (or pending changes that will be saved)
-    if (checked) {
-      const aboutValue = (getValues('about') ?? '').trim();
-      const hasIcon = !!(iconFile || iconPreview || server.icon_url);
-      const hasBanner = !!(bannerFile || bannerPreview || server.banner_url);
-      const hasAbout = !!(aboutValue || (server.about ?? '').trim());
-
-      const missing: string[] = [];
-      if (!hasIcon) missing.push('server icon');
-      if (!hasBanner) missing.push('server banner');
-      if (!hasAbout) missing.push('server description');
-
-      if (missing.length > 0) {
-        toast.error(`Please add a ${missing.join(', ')} before making this server public.`);
-        return;
-      }
-    }
-
-    // Don't publish immediately — only apply on "Save Changes"
-    setPendingIsPublished(checked);
   };
 
   const handleDeleteServer = async () => {
@@ -1913,21 +1867,15 @@ export const ServerSettingsPage = () => {
                   </p>
                 </div>
 
-                {/* Publish Server (owner-only) */}
+                {/* Publish Server (owner-only) - temporarily disabled while rebuilding Explore */}
                 {isOwner && (
                   <div className="space-y-2">
                     <Label className="text-sm">Publish Server</Label>
-                    <div className="flex items-start gap-3 p-3 rounded-lg border bg-secondary/30">
-                      <Checkbox
-                        checked={pendingIsPublished}
-                        disabled={isLoading || isUploadingIcon || isUploadingBanner}
-                        onCheckedChange={(v) => handlePublishChange(v === true)}
-                        className="mt-0.5"
-                      />
+                    <div className="flex items-start gap-3 p-3 rounded-lg border bg-secondary/30 opacity-75">
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-foreground">Make this server public</p>
                         <p className="text-xs text-muted-foreground">
-                          Public servers appear on the Explore page so people can discover and join.
+                          We&apos;re rebuilding the Explore page, so publishing will be available soon.
                         </p>
                       </div>
                     </div>
