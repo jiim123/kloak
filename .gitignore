@@ -26,8 +26,13 @@ dist-ssr
 /libsignal
 .env
 
+# Database backups (contain sensitive data)
+backups/
+
 # Tauri signing keys (NEVER commit these!)
 key.pem
 *.pem
 !key.pub
 *.md
+
+.cursor/mcp.json
