@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
 import { inviteCodeRateLimiter } from '@/lib/security';
 import { saveLastChannel, getLastChannel } from '@/lib/storage';
+import { bulkSetUsersInCache } from '@/lib/userCache';
 import { useAuthStore } from './authStore';
 import { useFriendStore } from './friendStore';
 import type {
@@ -1101,6 +1102,12 @@ export const useServerStore = create<ServerState>((set, get) => ({
           user: item.user as any,
           roles: item.roles as any,
         }));
+
+      // Populate user cache with member user data
+      const memberUsers = members.map(m => m.user).filter(Boolean);
+      if (memberUsers.length > 0) {
+        bulkSetUsersInCache(memberUsers as any);
+      }
 
       set({ members, isMembersLoading: false });
     } catch (error) {

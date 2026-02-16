@@ -1205,24 +1205,34 @@ export type Database = {
       }
       reactions: {
         Row: {
+          channel_id: string
           emoji: string
           id: string
           message_id: string
           user_id: string
         }
         Insert: {
+          channel_id: string
           emoji: string
           id?: string
           message_id: string
           user_id: string
         }
         Update: {
+          channel_id?: string
           emoji?: string
           id?: string
           message_id?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "reactions_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "reactions_message_id_fkey"
             columns: ["message_id"]
@@ -1977,6 +1987,120 @@ export type Database = {
           },
         ]
       }
+      user_devices: {
+        Row: {
+          created_at: string | null
+          device_id: number
+          device_name: string | null
+          id: string
+          identity_public_key: string
+          last_active: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          device_id: number
+          device_name?: string | null
+          id?: string
+          identity_public_key: string
+          last_active?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          device_id?: number
+          device_name?: string | null
+          id?: string
+          identity_public_key?: string
+          last_active?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_devices_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_identity_keys: {
+        Row: {
+          created_at: string | null
+          id: string
+          key_fingerprint: string
+          public_key: string
+          registration_id: number
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          key_fingerprint: string
+          public_key: string
+          registration_id: number
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          key_fingerprint?: string
+          public_key?: string
+          registration_id?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_identity_keys_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_key_backups: {
+        Row: {
+          created_at: string | null
+          encrypted_identity_private_key: string
+          id: string
+          iv: string
+          salt: string
+          updated_at: string | null
+          user_id: string | null
+          version: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          encrypted_identity_private_key: string
+          id?: string
+          iv: string
+          salt: string
+          updated_at?: string | null
+          user_id?: string | null
+          version?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          encrypted_identity_private_key?: string
+          id?: string
+          iv?: string
+          salt?: string
+          updated_at?: string | null
+          user_id?: string | null
+          version?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_key_backups_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_preferences: {
         Row: {
           animate_emojis: boolean
@@ -2054,6 +2178,44 @@ export type Database = {
           },
         ]
       }
+      user_prekeys: {
+        Row: {
+          created_at: string | null
+          device_id: number
+          id: string
+          is_used: boolean | null
+          key_id: number
+          public_key: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          device_id: number
+          id?: string
+          is_used?: boolean | null
+          key_id: number
+          public_key: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          device_id?: number
+          id?: string
+          is_used?: boolean | null
+          key_id?: number
+          public_key?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_prekeys_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_server_folders: {
         Row: {
           folder_data: Json
@@ -2104,6 +2266,47 @@ export type Database = {
             foreignKeyName: "user_server_tabs_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_signed_prekeys: {
+        Row: {
+          created_at: string | null
+          device_id: number
+          id: string
+          is_active: boolean | null
+          key_id: number
+          public_key: string
+          signature: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          device_id: number
+          id?: string
+          is_active?: boolean | null
+          key_id: number
+          public_key: string
+          signature: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          device_id?: number
+          id?: string
+          is_active?: boolean | null
+          key_id?: number
+          public_key?: string
+          signature?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_signed_prekeys_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -2266,6 +2469,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      check_e2e_status: { Args: { _user_id: string }; Returns: boolean }
       check_user_permission: {
         Args: {
           _channel_id: string
@@ -2288,6 +2492,10 @@ export type Database = {
       }
       close_expired_polls: { Args: { _channel_id: string }; Returns: number }
       close_poll: { Args: { _poll_id: string }; Returns: boolean }
+      count_available_prekeys: {
+        Args: { _device_id: number; _user_id: string }
+        Returns: number
+      }
       create_category:
         | {
             Args: { _name: string; _server_id: string; _user_id: string }
@@ -2516,6 +2724,8 @@ export type Database = {
         Args: { _content: string; _message_id: string; _user_id: string }
         Returns: Json
       }
+      fetch_key_backup: { Args: { _user_id: string }; Returns: Json }
+      fetch_prekey_bundle: { Args: { _target_user_id: string }; Returns: Json }
       generate_invite_code: { Args: never; Returns: string }
       get_all_channel_unread_counts: {
         Args: {
@@ -2775,38 +2985,33 @@ export type Database = {
         Args: { _channel_id: string; _content: string; _user_id: string }
         Returns: string
       }
+      publish_e2e_key_bundle: {
+        Args: {
+          _backup_iv: string
+          _backup_salt: string
+          _device_id: number
+          _device_name: string
+          _encrypted_private_key: string
+          _key_fingerprint: string
+          _prekeys: Json
+          _public_key: string
+          _registration_id: number
+          _signed_prekey_id: number
+          _signed_prekey_public: string
+          _signed_prekey_signature: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
       recompute_poll_results: { Args: { _poll_id: string }; Returns: undefined }
       regenerate_invite_code: {
         Args: { _server_id: string; _user_id: string }
         Returns: string
       }
-      register_user:
-        | {
-            Args: { _key_hash: string; _username: string }
-            Returns: {
-              avatar_decoration: string
-              avatar_url: string
-              banner_color: string
-              banner_url: string
-              bio: string
-              created_at: string
-              custom_status: string
-              display_name: string
-              id: string
-              last_seen: string
-              profile_effect: string
-              status: string
-              username: string
-            }[]
-          }
-        | {
-            Args: {
-              _banner_color?: string
-              _key_hash: string
-              _username: string
-            }
-            Returns: Json
-          }
+      register_user: {
+        Args: { _banner_color?: string; _key_hash: string; _username: string }
+        Returns: Json
+      }
       remove_channel_member: {
         Args: {
           _channel_id: string
@@ -2860,6 +3065,10 @@ export type Database = {
       reorder_user_servers: {
         Args: { _server_ids: string[]; _user_id: string }
         Returns: undefined
+      }
+      replenish_prekeys: {
+        Args: { _device_id: number; _prekeys: Json; _user_id: string }
+        Returns: number
       }
       reset_user_secret_key:
         | { Args: { _new_key_hash: string; _user_id: string }; Returns: Json }
@@ -3089,7 +3298,7 @@ export type Database = {
           }
         | {
             Args: { _server_id: string; _updates: Json; _user_id: string }
-            Returns: undefined
+            Returns: Json
           }
       update_server_role: {
         Args: {

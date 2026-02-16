@@ -55,6 +55,7 @@ export const useRealtimeReactions = (channelId: string | null) => {
             event: 'INSERT',
             schema: 'public',
             table: 'reactions',
+            filter: `channel_id=eq.${channelId}`,
           },
           (payload) => {
             try {
@@ -103,6 +104,7 @@ export const useRealtimeReactions = (channelId: string | null) => {
             event: 'DELETE',
             schema: 'public',
             table: 'reactions',
+            filter: `channel_id=eq.${channelId}`,
           },
           (payload) => {
             try {

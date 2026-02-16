@@ -3,26 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useMessageStore } from '@/stores/messageStore';
 import { useFriendStore } from '@/stores/friendStore';
 import { useConnectionStatus } from './useConnectionStatus';
-import type { Message, User } from '@/types';
-
-// User cache to avoid refetching
-const userCache = new Map<string, { user: User; timestamp: number }>();
-const USER_CACHE_TTL = 60000; // 1 minute
-
-const getCachedUser = async (userId: string): Promise<User | null> => {
-  const cached = userCache.get(userId);
-  if (cached && Date.now() - cached.timestamp < USER_CACHE_TTL) {
-    return cached.user;
-  }
-  
-  const { data } = await supabase.rpc('get_user_by_id', { _user_id: userId });
-  if (data) {
-    const user = data as unknown as User;
-    userCache.set(userId, { user, timestamp: Date.now() });
-    return user;
-  }
-  return null;
-};
+import type { Message } from '@/types';
+import { getOrFetchUser } from '@/lib/userCache';
 
 export const useRealtimeMessages = (channelId: string | null) => {
   const { isConnected, isReconnecting } = useConnectionStatus();
@@ -99,8 +81,8 @@ export const useRealtimeMessages = (channelId: string | null) => {
                   return;
                 }
                 
-                // Get user from cache or fetch
-                const user = await getCachedUser(newMsg.user_id);
+                // Get user from centralized cache or fetch
+                const user = await getOrFetchUser(newMsg.user_id);
                 if (!user) {
                   return;
                 }

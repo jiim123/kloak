@@ -18,9 +18,11 @@ export const useTyping = (channelId: string | null) => {
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
-      setTypingUsers((prev) =>
-        prev.filter((u) => now - u.started_at < TYPING_TIMEOUT_MS)
-      );
+      setTypingUsers((prev) => {
+        const filtered = prev.filter((u) => now - u.started_at < TYPING_TIMEOUT_MS);
+        if (filtered.length === prev.length) return prev; // No change — skip re-render
+        return filtered;
+      });
     }, STALE_CLEANUP_INTERVAL_MS);
 
     return () => clearInterval(interval);

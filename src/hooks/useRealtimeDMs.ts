@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useDMStore } from '@/stores/dmStore';
 import type { DirectMessage, ReactionGroup } from '@/types';
 import { useRealtimeUserUpdates } from './useRealtimeUserUpdates';
+import { getOrFetchUser } from '@/lib/userCache';
 
 interface UseRealtimeDMsOptions {
   userId: string | null;
@@ -43,38 +44,29 @@ export const useRealtimeDMs = ({
   const onNewMessageRef = useRef(onNewMessage);
   onNewMessageRef.current = onNewMessage;
 
-  // Handle incoming message
+  // Handle incoming message — use payload.new directly + user cache to avoid re-fetch
   const handleNewMessage = useCallback(
     async (payload: any) => {
-      const newMessageData = payload.new;
+      const newMsg = payload.new;
+      if (!newMsg) return;
 
-      // Fetch complete message with sender info (only needed columns)
-      const { data } = await supabase
-        .from('direct_messages')
-        .select(`
-          *,
-          sender:users (id, username, display_name, avatar_url, banner_url, avatar_decoration, profile_effect, banner_color, profile_theme_primary, profile_theme_accent, bio, status, custom_status, created_at, last_seen, pronouns),
-          reactions:dm_reactions (id, message_id, user_id, emoji)
-        `)
-        .eq('id', newMessageData.id)
-        .single();
+      // Use centralized user cache for sender info
+      const sender = await getOrFetchUser(newMsg.sender_id);
+      if (!sender) return;
 
-      if (!data) return;
-
-      // Fetch reply_to data if this message is a reply
+      // Check local cache for reply-to
       let reply_to: DirectMessage | null = null;
-      if (data.reply_to_id) {
-        // Check local cache first
-        const cachedMessages = useDMStore.getState().messagesByConversation[newMessageData.conversation_id] || [];
-        const cachedReply = cachedMessages.find((m: any) => m.id === data.reply_to_id);
+      if (newMsg.reply_to_id) {
+        const cachedMessages = useDMStore.getState().messagesByConversation[newMsg.conversation_id] || [];
+        const cachedReply = cachedMessages.find((m: any) => m.id === newMsg.reply_to_id);
         if (cachedReply) {
           reply_to = cachedReply;
         } else {
-          // Fetch from DB
+          // Fetch only if not in local state
           const { data: replyData } = await supabase
             .from('direct_messages')
             .select('id, content, sender_id, sender:users!direct_messages_sender_id_fkey(username)')
-            .eq('id', data.reply_to_id)
+            .eq('id', newMsg.reply_to_id)
             .single();
           if (replyData) {
             reply_to = {
@@ -88,43 +80,41 @@ export const useRealtimeDMs = ({
       }
 
       const message: DirectMessage = {
-        ...data,
+        id: newMsg.id,
+        conversation_id: newMsg.conversation_id,
+        sender_id: newMsg.sender_id,
+        content: newMsg.content,
+        created_at: newMsg.created_at,
+        edited_at: newMsg.edited_at,
+        reply_to_id: newMsg.reply_to_id,
         reply_to,
-        sender: data.sender ? {
-          id: data.sender.id,
-          username: data.sender.username,
-          display_name: data.sender.display_name,
-          avatar_url: data.sender.avatar_url,
-          banner_url: data.sender.banner_url ?? null,
-          avatar_decoration: data.sender.avatar_decoration,
-          profile_effect: data.sender.profile_effect ?? null,
-          banner_color: data.sender.banner_color || '#5865F2',
-          profile_theme_primary: data.sender.profile_theme_primary ?? null,
-          profile_theme_accent: data.sender.profile_theme_accent ?? null,
-          bio: data.sender.bio,
-          status: data.sender.status as any,
-          custom_status: data.sender.custom_status,
-          created_at: data.sender.created_at,
-          last_seen: data.sender.last_seen,
-         pronouns: (data.sender as any).pronouns ?? null,
-        } : undefined,
+        sender: {
+          id: sender.id,
+          username: sender.username,
+          display_name: sender.display_name,
+          avatar_url: sender.avatar_url,
+          banner_url: (sender as any).banner_url ?? null,
+          avatar_decoration: (sender as any).avatar_decoration,
+          profile_effect: (sender as any).profile_effect ?? null,
+          banner_color: (sender as any).banner_color || '#5865F2',
+          profile_theme_primary: (sender as any).profile_theme_primary ?? null,
+          profile_theme_accent: (sender as any).profile_theme_accent ?? null,
+          bio: (sender as any).bio,
+          status: sender.status as any,
+          custom_status: (sender as any).custom_status,
+          created_at: sender.created_at,
+          last_seen: (sender as any).last_seen,
+          pronouns: (sender as any).pronouns ?? null,
+        } as any,
         attachments: [],
-        reactions: groupReactions(data.reactions || [], userId || undefined),
+        reactions: [], // New messages have no reactions yet
       };
 
-      // Add message to the conversation's cache
-      addMessage(newMessageData.conversation_id, message);
+      addMessage(newMsg.conversation_id, message);
+      updateConversation(newMsg.conversation_id, { last_message: message });
 
-      // Update conversation's last message
-      updateConversation(newMessageData.conversation_id, {
-        last_message: message,
-      });
-
-      // Notify callback (for unread tracking)
-      // Get the current conversation from store to check if we're viewing it
-      const currentConvId = useDMStore.getState().currentConversation?.id;
-      if (onNewMessageRef.current && newMessageData.sender_id !== userId) {
-        onNewMessageRef.current(message, newMessageData.conversation_id);
+      if (onNewMessageRef.current && newMsg.sender_id !== userId) {
+        onNewMessageRef.current(message, newMsg.conversation_id);
       }
     },
     [addMessage, updateConversation, userId]
@@ -161,25 +151,35 @@ export const useRealtimeDMs = ({
       const messageId = payload.new?.message_id || payload.old?.message_id;
       if (!messageId) return;
 
-      // Fetch the message to get its conversation_id and updated reactions
-      const { data: messageData } = await supabase
-        .from('direct_messages')
-        .select('conversation_id')
-        .eq('id', messageId)
-        .single();
+      // Try to find the conversation_id from local state first (avoid DB query)
+      const { messagesByConversation } = useDMStore.getState();
+      let conversationId: string | null = null;
+      for (const [convId, messages] of Object.entries(messagesByConversation)) {
+        if ((messages as any[]).some((m: any) => m.id === messageId)) {
+          conversationId = convId;
+          break;
+        }
+      }
 
-      if (!messageData) return;
+      // Only fetch from DB if not found locally
+      if (!conversationId) {
+        const { data: messageData } = await supabase
+          .from('direct_messages')
+          .select('conversation_id')
+          .eq('id', messageId)
+          .single();
+        if (!messageData) return;
+        conversationId = messageData.conversation_id;
+      }
 
-      // Fetch updated reactions for this message - only columns we need
+      // Fetch updated reactions for this message
       const { data: reactionsData } = await supabase
         .from('dm_reactions')
         .select('id, message_id, user_id, emoji')
         .eq('message_id', messageId);
 
       const reactions = groupReactions(reactionsData || [], userId || undefined);
-
-      // Update the message in store
-      updateMessage(messageData.conversation_id, messageId, { reactions });
+      updateMessage(conversationId!, messageId, { reactions });
     },
     [userId, updateMessage]
   );
