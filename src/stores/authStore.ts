@@ -4,7 +4,8 @@ import { supabase, setKeyHashHeader } from "@/integrations/supabase/client";
 import { generateSecretKey, hashSecretKey, isValidSecretKey } from "@/lib/crypto";
 import { authRateLimiter, accountCreationRateLimiter, validateUsername } from "@/lib/security";
 import type { User, UserStatus } from "@/types";
-
+let lastSeenTimestamp = 0;
+const LAST_SEEN_INTERVAL = 60_000; // 60 seconds minimum between calls
 
 interface AuthState {
   user: User | null;
@@ -369,12 +370,15 @@ export const useAuthStore = create<AuthState>()(
         const { user } = get();
         if (!user) return;
 
+        // Throttle: skip if called within the last 60 seconds
+        const now = Date.now();
+        if (now - lastSeenTimestamp < LAST_SEEN_INTERVAL) return;
+        lastSeenTimestamp = now;
+
         try {
           await supabase.rpc("update_user_last_seen", {
             _user_id: user.id,
           });
-          // Don't update local state - this avoids triggering re-renders
-          // The last_seen is only used for other users' presence display
         } catch (error) {
           console.error("Failed to update last seen:", error);
         }
