@@ -531,14 +531,14 @@ const AppLayout = () => {
 
           <div className="flex-1 flex overflow-hidden">
             {isMobile ? (
-              <>
+              <div className="flex-1 flex flex-col overflow-hidden w-full">
                 {/* Mobile header - hide when in DM conversation (DMHeader handles it) */}
                 {!(isDMView && currentConversation) && (
                   <MobileHeader isDMView={isDMView} showFriends={showFriends} showExplore={showExplore} />
                 )}
 
                 {/* Mobile layout */}
-                <div className="flex-1 overflow-hidden bg-layout-chat relative">
+                <div className="flex-1 overflow-hidden bg-layout-chat relative w-full">
                   <VoicePersistentHost />
                   {/* Keep all views mounted, toggle visibility with CSS to prevent remount sluggishness */}
                   {currentConversation && (
@@ -573,7 +573,7 @@ const AppLayout = () => {
                     </>
                   )}
                 </div>
-              </>
+              </div>
             ) : (
               /* Desktop layout */
               <div className="flex flex-col flex-1 overflow-hidden">
