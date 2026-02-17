@@ -517,169 +517,169 @@ const AppLayout = () => {
         <div className="h-screen flex flex-col overflow-hidden">
           <DesktopTitleBar title={desktopTitle} />
 
-        {/* Backend maintenance notice */}
-        <div className="shrink-0 px-4 py-2 bg-red-900 dark:bg-red-950 border-b border-red-800 text-center text-sm text-red-50">
-          <span className="font-semibold underline mr-1">Update:</span>
-          While most of the work is done. Users can experience some errors and functions not working, please be patient.
-        </div>
+          {/* Connection Status Banner */}
+          <ConnectionStatus />
 
-        {/* Connection Status Banner */}
-        <ConnectionStatus />
-
-        <div className="flex-1 flex overflow-hidden">
-          {isMobile ? (
-            <>
-              {/* Mobile header - hide when in DM conversation (DMHeader handles it) */}
-              {!(isDMView && currentConversation) && (
-                <MobileHeader isDMView={isDMView} showFriends={showFriends} showExplore={showExplore} />
-              )}
-
-              {/* Mobile layout */}
-              <div className="flex-1 overflow-hidden bg-layout-chat relative">
-                <VoicePersistentHost />
-                {/* Keep all views mounted, toggle visibility with CSS to prevent remount sluggishness */}
-                {currentConversation && (
-                  <div className={isDMView && currentConversation ? "block h-full" : "hidden"}>
-                    <DMChatArea />
-                  </div>
-                )}
-                {isDMView && !currentConversation && (
-                  <>
-                    <div className={showFriends ? "block h-full" : "hidden"}>
-                      <FriendsList onOpenDM={() => navigate("/app")} />
-                    </div>
-                    <div className={showExplore ? "block h-full" : "hidden"}>
-                      <ExploreServers />
-                    </div>
-                    <div className={!showFriends && !showExplore ? "block h-full" : "hidden"}>
-                      <HomeLanding />
-                    </div>
-                  </>
-                )}
-                {currentServer && (
-                  <>
-                    {isServerOverviewView && <ServerOverviewView />}
-                    {isServerMembersViewAllowed && <ServerMembersView />}
-                    <div className={!isServerOverviewView && !isServerMembersViewAllowed && !isDMView ? "block h-full" : "hidden"}>
-                      <ChatArea />
-                    </div>
-                  </>
-                )}
-              </div>
-            </>
-          ) : (
-            /* Desktop layout */
-            <div className="flex flex-col flex-1 overflow-hidden">
-              {/* Horizontal Server Bar at top - hidden during full-screen settings */}
-              {!isServerSettingsOpen && activeModal !== "user-settings" && activeModal !== "edit-channel" && (
-                <HorizontalServerSidebar />
-              )}
-
-              <div className="flex flex-1 overflow-hidden relative">
-                {/* Full-screen settings overlays - rendered on top, main layout stays mounted */}
-                {isServerSettingsOpen && (
-                  <div className="absolute inset-0 z-20 bg-background">
-                    <ServerSettingsPage />
-                  </div>
-                )}
-                {activeModal === "user-settings" && (
-                  <div className="absolute inset-0 z-20 bg-background">
-                    <UserSettingsPage />
-                  </div>
-                )}
-                {activeModal === "edit-channel" && (
-                  <div className="absolute inset-0 z-20 bg-background">
-                    <ChannelSettingsPage />
-                  </div>
+          <div className="flex-1 flex overflow-hidden">
+            {isMobile ? (
+              <>
+                {/* Mobile header - hide when in DM conversation (DMHeader handles it) */}
+                {!(isDMView && currentConversation) && (
+                  <MobileHeader isDMView={isDMView} showFriends={showFriends} showExplore={showExplore} />
                 )}
 
-                {/* Main layout - ALWAYS mounted so VoicePersistentHost never unmounts */}
-                <ResizablePanelGroup direction="horizontal" className="flex-1">
-                  {/* Secondary sidebar - resizable */}
-                  <ResizablePanel defaultSize={20} minSize={10} maxSize={30} className="bg-layout-sidebar-secondary">
-                    <div className="h-full">
-                      {isDMView ? (
-                        <DMSidebar
-                          showFriends={showFriends}
-                          onShowFriendsChange={(show: boolean) => navigate(show ? "/app/friends" : "/app")}
-                          showExplore={showExplore}
-                          onShowExploreChange={(show: boolean) => navigate(show ? "/app/explore" : "/app")}
-                        />
-                      ) : (
-                        <ChannelSidebar />
-                      )}
+                {/* Mobile layout */}
+                <div className="flex-1 overflow-hidden bg-layout-chat relative">
+                  <VoicePersistentHost />
+                  {/* Keep all views mounted, toggle visibility with CSS to prevent remount sluggishness */}
+                  {currentConversation && (
+                    <div className={isDMView && currentConversation ? "block h-full" : "hidden"}>
+                      <DMChatArea />
                     </div>
-                  </ResizablePanel>
-
-                  <ResizableHandle className="w-1 bg-transparent hover:bg-primary/20 transition-colors" />
-
-                  {/* Main area - flexible */}
-                  <ResizablePanel defaultSize={isMemberSidebarOpen && !isDMView && !isServerSpecialView ? 70 : 85}>
-                    <div className="h-full bg-layout-chat relative overflow-hidden">
-                      <VoicePersistentHost />
-                      {/* Keep all views mounted, toggle visibility with CSS to prevent remount sluggishness */}
-                      {currentConversation && (
-                        <div className={isDMView && currentConversation ? "block h-full" : "hidden"}>
-                          <DMChatArea />
-                        </div>
-                      )}
-                      {isDMView && !currentConversation && (
-                        <>
-                          <div className={showFriends ? "block h-full" : "hidden"}>
-                            <FriendsList onOpenDM={() => navigate("/app")} />
-                          </div>
-                          <div className={showExplore ? "block h-full" : "hidden"}>
-                            <ExploreServers />
-                          </div>
-                          <div className={!showFriends && !showExplore ? "block h-full" : "hidden"}>
-                            <HomeLanding />
-                          </div>
-                        </>
-                      )}
-                      {currentServer && (
-                        <>
-                          {isServerOverviewView && <ServerOverviewView />}
-                          {isServerMembersViewAllowed && <ServerMembersView />}
-                          <div
-                            className={
-                              !isServerOverviewView && !isServerMembersViewAllowed && !isDMView ? "block h-full" : "hidden"
-                            }
-                          >
-                            <ChatArea />
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </ResizablePanel>
-
-                  {/* Members sidebar - collapsible, desktop only (mobile uses Sheet drawer) */}
-                  {!isDMView && !isServerSpecialView && isMemberSidebarOpen && (
+                  )}
+                  {isDMView && !currentConversation && (
                     <>
-                      <ResizableHandle className="w-1 bg-transparent hover:bg-primary/20 transition-colors" />
-                      <ResizablePanel defaultSize={15} minSize={10} maxSize={25} className="bg-layout-members">
-                        <MembersSidebar />
-                      </ResizablePanel>
+                      <div className={showFriends ? "block h-full" : "hidden"}>
+                        <FriendsList onOpenDM={() => navigate("/app")} />
+                      </div>
+                      <div className={showExplore ? "block h-full" : "hidden"}>
+                        <ExploreServers />
+                      </div>
+                      <div className={!showFriends && !showExplore ? "block h-full" : "hidden"}>
+                        <HomeLanding />
+                      </div>
                     </>
                   )}
-                </ResizablePanelGroup>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+                  {currentServer && (
+                    <>
+                      {isServerOverviewView && <ServerOverviewView />}
+                      {isServerMembersViewAllowed && <ServerMembersView />}
+                      <div
+                        className={
+                          !isServerOverviewView && !isServerMembersViewAllowed && !isDMView ? "block h-full" : "hidden"
+                        }
+                      >
+                        <ChatArea />
+                      </div>
+                    </>
+                  )}
+                </div>
+              </>
+            ) : (
+              /* Desktop layout */
+              <div className="flex flex-col flex-1 overflow-hidden">
+                {/* Horizontal Server Bar at top - hidden during full-screen settings */}
+                {!isServerSettingsOpen && activeModal !== "user-settings" && activeModal !== "edit-channel" && (
+                  <HorizontalServerSidebar />
+                )}
 
-      {/* Mobile Sidebars */}
-      {isMobile && (
-        <MobileSidebar
-          isDMView={isDMView}
-          showFriends={showFriends}
-          onShowFriendsChange={(show: boolean) => navigate(show ? "/app/friends" : "/app")}
-          showExplore={showExplore}
-          onShowExploreChange={(show: boolean) => navigate(show ? "/app/explore" : "/app")}
-        />
-      )}
-      {/* Mobile members drawer — always mounted so Sheet close animation works */}
-      {!isDMView && !isServerSpecialView && isMobile && <MembersSidebar />}
+                <div className="flex flex-1 overflow-hidden relative">
+                  {/* Full-screen settings overlays - rendered on top, main layout stays mounted */}
+                  {isServerSettingsOpen && (
+                    <div className="absolute inset-0 z-20 bg-background">
+                      <ServerSettingsPage />
+                    </div>
+                  )}
+                  {activeModal === "user-settings" && (
+                    <div className="absolute inset-0 z-20 bg-background">
+                      <UserSettingsPage />
+                    </div>
+                  )}
+                  {activeModal === "edit-channel" && (
+                    <div className="absolute inset-0 z-20 bg-background">
+                      <ChannelSettingsPage />
+                    </div>
+                  )}
+
+                  {/* Main layout - ALWAYS mounted so VoicePersistentHost never unmounts */}
+                  <ResizablePanelGroup direction="horizontal" className="flex-1">
+                    {/* Secondary sidebar - resizable */}
+                    <ResizablePanel defaultSize={20} minSize={10} maxSize={30} className="bg-layout-sidebar-secondary">
+                      <div className="h-full">
+                        {isDMView ? (
+                          <DMSidebar
+                            showFriends={showFriends}
+                            onShowFriendsChange={(show: boolean) => navigate(show ? "/app/friends" : "/app")}
+                            showExplore={showExplore}
+                            onShowExploreChange={(show: boolean) => navigate(show ? "/app/explore" : "/app")}
+                          />
+                        ) : (
+                          <ChannelSidebar />
+                        )}
+                      </div>
+                    </ResizablePanel>
+
+                    <ResizableHandle className="w-1 bg-transparent hover:bg-primary/20 transition-colors" />
+
+                    {/* Main area - flexible */}
+                    <ResizablePanel defaultSize={isMemberSidebarOpen && !isDMView && !isServerSpecialView ? 70 : 85}>
+                      <div className="h-full bg-layout-chat relative overflow-hidden">
+                        <VoicePersistentHost />
+                        {/* Keep all views mounted, toggle visibility with CSS to prevent remount sluggishness */}
+                        {currentConversation && (
+                          <div className={isDMView && currentConversation ? "block h-full" : "hidden"}>
+                            <DMChatArea />
+                          </div>
+                        )}
+                        {isDMView && !currentConversation && (
+                          <>
+                            <div className={showFriends ? "block h-full" : "hidden"}>
+                              <FriendsList onOpenDM={() => navigate("/app")} />
+                            </div>
+                            <div className={showExplore ? "block h-full" : "hidden"}>
+                              <ExploreServers />
+                            </div>
+                            <div className={!showFriends && !showExplore ? "block h-full" : "hidden"}>
+                              <HomeLanding />
+                            </div>
+                          </>
+                        )}
+                        {currentServer && (
+                          <>
+                            {isServerOverviewView && <ServerOverviewView />}
+                            {isServerMembersViewAllowed && <ServerMembersView />}
+                            <div
+                              className={
+                                !isServerOverviewView && !isServerMembersViewAllowed && !isDMView
+                                  ? "block h-full"
+                                  : "hidden"
+                              }
+                            >
+                              <ChatArea />
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </ResizablePanel>
+
+                    {/* Members sidebar - collapsible, desktop only (mobile uses Sheet drawer) */}
+                    {!isDMView && !isServerSpecialView && isMemberSidebarOpen && (
+                      <>
+                        <ResizableHandle className="w-1 bg-transparent hover:bg-primary/20 transition-colors" />
+                        <ResizablePanel defaultSize={15} minSize={10} maxSize={25} className="bg-layout-members">
+                          <MembersSidebar />
+                        </ResizablePanel>
+                      </>
+                    )}
+                  </ResizablePanelGroup>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Mobile Sidebars */}
+        {isMobile && (
+          <MobileSidebar
+            isDMView={isDMView}
+            showFriends={showFriends}
+            onShowFriendsChange={(show: boolean) => navigate(show ? "/app/friends" : "/app")}
+            showExplore={showExplore}
+            onShowExploreChange={(show: boolean) => navigate(show ? "/app/explore" : "/app")}
+          />
+        )}
+        {/* Mobile members drawer — always mounted so Sheet close animation works */}
+        {!isDMView && !isServerSpecialView && isMobile && <MembersSidebar />}
 
         {/* Modals */}
         <CreateServerModal />
