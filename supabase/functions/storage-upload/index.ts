@@ -18,20 +18,16 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
 }
 
 async function resolveUser(supabase: ReturnType<typeof createClient>, keyHash: string) {
-  const { data, error } = await supabase
-    .from("users")
-    .select("id")
-    .eq("key_hash", keyHash)
-    .single();
+  const { data, error } = await supabase.from("user_auth").select("user_id").eq("key_hash", keyHash).single();
   if (error || !data) return null;
-  return data.id as string;
+  return data.user_id as string;
 }
 
 async function checkPermission(
   supabase: ReturnType<typeof createClient>,
   userId: string,
   bucket: string,
-  path: string
+  path: string,
 ): Promise<string | null> {
   const firstSegment = path.split("/")[0];
 
@@ -60,11 +56,7 @@ async function checkPermission(
         return null;
       }
 
-      const { data: server } = await supabase
-        .from("servers")
-        .select("owner_id")
-        .eq("id", serverId)
-        .single();
+      const { data: server } = await supabase.from("servers").select("owner_id").eq("id", serverId).single();
 
       if (server && server.owner_id === userId) {
         return null;
@@ -105,11 +97,7 @@ Deno.serve(async (req) => {
     if (req.method === "DELETE") {
       const body = await req.json();
       const bucket = body.bucket as string;
-      const paths: string[] = body.paths
-        ? (body.paths as string[])
-        : body.path
-          ? [body.path as string]
-          : [];
+      const paths: string[] = body.paths ? (body.paths as string[]) : body.path ? [body.path as string] : [];
 
       if (!bucket || paths.length === 0) {
         return jsonResponse({ error: "Missing bucket or path(s)" }, 400);
@@ -148,9 +136,7 @@ Deno.serve(async (req) => {
           const err = await checkPermission(supabase, userId, bucket, prefix);
           if (err) return jsonResponse({ error: err }, 403);
 
-          const { data: files } = await supabase.storage
-            .from(bucket)
-            .list(prefix, { search: searchFilter });
+          const { data: files } = await supabase.storage.from(bucket).list(prefix, { search: searchFilter });
 
           if (files && files.length > 0) {
             const toRemove = searchFilter
