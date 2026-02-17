@@ -412,6 +412,11 @@ const AppLayout = () => {
       <div className="h-screen flex flex-col overflow-hidden">
         <DesktopTitleBar title={desktopTitle} />
 
+        {/* Backend maintenance notice */}
+        <div className="shrink-0 px-4 py-2 bg-red-900 dark:bg-red-950 border-b border-red-800 text-center text-sm text-red-50">
+          Backend maintenance in progress — some features (updating profiles, uploading images, etc) may not work as intended. We’re trying to fix this as soon as possible.
+        </div>
+
         {/* Connection Status Banner */}
         <ConnectionStatus />
 
