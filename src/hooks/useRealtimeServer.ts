@@ -100,7 +100,6 @@ export const useRealtimeServer = (serverId: string | null) => {
   // ----- Main subscription -----
   useEffect(() => {
     if (!serverId) return;
-    if (!isConnected && !isReconnecting) return;
 
     const channel = supabase
       .channel(`server:${serverId}`)
@@ -359,12 +358,19 @@ export const useRealtimeServer = (serverId: string | null) => {
       .subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
           console.log('[Realtime] Successfully subscribed to server:', serverId);
-        } else if (status === 'CHANNEL_ERROR') {
-          if (isConnected || isReconnecting) {
-            console.warn('[Realtime] Channel error for server:', err?.message || 'Unknown error');
+        } else if (status === 'CHANNEL_ERROR' || status === 'CLOSED' || status === 'TIMED_OUT') {
+          if (err) {
+            console.warn('[Realtime] Server subscribe error:', {
+              serverId,
+              status,
+              message: (err as any)?.message,
+              name: (err as any)?.name,
+              cause: (err as any)?.cause,
+              details: err,
+            });
+          } else {
+            console.warn('[Realtime] Server subscribe status:', { serverId, status });
           }
-        } else if (status === 'TIMED_OUT') {
-          console.warn('[Realtime] Server subscription timed out');
         }
       });
 

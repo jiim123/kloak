@@ -5,19 +5,17 @@ import { useFriendStore } from '@/stores/friendStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useConnectionStatus } from './useConnectionStatus';
 import type { Message } from '@/types';
-import { getOrFetchUser } from '@/lib/userCache';
+import { getOrFetchUser, getUserFromCache } from '@/lib/userCache';
+import type { User } from '@/types';
 
 export const useRealtimeMessages = (channelId: string | null) => {
   const { isConnected, isReconnecting } = useConnectionStatus();
   const isSettingUpRef = useRef(false);
+  const lastSubscribeAtRef = useRef<number>(0);
+  const lastEventAtRef = useRef<number>(0);
 
   useEffect(() => {
     if (!channelId) {
-      return;
-    }
-
-    // Don't set up subscription if connection is down
-    if (!isConnected && !isReconnecting) {
       return;
     }
 
@@ -62,6 +60,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
           async (payload) => {
             try {
               const eventType = payload.eventType;
+              lastEventAtRef.current = Date.now();
               
               if (eventType === 'INSERT') {
                 const newMsg = payload.new as any;
@@ -82,12 +81,32 @@ export const useRealtimeMessages = (channelId: string | null) => {
                   return;
                 }
                 
-                // Avoid redundant self lookups on messages we just sent.
+                // IMPORTANT: Don't block on fetching user data; add message immediately.
+                // We'll hydrate the author in the background if needed.
                 const localUser = useAuthStore.getState().user;
-                const user =
-                  localUser?.id === newMsg.user_id ? localUser : await getOrFetchUser(newMsg.user_id);
+                const cachedUser = getUserFromCache(newMsg.user_id);
+                let user: User | null =
+                  localUser?.id === newMsg.user_id ? (localUser as any as User) : cachedUser;
+
                 if (!user) {
-                  return;
+                  const nowIso = new Date().toISOString();
+                  user = {
+                    id: newMsg.user_id,
+                    username: 'unknown',
+                    display_name: null,
+                    avatar_url: null,
+                    banner_url: null,
+                    avatar_decoration: null,
+                    profile_effect: null,
+                    banner_color: '#111111',
+                    profile_theme_primary: null,
+                    profile_theme_accent: null,
+                    bio: null,
+                    status: 'offline',
+                    custom_status: null,
+                    created_at: nowIso,
+                    last_seen: null,
+                  } satisfies User;
                 }
                 
                 // Build message with minimal data
@@ -122,6 +141,16 @@ export const useRealtimeMessages = (channelId: string | null) => {
                 }
                 
                 useMessageStore.getState().addMessage(message);
+
+                // Hydrate author info asynchronously (no UI delay).
+                if (!cachedUser && localUser?.id !== newMsg.user_id) {
+                  void getOrFetchUser(newMsg.user_id)
+                    .then((u) => {
+                      if (!u) return;
+                      useMessageStore.getState().updateMessage(newMsg.id, { user: u } as any);
+                    })
+                    .catch(() => undefined);
+                }
               } else if (eventType === 'UPDATE') {
                 const updated = payload.new as any;
                 
@@ -151,27 +180,30 @@ export const useRealtimeMessages = (channelId: string | null) => {
           if (status === 'SUBSCRIBED') {
             console.log('[Realtime] Successfully subscribed to messages for channel:', channelId);
             retryCount = 0;
-          } else if (status === 'CHANNEL_ERROR') {
-            // Only retry if connection is available
-            if (!isConnected && !isReconnecting) {
-              console.warn('[Realtime] Connection down, not retrying messages subscription');
-              return;
+            lastSubscribeAtRef.current = Date.now();
+            lastEventAtRef.current = Date.now();
+          } else if (status === 'CHANNEL_ERROR' || status === 'CLOSED' || status === 'TIMED_OUT') {
+            if (err) {
+              console.warn('[Realtime] Messages subscribe error:', {
+                channelId,
+                status,
+                message: (err as any)?.message,
+                name: (err as any)?.name,
+                cause: (err as any)?.cause,
+                details: err,
+              });
+            } else {
+              console.warn('[Realtime] Messages subscribe status:', { channelId, status });
             }
-            
             if (retryCount < MAX_RETRIES) {
               retryCount++;
-              console.log(`[Realtime] Retrying messages subscription (attempt ${retryCount}/${MAX_RETRIES})...`);
+              console.log(`[Realtime] Retrying messages subscription (status=${status}, attempt ${retryCount}/${MAX_RETRIES})...`);
               retryTimeout = setTimeout(() => {
-                // Check connection again before retrying
-                if (isConnected || isReconnecting) {
-                  setupSubscription();
-                }
+                setupSubscription();
               }, RETRY_DELAY * retryCount);
             } else {
               console.warn('[Realtime] Max retries reached for messages subscription. Continuing without realtime messages.');
             }
-          } else if (status === 'TIMED_OUT') {
-            console.warn('[Realtime] Messages subscription timed out');
           }
         });
     };
@@ -181,18 +213,29 @@ export const useRealtimeMessages = (channelId: string | null) => {
     // Handle visibility changes to ensure subscription stays active
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && channel) {
-        // When tab becomes visible, check if subscription is still active
-        // and re-establish if needed
+        // Browsers may pause/throttle websocket in background. On restore,
+        // best-effort re-establish to avoid "stuck" realtime without refresh.
         try {
           const channelState = (channel as any).state;
           if (channelState === 'closed' || channelState === 'errored' || channelState === 'timed_out') {
-            console.log('[Realtime] Re-establishing subscription after visibility change');
+            console.log('[Realtime] Visibility restored; re-establishing messages subscription');
             setupSubscription();
           }
-        } catch (e) {
-          // If we can't check state, try to re-establish anyway
-          console.log('[Realtime] Re-establishing subscription after visibility change (state check failed)');
+        } catch {
+          // If we can't check state, try to re-establish anyway.
+          console.log('[Realtime] Visibility restored; re-establishing messages subscription (state unknown)');
           setupSubscription();
+        }
+
+        // Also do a cheap "catch-up" fetch in case realtime was paused and missed events.
+        // This avoids requiring a full page refresh.
+        try {
+          const store = useMessageStore.getState();
+          // Force, but silent if we already have messages.
+          const hasMessages = (store.messagesByChannel[channelId]?.messages?.length ?? 0) > 0;
+          store.fetchMessages(channelId, 50, undefined, true, hasMessages);
+        } catch {
+          // ignore
         }
       }
     };

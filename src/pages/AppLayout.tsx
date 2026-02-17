@@ -120,6 +120,15 @@ const AppLayout = () => {
   // Handle native notification click deep-links in Tauri.
   useTauriNotificationActions();
 
+  // Ensure Supabase Realtime websocket is connected early (helps avoid TIMED_OUT joins in some envs).
+  useEffect(() => {
+    try {
+      (supabase as any).realtime?.connect?.();
+    } catch {
+      // ignore
+    }
+  }, []);
+
   // Handle conversation query parameter for DM notification redirects
   useEffect(() => {
     const conversationId = searchParams.get("conversation");

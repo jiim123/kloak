@@ -237,7 +237,14 @@ export const useRealtimeDMs = ({
         },
         handleMessageDelete
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (status !== 'SUBSCRIBED') {
+          console.log('[Realtime] DM subscription status:', { status, userId, err });
+        }
+        if (err) {
+          console.error('[Realtime] DM subscription error:', err);
+        }
+      });
 
     return () => {
       cancelled = true;

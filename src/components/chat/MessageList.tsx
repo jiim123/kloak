@@ -158,9 +158,24 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
     lastMarkedMessageIdRef.current = null; // Reset for new channel
     setShowJumpToPresent(false);
     setNewMessageCount(0);
-    fetchMessages(channelId);
+
+    // IMPORTANT: Always force a silent refetch on channel entry so users see newly arrived messages
+    // even if realtime is temporarily unhealthy and the cache is still "fresh".
+    const hasCached = (useMessageStore.getState().messagesByChannel[channelId]?.messages?.length ?? 0) > 0;
+    fetchMessages(channelId, 50, undefined, true, hasCached);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelId]);
+
+  // Fallback polling: if realtime is paused/misconfigured, ensure the channel still updates.
+  // This is intentionally light (15s) and only when visible.
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      fetchMessages(channelId, 50, undefined, true, true);
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [channelId, fetchMessages]);
 
   // Scroll to bottom AFTER messages render on channel switch.
   // useLayoutEffect fires synchronously after DOM mutations but before paint,

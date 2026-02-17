@@ -87,7 +87,7 @@ export function useConnectionStatus() {
       const channel = supabase.channel('connection-status');
       sharedRealtimeChannel = channel;
 
-      channel.subscribe((status) => {
+      channel.subscribe((status, err) => {
         switch (status) {
           case 'SUBSCRIBED':
             notifyRealtimeConnected(true);
@@ -96,6 +96,15 @@ export function useConnectionStatus() {
             break;
           case 'CLOSED':
           case 'CHANNEL_ERROR':
+            if (err) {
+              console.warn('[Realtime] connection-status subscribe error:', {
+                status,
+                message: (err as any)?.message,
+                name: (err as any)?.name,
+                cause: (err as any)?.cause,
+                details: err,
+              });
+            }
             notifyRealtimeConnected(false);
             if (navigator.onLine) {
               setConnectionStatus('reconnecting');
@@ -105,6 +114,15 @@ export function useConnectionStatus() {
             }
             break;
           case 'TIMED_OUT':
+            if (err) {
+              console.warn('[Realtime] connection-status timed out:', {
+                status,
+                message: (err as any)?.message,
+                name: (err as any)?.name,
+                cause: (err as any)?.cause,
+                details: err,
+              });
+            }
             notifyRealtimeConnected(false);
             setConnectionStatus('disconnected');
             break;

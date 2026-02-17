@@ -85,7 +85,7 @@ export const useTyping = (channelId: string | null) => {
 
     lastTypingTime.current = now;
 
-    channelRef.current.send({
+    const sendPayload = {
       type: 'broadcast',
       event: 'typing',
       payload: {
@@ -93,7 +93,18 @@ export const useTyping = (channelId: string | null) => {
         username: user.username,
         display_name: user.display_name,
       },
-    });
+    };
+    // Newer realtime-js prefers httpSend(event, payload) for REST delivery (send() fallback will be deprecated).
+    const ch: any = channelRef.current as any;
+    try {
+      if (typeof ch.httpSend === 'function') {
+        void ch.httpSend(sendPayload.event, sendPayload.payload).catch(() => undefined);
+      } else {
+        void ch.send(sendPayload).catch(() => undefined);
+      }
+    } catch {
+      // ignore
+    }
 
     // Auto-stop after timeout
     if (typingTimeoutRef.current) {
@@ -112,13 +123,23 @@ export const useTyping = (channelId: string | null) => {
       typingTimeoutRef.current = null;
     }
 
-    channelRef.current.send({
+    const sendPayload = {
       type: 'broadcast',
       event: 'stop_typing',
       payload: {
         user_id: user.id,
       },
-    });
+    };
+    const ch: any = channelRef.current as any;
+    try {
+      if (typeof ch.httpSend === 'function') {
+        void ch.httpSend(sendPayload.event, sendPayload.payload).catch(() => undefined);
+      } else {
+        void ch.send(sendPayload).catch(() => undefined);
+      }
+    } catch {
+      // ignore
+    }
   }, [user]);
 
   return {

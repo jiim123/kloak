@@ -13,11 +13,6 @@ export const useRealtimeReactions = (channelId: string | null) => {
       return;
     }
 
-    // Don't set up subscription if connection is down
-    if (!isConnected && !isReconnecting) {
-      return;
-    }
-
     let channel: ReturnType<typeof supabase.channel> | null = null;
     let retryTimeout: NodeJS.Timeout | null = null;
     let retryCount = 0;
@@ -209,35 +204,54 @@ export const useRealtimeReactions = (channelId: string | null) => {
           if (status === 'SUBSCRIBED') {
             console.log('[Realtime] Successfully subscribed to reactions for channel:', channelId);
             retryCount = 0;
-          } else if (status === 'CHANNEL_ERROR') {
-            // Only retry if connection is available
-            if (!isConnected && !isReconnecting) {
-              console.warn('[Realtime] Connection down, not retrying reactions subscription');
-              return;
+          } else if (status === 'CHANNEL_ERROR' || status === 'CLOSED' || status === 'TIMED_OUT') {
+            if (err) {
+              console.warn('[Realtime] Reactions subscribe error:', {
+                channelId,
+                status,
+                message: (err as any)?.message,
+                name: (err as any)?.name,
+                cause: (err as any)?.cause,
+                details: err,
+              });
+            } else {
+              console.warn('[Realtime] Reactions subscribe status:', { channelId, status });
             }
-            
             if (retryCount < MAX_RETRIES) {
               retryCount++;
-              console.log(`[Realtime] Retrying reactions subscription (attempt ${retryCount}/${MAX_RETRIES})...`);
+              console.log(`[Realtime] Retrying reactions subscription (status=${status}, attempt ${retryCount}/${MAX_RETRIES})...`);
               retryTimeout = setTimeout(() => {
-                // Check connection again before retrying
-                if (isConnected || isReconnecting) {
-                  setupSubscription();
-                }
+                setupSubscription();
               }, RETRY_DELAY * retryCount);
             } else {
               console.warn('[Realtime] Max retries reached for reactions subscription. Continuing without realtime reactions.');
             }
-          } else if (status === 'TIMED_OUT') {
-            console.warn('[Realtime] Reactions subscription timed out');
           }
         });
     };
 
     setupSubscription();
 
+    // Similar to messages: best-effort re-establish after returning from background.
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && channel) {
+        try {
+          const channelState = (channel as any).state;
+          if (channelState === 'closed' || channelState === 'errored' || channelState === 'timed_out') {
+            console.log('[Realtime] Visibility restored; re-establishing reactions subscription');
+            setupSubscription();
+          }
+        } catch {
+          console.log('[Realtime] Visibility restored; re-establishing reactions subscription (state unknown)');
+          setupSubscription();
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       isSettingUpRef.current = false;
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (retryTimeout) {
         clearTimeout(retryTimeout);
       }
