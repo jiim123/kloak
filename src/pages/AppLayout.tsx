@@ -452,9 +452,8 @@ const AppLayout = () => {
 
         {/* Backend maintenance notice */}
         <div className="shrink-0 px-4 py-2 bg-red-900 dark:bg-red-950 border-b border-red-800 text-center text-sm text-red-50">
-          <span className="font-semibold underline mr-1">Scheduled Maintenance:</span>
-          We are performing critical security updates to our API to ensure user data remains protected. Some features
-          may be temporarily unavailable while we complete these essential safeguards.
+          <span className="font-semibold underline mr-1">Update:</span>
+          While most of the work is done. Users can experience some errors and functions not working, please be patient.
         </div>
 
         {/* Connection Status Banner */}
