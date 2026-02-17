@@ -1598,184 +1598,6 @@ export type Database = {
           },
         ]
       }
-      task_assignees: {
-        Row: {
-          assigned_at: string | null
-          assigned_by: string | null
-          id: string
-          task_id: string
-          user_id: string
-        }
-        Insert: {
-          assigned_at?: string | null
-          assigned_by?: string | null
-          id?: string
-          task_id: string
-          user_id: string
-        }
-        Update: {
-          assigned_at?: string | null
-          assigned_by?: string | null
-          id?: string
-          task_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "task_assignees_assigned_by_fkey"
-            columns: ["assigned_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_assignees_task_id_fkey"
-            columns: ["task_id"]
-            isOneToOne: false
-            referencedRelation: "tasks"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_assignees_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      task_comments: {
-        Row: {
-          content: string
-          created_at: string | null
-          edited_at: string | null
-          id: string
-          reply_to_id: string | null
-          task_id: string
-          user_id: string
-        }
-        Insert: {
-          content: string
-          created_at?: string | null
-          edited_at?: string | null
-          id?: string
-          reply_to_id?: string | null
-          task_id: string
-          user_id: string
-        }
-        Update: {
-          content?: string
-          created_at?: string | null
-          edited_at?: string | null
-          id?: string
-          reply_to_id?: string | null
-          task_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "task_comments_reply_to_id_fkey"
-            columns: ["reply_to_id"]
-            isOneToOne: false
-            referencedRelation: "task_comments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_comments_task_id_fkey"
-            columns: ["task_id"]
-            isOneToOne: false
-            referencedRelation: "tasks"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_comments_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      tasks: {
-        Row: {
-          channel_id: string
-          completed_at: string | null
-          completed_by: string | null
-          created_at: string | null
-          created_by: string
-          description: string | null
-          due_date: string | null
-          id: string
-          priority: Database["public"]["Enums"]["task_priority"] | null
-          server_id: string
-          status: Database["public"]["Enums"]["task_status"]
-          task_position: number
-          title: string
-          updated_at: string | null
-        }
-        Insert: {
-          channel_id: string
-          completed_at?: string | null
-          completed_by?: string | null
-          created_at?: string | null
-          created_by: string
-          description?: string | null
-          due_date?: string | null
-          id?: string
-          priority?: Database["public"]["Enums"]["task_priority"] | null
-          server_id: string
-          status?: Database["public"]["Enums"]["task_status"]
-          task_position?: number
-          title: string
-          updated_at?: string | null
-        }
-        Update: {
-          channel_id?: string
-          completed_at?: string | null
-          completed_by?: string | null
-          created_at?: string | null
-          created_by?: string
-          description?: string | null
-          due_date?: string | null
-          id?: string
-          priority?: Database["public"]["Enums"]["task_priority"] | null
-          server_id?: string
-          status?: Database["public"]["Enums"]["task_status"]
-          task_position?: number
-          title?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tasks_channel_id_fkey"
-            columns: ["channel_id"]
-            isOneToOne: false
-            referencedRelation: "channels"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_completed_by_fkey"
-            columns: ["completed_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_server_id_fkey"
-            columns: ["server_id"]
-            isOneToOne: false
-            referencedRelation: "servers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       thread_attachments: {
         Row: {
           file_name: string
@@ -1947,6 +1769,32 @@ export type Database = {
             columns: ["message_id"]
             isOneToOne: true
             referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_auth: {
+        Row: {
+          key_hash: string
+          last_key_reset_at: string | null
+          user_id: string
+        }
+        Insert: {
+          key_hash: string
+          last_key_reset_at?: string | null
+          user_id: string
+        }
+        Update: {
+          key_hash?: string
+          last_key_reset_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_auth_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -2355,8 +2203,6 @@ export type Database = {
           custom_status: string | null
           display_name: string | null
           id: string
-          key_hash: string
-          last_key_reset_at: string | null
           last_seen: string | null
           profile_effect: string | null
           profile_theme_accent: string | null
@@ -2375,8 +2221,6 @@ export type Database = {
           custom_status?: string | null
           display_name?: string | null
           id?: string
-          key_hash: string
-          last_key_reset_at?: string | null
           last_seen?: string | null
           profile_effect?: string | null
           profile_theme_accent?: string | null
@@ -2395,8 +2239,6 @@ export type Database = {
           custom_status?: string | null
           display_name?: string | null
           id?: string
-          key_hash?: string
-          last_key_reset_at?: string | null
           last_seen?: string | null
           profile_effect?: string | null
           profile_theme_accent?: string | null
@@ -2844,6 +2686,7 @@ export type Database = {
         Args: { _before?: string; _limit?: number; _thread_id: string }
         Returns: Json
       }
+      get_thread_summaries: { Args: { _thread_ids: string[] }; Returns: Json }
       get_user_by_id: { Args: { _user_id: string }; Returns: Json }
       get_user_dm_conversations: {
         Args: { _user_id: string }
@@ -2862,6 +2705,14 @@ export type Database = {
       get_user_server_tabs: { Args: { _user_id: string }; Returns: string[] }
       get_user_servers: { Args: { _user_id: string }; Returns: Json }
       get_user_voice_settings: { Args: { p_user_id: string }; Returns: Json }
+      has_channel_access: {
+        Args: { _channel_id: string; _user_id: string }
+        Returns: boolean
+      }
+      has_private_channel_access: {
+        Args: { _channel_id: string; _user_id: string }
+        Returns: boolean
+      }
       insert_announcement_comment: {
         Args: {
           _content: string
@@ -2900,12 +2751,28 @@ export type Database = {
         Args: { _mentions: Json; _user_id: string }
         Returns: undefined
       }
+      is_category_server_member: {
+        Args: { _category_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_channel_server_member: {
+        Args: { _channel_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_dm_message_participant: {
+        Args: { _message_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_dm_participant: {
         Args: { _conversation_id: string; _user_id: string }
         Returns: boolean
       }
       is_friend_with: {
         Args: { _other_user_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_member_in_same_server: {
+        Args: { _member_id: string; _user_id: string }
         Returns: boolean
       }
       is_server_member: {
@@ -2957,6 +2824,14 @@ export type Database = {
           _channel_id: string
           _last_read_at?: string
           _last_read_message_id: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      mark_channels_read: {
+        Args: {
+          _channel_ids: string[]
+          _last_read_at?: string
           _user_id: string
         }
         Returns: boolean
@@ -3070,9 +2945,11 @@ export type Database = {
         Args: { _device_id: number; _prekeys: Json; _user_id: string }
         Returns: number
       }
-      reset_user_secret_key:
-        | { Args: { _new_key_hash: string; _user_id: string }; Returns: Json }
-        | { Args: { _new_key_hash: string; _user_id: string }; Returns: Json }
+      requesting_user_id: { Args: never; Returns: string }
+      reset_user_secret_key: {
+        Args: { _new_key_hash: string; _user_id: string }
+        Returns: Json
+      }
       revoke_server_invite: {
         Args: { _invite_id: string; _user_id: string }
         Returns: boolean
@@ -3279,6 +3156,18 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      update_own_profile: {
+        Args: {
+          _avatar_url?: string
+          _banner_color?: string
+          _bio?: string
+          _custom_status?: string
+          _display_name?: string
+          _pronouns?: string
+          _status?: Database["public"]["Enums"]["user_status"]
+        }
+        Returns: undefined
       }
       update_server:
         | {

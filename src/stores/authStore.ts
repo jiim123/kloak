@@ -438,9 +438,9 @@ export const useAuthStore = create<AuthState>()(
             const inflight = statusInFlight.get(st);
             if (inflight) return;
 
-            const p = supabase
-              .rpc("update_user_status", { _user_id: uId, _status: st })
-              .then(() => undefined)
+            const p: Promise<void> = Promise.resolve(
+              supabase.rpc("update_user_status", { _user_id: uId, _status: st })
+            ).then(() => undefined)
               .finally(() => {
                 const cur = statusInFlight.get(st);
                 if (cur === p) statusInFlight.delete(st);
