@@ -49,6 +49,7 @@ export const useRealtimePolls = (channelId: string | null) => {
 
     // Close any expired polls when entering a channel (best-effort)
     const closeExpired = () => {
+      if (document.visibilityState !== "visible") return;
       usePollStore
         .getState()
         .closeExpiredPolls(channelId)

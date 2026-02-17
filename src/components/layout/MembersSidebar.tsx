@@ -114,6 +114,7 @@ export const MembersSidebar = () => {
   const currentServer = useServerStore((s) => s.currentServer);
   const roles = useServerStore((s) => s.roles);
   const isMembersLoading = useServerStore((s) => s.isMembersLoading);
+  const fetchMembers = useServerStore((s) => s.fetchMembers);
   const fetchRolePermissions = useServerStore((s) => s.fetchRolePermissions);
   const assignRoleToMember = useServerStore((s) => s.assignRoleToMember);
   const removeRoleFromMember = useServerStore((s) => s.removeRoleFromMember);
@@ -125,6 +126,14 @@ export const MembersSidebar = () => {
 
   // Subscribe to realtime member updates
   useRealtimeMembers(currentServer?.id || null);
+
+  // Lazy-load members only when the members UI is opened/visible.
+  useEffect(() => {
+    if (!currentServer?.id) return;
+    // Desktop: component only mounts when open; Mobile: always mounted, so gate on open state.
+    if (!isMemberSidebarOpen && isMobile) return;
+    fetchMembers(currentServer.id);
+  }, [currentServer?.id, isMemberSidebarOpen, isMobile, fetchMembers]);
 
   // Load permissions when server changes
   useEffect(() => {

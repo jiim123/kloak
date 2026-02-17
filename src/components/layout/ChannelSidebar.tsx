@@ -54,7 +54,7 @@ import { useServerStore } from "@/stores/serverStore";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { useVoicePresenceWatchers } from "@/hooks/useVoicePresenceWatchers";
 import { useUIStore } from "@/stores/uiStore";
-import { useUnread } from "@/hooks/useUnread";
+import { useUnreadChannelsContext } from "@/hooks/useUnreadChannelsContext";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { useChannelSettingsStore } from "@/stores/channelSettingsStore";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -669,7 +669,7 @@ export const ChannelSidebar = () => {
   const [isSortingMode, setIsSortingMode] = useState(false);
 
   const channelIds = useMemo(() => (channels || []).map((c) => c.id), [channels]);
-  const { getChannelUnread, markAsRead } = useUnread(channelIds);
+  const { getChannelUnread, markAsRead } = useUnreadChannelsContext();
 
   // Fetch per-user channel settings (mute, hide, pin) when channels change
   const { fetchSettings, isHidden, isPinned } = useChannelSettingsStore();

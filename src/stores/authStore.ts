@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import { supabase, setKeyHashHeader } from "@/integrations/supabase/client";
 import { generateSecretKey, hashSecretKey, isValidSecretKey } from "@/lib/crypto";
 import { authRateLimiter, accountCreationRateLimiter, validateUsername } from "@/lib/security";
+import { setUserInCache, invalidateUser } from "@/lib/userCache";
 import type { User, UserStatus } from "@/types";
 let lastSeenTimestamp = 0;
 const LAST_SEEN_INTERVAL = 60_000; // 60 seconds minimum between calls
@@ -10,6 +11,11 @@ const LAST_SEEN_INTERVAL = 60_000; // 60 seconds minimum between calls
 interface AuthState {
   user: User | null;
   secretKey: string | null;
+  /**
+   * Persisted SHA-256 hash of the secret key.
+   * Used to (re)apply the x-key-hash header immediately on refresh/HMR.
+   */
+  keyHash: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
@@ -45,6 +51,7 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       user: null,
       secretKey: null,
+      keyHash: null,
       isAuthenticated: false,
       isLoading: false,
       error: null,
@@ -52,7 +59,7 @@ export const useAuthStore = create<AuthState>()(
       manualStatus: null,
 
       setUser: (user) => set({ user, isAuthenticated: !!user }),
-      setSecretKey: (key) => set({ secretKey: key }),
+      setSecretKey: (key) => set({ secretKey: key, keyHash: null }),
       setLoading: (loading) => set({ isLoading: loading }),
       setError: (error) => set({ error }),
       setIsNewUser: (isNew) => set({ isNewUser: isNew }),
@@ -60,7 +67,7 @@ export const useAuthStore = create<AuthState>()(
       checkAuth: async () => {
         const { secretKey, login } = get();
         if (!secretKey || !isValidSecretKey(secretKey)) {
-          set({ isAuthenticated: false, user: null });
+          set({ isAuthenticated: false, user: null, keyHash: null });
           setKeyHashHeader(null);
           return false;
         }
@@ -68,11 +75,13 @@ export const useAuthStore = create<AuthState>()(
         // Set the key_hash header before login so RPCs can verify identity
         const keyHash = await hashSecretKey(secretKey);
         setKeyHashHeader(keyHash);
+        set({ keyHash });
 
         set({ isLoading: true });
         const success = await login(secretKey);
         if (!success) {
           setKeyHashHeader(null);
+          set({ keyHash: null });
         }
         set({ isLoading: false });
         return success;
@@ -149,7 +158,17 @@ export const useAuthStore = create<AuthState>()(
           // New account starts with no manual status override.
           const newKeyHash = await hashSecretKey(secretKey);
           setKeyHashHeader(newKeyHash);
-          set({ user, secretKey, isAuthenticated: true, isLoading: false, isNewUser: true, manualStatus: null });
+          set({
+            user,
+            secretKey,
+            keyHash: newKeyHash,
+            isAuthenticated: true,
+            isLoading: false,
+            isNewUser: true,
+            manualStatus: null,
+          });
+          // Seed user cache to avoid immediate redundant get_user_by_id calls (realtime / DMs).
+          setUserInCache(user.id, user);
 
           // Auto-join the default community server
           try {
@@ -191,6 +210,7 @@ export const useAuthStore = create<AuthState>()(
 
           // Set the key_hash header for identity verification on all subsequent requests
           setKeyHashHeader(keyHash);
+          set({ keyHash });
 
           // Use RPC function to login (bypasses RLS)
           const { data, error } = await supabase.rpc("login_user", {
@@ -199,7 +219,7 @@ export const useAuthStore = create<AuthState>()(
 
           if (error || !data) {
             setKeyHashHeader(null);
-            set({ error: "Invalid secret key", isLoading: false, isAuthenticated: false });
+            set({ error: "Invalid secret key", isLoading: false, isAuthenticated: false, keyHash: null });
             return false;
           }
 
@@ -224,6 +244,8 @@ export const useAuthStore = create<AuthState>()(
           };
 
           set({ user, secretKey, isAuthenticated: true, isLoading: false });
+          // Seed user cache to avoid redundant get_user_by_id calls (realtime / DMs).
+          setUserInCache(user.id, user);
 
           // Re-apply a persisted manual status (e.g. Invisible/DND) on login.
           const { manualStatus } = get();
@@ -248,9 +270,10 @@ export const useAuthStore = create<AuthState>()(
               _status: "offline",
             })
             .then(() => {});
+          invalidateUser(user.id);
         }
         setKeyHashHeader(null);
-        set({ user: null, secretKey: null, isAuthenticated: false, error: null });
+        set({ user: null, secretKey: null, keyHash: null, isAuthenticated: false, error: null });
       },
 
       updateUser: async (updates) => {
@@ -324,8 +347,11 @@ export const useAuthStore = create<AuthState>()(
             };
 
             set({ user: updatedUser });
+            setUserInCache(updatedUser.id, updatedUser as any);
           } else {
-            set({ user: { ...user, ...normalizedUpdates } });
+            const updatedUser = { ...user, ...normalizedUpdates };
+            set({ user: updatedUser });
+            setUserInCache(updatedUser.id, updatedUser as any);
           }
         } catch (error) {
           console.error("Failed to update user:", error);
@@ -417,7 +443,8 @@ export const useAuthStore = create<AuthState>()(
           }
 
           // Update local state with the new key
-          set({ secretKey: newSecretKey });
+          setKeyHashHeader(newKeyHash);
+          set({ secretKey: newSecretKey, keyHash: newKeyHash });
 
           return { newSecretKey };
         } catch (error) {
@@ -428,7 +455,16 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "kloak-auth",
-      partialize: (state) => ({ secretKey: state.secretKey, manualStatus: state.manualStatus }),
+      partialize: (state) => ({ secretKey: state.secretKey, keyHash: state.keyHash, manualStatus: state.manualStatus }),
+      onRehydrateStorage: () => (state) => {
+        // Ensure x-key-hash header is applied ASAP after hydration.
+        // This prevents secured RPCs from failing with identity mismatch after refresh/HMR.
+        try {
+          setKeyHashHeader(state?.keyHash ?? null);
+        } catch {
+          // ignore
+        }
+      },
     },
   ),
 );

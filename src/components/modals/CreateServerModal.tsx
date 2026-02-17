@@ -82,7 +82,7 @@ export const CreateServerModal = () => {
 
     try {
       const result = await secureUpload("server-icons", filePath, file, { upsert: true });
-      return `${result.publicUrl}?v=${Date.now()}`;
+      return result.publicUrl;
     } catch (err) {
       console.error("Failed to upload icon:", err);
       return null;

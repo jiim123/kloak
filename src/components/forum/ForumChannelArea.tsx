@@ -116,6 +116,7 @@ export const ForumChannelArea = () => {
   });
 
   const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
+  const fetchThreadsInFlightRef = useRef<Promise<void> | null>(null);
 
   // Load server emojis for custom emoji rendering
   useEffect(() => {
@@ -161,69 +162,60 @@ export const ForumChannelArea = () => {
 
   const fetchThreads = useCallback(async () => {
     if (!currentChannel) return;
+    if (fetchThreadsInFlightRef.current) return fetchThreadsInFlightRef.current;
 
-    setIsLoading(true);
-    try {
-      // Fetch all threads for this channel
-      const { data: threadsData, error: threadsError } = await supabase
-        .from("threads")
-        .select("*")
-        .eq("channel_id", currentChannel.id)
-        .order("created_at", { ascending: false });
+    const inFlight = (async () => {
+      setIsLoading(true);
+      try {
+        // Fetch all threads for this channel
+        const { data: threadsData, error: threadsError } = await supabase
+          .from("threads")
+          .select("*")
+          .eq("channel_id", currentChannel.id)
+          .order("created_at", { ascending: false });
 
-      if (threadsError) throw threadsError;
+        if (threadsError) throw threadsError;
 
-      // Fetch the original messages for each thread
-      const messageIds = (threadsData || []).map((t) => t.message_id);
-      if (messageIds.length === 0) {
-        setThreads([]);
-        setIsLoading(false);
-        return;
-      }
+        const threadIds = (threadsData || []).map((t) => t.id);
+        const messageIds = (threadsData || []).map((t) => t.message_id);
 
-      const { data: messagesData, error: messagesError } = await supabase
-        .from("messages")
-        .select(`
-          *,
-          user:users (*),
-          attachments:message_attachments (*),
-          reactions (*)
-        `)
-        .in("id", messageIds);
+        if (messageIds.length === 0) {
+          setThreads([]);
+          return;
+        }
 
-      if (messagesError) throw messagesError;
+        // Fetch the original messages for each thread (single query)
+        const { data: messagesData, error: messagesError } = await supabase
+          .from("messages")
+          .select(
+            `
+            *,
+            user:users (*),
+            attachments:message_attachments (*),
+            reactions (*)
+          `
+          )
+          .in("id", messageIds);
 
-      // Get message counts and last activity for each thread
-      const threadsWithInfo: Thread[] = await Promise.all(
-        (threadsData || []).map(async (thread) => {
-          const rawMessage = (messagesData || []).find((m) => m.id === thread.message_id);
-          
-          // Get thread message count
-          const { data: countData } = await supabase.rpc("get_thread_message_count", {
-            _message_id: thread.message_id,
-          });
+        if (messagesError) throw messagesError;
 
-          // Get last thread message for activity
-          const { data: lastMessagesData } = await supabase.rpc("get_thread_messages", {
-            _thread_id: thread.id,
-            _limit: 1,
-          });
+        // Batch fetch message_count + last_activity + last_message_author for ALL threads (single RPC)
+        const { data: summaryData, error: summaryError } = await (supabase.rpc as any)("get_thread_summaries", {
+          _thread_ids: threadIds,
+        });
+        if (summaryError) throw summaryError;
 
-          let lastActivity = thread.created_at;
-          let lastMessageAuthor: User | undefined;
-
-          if (lastMessagesData) {
-            // Parse JSON array if it's a string, otherwise use as-is
-            const lastMessages = typeof lastMessagesData === 'string' ? JSON.parse(lastMessagesData) : lastMessagesData;
-            
-            if (Array.isArray(lastMessages) && lastMessages.length > 0) {
-              const lastMsg = lastMessages[0] as any;
-              lastActivity = lastMsg.created_at;
-              if (lastMsg.user) {
-                lastMessageAuthor = lastMsg.user;
-              }
-            }
+        const summaries = typeof summaryData === "string" ? JSON.parse(summaryData) : summaryData;
+        const summaryByThreadId = new Map<string, any>();
+        if (Array.isArray(summaries)) {
+          for (const s of summaries) {
+            if (s?.thread_id) summaryByThreadId.set(s.thread_id, s);
           }
+        }
+
+        const threadsWithInfo: Thread[] = (threadsData || []).map((thread) => {
+          const rawMessage = (messagesData || []).find((m) => m.id === thread.message_id);
+          const summary = summaryByThreadId.get(thread.id);
 
           // Transform raw reactions to ReactionGroup format
           let reactions: ReactionGroup[] = [];
@@ -247,29 +239,40 @@ export const ForumChannelArea = () => {
           }
 
           // Build the message with properly typed reactions
-          const message: Message | undefined = rawMessage ? {
-            ...rawMessage,
-            is_pinned: rawMessage.is_pinned ?? false,
-            reactions,
-          } as Message : undefined;
+          const message: Message | undefined = rawMessage
+            ? ({
+                ...rawMessage,
+                is_pinned: rawMessage.is_pinned ?? false,
+                reactions,
+              } as Message)
+            : undefined;
 
           return {
             ...thread,
             message: message as Message,
-            message_count: countData || 0,
-            last_activity: lastActivity,
-            last_message_author: lastMessageAuthor,
+            message_count: summary?.message_count ?? 0,
+            last_activity: summary?.last_activity ?? thread.created_at,
+            last_message_author: summary?.last_message_author ?? undefined,
           };
-        })
-      );
+        });
 
-      setThreads(threadsWithInfo);
-    } catch (error) {
-      handleError(error, "Failed to fetch threads");
+        setThreads(threadsWithInfo);
+      } catch (error) {
+        handleError(error, "Failed to fetch threads");
+      } finally {
+        setIsLoading(false);
+      }
+    })();
+
+    fetchThreadsInFlightRef.current = inFlight;
+    try {
+      await inFlight;
     } finally {
-      setIsLoading(false);
+      if (fetchThreadsInFlightRef.current === inFlight) {
+        fetchThreadsInFlightRef.current = null;
+      }
     }
-  }, [currentChannel]);
+  }, [currentChannel, user?.id]);
 
   useEffect(() => {
     fetchThreads();

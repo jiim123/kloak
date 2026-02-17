@@ -8,7 +8,7 @@ import { CustomEmojiPopover } from './CustomEmojiPopover';
 import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
 import { fetchServerEmojis } from '@/lib/serverEmojis';
-import { getGlobalEmojiMap, getGlobalEmojiDuplicates, resolveQualifiedEmoji, resolveEmojiByNameFallback, type ResolvedEmoji } from '@/lib/globalEmojiResolver';
+import { getGlobalEmojiMap, getGlobalEmojiDuplicates, resolveQualifiedEmoji, resolveEmojisByNameFallback, type ResolvedEmoji } from '@/lib/globalEmojiResolver';
 
 interface UserInfo {
   id: string;
@@ -404,10 +404,12 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
     let cancelled = false;
 
     (async () => {
+      const names = Array.from(toResolve.keys());
+      const resolved = await resolveEmojisByNameFallback(names);
       for (const [name, nodes] of toResolve) {
         if (cancelled) return;
-        const url = await resolveEmojiByNameFallback(name);
-        if (cancelled || !url) continue;
+        const url = resolved.get(name);
+        if (!url) continue;
 
         for (const textNode of nodes) {
           if (!textNode.parentNode) continue;

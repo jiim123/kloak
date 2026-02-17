@@ -37,7 +37,7 @@ import { EmojiPicker } from "@/components/modals/EmojiPicker";
 import type { CustomServerRole, Message, ServerRole } from "@/types";
 import { format } from "date-fns";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
-import { getGlobalEmojiMap, resolveQualifiedEmoji, resolveEmojiByNameFallback, type ResolvedEmoji } from "@/lib/globalEmojiResolver";
+import { getGlobalEmojiMap, resolveEmojisByNameFallback, resolveQualifiedEmoji, type ResolvedEmoji } from "@/lib/globalEmojiResolver";
 import { cn } from "@/lib/utils";
 import { getPollIdFromContent, isPollMessageContent } from "@/lib/poll";
 
@@ -294,21 +294,36 @@ export const MessageItem = memo(function MessageItem({
     [customEmojiMap, globalEmojiMap],
   );
 
-  // Fallback emoji component for emojis from servers the user isn't in
-  const FallbackEmojiImg = memo(({ emoji, className }: { emoji: string; className: string }) => {
-    const [url, setUrl] = useState<string | null>(null);
-    const nameMatch = emoji.match(/^:([a-z0-9_]{2,32}):$/i);
-    useEffect(() => {
-      if (!nameMatch) return;
-      let cancelled = false;
-      resolveEmojiByNameFallback(nameMatch[1]).then((u) => {
-        if (!cancelled && u) setUrl(u);
-      });
-      return () => { cancelled = true; };
-    }, [emoji]);
-    if (url) return <img src={url} alt={emoji} className={`${className} object-contain`} loading="lazy" />;
-    return <span className="text-sm leading-none text-muted-foreground">{emoji}</span>;
-  });
+  // Prefetch fallback emoji URLs in one batched request per message render.
+  const [fallbackEmojiUrls, setFallbackEmojiUrls] = useState<Map<string, string | null>>(new Map());
+  useEffect(() => {
+    const reactions = message.reactions ?? [];
+    if (reactions.length === 0) return;
+    const names = new Set<string>();
+    for (const r of reactions) {
+      const emoji = r.emoji;
+      const m = emoji.match(/^:([a-z0-9_]{2,32}):$/i);
+      if (!m) continue;
+      // Skip anything we can already resolve locally.
+      if (resolveCustomEmojiUrl(emoji)) continue;
+      names.add(m[1]);
+    }
+    if (names.size === 0) return;
+    let cancelled = false;
+    resolveEmojisByNameFallback(Array.from(names))
+      .then((map) => {
+        if (cancelled) return;
+        setFallbackEmojiUrls((prev) => {
+          const next = new Map(prev);
+          for (const [k, v] of map) next.set(k, v);
+          return next;
+        });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [message.reactions, resolveCustomEmojiUrl]);
 
   const reactionEmojiNode = useCallback(
     (emoji: string) => {
@@ -318,11 +333,16 @@ export const MessageItem = memo(function MessageItem({
       }
       // Check if it looks like a custom emoji that we can't resolve locally
       if (/^:[a-z0-9_]{2,32}:$/i.test(emoji)) {
-        return <FallbackEmojiImg emoji={emoji} className="w-6 h-6" />;
+        const m = emoji.match(/^:([a-z0-9_]{2,32}):$/i);
+        const fallbackUrl = m ? fallbackEmojiUrls.get(m[1]) : null;
+        if (fallbackUrl) {
+          return <img src={fallbackUrl} alt={emoji} className="w-6 h-6 object-contain" loading="lazy" />;
+        }
+        return <span className="text-sm leading-none text-muted-foreground">{emoji}</span>;
       }
       return <span className="text-xl leading-none font-emoji">{emoji}</span>;
     },
-    [resolveCustomEmojiUrl],
+    [fallbackEmojiUrls, resolveCustomEmojiUrl],
   );
 
   const reactionEmojiNodeLarge = useCallback(
@@ -332,11 +352,16 @@ export const MessageItem = memo(function MessageItem({
         return <img src={url} alt={emoji} className="w-8 h-8 object-contain" loading="lazy" />;
       }
       if (/^:[a-z0-9_]{2,32}:$/i.test(emoji)) {
-        return <FallbackEmojiImg emoji={emoji} className="w-8 h-8" />;
+        const m = emoji.match(/^:([a-z0-9_]{2,32}):$/i);
+        const fallbackUrl = m ? fallbackEmojiUrls.get(m[1]) : null;
+        if (fallbackUrl) {
+          return <img src={fallbackUrl} alt={emoji} className="w-8 h-8 object-contain" loading="lazy" />;
+        }
+        return <span className="text-sm leading-none text-muted-foreground">{emoji}</span>;
       }
       return <span className="text-2xl leading-none font-emoji">{emoji}</span>;
     },
-    [resolveCustomEmojiUrl],
+    [fallbackEmojiUrls, resolveCustomEmojiUrl],
   );
 
   const memberNameById = useMemo(() => {

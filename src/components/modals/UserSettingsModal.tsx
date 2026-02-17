@@ -286,10 +286,8 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       const filePath = `${user.id}/avatar-${Date.now()}.${fileExt}`;
 
       const { publicUrl } = await secureUpload("avatars", filePath, file, { upsert: true });
-
-      const cacheBustedUrl = `${publicUrl}?v=${Date.now()}`;
-      setLocalAvatarUrl(cacheBustedUrl);
-      await updateUser({ avatar_url: cacheBustedUrl });
+      setLocalAvatarUrl(publicUrl);
+      await updateUser({ avatar_url: publicUrl });
       toast.success("Avatar updated!");
     } catch (error) {
       console.error("Upload error:", error);
@@ -321,10 +319,8 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       const filePath = `${user.id}/banner-${Date.now()}.${fileExt}`;
 
       const { publicUrl } = await secureUpload("avatars", filePath, file, { upsert: true });
-
-      const cacheBustedUrl = `${publicUrl}?v=${Date.now()}`;
-      setLocalBannerUrl(cacheBustedUrl);
-      await updateUser({ banner_url: cacheBustedUrl });
+      setLocalBannerUrl(publicUrl);
+      await updateUser({ banner_url: publicUrl });
       toast.success("Banner updated!");
     } catch (error) {
       console.error("Banner upload error:", error);

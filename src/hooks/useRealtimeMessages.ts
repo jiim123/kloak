@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useMessageStore } from '@/stores/messageStore';
 import { useFriendStore } from '@/stores/friendStore';
+import { useAuthStore } from '@/stores/authStore';
 import { useConnectionStatus } from './useConnectionStatus';
 import type { Message } from '@/types';
 import { getOrFetchUser } from '@/lib/userCache';
@@ -81,8 +82,10 @@ export const useRealtimeMessages = (channelId: string | null) => {
                   return;
                 }
                 
-                // Get user from centralized cache or fetch
-                const user = await getOrFetchUser(newMsg.user_id);
+                // Avoid redundant self lookups on messages we just sent.
+                const localUser = useAuthStore.getState().user;
+                const user =
+                  localUser?.id === newMsg.user_id ? localUser : await getOrFetchUser(newMsg.user_id);
                 if (!user) {
                   return;
                 }

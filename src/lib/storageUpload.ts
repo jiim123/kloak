@@ -17,7 +17,7 @@ export async function secureUpload(
   bucket: string,
   path: string,
   file: File | Blob,
-  options?: { contentType?: string; upsert?: boolean },
+  options?: { contentType?: string; upsert?: boolean; cacheControl?: string },
 ): Promise<{ publicUrl: string; path: string }> {
   const keyHash = requireKeyHash();
 
@@ -27,6 +27,9 @@ export async function secureUpload(
   formData.append("path", path);
   formData.append("contentType", options?.contentType || "image/webp");
   formData.append("upsert", options?.upsert ? "true" : "false");
+  if (options?.cacheControl) {
+    formData.append("cacheControl", options.cacheControl);
+  }
 
   const res = await fetch(STORAGE_FUNCTION_URL, {
     method: "POST",

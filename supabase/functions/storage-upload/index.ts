@@ -73,6 +73,32 @@ async function checkPermission(
   }
 }
 
+function defaultCacheControlSeconds(bucket: string): string {
+  // These assets are stored with unique paths (timestamp/uuid in filename),
+  // so we can safely tell browsers/CDNs to cache aggressively.
+  switch (bucket) {
+    case "avatars":
+    case "server-icons":
+    case "server-emojis":
+      return "31536000"; // 1 year
+    case "attachments":
+      return "604800"; // 7 days
+    default:
+      return "3600"; // 1 hour fallback
+  }
+}
+
+function normalizeCacheControlSeconds(raw: unknown, fallbackBucket: string): string {
+  const fallback = defaultCacheControlSeconds(fallbackBucket);
+  if (typeof raw !== "string") return fallback;
+  const trimmed = raw.trim();
+  // Supabase expects cacheControl as seconds (string number).
+  if (!/^\d{1,10}$/.test(trimmed)) return fallback;
+  // Clamp to 1 year max
+  const n = Math.min(parseInt(trimmed, 10), 31_536_000);
+  return String(n);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -160,6 +186,7 @@ Deno.serve(async (req) => {
       const path = formData.get("path") as string;
       const fileContentType = (formData.get("contentType") as string) || "image/webp";
       const upsert = formData.get("upsert") === "true";
+      const cacheControl = normalizeCacheControlSeconds(formData.get("cacheControl"), bucket);
 
       if (!file || !bucket || !path) {
         return jsonResponse({ error: "Missing file, bucket, or path" }, 400);
@@ -170,7 +197,7 @@ Deno.serve(async (req) => {
 
       const { data, error: uploadError } = await supabase.storage
         .from(bucket)
-        .upload(path, file, { contentType: fileContentType, upsert });
+        .upload(path, file, { contentType: fileContentType, upsert, cacheControl });
 
       if (uploadError) {
         return jsonResponse({ error: uploadError.message }, 500);

@@ -307,14 +307,28 @@ export const useUnread = (serverChannelIds: string[] = []) => {
   useEffect(() => {
     let lastRefetchTime = 0;
     const REFETCH_COOLDOWN_MS = 5000; // Don't refetch more than once per 5 seconds
+    const MIN_HIDDEN_MS_FOR_REFETCH = 15_000; // skip refetch for quick tab switches
+    let hiddenAt: number | null = null;
 
     const handleVisibility = () => {
-      if (document.visibilityState !== 'visible') return;
-      
+      if (document.visibilityState === "hidden") {
+        hiddenAt = Date.now();
+        return;
+      }
+
+      if (document.visibilityState !== "visible") return;
+
+      // If the tab was only hidden briefly, don't refetch.
+      if (hiddenAt) {
+        const hiddenFor = Date.now() - hiddenAt;
+        hiddenAt = null;
+        if (hiddenFor > 0 && hiddenFor < MIN_HIDDEN_MS_FOR_REFETCH) return;
+      }
+
       const now = Date.now();
       if (now - lastRefetchTime < REFETCH_COOLDOWN_MS) return;
       lastRefetchTime = now;
-      
+
       fetchUnreadCounts({ force: true });
     };
 

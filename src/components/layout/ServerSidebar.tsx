@@ -10,8 +10,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useUIStore } from "@/stores/uiStore";
-import { useUnread } from "@/hooks/useUnread";
-import { useUnreadDMs } from "@/hooks/useUnreadDMs";
+import { useUnreadDMsContext } from "@/hooks/useUnreadDMsContext";
+import { useUnreadChannelsContext } from "@/hooks/useUnreadChannelsContext";
 import { useDMStore } from "@/stores/dmStore";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -462,7 +462,7 @@ export const ServerSidebar = () => {
   const { servers, currentServer, setCurrentServer, isLoading, fetchServers, leaveServer, toggleServerMute } = useServerStore();
   const { setCurrentConversation } = useDMStore();
   const { openModal, activeModal, closeModal, closeServerSettings, openServerSettings } = useUIStore();
-  const [serverChannels, setServerChannels] = useState<ServerChannels>({});
+  const { serverChannels, getServerUnreadInfo, markServerAsRead } = useUnreadChannelsContext();
   const [hoveredServer, setHoveredServer] = useState<string | null>(null);
   const [tooltipsEnabled, setTooltipsEnabled] = useState(false);
   const [folderState, setFolderState] = useState<ServerFolderState>(() => loadServerFoldersState());
@@ -616,34 +616,7 @@ export const ServerSidebar = () => {
     });
   }, [servers]);
 
-  useEffect(() => {
-    const fetchAllChannels = async () => {
-      if (servers.length === 0) return;
-
-      const serverIds = servers.map((s) => s.id);
-      const { data: channels } = await supabase.from("channels").select("id, server_id").in("server_id", serverIds);
-
-      if (channels) {
-        const channelsByServer: ServerChannels = {};
-        channels.forEach((ch: { id: string; server_id: string }) => {
-          if (!channelsByServer[ch.server_id]) {
-            channelsByServer[ch.server_id] = [];
-          }
-          channelsByServer[ch.server_id].push(ch.id);
-        });
-        setServerChannels(channelsByServer);
-      }
-    };
-
-    fetchAllChannels();
-  }, [servers]);
-
-  const allChannelIds = useMemo(() => {
-    return Object.values(serverChannels).flat();
-  }, [serverChannels]);
-
-  const { getServerUnreadInfo, markServerAsRead } = useUnread(allChannelIds);
-  const { totalUnread: totalDMUnread, hasUnread: hasDMUnread } = useUnreadDMs(user?.id || null);
+  const { totalUnread: totalDMUnread, hasUnread: hasDMUnread } = useUnreadDMsContext();
 
   const getServerInitials = (name: string) => {
     return name

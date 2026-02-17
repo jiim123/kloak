@@ -1,6 +1,7 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useDMStore } from '@/stores/dmStore';
+import { useAuthStore } from '@/stores/authStore';
 import type { DirectMessage, ReactionGroup } from '@/types';
 import { useRealtimeUserUpdates } from './useRealtimeUserUpdates';
 import { getOrFetchUser } from '@/lib/userCache';
@@ -50,8 +51,10 @@ export const useRealtimeDMs = ({
       const newMsg = payload.new;
       if (!newMsg) return;
 
-      // Use centralized user cache for sender info
-      const sender = await getOrFetchUser(newMsg.sender_id);
+      // Avoid redundant self lookups on messages we just sent.
+      const localUser = useAuthStore.getState().user;
+      const sender =
+        localUser?.id === newMsg.sender_id ? localUser : await getOrFetchUser(newMsg.sender_id);
       if (!sender) return;
 
       // Check local cache for reply-to

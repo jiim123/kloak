@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
 import { inviteCodeRateLimiter } from '@/lib/security';
 import { saveLastChannel, getLastChannel } from '@/lib/storage';
-import { bulkSetUsersInCache } from '@/lib/userCache';
+import { bulkSetUsersInCache, deduplicatedFetch } from '@/lib/userCache';
 import { useAuthStore } from './authStore';
 import { useFriendStore } from './friendStore';
 import type {
@@ -28,6 +28,8 @@ interface ServerState {
   channels: Channel[];
   members: ServerMember[];
   isMembersLoading: boolean;
+  /** Which server the current `members` list belongs to (even if empty after a failed fetch). */
+  membersServerId: string | null;
   isLoading: boolean;
   error: string | null;
 
@@ -111,6 +113,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
   channels: [],
   members: [],
   isMembersLoading: false,
+  membersServerId: null,
   roles: [],
   rolePermissions: [],
   channelPermissions: [],
@@ -120,12 +123,13 @@ export const useServerStore = create<ServerState>((set, get) => ({
   error: null,
 
   fetchServers: async (userId: string) => {
-    set({ isLoading: true });
-    try {
-      // Use RPC function to bypass RLS (app uses custom auth, not Supabase Auth)
-      const { data, error } = await supabase.rpc('get_user_servers', { _user_id: userId });
+    return deduplicatedFetch(`serverStore:fetchServers:${userId}`, async () => {
+      set({ isLoading: true });
+      try {
+        // Use RPC function to bypass RLS (app uses custom auth, not Supabase Auth)
+        const { data, error } = await supabase.rpc('get_user_servers', { _user_id: userId });
 
-      if (error) throw error;
+        if (error) throw error;
 
       // Cast the JSON result to array
       const serverData = (data || []) as unknown as Array<{
@@ -186,6 +190,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
             channels: [],
             categories: [],
             members: [],
+            membersServerId: null,
             isLoading: false 
           });
           return;
@@ -211,13 +216,14 @@ export const useServerStore = create<ServerState>((set, get) => ({
           localStorage.removeItem('kloak-current-channel-id');
           set({ servers, isLoading: false });
         }
-      } else {
-        set({ servers, isLoading: false });
+        } else {
+          set({ servers, isLoading: false });
+        }
+      } catch (error) {
+        console.error('Failed to fetch servers:', error);
+        set({ error: 'Failed to load servers', isLoading: false });
       }
-    } catch (error) {
-      console.error('Failed to fetch servers:', error);
-      set({ error: 'Failed to load servers', isLoading: false });
-    }
+    });
   },
 
   createServer: async (name: string, ownerId: string) => {
@@ -503,6 +509,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         channels: [],
         categories: [],
         members: [],
+        membersServerId: null,
       }));
     } catch (error) {
       console.error('Failed to delete server:', error);
@@ -536,6 +543,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         channels: [],
         categories: [],
         members: [],
+        membersServerId: null,
         isMembersLoading: true,
       });
     } else {
@@ -559,62 +567,65 @@ export const useServerStore = create<ServerState>((set, get) => ({
   },
 
   fetchChannels: async (serverId: string) => {
-    try {
-      // Get current user ID for private channel filtering
-      const userId = useAuthStore.getState().user?.id;
-      
-      // Use RPC functions to bypass RLS
-      const [categoriesResult, channelsResult] = await Promise.all([
-        supabase.rpc('get_server_categories', { _server_id: serverId, _user_id: userId }),
-        supabase.rpc('get_server_channels', { _server_id: serverId, _user_id: userId }),
-      ]);
+    const uid = useAuthStore.getState().user?.id ?? 'anon';
+    return deduplicatedFetch(`serverStore:fetchChannels:${serverId}:${uid}`, async () => {
+      try {
+        // Get current user ID for private channel filtering
+        const userId = useAuthStore.getState().user?.id;
 
-      if (categoriesResult.error) throw categoriesResult.error;
-      if (channelsResult.error) throw channelsResult.error;
+        // Use RPC functions to bypass RLS
+        const [categoriesResult, channelsResult] = await Promise.all([
+          supabase.rpc('get_server_categories', { _server_id: serverId, _user_id: userId }),
+          supabase.rpc('get_server_channels', { _server_id: serverId, _user_id: userId }),
+        ]);
 
-      const categories = (categoriesResult.data || []) as unknown as ChannelCategory[];
-      const channels = (channelsResult.data || []) as unknown as Channel[];
+        if (categoriesResult.error) throw categoriesResult.error;
+        if (channelsResult.error) throw channelsResult.error;
 
-      set({
-        categories,
-        channels,
-      });
+        const categories = (categoriesResult.data || []) as unknown as ChannelCategory[];
+        const channels = (channelsResult.data || []) as unknown as Channel[];
 
-      // Also fetch roles when fetching channels
-      await get().fetchRoles(serverId);
+        set({
+          categories,
+          channels,
+        });
 
-      // Try to restore the last visited channel for this specific server
-      const { currentChannel } = get();
-      const lastChannelForServer = getLastChannel(serverId);
-      const persistedChannelId = localStorage.getItem('kloak-current-channel-id');
+        // Also fetch roles when fetching channels
+        await get().fetchRoles(serverId);
 
-      // Restore channel priority: 
-      // 1. Last channel for this specific server
-      // 2. Global persisted channel (if it belongs to this server)
-      // 3. First channel in the server
-      if (channels.length > 0) {
-        const lastChannel = lastChannelForServer
-          ? channels.find(c => c.id === lastChannelForServer)
-          : null;
-        const restoredChannel = lastChannel || (persistedChannelId
-          ? channels.find(c => c.id === persistedChannelId)
-          : null);
+        // Try to restore the last visited channel for this specific server
+        const { currentChannel } = get();
+        const lastChannelForServer = getLastChannel(serverId);
+        const persistedChannelId = localStorage.getItem('kloak-current-channel-id');
 
-        // If current channel is valid for this server, keep it
-        const currentIsValid = currentChannel && channels.find(c => c.id === currentChannel.id);
+        // Restore channel priority: 
+        // 1. Last channel for this specific server
+        // 2. Global persisted channel (if it belongs to this server)
+        // 3. First channel in the server
+        if (channels.length > 0) {
+          const lastChannel = lastChannelForServer
+            ? channels.find(c => c.id === lastChannelForServer)
+            : null;
+          const restoredChannel = lastChannel || (persistedChannelId
+            ? channels.find(c => c.id === persistedChannelId)
+            : null);
 
-        if (restoredChannel) {
-          set({ currentChannel: restoredChannel });
-        } else if (!currentIsValid) {
-          set({ currentChannel: channels[0] });
+          // If current channel is valid for this server, keep it
+          const currentIsValid = currentChannel && channels.find(c => c.id === currentChannel.id);
+
+          if (restoredChannel) {
+            set({ currentChannel: restoredChannel });
+          } else if (!currentIsValid) {
+            set({ currentChannel: channels[0] });
+          }
+        } else {
+          // No channels in this server
+          set({ currentChannel: null });
         }
-      } else {
-        // No channels in this server
-        set({ currentChannel: null });
+      } catch (error) {
+        console.error('Failed to fetch channels:', error);
       }
-    } catch (error) {
-      console.error('Failed to fetch channels:', error);
-    }
+    });
   },
 
   createCategory: async (serverId: string, name: string, userId: string) => {
@@ -1015,16 +1026,17 @@ export const useServerStore = create<ServerState>((set, get) => ({
   },
 
   fetchMembers: async (serverId: string) => {
-    set({ isMembersLoading: true });
-    try {
-      // Fetch roles first if not already loaded
-      const { roles: currentRoles } = get();
-      if (currentRoles.length === 0 || currentRoles[0]?.server_id !== serverId) {
-        await get().fetchRoles(serverId);
-      }
+    return deduplicatedFetch(`serverStore:fetchMembers:${serverId}`, async () => {
+      set({ isMembersLoading: true, membersServerId: serverId });
+      try {
+        // Fetch roles first if not already loaded
+        const { roles: currentRoles } = get();
+        if (currentRoles.length === 0 || currentRoles[0]?.server_id !== serverId) {
+          await get().fetchRoles(serverId);
+        }
 
-      // Use RPC function to bypass RLS
-      const { data, error } = await supabase.rpc('get_server_members', { _server_id: serverId });
+        // Use RPC function to bypass RLS
+        const { data, error } = await supabase.rpc('get_server_members', { _server_id: serverId });
 
       if (error) {
         console.error('get_server_members RPC error:', error);
@@ -1109,12 +1121,13 @@ export const useServerStore = create<ServerState>((set, get) => ({
         bulkSetUsersInCache(memberUsers as any);
       }
 
-      set({ members, isMembersLoading: false });
-    } catch (error) {
-      console.error('Failed to fetch members:', error);
-      // Set empty array on error to prevent stale data
-      set({ members: [], isMembersLoading: false });
-    }
+        set({ members, isMembersLoading: false, membersServerId: serverId });
+      } catch (error) {
+        console.error('Failed to fetch members:', error);
+        // Set empty array on error to prevent stale data
+        set({ members: [], isMembersLoading: false, membersServerId: serverId });
+      }
+    });
   },
 
   updateMember: async (memberId: string, updates: Partial<ServerMember>) => {
@@ -1223,21 +1236,23 @@ export const useServerStore = create<ServerState>((set, get) => ({
   },
 
   fetchRoles: async (serverId: string) => {
-    try {
-      // OPTIMIZATION: Specify only required columns instead of select('*')
-      const { data, error } = await supabase
-        .from('server_roles')
-        .select('id, server_id, name, color, icon, position, created_at')
-        .eq('server_id', serverId)
-        .order('position', { ascending: true });
+    return deduplicatedFetch(`serverStore:fetchRoles:${serverId}`, async () => {
+      try {
+        // OPTIMIZATION: Specify only required columns instead of select('*')
+        const { data, error } = await supabase
+          .from('server_roles')
+          .select('id, server_id, name, color, icon, position, created_at')
+          .eq('server_id', serverId)
+          .order('position', { ascending: true });
 
-      if (error) throw error;
+        if (error) throw error;
 
-      const roles = (data || []) as unknown as CustomServerRole[];
-      set({ roles });
-    } catch (error) {
-      console.error('Failed to fetch roles:', error);
-    }
+        const roles = (data || []) as unknown as CustomServerRole[];
+        set({ roles });
+      } catch (error) {
+        console.error('Failed to fetch roles:', error);
+      }
+    });
   },
 
   createRole: async (serverId: string, userId: string, name: string, color: string, icon?: string | null) => {
@@ -1417,33 +1432,35 @@ export const useServerStore = create<ServerState>((set, get) => ({
   },
 
   fetchRolePermissions: async (serverId: string) => {
-    try {
-      // OPTIMIZATION: Specify only required columns instead of select('*')
-      const { data, error } = await supabase
-        .from('role_permissions')
-        .select('id, server_id, role_id, role_name, permission, allowed, created_at')
-        .eq('server_id', serverId);
+    return deduplicatedFetch(`serverStore:fetchRolePermissions:${serverId}`, async () => {
+      try {
+        // OPTIMIZATION: Specify only required columns instead of select('*')
+        const { data, error } = await supabase
+          .from('role_permissions')
+          .select('id, server_id, role_id, role_name, permission, allowed, created_at')
+          .eq('server_id', serverId);
 
-      if (error) {
-        console.error('Query error:', error);
+        if (error) {
+          console.error('Query error:', error);
+          throw error;
+        }
+
+        const permissions: RolePermission[] = (data ?? []).map((row) => ({
+          id: row.id,
+          server_id: row.server_id,
+          role_id: row.role_id,
+          role_name: row.role_name as ServerRole | null,
+          permission: row.permission as Permission,
+          allowed: row.allowed,
+          created_at: row.created_at ?? '',
+        }));
+
+        set({ rolePermissions: permissions });
+      } catch (error) {
+        console.error('Failed to fetch role permissions:', error);
         throw error;
       }
-
-      const permissions: RolePermission[] = (data ?? []).map((row) => ({
-        id: row.id,
-        server_id: row.server_id,
-        role_id: row.role_id,
-        role_name: row.role_name as ServerRole | null,
-        permission: row.permission as Permission,
-        allowed: row.allowed,
-        created_at: row.created_at ?? '',
-      }));
-
-      set({ rolePermissions: permissions });
-    } catch (error) {
-      console.error('Failed to fetch role permissions:', error);
-      throw error;
-    }
+    });
   },
 
   fetchChannelPermissions: async (channelId: string) => {
@@ -1805,6 +1822,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
       categories: [],
       channels: [],
       members: [],
+      membersServerId: null,
       roles: [],
     }),
 }));

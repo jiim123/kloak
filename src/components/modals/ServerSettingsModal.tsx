@@ -974,9 +974,8 @@ export const ServerSettingsModal = () => {
       const uploadedUrl = await uploadIcon(server.id, file);
       if (!uploadedUrl) throw new Error("Upload returned null");
 
-      const cacheBustedUrl = `${uploadedUrl}?t=${Date.now()}`;
-      await updateServer(server.id, user.id, { icon_url: cacheBustedUrl });
-      setIconPreview(cacheBustedUrl);
+      await updateServer(server.id, user.id, { icon_url: uploadedUrl });
+      setIconPreview(uploadedUrl);
       toast.success("Server icon updated");
     } catch (err) {
       console.error("Failed to upload icon:", err);
@@ -1061,9 +1060,8 @@ export const ServerSettingsModal = () => {
       const uploadedUrl = await uploadBanner(server.id, compressed);
       if (!uploadedUrl) throw new Error("Upload returned null");
 
-      const cacheBustedUrl = `${uploadedUrl}?t=${Date.now()}`;
-      await updateServer(server.id, user.id, { banner_url: cacheBustedUrl });
-      setBannerPreview(cacheBustedUrl);
+      await updateServer(server.id, user.id, { banner_url: uploadedUrl });
+      setBannerPreview(uploadedUrl);
       toast.success("Server banner updated");
     } catch (err) {
       console.error("Failed to upload banner:", err);

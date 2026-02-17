@@ -24,6 +24,8 @@ import { motion } from "framer-motion";
 
 const selectCurrentChannel = (s: ReturnType<typeof useServerStore.getState>) => s.currentChannel;
 const selectCurrentServer = (s: ReturnType<typeof useServerStore.getState>) => s.currentServer;
+const selectFetchMembers = (s: ReturnType<typeof useServerStore.getState>) => s.fetchMembers;
+const selectMembersServerId = (s: ReturnType<typeof useServerStore.getState>) => s.membersServerId;
 const selectUser = (s: ReturnType<typeof useAuthStore.getState>) => s.user;
 const selectSetMobileSidebarOpen = (s: ReturnType<typeof useUIStore.getState>) => s.setMobileSidebarOpen;
 const selectSetMemberSidebarOpen = (s: ReturnType<typeof useUIStore.getState>) => s.setMemberSidebarOpen;
@@ -146,6 +148,8 @@ export const ChatArea = () => {
   // Granular selectors — component only re‑renders when these specific values change
   const currentChannel = useServerStore(selectCurrentChannel);
   const currentServer = useServerStore(selectCurrentServer);
+  const fetchMembers = useServerStore(selectFetchMembers);
+  const membersServerId = useServerStore(selectMembersServerId);
   const user = useAuthStore(selectUser);
   const setMobileSidebarOpen = useUIStore(selectSetMobileSidebarOpen);
   const setMemberSidebarOpen = useUIStore(selectSetMemberSidebarOpen);
@@ -157,6 +161,17 @@ export const ChatArea = () => {
   const channelName = currentChannel?.name ?? "";
   const serverId = currentServer?.id ?? null;
   const isGhostMode = currentChannel?.ghost_mode ?? false;
+
+  // Ensure we have member/role info for chat rendering (role colors, nicknames, ghost-mode admin checks).
+  // We previously lazy-loaded members only when the member sidebar opened, which broke these UI features.
+  useEffect(() => {
+    if (!serverId) return;
+    if (!currentChannel) return;
+    // If the currently loaded members are for a different server (or not loaded yet), load them.
+    if (membersServerId !== serverId) {
+      fetchMembers(serverId);
+    }
+  }, [serverId, currentChannel?.id, membersServerId, fetchMembers]);
 
   const { typingUsers, startTyping, stopTyping } = useTyping(isGhostMode ? null : channelId);
   const { pinnedMessages } = useRealtimePinnedMessages(channelId);

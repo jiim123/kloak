@@ -159,48 +159,97 @@ export function invalidateGlobalEmojiCache() {
 import { supabase } from '@/integrations/supabase/client';
 
 const fallbackCache = new Map<string, string | null>();
-const fallbackInFlight = new Map<string, Promise<string | null>>();
+const fallbackBatchInFlight = new Map<string, Promise<Map<string, string | null>>>();
 
 /**
  * Look up a custom emoji by name across ALL servers (not just user's).
  * Returns the public URL or null. Results are cached for the session.
  */
+export async function resolveEmojisByNameFallback(names: string[]): Promise<Map<string, string | null>> {
+  const out = new Map<string, string | null>();
+  const unique = Array.from(new Set(names)).filter(Boolean);
+  const missing: string[] = [];
+
+  for (const name of unique) {
+    const cached = fallbackCache.get(name);
+    if (cached !== undefined) {
+      out.set(name, cached);
+    } else {
+      missing.push(name);
+    }
+  }
+
+  if (missing.length === 0) return out;
+
+  const batchKey = missing.slice().sort().join(',');
+  const existing = fallbackBatchInFlight.get(batchKey);
+  if (existing) {
+    const map = await existing;
+    for (const [k, v] of map) out.set(k, v);
+    return out;
+  }
+
+  const promise = (async () => {
+    const resolved = new Map<string, string | null>();
+    try {
+      const { data, error } = await supabase
+        .from('server_emojis')
+        .select('name,file_path')
+        .in('name', missing);
+
+      if (error || !data) {
+        for (const name of missing) {
+          fallbackCache.set(name, null);
+          resolved.set(name, null);
+        }
+        return resolved;
+      }
+
+      // Choose first match per name (names may exist in multiple servers).
+      const firstFilePathByName = new Map<string, string>();
+      for (const row of data as Array<{ name: string; file_path: string }>) {
+        if (!row?.name || !row?.file_path) continue;
+        if (!firstFilePathByName.has(row.name)) {
+          firstFilePathByName.set(row.name, row.file_path);
+        }
+      }
+
+      for (const name of missing) {
+        const filePath = firstFilePathByName.get(name);
+        if (!filePath) {
+          fallbackCache.set(name, null);
+          resolved.set(name, null);
+          continue;
+        }
+
+        const { data: urlData } = supabase.storage.from('server-emojis').getPublicUrl(filePath);
+        const url = urlData.publicUrl;
+        fallbackCache.set(name, url);
+        resolved.set(name, url);
+      }
+
+      return resolved;
+    } catch {
+      for (const name of missing) {
+        fallbackCache.set(name, null);
+        resolved.set(name, null);
+      }
+      return resolved;
+    } finally {
+      fallbackBatchInFlight.delete(batchKey);
+    }
+  })();
+
+  fallbackBatchInFlight.set(batchKey, promise);
+  const map = await promise;
+  for (const [k, v] of map) out.set(k, v);
+  return out;
+}
+
 export async function resolveEmojiByNameFallback(name: string): Promise<string | null> {
   const cached = fallbackCache.get(name);
   if (cached !== undefined) return cached;
 
-  const existing = fallbackInFlight.get(name);
-  if (existing) return existing;
-
-  const promise = (async () => {
-    try {
-      const { data, error } = await supabase
-        .from('server_emojis')
-        .select('file_path')
-        .eq('name', name)
-        .limit(1)
-        .maybeSingle();
-
-      if (error || !data) {
-        fallbackCache.set(name, null);
-        return null;
-      }
-
-      const { data: urlData } = supabase.storage
-        .from('server-emojis')
-        .getPublicUrl(data.file_path);
-
-      const url = urlData.publicUrl;
-      fallbackCache.set(name, url);
-      return url;
-    } catch {
-      fallbackCache.set(name, null);
-      return null;
-    } finally {
-      fallbackInFlight.delete(name);
-    }
-  })();
-
-  fallbackInFlight.set(name, promise);
-  return promise;
+  const map = await resolveEmojisByNameFallback([name]);
+  return map.get(name) ?? null;
 }

@@ -9,7 +9,7 @@ import { useMessageStore } from "@/stores/messageStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { useServerStore } from "@/stores/serverStore";
-import { useUnread } from "@/hooks/useUnread";
+import { useUnreadChannelsContext } from "@/hooks/useUnreadChannelsContext";
 import { useScrollToMessage } from "@/hooks/useScrollToMessage";
 import { useRealtimePolls } from "@/hooks/useRealtimePolls";
 import type { Message } from "@/types";
@@ -125,8 +125,7 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   }
 
   // Unread tracking
-  const channelIds = useMemo(() => [channelId], [channelId]);
-  const { getChannelUnread, markAsRead } = useUnread(channelIds);
+  const { getChannelUnread, markAsRead } = useUnreadChannelsContext();
   const { lastReadAt, firstUnreadMessageId } = getChannelUnread(channelId);
 
   // Scroll to message from notification
@@ -187,9 +186,24 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   const isRefetchingRef = useRef(false);
 
   useEffect(() => {
+    const MIN_HIDDEN_MS_FOR_REFETCH = 15_000; // skip refetch for quick tab switches
+
     // Consolidated refetch handler with error recovery
-    const performRefetch = () => {
+    const performRefetch = (reason: "visibility" | "focus") => {
       if (isRefetchingRef.current) return;
+
+      // Avoid refetching on window focus if the tab is visible; visibilitychange already covers it.
+      if (reason === "focus" && document.visibilityState === "visible") {
+        return;
+      }
+
+      // If the tab was only hidden briefly, don't refetch.
+      if (hiddenTimeRef.current) {
+        const hiddenFor = Date.now() - hiddenTimeRef.current;
+        if (hiddenFor > 0 && hiddenFor < MIN_HIDDEN_MS_FOR_REFETCH) {
+          return;
+        }
+      }
 
       isRefetchingRef.current = true;
 
@@ -223,22 +237,14 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
         hiddenTimeRef.current = Date.now();
       } else if (document.visibilityState === "visible") {
         // Refetch when tab becomes visible
-        performRefetch();
+        performRefetch("visibility");
         hiddenTimeRef.current = null;
       }
     };
 
-    // Focus handler uses the same refetch logic
-    const handleFocus = () => {
-      performRefetch();
-      hiddenTimeRef.current = null;
-    };
-
-    window.addEventListener("focus", handleFocus);
     document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
-      window.removeEventListener("focus", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibility);
       // Cleanup timeout on unmount
       if (refetchTimeoutRef.current) {
