@@ -158,51 +158,54 @@ export function invalidateGlobalEmojiCache() {
 // ---------------------------------------------------------------------------
 import { supabase } from '@/integrations/supabase/client';
 
-const fallbackCache = new Map<string, string | null>();
-const fallbackBatchInFlight = new Map<string, Promise<Map<string, string | null>>>();
+type FallbackCacheEntry = { value: string | null; cachedAt: number };
 
-/**
- * Look up a custom emoji by name across ALL servers (not just user's).
- * Returns the public URL or null. Results are cached for the session.
- */
-export async function resolveEmojisByNameFallback(names: string[]): Promise<Map<string, string | null>> {
-  const out = new Map<string, string | null>();
-  const unique = Array.from(new Set(names)).filter(Boolean);
-  const missing: string[] = [];
+// Cache fallback emoji resolutions for a while; this is only used when the viewer isn't in the server.
+const FALLBACK_CACHE_TTL_MS = 10 * 60_000; // 10 minutes
+const fallbackCache = new Map<string, FallbackCacheEntry>();
 
-  for (const name of unique) {
-    const cached = fallbackCache.get(name);
-    if (cached !== undefined) {
-      out.set(name, cached);
-    } else {
-      missing.push(name);
-    }
+// Micro-batched, cross-call request coalescing:
+// many message components may ask for different subsets of names at the same time.
+// Instead of firing 5-20 near-identical requests with slightly different `in(name, ...)` sets,
+// we queue names for a short window and resolve them with a single query.
+type Deferred<T> = { promise: Promise<T>; resolve: (v: T) => void; reject: (e: unknown) => void };
+const fallbackInflightByName = new Map<string, Deferred<string | null>>();
+const pendingFallbackNames = new Set<string>();
+let flushTimer: ReturnType<typeof setTimeout> | null = null;
+
+function getCachedFallback(name: string): string | null | undefined {
+  const entry = fallbackCache.get(name);
+  if (!entry) return undefined;
+  if (Date.now() - entry.cachedAt > FALLBACK_CACHE_TTL_MS) {
+    fallbackCache.delete(name);
+    return undefined;
   }
+  return entry.value;
+}
 
-  if (missing.length === 0) return out;
+function scheduleFallbackFlush() {
+  if (flushTimer) return;
 
-  const batchKey = missing.slice().sort().join(',');
-  const existing = fallbackBatchInFlight.get(batchKey);
-  if (existing) {
-    const map = await existing;
-    for (const [k, v] of map) out.set(k, v);
-    return out;
-  }
+  // 25ms groups together multiple component effects/renders from the same frame / route switch.
+  flushTimer = setTimeout(async () => {
+    flushTimer = null;
 
-  const promise = (async () => {
-    const resolved = new Map<string, string | null>();
+    const names = Array.from(pendingFallbackNames);
+    pendingFallbackNames.clear();
+    if (names.length === 0) return;
+
     try {
-      const { data, error } = await supabase
-        .from('server_emojis')
-        .select('name,file_path')
-        .in('name', missing);
+      const { data, error } = await supabase.from('server_emojis').select('name,file_path').in('name', names);
 
       if (error || !data) {
-        for (const name of missing) {
-          fallbackCache.set(name, null);
-          resolved.set(name, null);
+        // Do not cache failures; just resolve current inflight as null.
+        for (const name of names) {
+          const d = fallbackInflightByName.get(name);
+          if (!d) continue;
+          d.resolve(null);
+          fallbackInflightByName.delete(name);
         }
-        return resolved;
+        return;
       }
 
       // Choose first match per name (names may exist in multiple servers).
@@ -214,42 +217,75 @@ export async function resolveEmojisByNameFallback(names: string[]): Promise<Map<
         }
       }
 
-      for (const name of missing) {
+      for (const name of names) {
         const filePath = firstFilePathByName.get(name);
-        if (!filePath) {
-          fallbackCache.set(name, null);
-          resolved.set(name, null);
-          continue;
+        let value: string | null = null;
+        if (filePath) {
+          const { data: urlData } = supabase.storage.from('server-emojis').getPublicUrl(filePath);
+          value = urlData.publicUrl;
         }
 
-        const { data: urlData } = supabase.storage.from('server-emojis').getPublicUrl(filePath);
-        const url = urlData.publicUrl;
-        fallbackCache.set(name, url);
-        resolved.set(name, url);
-      }
+        fallbackCache.set(name, { value, cachedAt: Date.now() });
 
-      return resolved;
-    } catch {
-      for (const name of missing) {
-        fallbackCache.set(name, null);
-        resolved.set(name, null);
+        const d = fallbackInflightByName.get(name);
+        if (d) {
+          d.resolve(value);
+          fallbackInflightByName.delete(name);
+        }
       }
-      return resolved;
-    } finally {
-      fallbackBatchInFlight.delete(batchKey);
+    } catch (e) {
+      // Do not cache failures; resolve current inflight as null to keep rendering stable.
+      for (const name of names) {
+        const d = fallbackInflightByName.get(name);
+        if (!d) continue;
+        d.resolve(null);
+        fallbackInflightByName.delete(name);
+      }
     }
-  })();
+  }, 25);
+}
 
-  fallbackBatchInFlight.set(batchKey, promise);
-  const map = await promise;
-  for (const [k, v] of map) out.set(k, v);
+function getOrQueueFallbackName(name: string): Promise<string | null> {
+  const cached = getCachedFallback(name);
+  if (cached !== undefined) return Promise.resolve(cached);
+
+  const existing = fallbackInflightByName.get(name);
+  if (existing) return existing.promise;
+
+  let resolve!: (v: string | null) => void;
+  let reject!: (e: unknown) => void;
+  const promise = new Promise<string | null>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+
+  const deferred: Deferred<string | null> = { promise, resolve, reject };
+  fallbackInflightByName.set(name, deferred);
+  pendingFallbackNames.add(name);
+  scheduleFallbackFlush();
+  return promise;
+}
+
+/**
+ * Look up a custom emoji by name across ALL servers (not just user's).
+ * Returns the public URL or null. Results are cached for the session.
+ */
+export async function resolveEmojisByNameFallback(names: string[]): Promise<Map<string, string | null>> {
+  const out = new Map<string, string | null>();
+  const unique = Array.from(new Set(names)).filter(Boolean);
+
+  const promises = unique.map(async (name) => {
+    const url = await getOrQueueFallbackName(name);
+    return [name, url] as const;
+  });
+
+  const resolved = await Promise.all(promises);
+  for (const [name, url] of resolved) out.set(name, url);
   return out;
 }
 
 export async function resolveEmojiByNameFallback(name: string): Promise<string | null> {
-  const cached = fallbackCache.get(name);
+  const cached = getCachedFallback(name);
   if (cached !== undefined) return cached;
-
-  const map = await resolveEmojisByNameFallback([name]);
-  return map.get(name) ?? null;
+  return await getOrQueueFallbackName(name);
 }

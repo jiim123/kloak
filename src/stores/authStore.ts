@@ -6,6 +6,13 @@ import { authRateLimiter, accountCreationRateLimiter, validateUsername } from "@
 import { setUserInCache, invalidateUser } from "@/lib/userCache";
 import type { User, UserStatus } from "@/types";
 let lastSeenTimestamp = 0;
+// Presence/status is not critical to be realtime; debounce + coalesce AUTO status updates
+// to avoid spamming `update_user_status` during tab switches/activity bursts.
+const AUTO_STATUS_RPC_DELAY_MS = 90_000; // ~1.5 minutes
+let autoStatusTimer: ReturnType<typeof setTimeout> | null = null;
+let pendingAutoStatus: UserStatus | null = null;
+let pendingAutoUserId: string | null = null;
+const statusInFlight = new Map<UserStatus, Promise<void>>();
 const LAST_SEEN_INTERVAL = 60_000; // 60 seconds minimum between calls
 
 interface AuthState {
@@ -363,12 +370,15 @@ export const useAuthStore = create<AuthState>()(
         if (!user) return;
 
         try {
-          await supabase.rpc("update_user_status", {
-            _user_id: user.id,
-            _status: status,
-          });
-
           const source = options?.source ?? "manual";
+
+          // Avoid spamming `update_user_status` on tab switches / activity bursts.
+          // - If status is already set locally, no-op (for both manual/auto).
+          // - For auto updates, delay + coalesce RPC (only send the final status after a short window).
+          if (user.status === status) {
+            return;
+          }
+
           const currentManualStatus = get().manualStatus;
 
           // Track manual status for DND/Invisible so they persist across sessions
@@ -386,7 +396,59 @@ export const useAuthStore = create<AuthState>()(
             nextManualStatus = currentManualStatus;
           }
 
+          // Always update local state immediately (UI responsiveness),
+          // but for AUTO updates delay the server RPC.
           set({ user: { ...user, status }, manualStatus: nextManualStatus });
+
+          if (source === "manual") {
+            // Manual changes should go to server immediately and also cancel any pending auto update.
+            pendingAutoStatus = null;
+            pendingAutoUserId = null;
+            if (autoStatusTimer) {
+              clearTimeout(autoStatusTimer);
+              autoStatusTimer = null;
+            }
+
+            await supabase.rpc("update_user_status", {
+              _user_id: user.id,
+              _status: status,
+            });
+            return;
+          }
+
+          // AUTO: coalesce multiple status changes into one RPC after delay.
+          pendingAutoStatus = status;
+          pendingAutoUserId = user.id;
+          if (autoStatusTimer) clearTimeout(autoStatusTimer);
+
+          autoStatusTimer = setTimeout(async () => {
+            const uId = pendingAutoUserId;
+            const st = pendingAutoStatus;
+            pendingAutoUserId = null;
+            pendingAutoStatus = null;
+            autoStatusTimer = null;
+
+            if (!uId || !st) return;
+
+            // If user logged out or local status changed since scheduling, skip.
+            const current = useAuthStore.getState().user;
+            if (!current || current.id !== uId) return;
+            if (current.status !== st) return;
+
+            const inflight = statusInFlight.get(st);
+            if (inflight) return;
+
+            const p = supabase
+              .rpc("update_user_status", { _user_id: uId, _status: st })
+              .then(() => undefined)
+              .finally(() => {
+                const cur = statusInFlight.get(st);
+                if (cur === p) statusInFlight.delete(st);
+              });
+
+            statusInFlight.set(st, p);
+            await p;
+          }, AUTO_STATUS_RPC_DELAY_MS);
         } catch (error) {
           console.error("Failed to update status:", error);
         }

@@ -17,6 +17,8 @@ export const useUnreadDMs = (userId: string | null) => {
   const [unreadState, setUnreadState] = useState<UnreadDMState>({});
   const [isLoading, setIsLoading] = useState(true);
   const lastFetchRef = useRef(0);
+  const inFlightRef = useRef<Promise<void> | null>(null);
+  const queuedRef = useRef(false);
 
   const fetchUnreadCounts = useCallback(async ({ force = false } = {}) => {
     if (!userId) {
@@ -32,6 +34,12 @@ export const useUnreadDMs = (userId: string | null) => {
     }
     lastFetchRef.current = now;
 
+    if (inFlightRef.current) {
+      queuedRef.current = true;
+      return;
+    }
+
+    const p = (async () => {
     try {
       // Use batched RPC call instead of N+1 queries
       const { data, error } = await supabase.rpc('get_dm_unread_counts', {
@@ -57,6 +65,18 @@ export const useUnreadDMs = (userId: string | null) => {
       console.error('Failed to fetch DM unread counts:', error);
     } finally {
       setIsLoading(false);
+    }
+    })();
+
+    inFlightRef.current = p;
+    try {
+      await p;
+    } finally {
+      if (inFlightRef.current === p) inFlightRef.current = null;
+      if (queuedRef.current) {
+        queuedRef.current = false;
+        fetchUnreadCounts({ force: true });
+      }
     }
   }, [userId]);
 

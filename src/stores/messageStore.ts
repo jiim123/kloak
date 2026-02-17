@@ -94,6 +94,9 @@ const groupReactions = (reactions: any[], currentUserId?: string): ReactionGroup
 // Cache expiry time - 5 minutes
 const CACHE_EXPIRY_MS = 5 * 60 * 1000;
 
+// In-flight request coalescing (prevents duplicate message fetches during rapid switching)
+const inflightFetches = new Map<string, Promise<void>>();
+
 export const useMessageStore = create<MessageState>((set, get) => ({
   messagesByChannel: {},
   currentChannelId: null,
@@ -122,6 +125,11 @@ export const useMessageStore = create<MessageState>((set, get) => ({
   },
 
   fetchMessages: async (channelId: string, limit = 50, before?: string, force = false, silent = false) => {
+    const inflightKey = `${channelId}:${before ?? ""}:${force ? 1 : 0}:${limit}`;
+    const existingInflight = inflightFetches.get(inflightKey);
+    if (existingInflight) return existingInflight;
+
+    const p = (async () => {
     const { messagesByChannel } = get();
     const cached = messagesByChannel[channelId];
 
@@ -313,6 +321,13 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         return { isLoading: false, fetchingChannels: restFetching };
       });
     }
+    })().finally(() => {
+      const cur = inflightFetches.get(inflightKey);
+      if (cur === p) inflightFetches.delete(inflightKey);
+    });
+
+    inflightFetches.set(inflightKey, p);
+    return p;
   },
 
   sendMessage: async (channelId: string, userId: string, content: string, replyToId?: string) => {

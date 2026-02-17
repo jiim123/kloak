@@ -37,8 +37,14 @@ interface LinkPreviewProps {
   messageId?: string; // For persistent embed tracking
 }
 
-// Cache for link previews to avoid refetching
-const previewCache = new Map<string, LinkPreviewData>();
+// Cache for link previews to avoid refetching (includes negative-cache for transient failures)
+type CachedPreview =
+  | { kind: "ok"; data: LinkPreviewData; cachedAt: number }
+  | { kind: "error"; cachedAt: number };
+
+const PREVIEW_OK_TTL_MS = 30 * 60_000;
+const PREVIEW_ERROR_TTL_MS = 2 * 60_000;
+const previewCache = new Map<string, CachedPreview>();
 
 // Generate a stable ID for an embed
 const getEmbedId = (url: string, messageId: string) => `${messageId}-${btoa(url).slice(0, 16)}`;
@@ -56,9 +62,18 @@ export const LinkPreview = ({ url, disabled, messageId }: LinkPreviewProps) => {
     if (disabled) return;
 
     // Check cache first
-    if (previewCache.has(url)) {
-      setPreview(previewCache.get(url)!);
-      return;
+    const cached = previewCache.get(url);
+    if (cached) {
+      const age = Date.now() - cached.cachedAt;
+      if (cached.kind === "ok" && age < PREVIEW_OK_TTL_MS) {
+        setPreview(cached.data);
+        return;
+      }
+      if (cached.kind === "error" && age < PREVIEW_ERROR_TTL_MS) {
+        // Suppress repeat spam for transient/CORS failures for a short window.
+        return;
+      }
+      previewCache.delete(url);
     }
 
     const controller = new AbortController();
@@ -78,20 +93,23 @@ export const LinkPreview = ({ url, disabled, messageId }: LinkPreviewProps) => {
         if (fnError) {
           console.error("Link preview error:", fnError);
           setError("Failed to load preview");
+          previewCache.set(url, { kind: "error", cachedAt: Date.now() });
           return;
         }
 
         if (data?.error) {
           setError(data.error);
+          previewCache.set(url, { kind: "error", cachedAt: Date.now() });
           return;
         }
 
         setPreview(data);
-        previewCache.set(url, data);
+        previewCache.set(url, { kind: "ok", data, cachedAt: Date.now() });
       } catch (err) {
         if (cancelled) return;
         console.error("Link preview fetch error:", err);
         setError("Failed to load preview");
+        previewCache.set(url, { kind: "error", cachedAt: Date.now() });
       } finally {
         if (!cancelled) {
           setIsLoading(false);

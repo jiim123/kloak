@@ -32,7 +32,14 @@ export const useUnread = (serverChannelIds: string[] = []) => {
   const fetchSeqRef = useRef(0);
   const inFlightRef = useRef(false);
   const queuedRef = useRef(false);
+  const markInFlightRef = useRef<Map<string, Promise<void>>>(new Map());
+  const unreadStateRef = useRef<UnreadState>({});
+  const channelReadsRefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const channelIdsKey = [...serverChannelIds].sort().join(',');
+
+  useEffect(() => {
+    unreadStateRef.current = unreadState;
+  }, [unreadState]);
 
   // OPTIMIZATION: Use batch RPC instead of N+1 queries
   // This reduces 50+ queries to a single query per polling cycle
@@ -122,56 +129,110 @@ export const useUnread = (serverChannelIds: string[] = []) => {
     async (channelId: string, lastMessageId?: string) => {
       if (!user) return;
 
-      try {
-        // If no lastMessageId provided, get the latest message
-        let messageId = lastMessageId;
-        if (!messageId) {
-          const { data: latestMessage } = await supabase
-            .from('messages')
-            .select('id')
-            .eq('channel_id', channelId)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          
-          messageId = latestMessage?.id;
+      // If we already consider this channel read up to the same message id, skip the RPC.
+      // This avoids extra `mark_channel_read` when revisiting a channel you already read.
+      if (lastMessageId) {
+        const local = unreadStateRef.current[channelId];
+        if (local?.lastReadMessageId === lastMessageId && local.unreadCount === 0 && local.mentionCount === 0) {
+          return;
         }
-
-        if (!messageId) return;
-
-        const now = new Date().toISOString();
-
-        // Prefer SECURITY DEFINER RPC (custom auth app)
-        const { error: rpcError } = await supabase.rpc('mark_channel_read', {
-          _channel_id: channelId,
-          _user_id: user.id,
-          _last_read_message_id: messageId,
-          _last_read_at: now,
-        });
-
-        if (rpcError) {
-          // RPC not available yet — log warning but don't fallback to direct writes
-          // Direct table writes are blocked by RLS for security
-          console.warn('mark_channel_read RPC failed:', rpcError.message);
-        }
-
-        setUnreadState((prev) => ({
-          ...prev,
-          [channelId]: {
-            unreadCount: 0,
-            mentionCount: 0,
-            lastReadMessageId: messageId!,
-            lastReadAt: now,
-            firstUnreadMessageId: null,
-          },
-        }));
-
-        // Broadcast locally so other `useUnread()` instances (ServerSidebar, etc.)
-        // update immediately without waiting for realtime/poll.
-        window.dispatchEvent(new CustomEvent(CHANNEL_READ_EVENT, { detail: { channelId, at: now } }));
-      } catch (error) {
-        console.error('Error marking channel as read:', error);
       }
+
+      const existing = markInFlightRef.current.get(channelId);
+      if (existing) return existing;
+
+      const p = (async () => {
+        try {
+          const now = new Date().toISOString();
+
+          if (lastMessageId) {
+            // Fast path: caller already knows the last visible message id.
+            const { error: rpcError } = await supabase.rpc('mark_channel_read', {
+              _channel_id: channelId,
+              _user_id: user.id,
+              _last_read_message_id: lastMessageId,
+              _last_read_at: now,
+            });
+
+            if (rpcError) {
+              console.warn('mark_channel_read RPC failed:', rpcError.message);
+            }
+
+            setUnreadState((prev) => ({
+              ...prev,
+              [channelId]: {
+                unreadCount: 0,
+                mentionCount: 0,
+                lastReadMessageId: lastMessageId,
+                lastReadAt: now,
+                firstUnreadMessageId: null,
+              },
+            }));
+          } else {
+            // Avoid a client-side "latest message" query (causes request spam).
+            // Let the DB compute the latest message id per channel in a single RPC.
+            const { error: rpcError } = await (supabase.rpc as any)('mark_channels_read', {
+              _channel_ids: [channelId],
+              _user_id: user.id,
+              _last_read_at: now,
+            });
+
+            let fallbackMessageId: string | null = null;
+
+            if (rpcError) {
+              console.warn('mark_channels_read RPC failed:', rpcError.message);
+
+              // Back-compat fallback (in case migration hasn't been applied yet).
+              // This reintroduces the extra query, but only until the RPC exists.
+              const { data: latestMessage } = await supabase
+                .from('messages')
+                .select('id')
+                .eq('channel_id', channelId)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+              fallbackMessageId = latestMessage?.id ?? null;
+
+              if (fallbackMessageId) {
+                const { error: fallbackError } = await supabase.rpc('mark_channel_read', {
+                  _channel_id: channelId,
+                  _user_id: user.id,
+                  _last_read_message_id: fallbackMessageId,
+                  _last_read_at: now,
+                });
+
+                if (fallbackError) {
+                  console.warn('mark_channel_read fallback failed:', fallbackError.message);
+                }
+              }
+            }
+
+            setUnreadState((prev) => ({
+              ...prev,
+              [channelId]: {
+                unreadCount: 0,
+                mentionCount: 0,
+                lastReadMessageId: fallbackMessageId ?? prev[channelId]?.lastReadMessageId ?? null,
+                lastReadAt: now,
+                firstUnreadMessageId: null,
+              },
+            }));
+          }
+
+          // Broadcast locally so other `useUnread()` instances (ServerSidebar, etc.)
+          // update immediately without waiting for realtime/poll.
+          window.dispatchEvent(new CustomEvent(CHANNEL_READ_EVENT, { detail: { channelId, at: now } }));
+        } catch (error) {
+          console.error('Error marking channel as read:', error);
+        } finally {
+          const cur = markInFlightRef.current.get(channelId);
+          if (cur === p) markInFlightRef.current.delete(channelId);
+        }
+      })();
+
+      markInFlightRef.current.set(channelId, p);
+      return p;
     },
     [user]
   );
@@ -225,11 +286,73 @@ export const useUnread = (serverChannelIds: string[] = []) => {
   const markServerAsRead = useCallback(
     async (channelIds: string[]) => {
       if (!user || channelIds.length === 0) return;
-      
-      // Mark all channels in parallel
-      await Promise.all(channelIds.map(channelId => markAsRead(channelId)));
+
+      const now = new Date().toISOString();
+
+      try {
+        // One RPC instead of N calls (+ avoids "latest message" lookups on the client).
+        const { error: rpcError } = await (supabase.rpc as any)('mark_channels_read', {
+          _channel_ids: channelIds,
+          _user_id: user.id,
+          _last_read_at: now,
+        });
+
+        if (rpcError) {
+          console.warn('mark_channels_read RPC failed:', rpcError.message);
+
+          // Back-compat fallback (in case migration hasn't been applied yet).
+          // Note: this is N+1, but only used during rollout.
+          await Promise.all(
+            channelIds.map(async (channelId) => {
+              const { data: latestMessage } = await supabase
+                .from('messages')
+                .select('id')
+                .eq('channel_id', channelId)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+              const messageId = latestMessage?.id;
+              if (!messageId) return;
+
+              const { error: fallbackError } = await supabase.rpc('mark_channel_read', {
+                _channel_id: channelId,
+                _user_id: user.id,
+                _last_read_message_id: messageId,
+                _last_read_at: now,
+              });
+
+              if (fallbackError) {
+                console.warn('mark_channel_read fallback failed:', fallbackError.message);
+              }
+            })
+          );
+        }
+      } catch (error) {
+        console.error('Error marking server as read:', error);
+      }
+
+      // Optimistically clear unread state locally.
+      setUnreadState((prev) => {
+        const next = { ...prev };
+        for (const channelId of channelIds) {
+          next[channelId] = {
+            unreadCount: 0,
+            mentionCount: 0,
+            lastReadMessageId: prev[channelId]?.lastReadMessageId ?? null,
+            lastReadAt: now,
+            firstUnreadMessageId: null,
+          };
+        }
+        return next;
+      });
+
+      // Broadcast locally for cross-component sync.
+      for (const channelId of channelIds) {
+        window.dispatchEvent(new CustomEvent(CHANNEL_READ_EVENT, { detail: { channelId, at: now } }));
+      }
     },
-    [user, markAsRead]
+    [user]
   );
 
   // Fetch on mount and when channel IDs change
@@ -263,14 +386,25 @@ export const useUnread = (serverChannelIds: string[] = []) => {
           filter: `user_id=eq.${user.id}`,
         },
         () => {
-          // Refetch on any change to channel_reads
-          channelIdsRef.current = []; // Reset to force refetch
-          fetchUnreadCounts({ force: true });
+          // Refetch on change to channel_reads, but debounce/coalesce bursts
+          // (e.g. switching channels triggers mark_channel_read + realtime UPDATE).
+          if (channelReadsRefetchTimerRef.current) {
+            clearTimeout(channelReadsRefetchTimerRef.current);
+          }
+          channelReadsRefetchTimerRef.current = setTimeout(() => {
+            channelReadsRefetchTimerRef.current = null;
+            channelIdsRef.current = []; // Reset to force refetch
+            fetchUnreadCounts({ force: true });
+          }, 250);
         }
       )
       .subscribe();
 
     return () => {
+      if (channelReadsRefetchTimerRef.current) {
+        clearTimeout(channelReadsRefetchTimerRef.current);
+        channelReadsRefetchTimerRef.current = null;
+      }
       supabase.removeChannel(channel);
     };
   }, [user, fetchUnreadCounts]);

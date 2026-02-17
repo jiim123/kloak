@@ -235,15 +235,19 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const draftSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load permissions when server/channel changes
+  // Load role permissions only when server changes (avoid refetching on every channel switch)
   useEffect(() => {
     if (currentServer?.id) {
       fetchRolePermissions(currentServer.id);
     }
+  }, [currentServer?.id, fetchRolePermissions]);
+
+  // Load channel permissions when channel changes
+  useEffect(() => {
     if (channelId) {
       fetchChannelPermissions(channelId);
     }
-  }, [currentServer?.id, channelId, fetchRolePermissions, fetchChannelPermissions]);
+  }, [channelId, fetchChannelPermissions]);
 
   // Memoized permission checks
   const currentMember = useMemo(() => members.find((m) => m.user_id === user?.id), [members, user?.id]);

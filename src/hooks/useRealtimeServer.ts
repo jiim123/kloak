@@ -56,7 +56,7 @@ export const useRealtimeServer = (serverId: string | null) => {
           handleChannelAccessLost(serverId, 'A channel you were viewing is no longer available');
         }
       });
-      store.fetchRolePermissions(serverId);
+      store.fetchRolePermissions(serverId, { force: true });
     }
 
     prevConnectedRef.current = nowConnected;
@@ -88,7 +88,7 @@ export const useRealtimeServer = (serverId: string | null) => {
           handleChannelAccessLost(sid, 'You no longer have access to that channel');
         }
       });
-      store.fetchRolePermissions(sid);
+      store.fetchRolePermissions(sid, { force: true });
     };
 
     const debounced = makeDebouncedFn(refreshPermissions, 500);

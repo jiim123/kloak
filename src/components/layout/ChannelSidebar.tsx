@@ -783,14 +783,12 @@ export const ChannelSidebar = () => {
   const handleSelectChannel = useCallback(
     (channel: Channel) => {
       setCurrentChannel(channel);
-      // Mark channel as read when selected
-      markAsRead(channel.id);
       // Navigate to channel URL
       if (currentServer) {
         navigate(`/app/servers/${currentServer.id}/channels/${channel.id}`);
       }
     },
-    [setCurrentChannel, markAsRead, currentServer, navigate],
+    [setCurrentChannel, currentServer, navigate],
   );
 
   const isOverviewActive = !!currentServer && location.pathname === `/app/servers/${currentServer.id}/overview`;

@@ -20,6 +20,12 @@ import type {
   Permission
 } from '@/types';
 
+// Permission queries can be triggered by multiple components/effects.
+// Use a short TTL cache to avoid sequential re-fetch spam when switching channels.
+const PERMISSIONS_TTL_MS = 60_000;
+const rolePermissionsCache = new Map<string, { data: RolePermission[]; cachedAt: number }>();
+const channelPermissionsCache = new Map<string, { data: ChannelPermission[]; cachedAt: number }>();
+
 interface ServerState {
   servers: ServerWithMembership[];
   currentServer: Server | null;
@@ -87,8 +93,8 @@ interface ServerState {
   rolePermissions: RolePermission[];
   channelPermissions: ChannelPermission[];
   categoryPermissions: CategoryPermission[];
-  fetchRolePermissions: (serverId: string) => Promise<void>;
-  fetchChannelPermissions: (channelId: string) => Promise<void>;
+  fetchRolePermissions: (serverId: string, opts?: { force?: boolean }) => Promise<void>;
+  fetchChannelPermissions: (channelId: string, opts?: { force?: boolean }) => Promise<void>;
   fetchCategoryPermissions: (categoryId: string) => Promise<void>;
   setRolePermission: (serverId: string, userId: string, permission: Permission, roleId?: string, roleName?: ServerRole, allowed?: boolean) => Promise<void>;
   setChannelPermission: (channelId: string, userId: string, permission: Permission, allowed: boolean, roleId?: string, roleName?: ServerRole, targetUserId?: string) => Promise<void>;
@@ -1431,9 +1437,15 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }
   },
 
-  fetchRolePermissions: async (serverId: string) => {
+  fetchRolePermissions: async (serverId: string, opts?: { force?: boolean }) => {
     return deduplicatedFetch(`serverStore:fetchRolePermissions:${serverId}`, async () => {
       try {
+        const cached = rolePermissionsCache.get(serverId);
+        if (!opts?.force && cached && Date.now() - cached.cachedAt < PERMISSIONS_TTL_MS) {
+          set({ rolePermissions: cached.data });
+          return;
+        }
+
         // OPTIMIZATION: Specify only required columns instead of select('*')
         const { data, error } = await supabase
           .from('role_permissions')
@@ -1455,6 +1467,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
           created_at: row.created_at ?? '',
         }));
 
+        rolePermissionsCache.set(serverId, { data: permissions, cachedAt: Date.now() });
         set({ rolePermissions: permissions });
       } catch (error) {
         console.error('Failed to fetch role permissions:', error);
@@ -1463,35 +1476,44 @@ export const useServerStore = create<ServerState>((set, get) => ({
     });
   },
 
-  fetchChannelPermissions: async (channelId: string) => {
-    try {
-      // OPTIMIZATION: Specify only required columns instead of select('*')
-      const { data, error } = await supabase
-        .from('channel_permissions')
-        .select('id, channel_id, role_id, role_name, user_id, permission, allowed, created_at')
-        .eq('channel_id', channelId);
+  fetchChannelPermissions: async (channelId: string, opts?: { force?: boolean }) => {
+    return deduplicatedFetch(`serverStore:fetchChannelPermissions:${channelId}`, async () => {
+      try {
+        const cached = channelPermissionsCache.get(channelId);
+        if (!opts?.force && cached && Date.now() - cached.cachedAt < PERMISSIONS_TTL_MS) {
+          set({ channelPermissions: cached.data });
+          return;
+        }
 
-      if (error) {
-        console.error('Query error:', error);
+        // OPTIMIZATION: Specify only required columns instead of select('*')
+        const { data, error } = await supabase
+          .from('channel_permissions')
+          .select('id, channel_id, role_id, role_name, user_id, permission, allowed, created_at')
+          .eq('channel_id', channelId);
+
+        if (error) {
+          console.error('Query error:', error);
+          throw error;
+        }
+
+        const permissions: ChannelPermission[] = (data ?? []).map((row: any) => ({
+          id: row.id,
+          channel_id: row.channel_id,
+          role_id: row.role_id,
+          role_name: row.role_name as ServerRole | null,
+          user_id: row.user_id || null,
+          permission: row.permission as Permission,
+          allowed: row.allowed,
+          created_at: row.created_at ?? '',
+        }));
+
+        channelPermissionsCache.set(channelId, { data: permissions, cachedAt: Date.now() });
+        set({ channelPermissions: permissions });
+      } catch (error) {
+        console.error('Failed to fetch channel permissions:', error);
         throw error;
       }
-
-      const permissions: ChannelPermission[] = (data ?? []).map((row: any) => ({
-        id: row.id,
-        channel_id: row.channel_id,
-        role_id: row.role_id,
-        role_name: row.role_name as ServerRole | null,
-        user_id: row.user_id || null,
-        permission: row.permission as Permission,
-        allowed: row.allowed,
-        created_at: row.created_at ?? '',
-      }));
-
-      set({ channelPermissions: permissions });
-    } catch (error) {
-      console.error('Failed to fetch channel permissions:', error);
-      throw error;
-    }
+    });
   },
 
   setRolePermission: async (
@@ -1516,7 +1538,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
       if (error) throw error;
 
       // Refresh role permissions
-      await get().fetchRolePermissions(serverId);
+      await get().fetchRolePermissions(serverId, { force: true });
     } catch (error) {
       console.error('Failed to set role permission:', error);
       throw error;
@@ -1547,7 +1569,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
       if (error) throw error;
 
       // Refresh channel permissions
-      await get().fetchChannelPermissions(channelId);
+      await get().fetchChannelPermissions(channelId, { force: true });
     } catch (error) {
       console.error('Failed to set channel permission:', error);
       throw error;
@@ -1566,7 +1588,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
       // Refresh role permissions
       const { currentServer } = get();
       if (currentServer) {
-        await get().fetchRolePermissions(currentServer.id);
+        await get().fetchRolePermissions(currentServer.id, { force: true });
       }
     } catch (error) {
       console.error('Failed to delete role permission:', error);
@@ -1588,7 +1610,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
       // Refresh channel permissions
       if (toDelete) {
-        await get().fetchChannelPermissions(toDelete.channel_id);
+        await get().fetchChannelPermissions(toDelete.channel_id, { force: true });
       }
     } catch (error) {
       console.error('Failed to delete channel permission:', error);

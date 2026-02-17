@@ -38,6 +38,7 @@ import { isImageOnlyMessage } from "@/lib/message";
 import { isPollMessageContent } from "@/lib/poll";
 import { ReplyPreview } from "@/components/chat/MessageContent";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
+import { getOrFetchUser } from "@/lib/userCache";
 import type { Message, User, ReactionGroup } from "@/types";
 
 interface Thread {
@@ -345,16 +346,9 @@ export const ForumChannelArea = () => {
 
             if (!shouldAdd) return;
 
-            // Fetch user data for the new message
-            const { data: userData, error: userError } = await supabase
-              .from("users")
-              .select("*")
-              .eq("id", newMsg.user_id)
-              .single();
-
-            if (userError || !userData) {
-              return;
-            }
+            // Fetch user data for the new message (cached + in-flight deduped)
+            const userData = await getOrFetchUser(newMsg.user_id);
+            if (!userData) return;
 
             // Fetch reply_to data if it exists
             let replyToData = null;
@@ -367,12 +361,8 @@ export const ForumChannelArea = () => {
                   .single();
                 
                 if (!replyError && replyMsg) {
-                  // Fetch reply user
-                  const { data: replyUser } = await supabase
-                    .from("users")
-                    .select("id, username, display_name, avatar_url")
-                    .eq("id", replyMsg.user_id)
-                    .single();
+                  // Fetch reply user (cached + in-flight deduped)
+                  const replyUser = await getOrFetchUser(replyMsg.user_id);
                   
                   replyToData = {
                     id: replyMsg.id,
