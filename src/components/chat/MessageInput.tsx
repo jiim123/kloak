@@ -51,8 +51,8 @@ const MAX_TEXTAREA_HEIGHT = 160;
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 const MAX_IMAGE_FILE_SIZE = 1 * 1024 * 1024; // 1MB
 const MAX_ATTACHMENTS = 10;
-const DRAFT_SAVE_DELAY = 500; // ms
-const TYPING_STOP_DELAY = 2000; // ms
+const DRAFT_SAVE_DELAY = 500;
+const TYPING_STOP_DELAY = 2000;
 
 const ActionButtons = memo(
   ({
@@ -92,64 +92,36 @@ const ActionButtons = memo(
       <div className="flex items-center gap-1 mb-0.5 relative">
         {showCharacterWarning && (
           <span
-            className={`text-[13px] font-[Inter,system-ui,sans-serif] mr-1 ${content.length > MAX_LENGTH - 50 ? "text-destructive" : "text-muted-foreground"}`}
+            className={`text-[13px] font-sans mr-1 ${content.length > MAX_LENGTH - 50 ? "text-destructive" : "text-muted-foreground"}`}
           >
             {MAX_LENGTH - content.length}
           </span>
         )}
         {shouldCollapse ? (
-          <>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-150"
-                  onMouseDown={(e) => e.preventDefault()}
-                >
-                  <MoreHorizontal className="w-5 h-5" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="min-w-[160px]">
-                {showAttachButton && (
-                  <DropdownMenuItem onClick={onAttachClick} disabled={!canSendMessage}>
-                    <Paperclip className="w-4 h-4 mr-2" />
-                    Upload image
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem onClick={() => setShowCreatePoll(true)} disabled={!canSendMessage}>
-                  <SquareChartGantt className="w-4 h-4 mr-2" />
-                  Create poll
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <EmojiPicker
-              open={showEmojiPicker}
-              onOpenChange={setShowEmojiPicker}
-              onEmojiSelect={onEmojiSelect}
-              serverId={currentServer?.id}
-            >
-              <button
-                type="button"
-                className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-150"
-                onMouseDown={(e) => e.preventDefault()}
-              >
-                <Smile className="w-5 h-5" />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button type="button" className="p-2 rounded-xl text-muted-foreground hover:bg-muted/50">
+                <MoreHorizontal className="w-5 h-5" />
               </button>
-            </EmojiPicker>
-          </>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {showAttachButton && (
+                <DropdownMenuItem onClick={onAttachClick}>
+                  <Paperclip className="w-4 h-4 mr-2" /> Upload
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={() => setShowCreatePoll(true)}>
+                <SquareChartGantt className="w-4 h-4 mr-2" /> Poll
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         ) : (
           <>
             <button
               type="button"
               onClick={() => setShowCreatePoll(true)}
               disabled={!canSendMessage}
-              className={`p-2 rounded-xl transition-colors duration-150 ${
-                canSendMessage
-                  ? "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                  : "text-muted-foreground/50 cursor-not-allowed"
-              }`}
-              onMouseDown={(e) => e.preventDefault()}
-              title="Create poll"
+              className="p-2 text-muted-foreground hover:bg-muted/50"
             >
               <SquareChartGantt className="w-5 h-5" />
             </button>
@@ -159,11 +131,7 @@ const ActionButtons = memo(
               onEmojiSelect={onEmojiSelect}
               serverId={currentServer?.id}
             >
-              <button
-                type="button"
-                className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-150"
-                onMouseDown={(e) => e.preventDefault()}
-              >
+              <button type="button" className="p-2 text-muted-foreground hover:bg-muted/50">
                 <Smile className="w-5 h-5" />
               </button>
             </EmojiPicker>
@@ -172,11 +140,7 @@ const ActionButtons = memo(
         <button
           onClick={onSubmit}
           disabled={!canSend}
-          className={`p-2 rounded-xl transition-all duration-150 ${
-            canSend
-              ? "bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95"
-              : "bg-muted/50 text-muted-foreground/50 cursor-not-allowed"
-          }`}
+          className={`p-2 rounded-xl ${canSend ? "bg-primary text-primary-foreground" : "bg-muted/50 text-muted-foreground/50"}`}
         >
           {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
         </button>
@@ -184,13 +148,11 @@ const ActionButtons = memo(
     );
   },
 );
-ActionButtons.displayName = "ActionButtons";
 
 export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }: MessageInputProps) => {
   const { user } = useAuthStore();
   const { replyingTo, setReplyingTo, sendMessage } = useMessageStore();
-  const { members, currentServer, currentChannel, channels, fetchRolePermissions, fetchChannelPermissions } =
-    useServerStore();
+  const { members, currentServer, currentChannel, fetchRolePermissions, fetchChannelPermissions } = useServerStore();
   const [content, setContent] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [showMentions, setShowMentions] = useState(false);
@@ -202,99 +164,155 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showCreatePoll, setShowCreatePoll] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mentionMappingsRef = useRef<MentionMapping[]>([]);
   const channelMappingsRef = useRef<ChannelMapping[]>([]);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const draftSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    if (currentServer?.id) fetchRolePermissions(currentServer.id);
-  }, [currentServer?.id, fetchRolePermissions]);
-
-  useEffect(() => {
-    if (channelId) fetchChannelPermissions(channelId);
-  }, [channelId, fetchChannelPermissions]);
-
+  // Permissions & Logic
   const currentMember = useMemo(() => members.find((m) => m.user_id === user?.id), [members, user?.id]);
   const isMuted = currentMember?.is_muted || false;
-  const isReadOnlyChannel = currentChannel?.is_read_only || false;
-  const blockLinks = currentChannel?.block_links || false;
-  const allowedLinkDomains = currentChannel?.allowed_link_domains || [];
   const { hasPermission } = useMemberPermissions(channelId);
-  const canSendMessagesPermission = hasPermission("send_messages");
-  const canSendInReadOnly = isReadOnlyChannel ? hasPermission("manage_messages") : true;
-  const canSendMessage = !isMuted && canSendMessagesPermission && canSendInReadOnly;
-  const isAdmin = hasPermission("manage_messages");
-  const canUseExternalEmojis = hasPermission("use_external_emojis");
-
-  const saveDraftDebounced = useCallback((channelId: string, content: string) => {
-    if (draftSaveTimeoutRef.current) clearTimeout(draftSaveTimeoutRef.current);
-    draftSaveTimeoutRef.current = setTimeout(() => saveDraft(channelId, content), DRAFT_SAVE_DELAY);
-  }, []);
+  const canSendMessage = !isMuted && hasPermission("send_messages");
 
   const resizeTextarea = useCallback(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    textarea.style.height = "0px";
-    const scrollHeight = textarea.scrollHeight;
-    const newHeight = Math.min(Math.max(scrollHeight, MIN_TEXTAREA_HEIGHT), MAX_TEXTAREA_HEIGHT);
-    textarea.style.height = `${newHeight}px`;
+    if (!textareaRef.current) return;
+    textareaRef.current.style.height = "0px";
+    textareaRef.current.style.height = `${Math.min(Math.max(textareaRef.current.scrollHeight, MIN_TEXTAREA_HEIGHT), MAX_TEXTAREA_HEIGHT)}px`;
   }, []);
 
+  const escapeRegex = (string: string) => string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  const convertMentionsForSend = useCallback((text: string): string => {
+    let result = text;
+    mentionMappingsRef.current.forEach((m) => {
+      const regex = new RegExp(`@${escapeRegex(m.username)}(?=\\s|$|[.,!?;:])`, "g");
+      result = result.replace(regex, `<@${m.userId}>`);
+    });
+    return result;
+  }, []);
+
+  const uploadAttachments = useCallback(async (): Promise<string[]> => {
+    if (!user || pendingAttachments.length === 0) return [];
+    const urls: string[] = [];
+    for (const att of pendingAttachments) {
+      const fileName = `${user.id}/${Date.now()}-${crypto.randomUUID()}.${att.file.name.split(".").pop()}`;
+      const result = await secureUpload("attachments", fileName, att.file, { contentType: att.file.type });
+      urls.push(result.publicUrl);
+    }
+    return urls;
+  }, [user, pendingAttachments]);
+
   const handleSubmit = useCallback(async () => {
-    const hasText = content.trim().length > 0;
-    const hasAttachments = pendingAttachments.length > 0;
-    if ((!hasText && !hasAttachments) || !user || isMuted || isSending || !canSendMessage) return;
+    if (!content.trim() && pendingAttachments.length === 0) return;
+    if (isSending || !canSendMessage) return;
 
-    const messageContent = content.trim();
-    if (hasText) {
-      const validation = validateMessageContent(messageContent);
-      if (!validation.valid) {
-        showWarning("Invalid message", validation.error || "Check your message");
-        return;
-      }
-    }
-
-    if (!messageRateLimiter.isAllowed(user.id)) {
-      showWarning("Slow down!", `Try again in ${messageRateLimiter.getRemainingTime(user.id)}s`);
-      return;
-    }
-
-    const contentToSend = hasText ? convertMentionsForSend(messageContent) : "";
-    
-    // Clear state early for UX snappiness
-    setContent("");
-    clearDraft(channelId);
-    setReplyingTo(null);
     setIsSending(true);
-    onStopTyping();
-
-    if (textareaRef.current) textareaRef.current.style.height = `${MIN_TEXTAREA_HEIGHT}px`;
+    const contentToSend = convertMentionsForSend(content.trim());
 
     try {
       let finalContent = contentToSend;
-      if (hasAttachments) {
+      if (pendingAttachments.length > 0) {
         const urls = await uploadAttachments();
         finalContent = finalContent ? `${finalContent}\n${urls.join("\n")}` : urls.join("\n");
-        clearAttachments();
       }
 
-      // 🚀 DB Trigger now handles pings automatically upon message insertion
-      await sendMessage(channelId, user.id, finalContent, replyingTo?.id);
-      
-      const auth = useAuthStore.getState();
-      if (auth.manualStatus !== "offline") auth.updateLastSeen();
-      
+      // 🚀 The magic: One call. The DB trigger handles the pings.
+      await sendMessage(channelId, user!.id, finalContent, replyingTo?.id);
+
+      setContent("");
+      setPendingAttachments([]);
+      setReplyingTo(null);
+      clearDraft(channelId);
+      if (textareaRef.current) textareaRef.current.style.height = `${MIN_TEXTAREA_HEIGHT}px`;
     } catch (error) {
-      handleError(error, "Failed to send message");
+      handleError(error, "Failed to send");
     } finally {
       setIsSending(false);
     }
-  }, [content, pendingAttachments, user, isMuted, isSending, canSendMessage, channelId, replyingTo, sendMessage, onStopTyping]);
+  }, [
+    content,
+    pendingAttachments,
+    channelId,
+    replyingTo,
+    sendMessage,
+    user,
+    canSendMessage,
+    convertMentionsForSend,
+    uploadAttachments,
+  ]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey && !useIsMobile()) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
 
   return (
-    // ... UI JSX remains same, ensure textareaRef is attached ...
+    <div className="relative flex flex-col w-full px-4 pb-4 bg-background">
+      {replyingTo && (
+        <div className="flex items-center justify-between px-3 py-2 mb-2 bg-muted/30 rounded-xl border border-border/50">
+          <div className="flex flex-col truncate">
+            <span className="text-xs font-semibold text-primary">Replying to {replyingTo.user?.display_name}</span>
+            <span className="text-xs text-muted-foreground truncate">{replyingTo.content}</span>
+          </div>
+          <button onClick={() => setReplyingTo(null)} className="p-1 hover:bg-muted rounded-full">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      <div className="flex flex-col w-full bg-muted/20 rounded-2xl border border-border/50 focus-within:border-primary/30 transition-all duration-200">
+        <AttachmentPreviewBar
+          attachments={pendingAttachments}
+          onRemove={(i) => setPendingAttachments((p) => p.filter((_, idx) => idx !== i))}
+        />
+
+        <div className="flex items-end gap-2 px-3 py-2">
+          <textarea
+            ref={textareaRef}
+            value={content}
+            onChange={(e) => {
+              setContent(e.target.value);
+              resizeTextarea();
+              onTyping();
+            }}
+            onKeyDown={handleKeyDown}
+            placeholder={`Message #${channelName}`}
+            className="flex-1 bg-transparent border-none focus:ring-0 resize-none py-2 max-h-[160px] text-[15px] placeholder:text-muted-foreground/60"
+            rows={1}
+          />
+          <ActionButtons
+            content={content}
+            isSending={isSending}
+            canSendMessage={canSendMessage}
+            onSubmit={handleSubmit}
+            onEmojiSelect={(emoji) => setContent((prev) => prev + emoji)}
+            currentServer={currentServer}
+            showEmojiPicker={showEmojiPicker}
+            setShowEmojiPicker={setShowEmojiPicker}
+            showCreatePoll={showCreatePoll}
+            setShowCreatePoll={setShowCreatePoll}
+            hasAttachments={pendingAttachments.length > 0}
+          />
+        </div>
+      </div>
+      <input
+        type="file"
+        ref={fileInputRef}
+        hidden
+        onChange={(e) => {
+          if (e.target.files)
+            setPendingAttachments((prev) => [
+              ...prev,
+              { file: e.target.files![0], preview: URL.createObjectURL(e.target.files![0]) },
+            ]);
+        }}
+      />
+    </div>
   );
 };
