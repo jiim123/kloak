@@ -58,7 +58,7 @@ const tabContentVariants = {
 const Auth = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, isLoading, error, createAccount, login, setError } = useAuthStore();
+  const { user, isLoading, error, createAccount, login, setError, setLoading } = useAuthStore();
   const { toast } = useToast();
 
   const redirectParam = useMemo(() => new URLSearchParams(location.search).get("redirect"), [location.search]);
@@ -266,6 +266,7 @@ const Auth = () => {
 
       let captchaToken: string | null = null;
       if (hcaptchaSiteKey && hcaptchaRef.current) {
+        setLoading(true);
         try {
           const result = await hcaptchaRef.current.execute({ async: true });
           captchaToken = result?.response ?? null;
@@ -277,6 +278,8 @@ const Auth = () => {
             description: "Please complete the captcha to create an account.",
           });
           return;
+        } finally {
+          setLoading(false);
         }
         if (!captchaToken) {
           toast({

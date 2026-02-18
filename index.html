@@ -24,13 +24,13 @@
       http-equiv="Content-Security-Policy"
       content="
       default-src 'self';
-      script-src 'self' 'unsafe-inline';
-      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+      script-src 'self' 'unsafe-inline' https://hcaptcha.com https://*.hcaptcha.com;
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://hcaptcha.com https://*.hcaptcha.com;
       font-src 'self' https://fonts.gstatic.com;
       img-src 'self' data: blob: https: http:;
       media-src 'self' blob: https:;
-      connect-src 'self' https://*.supabase.co wss://*.supabase.co https://livekit.kibun.social wss://livekit.kibun.social https://api.giphy.com https://media.giphy.com https://media0.giphy.com https://media1.giphy.com https://media2.giphy.com https://media3.giphy.com https://media4.giphy.com;
-      frame-src https://www.youtube.com https://player.vimeo.com https://store.steampowered.com https://open.spotify.com https://w.soundcloud.com https://player.twitch.tv https://clips.twitch.tv https://player.kick.com;
+      connect-src 'self' https://*.supabase.co wss://*.supabase.co https://livekit.kibun.social wss://livekit.kibun.social https://api.giphy.com https://media.giphy.com https://media0.giphy.com https://media1.giphy.com https://media2.giphy.com https://media3.giphy.com https://media4.giphy.com https://hcaptcha.com https://*.hcaptcha.com https://sentry.hcaptcha.com;
+      frame-src https://www.youtube.com https://player.vimeo.com https://store.steampowered.com https://open.spotify.com https://w.soundcloud.com https://player.twitch.tv https://clips.twitch.tv https://player.kick.com https://hcaptcha.com https://*.hcaptcha.com;
       object-src 'none';
       base-uri 'self';
       form-action 'self';
