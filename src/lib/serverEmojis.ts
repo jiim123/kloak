@@ -25,12 +25,14 @@ export async function fetchServerEmojis(serverId: string, opts?: { force?: boole
   const now = Date.now();
   const existing = cache.get(serverId);
 
-  if (!force && existing && now - existing.fetchedAt < CACHE_TTL_MS) {
-    return existing.items;
+  // Always coalesce concurrent requests (even when forced).
+  // Otherwise multiple components calling `{ force: true }` at once can create request storms.
+  if (existing?.inFlight) {
+    return existing.inFlight;
   }
 
-  if (!force && existing?.inFlight) {
-    return existing.inFlight;
+  if (!force && existing && now - existing.fetchedAt < CACHE_TTL_MS) {
+    return existing.items;
   }
 
   const inFlight = (async () => {

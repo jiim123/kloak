@@ -659,12 +659,14 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange, serve
 
   // Fetch server emojis when a server is selected
   const loadServerEmojis = useCallback(
-    async (sId: string) => {
-      if (serverEmojis[sId] || loadingServers.has(sId)) return;
+    async (sId: string, opts?: { force?: boolean }) => {
+      const force = opts?.force ?? false;
+      if (!force && (serverEmojis[sId] || loadingServers.has(sId))) return;
+      if (loadingServers.has(sId)) return;
 
       setLoadingServers((prev) => new Set([...prev, sId]));
       try {
-        const emojis = await fetchServerEmojis(sId);
+        const emojis = await fetchServerEmojis(sId, { force });
         setServerEmojis((prev) => ({ ...prev, [sId]: emojis }));
       } catch (error) {
         console.error("Failed to fetch server emojis:", error);
@@ -679,6 +681,20 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange, serve
     },
     [serverEmojis, loadingServers],
   );
+
+  // When emojis change elsewhere (upload/rename/delete), refresh any loaded lists.
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { serverId?: string } | undefined;
+      const changedServerId = detail?.serverId;
+      if (!changedServerId) return;
+      if (!serverEmojis[changedServerId] && selectedServerForEmoji !== changedServerId) return;
+      loadServerEmojis(changedServerId, { force: true });
+    };
+    window.addEventListener("server-emojis-changed", handler);
+    return () => window.removeEventListener("server-emojis-changed", handler);
+  }, [open, serverEmojis, selectedServerForEmoji, loadServerEmojis]);
 
   // Load current server emojis when picker opens
   useEffect(() => {

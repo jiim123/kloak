@@ -8,6 +8,7 @@ export { useRealtimeUsers, useRealtimeSingleUser, patchUserAcrossStores } from '
 export { useRealtimeUserUpdates } from './useRealtimeUserUpdates';
 export { useRealtimePinnedMessages } from './useRealtimePinnedMessages';
 export { useRealtimeServer } from './useRealtimeServer';
+export { useRealtimeServerEmojis } from './useRealtimeServerEmojis';
 export { useRealtimeNotifications, requestNotificationPermission } from './useRealtimeNotifications';
 export { useTauriNotificationActions } from './useTauriNotificationActions';
 export { useTyping } from './useTyping';

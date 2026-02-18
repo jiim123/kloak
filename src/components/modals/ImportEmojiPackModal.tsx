@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { secureUpload, secureDelete } from "@/lib/storageUpload";
 import { toast } from "sonner";
 import { invalidateServerEmojis } from "@/lib/serverEmojis";
+import { invalidateGlobalEmojiCache } from "@/lib/globalEmojiResolver";
 import JSZip from "jszip";
 
 const MAX_SERVER_EMOJIS = 1000;
@@ -219,6 +220,7 @@ export const ImportEmojiPackModal = () => {
       }
 
       invalidateServerEmojis(currentServer.id);
+      invalidateGlobalEmojiCache();
       window.dispatchEvent(new CustomEvent("server-emojis-changed", { detail: { serverId: currentServer.id } }));
       setImportResult({ success: successCount, failed: failedCount });
 

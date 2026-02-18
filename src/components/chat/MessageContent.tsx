@@ -8,7 +8,14 @@ import { CustomEmojiPopover } from './CustomEmojiPopover';
 import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
 import { fetchServerEmojis } from '@/lib/serverEmojis';
-import { getGlobalEmojiMap, getGlobalEmojiDuplicates, resolveQualifiedEmoji, resolveEmojisByNameFallback, type ResolvedEmoji } from '@/lib/globalEmojiResolver';
+import {
+  getGlobalEmojiMap,
+  getGlobalEmojiDuplicates,
+  resolveQualifiedEmoji,
+  resolveEmojisByNameFallback,
+  resolveQualifiedEmojiByNameFallback,
+  type ResolvedEmoji,
+} from '@/lib/globalEmojiResolver';
 
 interface UserInfo {
   id: string;
@@ -79,7 +86,7 @@ const extractUrls = (content: string): string[] => {
 // Parse message into segments (text, code blocks, inline code)
 const parseMessageSegments = (content: string): ParsedSegment[] => {
   const segments: ParsedSegment[] = [];
-  let remaining = content;
+  const remaining = content;
   
   // Match code blocks first: ```language\ncode``` or ```code```
   const codeBlockRegex = /```(\w+)?\n?([\s\S]*?)```/g;
@@ -119,7 +126,7 @@ const parseMessageSegments = (content: string): ParsedSegment[] => {
   for (const segment of segments) {
     if (segment.type === 'text') {
       const inlineCodeRegex = /`([^`]+)`/g;
-      let textRemaining = segment.content;
+      const textRemaining = segment.content;
       let textLastIndex = 0;
       let inlineMatch;
       
@@ -377,6 +384,9 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
     return () => { cancelled = true; };
   }, [currentServer?.id]); // re-resolve when server changes
 
+  // Note: we intentionally avoid per-message global event listeners here.
+  // Emoji changes are handled via cache invalidation + in-flight request coalescing.
+
   // Fallback: resolve unresolved :emojiname: from DB for emojis from servers the viewer isn't in
   useEffect(() => {
     const el = contentRef.current;
@@ -384,8 +394,10 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
 
     // Find all text nodes that still contain unresolved :emojiname: patterns
     const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
-    const emojiPattern = /:([a-z0-9_]{2,32}):/g;
-    const toResolve = new Map<string, Text[]>();
+    const emojiPattern = /:([a-z0-9_]{2,32})(?:~([^:]{1,50}))?:/g;
+    const nodesToProcess = new Set<Text>();
+    const simpleNames = new Set<string>();
+    const qualifiedPairs = new Set<string>(); // "name~ServerName"
 
     let node: Text | null;
     while ((node = walker.nextNode() as Text | null)) {
@@ -394,44 +406,81 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
       emojiPattern.lastIndex = 0;
       while ((m = emojiPattern.exec(text)) !== null) {
         const name = m[1];
-        if (!toResolve.has(name)) toResolve.set(name, []);
-        toResolve.get(name)!.push(node);
+        const qualifier = m[2];
+        nodesToProcess.add(node);
+        if (qualifier) {
+          qualifiedPairs.add(`${name}~${qualifier}`);
+        } else {
+          simpleNames.add(name);
+        }
       }
     }
 
-    if (toResolve.size === 0) return;
+    if (nodesToProcess.size === 0) return;
 
     let cancelled = false;
 
     (async () => {
-      const names = Array.from(toResolve.keys());
-      const resolved = await resolveEmojisByNameFallback(names);
-      for (const [name, nodes] of toResolve) {
+      const resolvedSimple = await resolveEmojisByNameFallback(Array.from(simpleNames));
+
+      const qualified = Array.from(qualifiedPairs);
+      const resolvedQualified = new Map<string, string | null>();
+      await Promise.all(
+        qualified.map(async (key) => {
+          const idx = key.indexOf('~');
+          const name = key.slice(0, idx);
+          const serverName = key.slice(idx + 1);
+          const url = await resolveQualifiedEmojiByNameFallback(name, serverName);
+          resolvedQualified.set(key, url);
+        }),
+      );
+
+      for (const textNode of nodesToProcess) {
         if (cancelled) return;
-        const url = resolved.get(name);
-        if (!url) continue;
+        if (!textNode.parentNode) continue;
 
-        for (const textNode of nodes) {
-          if (!textNode.parentNode) continue;
-          const parts = textNode.textContent!.split(`:${name}:`);
-          if (parts.length <= 1) continue;
+        const text = textNode.textContent || '';
+        emojiPattern.lastIndex = 0;
+        let lastIndex = 0;
+        let match: RegExpExecArray | null;
 
-          const frag = document.createDocumentFragment();
-          parts.forEach((part, i) => {
-            if (i > 0) {
-              const img = document.createElement('img');
-              img.src = url;
-              img.alt = `:${name}:`;
-              img.title = `:${name}:`;
-              img.className = 'inline-block w-8 h-8 align-middle object-contain cursor-pointer hover:scale-110 transition-transform';
-              img.loading = 'lazy';
-              img.dataset.crossEmoji = name;
-              frag.appendChild(img);
-            }
-            if (part) frag.appendChild(document.createTextNode(part));
-          });
-          textNode.parentNode.replaceChild(frag, textNode);
+        const frag = document.createDocumentFragment();
+
+        while ((match = emojiPattern.exec(text)) !== null) {
+          const full = match[0];
+          const name = match[1];
+          const qualifier = match[2];
+          const start = match.index;
+
+          if (start > lastIndex) {
+            frag.appendChild(document.createTextNode(text.slice(lastIndex, start)));
+          }
+
+          const url = qualifier ? resolvedQualified.get(`${name}~${qualifier}`) : resolvedSimple.get(name);
+
+          if (url) {
+            const img = document.createElement('img');
+            img.src = url;
+            img.alt = full;
+            img.title = full;
+            img.className =
+              'inline-block w-8 h-8 align-middle object-contain cursor-pointer hover:scale-110 transition-transform';
+            img.loading = 'lazy';
+            img.dataset.crossEmoji = name;
+            if (qualifier) img.dataset.crossEmojiServer = qualifier;
+            frag.appendChild(img);
+          } else {
+            frag.appendChild(document.createTextNode(full));
+          }
+
+          lastIndex = start + full.length;
         }
+
+        if (lastIndex < text.length) {
+          frag.appendChild(document.createTextNode(text.slice(lastIndex)));
+        }
+
+        textNode.parentNode.replaceChild(frag, textNode);
       }
     })();
 

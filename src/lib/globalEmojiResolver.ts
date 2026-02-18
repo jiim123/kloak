@@ -43,6 +43,12 @@ export async function getGlobalEmojiMap(opts?: { force?: boolean }): Promise<Map
   const servers = useServerStore.getState().servers;
   const serverIds = servers.map((s) => s.id).sort();
 
+  // Always deduplicate in-flight builds (even when forced).
+  // Multiple components may ask for a force-refresh at once; coalesce them.
+  if (globalCache?.inFlight) {
+    return globalCache.inFlight;
+  }
+
   // Check cache validity
   if (
     !force &&
@@ -51,11 +57,6 @@ export async function getGlobalEmojiMap(opts?: { force?: boolean }): Promise<Map
     globalCache.serverIds.join(',') === serverIds.join(',')
   ) {
     return globalCache.map;
-  }
-
-  // Deduplicate in-flight
-  if (!force && globalCache?.inFlight) {
-    return globalCache.inFlight;
   }
 
   const inFlight = (async () => {
@@ -164,6 +165,10 @@ type FallbackCacheEntry = { value: string | null; cachedAt: number };
 const FALLBACK_CACHE_TTL_MS = 10 * 60_000; // 10 minutes
 const fallbackCache = new Map<string, FallbackCacheEntry>();
 
+// Qualified fallback cache: "name~ServerName" → url|null
+const qualifiedFallbackCache = new Map<string, FallbackCacheEntry>();
+const qualifiedFallbackInflight = new Map<string, Promise<string | null>>();
+
 // Micro-batched, cross-call request coalescing:
 // many message components may ask for different subsets of names at the same time.
 // Instead of firing 5-20 near-identical requests with slightly different `in(name, ...)` sets,
@@ -178,6 +183,16 @@ function getCachedFallback(name: string): string | null | undefined {
   if (!entry) return undefined;
   if (Date.now() - entry.cachedAt > FALLBACK_CACHE_TTL_MS) {
     fallbackCache.delete(name);
+    return undefined;
+  }
+  return entry.value;
+}
+
+function getCachedQualifiedFallback(key: string): string | null | undefined {
+  const entry = qualifiedFallbackCache.get(key);
+  if (!entry) return undefined;
+  if (Date.now() - entry.cachedAt > FALLBACK_CACHE_TTL_MS) {
+    qualifiedFallbackCache.delete(key);
     return undefined;
   }
   return entry.value;
@@ -289,3 +304,54 @@ export async function resolveEmojiByNameFallback(name: string): Promise<string |
   if (cached !== undefined) return cached;
   return await getOrQueueFallbackName(name);
 }
+
+/**
+ * Resolve a qualified custom emoji like ":name~Server Name:" by looking up the matching server name.
+ * This is only used when the viewer can't resolve it from their own server list / global cache.
+ *
+ * Note: server names are not guaranteed unique. This best-effort resolver returns the first match.
+ */
+export async function resolveQualifiedEmojiByNameFallback(name: string, serverName: string): Promise<string | null> {
+  const key = `${name}~${serverName}`;
+  const cached = getCachedQualifiedFallback(key);
+  if (cached !== undefined) return cached;
+
+  const existing = qualifiedFallbackInflight.get(key);
+  if (existing) return existing;
+
+  const p = (async () => {
+    try {
+      const { data, error } = await supabase
+        .from('server_emojis')
+        .select('file_path, servers!inner(name)')
+        .eq('name', name)
+        .eq('servers.name', serverName)
+        .limit(1);
+
+      if (error || !data || data.length === 0) {
+        qualifiedFallbackCache.set(key, { value: null, cachedAt: Date.now() });
+        return null;
+      }
+
+      const filePath = (data[0] as any)?.file_path as string | undefined;
+      if (!filePath) {
+        qualifiedFallbackCache.set(key, { value: null, cachedAt: Date.now() });
+        return null;
+      }
+
+      const { data: urlData } = supabase.storage.from('server-emojis').getPublicUrl(filePath);
+      const url = urlData.publicUrl || null;
+      qualifiedFallbackCache.set(key, { value: url, cachedAt: Date.now() });
+      return url;
+    } catch {
+      qualifiedFallbackCache.set(key, { value: null, cachedAt: Date.now() });
+      return null;
+    } finally {
+      qualifiedFallbackInflight.delete(key);
+    }
+  })();
+
+  qualifiedFallbackInflight.set(key, p);
+  return await p;
+}
+

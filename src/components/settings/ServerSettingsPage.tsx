@@ -59,6 +59,7 @@ import { secureUpload, secureDelete, secureListAndDelete } from '@/lib/storageUp
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { invalidateServerEmojis } from '@/lib/serverEmojis';
+import { invalidateGlobalEmojiCache } from '@/lib/globalEmojiResolver';
 import type { ServerRole, ServerMember, CustomServerRole, Permission } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -1112,6 +1113,8 @@ export const ServerSettingsPage = () => {
       setServerEmojis((data ?? []) as Array<{ id: string; name: string; file_path: string }>);
       toast.success('Emoji uploaded');
       invalidateServerEmojis(server.id);
+      invalidateGlobalEmojiCache();
+      window.dispatchEvent(new CustomEvent('server-emojis-changed', { detail: { serverId: server.id } }));
       clearEmoji();
     } catch (err: any) {
       const msg = err?.message || 'Failed to upload emoji';
@@ -1151,6 +1154,8 @@ export const ServerSettingsPage = () => {
       if (error) throw error;
       setServerEmojis((prev) => prev.map((e) => (e.id === emojiId ? { ...e, name: trimmed } : e)));
       invalidateServerEmojis(server.id);
+      invalidateGlobalEmojiCache();
+      window.dispatchEvent(new CustomEvent('server-emojis-changed', { detail: { serverId: server.id } }));
       setEditingEmojiId(null);
       toast.success("Emoji renamed");
     } catch (err: any) {
@@ -1184,6 +1189,8 @@ export const ServerSettingsPage = () => {
 
       setServerEmojis((prev) => prev.filter((e) => e.id !== emoji.id));
       invalidateServerEmojis(server.id);
+      invalidateGlobalEmojiCache();
+      window.dispatchEvent(new CustomEvent('server-emojis-changed', { detail: { serverId: server.id } }));
       toast.success('Emoji deleted');
     } catch (error) {
       console.error('Failed to delete emoji:', error);
@@ -1215,6 +1222,8 @@ export const ServerSettingsPage = () => {
 
     setServerEmojis((prev) => prev.filter((e) => !selectedEmojiIds.has(e.id)));
     invalidateServerEmojis(server.id);
+    invalidateGlobalEmojiCache();
+    window.dispatchEvent(new CustomEvent('server-emojis-changed', { detail: { serverId: server.id } }));
     setSelectedEmojiIds(new Set());
     setIsMultiSelectMode(false);
     setIsDeletingEmojis(false);

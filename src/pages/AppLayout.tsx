@@ -59,6 +59,7 @@ import {
   useRealtimeReactions,
   useTauriNotificationActions,
   useRealtimeOwnMembership,
+  useRealtimeServerEmojis,
 } from "@/hooks";
 import { UnreadDMsContext } from "@/hooks/useUnreadDMsContext";
 import { UnreadChannelsContext } from "@/hooks/useUnreadChannelsContext";
@@ -198,6 +199,7 @@ const AppLayout = () => {
   useRealtimeFriendships(user?.id || null);
   useRealtimeUsers();
   useRealtimeServer(currentServer?.id || null);
+  useRealtimeServerEmojis(currentServer?.id || null);
   useRealtimeNotifications(user?.id || null);
   usePresence();
 

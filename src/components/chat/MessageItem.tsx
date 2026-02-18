@@ -229,6 +229,8 @@ export const MessageItem = memo(function MessageItem({
     return () => { cancelled = true; };
   }, [currentServer?.id]);
 
+  // Note: avoid per-message global event listeners; cache invalidation handles freshness.
+
   const priorityRoleWithIcon = useMemo<Pick<CustomServerRole, "name" | "icon"> | null>(() => {
     const memberRoles = messageMember?.roles ?? [];
     if (memberRoles.length === 0) return null;
