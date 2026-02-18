@@ -42,7 +42,7 @@ interface AuthState {
 
   // Auth methods
   checkAuth: () => Promise<boolean>;
-  createAccount: (username: string) => Promise<{ secretKey: string; user: User } | null>;
+  createAccount: (username: string, hcaptchaToken?: string | null) => Promise<{ secretKey: string; user: User } | null>;
   login: (secretKey: string) => Promise<boolean>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => Promise<void>;
@@ -94,7 +94,7 @@ export const useAuthStore = create<AuthState>()(
         return success;
       },
 
-      createAccount: async (username: string) => {
+      createAccount: async (username: string, hcaptchaToken?: string | null) => {
         set({ isLoading: true, error: null });
 
         // Rate limit account creation to prevent abuse
@@ -116,33 +116,62 @@ export const useAuthStore = create<AuthState>()(
         try {
           const secretKey = generateSecretKey();
           const keyHash = await hashSecretKey(secretKey);
+          const normalizedUsername = username.toLowerCase().trim();
+          const bannerColor = "#5865F2";
 
-          // Use the secure RPC function to register (bypasses RLS)
-          const { data, error } = await supabase.rpc("register_user", {
-            _username: username.toLowerCase().trim(),
-            _key_hash: keyHash,
-            _banner_color: "#5865F2",
-          });
+          let data: Record<string, unknown> | null = null;
+          let errorMessage: string | null = null;
 
-          if (error) {
-            // Handle specific error messages from the function
-            if (error.message.includes("Username already taken")) {
+          if (hcaptchaToken) {
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            if (!supabaseUrl) {
+              set({ error: "Registration is not configured. Missing VITE_SUPABASE_URL.", isLoading: false });
+              return null;
+            }
+            const res = await fetch(`${supabaseUrl}/functions/v1/register-with-captcha`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                username: normalizedUsername,
+                key_hash: keyHash,
+                hcaptcha_response: hcaptchaToken,
+                banner_color: bannerColor,
+              }),
+            });
+            const json = (await res.json()) as { data?: Record<string, unknown>; error?: string };
+            if (!res.ok) {
+              errorMessage = json.error ?? "Registration failed";
+            } else {
+              data = json.data ?? null;
+            }
+          } else {
+            const { data: rpcData, error } = await supabase.rpc("register_user", {
+              _username: normalizedUsername,
+              _key_hash: keyHash,
+              _banner_color: bannerColor,
+            });
+            if (error) errorMessage = error.message;
+            else data = rpcData as Record<string, unknown> | null;
+          }
+
+          if (errorMessage) {
+            if (errorMessage.includes("Username already taken")) {
               set({ error: "Username already taken", isLoading: false });
               return null;
             }
-            if (error.message.includes("reserved")) {
+            if (errorMessage.includes("reserved")) {
               set({ error: "This username is reserved", isLoading: false });
               return null;
             }
-            throw error;
+            set({ error: errorMessage, isLoading: false });
+            return null;
           }
 
           if (!data) {
             throw new Error("No user data returned");
           }
 
-          // Data is returned as JSON from the RPC function
-          const userData = data as Record<string, unknown>;
+          const userData = data;
           const user: User = {
             id: userData.id as string,
             username: userData.username as string,

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuthStore, initializeAuth } from "@/stores/authStore";
@@ -38,6 +38,7 @@ import {
   recordRegistrationAttempt,
   logBlockedUsernameAttempt,
 } from "@/utils/blockedUsernames";
+import HCaptcha from "@hcaptcha/react-hcaptcha";
 
 const tabContentVariants = {
   enter: (direction: number) => ({
@@ -88,6 +89,10 @@ const Auth = () => {
   // Login state
   const [secretKey, setSecretKey] = useState("");
   const [showSecretKey, setShowSecretKey] = useState(false);
+
+  // hCaptcha (registration only); when set, registration goes through Edge Function with captcha
+  const hcaptchaSiteKey = import.meta.env.VITE_HCAPTCHA_SITE_KEY as string | undefined;
+  const hcaptchaRef = useRef<HCaptcha | null>(null);
 
   // Check for saved session on mount
   useEffect(() => {
@@ -258,19 +263,45 @@ const Auth = () => {
 
     try {
       recordRegistrationAttempt();
+
+      let captchaToken: string | null = null;
+      if (hcaptchaSiteKey && hcaptchaRef.current) {
+        try {
+          const result = await hcaptchaRef.current.execute({ async: true });
+          captchaToken = result?.response ?? null;
+        } catch (captchaErr) {
+          console.warn("Captcha cancelled or failed:", captchaErr);
+          toast({
+            variant: "destructive",
+            title: "Verification required",
+            description: "Please complete the captcha to create an account.",
+          });
+          return;
+        }
+        if (!captchaToken) {
+          toast({
+            variant: "destructive",
+            title: "Verification required",
+            description: "Please complete the captcha to create an account.",
+          });
+          return;
+        }
+      }
+
       // Set modal flag BEFORE createAccount so the redirect useEffect
       // won't navigate away when the user is set in the store.
       setShowWelcomeModal(true);
-      const result = await createAccount(username.trim().toLowerCase());
+      const result = await createAccount(username.trim().toLowerCase(), captchaToken ?? undefined);
       if (result) {
         setGeneratedKey(result.secretKey);
       } else {
-        // Account creation failed — reset the modal flag
         setShowWelcomeModal(false);
+        hcaptchaRef.current?.resetCaptcha();
       }
     } catch (err) {
       console.error("Account creation error:", err);
-      // Error is already handled in authStore, but add extra logging for iOS debugging
+      setShowWelcomeModal(false);
+      hcaptchaRef.current?.resetCaptcha();
       toast({
         variant: "destructive",
         title: "Account creation failed",
@@ -508,6 +539,17 @@ const Auth = () => {
                           {renderUsernameSuggestions()}
                         </div>
 
+                        {hcaptchaSiteKey && (
+                          <div className="flex justify-center">
+                            <HCaptcha
+                              ref={hcaptchaRef}
+                              sitekey={hcaptchaSiteKey}
+                              theme="dark"
+                              size="normal"
+                            />
+                          </div>
+                        )}
+
                         <Button
                           type="submit"
                           className="w-full"
@@ -702,6 +744,17 @@ const Auth = () => {
                           {renderUsernameHelperText()}
                           {renderUsernameSuggestions()}
                         </div>
+
+                        {hcaptchaSiteKey && (
+                          <div className="flex justify-center">
+                            <HCaptcha
+                              ref={hcaptchaRef}
+                              sitekey={hcaptchaSiteKey}
+                              theme="dark"
+                              size="normal"
+                            />
+                          </div>
+                        )}
 
                         <Button
                           type="submit"
