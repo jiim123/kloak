@@ -7,6 +7,7 @@ import { markWelcomeSeen } from "@/lib/storage";
 import {
   Key,
   AlertCircle,
+  AlertTriangle,
   Eye,
   EyeOff,
   Loader2,
@@ -39,6 +40,7 @@ import {
   logBlockedUsernameAttempt,
 } from "@/utils/blockedUsernames";
 import HCaptcha from "@hcaptcha/react-hcaptcha";
+import { MAINTENANCE_MODE } from "@/lib/maintenance";
 
 const tabContentVariants = {
   enter: (direction: number) => ({
@@ -235,6 +237,8 @@ const Auth = () => {
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (MAINTENANCE_MODE) return;
+
     // Check rate limit
     const rateLimit = checkRegistrationRateLimit();
     if (!rateLimit.allowed) {
@@ -316,6 +320,8 @@ const Auth = () => {
   // Handle login
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (MAINTENANCE_MODE) return;
 
     const trimmedKey = secretKey.trim();
 
@@ -441,9 +447,18 @@ const Auth = () => {
   // Tauri window uses compact "form-only" layout
   const isTauriApp = isTauriWindow();
 
+  const maintenanceBanner = MAINTENANCE_MODE ? (
+    <div className="w-full py-2.5 px-4 bg-amber-500/20 border-b border-amber-500/30 flex items-center justify-center gap-2 text-amber-700 dark:text-amber-400 text-sm font-medium shrink-0">
+      <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+      We're currently under maintenance. New sign-ups and login are temporarily unavailable.
+    </div>
+  ) : null;
+
   if (isTauriApp) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+      <div className="min-h-screen bg-background flex flex-col">
+        {maintenanceBanner}
+        <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-md">
           {/* Auth card */}
           <div className="bg-card border border-border rounded-xl p-6 shadow-xl">
@@ -465,14 +480,12 @@ const Auth = () => {
                 </TabsTrigger>
               </TabsList>
 
-              {/* Backend maintenance notice */}
-              {/*<div className="mb-4 p-3 rounded-lg bg-muted/60 border border-border flex items-start gap-2.5 text-muted-foreground">
-                <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                <p className="text-sm leading-relaxed">
-                  We're running a backend process right now. Login or account creation may not work for a short
-                  while—nothing to worry about, it's routine. If something fails, try again in a few minutes.
-                </p>
-              </div>*/}
+              {/* Maintenance notice */}
+              {MAINTENANCE_MODE && (
+                <div className="mb-4 p-4 rounded-lg bg-slate-700 border border-slate-600 text-sm leading-relaxed text-slate-300">
+                  We are currently experiencing high traffic volumes and are scaling our systems to keep up. Login and Registration are temporarily disabled to ensure stability for active sessions. We'll be back shortly!
+                </div>
+              )}
 
               {/* Rate limit warning */}
               {rateLimitCooldown !== null && rateLimitCooldown > 0 && (
@@ -533,7 +546,7 @@ const Auth = () => {
                               value={username}
                               onChange={(e) => setUsername(e.target.value)}
                               maxLength={16}
-                              disabled={isLoading || (rateLimitCooldown !== null && rateLimitCooldown > 0)}
+                              disabled={MAINTENANCE_MODE || isLoading || (rateLimitCooldown !== null && rateLimitCooldown > 0)}
                               className={cn(getInputClassName())}
                             />
                             <div className="absolute right-3 top-1/2 -translate-y-1/2">{renderUsernameStatus()}</div>
@@ -557,6 +570,7 @@ const Auth = () => {
                           type="submit"
                           className="w-full"
                           disabled={
+                            MAINTENANCE_MODE ||
                             isLoading ||
                             !!usernameError ||
                             isUsernameAvailable !== true ||
@@ -607,7 +621,7 @@ const Auth = () => {
                               onChange={(e) => setSecretKey(e.target.value)}
                               onPaste={handleKeyPaste}
                               className="font-mono text-sm pr-10"
-                              disabled={isLoading}
+                              disabled={MAINTENANCE_MODE || isLoading}
                             />
                             <Button
                               type="button"
@@ -621,7 +635,7 @@ const Auth = () => {
                           </div>
                         </div>
 
-                        <Button type="submit" className="w-full" disabled={isLoading || !secretKey}>
+                        <Button type="submit" className="w-full" disabled={MAINTENANCE_MODE || isLoading || !secretKey}>
                           {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                           Login
                         </Button>
@@ -639,6 +653,7 @@ const Auth = () => {
         </div>
         {/* Onboarding Modal for new users */}
         <OnboardingModal open={showWelcomeModal} onClose={handleOnboardingClose} secretKey={generatedKey} />
+        </div>
       </div>
     );
   }
@@ -649,6 +664,7 @@ const Auth = () => {
       <SEO {...SEO_CONFIG.auth} noIndex />
       {/* Navigation */}
       <NavigationMenu />
+      {maintenanceBanner}
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           {/* Auth card */}
@@ -671,14 +687,12 @@ const Auth = () => {
                 </TabsTrigger>
               </TabsList>
 
-              {/* Backend maintenance notice */}
-              {/*<div className="mb-4 p-3 rounded-lg bg-muted/60 border border-border flex items-start gap-2.5 text-muted-foreground">
-                <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                <p className="text-sm leading-relaxed">
-                  We're running a backend process right now. Login or account creation may not work for a short
-                  while—nothing to worry about, it's routine. If something fails, try again in a few minutes.
-                </p>
-              </div>*/}
+              {/* Maintenance notice */}
+              {MAINTENANCE_MODE && (
+                <div className="mb-4 p-4 rounded-lg bg-slate-700 border border-slate-600 text-sm leading-relaxed text-slate-300">
+                  We are currently experiencing high traffic volumes and are scaling our systems to keep up. Login and Registration are temporarily disabled to ensure stability for active sessions. We'll be back shortly!
+                </div>
+              )}
 
               {/* Rate limit warning */}
               {rateLimitCooldown !== null && rateLimitCooldown > 0 && (
@@ -739,7 +753,7 @@ const Auth = () => {
                               value={username}
                               onChange={(e) => setUsername(e.target.value)}
                               maxLength={16}
-                              disabled={isLoading || (rateLimitCooldown !== null && rateLimitCooldown > 0)}
+                              disabled={MAINTENANCE_MODE || isLoading || (rateLimitCooldown !== null && rateLimitCooldown > 0)}
                               className={cn(getInputClassName())}
                             />
                             <div className="absolute right-3 top-1/2 -translate-y-1/2">{renderUsernameStatus()}</div>
@@ -763,6 +777,7 @@ const Auth = () => {
                           type="submit"
                           className="w-full"
                           disabled={
+                            MAINTENANCE_MODE ||
                             isLoading ||
                             !!usernameError ||
                             isUsernameAvailable !== true ||
@@ -813,7 +828,7 @@ const Auth = () => {
                               onChange={(e) => setSecretKey(e.target.value)}
                               onPaste={handleKeyPaste}
                               className="font-mono text-sm pr-10"
-                              disabled={isLoading}
+                              disabled={MAINTENANCE_MODE || isLoading}
                             />
                             <Button
                               type="button"
@@ -827,7 +842,7 @@ const Auth = () => {
                           </div>
                         </div>
 
-                        <Button type="submit" className="w-full" disabled={isLoading || !secretKey}>
+                        <Button type="submit" className="w-full" disabled={MAINTENANCE_MODE || isLoading || !secretKey}>
                           {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                           Login
                         </Button>

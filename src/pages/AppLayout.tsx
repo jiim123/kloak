@@ -72,6 +72,7 @@ import type { User } from "@/types";
 import { PresenceDebugOverlay } from "@/components/debug/PresenceDebugOverlay";
 import { SEO } from "@/components/seo";
 import { resizeWindowForApp } from "@/lib/tauriRuntime";
+import { MAINTENANCE_MODE } from "@/lib/maintenance";
 
 const AppLayout = () => {
   const navigate = useNavigate();
@@ -527,6 +528,12 @@ const AppLayout = () => {
         <SEO title={desktopTitle} noIndex />
         <div className="h-screen flex flex-col overflow-hidden">
           <DesktopTitleBar title={desktopTitle} />
+
+          {MAINTENANCE_MODE && (
+            <div className="w-full py-2.5 px-4 bg-slate-700 border-b border-slate-600 text-center text-sm text-slate-300 shrink-0">
+              We're scaling our systems to handle high traffic. You’re logged in, so you’re safe!
+            </div>
+          )}
 
           {/* Connection Status Banner */}
           <ConnectionStatus />
