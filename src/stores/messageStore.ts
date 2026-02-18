@@ -130,153 +130,183 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     if (existingInflight) return existingInflight;
 
     const p = (async () => {
-    const { messagesByChannel } = get();
-    const cached = messagesByChannel[channelId];
+      const { messagesByChannel } = get();
+      const cached = messagesByChannel[channelId];
 
-    // If we have cached messages and they're fresh, don't refetch (unless paginating)
-    if (!before && !force && cached && cached.messages.length > 0) {
-      const isFresh = Date.now() - cached.lastFetched < CACHE_EXPIRY_MS;
-      if (isFresh) {
-        return;
+      // If we have cached messages and they're fresh, don't refetch (unless paginating)
+      if (!before && !force && cached && cached.messages.length > 0) {
+        const isFresh = Date.now() - cached.lastFetched < CACHE_EXPIRY_MS;
+        if (isFresh) {
+          return;
+        }
       }
-    }
 
-    // ─── KEY CHANGE: stale-while-revalidate ───
-    // Only show the full-screen skeleton if we have ZERO cached messages for this channel.
-    // If we have stale cached messages, show them immediately and fetch silently in background.
-    const hasCachedMessages = cached && cached.messages.length > 0;
+      // ─── KEY CHANGE: stale-while-revalidate ───
+      // Only show the full-screen skeleton if we have ZERO cached messages for this channel.
+      // If we have stale cached messages, show them immediately and fetch silently in background.
+      const hasCachedMessages = cached && cached.messages.length > 0;
 
-    if (!hasCachedMessages && !silent) {
-      // First-ever visit to this channel — show skeleton
-      set({ isLoading: true });
-    }
+      if (!hasCachedMessages && !silent) {
+        // First-ever visit to this channel — show skeleton
+        set({ isLoading: true });
+      }
 
-    // Track per-channel fetching (used for pagination spinner only)
-    if (before) {
-      set((state) => ({
-        fetchingChannels: { ...state.fetchingChannels, [channelId]: true },
-      }));
-    }
+      // Track per-channel fetching (used for pagination spinner only)
+      if (before) {
+        set((state) => ({
+          fetchingChannels: { ...state.fetchingChannels, [channelId]: true },
+        }));
+      }
 
-    try {
-      const blockedUserIds = useFriendStore.getState().visibilityBlockedUserIds;
-      const blockedIn = blockedUserIds.length > 0 ? `(${blockedUserIds.map((id) => `"${id}"`).join(",")})` : null;
+      try {
+        const blockedUserIds = useFriendStore.getState().visibilityBlockedUserIds;
+        const blockedIn = blockedUserIds.length > 0 ? `(${blockedUserIds.map((id) => `"${id}"`).join(",")})` : null;
 
-      let query = supabase
-        .from("messages")
-        .select(
-          `
+        let query = supabase
+          .from("messages")
+          .select(
+            `
           *,
           user:users (*),
           attachments:message_attachments (*),
           reactions (*)
         `,
-        )
-        .eq("channel_id", channelId)
-        .order("created_at", { ascending: false })
-        .limit(limit);
-
-      if (blockedIn) {
-        query = query.not("user_id", "in", blockedIn);
-      }
-
-      if (before) {
-        query = query.lt("created_at", before);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      // Get reply_to_ids that need to be fetched
-      const replyToIds = (data || []).filter((msg: any) => msg.reply_to_id).map((msg: any) => msg.reply_to_id);
-
-      // Fetch reply messages separately if there are any
-      let replyMap: Record<string, MessageReply> = {};
-      if (replyToIds.length > 0) {
-        let replyQuery = supabase.from("messages").select("id, content, user:users (*)").in("id", replyToIds);
+          )
+          .eq("channel_id", channelId)
+          .order("created_at", { ascending: false })
+          .limit(limit);
 
         if (blockedIn) {
-          replyQuery = replyQuery.not("user_id", "in", blockedIn);
+          query = query.not("user_id", "in", blockedIn);
         }
 
-        const { data: replyData } = await replyQuery;
-
-        if (replyData) {
-          replyData.forEach((reply: any) => {
-            replyMap[reply.id] = {
-              id: reply.id,
-              content: reply.content,
-              user: reply.user as User,
-            };
-          });
+        if (before) {
+          query = query.lt("created_at", before);
         }
-      }
 
-      const currentUserId = useAuthStore.getState().user?.id;
-      const messages: Message[] = (data || []).reverse().map((msg: any) => ({
-        ...msg,
-        user: msg.user,
-        reply_to: msg.reply_to_id ? replyMap[msg.reply_to_id] : undefined,
-        attachments: msg.attachments || [],
-        reactions: groupReactions(
-          blockedUserIds.length > 0
-            ? (msg.reactions || []).filter((r: any) => !blockedUserIds.includes(r.user_id))
-            : msg.reactions || [],
-          currentUserId,
-        ),
-      }));
+        const { data, error } = await query;
 
-      // Populate user cache with message authors
-      const uniqueUsers = new Map<string, User>();
-      messages.forEach((m) => { if (m.user) uniqueUsers.set(m.user.id, m.user); });
-      if (uniqueUsers.size > 0) bulkSetUsersInCache(Array.from(uniqueUsers.values()));
+        if (error) throw error;
 
-      const hasMore = messages.length === limit;
+        // Get reply_to_ids that need to be fetched
+        const replyToIds = (data || []).filter((msg: any) => msg.reply_to_id).map((msg: any) => msg.reply_to_id);
 
-      set((state) => {
-        const existingCache = state.messagesByChannel[channelId];
+        // Fetch reply messages separately if there are any
+        let replyMap: Record<string, MessageReply> = {};
+        if (replyToIds.length > 0) {
+          let replyQuery = supabase.from("messages").select("id, content, user:users (*)").in("id", replyToIds);
 
-        // Clear per-channel fetching flag
-        const { [channelId]: _, ...restFetching } = state.fetchingChannels;
+          if (blockedIn) {
+            replyQuery = replyQuery.not("user_id", "in", blockedIn);
+          }
 
-        if (before && existingCache) {
-          // Prepend older messages to existing cache
-          return {
-            messagesByChannel: {
-              ...state.messagesByChannel,
-              [channelId]: {
-                messages: [...messages, ...existingCache.messages],
-                hasMore,
-                lastFetched: existingCache.lastFetched,
-              },
-            },
-            isLoading: false,
-            fetchingChannels: restFetching,
-          };
-        } else if (force && existingCache && existingCache.messages.length > 0) {
-          // Force refetch (e.g., on visibility change) - merge new messages intelligently
-          const existingIds = new Set(existingCache.messages.map((m) => m.id));
-          const newMessages = messages.filter((m) => !existingIds.has(m.id));
+          const { data: replyData } = await replyQuery;
 
-          if (newMessages.length > 0) {
-            const merged = [...existingCache.messages, ...newMessages];
-            const uniqueById = new Map<string, Message>();
-            merged.forEach((msg) => {
-              const existing = uniqueById.get(msg.id);
-              if (!existing || new Date(msg.created_at).getTime() > new Date(existing.created_at).getTime()) {
-                uniqueById.set(msg.id, msg);
-              }
+          if (replyData) {
+            replyData.forEach((reply: any) => {
+              replyMap[reply.id] = {
+                id: reply.id,
+                content: reply.content,
+                user: reply.user as User,
+              };
             });
-            const sorted = Array.from(uniqueById.values()).sort(
-              (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-            );
+          }
+        }
 
+        const currentUserId = useAuthStore.getState().user?.id;
+        const messages: Message[] = (data || []).reverse().map((msg: any) => ({
+          ...msg,
+          user: msg.user,
+          reply_to: msg.reply_to_id ? replyMap[msg.reply_to_id] : undefined,
+          attachments: msg.attachments || [],
+          reactions: groupReactions(
+            blockedUserIds.length > 0
+              ? (msg.reactions || []).filter((r: any) => !blockedUserIds.includes(r.user_id))
+              : msg.reactions || [],
+            currentUserId,
+          ),
+        }));
+
+        // Populate user cache with message authors
+        const uniqueUsers = new Map<string, User>();
+        messages.forEach((m) => {
+          if (m.user) uniqueUsers.set(m.user.id, m.user);
+        });
+        if (uniqueUsers.size > 0) bulkSetUsersInCache(Array.from(uniqueUsers.values()));
+
+        const hasMore = messages.length === limit;
+
+        set((state) => {
+          const existingCache = state.messagesByChannel[channelId];
+
+          // Clear per-channel fetching flag
+          const { [channelId]: _, ...restFetching } = state.fetchingChannels;
+
+          if (before && existingCache) {
+            // Prepend older messages to existing cache
             return {
               messagesByChannel: {
                 ...state.messagesByChannel,
                 [channelId]: {
-                  messages: sorted,
+                  messages: [...messages, ...existingCache.messages],
+                  hasMore,
+                  lastFetched: existingCache.lastFetched,
+                },
+              },
+              isLoading: false,
+              fetchingChannels: restFetching,
+            };
+          } else if (force && existingCache && existingCache.messages.length > 0) {
+            // Force refetch (e.g., on visibility change) - merge new messages intelligently
+            const existingIds = new Set(existingCache.messages.map((m) => m.id));
+            const newMessages = messages.filter((m) => !existingIds.has(m.id));
+
+            if (newMessages.length > 0) {
+              const merged = [...existingCache.messages, ...newMessages];
+              const uniqueById = new Map<string, Message>();
+              merged.forEach((msg) => {
+                const existing = uniqueById.get(msg.id);
+                if (!existing || new Date(msg.created_at).getTime() > new Date(existing.created_at).getTime()) {
+                  uniqueById.set(msg.id, msg);
+                }
+              });
+              const sorted = Array.from(uniqueById.values()).sort(
+                (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+              );
+
+              return {
+                messagesByChannel: {
+                  ...state.messagesByChannel,
+                  [channelId]: {
+                    messages: sorted,
+                    hasMore,
+                    lastFetched: Date.now(),
+                  },
+                },
+                isLoading: false,
+                fetchingChannels: restFetching,
+              };
+            } else {
+              // No new messages, just update timestamp
+              return {
+                messagesByChannel: {
+                  ...state.messagesByChannel,
+                  [channelId]: {
+                    ...existingCache,
+                    lastFetched: Date.now(),
+                  },
+                },
+                isLoading: false,
+                fetchingChannels: restFetching,
+              };
+            }
+          } else {
+            // Fresh fetch - replace cache
+            return {
+              messagesByChannel: {
+                ...state.messagesByChannel,
+                [channelId]: {
+                  messages,
                   hasMore,
                   lastFetched: Date.now(),
                 },
@@ -284,43 +314,15 @@ export const useMessageStore = create<MessageState>((set, get) => ({
               isLoading: false,
               fetchingChannels: restFetching,
             };
-          } else {
-            // No new messages, just update timestamp
-            return {
-              messagesByChannel: {
-                ...state.messagesByChannel,
-                [channelId]: {
-                  ...existingCache,
-                  lastFetched: Date.now(),
-                },
-              },
-              isLoading: false,
-              fetchingChannels: restFetching,
-            };
           }
-        } else {
-          // Fresh fetch - replace cache
-          return {
-            messagesByChannel: {
-              ...state.messagesByChannel,
-              [channelId]: {
-                messages,
-                hasMore,
-                lastFetched: Date.now(),
-              },
-            },
-            isLoading: false,
-            fetchingChannels: restFetching,
-          };
-        }
-      });
-    } catch (error) {
-      console.error("Failed to fetch messages:", error);
-      set((state) => {
-        const { [channelId]: _, ...restFetching } = state.fetchingChannels;
-        return { isLoading: false, fetchingChannels: restFetching };
-      });
-    }
+        });
+      } catch (error) {
+        console.error("Failed to fetch messages:", error);
+        set((state) => {
+          const { [channelId]: _, ...restFetching } = state.fetchingChannels;
+          return { isLoading: false, fetchingChannels: restFetching };
+        });
+      }
     })().finally(() => {
       const cur = inflightFetches.get(inflightKey);
       if (cur === p) inflightFetches.delete(inflightKey);
@@ -332,12 +334,25 @@ export const useMessageStore = create<MessageState>((set, get) => ({
 
   sendMessage: async (channelId: string, userId: string, content: string, replyToId?: string) => {
     try {
-      const { data, error } = await supabase.rpc("send_message", {
-        _channel_id: channelId,
-        _user_id: userId,
-        _content: content,
-        _reply_to_id: replyToId || null,
-      });
+      // 1. Perform a direct insert. The DB trigger handles mentions/pings automatically.
+      // We use .select() to get the full message object + joined user in one trip.
+      const { data, error } = await supabase
+        .from("messages")
+        .insert({
+          channel_id: channelId,
+          user_id: userId,
+          content: content,
+          reply_to_id: replyToId || null,
+        })
+        .select(
+          `
+          *,
+          user:users (*),
+          attachments:message_attachments (*),
+          reactions (*)
+        `,
+        )
+        .single();
 
       if (error) {
         if (error.message.includes("muted")) {
@@ -346,12 +361,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         throw error;
       }
 
-      const localUser = useAuthStore.getState().user;
-      const { data: userData } =
-        localUser?.id === userId
-          ? { data: localUser }
-          : await supabase.rpc("get_user_by_id" as any, { _user_id: userId });
-
+      // 2. Resolve reply data from local cache for immediate display
       let replyData: MessageReply | undefined;
       if (replyToId) {
         const messages = get().getMessages();
@@ -365,27 +375,21 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         }
       }
 
-      const msgData = data as any;
-      const userDataParsed = userData as unknown as User;
+      // 3. Map database response to your Message type
       const message: Message = {
-        id: msgData.id,
-        channel_id: msgData.channel_id,
-        user_id: msgData.user_id,
-        reply_to_id: msgData.reply_to_id,
-        content: msgData.content,
-        is_pinned: msgData.is_pinned || false,
-        edited_at: msgData.edited_at,
-        created_at: msgData.created_at,
-        user: userDataParsed,
+        ...data,
+        user: data.user,
         reply_to: replyData,
-        attachments: [],
-        reactions: [],
+        attachments: data.attachments || [],
+        reactions: [], // New messages always start with 0 reactions
       };
 
+      // 4. Update the local state
       set((state) => {
         const existingCache = state.messagesByChannel[channelId];
         if (!existingCache) return { replyingTo: null };
 
+        // Check for duplicates to prevent issues with Realtime subscriptions
         if (existingCache.messages.some((m) => m.id === message.id)) {
           return { replyingTo: null };
         }
