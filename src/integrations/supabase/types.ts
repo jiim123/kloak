@@ -2646,6 +2646,10 @@ export type Database = {
         Args: { _emoji: string; _message_id: string; _user_id: string }
         Returns: Json
       }
+      assert_request_user: {
+        Args: { _expected_user_id: string }
+        Returns: string
+      }
       assign_role_to_member: {
         Args: { _member_id: string; _role_id: string; _user_id: string }
         Returns: undefined
