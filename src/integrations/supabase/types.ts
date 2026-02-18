@@ -3038,7 +3038,9 @@ export type Database = {
         Args: { _server_id: string; _user_id?: string }
         Returns: Json
       }
-      get_server_members: { Args: { _server_id: string }; Returns: Json }
+      get_server_members:
+        | { Args: { _server_id: string }; Returns: Json }
+        | { Args: { _server_id: string; _user_id?: string }; Returns: Json }
       get_server_roles: { Args: { _server_id: string }; Returns: Json }
       get_task_comments: {
         Args: { _task_id: string; _user_id: string }
