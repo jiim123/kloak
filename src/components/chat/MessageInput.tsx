@@ -11,22 +11,19 @@ import { useAuthStore } from "@/stores/authStore";
 import { useMessageStore } from "@/stores/messageStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useOfflineQueueStore } from "@/stores/offlineQueueStore";
-import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { saveDraft, getDraft, clearDraft } from "@/lib/storage";
-import { isImageOnlyMessage } from "@/lib/message";
-import { ReplyPreview } from "./MessageContent";
+import { validateMessageContent } from "@/lib/security";
+import { secureUpload } from "@/lib/storageUpload";
+import { handleError, showWarning } from "@/lib/errorHandler";
+import { messageRateLimiter } from "@/lib/security";
+import { toast } from "sonner";
+
+// Components
+import { EmojiPicker } from "@/components/modals/EmojiPicker";
+import { AttachmentPreviewBar, PendingAttachment } from "./AttachmentPreviewBar";
 import { MentionAutocomplete } from "./MentionAutocomplete";
 import { ChannelAutocomplete } from "./ChannelAutocomplete";
-import { EmojiPicker } from "@/components/modals/EmojiPicker";
-import { CreatePollModal } from "@/components/modals/CreatePollModal";
-import { SelectionFormatToolbar, FORMAT_SYNTAX, getCodeBlockSyntax } from "./FormatToolbar";
-import { AttachmentPreviewBar, PendingAttachment } from "./AttachmentPreviewBar";
-import { supabase } from "@/integrations/supabase/client";
-import { secureUpload } from "@/lib/storageUpload";
-import { showSuccess, showWarning, handleError } from "@/lib/errorHandler";
-import { messageRateLimiter, validateMessageContent } from "@/lib/security";
-import { toast } from "sonner";
 
 interface MessageInputProps {
   channelId: string;
@@ -48,99 +45,44 @@ interface ChannelMapping {
 const MAX_LENGTH = 2000;
 const MIN_TEXTAREA_HEIGHT = 40;
 const MAX_TEXTAREA_HEIGHT = 160;
-const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-const MAX_IMAGE_FILE_SIZE = 1 * 1024 * 1024; // 1MB
-const MAX_ATTACHMENTS = 10;
 const DRAFT_SAVE_DELAY = 500;
 const TYPING_STOP_DELAY = 2000;
 
 const ActionButtons = memo(
   ({
-    showCreatePoll,
-    setShowCreatePoll,
-    showEmojiPicker,
-    setShowEmojiPicker,
+    onSubmit,
+    isSending,
     canSendMessage,
     content,
-    isSending,
     hasAttachments,
-    onSubmit,
-    onEmojiSelect,
     currentServer,
-    showAttachButton,
-    onAttachClick,
-  }: {
-    showCreatePoll: boolean;
-    setShowCreatePoll: (show: boolean) => void;
-    showEmojiPicker: boolean;
-    setShowEmojiPicker: (show: boolean) => void;
-    canSendMessage: boolean;
-    content: string;
-    isSending: boolean;
-    hasAttachments: boolean;
-    onSubmit: () => void;
-    onEmojiSelect: (emoji: string) => void;
-    currentServer: any;
-    showAttachButton?: boolean;
-    onAttachClick?: () => void;
-  }) => {
-    const showCharacterWarning = content.length > MAX_LENGTH - 200;
+    showEmojiPicker,
+    setShowEmojiPicker,
+    onEmojiSelect,
+  }: any) => {
     const isMobile = useIsMobile();
-    const shouldCollapse = isMobile && content.length > 10;
     const canSend = (content.trim() || hasAttachments) && !isSending;
+
     return (
       <div className="flex items-center gap-1 mb-0.5 relative">
-        {showCharacterWarning && (
-          <span
-            className={`text-[13px] font-sans mr-1 ${content.length > MAX_LENGTH - 50 ? "text-destructive" : "text-muted-foreground"}`}
-          >
-            {MAX_LENGTH - content.length}
-          </span>
-        )}
-        {shouldCollapse ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button type="button" className="p-2 rounded-xl text-muted-foreground hover:bg-muted/50">
-                <MoreHorizontal className="w-5 h-5" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {showAttachButton && (
-                <DropdownMenuItem onClick={onAttachClick}>
-                  <Paperclip className="w-4 h-4 mr-2" /> Upload
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuItem onClick={() => setShowCreatePoll(true)}>
-                <SquareChartGantt className="w-4 h-4 mr-2" /> Poll
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <>
-            <button
-              type="button"
-              onClick={() => setShowCreatePoll(true)}
-              disabled={!canSendMessage}
-              className="p-2 text-muted-foreground hover:bg-muted/50"
-            >
-              <SquareChartGantt className="w-5 h-5" />
-            </button>
-            <EmojiPicker
-              open={showEmojiPicker}
-              onOpenChange={setShowEmojiPicker}
-              onEmojiSelect={onEmojiSelect}
-              serverId={currentServer?.id}
-            >
-              <button type="button" className="p-2 text-muted-foreground hover:bg-muted/50">
-                <Smile className="w-5 h-5" />
-              </button>
-            </EmojiPicker>
-          </>
-        )}
+        <EmojiPicker
+          open={showEmojiPicker}
+          onOpenChange={setShowEmojiPicker}
+          onEmojiSelect={onEmojiSelect}
+          serverId={currentServer?.id}
+        >
+          <button type="button" className="p-2 rounded-xl text-muted-foreground hover:bg-muted/50">
+            <Smile className="w-5 h-5" />
+          </button>
+        </EmojiPicker>
         <button
           onClick={onSubmit}
-          disabled={!canSend}
-          className={`p-2 rounded-xl ${canSend ? "bg-primary text-primary-foreground" : "bg-muted/50 text-muted-foreground/50"}`}
+          disabled={!canSend || !canSendMessage}
+          className={`p-2 rounded-xl transition-all ${
+            canSend
+              ? "bg-primary text-primary-foreground active:scale-95"
+              : "bg-muted/50 text-muted-foreground/50 cursor-not-allowed"
+          }`}
         >
           {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
         </button>
@@ -153,62 +95,103 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const { user } = useAuthStore();
   const { replyingTo, setReplyingTo, sendMessage } = useMessageStore();
   const { members, currentServer, currentChannel, fetchRolePermissions, fetchChannelPermissions } = useServerStore();
+
   const [content, setContent] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
+
+  // Autocomplete States
   const [showMentions, setShowMentions] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
   const [mentionStartIndex, setMentionStartIndex] = useState(-1);
   const [showChannels, setShowChannels] = useState(false);
   const [channelQuery, setChannelQuery] = useState("");
   const [channelStartIndex, setChannelStartIndex] = useState(-1);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [showCreatePoll, setShowCreatePoll] = useState(false);
-  const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mentionMappingsRef = useRef<MentionMapping[]>([]);
   const channelMappingsRef = useRef<ChannelMapping[]>([]);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const draftSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Permissions & Logic
-  const currentMember = useMemo(() => members.find((m) => m.user_id === user?.id), [members, user?.id]);
-  const isMuted = currentMember?.is_muted || false;
+  // Load permissions
+  useEffect(() => {
+    if (currentServer?.id) fetchRolePermissions(currentServer.id);
+  }, [currentServer?.id, fetchRolePermissions]);
+
+  useEffect(() => {
+    if (channelId) {
+      fetchChannelPermissions(channelId);
+      setContent(getDraft(channelId));
+    }
+  }, [channelId, fetchChannelPermissions]);
+
   const { hasPermission } = useMemberPermissions(channelId);
-  const canSendMessage = !isMuted && hasPermission("send_messages");
+  const currentMember = useMemo(() => members.find((m) => m.user_id === user?.id), [members, user?.id]);
+  const canSendMessage = !currentMember?.is_muted && hasPermission("send_messages");
 
   const resizeTextarea = useCallback(() => {
     if (!textareaRef.current) return;
     textareaRef.current.style.height = "0px";
-    textareaRef.current.style.height = `${Math.min(Math.max(textareaRef.current.scrollHeight, MIN_TEXTAREA_HEIGHT), MAX_TEXTAREA_HEIGHT)}px`;
+    const newHeight = Math.min(Math.max(textareaRef.current.scrollHeight, MIN_TEXTAREA_HEIGHT), MAX_TEXTAREA_HEIGHT);
+    textareaRef.current.style.height = `${newHeight}px`;
   }, []);
 
-  const escapeRegex = (string: string) => string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const detectAutocomplete = useCallback((value: string, pos: number) => {
+    const textBefore = value.slice(0, pos);
+
+    // Mentions
+    const atIndex = textBefore.lastIndexOf("@");
+    if (atIndex !== -1 && !textBefore.slice(atIndex).includes(" ")) {
+      setMentionQuery(textBefore.slice(atIndex + 1));
+      setMentionStartIndex(atIndex);
+      setShowMentions(true);
+      setShowChannels(false);
+    } else {
+      setShowMentions(false);
+    }
+
+    // Channels
+    const hashIndex = textBefore.lastIndexOf("#");
+    if (hashIndex !== -1 && !textBefore.slice(hashIndex).includes(" ")) {
+      setChannelQuery(textBefore.slice(hashIndex + 1));
+      setChannelStartIndex(hashIndex);
+      setShowChannels(true);
+      setShowMentions(false);
+    } else {
+      setShowChannels(false);
+    }
+  }, []);
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    if (val.length > MAX_LENGTH) return;
+    setContent(val);
+    resizeTextarea();
+    onTyping();
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(onStopTyping, TYPING_STOP_DELAY);
+    detectAutocomplete(val, e.target.selectionStart);
+    saveDraft(channelId, val);
+  };
 
   const convertMentionsForSend = useCallback((text: string): string => {
     let result = text;
     mentionMappingsRef.current.forEach((m) => {
-      const regex = new RegExp(`@${escapeRegex(m.username)}(?=\\s|$|[.,!?;:])`, "g");
+      const regex = new RegExp(`@${m.username.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=\\s|$|[.,!?;:])`, "g");
       result = result.replace(regex, `<@${m.userId}>`);
     });
     return result;
   }, []);
 
-  const uploadAttachments = useCallback(async (): Promise<string[]> => {
-    if (!user || pendingAttachments.length === 0) return [];
-    const urls: string[] = [];
-    for (const att of pendingAttachments) {
-      const fileName = `${user.id}/${Date.now()}-${crypto.randomUUID()}.${att.file.name.split(".").pop()}`;
-      const result = await secureUpload("attachments", fileName, att.file, { contentType: att.file.type });
-      urls.push(result.publicUrl);
-    }
-    return urls;
-  }, [user, pendingAttachments]);
-
   const handleSubmit = useCallback(async () => {
-    if (!content.trim() && pendingAttachments.length === 0) return;
-    if (isSending || !canSendMessage) return;
+    if ((!content.trim() && pendingAttachments.length === 0) || isSending || !canSendMessage) return;
+
+    if (!messageRateLimiter.isAllowed(user!.id)) {
+      showWarning("Slow down!", `Try again in ${messageRateLimiter.getRemainingTime(user!.id)}s`);
+      return;
+    }
 
     setIsSending(true);
     const contentToSend = convertMentionsForSend(content.trim());
@@ -216,11 +199,16 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     try {
       let finalContent = contentToSend;
       if (pendingAttachments.length > 0) {
-        const urls = await uploadAttachments();
+        const urls = [];
+        for (const att of pendingAttachments) {
+          const fileName = `${user!.id}/${Date.now()}-${crypto.randomUUID()}.${att.file.name.split(".").pop()}`;
+          const res = await secureUpload("attachments", fileName, att.file, { contentType: att.file.type });
+          urls.push(res.publicUrl);
+        }
         finalContent = finalContent ? `${finalContent}\n${urls.join("\n")}` : urls.join("\n");
       }
 
-      // 🚀 The magic: One call. The DB trigger handles the pings.
+      // 🚀 DATABASE TRIGGER HANDLES ALL MENTION COUNTS AUTOMATICALLY
       await sendMessage(channelId, user!.id, finalContent, replyingTo?.id);
 
       setContent("");
@@ -237,20 +225,13 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     content,
     pendingAttachments,
     channelId,
-    replyingTo,
-    sendMessage,
     user,
+    replyingTo,
     canSendMessage,
+    isSending,
     convertMentionsForSend,
-    uploadAttachments,
+    sendMessage,
   ]);
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey && !useIsMobile()) {
-      e.preventDefault();
-      handleSubmit();
-    }
-  };
 
   return (
     <div className="relative flex flex-col w-full px-4 pb-4 bg-background">
@@ -266,22 +247,37 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
         </div>
       )}
 
+      {showMentions && (
+        <MentionAutocomplete
+          query={mentionQuery}
+          onSelect={(opt) => {
+            const before = content.slice(0, mentionStartIndex);
+            const after = content.slice(mentionStartIndex + mentionQuery.length + 1);
+            if (opt.id) mentionMappingsRef.current.push({ username: opt.label, userId: opt.id });
+            setContent(`${before}@${opt.label} ${after}`);
+            setShowMentions(false);
+          }}
+        />
+      )}
+
       <div className="flex flex-col w-full bg-muted/20 rounded-2xl border border-border/50 focus-within:border-primary/30 transition-all duration-200">
         <AttachmentPreviewBar
           attachments={pendingAttachments}
-          onRemove={(i) => setPendingAttachments((p) => p.filter((_, idx) => idx !== i))}
+          onRemove={(i) => setPendingAttachments((prev) => prev.filter((_, idx) => idx !== i))}
+          onAddMore={() => fileInputRef.current?.click()}
         />
 
         <div className="flex items-end gap-2 px-3 py-2">
           <textarea
             ref={textareaRef}
             value={content}
-            onChange={(e) => {
-              setContent(e.target.value);
-              resizeTextarea();
-              onTyping();
+            onChange={handleChange}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey && !useIsMobile()) {
+                e.preventDefault();
+                handleSubmit();
+              }
             }}
-            onKeyDown={handleKeyDown}
             placeholder={`Message #${channelName}`}
             className="flex-1 bg-transparent border-none focus:ring-0 resize-none py-2 max-h-[160px] text-[15px] placeholder:text-muted-foreground/60"
             rows={1}
@@ -291,12 +287,10 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
             isSending={isSending}
             canSendMessage={canSendMessage}
             onSubmit={handleSubmit}
-            onEmojiSelect={(emoji) => setContent((prev) => prev + emoji)}
+            onEmojiSelect={(emoji: string) => setContent((prev) => prev + emoji)}
             currentServer={currentServer}
             showEmojiPicker={showEmojiPicker}
             setShowEmojiPicker={setShowEmojiPicker}
-            showCreatePoll={showCreatePoll}
-            setShowCreatePoll={setShowCreatePoll}
             hasAttachments={pendingAttachments.length > 0}
           />
         </div>
@@ -306,11 +300,13 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
         ref={fileInputRef}
         hidden
         onChange={(e) => {
-          if (e.target.files)
+          if (e.target.files?.[0]) {
             setPendingAttachments((prev) => [
               ...prev,
               { file: e.target.files![0], preview: URL.createObjectURL(e.target.files![0]) },
             ]);
+          }
+          e.target.value = "";
         }}
       />
     </div>
