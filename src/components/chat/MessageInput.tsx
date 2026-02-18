@@ -601,29 +601,26 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
         }
 
         if (currentServer) {
-          const mentions = extractMentions(finalContent);
-          Promise.resolve()
-            .then(async () => {
-              const mentionBatch: { user_id: string; mention_type: string }[] = [];
-              for (const mention of mentions) {
-                if (mention.type === "user" && mention.id && mention.id !== user.id) {
-                  mentionBatch.push({ user_id: mention.id, mention_type: "user" });
-                } else if (mention.type === "everyone" || mention.type === "here") {
-                  const targetMembers =
-                    mention.type === "here"
-                      ? members.filter((m) => m.user?.status === "online" && m.user_id !== user.id)
-                      : members.filter((m) => m.user_id !== user.id);
-                  for (const member of targetMembers.slice(0, 50)) {
-                    mentionBatch.push({ user_id: member.user_id, mention_type: mention.type });
-                  }
-                }
+          const mentionBatch: { message_id: string; user_id: string; mention_type: string }[] = [];
+          for (const mention of mentions) {
+            if (mention.type === "user" && mention.id && mention.id !== user.id) {
+              mentionBatch.push({ message_id: message.id, user_id: mention.id, mention_type: "user" });
+            } else if (mention.type === "everyone" || mention.type === "here") {
+              const targetMembers =
+                mention.type === "here"
+                  ? members.filter((m) => m.user?.status === "online" && m.user_id !== user.id)
+                  : members.filter((m) => m.user_id !== user.id);
+              for (const member of targetMembers.slice(0, 50)) {
+                mentionBatch.push({ message_id: message.id, user_id: member.user_id, mention_type: mention.type });
               }
-              if (mentionBatch.length > 0) {
-                await supabase.rpc('insert_mentions' as any, {
-                  _message_id: message.id,
-                  _mentions: mentionBatch,
-                });
-              }
+            }
+          }
+          if (mentionBatch.length > 0) {
+            await supabase.rpc('insert_mentions' as any, {
+              _user_id: user.id,
+              _mentions: mentionBatch,
+            });
+          }
             })
             .catch((err) => console.error("Failed to process mentions:", err));
         }
