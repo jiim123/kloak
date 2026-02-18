@@ -6,7 +6,7 @@
  * Duplicate emoji names across servers are tracked so consumers can
  * disambiguate using the :name~ServerName: syntax.
  */
-import { fetchServerEmojis, type ServerEmoji } from './serverEmojis';
+import { supabase } from '@/integrations/supabase/client';
 import { useServerStore } from '@/stores/serverStore';
 
 export interface ResolvedEmoji {
@@ -66,21 +66,27 @@ export async function getGlobalEmojiMap(opts?: { force?: boolean }): Promise<Map
     /** Temporary: all emojis per name to detect duplicates */
     const allByName = new Map<string, ResolvedEmoji[]>();
 
-    // Fetch emojis from all servers in parallel
-    const results = await Promise.allSettled(
-      servers.map(async (server) => {
-        const emojis = await fetchServerEmojis(server.id);
-        return { server, emojis };
-      })
-    );
+    const serverById = new Map(servers.map((s) => [s.id, s] as const));
 
-    for (const result of results) {
-      if (result.status !== 'fulfilled') continue;
-      const { server, emojis } = result.value;
-      for (const emoji of emojis) {
+    // Important perf win:
+    // A single `in(server_id, ...)` query replaces N-per-server requests.
+    if (serverIds.length > 0) {
+      const { data, error } = await supabase
+        .from('server_emojis')
+        .select('server_id,name,file_path')
+        .in('server_id', serverIds)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      for (const row of data ?? []) {
+        const server = serverById.get(row.server_id);
+        if (!server) continue;
+
+        const { data: urlData } = supabase.storage.from('server-emojis').getPublicUrl(row.file_path);
         const resolved: ResolvedEmoji = {
-          name: emoji.name,
-          url: emoji.url,
+          name: row.name,
+          url: urlData.publicUrl,
           serverId: server.id,
           serverName: server.name,
           serverIcon: server.icon_url,
@@ -88,20 +94,20 @@ export async function getGlobalEmojiMap(opts?: { force?: boolean }): Promise<Map
         };
 
         // Track all emojis by name
-        const existing = allByName.get(emoji.name);
+        const existing = allByName.get(row.name);
         if (existing) {
           existing.push(resolved);
         } else {
-          allByName.set(emoji.name, [resolved]);
+          allByName.set(row.name, [resolved]);
         }
 
         // First match wins for unqualified lookup
-        if (!map.has(emoji.name)) {
-          map.set(emoji.name, resolved);
+        if (!map.has(row.name)) {
+          map.set(row.name, resolved);
         }
 
         // Always add qualified name: "emojiName~ServerName"
-        const qualifiedKey = `${emoji.name}~${server.name}`;
+        const qualifiedKey = `${row.name}~${server.name}`;
         qualifiedMap.set(qualifiedKey, resolved);
       }
     }
@@ -157,8 +163,6 @@ export function invalidateGlobalEmojiCache() {
 // ---------------------------------------------------------------------------
 // Fallback resolver: fetch emoji URL from DB when viewer isn't in the server
 // ---------------------------------------------------------------------------
-import { supabase } from '@/integrations/supabase/client';
-
 type FallbackCacheEntry = { value: string | null; cachedAt: number };
 
 // Cache fallback emoji resolutions for a while; this is only used when the viewer isn't in the server.

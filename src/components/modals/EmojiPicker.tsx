@@ -715,11 +715,16 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange, serve
 
     if (unloaded.length === 0) return;
 
+    // Background prefetch can explode into dozens of requests for users in many servers.
+    // Cap how many servers we prefetch; everything else remains on-demand when selected.
+    const MAX_BACKGROUND_PREFETCH = servers.length <= 8 ? unloaded.length : 5;
+    const toPrefetch = unloaded.slice(0, MAX_BACKGROUND_PREFETCH);
+
     // Stagger loads: 1 server every 150ms using requestIdleCallback (or setTimeout fallback)
     const schedule = typeof requestIdleCallback === "function" ? requestIdleCallback : (cb: () => void) => setTimeout(cb, 0);
     const timers: number[] = [];
 
-    unloaded.forEach((id, idx) => {
+    toPrefetch.forEach((id, idx) => {
       const timerId = window.setTimeout(() => {
         schedule(() => loadServerEmojis(id));
       }, idx * 150);
