@@ -1,3 +1,4 @@
+// deno-lint-ignore-file no-explicit-any
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -17,14 +18,24 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
   });
 }
 
-async function resolveUser(supabase: ReturnType<typeof createClient>, keyHash: string) {
-  const { data, error } = await supabase.from("user_auth").select("user_id").eq("key_hash", keyHash).single();
+function createServiceClient() {
+  return createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  }) as any;
+}
+
+async function resolveUser(supabase: any, keyHash: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("user_auth")
+    .select("user_id")
+    .eq("key_hash", keyHash)
+    .single();
   if (error || !data) return null;
   return data.user_id as string;
 }
 
 async function checkPermission(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   userId: string,
   bucket: string,
   path: string,
@@ -56,7 +67,11 @@ async function checkPermission(
         return null;
       }
 
-      const { data: server } = await supabase.from("servers").select("owner_id").eq("id", serverId).single();
+      const { data: server } = await supabase
+        .from("servers")
+        .select("owner_id")
+        .eq("id", serverId)
+        .single();
 
       if (server && server.owner_id === userId) {
         return null;
@@ -74,8 +89,6 @@ async function checkPermission(
 }
 
 function defaultCacheControlSeconds(bucket: string): string {
-  // These assets are stored with unique paths (timestamp/uuid in filename),
-  // so we can safely tell browsers/CDNs to cache aggressively.
   switch (bucket) {
     case "avatars":
     case "server-icons":
@@ -92,9 +105,7 @@ function normalizeCacheControlSeconds(raw: unknown, fallbackBucket: string): str
   const fallback = defaultCacheControlSeconds(fallbackBucket);
   if (typeof raw !== "string") return fallback;
   const trimmed = raw.trim();
-  // Supabase expects cacheControl as seconds (string number).
   if (!/^\d{1,10}$/.test(trimmed)) return fallback;
-  // Clamp to 1 year max
   const n = Math.min(parseInt(trimmed, 10), 31_536_000);
   return String(n);
 }
@@ -110,9 +121,7 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Missing x-key-hash header" }, 401);
     }
 
-    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    const supabase = createServiceClient();
 
     const userId = await resolveUser(supabase, keyHash);
     if (!userId) {
@@ -129,7 +138,6 @@ Deno.serve(async (req) => {
         return jsonResponse({ error: "Missing bucket or path(s)" }, 400);
       }
 
-      // Check permission for every path
       for (const p of paths) {
         const err = await checkPermission(supabase, userId, bucket, p);
         if (err) return jsonResponse({ error: err }, 403);
@@ -158,7 +166,6 @@ Deno.serve(async (req) => {
             return jsonResponse({ error: "Missing bucket or prefix" }, 400);
           }
 
-          // Permission check on the prefix itself
           const err = await checkPermission(supabase, userId, bucket, prefix);
           if (err) return jsonResponse({ error: err }, 403);
 
@@ -166,8 +173,8 @@ Deno.serve(async (req) => {
 
           if (files && files.length > 0) {
             const toRemove = searchFilter
-              ? files.filter((f) => f.name.startsWith(searchFilter)).map((f) => `${prefix}/${f.name}`)
-              : files.map((f) => `${prefix}/${f.name}`);
+              ? files.filter((f: any) => f.name.startsWith(searchFilter)).map((f: any) => `${prefix}/${f.name}`)
+              : files.map((f: any) => `${prefix}/${f.name}`);
 
             if (toRemove.length > 0) {
               await supabase.storage.from(bucket).remove(toRemove);

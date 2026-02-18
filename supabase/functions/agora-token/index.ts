@@ -71,16 +71,21 @@ function concatBytes(...arrays: Uint8Array[]): Uint8Array {
 
 async function hmacSign(key: Uint8Array, data: Uint8Array): Promise<Uint8Array> {
   const cryptoKey = await crypto.subtle.importKey(
-    "raw", key, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+    "raw", key.buffer.slice(key.byteOffset, key.byteOffset + key.byteLength) as ArrayBuffer,
+    { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
   );
-  const sig = await crypto.subtle.sign("HMAC", cryptoKey, data);
+  const sig = await crypto.subtle.sign(
+    "HMAC", cryptoKey,
+    data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer
+  );
   return new Uint8Array(sig);
 }
 
 // --- Zlib deflate using DecompressionStream/CompressionStream ---
 
 async function zlibCompress(data: Uint8Array): Promise<Uint8Array> {
-  const stream = new Blob([data]).stream().pipeThrough(new CompressionStream("deflate"));
+  const buf = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
+  const stream = new Blob([buf]).stream().pipeThrough(new CompressionStream("deflate"));
   const reader = stream.getReader();
   const chunks: Uint8Array[] = [];
   while (true) {
