@@ -116,6 +116,24 @@ export type Database = {
           },
         ]
       }
+      app_config: {
+        Row: {
+          key: string
+          updated_at: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string | null
+          value?: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
       badges: {
         Row: {
           created_at: string | null
@@ -2125,96 +2143,6 @@ export type Database = {
           },
         ]
       }
-      user_identity_keys: {
-        Row: {
-          created_at: string | null
-          id: string
-          key_fingerprint: string
-          public_key: string
-          registration_id: number
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          key_fingerprint: string
-          public_key: string
-          registration_id: number
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          key_fingerprint?: string
-          public_key?: string
-          registration_id?: number
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_identity_keys_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_identity_keys_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "users_public"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_key_backups: {
-        Row: {
-          created_at: string | null
-          encrypted_identity_private_key: string
-          id: string
-          iv: string
-          salt: string
-          updated_at: string | null
-          user_id: string | null
-          version: number | null
-        }
-        Insert: {
-          created_at?: string | null
-          encrypted_identity_private_key: string
-          id?: string
-          iv: string
-          salt: string
-          updated_at?: string | null
-          user_id?: string | null
-          version?: number | null
-        }
-        Update: {
-          created_at?: string | null
-          encrypted_identity_private_key?: string
-          id?: string
-          iv?: string
-          salt?: string
-          updated_at?: string | null
-          user_id?: string | null
-          version?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_key_backups_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_key_backups_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "users_public"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       user_preferences: {
         Row: {
           animate_emojis: boolean
@@ -2299,51 +2227,6 @@ export type Database = {
           },
         ]
       }
-      user_prekeys: {
-        Row: {
-          created_at: string | null
-          device_id: number
-          id: string
-          is_used: boolean | null
-          key_id: number
-          public_key: string
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          device_id: number
-          id?: string
-          is_used?: boolean | null
-          key_id: number
-          public_key: string
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          device_id?: number
-          id?: string
-          is_used?: boolean | null
-          key_id?: number
-          public_key?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_prekeys_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_prekeys_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_public"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       user_server_folders: {
         Row: {
           folder_data: Json
@@ -2408,54 +2291,6 @@ export type Database = {
             foreignKeyName: "user_server_tabs_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
-            referencedRelation: "users_public"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_signed_prekeys: {
-        Row: {
-          created_at: string | null
-          device_id: number
-          id: string
-          is_active: boolean | null
-          key_id: number
-          public_key: string
-          signature: string
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          device_id: number
-          id?: string
-          is_active?: boolean | null
-          key_id: number
-          public_key: string
-          signature: string
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          device_id?: number
-          id?: string
-          is_active?: boolean | null
-          key_id?: number
-          public_key?: string
-          signature?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_signed_prekeys_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_signed_prekeys_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
             referencedRelation: "users_public"
             referencedColumns: ["id"]
           },
@@ -2680,6 +2515,7 @@ export type Database = {
         Returns: boolean
       }
       check_e2e_status: { Args: { _user_id: string }; Returns: boolean }
+      check_server_membership: { Args: { _server_id: string }; Returns: Json }
       check_user_permission: {
         Args: {
           _channel_id: string
@@ -2700,53 +2536,37 @@ export type Database = {
         Args: { _username: string }
         Returns: boolean
       }
-      close_expired_polls: { Args: { _channel_id: string }; Returns: number }
+      close_expired_polls:
+        | { Args: never; Returns: undefined }
+        | { Args: { _channel_id: string }; Returns: number }
       close_poll: { Args: { _poll_id: string }; Returns: boolean }
       count_available_prekeys: {
         Args: { _device_id: number; _user_id: string }
         Returns: number
       }
-      create_category:
-        | {
-            Args: { _name: string; _server_id: string; _user_id: string }
-            Returns: Json
-          }
-        | {
-            Args: {
-              _name: string
-              _position?: number
-              _server_id: string
-              _user_id: string
-            }
-            Returns: Json
-          }
-      create_channel:
-        | {
-            Args: {
-              _category_id?: string
-              _ghost_mode?: boolean
-              _icon?: string
-              _is_private?: boolean
-              _name: string
-              _position?: number
-              _server_id: string
-              _type?: string
-              _user_id?: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              _category_id?: string
-              _is_private?: boolean
-              _name: string
-              _server_id: string
-              _topic?: string
-              _type?: string
-              _user_id: string
-            }
-            Returns: Json
-          }
+      create_category: {
+        Args: {
+          _name: string
+          _position?: number
+          _server_id: string
+          _user_id: string
+        }
+        Returns: Json
+      }
+      create_channel: {
+        Args: {
+          _category_id?: string
+          _ghost_mode?: boolean
+          _icon?: string
+          _is_private?: boolean
+          _name: string
+          _position?: number
+          _server_id: string
+          _type?: string
+          _user_id?: string
+        }
+        Returns: Json
+      }
       create_group_dm: {
         Args: {
           _creator_id: string
@@ -2774,26 +2594,16 @@ export type Database = {
         }
         Returns: string
       }
-      create_server_role:
-        | {
-            Args: {
-              _color?: string
-              _name: string
-              _server_id: string
-              _user_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              _color: string
-              _icon?: string
-              _name: string
-              _server_id: string
-              _user_id: string
-            }
-            Returns: Json
-          }
+      create_server_role: {
+        Args: {
+          _color: string
+          _icon?: string
+          _name: string
+          _server_id: string
+          _user_id: string
+        }
+        Returns: Json
+      }
       create_server_with_owner: {
         Args: { _name: string; _owner_id: string }
         Returns: Json
@@ -2810,20 +2620,15 @@ export type Database = {
         }
         Returns: Json
       }
-      create_task_comment:
-        | {
-            Args: { _content: string; _task_id: string; _user_id: string }
-            Returns: Json
-          }
-        | {
-            Args: {
-              _content: string
-              _reply_to_id?: string
-              _task_id: string
-              _user_id: string
-            }
-            Returns: Json
-          }
+      create_task_comment: {
+        Args: {
+          _content: string
+          _reply_to_id?: string
+          _task_id: string
+          _user_id: string
+        }
+        Returns: Json
+      }
       create_thread: {
         Args: { _message_id: string; _user_id: string }
         Returns: string
@@ -3014,6 +2819,7 @@ export type Database = {
           name: string
         }[]
       }
+      get_maintenance_mode: { Args: never; Returns: boolean }
       get_outgoing_friend_requests: {
         Args: { _user_id: string }
         Returns: Json
@@ -3038,9 +2844,7 @@ export type Database = {
         Args: { _server_id: string; _user_id?: string }
         Returns: Json
       }
-      get_server_members:
-        | { Args: { _server_id: string }; Returns: Json }
-        | { Args: { _server_id: string; _user_id?: string }; Returns: Json }
+      get_server_members: { Args: { _server_id: string }; Returns: Json }
       get_server_roles: { Args: { _server_id: string }; Returns: Json }
       get_task_comments: {
         Args: { _task_id: string; _user_id: string }
@@ -3141,6 +2945,7 @@ export type Database = {
         Args: { _other_user_id: string; _user_id: string }
         Returns: boolean
       }
+      is_maintenance_active: { Args: never; Returns: boolean }
       is_media_channel_member: {
         Args: { _media_id: string; _user_id: string }
         Returns: boolean
@@ -3162,16 +2967,18 @@ export type Database = {
         Returns: boolean
       }
       is_username_blocked: { Args: { username: string }; Returns: boolean }
-      join_server_by_invite:
-        | { Args: { _invite_code: string; _user_id: string }; Returns: Json }
-        | {
-            Args: {
-              _invite_code: string
-              _join_source?: string
-              _user_id: string
-            }
-            Returns: Json
-          }
+      join_server_by_invite: {
+        Args: { _invite_code: string; _join_source?: string; _user_id: string }
+        Returns: Json
+      }
+      kick_group_dm_member: {
+        Args: {
+          _conversation_id: string
+          _kicker_id: string
+          _target_user_id: string
+        }
+        Returns: boolean
+      }
       kick_member: {
         Args: { _server_id: string; _target_user_id: string; _user_id: string }
         Returns: undefined
@@ -3265,10 +3072,16 @@ export type Database = {
         Args: { _server_id: string; _user_id: string }
         Returns: string
       }
-      register_user: {
-        Args: { _banner_color?: string; _key_hash: string; _username: string }
-        Returns: Json
-      }
+      register_user:
+        | { Args: { _key_hash: string; _username: string }; Returns: Json }
+        | {
+            Args: {
+              _banner_color?: string
+              _key_hash: string
+              _username: string
+            }
+            Returns: Json
+          }
       remove_channel_member: {
         Args: {
           _channel_id: string
@@ -3432,27 +3245,17 @@ export type Database = {
         Args: { _hidden: boolean; _message_id: string; _user_id: string }
         Returns: boolean
       }
-      set_role_permission:
-        | {
-            Args: {
-              _allowed?: boolean
-              _permission: Database["public"]["Enums"]["permission_type"]
-              _role_id?: string
-              _role_name?: string
-              _server_id: string
-              _user_id: string
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              _allowed: boolean
-              _permission: Database["public"]["Enums"]["permission_type"]
-              _role_id: string
-              _user_id: string
-            }
-            Returns: undefined
-          }
+      set_role_permission: {
+        Args: {
+          _allowed?: boolean
+          _permission: Database["public"]["Enums"]["permission_type"]
+          _role_id?: string
+          _role_name?: string
+          _server_id: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
       shares_dm_with: {
         Args: { _other_user_id: string; _user_id: string }
         Returns: boolean
@@ -3551,26 +3354,10 @@ export type Database = {
         }
         Returns: undefined
       }
-      update_server:
-        | {
-            Args: {
-              _about?: string
-              _banner_url?: string
-              _icon_url?: string
-              _is_published?: boolean
-              _name?: string
-              _server_id: string
-              _system_channel_id?: string
-              _system_channel_send_join?: boolean
-              _system_channel_send_leave?: boolean
-              _user_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: { _server_id: string; _updates: Json; _user_id: string }
-            Returns: Json
-          }
+      update_server: {
+        Args: { _server_id: string; _updates: Json; _user_id: string }
+        Returns: Json
+      }
       update_server_role: {
         Args: {
           _color?: string
@@ -3598,6 +3385,7 @@ export type Database = {
         Returns: Json
       }
       update_user_last_seen: { Args: { _user_id: string }; Returns: boolean }
+      update_user_presence: { Args: { _user_id: string }; Returns: undefined }
       update_user_profile: {
         Args: { _updates: Json; _user_id: string }
         Returns: Json
@@ -3644,7 +3432,7 @@ export type Database = {
         | "forum"
         | "tasks"
         | "media"
-      friendship_status: "pending" | "accepted" | "blocked"
+      friendship_status: "pending" | "accepted" | "blocked" | "declined"
       mention_type: "user" | "everyone" | "here" | "role"
       notification_type:
         | "mention"
@@ -3830,7 +3618,7 @@ export const Constants = {
         "tasks",
         "media",
       ],
-      friendship_status: ["pending", "accepted", "blocked"],
+      friendship_status: ["pending", "accepted", "blocked", "declined"],
       mention_type: ["user", "everyone", "here", "role"],
       notification_type: [
         "mention",
