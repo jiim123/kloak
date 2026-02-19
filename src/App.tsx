@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Invite from "./pages/Invite";
 import AppLayout from "./pages/AppLayout";
+import { ServerAuthGuard } from "./components/auth/ServerAuthGuard";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Cookies from "./pages/Cookies";
@@ -36,10 +37,10 @@ const App = () => (
               <Route index element={<EmptyRoute />} />
               <Route path="friends" element={<EmptyRoute />} />
               <Route path="explore" element={<EmptyRoute />} />
-              <Route path="servers/:serverId" element={<EmptyRoute />} />
-              <Route path="servers/:serverId/overview" element={<EmptyRoute />} />
-              <Route path="servers/:serverId/members" element={<EmptyRoute />} />
-              <Route path="servers/:serverId/channels/:channelId" element={<EmptyRoute />} />
+              <Route path="servers/:serverId" element={<ServerAuthGuard><EmptyRoute /></ServerAuthGuard>} />
+              <Route path="servers/:serverId/overview" element={<ServerAuthGuard><EmptyRoute /></ServerAuthGuard>} />
+              <Route path="servers/:serverId/members" element={<ServerAuthGuard><EmptyRoute /></ServerAuthGuard>} />
+              <Route path="servers/:serverId/channels/:channelId" element={<ServerAuthGuard><EmptyRoute /></ServerAuthGuard>} />
             </Route>
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
