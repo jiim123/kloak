@@ -3388,7 +3388,9 @@ export type Database = {
         Args: { _comment_id: string; _content: string; _user_id: string }
         Returns: Json
       }
-      update_user_last_seen: { Args: { _user_id: string }; Returns: boolean }
+      update_user_last_seen:
+        | { Args: never; Returns: undefined }
+        | { Args: { _user_id?: string }; Returns: undefined }
       update_user_presence: { Args: { _user_id: string }; Returns: undefined }
       update_user_profile: {
         Args: { _updates: Json; _user_id: string }
