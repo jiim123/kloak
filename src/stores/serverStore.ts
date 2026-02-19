@@ -1138,20 +1138,38 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   updateMember: async (memberId: string, updates: Partial<ServerMember>) => {
     try {
-      const { currentServer } = get();
+      const { currentServer, members } = get();
       const userId = useAuthStore.getState().user?.id;
       if (!currentServer || !userId) throw new Error('Not authenticated or no server selected');
 
-      const { error } = await (supabase.rpc as any)('update_member', {
-        _server_id: currentServer.id,
-        _actor_user_id: userId,
-        _member_id: memberId,
-        _nickname: updates.nickname ?? null,
-        _is_muted: updates.is_muted ?? null,
-        _role: updates.role ?? null,
-      });
+      const member = members.find((m) => m.id === memberId);
+      if (!member) throw new Error('Member not found');
+      const targetUserId = member.user_id;
 
-      if (error) throw error;
+      const serverId = currentServer.id;
+      const rpcOptions = { _server_id: serverId, _user_id: userId, _target_user_id: targetUserId };
+
+      if (updates.nickname !== undefined) {
+        const { error } = await supabase.rpc('update_member_nickname', {
+          ...rpcOptions,
+          _nickname: updates.nickname ?? null,
+        });
+        if (error) throw error;
+      }
+      if (updates.is_muted !== undefined) {
+        const { error } = await supabase.rpc('toggle_mute_member', {
+          ...rpcOptions,
+          _muted: updates.is_muted,
+        });
+        if (error) throw error;
+      }
+      if (updates.role !== undefined) {
+        const { error } = await supabase.rpc('change_member_role', {
+          ...rpcOptions,
+          _new_role: updates.role,
+        });
+        if (error) throw error;
+      }
 
       set((state) => ({
         members: state.members.map((m) =>
