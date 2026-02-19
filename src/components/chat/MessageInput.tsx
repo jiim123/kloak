@@ -157,6 +157,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const { members, currentServer, currentChannel, channels, fetchRolePermissions, fetchChannelPermissions } =
     useServerStore();
   const { getQueuedForChannel } = useOfflineQueueStore();
+  const isMobile = useIsMobile();
 
   const [content, setContent] = useState("");
   const [isFocused, setIsFocused] = useState(false);
@@ -194,6 +195,20 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       });
     };
   }, [channelId, fetchChannelPermissions]);
+
+  // Auto-focus text input when switching channels so user can type immediately
+  useEffect(() => {
+    if (channelId) {
+      const t = textareaRef.current;
+      if (t) {
+        // Small delay so the channel content has rendered
+        const id = requestAnimationFrame(() => {
+          t.focus();
+        });
+        return () => cancelAnimationFrame(id);
+      }
+    }
+  }, [channelId]);
 
   const { hasPermission } = useMemberPermissions(channelId);
   const currentMember = useMemo(() => members.find((m) => m.user_id === user?.id), [members, user?.id]);
@@ -399,7 +414,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
         handleChange={handleChange}
         setIsFocused={setIsFocused}
         handleKeyDown={(e: any) => {
-          if (e.key === "Enter" && !e.shiftKey && !useIsMobile()) {
+          if (e.key === "Enter" && !e.shiftKey && !isMobile) {
             e.preventDefault();
             handleSubmit();
           }
