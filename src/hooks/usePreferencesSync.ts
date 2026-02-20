@@ -128,10 +128,7 @@ export const usePreferencesSync = () => {
           if (typeof data.animate_emojis === "boolean") {
             setAnimateEmojis(data.animate_emojis);
           }
-          if (typeof (data as any).dm_privacy === "string") {
-            setDmPrivacy((data as any).dm_privacy);
-          }
-
+          
           isUpdating.current = false;
         } else {
           // Create initial preferences record via secure RPC
