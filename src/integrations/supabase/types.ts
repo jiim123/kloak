@@ -2505,6 +2505,10 @@ export type Database = {
         Args: { _channel_id: string; _user_id: string }
         Returns: boolean
       }
+      can_view_user: {
+        Args: { _requesting_user_id: string; _target_user_id: string }
+        Returns: boolean
+      }
       change_member_role: {
         Args: {
           _new_role: Database["public"]["Enums"]["server_role"]
@@ -2536,9 +2540,7 @@ export type Database = {
         Args: { _username: string }
         Returns: boolean
       }
-      close_expired_polls:
-        | { Args: never; Returns: undefined }
-        | { Args: { _channel_id: string }; Returns: number }
+      close_expired_polls: { Args: { _channel_id: string }; Returns: number }
       close_poll: { Args: { _poll_id: string }; Returns: boolean }
       count_available_prekeys: {
         Args: { _device_id: number; _user_id: string }
@@ -2596,7 +2598,7 @@ export type Database = {
       }
       create_server_role: {
         Args: {
-          _color: string
+          _color?: string
           _icon?: string
           _name: string
           _server_id: string
@@ -3078,16 +3080,10 @@ export type Database = {
         Args: { _server_id: string; _user_id: string }
         Returns: string
       }
-      register_user:
-        | { Args: { _key_hash: string; _username: string }; Returns: Json }
-        | {
-            Args: {
-              _banner_color?: string
-              _key_hash: string
-              _username: string
-            }
-            Returns: Json
-          }
+      register_user: {
+        Args: { _banner_color?: string; _key_hash: string; _username: string }
+        Returns: Json
+      }
       remove_channel_member: {
         Args: {
           _channel_id: string
@@ -3304,11 +3300,7 @@ export type Database = {
         Returns: Json
       }
       transfer_ownership: {
-        Args: {
-          _current_owner_id: string
-          _new_owner_id: string
-          _server_id: string
-        }
+        Args: { _new_owner_id: string; _server_id: string }
         Returns: boolean
       }
       unassign_task_users: {
