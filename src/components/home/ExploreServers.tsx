@@ -53,33 +53,25 @@ const ExploreServersOriginal = () => {
       }
       
       try {
-        const { data, error } = await supabase
-          .from('servers')
-          .select('id,name,icon_url,banner_url,invite_code,owner_id,created_at,is_published,about,server_members(count)')
-          .eq('is_published', true)
-          .order('created_at', { ascending: false });
+        // Use RPC for one efficient query (avoids PostgREST LATERAL server_members(count) per row)
+        const { data, error } = await (supabase.rpc as (name: string, args?: object) => ReturnType<typeof supabase.rpc>)('get_explore_servers');
 
         if (error) throw error;
         if (cancelled) return;
 
-        const mapped = (data ?? []).map((row: any) => {
-          const count = Array.isArray(row.server_members) ? (row.server_members[0]?.count ?? 0) : 0;
-          const item: ExploreServer = {
-            id: row.id,
-            name: row.name,
-            icon_url: row.icon_url,
-            banner_url: row.banner_url,
-            invite_code: row.invite_code,
-            owner_id: row.owner_id,
-            created_at: row.created_at,
-            is_published: !!row.is_published,
-            about: row.about || null,
-            member_count: count,
-          };
-          return item;
-        });
-
-        mapped.sort((a, b) => b.member_count - a.member_count);
+        const raw = Array.isArray(data) ? data : (data ? [data] : []);
+        const mapped: ExploreServer[] = raw.map((row: any) => ({
+          id: row.id,
+          name: row.name,
+          icon_url: row.icon_url,
+          banner_url: row.banner_url,
+          invite_code: row.invite_code,
+          owner_id: row.owner_id,
+          created_at: row.created_at,
+          is_published: !!row.is_published,
+          about: row.about ?? null,
+          member_count: Number(row.member_count) ?? 0,
+        }));
         setItems(mapped);
       } catch (e: any) {
         console.error('Failed to load Explore servers:', e);
