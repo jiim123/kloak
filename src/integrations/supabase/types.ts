@@ -134,6 +134,27 @@ export type Database = {
         }
         Relationships: []
       }
+      auth_rate_limits: {
+        Row: {
+          action: string
+          attempts: number | null
+          ip_hash: string
+          window_start: string | null
+        }
+        Insert: {
+          action: string
+          attempts?: number | null
+          ip_hash: string
+          window_start?: string | null
+        }
+        Update: {
+          action?: string
+          attempts?: number | null
+          ip_hash?: string
+          window_start?: string | null
+        }
+        Relationships: []
+      }
       badges: {
         Row: {
           created_at: string | null
@@ -894,6 +915,27 @@ export type Database = {
           },
         ]
       }
+      function_rollback_snapshots: {
+        Row: {
+          captured_at: string
+          definition: string
+          signature: string
+          snapshot_name: string
+        }
+        Insert: {
+          captured_at?: string
+          definition: string
+          signature: string
+          snapshot_name: string
+        }
+        Update: {
+          captured_at?: string
+          definition?: string
+          signature?: string
+          snapshot_name?: string
+        }
+        Relationships: []
+      }
       media_comment_reactions: {
         Row: {
           comment_id: string
@@ -1388,6 +1430,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      pow_challenges: {
+        Row: {
+          created_at: string
+          difficulty: number
+          expires_at: string
+          id: string
+          nonce: string
+          used: boolean | null
+        }
+        Insert: {
+          created_at?: string
+          difficulty?: number
+          expires_at?: string
+          id?: string
+          nonce: string
+          used?: boolean | null
+        }
+        Update: {
+          created_at?: string
+          difficulty?: number
+          expires_at?: string
+          id?: string
+          nonce?: string
+          used?: boolean | null
+        }
+        Relationships: []
       }
       reactions: {
         Row: {
@@ -2150,6 +2219,7 @@ export type Database = {
           compact_mode: boolean
           created_at: string
           desktop_notifications_enabled: boolean
+          dm_privacy: string
           id: string
           link_previews_enabled: boolean
           notification_sound_enabled: boolean
@@ -2172,6 +2242,7 @@ export type Database = {
           compact_mode?: boolean
           created_at?: string
           desktop_notifications_enabled?: boolean
+          dm_privacy?: string
           id?: string
           link_previews_enabled?: boolean
           notification_sound_enabled?: boolean
@@ -2194,6 +2265,7 @@ export type Database = {
           compact_mode?: boolean
           created_at?: string
           desktop_notifications_enabled?: boolean
+          dm_privacy?: string
           id?: string
           link_previews_enabled?: boolean
           notification_sound_enabled?: boolean
@@ -2519,6 +2591,15 @@ export type Database = {
         Returns: boolean
       }
       check_e2e_status: { Args: { _user_id: string }; Returns: boolean }
+      check_rate_limit: {
+        Args: {
+          _action: string
+          _ip_hash: string
+          _max_attempts: number
+          _window_seconds: number
+        }
+        Returns: boolean
+      }
       check_server_membership: { Args: { _server_id: string }; Returns: Json }
       check_user_permission: {
         Args: {
@@ -2540,6 +2621,7 @@ export type Database = {
         Args: { _username: string }
         Returns: boolean
       }
+      cleanup_pow_challenges: { Args: never; Returns: undefined }
       close_expired_polls: { Args: { _channel_id: string }; Returns: number }
       close_poll: { Args: { _poll_id: string }; Returns: boolean }
       count_available_prekeys: {
@@ -3241,6 +3323,10 @@ export type Database = {
           _target_user_id?: string
           _user_id: string
         }
+        Returns: undefined
+      }
+      set_dm_privacy_preference: {
+        Args: { _dm_privacy: string; _user_id: string }
         Returns: undefined
       }
       set_message_embed_hidden: {
