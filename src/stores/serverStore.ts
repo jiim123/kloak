@@ -77,7 +77,7 @@ interface ServerState {
   updateMember: (memberId: string, updates: Partial<ServerMember>) => Promise<void>;
   kickMember: (serverId: string, userId: string) => Promise<void>;
   banMember: (serverId: string, userId: string) => Promise<void>;
-  transferOwnership: (serverId: string, currentOwnerId: string, newOwnerId: string) => Promise<void>;
+  transferOwnership: (serverId: string, newOwnerId: string) => Promise<void>;
 
   // Role actions
   roles: CustomServerRole[];
@@ -1228,13 +1228,25 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }
   },
 
-  transferOwnership: async (serverId: string, currentOwnerId: string, newOwnerId: string) => {
+  transferOwnership: async (serverId: string, newOwnerId: string) => {
     try {
-      const { error } = await supabase.rpc('transfer_ownership', {
+      const currentOwnerId = useAuthStore.getState().user?.id;
+      if (!currentOwnerId) throw new Error('Not authenticated');
+
+      let { error } = await supabase.rpc('transfer_ownership', {
         _server_id: serverId,
-        _current_owner_id: currentOwnerId,
         _new_owner_id: newOwnerId,
       });
+
+      // Backward compatibility: some DBs may still have only the legacy 3-arg signature.
+      if (error?.code === 'PGRST202') {
+        const legacy = await (supabase as any).rpc('transfer_ownership', {
+          _server_id: serverId,
+          _current_owner_id: currentOwnerId,
+          _new_owner_id: newOwnerId,
+        });
+        error = legacy.error ?? null;
+      }
 
       if (error) throw error;
 

@@ -2774,26 +2774,16 @@ export type Database = {
         }
         Returns: string
       }
-      create_server_role:
-        | {
-            Args: {
-              _color?: string
-              _name: string
-              _server_id: string
-              _user_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              _color: string
-              _icon?: string
-              _name: string
-              _server_id: string
-              _user_id: string
-            }
-            Returns: Json
-          }
+      create_server_role: {
+        Args: {
+          _color: string
+          _icon?: string
+          _name: string
+          _server_id: string
+          _user_id: string
+        }
+        Returns: Json
+      }
       create_server_with_owner: {
         Args: { _name: string; _owner_id: string }
         Returns: Json
@@ -3496,7 +3486,6 @@ export type Database = {
       }
       transfer_ownership: {
         Args: {
-          _current_owner_id: string
           _new_owner_id: string
           _server_id: string
         }

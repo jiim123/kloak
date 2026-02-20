@@ -26,6 +26,7 @@ export const usePreferencesSync = () => {
     compactMode,
     showTimestamps,
     animateEmojis,
+    dmPrivacy,
     setTheme,
     setLinkPreviewsEnabled,
     setDesktopNotificationsEnabled,
@@ -42,6 +43,7 @@ export const usePreferencesSync = () => {
     setCompactMode,
     setShowTimestamps,
     setAnimateEmojis,
+    setDmPrivacy,
   } = useUIStore();
   
   const hasLoadedFromDB = useRef(false);
@@ -126,6 +128,9 @@ export const usePreferencesSync = () => {
           if (typeof data.animate_emojis === 'boolean') {
             setAnimateEmojis(data.animate_emojis);
           }
+          if (typeof (data as any).dm_privacy === 'string') {
+            setDmPrivacy((data as any).dm_privacy);
+          }
           
           isUpdating.current = false;
         } else {
@@ -149,6 +154,7 @@ export const usePreferencesSync = () => {
               compact_mode: compactMode,
               show_timestamps: showTimestamps,
               animate_emojis: animateEmojis,
+              dm_privacy: dmPrivacy,
             },
           });
         }
@@ -189,6 +195,7 @@ export const usePreferencesSync = () => {
             compact_mode: compactMode,
             show_timestamps: showTimestamps,
             animate_emojis: animateEmojis,
+            dm_privacy: dmPrivacy,
           },
         });
       } catch (err) {
@@ -214,6 +221,7 @@ export const usePreferencesSync = () => {
     compactMode,
     showTimestamps,
     animateEmojis,
+    dmPrivacy,
     isAuthenticated,
     user?.id,
   ]);

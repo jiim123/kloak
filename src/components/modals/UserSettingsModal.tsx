@@ -29,6 +29,7 @@ import {
   RefreshCw,
   AlertTriangle,
   Download,
+  Shield,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -126,6 +127,8 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     setShowTimestamps,
     animateEmojis,
     setAnimateEmojis,
+    dmPrivacy,
+    setDmPrivacy,
   } = useUIStore();
   const { playTestSound } = useNotificationSound();
   const { user, secretKey, updateUser, logout, resetSecretKey } = useAuthStore();
@@ -222,6 +225,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const navItems = [
     { id: "account", label: "Account", icon: Key },
     { id: "profile", label: "Profile", icon: User },
+    { id: "privacy", label: "Privacy", icon: Shield },
     { id: "voice", label: "Voice & Audio", icon: Mic },
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "appearance", label: "Appearance", icon: Palette },
@@ -235,6 +239,27 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     if (variant === "modal" && !isOpen) return;
     fetchFriends(user.id);
   }, [fetchFriends, isOpen, user?.id, variant]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    if (variant === "modal" && !isOpen) return;
+
+    const loadDmPrivacy = async () => {
+      const { data, error } = await supabase
+        .from("user_preferences")
+        .select("dm_privacy")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (error) return;
+      const value = (data as any)?.dm_privacy;
+      if (typeof value === "string") {
+        setDmPrivacy(value as "everyone" | "shared_servers" | "friends" | "no_one");
+      }
+    };
+
+    loadDmPrivacy();
+  }, [isOpen, setDmPrivacy, user?.id, variant]);
 
   // ESC key to close (desktop page variant)
   useEffect(() => {
@@ -261,6 +286,20 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       toast.error("Failed to update profile");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDmPrivacyChange = async (value: "everyone" | "shared_servers" | "friends" | "no_one") => {
+    if (!user?.id) return;
+    setDmPrivacy(value);
+    const { error } = await supabase.rpc("set_dm_privacy_preference" as any, {
+      _user_id: user.id,
+      _dm_privacy: value,
+    });
+    if (error) {
+      toast.error("Failed to update DM privacy");
+    } else {
+      toast.success("DM privacy updated");
     }
   };
 
@@ -526,6 +565,8 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         return accountContent;
       case "profile":
         return profileContent;
+      case "privacy":
+        return privacyContent;
       case "voice":
         return voiceContent;
       case "notifications":
@@ -899,6 +940,57 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   // Voice & Audio Content
   const voiceContent = (
     <VoiceSettingsPanel />
+  );
+
+  const privacyOptions: Array<{
+    id: "everyone" | "shared_servers" | "friends" | "no_one";
+    title: string;
+    description: string;
+  }> = [
+    { id: "everyone", title: "Everyone", description: "Anyone can start a DM with you." },
+    { id: "shared_servers", title: "Shared Servers", description: "Only people who share a server with you can DM you." },
+    { id: "friends", title: "Friends Only", description: "Only accepted friends can start a DM." },
+    { id: "no_one", title: "No One", description: "Nobody can start new DMs with you." },
+  ];
+
+  const privacyContent = (
+    <div className="space-y-4">
+      <div className="p-4 rounded-xl bg-secondary/30 border border-border/50 space-y-2">
+        <div className="flex items-center gap-2 mb-1">
+          <Shield className="w-4 h-4 text-muted-foreground" />
+          <h3 className="text-sm font-semibold">Direct Message Privacy</h3>
+        </div>
+        <p className="text-xs text-muted-foreground mb-2">
+          Control who can start a new DM conversation with you.
+        </p>
+        <div className="space-y-2">
+          {privacyOptions.map((option) => {
+            const active = dmPrivacy === option.id;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => void handleDmPrivacyChange(option.id)}
+                className={cn(
+                  "w-full text-left p-3 rounded-xl border transition-colors",
+                  active
+                    ? "border-primary bg-primary/10"
+                    : "border-border/50 bg-background/30 hover:border-primary/40",
+                )}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium">{option.title}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{option.description}</p>
+                  </div>
+                  {active && <Check className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 
   // Notifications Content
@@ -1312,6 +1404,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {activeTab === "account" && "Manage your account"}
                   {activeTab === "profile" && "Customize your profile"}
+                  {activeTab === "privacy" && "Control who can message you"}
                   {activeTab === "voice" && "Audio and voice settings"}
                   {activeTab === "notifications" && "Notification settings"}
                   {activeTab === "appearance" && "Personalize your app"}
@@ -1408,6 +1501,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
               <p className="text-sm text-muted-foreground mb-6">
                 {activeTab === "account" && "Manage your account credentials and security"}
                 {activeTab === "profile" && "Customize how others see you"}
+                {activeTab === "privacy" && "Manage your direct message privacy preferences"}
                 {activeTab === "voice" && "Configure your audio input, output, and voice settings"}
                 {activeTab === "notifications" && "Control how you receive notifications"}
                 {activeTab === "appearance" && "Personalize your app experience"}

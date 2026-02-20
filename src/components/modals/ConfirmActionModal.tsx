@@ -66,7 +66,7 @@ export const ConfirmActionModal = () => {
           
         case 'transferOwnership':
           if (user) {
-            await transferOwnership(currentServer.id, user.id, member.user_id);
+            await transferOwnership(currentServer.id, member.user_id);
             toast.success(`Server ownership has been transferred to ${member.nickname || member.user?.username}`);
           }
           break;

@@ -312,6 +312,8 @@ export const UserProfilePopup = () => {
         setCurrentServer(null);
         setCurrentConversation(conversation);
         closeModal();
+      } else {
+        toast.error("You can't message this user");
       }
     } catch (error) {
       toast.error("Failed to open conversation");

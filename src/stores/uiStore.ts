@@ -11,6 +11,7 @@ export const THEMES = [
 ] as const;
 
 export type Theme = typeof THEMES[number]['id'];
+export type DmPrivacy = 'everyone' | 'shared_servers' | 'friends' | 'no_one';
 
 export type ModalType =
   | 'create-server'
@@ -82,6 +83,7 @@ interface UIState {
   compactMode: boolean;
   showTimestamps: boolean;
   animateEmojis: boolean;
+  dmPrivacy: DmPrivacy;
 
   // Theme actions
   toggleTheme: () => void;
@@ -135,6 +137,7 @@ interface UIState {
   setCompactMode: (enabled: boolean) => void;
   setShowTimestamps: (enabled: boolean) => void;
   setAnimateEmojis: (enabled: boolean) => void;
+  setDmPrivacy: (value: DmPrivacy) => void;
 }
 
 export const applyTheme = (theme: Theme) => {
@@ -187,6 +190,7 @@ export const useUIStore = create<UIState>()(
       compactMode: false,
       showTimestamps: true,
       animateEmojis: true,
+      dmPrivacy: 'friends',
 
       toggleTheme: () => {
         const currentTheme = get().theme;
@@ -348,6 +352,9 @@ export const useUIStore = create<UIState>()(
       setAnimateEmojis: (enabled) => {
         set({ animateEmojis: enabled });
       },
+      setDmPrivacy: (value) => {
+        set({ dmPrivacy: value });
+      },
     }),
     {
       name: 'kloak-ui',
@@ -374,6 +381,7 @@ export const useUIStore = create<UIState>()(
         compactMode: state.compactMode,
         showTimestamps: state.showTimestamps,
         animateEmojis: state.animateEmojis,
+        dmPrivacy: state.dmPrivacy,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
