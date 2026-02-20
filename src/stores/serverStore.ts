@@ -26,6 +26,9 @@ const PERMISSIONS_TTL_MS = 60_000;
 const rolePermissionsCache = new Map<string, { data: RolePermission[]; cachedAt: number }>();
 const channelPermissionsCache = new Map<string, { data: ChannelPermission[]; cachedAt: number }>();
 
+const MEMBERS_CACHE_TTL_MS = 60_000;
+const membersCachedAt = new Map<string, number>();
+
 interface ServerState {
   servers: ServerWithMembership[];
   currentServer: Server | null;
@@ -1032,6 +1035,15 @@ export const useServerStore = create<ServerState>((set, get) => ({
   },
 
   fetchMembers: async (serverId: string) => {
+    const state = get();
+    const cachedAt = membersCachedAt.get(serverId);
+    if (
+      state.membersServerId === serverId &&
+      cachedAt != null &&
+      Date.now() - cachedAt < MEMBERS_CACHE_TTL_MS
+    ) {
+      return;
+    }
     return deduplicatedFetch(`serverStore:fetchMembers:${serverId}`, async () => {
       set({ isMembersLoading: true, membersServerId: serverId });
       try {
@@ -1127,6 +1139,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         bulkSetUsersInCache(memberUsers as any);
       }
 
+        membersCachedAt.set(serverId, Date.now());
         set({ members, isMembersLoading: false, membersServerId: serverId });
       } catch (error) {
         console.error('Failed to fetch members:', error);
@@ -1196,6 +1209,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
       if (error) throw error;
 
+      membersCachedAt.delete(serverId);
       set((state) => ({
         members: state.members.filter((m) => m.user_id !== targetUserId),
       }));
@@ -1219,6 +1233,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
       if (error) throw error;
 
+      membersCachedAt.delete(serverId);
       set((state) => ({
         members: state.members.filter((m) => m.user_id !== targetUserId),
       }));
@@ -1250,6 +1265,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
       if (error) throw error;
 
+      membersCachedAt.delete(serverId);
       const { members } = get();
       const currentOwnerMember = members.find(m => m.user_id === currentOwnerId && m.server_id === serverId);
       const newOwnerMember = members.find(m => m.user_id === newOwnerId && m.server_id === serverId);
