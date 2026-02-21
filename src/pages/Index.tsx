@@ -81,7 +81,22 @@ const Index = () => {
       <SEO {...SEO_CONFIG.home} />
       <div className="w-full">
         <NavigationMenu />
-        <main className="pt-10">
+        <main className="pt-16">
+          {/* Infrastructure Notice Banner */}
+          <div className="bg-amber-500/10 border-b border-amber-500/30">
+            <div className="max-w-5xl mx-auto px-6 py-5 text-center space-y-2">
+              <h3 className="text-sm font-semibold text-amber-400 tracking-wide uppercase">
+                We're Rebuilding the Foundation.
+              </h3>
+              <p className="text-sm text-amber-200/80 leading-relaxed">
+                Over the past days, our community has grown faster than we anticipated, and with that growth came challenges we weren't fully prepared for. Rather than patch over the cracks, we're doing what our values demand: stopping, looking closely, and getting it right. We've begun a full investigation and restructure of our infrastructure to ensure Kloak can support its community safely, now and long into the future. If you have any questions:{" "}
+                <a href="mailto:support@kloak.app" className="text-amber-400 hover:text-amber-300 underline underline-offset-2 transition-colors">
+                  support@kloak.app
+                </a>
+              </p>
+            </div>
+          </div>
+
           {/* Hero Section */}
           <HeroAscii />
 
