@@ -14,6 +14,144 @@ export type Database = {
   }
   public: {
     Tables: {
+      _snapshot_direct_messages_20260221: {
+        Row: {
+          content: string | null
+          conversation_id: string | null
+          created_at: string | null
+          edited_at: string | null
+          id: string | null
+          reply_to_id: string | null
+          sender_id: string | null
+        }
+        Insert: {
+          content?: string | null
+          conversation_id?: string | null
+          created_at?: string | null
+          edited_at?: string | null
+          id?: string | null
+          reply_to_id?: string | null
+          sender_id?: string | null
+        }
+        Update: {
+          content?: string | null
+          conversation_id?: string | null
+          created_at?: string | null
+          edited_at?: string | null
+          id?: string | null
+          reply_to_id?: string | null
+          sender_id?: string | null
+        }
+        Relationships: []
+      }
+      _snapshot_direct_messages_compromise_20260221: {
+        Row: {
+          content: string | null
+          conversation_id: string | null
+          created_at: string | null
+          edited_at: string | null
+          id: string | null
+          reply_to_id: string | null
+          sender_id: string | null
+        }
+        Insert: {
+          content?: string | null
+          conversation_id?: string | null
+          created_at?: string | null
+          edited_at?: string | null
+          id?: string | null
+          reply_to_id?: string | null
+          sender_id?: string | null
+        }
+        Update: {
+          content?: string | null
+          conversation_id?: string | null
+          created_at?: string | null
+          edited_at?: string | null
+          id?: string | null
+          reply_to_id?: string | null
+          sender_id?: string | null
+        }
+        Relationships: []
+      }
+      _snapshot_messages_20260221: {
+        Row: {
+          channel_id: string | null
+          content: string | null
+          created_at: string | null
+          edited_at: string | null
+          embed_hidden: boolean | null
+          id: string | null
+          is_pinned: boolean | null
+          is_system_message: boolean | null
+          reply_to_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          channel_id?: string | null
+          content?: string | null
+          created_at?: string | null
+          edited_at?: string | null
+          embed_hidden?: boolean | null
+          id?: string | null
+          is_pinned?: boolean | null
+          is_system_message?: boolean | null
+          reply_to_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          channel_id?: string | null
+          content?: string | null
+          created_at?: string | null
+          edited_at?: string | null
+          embed_hidden?: boolean | null
+          id?: string | null
+          is_pinned?: boolean | null
+          is_system_message?: boolean | null
+          reply_to_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      _snapshot_messages_compromise_20260221: {
+        Row: {
+          channel_id: string | null
+          content: string | null
+          created_at: string | null
+          edited_at: string | null
+          embed_hidden: boolean | null
+          id: string | null
+          is_pinned: boolean | null
+          is_system_message: boolean | null
+          reply_to_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          channel_id?: string | null
+          content?: string | null
+          created_at?: string | null
+          edited_at?: string | null
+          embed_hidden?: boolean | null
+          id?: string | null
+          is_pinned?: boolean | null
+          is_system_message?: boolean | null
+          reply_to_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          channel_id?: string | null
+          content?: string | null
+          created_at?: string | null
+          edited_at?: string | null
+          embed_hidden?: boolean | null
+          id?: string | null
+          is_pinned?: boolean | null
+          is_system_message?: boolean | null
+          reply_to_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       announcement_comment_reactions: {
         Row: {
           comment_id: string
