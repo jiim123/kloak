@@ -1,39 +1,40 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 // All available themes
 export const THEMES = [
-  { id: 'default', name: 'Default', description: 'Orange/Amber brand dark theme' },
-  { id: 'nostalgia', name: 'Nostalgia', description: 'Warm, muted, vintage feel' },
-  { id: 'lofi', name: 'Lo-fi', description: 'Bold, retro, high contrast anime aesthetic' },
-  { id: 'cappuccino', name: 'Cappuccino', description: 'Warm, cozy coffee house aesthetic' },
-  { id: 'hokori', name: 'Hokori', description: 'Stark, Japanese-inspired, dramatic minimalism' },
+  { id: "default", name: "Default", description: "Orange/Amber brand dark theme" },
+  { id: "nostalgia", name: "Nostalgia", description: "Warm, muted, vintage feel" },
+  { id: "lofi", name: "Lo-fi", description: "Bold, retro, high contrast anime aesthetic" },
+  { id: "cappuccino", name: "Cappuccino", description: "Warm, cozy coffee house aesthetic" },
+  { id: "hokori", name: "Hokori", description: "Stark, Japanese-inspired, dramatic minimalism" },
 ] as const;
 
-export type Theme = typeof THEMES[number]['id'];
+export type Theme = (typeof THEMES)[number]["id"];
+export type DmPrivacy = "everyone" | "shared_servers" | "friends" | "no_one";
 
 export type ModalType =
-  | 'create-server'
-  | 'join-server'
-  | 'server-settings'
-  | 'create-channel'
-  | 'edit-channel'
-  | 'user-settings'
-  | 'userProfile'
-  | 'invite'
-  | 'delete-message'
-  | 'leave-server'
-  | 'kick-member'
-  | 'ban-member'
-  | 'quickSwitcher'
-  | 'shortcuts'
-  | 'pinned-messages'
-  | 'search'
-  | 'changeNickname'
-  | 'confirmAction'
-  | 'permission-debug'
-  | 'import-discord-template'
-  | 'import-emoji-pack'
+  | "create-server"
+  | "join-server"
+  | "server-settings"
+  | "create-channel"
+  | "edit-channel"
+  | "user-settings"
+  | "userProfile"
+  | "invite"
+  | "delete-message"
+  | "leave-server"
+  | "kick-member"
+  | "ban-member"
+  | "quickSwitcher"
+  | "shortcuts"
+  | "pinned-messages"
+  | "search"
+  | "changeNickname"
+  | "confirmAction"
+  | "permission-debug"
+  | "import-discord-template"
+  | "import-emoji-pack"
   | null;
 
 interface ModalData {
@@ -82,6 +83,7 @@ interface UIState {
   compactMode: boolean;
   showTimestamps: boolean;
   animateEmojis: boolean;
+  dmPrivacy: DmPrivacy;
 
   // Theme actions
   toggleTheme: () => void;
@@ -135,25 +137,26 @@ interface UIState {
   setCompactMode: (enabled: boolean) => void;
   setShowTimestamps: (enabled: boolean) => void;
   setAnimateEmojis: (enabled: boolean) => void;
+  setDmPrivacy: (value: DmPrivacy) => void;
 }
 
 export const applyTheme = (theme: Theme) => {
   const root = document.documentElement;
 
   // Remove all theme classes
-  THEMES.forEach(t => root.classList.remove(t.id));
+  THEMES.forEach((t) => root.classList.remove(t.id));
 
   // Add the new theme class
   root.classList.add(theme);
 
   // Also set data-theme attribute for potential CSS usage
-  root.setAttribute('data-theme', theme);
+  root.setAttribute("data-theme", theme);
 };
 
 export const useUIStore = create<UIState>()(
   persist(
     (set, get) => ({
-      theme: 'default',
+      theme: "default",
       isMemberSidebarOpen: true,
       isSettingsOpen: false,
       isServerSettingsOpen: false,
@@ -187,10 +190,11 @@ export const useUIStore = create<UIState>()(
       compactMode: false,
       showTimestamps: true,
       animateEmojis: true,
+      dmPrivacy: "friends",
 
       toggleTheme: () => {
         const currentTheme = get().theme;
-        const newTheme = currentTheme === 'default' ? 'nostalgia' : 'default';
+        const newTheme = currentTheme === "default" ? "nostalgia" : "default";
         applyTheme(newTheme);
         set({ theme: newTheme });
       },
@@ -202,7 +206,7 @@ export const useUIStore = create<UIState>()(
 
       cycleTheme: () => {
         const currentTheme = get().theme;
-        const currentIndex = THEMES.findIndex(t => t.id === currentTheme);
+        const currentIndex = THEMES.findIndex((t) => t.id === currentTheme);
         const nextIndex = (currentIndex + 1) % THEMES.length;
         const newTheme = THEMES[nextIndex].id;
         applyTheme(newTheme);
@@ -231,9 +235,16 @@ export const useUIStore = create<UIState>()(
 
       openModal: (modal, data = null) => {
         // Close server settings and mobile sidebars when opening user-settings to prevent stacking
-        if (modal === 'user-settings') {
-          set({ activeModal: modal, modalData: data, isServerSettingsOpen: false, isSettingsOpen: true, isMobileSidebarOpen: false, isMobileChannelSidebarOpen: false });
-        } else if (modal === 'edit-channel' || modal === 'create-channel') {
+        if (modal === "user-settings") {
+          set({
+            activeModal: modal,
+            modalData: data,
+            isServerSettingsOpen: false,
+            isSettingsOpen: true,
+            isMobileSidebarOpen: false,
+            isMobileChannelSidebarOpen: false,
+          });
+        } else if (modal === "edit-channel" || modal === "create-channel") {
           // Close mobile sidebars when opening channel modals so they appear on top
           set({ activeModal: modal, modalData: data, isMobileSidebarOpen: false, isMobileChannelSidebarOpen: false });
         } else {
@@ -247,7 +258,13 @@ export const useUIStore = create<UIState>()(
 
       openSettings: () => {
         // Close server settings and mobile sidebars when opening user settings to prevent stacking
-        set({ isSettingsOpen: true, isServerSettingsOpen: false, activeModal: 'user-settings', isMobileSidebarOpen: false, isMobileChannelSidebarOpen: false });
+        set({
+          isSettingsOpen: true,
+          isServerSettingsOpen: false,
+          activeModal: "user-settings",
+          isMobileSidebarOpen: false,
+          isMobileChannelSidebarOpen: false,
+        });
       },
 
       closeSettings: () => {
@@ -257,7 +274,7 @@ export const useUIStore = create<UIState>()(
       openServerSettings: () => {
         // Close user settings when opening server settings to prevent stacking
         // Set activeModal to 'server-settings' so the modal works on mobile
-        set({ isServerSettingsOpen: true, isSettingsOpen: false, activeModal: 'server-settings' });
+        set({ isServerSettingsOpen: true, isSettingsOpen: false, activeModal: "server-settings" });
       },
 
       openServerSettingsPage: () => {
@@ -348,9 +365,12 @@ export const useUIStore = create<UIState>()(
       setAnimateEmojis: (enabled) => {
         set({ animateEmojis: enabled });
       },
+      setDmPrivacy: (value) => {
+        set({ dmPrivacy: value });
+      },
     }),
     {
-      name: 'kloak-ui',
+      name: "kloak-ui",
       partialize: (state) => ({
         theme: state.theme,
         isMemberSidebarOpen: state.isMemberSidebarOpen,
@@ -374,14 +394,15 @@ export const useUIStore = create<UIState>()(
         compactMode: state.compactMode,
         showTimestamps: state.showTimestamps,
         animateEmojis: state.animateEmojis,
+        dmPrivacy: state.dmPrivacy,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
           applyTheme(state.theme);
         }
       },
-    }
-  )
+    },
+  ),
 );
 
 // Initialize theme on load

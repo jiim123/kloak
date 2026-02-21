@@ -1,11 +1,10 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { supabase, setKeyHashHeader } from "@/integrations/supabase/client";
-import { generateSecretKey, hashSecretKey, isValidSecretKey, fetchPoWChallenge, solvePoWChallenge } from "@/lib/crypto";
+import { generateSecretKey, hashSecretKey, isValidSecretKey } from "@/lib/crypto";
 import { authRateLimiter, accountCreationRateLimiter, validateUsername } from "@/lib/security";
 import { setUserInCache, invalidateUser } from "@/lib/userCache";
 import type { User, UserStatus } from "@/types";
-
 let lastSeenTimestamp = 0;
 // Presence/status is not critical to be realtime; debounce + coalesce AUTO status updates
 // to avoid spamming `update_user_status` during tab switches/activity bursts.
@@ -43,7 +42,7 @@ interface AuthState {
 
   // Auth methods
   checkAuth: () => Promise<boolean>;
-  createAccount: (username: string) => Promise<{ secretKey: string; user: User } | null>;
+  createAccount: (username: string, hcaptchaToken?: string | null) => Promise<{ secretKey: string; user: User } | null>;
   login: (secretKey: string) => Promise<boolean>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => Promise<void>;
@@ -95,10 +94,11 @@ export const useAuthStore = create<AuthState>()(
         return success;
       },
 
-      createAccount: async (username: string) => {
+      createAccount: async (username: string, hcaptchaToken?: string | null) => {
         set({ isLoading: true, error: null });
 
-        // Client-side rate limit to prevent rapid-fire attempts
+        // Rate limit account creation to prevent abuse
+        // Use a global key since we don't have a user ID yet
         const rateLimitKey = `create_${username.toLowerCase().trim()}`;
         if (!accountCreationRateLimiter.isAllowed(rateLimitKey)) {
           const remainingTime = accountCreationRateLimiter.getRemainingTime(rateLimitKey);
@@ -106,7 +106,7 @@ export const useAuthStore = create<AuthState>()(
           return null;
         }
 
-        // Validate username client-side before hitting the server
+        // Validate username
         const usernameValidation = validateUsername(username);
         if (!usernameValidation.valid) {
           set({ error: usernameValidation.error, isLoading: false });
@@ -119,42 +119,37 @@ export const useAuthStore = create<AuthState>()(
           const normalizedUsername = username.toLowerCase().trim();
           const bannerColor = "#5865F2";
 
+          if (!hcaptchaToken) {
+            set({ error: "Please complete captcha before creating an account.", isLoading: false });
+            return null;
+          }
+
           const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
           if (!supabaseUrl) {
             set({ error: "Registration is not configured. Missing VITE_SUPABASE_URL.", isLoading: false });
             return null;
           }
 
-          // Step 1: Fetch a Proof of Work challenge from the server
-          let challenge: { id: string; nonce: string; difficulty: number; expires_at: string };
-          try {
-            challenge = await fetchPoWChallenge();
-          } catch {
-            set({ error: "Failed to reach registration server. Please try again.", isLoading: false });
-            return null;
-          }
-
-          // Step 2: Solve the PoW challenge (runs in browser, ~65k hash attempts for difficulty 4)
-          const solution = await solvePoWChallenge(challenge.nonce, challenge.difficulty);
-
-          // Step 3: Submit registration with PoW proof
-          const res = await fetch(`${supabaseUrl}/functions/v1/register-with-pow`, {
+          let data: Record<string, unknown> | null = null;
+          let errorMessage: string | null = null;
+          const res = await fetch(`${supabaseUrl}/functions/v1/register-with-captcha`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              challenge_id: challenge.id,
-              nonce: challenge.nonce,
-              solution,
               username: normalizedUsername,
               key_hash: keyHash,
+              hcaptcha_response: hcaptchaToken,
               banner_color: bannerColor,
             }),
           });
-
           const json = (await res.json()) as { data?: Record<string, unknown>; error?: string };
-
           if (!res.ok) {
-            const errorMessage = json.error ?? "Registration failed";
+            errorMessage = json.error ?? "Registration failed";
+          } else {
+            data = json.data ?? null;
+          }
+
+          if (errorMessage) {
             if (errorMessage.includes("Username already taken")) {
               set({ error: "Username already taken", isLoading: false });
               return null;
@@ -163,19 +158,15 @@ export const useAuthStore = create<AuthState>()(
               set({ error: "This username is reserved", isLoading: false });
               return null;
             }
-            if (errorMessage.includes("Invalid or expired challenge")) {
-              set({ error: "Registration challenge expired. Please try again.", isLoading: false });
-              return null;
-            }
             set({ error: errorMessage, isLoading: false });
             return null;
           }
 
-          if (!json.data) {
+          if (!data) {
             throw new Error("No user data returned");
           }
 
-          const userData = json.data;
+          const userData = data;
           const user: User = {
             id: userData.id as string,
             username: userData.username as string,
@@ -195,6 +186,7 @@ export const useAuthStore = create<AuthState>()(
             pronouns: (userData.pronouns as string | null) ?? null,
           };
 
+          // New account starts with no manual status override.
           const newKeyHash = await hashSecretKey(secretKey);
           setKeyHashHeader(newKeyHash);
           set({
@@ -206,7 +198,6 @@ export const useAuthStore = create<AuthState>()(
             isNewUser: true,
             manualStatus: null,
           });
-
           // Seed user cache to avoid immediate redundant get_user_by_id calls (realtime / DMs).
           setUserInCache(user.id, user);
 

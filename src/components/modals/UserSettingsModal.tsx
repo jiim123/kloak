@@ -29,6 +29,7 @@ import {
   RefreshCw,
   AlertTriangle,
   Download,
+  Shield,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -126,6 +127,8 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     setShowTimestamps,
     animateEmojis,
     setAnimateEmojis,
+    dmPrivacy,
+    setDmPrivacy,
   } = useUIStore();
   const { playTestSound } = useNotificationSound();
   const { user, secretKey, updateUser, logout, resetSecretKey } = useAuthStore();
@@ -162,12 +165,14 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const [showAvatarDecorationModal, setShowAvatarDecorationModal] = useState(false);
   const [showProfileEffectModal, setShowProfileEffectModal] = useState(false);
   const [isBannerUploading, setIsBannerUploading] = useState(false);
-  const [browserPermissionStatus, setBrowserPermissionStatus] = useState<NotificationPermission | 'unsupported'>('default');
+  const [browserPermissionStatus, setBrowserPermissionStatus] = useState<NotificationPermission | "unsupported">(
+    "default",
+  );
 
   // Sync browser notification toggle with actual browser permission on mount
   useEffect(() => {
-    if (typeof Notification === 'undefined') {
-      setBrowserPermissionStatus('unsupported');
+    if (typeof Notification === "undefined") {
+      setBrowserPermissionStatus("unsupported");
       return;
     }
 
@@ -175,33 +180,33 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     setBrowserPermissionStatus(Notification.permission);
 
     // If permission is denied or unsupported, force the toggle off
-    if (Notification.permission === 'denied') {
+    if (Notification.permission === "denied") {
       setBrowserNotificationsEnabled(false);
     }
 
     // Listen for permission changes (some browsers support this)
     const checkPermission = () => {
       setBrowserPermissionStatus(Notification.permission);
-      if (Notification.permission === 'denied') {
+      if (Notification.permission === "denied") {
         setBrowserNotificationsEnabled(false);
       }
     };
 
     // Check periodically when tab becomes visible (catches manual browser setting changes)
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && typeof Notification !== 'undefined') {
+      if (document.visibilityState === "visible" && typeof Notification !== "undefined") {
         checkPermission();
       }
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [setBrowserNotificationsEnabled]);
 
   // Profile form state
   const [displayName, setDisplayName] = useState(user?.display_name || "");
   const [bio, setBio] = useState(user?.bio || "");
- // Pronouns removed per user request
+  // Pronouns removed per user request
   const [profileThemePrimary, setProfileThemePrimary] = useState<string | null>(user?.profile_theme_primary ?? null);
   const [profileThemeAccent, setProfileThemeAccent] = useState<string | null>(user?.profile_theme_accent ?? null);
   const [localAvatarUrl, setLocalAvatarUrl] = useState<string | null>(user?.avatar_url ?? null);
@@ -222,6 +227,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const navItems = [
     { id: "account", label: "Account", icon: Key },
     { id: "profile", label: "Profile", icon: User },
+    { id: "privacy", label: "Privacy", icon: Shield },
     { id: "voice", label: "Voice & Audio", icon: Mic },
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "appearance", label: "Appearance", icon: Palette },
@@ -236,14 +242,35 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     fetchFriends(user.id);
   }, [fetchFriends, isOpen, user?.id, variant]);
 
+  useEffect(() => {
+    if (!user?.id) return;
+    if (variant === "modal" && !isOpen) return;
+
+    const loadDmPrivacy = async () => {
+      const { data, error } = await supabase
+        .from("user_preferences")
+        .select("dm_privacy")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (error) return;
+      const value = (data as any)?.dm_privacy;
+      if (typeof value === "string") {
+        setDmPrivacy(value as "everyone" | "shared_servers" | "friends" | "no_one");
+      }
+    };
+
+    loadDmPrivacy();
+  }, [isOpen, setDmPrivacy, user?.id, variant]);
+
   // ESC key to close (desktop page variant)
   useEffect(() => {
     if (variant !== "page") return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') handleClose();
+      if (e.key === "Escape") handleClose();
     };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [variant]);
 
   const handleSaveProfile = async () => {
@@ -261,6 +288,20 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       toast.error("Failed to update profile");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDmPrivacyChange = async (value: "everyone" | "shared_servers" | "friends" | "no_one") => {
+    if (!user?.id) return;
+    setDmPrivacy(value);
+    const { error } = await supabase.rpc("set_dm_privacy_preference" as any, {
+      _user_id: user.id,
+      _dm_privacy: value,
+    });
+    if (error) {
+      toast.error("Failed to update DM privacy");
+    } else {
+      toast.success("DM privacy updated");
     }
   };
 
@@ -354,7 +395,9 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       // Delete avatar files from storage first
       try {
         await secureListAndDelete("avatars", user.id, "avatar");
-      } catch { /* ignore cleanup errors */ }
+      } catch {
+        /* ignore cleanup errors */
+      }
 
       setLocalAvatarUrl(null);
       await updateUser({ avatar_url: null });
@@ -526,6 +569,8 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         return accountContent;
       case "profile":
         return profileContent;
+      case "privacy":
+        return privacyContent;
       case "voice":
         return voiceContent;
       case "notifications":
@@ -559,7 +604,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       {/* Secret Key Section - Redesigned */}
       <div className="space-y-4">
         <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Secret Key</Label>
-        
+
         {/* View Secret Key Card */}
         <div className="p-4 rounded-xl bg-secondary/50 border border-border/50 space-y-3">
           <div className="flex items-center gap-3">
@@ -624,7 +669,8 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           </div>
 
           <p className="text-xs text-muted-foreground leading-relaxed">
-            If you believe your key has been compromised, you can generate a new one. Your old key will be invalidated immediately.
+            If you believe your key has been compromised, you can generate a new one. Your old key will be invalidated
+            immediately.
           </p>
 
           {resetCooldownEndsAt && resetCooldownEndsAt > new Date() ? (
@@ -633,11 +679,12 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
               <div className="text-xs">
                 <span className="text-amber-500 font-medium">Cooldown active</span>
                 <span className="text-muted-foreground ml-1">
-                  – Available {new Date(resetCooldownEndsAt).toLocaleString(undefined, { 
-                    month: 'short', 
-                    day: 'numeric', 
-                    hour: 'numeric', 
-                    minute: '2-digit' 
+                  – Available{" "}
+                  {new Date(resetCooldownEndsAt).toLocaleString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
                   })}
                 </span>
               </div>
@@ -669,7 +716,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       {isTauriApp && (
         <div className="space-y-4">
           <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">App Updates</Label>
-          
+
           <div className="p-4 rounded-xl bg-secondary/50 border border-border/50 space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -678,20 +725,20 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
               <div className="flex-1">
                 <h4 className="text-sm font-medium">Check for Updates</h4>
                 <p className="text-xs text-muted-foreground">
-                  {updateInfo.available 
-                    ? `Update available: v${updateInfo.version}`
-                    : updateInfo.error
-                    ? (
-                        <span className="text-destructive">
-                          {updateInfo.error}
-                          {updateInfo.error.includes('Unknown') && (
-                            <span className="block mt-1 text-[10px] opacity-75">
-                              Open DevTools (F12) Console for details
-                            </span>
-                          )}
+                  {updateInfo.available ? (
+                    `Update available: v${updateInfo.version}`
+                  ) : updateInfo.error ? (
+                    <span className="text-destructive">
+                      {updateInfo.error}
+                      {updateInfo.error.includes("Unknown") && (
+                        <span className="block mt-1 text-[10px] opacity-75">
+                          Open DevTools (F12) Console for details
                         </span>
-                      )
-                    : "Check if a new version is available"}
+                      )}
+                    </span>
+                  ) : (
+                    "Check if a new version is available"
+                  )}
                 </p>
               </div>
             </div>
@@ -713,21 +760,18 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                           {updateInfo.error}
                         </p>
                         <p className="text-[10px] text-muted-foreground mt-2">
-                          Common issues: Missing .sig file, network error, or permission denied. Check GitHub releases for update files.
+                          Common issues: Missing .sig file, network error, or permission denied. Check GitHub releases
+                          for update files.
                         </p>
                       </div>
                     </div>
                   </div>
                 )}
-                <Button
-                  onClick={installUpdate}
-                  disabled={isInstalling}
-                  className="w-full h-11 rounded-xl"
-                >
+                <Button onClick={installUpdate} disabled={isInstalling} className="w-full h-11 rounded-xl">
                   {isInstalling ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      {updateInfo.error ? 'Retry Installation' : 'Installing Update...'}
+                      {updateInfo.error ? "Retry Installation" : "Installing Update..."}
                     </>
                   ) : (
                     <>
@@ -738,9 +782,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 </Button>
                 {isInstalling && !updateInfo.error && (
                   <div className="space-y-2">
-                    <p className="text-xs text-center text-muted-foreground">
-                      Downloading and installing update...
-                    </p>
+                    <p className="text-xs text-center text-muted-foreground">Downloading and installing update...</p>
                     <p className="text-[10px] text-center text-muted-foreground/70">
                       The app will restart automatically after installation completes.
                     </p>
@@ -774,8 +816,10 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       {/* DevTools - Only show in Tauri */}
       {isTauriApp && (
         <div className="space-y-4">
-          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Developer Tools</Label>
-          
+          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Developer Tools
+          </Label>
+
           <div className="p-4 rounded-xl bg-secondary/50 border border-border/50 space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -783,27 +827,28 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
               </div>
               <div className="flex-1">
                 <h4 className="text-sm font-medium">Open DevTools</h4>
-                <p className="text-xs text-muted-foreground">
-                  Open browser DevTools to view console logs and debug
-                </p>
+                <p className="text-xs text-muted-foreground">Open browser DevTools to view console logs and debug</p>
               </div>
             </div>
             <div className="p-3 rounded-lg bg-muted/50 border border-border/50 space-y-2">
               <p className="text-xs text-muted-foreground">
-                DevTools: Press <kbd className="text-[10px] bg-background px-1.5 py-0.5 rounded border">F12</kbd> or <kbd className="text-[10px] bg-background px-1.5 py-0.5 rounded border">Ctrl+Shift+I</kbd> to open.
+                DevTools: Press <kbd className="text-[10px] bg-background px-1.5 py-0.5 rounded border">F12</kbd> or{" "}
+                <kbd className="text-[10px] bg-background px-1.5 py-0.5 rounded border">Ctrl+Shift+I</kbd> to open.
               </p>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={async () => {
                   try {
-                    const { invoke } = await import('@tauri-apps/api/core');
-                    const appDataDir = await invoke<string>('get_app_data_dir');
+                    const { invoke } = await import("@tauri-apps/api/core");
+                    const appDataDir = await invoke<string>("get_app_data_dir");
                     const logPath = `${appDataDir}\\updater-error.log`;
-                    alert(`App Data Directory:\n${appDataDir}\n\nUpdater Error Log:\n${logPath}\n\n(Only exists if updater failed to initialize)`);
+                    alert(
+                      `App Data Directory:\n${appDataDir}\n\nUpdater Error Log:\n${logPath}\n\n(Only exists if updater failed to initialize)`,
+                    );
                   } catch (error) {
-                    console.error('Failed to get app data dir:', error);
-                    alert('Failed to get app data directory. Check console.');
+                    console.error("Failed to get app data dir:", error);
+                    alert("Failed to get app data directory. Check console.");
                   }
                 }}
                 className="w-full h-8 text-xs"
@@ -883,12 +928,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         >
           Reset
         </Button>
-        <Button
-          variant="primary"
-          onClick={handleSaveProfile}
-          disabled={isLoading}
-          className="flex-1 h-11 rounded-xl"
-        >
+        <Button variant="primary" onClick={handleSaveProfile} disabled={isLoading} className="flex-1 h-11 rounded-xl">
           {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
           Save Changes
         </Button>
@@ -897,8 +937,57 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   );
 
   // Voice & Audio Content
-  const voiceContent = (
-    <VoiceSettingsPanel />
+  const voiceContent = <VoiceSettingsPanel />;
+
+  const privacyOptions: Array<{
+    id: "everyone" | "shared_servers" | "friends" | "no_one";
+    title: string;
+    description: string;
+  }> = [
+    { id: "everyone", title: "Everyone", description: "Anyone can start a DM with you." },
+    {
+      id: "shared_servers",
+      title: "Shared Servers",
+      description: "Only people who share a server with you can DM you.",
+    },
+    { id: "friends", title: "Friends Only", description: "Only accepted friends can start a DM." },
+    { id: "no_one", title: "No One", description: "Nobody can start new DMs with you." },
+  ];
+
+  const privacyContent = (
+    <div className="space-y-4">
+      <div className="p-4 rounded-xl bg-secondary/30 border border-border/50 space-y-2">
+        <div className="flex items-center gap-2 mb-1">
+          <Shield className="w-4 h-4 text-muted-foreground" />
+          <h3 className="text-sm font-semibold">Direct Message Privacy</h3>
+        </div>
+        <p className="text-xs text-muted-foreground mb-2">Control who can start a new DM conversation with you.</p>
+        <div className="space-y-2">
+          {privacyOptions.map((option) => {
+            const active = dmPrivacy === option.id;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => void handleDmPrivacyChange(option.id)}
+                className={cn(
+                  "w-full text-left p-3 rounded-xl border transition-colors",
+                  active ? "border-primary bg-primary/10" : "border-border/50 bg-background/30 hover:border-primary/40",
+                )}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium">{option.title}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{option.description}</p>
+                  </div>
+                  {active && <Check className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 
   // Notifications Content
@@ -1019,38 +1108,40 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           icon={Globe}
           label="Browser Notifications"
           description={
-            browserPermissionStatus === 'unsupported'
+            browserPermissionStatus === "unsupported"
               ? "Not supported on this device"
-              : browserPermissionStatus === 'denied'
+              : browserPermissionStatus === "denied"
                 ? "Blocked in browser settings. Please enable in your browser's site settings."
-                : browserPermissionStatus === 'default'
+                : browserPermissionStatus === "default"
                   ? "Click to enable browser notifications"
                   : "Show browser notifications for new messages"
           }
-          checked={browserNotificationsEnabled && browserPermissionStatus === 'granted'}
-          disabled={browserPermissionStatus === 'unsupported' || browserPermissionStatus === 'denied'}
+          checked={browserNotificationsEnabled && browserPermissionStatus === "granted"}
+          disabled={browserPermissionStatus === "unsupported" || browserPermissionStatus === "denied"}
           onCheckedChange={async (checked) => {
             if (!checked) return setBrowserNotificationsEnabled(false);
 
-            if (browserPermissionStatus === 'unsupported') {
+            if (browserPermissionStatus === "unsupported") {
               toast.error("Browser notifications are not supported on this device.");
               return;
             }
 
-            if (browserPermissionStatus === 'denied') {
+            if (browserPermissionStatus === "denied") {
               toast.error("Notifications are blocked. Please enable them in your browser's site settings.");
               return;
             }
 
-            if (browserPermissionStatus === 'default') {
+            if (browserPermissionStatus === "default") {
               try {
                 const permission = await Notification.requestPermission();
                 setBrowserPermissionStatus(permission);
-                if (permission === 'granted') {
+                if (permission === "granted") {
                   setBrowserNotificationsEnabled(true);
                   toast.success("Browser notifications enabled!");
-                } else if (permission === 'denied') {
-                  toast.error("Notification permission denied. You can enable it later in your browser's site settings.");
+                } else if (permission === "denied") {
+                  toast.error(
+                    "Notification permission denied. You can enable it later in your browser's site settings.",
+                  );
                 }
               } catch {
                 toast.error("Unable to request notification permission.");
@@ -1060,9 +1151,10 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
             setBrowserNotificationsEnabled(true);
           }}
         />
-        {browserPermissionStatus === 'denied' && (
+        {browserPermissionStatus === "denied" && (
           <p className="text-xs text-muted-foreground ml-14">
-            To enable notifications, click the lock/info icon in your browser's address bar and allow notifications for this site.
+            To enable notifications, click the lock/info icon in your browser's address bar and allow notifications for
+            this site.
           </p>
         )}
       </div>
@@ -1098,13 +1190,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                   step={1}
                   className="flex-1"
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={playTestSound}
-                  className="flex-shrink-0"
-                >
+                <Button type="button" variant="outline" size="sm" onClick={playTestSound} className="flex-shrink-0">
                   Test
                 </Button>
               </div>
@@ -1128,20 +1214,14 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                   <AtSign className="w-4 h-4 text-muted-foreground" />
                   <span className="text-sm">User Mentions (@you)</span>
                 </div>
-                <Switch
-                  checked={notificationSoundUserMentions}
-                  onCheckedChange={setNotificationSoundUserMentions}
-                />
+                <Switch checked={notificationSoundUserMentions} onCheckedChange={setNotificationSoundUserMentions} />
               </div>
               <div className="flex items-center justify-between py-1.5">
                 <div className="flex items-center gap-2">
                   <Reply className="w-4 h-4 text-muted-foreground" />
                   <span className="text-sm">Replies</span>
                 </div>
-                <Switch
-                  checked={notificationSoundReplies}
-                  onCheckedChange={setNotificationSoundReplies}
-                />
+                <Switch checked={notificationSoundReplies} onCheckedChange={setNotificationSoundReplies} />
               </div>
             </div>
           </div>
@@ -1171,30 +1251,21 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 <Users className="w-4 h-4 text-muted-foreground" />
                 <span className="text-sm">Server Mentions</span>
               </div>
-              <Switch
-                checked={showPreviewServerMentions}
-                onCheckedChange={setShowPreviewServerMentions}
-              />
+              <Switch checked={showPreviewServerMentions} onCheckedChange={setShowPreviewServerMentions} />
             </div>
             <div className="flex items-center justify-between py-1.5">
               <div className="flex items-center gap-2">
                 <AtSign className="w-4 h-4 text-muted-foreground" />
                 <span className="text-sm">User Mentions</span>
               </div>
-              <Switch
-                checked={showPreviewUserMentions}
-                onCheckedChange={setShowPreviewUserMentions}
-              />
+              <Switch checked={showPreviewUserMentions} onCheckedChange={setShowPreviewUserMentions} />
             </div>
             <div className="flex items-center justify-between py-1.5">
               <div className="flex items-center gap-2">
                 <Reply className="w-4 h-4 text-muted-foreground" />
                 <span className="text-sm">Replies</span>
               </div>
-              <Switch
-                checked={showPreviewReplies}
-                onCheckedChange={setShowPreviewReplies}
-              />
+              <Switch checked={showPreviewReplies} onCheckedChange={setShowPreviewReplies} />
             </div>
           </div>
         )}
@@ -1312,6 +1383,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {activeTab === "account" && "Manage your account"}
                   {activeTab === "profile" && "Customize your profile"}
+                  {activeTab === "privacy" && "Control who can message you"}
                   {activeTab === "voice" && "Audio and voice settings"}
                   {activeTab === "notifications" && "Notification settings"}
                   {activeTab === "appearance" && "Personalize your app"}
@@ -1330,11 +1402,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           </div>
 
           {/* Dock Navigation */}
-          <DockNavigation 
-            navItems={navItems} 
-            activeTab={activeTab} 
-            onTabChange={setActiveTab} 
-          />
+          <DockNavigation navItems={navItems} activeTab={activeTab} onTabChange={setActiveTab} />
         </div>
       )}
 
@@ -1408,15 +1476,14 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
               <p className="text-sm text-muted-foreground mb-6">
                 {activeTab === "account" && "Manage your account credentials and security"}
                 {activeTab === "profile" && "Customize how others see you"}
+                {activeTab === "privacy" && "Manage your direct message privacy preferences"}
                 {activeTab === "voice" && "Configure your audio input, output, and voice settings"}
                 {activeTab === "notifications" && "Control how you receive notifications"}
                 {activeTab === "appearance" && "Personalize your app experience"}
                 {activeTab === "blocked" && "View and unblock users"}
               </p>
 
-              <div className={cn(activeTab !== "profile" && "max-w-xl")}>
-                {renderContent()}
-              </div>
+              <div className={cn(activeTab !== "profile" && "max-w-xl")}>{renderContent()}</div>
             </div>
           </div>
         </div>
@@ -1623,8 +1690,12 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
               Reset Secret Key?
             </AlertDialogTitle>
             <AlertDialogDescription className="leading-relaxed space-y-2">
-              <span className="block">This will generate a new secret key and immediately invalidate your current one.</span>
-              <span className="block font-medium text-foreground">Make sure to save the new key - you won't be able to recover it later!</span>
+              <span className="block">
+                This will generate a new secret key and immediately invalidate your current one.
+              </span>
+              <span className="block font-medium text-foreground">
+                Make sure to save the new key - you won't be able to recover it later!
+              </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col sm:flex-row gap-2">
@@ -1637,13 +1708,13 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 setIsResettingKey(false);
                 if (result) {
                   // Check if it's a cooldown error
-                  if ('error' in result && result.error === 'cooldown') {
+                  if ("error" in result && result.error === "cooldown") {
                     if (result.cooldownEndsAt) {
                       setResetCooldownEndsAt(new Date(result.cooldownEndsAt));
                     }
                     const hoursLeft = result.hoursRemaining ? Math.ceil(result.hoursRemaining) : 24;
-                    toast.error(`You can reset your key again in ${hoursLeft} hour${hoursLeft !== 1 ? 's' : ''}`);
-                  } else if ('newSecretKey' in result) {
+                    toast.error(`You can reset your key again in ${hoursLeft} hour${hoursLeft !== 1 ? "s" : ""}`);
+                  } else if ("newSecretKey" in result) {
                     setNewSecretKey(result.newSecretKey);
                     setShowNewKeyModal(true);
                     toast.success("Secret key reset successfully!");
@@ -1654,7 +1725,11 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
               }}
               className="rounded-xl bg-amber-600 text-white hover:bg-amber-700"
             >
-              {isResettingKey ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+              {isResettingKey ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4 mr-2" />
+              )}
               Reset Key
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1662,12 +1737,15 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       </AlertDialog>
 
       {/* New Secret Key Display Modal */}
-      <AlertDialog open={showNewKeyModal} onOpenChange={(open) => {
-        if (!open) {
-          setShowNewKeyModal(false);
-          setNewSecretKey(null);
-        }
-      }}>
+      <AlertDialog
+        open={showNewKeyModal}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowNewKeyModal(false);
+            setNewSecretKey(null);
+          }
+        }}
+      >
         <AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-lg rounded-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-emerald-500">
@@ -1700,9 +1778,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
             </p>
           </div>
           <AlertDialogFooter>
-            <AlertDialogAction className="w-full rounded-xl">
-              I've Saved My Key
-            </AlertDialogAction>
+            <AlertDialogAction className="w-full rounded-xl">I've Saved My Key</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
