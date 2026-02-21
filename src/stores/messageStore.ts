@@ -334,25 +334,13 @@ export const useMessageStore = create<MessageState>((set, get) => ({
 
   sendMessage: async (channelId: string, userId: string, content: string, replyToId?: string) => {
     try {
-      // 1. Perform a direct insert. The DB trigger handles mentions/pings automatically.
-      // We use .select() to get the full message object + joined user in one trip.
-      const { data, error } = await supabase
-        .from("messages")
-        .insert({
-          channel_id: channelId,
-          user_id: userId,
-          content: content,
-          reply_to_id: replyToId || null,
-        })
-        .select(
-          `
-          *,
-          user:users (*),
-          attachments:message_attachments (*),
-          reactions (*)
-        `,
-        )
-        .single();
+      // Use hardened RPC path; direct table INSERT may be intentionally blocked for anon clients.
+      const { data, error } = await supabase.rpc("send_message" as any, {
+        _channel_id: channelId,
+        _user_id: userId,
+        _content: content,
+        _reply_to_id: replyToId || null,
+      });
 
       if (error) {
         if (error.message.includes("muted")) {
@@ -375,12 +363,14 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         }
       }
 
-      // 3. Map database response to your Message type
+      const currentUser = useAuthStore.getState().user;
+
+      // 3. Map RPC response to Message type
       const message: Message = {
         ...data,
-        user: data.user,
+        user: currentUser && currentUser.id === userId ? currentUser : undefined,
         reply_to: replyData,
-        attachments: data.attachments || [],
+        attachments: [],
         reactions: [], // New messages always start with 0 reactions
       };
 
