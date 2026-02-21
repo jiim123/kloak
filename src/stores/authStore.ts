@@ -119,39 +119,34 @@ export const useAuthStore = create<AuthState>()(
           const normalizedUsername = username.toLowerCase().trim();
           const bannerColor = "#5865F2";
 
+          if (!hcaptchaToken) {
+            set({ error: "Please complete captcha before creating an account.", isLoading: false });
+            return null;
+          }
+
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+          if (!supabaseUrl) {
+            set({ error: "Registration is not configured. Missing VITE_SUPABASE_URL.", isLoading: false });
+            return null;
+          }
+
           let data: Record<string, unknown> | null = null;
           let errorMessage: string | null = null;
-
-          if (hcaptchaToken) {
-            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-            if (!supabaseUrl) {
-              set({ error: "Registration is not configured. Missing VITE_SUPABASE_URL.", isLoading: false });
-              return null;
-            }
-            const res = await fetch(`${supabaseUrl}/functions/v1/register-with-captcha`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                username: normalizedUsername,
-                key_hash: keyHash,
-                hcaptcha_response: hcaptchaToken,
-                banner_color: bannerColor,
-              }),
-            });
-            const json = (await res.json()) as { data?: Record<string, unknown>; error?: string };
-            if (!res.ok) {
-              errorMessage = json.error ?? "Registration failed";
-            } else {
-              data = json.data ?? null;
-            }
+          const res = await fetch(`${supabaseUrl}/functions/v1/register-with-captcha`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              username: normalizedUsername,
+              key_hash: keyHash,
+              hcaptcha_response: hcaptchaToken,
+              banner_color: bannerColor,
+            }),
+          });
+          const json = (await res.json()) as { data?: Record<string, unknown>; error?: string };
+          if (!res.ok) {
+            errorMessage = json.error ?? "Registration failed";
           } else {
-            const { data: rpcData, error } = await supabase.rpc("register_user", {
-              _username: normalizedUsername,
-              _key_hash: keyHash,
-              _banner_color: bannerColor,
-            });
-            if (error) errorMessage = error.message;
-            else data = rpcData as Record<string, unknown> | null;
+            data = json.data ?? null;
           }
 
           if (errorMessage) {
