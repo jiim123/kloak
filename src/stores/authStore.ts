@@ -201,17 +201,6 @@ export const useAuthStore = create<AuthState>()(
           // Seed user cache to avoid immediate redundant get_user_by_id calls (realtime / DMs).
           setUserInCache(user.id, user);
 
-          // Auto-join the default community server
-          try {
-            await supabase.rpc("join_server_by_invite", {
-              _invite_code: "6JN4JWKN",
-              _user_id: user.id,
-            });
-          } catch (e) {
-            // Non-critical — don't block registration if auto-join fails
-            console.warn("Auto-join default server failed:", e);
-          }
-
           return { secretKey, user };
         } catch (error) {
           console.error("Registration error:", error);
