@@ -1,8 +1,5 @@
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+import { corsHeaders } from "../_shared/cors.ts";
+import { createServiceClient, enforceRateLimit, getAuthContext } from "../_shared/edgeSecurity.ts";
 
 interface EmojiGGEmoji {
   id: number;
@@ -23,8 +20,24 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+  if (req.method !== "POST") {
+    return new Response(
+      JSON.stringify({ error: "Method not allowed" }),
+      { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
 
   try {
+    const supabase = createServiceClient();
+    const auth = await getAuthContext(supabase, req);
+    const rateOk = await enforceRateLimit(supabase, auth.scopeBase, "edge_fetch_emoji_pack", 20, 60);
+    if (!rateOk) {
+      return new Response(
+        JSON.stringify({ error: "Rate limited: too many emoji pack lookups" }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const { packUrl } = await req.json();
 
     if (!packUrl || typeof packUrl !== "string") {

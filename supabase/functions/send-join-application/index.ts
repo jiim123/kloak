@@ -1,11 +1,13 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createServiceClient, enforceRateLimit, getAuthContext } from "../_shared/edgeSecurity.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "authorization, x-client-info, apikey, content-type, x-key-hash, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 interface JoinApplicationRequest {
@@ -21,10 +23,26 @@ const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
+  }
 
   try {
     if (!RESEND_API_KEY) {
       throw new Error("RESEND_API_KEY is not configured");
+    }
+
+    const supabase = createServiceClient();
+    const auth = await getAuthContext(supabase, req);
+    const clientRateOk = await enforceRateLimit(supabase, auth.scopeBase, "edge_join_application_client", 5, 600);
+    if (!clientRateOk) {
+      return new Response(JSON.stringify({ error: "Rate limited. Please try again later." }), {
+        status: 429,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
     }
 
     const { name, email, role, message, portfolio }: JoinApplicationRequest = await req.json();
@@ -33,11 +51,22 @@ const handler = async (req: Request): Promise<Response> => {
     if (!name || !email || !role || !message) {
       throw new Error("Missing required fields");
     }
+    if (name.length > 100 || email.length > 254 || role.length > 80 || message.length > 4000) {
+      throw new Error("Input too long");
+    }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       throw new Error("Invalid email format");
+    }
+    const emailBucket = `email:${email.toLowerCase().trim()}`;
+    const emailRateOk = await enforceRateLimit(supabase, emailBucket, "edge_join_application_email", 2, 3600);
+    if (!emailRateOk) {
+      return new Response(JSON.stringify({ error: "Rate limited. Please try again later." }), {
+        status: 429,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
     }
 
     // Sanitize inputs for HTML
