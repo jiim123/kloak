@@ -17,6 +17,7 @@ import Cookies from "./pages/Cookies";
 import Philosophy from "./pages/Philosophy";
 import Join from "./pages/Join";
 import FAQ from "./pages/FAQ";
+import Brand from "./pages/Brand";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -58,6 +59,7 @@ const AppContent = () => {
         <Route path="/philosophy" element={<Philosophy />} />
         <Route path="/join" element={<Join />} />
         <Route path="/faq" element={<FAQ />} />
+        <Route path="/brand" element={<Brand />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
