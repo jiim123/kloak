@@ -1,9 +1,11 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createServiceClient, enforceRateLimit, getAuthContext } from "../_shared/edgeSecurity.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-key-hash',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 interface LinkPreview {
@@ -199,8 +201,24 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+  if (req.method !== 'POST') {
+    return new Response(
+      JSON.stringify({ error: 'Method not allowed' }),
+      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
 
   try {
+    const supabase = createServiceClient();
+    const auth = await getAuthContext(supabase, req);
+    const rateOk = await enforceRateLimit(supabase, auth.scopeBase, 'edge_link_preview', 60, 60);
+    if (!rateOk) {
+      return new Response(
+        JSON.stringify({ error: 'Rate limited: too many link previews' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { url } = await req.json();
 
     if (!url) {

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import { createServiceClient, enforceRateLimit, getAuthContext } from "../_shared/edgeSecurity.ts";
 
 // Discord template API endpoint: https://discord.com/api/v9/guilds/templates/{code}
 
@@ -74,8 +75,24 @@ serve(async (req) => {
       headers: corsHeaders 
     });
   }
+  if (req.method !== "POST") {
+    return new Response(
+      JSON.stringify({ error: "Method not allowed" }),
+      { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
 
   try {
+    const supabase = createServiceClient();
+    const auth = await getAuthContext(supabase, req);
+    const rateOk = await enforceRateLimit(supabase, auth.scopeBase, "edge_fetch_discord_template", 20, 60);
+    if (!rateOk) {
+      return new Response(
+        JSON.stringify({ error: "Rate limited: too many template lookups" }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const { templateUrl } = await req.json();
 
     if (!templateUrl) {
