@@ -184,15 +184,15 @@ export const useUnread = (serverChannelIds: string[] = []) => {
 
               // Back-compat fallback (in case migration hasn't been applied yet).
               // This reintroduces the extra query, but only until the RPC exists.
-              const { data: latestMessage } = await supabase
-                .from('messages')
-                .select('id')
-                .eq('channel_id', channelId)
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle();
+              const { data: latestMessages } = await supabase.rpc('get_channel_messages_secure', {
+                _channel_id: channelId,
+                _user_id: user.id,
+                _limit: 1,
+                _before: null,
+                _blocked_user_ids: [],
+              });
 
-              fallbackMessageId = latestMessage?.id ?? null;
+              fallbackMessageId = Array.isArray(latestMessages) && latestMessages.length > 0 ? latestMessages[0].id : null;
 
               if (fallbackMessageId) {
                 const { error: fallbackError } = await supabase.rpc('mark_channel_read', {
@@ -304,15 +304,16 @@ export const useUnread = (serverChannelIds: string[] = []) => {
           // Note: this is N+1, but only used during rollout.
           await Promise.all(
             channelIds.map(async (channelId) => {
-              const { data: latestMessage } = await supabase
-                .from('messages')
-                .select('id')
-                .eq('channel_id', channelId)
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle();
+              const { data: latestMessages } = await supabase.rpc('get_channel_messages_secure', {
+                _channel_id: channelId,
+                _user_id: user.id,
+                _limit: 1,
+                _before: null,
+                _blocked_user_ids: [],
+              });
 
-              const messageId = latestMessage?.id;
+              const messageId =
+                Array.isArray(latestMessages) && latestMessages.length > 0 ? latestMessages[0].id : null;
               if (!messageId) return;
 
               const { error: fallbackError } = await supabase.rpc('mark_channel_read', {

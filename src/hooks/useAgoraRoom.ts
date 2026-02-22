@@ -14,7 +14,7 @@ import {
   RemoteAudioTrack,
   setLogLevel,
 } from "livekit-client";
-import { supabase } from "@/integrations/supabase/client";
+import { getKeyHash, supabase } from "@/integrations/supabase/client";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { useVoiceSettingsStore } from "@/stores/voiceSettingsStore";
 import { pauseVoicePresenceWatch, resumeVoicePresenceWatch } from "@/hooks/useVoicePresenceWatchers";
@@ -162,8 +162,14 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
 
     try {
       // Get token from edge function
+      const keyHash = getKeyHash();
+      if (!keyHash) {
+        throw new Error("Missing auth credentials for voice token");
+      }
+
       const { data, error: fnError } = await supabase.functions.invoke("get-livekit-token", {
         body: { room: channelId, identity: userId, name: displayName },
+        headers: { "x-key-hash": keyHash },
       });
 
       if (fnError || !data?.token || !data?.url) {

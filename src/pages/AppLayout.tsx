@@ -158,16 +158,15 @@ const AppLayout = () => {
           } else {
             // Conversation not found in list, try to fetch participants to build it
             supabase
-              .from("dm_participants")
-              .select("user_id")
-              .eq("conversation_id", conversationId)
-              .neq("user_id", user.id)
-              .single()
-              .then(async ({ data: participant }) => {
-                if (participant) {
+              .rpc("get_dm_other_participant" as any, {
+                _conversation_id: conversationId,
+                _user_id: user.id,
+              })
+              .then(async ({ data: otherParticipantId }) => {
+                if (otherParticipantId) {
                   // Fetch the other user's details
                   const { data: otherUserData } = await supabase.rpc("get_user_by_id", {
-                    _user_id: participant.user_id,
+                    _user_id: otherParticipantId,
                   });
 
                   if (otherUserData) {
@@ -263,13 +262,12 @@ const AppLayout = () => {
         // Server not found in user's servers — could be banned/kicked/left
         // Check if the user is banned from this server
         supabase
-          .from("server_members")
-          .select("is_banned")
-          .eq("server_id", urlServerId)
-          .eq("user_id", user.id)
-          .maybeSingle()
+          .rpc("is_server_banned_secure", {
+            _server_id: urlServerId,
+            _user_id: user.id,
+          })
           .then(({ data }) => {
-            if (data?.is_banned) {
+            if (data) {
               console.warn("[AppLayout] User is banned from server, redirecting");
             }
           });

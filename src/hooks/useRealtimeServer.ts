@@ -325,8 +325,9 @@ export const useRealtimeServer = (serverId: string | null) => {
           // Only react if this permission is for a channel in the current server
           const rec = (payload.new || payload.old) as any;
           if (!rec?.channel_id) return;
-          // We can't filter by server_id directly, but channels belong to servers.
-          // The debounced refresh will re-fetch and the RPC handles filtering.
+          const channels = useServerStore.getState().channels;
+          const belongsToCurrentServer = channels.some((ch) => ch.id === rec.channel_id && ch.server_id === serverId);
+          if (!belongsToCurrentServer) return;
           debouncedRefreshRef.current?.();
         }
       )
@@ -340,7 +341,18 @@ export const useRealtimeServer = (serverId: string | null) => {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'server_member_roles' },
-        () => { debouncedRefreshRef.current?.(); }
+        (payload) => {
+          // Only refresh when the current user's own role assignments changed.
+          const rec = (payload.new || payload.old) as any;
+          if (!rec?.member_id) return;
+          const { user } = authStoreRef.current;
+          if (!user?.id) return;
+          const members = useServerStore.getState().members;
+          const selfMember = members.find((m) => m.user_id === user.id);
+          if (!selfMember) return;
+          if (rec.member_id !== selfMember.id) return;
+          debouncedRefreshRef.current?.();
+        }
       )
       // channel_members changes (affects private channel visibility)
       .on(

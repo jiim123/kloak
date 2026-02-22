@@ -66,17 +66,17 @@ export const useRealtimeDMs = ({
           reply_to = cachedReply;
         } else {
           // Fetch only if not in local state
-          const { data: replyData } = await supabase
-            .from('direct_messages')
-            .select('id, content, sender_id, sender:users!direct_messages_sender_id_fkey(username)')
-            .eq('id', newMsg.reply_to_id)
-            .single();
+          const { data: replyRows } = await supabase.rpc('get_dm_messages_by_ids_secure', {
+            _message_ids: [newMsg.reply_to_id],
+            _user_id: userId,
+          });
+          const replyData = Array.isArray(replyRows) ? replyRows[0] : null;
           if (replyData) {
             reply_to = {
-              id: (replyData as any).id,
-              content: (replyData as any).content,
-              sender_id: (replyData as any).sender_id,
-              sender: (replyData as any).sender ? { username: (replyData as any).sender.username } as any : undefined,
+              id: replyData.id,
+              content: replyData.content,
+              sender_id: replyData.sender_id,
+              sender: replyData.sender ? { username: replyData.sender.username } as any : undefined,
             } as DirectMessage;
           }
         }
@@ -166,13 +166,12 @@ export const useRealtimeDMs = ({
 
       // Only fetch from DB if not found locally
       if (!conversationId) {
-        const { data: messageData } = await supabase
-          .from('direct_messages')
-          .select('conversation_id')
-          .eq('id', messageId)
-          .single();
-        if (!messageData) return;
-        conversationId = messageData.conversation_id;
+        const { data: resolvedConversationId } = await supabase.rpc('get_dm_message_conversation_secure', {
+          _message_id: messageId,
+          _user_id: userId,
+        });
+        if (!resolvedConversationId) return;
+        conversationId = resolvedConversationId;
       }
 
       // Fetch updated reactions for this message
@@ -194,12 +193,11 @@ export const useRealtimeDMs = ({
     // doing a DB lookup for every global direct_messages event.
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
-        .from('dm_participants')
-        .select('conversation_id')
-        .eq('user_id', userId);
+      const { data } = await supabase.rpc('get_user_dm_conversation_ids_secure', {
+        _user_id: userId,
+      });
       if (cancelled) return;
-      conversationIdsRef.current = new Set((data || []).map((r: any) => r.conversation_id));
+      conversationIdsRef.current = new Set((Array.isArray(data) ? data : []) as string[]);
     })();
 
     // Subscribe to all direct_messages where user is a participant

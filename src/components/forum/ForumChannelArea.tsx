@@ -181,7 +181,7 @@ export const ForumChannelArea = () => {
   );
 
   const fetchThreads = useCallback(async () => {
-    if (!currentChannel) return;
+    if (!currentChannel || !user?.id) return;
     if (fetchThreadsInFlightRef.current) return fetchThreadsInFlightRef.current;
 
     const inFlight = (async () => {
@@ -205,17 +205,11 @@ export const ForumChannelArea = () => {
         }
 
         // Fetch the original messages for each thread (single query)
-        const { data: messagesData, error: messagesError } = await supabase
-          .from("messages")
-          .select(
-            `
-            *,
-            user:users (*),
-            attachments:message_attachments (*),
-            reactions (*)
-          `,
-          )
-          .in("id", messageIds);
+        const { data: messagesData, error: messagesError } = await supabase.rpc("get_messages_by_ids_secure", {
+          _message_ids: messageIds,
+          _user_id: user!.id,
+          _blocked_user_ids: [],
+        });
 
         if (messagesError) throw messagesError;
 

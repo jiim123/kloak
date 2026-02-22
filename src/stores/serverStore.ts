@@ -433,14 +433,12 @@ export const useServerStore = create<ServerState>((set, get) => ({
       };
 
       // Defense-in-depth: verify user is not banned after RPC returns
-      const { data: banCheck } = await supabase
-        .from('server_members')
-        .select('is_banned')
-        .eq('server_id', server.id)
-        .eq('user_id', userId)
-        .maybeSingle();
+      const { data: isBanned } = await supabase.rpc('is_server_banned_secure', {
+        _server_id: server.id,
+        _user_id: userId,
+      });
 
-      if (banCheck?.is_banned) {
+      if (isBanned) {
         set({ error: 'You are banned from this server' });
         return null;
       }
@@ -1290,16 +1288,20 @@ export const useServerStore = create<ServerState>((set, get) => ({
   fetchRoles: async (serverId: string) => {
     return deduplicatedFetch(`serverStore:fetchRoles:${serverId}`, async () => {
       try {
-        // OPTIMIZATION: Specify only required columns instead of select('*')
-        const { data, error } = await supabase
-          .from('server_roles')
-          .select('id, server_id, name, color, icon, position, created_at')
-          .eq('server_id', serverId)
-          .order('position', { ascending: true });
+        const userId = useAuthStore.getState().user?.id;
+        if (!userId) {
+          set({ roles: [] });
+          return;
+        }
+
+        const { data, error } = await supabase.rpc('get_server_roles_secure', {
+          _server_id: serverId,
+          _user_id: userId,
+        });
 
         if (error) throw error;
 
-        const roles = (data || []) as unknown as CustomServerRole[];
+        const roles = (Array.isArray(data) ? data : []) as unknown as CustomServerRole[];
         set({ roles });
       } catch (error) {
         console.error('Failed to fetch roles:', error);

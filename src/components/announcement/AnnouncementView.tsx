@@ -252,11 +252,11 @@ export const AnnouncementView = ({ message, onClose }: AnnouncementViewProps) =>
             }
 
             // Fetch user data
-            const { data: userData } = await supabase
-              .from("users")
-              .select("*")
-              .eq("id", newComment.user_id)
-              .single();
+            const { data: userRows } = await supabase.rpc("get_users_basic_secure", {
+              _user_id: user!.id,
+              _target_user_ids: [newComment.user_id],
+            });
+            const userData = Array.isArray(userRows) ? userRows[0] : null;
 
             // Fetch reply_to data if exists
             let replyToData = null;

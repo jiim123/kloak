@@ -244,26 +244,24 @@ export const AnnouncementChannelArea = () => {
 
   // Fetch announcements
   const fetchAnnouncements = useCallback(async () => {
-    if (!currentChannel) return;
+    if (!currentChannel || !user?.id) return;
 
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("messages")
-        .select(`
-          *,
-          user:users (*),
-          attachments:message_attachments (*),
-          reactions (*)
-        `)
-        .eq("channel_id", currentChannel.id)
-        .order("created_at", { ascending: false });
+      const { data, error } = await supabase.rpc("get_channel_messages_secure", {
+        _channel_id: currentChannel.id,
+        _user_id: user!.id,
+        _limit: 500,
+        _before: null,
+        _blocked_user_ids: [],
+      });
 
       if (error) throw error;
+      const rows = Array.isArray(data) ? data : [];
 
       // Group reactions for each announcement
       const currentUserId = user?.id;
-      const announcementsWithReactions = (data || []).map((announcement: any) => ({
+      const announcementsWithReactions = rows.map((announcement: any) => ({
         ...announcement,
         reactions: groupReactions(announcement.reactions || [], currentUserId),
       }));
@@ -274,7 +272,7 @@ export const AnnouncementChannelArea = () => {
       const counts: Record<string, number> = {};
       const activities: Record<string, { time: string; user?: User }> = {};
 
-      for (const announcement of data || []) {
+      for (const announcement of rows) {
         // Get comment count
         const { count } = await supabase
           .from("announcement_comments")

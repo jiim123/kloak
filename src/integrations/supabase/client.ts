@@ -2,9 +2,33 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
 import { hashSecretKey, isValidSecretKey } from "@/lib/crypto";
-const SUPABASE_URL = "https://foquucurnwpqcvgqukpz.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZvcXV1Y3VybndwcWN2Z3F1a3B6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwOTUyMDYsImV4cCI6MjA4MTY3MTIwNn0.MX1wK26ZEx7zA9x-hY7hAaRXTh4RKX2upG4AGNBNIRk";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+
+if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+  throw new Error("Missing VITE_SUPABASE_URL or VITE_SUPABASE_PUBLISHABLE_KEY in environment.");
+}
+
+function parseJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+    const json = atob(padded);
+    return JSON.parse(json) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+const keyPayload = parseJwtPayload(SUPABASE_PUBLISHABLE_KEY);
+const keyRole = typeof keyPayload?.role === "string" ? keyPayload.role : null;
+if (keyRole === "service_role") {
+  throw new Error(
+    "VITE_SUPABASE_PUBLISHABLE_KEY is set to a service_role key. Use anon/publishable key only and rotate leaked service_role key.",
+  );
+}
 
 /**
  * Current key hash for identity verification.
@@ -91,8 +115,11 @@ export function getKeyHash(): string | null {
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     storage: localStorage,
-    persistSession: true,
-    autoRefreshToken: true,
+    // This app uses custom key-hash auth, not Supabase Auth sessions.
+    // Disable session persistence to avoid stale Bearer JWTs causing PGRST301
+    // when switching projects/self-hosted instances.
+    persistSession: false,
+    autoRefreshToken: false,
   },
   global: {
     fetch: async (input, init) => {

@@ -13,6 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
+import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
@@ -37,6 +38,7 @@ interface SearchResult {
 export const SearchModal = () => {
   const { activeModal, closeModal } = useUIStore();
   const { currentServer, setCurrentChannel, channels } = useServerStore();
+  const currentUserId = useAuthStore((s) => s.user?.id);
   
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -55,7 +57,7 @@ export const SearchModal = () => {
   }, [isOpen]);
 
   const handleSearch = useCallback(async () => {
-    if (!query.trim() || !currentServer) return;
+    if (!query.trim() || !currentServer || !currentUserId) return;
 
     setIsLoading(true);
     setHasSearched(true);
@@ -108,10 +110,10 @@ export const SearchModal = () => {
 
       // Batch fetch users and channels in parallel
       const [usersRes, channelsRes] = await Promise.all([
-        supabase
-          .from('users')
-          .select('id, username, display_name, avatar_url, banner_color')
-          .in('id', userIds),
+        supabase.rpc('get_users_basic_secure', {
+          _user_id: currentUserId,
+          _target_user_ids: userIds,
+        }),
         supabase
           .from('channels')
           .select('id, name')
@@ -120,7 +122,7 @@ export const SearchModal = () => {
 
       // Create lookup maps
       const usersMap = new Map(
-        (usersRes.data || []).map((u) => [u.id, u])
+        ((usersRes.data as any[]) || []).map((u) => [u.id, u])
       );
       const channelsMap = new Map(
         (channelsRes.data || []).map((c) => [c.id, c])
@@ -140,7 +142,7 @@ export const SearchModal = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [query, currentServer, channels]);
+  }, [query, currentServer, channels, currentUserId]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {

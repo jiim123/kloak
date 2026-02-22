@@ -85,21 +85,12 @@ export const useUnreadDMs = (userId: string | null) => {
     if (!userId) return;
 
     try {
-      // Prefer SECURITY DEFINER RPC (this app uses custom auth, not Supabase Auth)
-      const { error: rpcError } = await supabase.rpc('mark_dm_read', {
+      const { error } = await supabase.rpc('mark_dm_read', {
         _conversation_id: conversationId,
         _user_id: userId,
       });
 
-      if (rpcError) {
-        // Back-compat fallback (in case migration hasn't been applied yet).
-        const { error } = await supabase
-          .from('dm_participants')
-          .update({ last_read_at: new Date().toISOString() })
-          .eq('conversation_id', conversationId)
-          .eq('user_id', userId);
-        if (error) throw error;
-      }
+      if (error) throw error;
 
       // Update local state optimistically
       setUnreadState((prev) => ({

@@ -202,19 +202,18 @@ export const UserProfilePopup = () => {
 
   // Fetch user profile
   useEffect(() => {
-    if (!isOpen || !userId) return;
+    if (!isOpen || !userId || !currentUser?.id) return;
 
     const fetchProfile = async () => {
       setIsLoading(true);
       try {
-        // OPTIMIZATION: Specify only required columns instead of select('*')
-        const { data, error } = await supabase
-          .from("users")
-          .select("id, username, display_name, avatar_url, banner_url, avatar_decoration, profile_effect, banner_color, profile_theme_primary, profile_theme_accent, bio, status, custom_status, created_at, last_seen")
-          .eq("id", userId)
-          .single();
+        const { data, error } = await supabase.rpc("get_user_profile_secure", {
+          _target_user_id: userId,
+          _requesting_user_id: currentUser!.id,
+        });
 
         if (error) throw error;
+        if (!data) throw new Error("Profile not found");
 
         setProfileUser({
           id: data.id,
@@ -236,18 +235,15 @@ export const UserProfilePopup = () => {
 
         // Find shared servers
         if (servers.length > 0) {
-          const { data: membershipData, error: membershipError } = await supabase
-            .from("server_members")
-            .select("server_id")
-            .eq("user_id", userId)
-            .in(
-              "server_id",
-              servers.map((s) => s.id),
-            );
+          const { data: membershipData, error: membershipError } = await supabase.rpc("get_shared_server_ids_secure", {
+            _target_user_id: userId,
+            _requesting_user_id: currentUser!.id,
+            _server_ids: servers.map((s) => s.id),
+          });
 
           if (membershipError) throw membershipError;
 
-          const sharedServerIds = new Set(membershipData.map((m) => m.server_id));
+          const sharedServerIds = new Set((Array.isArray(membershipData) ? membershipData : []) as string[]);
           const shared = servers.filter((s) => sharedServerIds.has(s.id));
           setSharedServers(shared.slice(0, 3));
         } else {
@@ -264,7 +260,7 @@ export const UserProfilePopup = () => {
     };
 
     fetchProfile();
-  }, [isOpen, userId, servers, checkCooldown]);
+  }, [isOpen, userId, servers, checkCooldown, currentUser?.id]);
 
   // Countdown timer effect
   useEffect(() => {

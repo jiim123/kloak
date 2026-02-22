@@ -124,10 +124,10 @@ export const useRealtimeUsers = () => {
       lastPollRef.current = now;
 
       // Fetch only the columns we need (optimized query)
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, status, last_seen')
-        .in('id', Array.from(userIds));
+      const { data, error } = await supabase.rpc('get_users_presence_secure', {
+        _user_id: userId,
+        _target_user_ids: Array.from(userIds),
+      });
 
       if (error || !data) return;
 
