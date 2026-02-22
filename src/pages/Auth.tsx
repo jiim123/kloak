@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuthStore, initializeAuth } from "@/stores/authStore";
-import { supabase } from "@/integrations/supabase/client";
 import { markWelcomeSeen } from "@/lib/storage";
 import {
   Key,
@@ -82,7 +81,6 @@ const Auth = () => {
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [usernameErrorType, setUsernameErrorType] = useState<string | null>(null);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
-  const [isUsernameAvailable, setIsUsernameAvailable] = useState<boolean | null>(null);
   const [generatedKey, setGeneratedKey] = useState<string | null>(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([]);
@@ -151,7 +149,6 @@ const Auth = () => {
     setUsername("");
     setSecretKey("");
     setGeneratedKey(null);
-    setIsUsernameAvailable(null);
     setUsernameSuggestions([]);
   }, [activeTab, setError]);
 
@@ -177,7 +174,6 @@ const Auth = () => {
     if (!username) {
       setUsernameError(null);
       setUsernameErrorType(null);
-      setIsUsernameAvailable(null);
       setUsernameSuggestions([]);
       return;
     }
@@ -187,7 +183,6 @@ const Auth = () => {
     if (!validation.isValid) {
       setUsernameError(validation.error || "Invalid username");
       setUsernameErrorType(validation.errorType || null);
-      setIsUsernameAvailable(null);
 
       // Log blocked username attempts for security monitoring
       if (validation.errorType === "reserved" || validation.errorType === "contains_restricted") {
@@ -205,32 +200,7 @@ const Auth = () => {
     setUsernameError(null);
     setUsernameErrorType(null);
     setUsernameSuggestions([]);
-    setIsCheckingUsername(true);
-    setIsUsernameAvailable(null);
-
-    // Debounced availability check
-    const timeoutId = setTimeout(async () => {
-      try {
-        // Use the secure RPC function to check availability (bypasses RLS)
-        const { data, error } = await supabase.rpc("check_username_available", { _username: username.toLowerCase() });
-
-        if (error) throw error;
-        setIsUsernameAvailable(data === true);
-
-        // Generate suggestions if username is taken
-        if (data !== true) {
-          const suggestions = generateUsernameSuggestions(username, 4);
-          setUsernameSuggestions(suggestions);
-        }
-      } catch (err) {
-        console.error("Username check failed:", err);
-        setIsUsernameAvailable(null);
-      } finally {
-        setIsCheckingUsername(false);
-      }
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
+    setIsCheckingUsername(false);
   }, [username]);
 
   // Handle create account
@@ -255,12 +225,6 @@ const Auth = () => {
     if (!validation.isValid) {
       setUsernameError(validation.error || "Invalid username");
       setUsernameErrorType(validation.errorType || null);
-      recordRegistrationAttempt();
-      return;
-    }
-
-    if (isUsernameAvailable === false) {
-      setUsernameError("Username is already taken");
       recordRegistrationAttempt();
       return;
     }
@@ -378,8 +342,7 @@ const Auth = () => {
     if (!username) return null;
     if (usernameError) return <XCircle className="w-4 h-4 text-destructive" />;
     if (isCheckingUsername) return <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />;
-    if (isUsernameAvailable === true) return <CheckCircle2 className="w-4 h-4 text-[hsl(var(--kloak-success))]" />;
-    if (isUsernameAvailable === false) return <XCircle className="w-4 h-4 text-destructive" />;
+    if (username) return <CheckCircle2 className="w-4 h-4 text-[hsl(var(--kloak-success))]" />;
     return null;
   };
 
@@ -388,11 +351,8 @@ const Auth = () => {
     if (usernameError) {
       return "pr-10 border-destructive focus-visible:border-destructive focus-visible:ring-destructive/30 bg-destructive/5";
     }
-    if (isUsernameAvailable === true) {
+    if (username) {
       return "pr-10 border-[hsl(var(--kloak-success))] focus-visible:border-[hsl(var(--kloak-success))] focus-visible:ring-[hsl(var(--kloak-success))]/30 bg-[hsl(var(--kloak-success))]/5";
-    }
-    if (isUsernameAvailable === false) {
-      return "pr-10 border-destructive focus-visible:border-destructive focus-visible:ring-destructive/30 bg-destructive/5";
     }
     return "pr-10";
   };
@@ -428,16 +388,10 @@ const Auth = () => {
     if (usernameError) {
       return <p className="text-xs text-destructive">{usernameError}</p>;
     }
-    if (!usernameError && isUsernameAvailable === false) {
-      return <p className="text-xs text-destructive">Username is already taken</p>;
-    }
-    if (!usernameError && isUsernameAvailable === true) {
-      return <p className="text-xs text-[hsl(var(--kloak-success))]">Username is available!</p>;
-    }
-    if (!usernameError && isUsernameAvailable === null && username && !isCheckingUsername) {
+    if (!usernameError && username && !isCheckingUsername) {
       return (
         <p className="text-xs text-muted-foreground">
-          3-16 characters. Letters, numbers, underscores, and hyphens only.
+          Username availability is checked when you submit registration.
         </p>
       );
     }
@@ -590,7 +544,6 @@ const Auth = () => {
                             MAINTENANCE_MODE ||
                             isLoading ||
                             !!usernameError ||
-                            isUsernameAvailable !== true ||
                             (rateLimitCooldown !== null && rateLimitCooldown > 0)
                           }
                         >
@@ -815,7 +768,6 @@ const Auth = () => {
                             MAINTENANCE_MODE ||
                             isLoading ||
                             !!usernameError ||
-                            isUsernameAvailable !== true ||
                             (rateLimitCooldown !== null && rateLimitCooldown > 0)
                           }
                         >

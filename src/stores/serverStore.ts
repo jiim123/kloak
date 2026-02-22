@@ -1351,7 +1351,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
         if (error) throw error;
 
-        const roles = (data || []) as unknown as CustomServerRole[];
+        const roles = (Array.isArray(data) ? data : []) as unknown as CustomServerRole[];
         set({ roles });
       } catch (error) {
         console.error("Failed to fetch roles:", error);

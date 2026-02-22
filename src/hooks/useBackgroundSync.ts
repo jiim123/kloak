@@ -103,7 +103,7 @@ export function useBackgroundSync() {
     
     // Try to ping Supabase
     try {
-      const { error } = await supabase.from('users').select('id').limit(1);
+      const { error } = await supabase.rpc('ping_health');
       
       if (!error) {
         if (reconnectTimeoutRef.current) {

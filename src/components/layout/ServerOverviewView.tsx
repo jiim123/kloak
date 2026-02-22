@@ -5,6 +5,7 @@ import { useServerStore } from "@/stores/serverStore";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { useAuthStore } from "@/stores/authStore";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import type { Message, User } from "@/types";
@@ -20,6 +21,7 @@ interface AnnouncementCard {
 
 export const ServerOverviewView = () => {
   const { currentServer, members, channels } = useServerStore();
+  const userId = useAuthStore((s) => s.user?.id);
   const navigate = useNavigate();
   const [recentAnnouncements, setRecentAnnouncements] = useState<AnnouncementCard[]>([]);
   const [isLoadingAnnouncements, setIsLoadingAnnouncements] = useState(false);
@@ -35,7 +37,7 @@ export const ServerOverviewView = () => {
 
   // Fetch recent announcements
   useEffect(() => {
-    if (!currentServer) return;
+    if (!currentServer || !userId) return;
 
     const fetchAnnouncements = async () => {
       setIsLoadingAnnouncements(true);
@@ -48,27 +50,16 @@ export const ServerOverviewView = () => {
           return;
         }
 
-        const channelIds = announcementChannels.map(c => c.id);
-
-        // Fetch recent messages from announcement channels
-        const { data: messagesData, error } = await supabase
-          .from('messages')
-          .select(`
-            id,
-            content,
-            created_at,
-            channel_id,
-            user:users (*)
-          `)
-          .in('channel_id', channelIds)
-          .order('created_at', { ascending: false })
-          .limit(5);
+        const { data: messagesData, error } = await supabase.rpc('get_server_recent_announcements_secure', {
+          _server_id: currentServer.id,
+          _user_id: userId,
+          _limit: 5,
+        });
 
         if (error) throw error;
 
         // Map messages to announcement cards with channel names
-        const announcements: AnnouncementCard[] = (messagesData || []).map((msg: any) => {
-          const channel = announcementChannels.find(c => c.id === msg.channel_id);
+        const announcements: AnnouncementCard[] = (Array.isArray(messagesData) ? messagesData : []).map((msg: any) => {
           // Extract title from content (first line before double newline, or first line)
           const content = msg.content || "";
           const parts = content.split('\n\n');
@@ -82,7 +73,7 @@ export const ServerOverviewView = () => {
             created_at: msg.created_at,
             user: msg.user,
             channel_id: msg.channel_id,
-            channel_name: channel?.name || 'Announcements',
+            channel_name: msg.channel_name || 'Announcements',
           };
         });
 
@@ -95,7 +86,7 @@ export const ServerOverviewView = () => {
     };
 
     fetchAnnouncements();
-  }, [currentServer, channels]);
+  }, [currentServer, channels, userId]);
 
   if (!currentServer) return null;
 

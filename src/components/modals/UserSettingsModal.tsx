@@ -247,11 +247,9 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     if (variant === "modal" && !isOpen) return;
 
     const loadDmPrivacy = async () => {
-      const { data, error } = await supabase
-        .from("user_preferences")
-        .select("dm_privacy")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      const { data, error } = await supabase.rpc("get_user_preferences" as any, {
+        _user_id: user.id,
+      });
 
       if (error) return;
       const value = (data as any)?.dm_privacy;

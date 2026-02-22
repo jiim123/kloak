@@ -12,12 +12,17 @@ import { useServerStore } from "@/stores/serverStore";
 import { useUnreadChannelsContext } from "@/hooks/useUnreadChannelsContext";
 import { useScrollToMessage } from "@/hooks/useScrollToMessage";
 import { useRealtimePolls } from "@/hooks/useRealtimePolls";
+import { useConnectionStatus } from "@/hooks/useConnectionStatus";
 import type { Message } from "@/types";
 
 interface MessageListProps {
   channelId: string;
   channelName: string;
 }
+
+const VIRTUALIZATION_THRESHOLD = 120;
+const VIRTUAL_OVERSCAN = 20;
+const ESTIMATED_MESSAGE_HEIGHT = 72;
 
 // Group messages from same user within 1 minute
 const shouldGroupMessages = (current: Message, previous: Message | null): boolean => {
@@ -53,6 +58,7 @@ const getStableMessageKey = (message: Message): string => {
 export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   const { user } = useAuthStore();
   const { isLoading, fetchMessages, setCurrentChannel, messagesByChannel } = useMessageStore();
+  const { isRealtimeConnected } = useConnectionStatus();
   const visibilityBlockedUserIds = useFriendStore((s) => s.visibilityBlockedUserIds);
   const { currentChannel } = useServerStore();
 
@@ -107,6 +113,8 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [showJumpToPresent, setShowJumpToPresent] = useState(false);
   const [newMessageCount, setNewMessageCount] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(0);
+  const [scrollTop, setScrollTop] = useState(0);
   const isNearBottomRef = useRef(true);
   const lastMarkedMessageIdRef = useRef<string | null>(null); // Track last marked message ID instead of boolean
   const prevMessagesLengthRef = useRef(0);
@@ -166,16 +174,17 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelId]);
 
-  // Fallback polling: if realtime is paused/misconfigured, ensure the channel still updates.
-  // This is intentionally light (15s) and only when visible.
+  // Fallback polling only when realtime is not healthy.
   useEffect(() => {
+    if (isRealtimeConnected) return;
+
     const interval = setInterval(() => {
       if (document.visibilityState !== "visible") return;
       fetchMessages(channelId, 50, undefined, true, true);
-    }, 15000);
+    }, 30000);
 
     return () => clearInterval(interval);
-  }, [channelId, fetchMessages]);
+  }, [channelId, fetchMessages, isRealtimeConnected]);
 
   // Scroll to bottom AFTER messages render on channel switch.
   // useLayoutEffect fires synchronously after DOM mutations but before paint,
@@ -318,6 +327,7 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
       if (!container) return;
 
       const { scrollTop, scrollHeight, clientHeight } = container;
+      setScrollTop(scrollTop);
       const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
 
       const wasNearBottom = isNearBottomRef.current;
@@ -341,6 +351,28 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
       scrollRAFRef.current = null;
     });
   }, [channelId, hasMore, isLoading, deduplicatedMessages, fetchMessages]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const updateDimensions = () => {
+      setContainerHeight(container.clientHeight);
+    };
+
+    updateDimensions();
+
+    if (typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const resizeObserver = new ResizeObserver(updateDimensions);
+    resizeObserver.observe(container);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [channelId]);
 
   const scrollToBottom = () => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -372,6 +404,41 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
     }
     return -1;
   }, [messages, lastReadAt, firstUnreadMessageId]);
+
+  const shouldVirtualize = deduplicatedMessages.length >= VIRTUALIZATION_THRESHOLD && !highlightedMessageId;
+  const estimatedTotalHeight = deduplicatedMessages.length * ESTIMATED_MESSAGE_HEIGHT;
+  const virtualRange = useMemo(() => {
+    if (!shouldVirtualize || containerHeight <= 0) {
+      return {
+        startIndex: 0,
+        endIndex: deduplicatedMessages.length - 1,
+      };
+    }
+
+    const rawStart = Math.floor(scrollTop / ESTIMATED_MESSAGE_HEIGHT);
+    const visibleCount = Math.ceil(containerHeight / ESTIMATED_MESSAGE_HEIGHT);
+    const startIndex = Math.max(0, rawStart - VIRTUAL_OVERSCAN);
+    const endIndex = Math.min(
+      deduplicatedMessages.length - 1,
+      rawStart + visibleCount + VIRTUAL_OVERSCAN,
+    );
+
+    return { startIndex, endIndex };
+  }, [shouldVirtualize, containerHeight, scrollTop, deduplicatedMessages.length]);
+
+  const visibleMessages = useMemo(() => {
+    if (!shouldVirtualize) return deduplicatedMessages;
+    if (virtualRange.endIndex < virtualRange.startIndex) return [];
+    return deduplicatedMessages.slice(virtualRange.startIndex, virtualRange.endIndex + 1);
+  }, [shouldVirtualize, deduplicatedMessages, virtualRange.startIndex, virtualRange.endIndex]);
+
+  const topSpacerHeight = shouldVirtualize
+    ? Math.max(0, virtualRange.startIndex * ESTIMATED_MESSAGE_HEIGHT)
+    : 0;
+  const renderedHeight = shouldVirtualize ? visibleMessages.length * ESTIMATED_MESSAGE_HEIGHT : 0;
+  const bottomSpacerHeight = shouldVirtualize
+    ? Math.max(0, estimatedTotalHeight - topSpacerHeight - renderedHeight)
+    : 0;
 
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
@@ -425,7 +492,9 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
 
         {/* Messages */}
         <div className="py-4">
-          {deduplicatedMessages.map((message, index) => {
+          {shouldVirtualize && topSpacerHeight > 0 && <div style={{ height: topSpacerHeight }} />}
+          {visibleMessages.map((message, localIndex) => {
+            const index = shouldVirtualize ? virtualRange.startIndex + localIndex : localIndex;
             const previousMessage = index > 0 ? deduplicatedMessages[index - 1] : null;
             const isGrouped = shouldGroupMessages(message, previousMessage);
             const showNewDivider = index === newMessagesDividerIndex && lastMarkedMessageIdRef.current === null;
@@ -440,6 +509,7 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
               />
             );
           })}
+          {shouldVirtualize && bottomSpacerHeight > 0 && <div style={{ height: bottomSpacerHeight }} />}
         </div>
 
         {/* Scroll anchor */}

@@ -268,14 +268,14 @@ export const useDMStore = create<DMState>((set, get) => ({
           }
         }
 
-        // Fetch missing ones from DB
+        // Fetch missing ones from guarded RPC
         if (missingIds.length > 0) {
-          const { data: replyData } = await supabase
-            .from('direct_messages')
-            .select('id, content, sender_id, sender:users!direct_messages_sender_id_fkey(username)')
-            .in('id', missingIds);
+          const { data: replyData } = await supabase.rpc('get_dm_messages_by_ids_secure', {
+            _message_ids: missingIds,
+            _user_id: userId,
+          });
           if (replyData) {
-            for (const r of replyData as any[]) {
+            for (const r of (replyData as any[])) {
               replyToMap[r.id] = {
                 id: r.id,
                 content: r.content,

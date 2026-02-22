@@ -48,7 +48,7 @@ export function useConnectionStatus() {
     
     const start = performance.now();
     try {
-      const { error } = await supabase.from('users').select('id').limit(1);
+      const { error } = await supabase.rpc('ping_health');
       if (error) throw error;
       
       // Success - update latency and reset failures

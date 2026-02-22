@@ -160,50 +160,34 @@ export const useMessageStore = create<MessageState>((set, get) => ({
 
       try {
         const blockedUserIds = useFriendStore.getState().visibilityBlockedUserIds;
-        const blockedIn = blockedUserIds.length > 0 ? `(${blockedUserIds.map((id) => `"${id}"`).join(",")})` : null;
+        const requestUserId = useAuthStore.getState().user?.id;
+        if (!requestUserId) throw new Error("Not authenticated");
 
-        let query = supabase
-          .from("messages")
-          .select(
-            `
-          *,
-          user:users (*),
-          attachments:message_attachments (*),
-          reactions (*)
-        `,
-          )
-          .eq("channel_id", channelId)
-          .order("created_at", { ascending: false })
-          .limit(limit);
-
-        if (blockedIn) {
-          query = query.not("user_id", "in", blockedIn);
-        }
-
-        if (before) {
-          query = query.lt("created_at", before);
-        }
-
-        const { data, error } = await query;
+        const { data, error } = await supabase.rpc("get_channel_messages_secure", {
+          _channel_id: channelId,
+          _user_id: requestUserId,
+          _limit: limit,
+          _before: before || null,
+          _blocked_user_ids: blockedUserIds,
+        });
 
         if (error) throw error;
+        const messageRows = Array.isArray(data) ? data : [];
 
         // Get reply_to_ids that need to be fetched
-        const replyToIds = (data || []).filter((msg: any) => msg.reply_to_id).map((msg: any) => msg.reply_to_id);
+        const replyToIds = messageRows.filter((msg: any) => msg.reply_to_id).map((msg: any) => msg.reply_to_id);
 
         // Fetch reply messages separately if there are any
         let replyMap: Record<string, MessageReply> = {};
         if (replyToIds.length > 0) {
-          let replyQuery = supabase.from("messages").select("id, content, user:users (*)").in("id", replyToIds);
-
-          if (blockedIn) {
-            replyQuery = replyQuery.not("user_id", "in", blockedIn);
-          }
-
-          const { data: replyData } = await replyQuery;
+          const { data: replyData } = await supabase.rpc("get_message_replies_secure", {
+            _message_ids: replyToIds,
+            _user_id: requestUserId,
+            _blocked_user_ids: blockedUserIds,
+          });
 
           if (replyData) {
-            replyData.forEach((reply: any) => {
+            (replyData as any[]).forEach((reply: any) => {
               replyMap[reply.id] = {
                 id: reply.id,
                 content: reply.content,
@@ -214,7 +198,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         }
 
         const currentUserId = useAuthStore.getState().user?.id;
-        const messages: Message[] = (data || []).reverse().map((msg: any) => ({
+        const messages: Message[] = messageRows.reverse().map((msg: any) => ({
           ...msg,
           user: msg.user,
           reply_to: msg.reply_to_id ? replyMap[msg.reply_to_id] : undefined,
