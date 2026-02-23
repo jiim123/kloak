@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { supabase, setKeyHashHeader } from "@/integrations/supabase/client";
+import { getKeyHash, supabase, setKeyHashHeader } from "@/integrations/supabase/client";
 import { generateSecretKey, hashSecretKey, isValidSecretKey } from "@/lib/crypto";
 import { authRateLimiter, accountCreationRateLimiter, validateUsername } from "@/lib/security";
 import { setUserInCache, invalidateUser } from "@/lib/userCache";
@@ -307,9 +307,14 @@ export const useAuthStore = create<AuthState>()(
             normalizedUpdates.custom_status = null;
           }
 
-          const { data, error } = await supabase.rpc("update_user_profile", {
-            _user_id: user.id,
-            _updates: normalizedUpdates,
+          const keyHash = getKeyHash();
+          if (!keyHash) {
+            throw new Error("Missing auth credentials");
+          }
+
+          const { data, error } = await supabase.functions.invoke("update-user-profile", {
+            body: { updates: normalizedUpdates },
+            headers: { "x-key-hash": keyHash },
           });
 
           if (error) throw error;
