@@ -20,6 +20,10 @@ interface HCaptchaVerifyResponse {
   "error-codes"?: string[];
 }
 
+function requestDebugId(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 function uniqueNonEmpty(values: Array<string | undefined | null>): string[] {
   const out: string[] = [];
   for (const value of values) {
@@ -52,6 +56,8 @@ function getCanonicalClientIp(req: Request): string | null {
 }
 
 Deno.serve(async (req) => {
+  const debugId = requestDebugId();
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -63,9 +69,28 @@ Deno.serve(async (req) => {
     );
   }
 
-  const secret = Deno.env.get("HCAPTCHA_SECRET_KEY");
+  const secret = uniqueNonEmpty([
+    Deno.env.get("SUPABASE_HCAPTCHA_SECRET_KEY"),
+    Deno.env.get("HCAPTCHA_SECRET_KEY"),
+    Deno.env.get("HCAPTCHA_SECRET"),
+    Deno.env.get("CAPTCHA_SECRET_KEY"),
+  ])[0];
   if (!secret) {
-    console.error("HCAPTCHA_SECRET_KEY is not set");
+    console.error("[register-with-captcha] Missing hCaptcha secret env", {
+      debugId,
+      envVisible: {
+        SUPABASE_HCAPTCHA_SECRET_KEY: !!Deno.env.get("SUPABASE_HCAPTCHA_SECRET_KEY"),
+        HCAPTCHA_SECRET_KEY: !!Deno.env.get("HCAPTCHA_SECRET_KEY"),
+        HCAPTCHA_SECRET: !!Deno.env.get("HCAPTCHA_SECRET"),
+        CAPTCHA_SECRET_KEY: !!Deno.env.get("CAPTCHA_SECRET_KEY"),
+      },
+      expectedAnyOf: [
+        "SUPABASE_HCAPTCHA_SECRET_KEY",
+        "HCAPTCHA_SECRET_KEY",
+        "HCAPTCHA_SECRET",
+        "CAPTCHA_SECRET_KEY",
+      ],
+    });
     return new Response(
       JSON.stringify({ error: "Server configuration error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -121,9 +146,23 @@ Deno.serve(async (req) => {
     const supabaseInternalUrl = Deno.env.get("SUPABASE_INTERNAL_URL");
     const supabaseExternalUrl = Deno.env.get("SUPABASE_URL");
     const candidateUrls = uniqueNonEmpty([supabaseInternalUrl, supabaseExternalUrl]);
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    const serviceRoleKey = uniqueNonEmpty([
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
+      Deno.env.get("SERVICE_ROLE_KEY"),
+    ])[0] ?? "";
     if (candidateUrls.length === 0 || !serviceRoleKey) {
-      console.error("Missing SUPABASE_INTERNAL_URL/SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+      console.error("[register-with-captcha] Missing Supabase runtime env", {
+        debugId,
+        hasCandidateUrl: candidateUrls.length > 0,
+        candidateUrlCount: candidateUrls.length,
+        hasServiceRoleKey: !!serviceRoleKey,
+        envVisible: {
+          SUPABASE_INTERNAL_URL: !!Deno.env.get("SUPABASE_INTERNAL_URL"),
+          SUPABASE_URL: !!Deno.env.get("SUPABASE_URL"),
+          SUPABASE_SERVICE_ROLE_KEY: !!Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
+          SERVICE_ROLE_KEY: !!Deno.env.get("SERVICE_ROLE_KEY"),
+        },
+      });
       return new Response(
         JSON.stringify({ error: "Server configuration error" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -197,7 +236,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("register-with-captcha error:", err);
+    console.error("[register-with-captcha] Unhandled error:", { debugId, err });
     const message = err instanceof Error ? err.message : "Registration failed";
     return new Response(
       JSON.stringify({ error: message }),
