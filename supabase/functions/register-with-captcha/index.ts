@@ -30,6 +30,27 @@ function uniqueNonEmpty(values: Array<string | undefined | null>): string[] {
   return out;
 }
 
+function getCanonicalClientIp(req: Request): string | null {
+  const xForwardedFor = req.headers.get("x-forwarded-for")?.trim() ?? "";
+  if (xForwardedFor) {
+    const hops = xForwardedFor
+      .split(",")
+      .map((hop) => hop.trim())
+      .filter((hop) => hop.length > 0);
+    if (hops.length > 0) {
+      return hops[hops.length - 1].slice(0, 128);
+    }
+  }
+
+  const realIp = req.headers.get("x-real-ip")?.trim() ?? "";
+  if (realIp) return realIp.slice(0, 128);
+
+  const cfIp = req.headers.get("cf-connecting-ip")?.trim() ?? "";
+  if (cfIp) return cfIp.slice(0, 128);
+
+  return null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -108,13 +129,13 @@ Deno.serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-    const realIp = req.headers.get("x-real-ip")?.trim() ?? "";
-    const forwardedFor = req.headers.get("x-forwarded-for")?.trim() ?? "";
-    const clientIp = req.headers.get("cf-connecting-ip")?.trim() ?? "";
     const rpcHeaders: Record<string, string> = {};
-    if (realIp) rpcHeaders["x-real-ip"] = realIp;
-    if (forwardedFor) rpcHeaders["x-forwarded-for"] = forwardedFor;
-    if (clientIp) rpcHeaders["cf-connecting-ip"] = clientIp;
+    const canonicalIp = getCanonicalClientIp(req);
+    if (canonicalIp) {
+      rpcHeaders["x-real-ip"] = canonicalIp;
+      rpcHeaders["x-forwarded-for"] = canonicalIp;
+      rpcHeaders["cf-connecting-ip"] = canonicalIp;
+    }
 
     const normalizedUsername = username.toLowerCase().trim();
     let data: Record<string, unknown> | null = null;
