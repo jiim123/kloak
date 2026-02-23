@@ -83,11 +83,9 @@ const Index = () => {
         <NavigationMenu />
         <main className="pt-16">
           {/* Infrastructure Notice Banner */}
-          <div className="bg-amber-500/10 border-b border-green-500/30">
+          <div className="bg-green-500/10 border-b border-green-500/30">
             <div className="max-w-5xl mx-auto px-6 py-5 text-center space-y-2">
-              <h3 className="text-sm font-semibold text-green-400 tracking-wide uppercase">
-                We're Rebuilding the Foundation.
-              </h3>
+              <h3 className="text-sm font-semibold text-green-400 tracking-wide uppercase">We're Coming Back</h3>
               <p className="text-sm text-green-200/80 leading-relaxed">
                 First, thank you for your patience. We know a few days of silence isn't easy, and you deserved better
                 communication from us. That's on us. Here's where things stand: the investigation and restructure we
