@@ -87,12 +87,26 @@ export async function enforceRateLimit(
   maxRequests: number,
   windowSeconds: number,
 ): Promise<boolean> {
-  const { data, error } = await supabase.rpc("check_rate_limit", {
-    _scope: scope,
-    _bucket: bucket,
-    _max_requests: maxRequests,
+  // Support both limiter signatures:
+  // - legacy: (_ip_hash, _action, _max_attempts, _window_seconds)
+  // - newer:  (_scope, _bucket, _max_requests, _window_seconds)
+  let { data, error } = await supabase.rpc("check_rate_limit", {
+    _ip_hash: scope,
+    _action: bucket,
+    _max_attempts: maxRequests,
     _window_seconds: windowSeconds,
   });
+
+  if (error && /Could not find the function public\.check_rate_limit/i.test(error.message)) {
+    const retry = await supabase.rpc("check_rate_limit", {
+      _scope: scope,
+      _bucket: bucket,
+      _max_requests: maxRequests,
+      _window_seconds: windowSeconds,
+    });
+    data = retry.data;
+    error = retry.error;
+  }
 
   if (error) {
     console.error("[edge-rate-limit] check_rate_limit failed:", {
@@ -100,7 +114,7 @@ export async function enforceRateLimit(
       scope,
       message: error.message,
     });
-    return false;
+    throw new Error(`Rate-limit backend error: ${error.message}`);
   }
 
   return !!data;

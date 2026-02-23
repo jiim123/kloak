@@ -44,7 +44,14 @@ serve(async (req) => {
       return jsonResponse({ error: "Invalid credentials" }, 401);
     }
 
-    const rateOk = await enforceRateLimit(supabase, auth.scopeBase, "edge_update_profile", 30, 60);
+    let rateOk = false;
+    try {
+      rateOk = await enforceRateLimit(supabase, auth.scopeBase, "edge_update_profile", 30, 60);
+    } catch (rateError) {
+      const rateMessage =
+        rateError instanceof Error ? rateError.message : "Rate-limit backend unavailable";
+      return jsonResponse({ error: rateMessage }, 503);
+    }
     if (!rateOk) {
       return jsonResponse({ error: "Rate limited: too many profile updates" }, 429);
     }
@@ -92,4 +99,3 @@ serve(async (req) => {
     return jsonResponse({ error: message }, 500);
   }
 });
-
