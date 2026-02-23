@@ -95,6 +95,40 @@ function isUrlSafe(urlString: string): { safe: boolean; error?: string } {
   return { safe: true };
 }
 
+async function fetchSafeWithRedirects(
+  initialUrl: string,
+  init: RequestInit,
+  maxRedirects = 3,
+): Promise<Response> {
+  let currentUrl = initialUrl;
+
+  for (let i = 0; i <= maxRedirects; i++) {
+    const validation = isUrlSafe(currentUrl);
+    if (!validation.safe) {
+      throw new Error(validation.error || "Unsafe redirect target");
+    }
+
+    const response = await fetch(currentUrl, {
+      ...init,
+      redirect: 'manual',
+    });
+
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get('location');
+      if (!location) {
+        return response;
+      }
+
+      currentUrl = new URL(location, currentUrl).href;
+      continue;
+    }
+
+    return response;
+  }
+
+  throw new Error('Too many redirects');
+}
+
 // Extract Open Graph and meta tags from HTML
 function extractMetadata(html: string, url: string): LinkPreview {
   const preview: LinkPreview = { url };
@@ -337,7 +371,7 @@ serve(async (req) => {
     if (spotifyInfo) {
       // Fetch the page to get Open Graph metadata for title/description
       try {
-        const response = await fetch(url, {
+        const response = await fetchSafeWithRedirects(url, {
           headers: {
             'User-Agent': 'Mozilla/5.0 (compatible; LinkPreviewBot/1.0)',
             'Accept': 'text/html,application/xhtml+xml',
@@ -455,7 +489,7 @@ serve(async (req) => {
     }
 
     // General URL fetch with timeout and size limit
-    const response = await fetch(url, {
+    const response = await fetchSafeWithRedirects(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',

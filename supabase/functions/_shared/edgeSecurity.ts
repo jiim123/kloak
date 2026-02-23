@@ -19,14 +19,30 @@ export function createServiceClient() {
 }
 
 export function getClientIp(req: Request): string {
-  const cf = req.headers.get("cf-connecting-ip")?.trim();
-  if (cf) return cf;
+  const normalize = (value: string | null): string | null => {
+    if (!value) return null;
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    return trimmed.slice(0, 128);
+  };
 
-  const real = req.headers.get("x-real-ip")?.trim();
+  const forwarded = normalize(req.headers.get("x-forwarded-for"));
+  if (forwarded) {
+    const hops = forwarded
+      .split(",")
+      .map((hop) => hop.trim())
+      .filter((hop) => hop.length > 0);
+    if (hops.length > 0) {
+      // Prefer the right-most proxy-appended hop to reduce spoofing via client-prepended values.
+      return hops[hops.length - 1].slice(0, 128);
+    }
+  }
+
+  const real = normalize(req.headers.get("x-real-ip"));
   if (real) return real;
 
-  const forwarded = req.headers.get("x-forwarded-for")?.trim();
-  if (forwarded) return forwarded.split(",")[0].trim();
+  const cf = normalize(req.headers.get("cf-connecting-ip"));
+  if (cf) return cf;
 
   return "unknown";
 }
