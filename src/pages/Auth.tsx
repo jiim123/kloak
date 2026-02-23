@@ -262,7 +262,7 @@ const Auth = () => {
       // Set modal flag BEFORE createAccount so the redirect useEffect
       // won't navigate away when the user is set in the store.
       setShowWelcomeModal(true);
-      const result = await createAccount(username.trim().toLowerCase());
+      const result = await createAccount(username.trim().toLowerCase(), captchaToken);
       if (result) {
         setGeneratedKey(result.secretKey);
       } else {
