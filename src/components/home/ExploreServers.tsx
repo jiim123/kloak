@@ -24,6 +24,14 @@ type ExploreServer = {
 };
 
 export const ExploreServers = () => {
+  return (
+    <div className="flex-1 flex items-center justify-center text-muted-foreground">
+      <p>Explore is currently disabled.</p>
+    </div>
+  );
+};
+
+const ExploreServersOriginal = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { servers: myServers, joinServer, setCurrentServer } = useServerStore();

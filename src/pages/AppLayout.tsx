@@ -73,6 +73,7 @@ import { PresenceDebugOverlay } from "@/components/debug/PresenceDebugOverlay";
 import { SEO } from "@/components/seo";
 import { resizeWindowForApp } from "@/lib/tauriRuntime";
 import { MAINTENANCE_MODE } from "@/lib/maintenance";
+import { AlphaNoticeBanner } from "@/components/layout/AlphaNoticeBanner";
 
 const AppLayout = () => {
   const navigate = useNavigate();
@@ -539,6 +540,9 @@ const AppLayout = () => {
           <div className="flex-1 flex overflow-hidden">
             {isMobile ? (
               <div className="flex-1 flex flex-col overflow-hidden w-full">
+                {/* Alpha notice banner - mobile */}
+                <AlphaNoticeBanner />
+
                 {/* Mobile header - hide when in DM conversation (DMHeader handles it) */}
                 {!(isDMView && currentConversation) && (
                   <MobileHeader isDMView={isDMView} showFriends={showFriends} showExplore={showExplore} />
@@ -584,6 +588,11 @@ const AppLayout = () => {
             ) : (
               /* Desktop layout */
               <div className="flex flex-col flex-1 overflow-hidden">
+                {/* Alpha notice banner */}
+                {!isServerSettingsOpen && activeModal !== "user-settings" && activeModal !== "edit-channel" && (
+                  <AlphaNoticeBanner />
+                )}
+
                 {/* Horizontal Server Bar at top - hidden during full-screen settings */}
                 {!isServerSettingsOpen && activeModal !== "user-settings" && activeModal !== "edit-channel" && (
                   <HorizontalServerSidebar />

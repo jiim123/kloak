@@ -39,7 +39,7 @@ import {
   logBlockedUsernameAttempt,
 } from "@/utils/blockedUsernames";
 import HCaptcha from "@hcaptcha/react-hcaptcha";
-import { MAINTENANCE_MODE } from "@/lib/maintenance";
+import { MAINTENANCE_MODE, REGISTRATION_DISABLED } from "@/lib/maintenance";
 
 const tabContentVariants = {
   enter: (direction: number) => ({
@@ -207,7 +207,7 @@ const Auth = () => {
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (MAINTENANCE_MODE) return;
+    if (MAINTENANCE_MODE || REGISTRATION_DISABLED) return;
 
     // Check rate limit
     const rateLimit = checkRegistrationRateLimit();
@@ -262,7 +262,7 @@ const Auth = () => {
       // Set modal flag BEFORE createAccount so the redirect useEffect
       // won't navigate away when the user is set in the store.
       setShowWelcomeModal(true);
-      const result = await createAccount(username.trim().toLowerCase(), captchaToken ?? undefined);
+      const result = await createAccount(username.trim().toLowerCase(), captchaToken);
       if (result) {
         setGeneratedKey(result.secretKey);
       } else {
@@ -470,6 +470,23 @@ const Auth = () => {
                       exit="exit"
                       transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
                     >
+                      {REGISTRATION_DISABLED ? (
+                        <div className="space-y-4">
+                          <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm leading-relaxed text-amber-400">
+                            <div className="flex items-center gap-2 mb-2 font-medium">
+                              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                              Registration Temporarily Disabled
+                            </div>
+                            <p className="text-muted-foreground">
+                              New account registrations are currently paused. If you already have an account, please use the <strong className="text-foreground">Login with Key</strong> tab to sign in. Check back later for updates.
+                            </p>
+                          </div>
+                          <Button className="w-full" disabled>
+                            <Key className="w-4 h-4 mr-2" />
+                            Create Account
+                          </Button>
+                        </div>
+                      ) : (
                       <form onSubmit={handleCreateAccount} className="space-y-4">
                         <div className="space-y-2">
                           <div className="flex items-center gap-1.5">
@@ -549,6 +566,7 @@ const Auth = () => {
                           </Link>
                         </p>
                       </form>
+                      )}
                     </motion.div>
                   )}
 
@@ -676,6 +694,23 @@ const Auth = () => {
                       exit="exit"
                       transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
                     >
+                      {REGISTRATION_DISABLED ? (
+                        <div className="space-y-4">
+                          <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm leading-relaxed text-amber-400">
+                            <div className="flex items-center gap-2 mb-2 font-medium">
+                              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                              Registration Temporarily Disabled
+                            </div>
+                            <p className="text-muted-foreground">
+                              New account registrations are currently paused. If you already have an account, please use the <strong className="text-foreground">Login with Key</strong> tab to sign in. Check back later for updates.
+                            </p>
+                          </div>
+                          <Button className="w-full" disabled>
+                            <Key className="w-4 h-4 mr-2" />
+                            Create Account
+                          </Button>
+                        </div>
+                      ) : (
                       <form onSubmit={handleCreateAccount} className="space-y-4">
                         <div className="space-y-2">
                           <div className="flex items-center gap-1.5">
@@ -755,6 +790,7 @@ const Auth = () => {
                           </Link>
                         </p>
                       </form>
+                      )}
                     </motion.div>
                   )}
 

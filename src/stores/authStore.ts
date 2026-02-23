@@ -201,17 +201,6 @@ export const useAuthStore = create<AuthState>()(
           // Seed user cache to avoid immediate redundant get_user_by_id calls (realtime / DMs).
           setUserInCache(user.id, user);
 
-          // Auto-join the default community server
-          try {
-            await supabase.rpc("join_server_by_invite", {
-              _invite_code: "6JN4JWKN",
-              _user_id: user.id,
-            });
-          } catch (e) {
-            // Non-critical — don't block registration if auto-join fails
-            console.warn("Auto-join default server failed:", e);
-          }
-
           return { secretKey, user };
         } catch (error) {
           console.error("Registration error:", error);
@@ -467,9 +456,8 @@ export const useAuthStore = create<AuthState>()(
             const inflight = statusInFlight.get(st);
             if (inflight) return;
 
-            const p: Promise<void> = Promise.resolve(
-              supabase.rpc("update_user_status", { _user_id: uId, _status: st })
-            ).then(() => undefined)
+            const p: Promise<void> = Promise.resolve(supabase.rpc("update_user_status", { _user_id: uId, _status: st }))
+              .then(() => undefined)
               .finally(() => {
                 const cur = statusInFlight.get(st);
                 if (cur === p) statusInFlight.delete(st);

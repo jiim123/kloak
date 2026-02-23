@@ -1,7 +1,7 @@
 /**
  * Cryptographic utilities for Kloak
- * Handles secret key generation, hashing, and validation
- * 
+ * Handles secret key generation, hashing, validation, and Proof of Work
+ *
  * IMPORTANT: iOS Safari requires a secure context (HTTPS) for crypto.subtle
  */
 
@@ -9,11 +9,7 @@
  * Check if Web Crypto API is available (requires secure context on iOS Safari)
  */
 export const isWebCryptoAvailable = (): boolean => {
-  return !!(
-    typeof crypto !== 'undefined' &&
-    crypto.subtle &&
-    typeof crypto.subtle.digest === 'function'
-  );
+  return !!(typeof crypto !== "undefined" && crypto.subtle && typeof crypto.subtle.digest === "function");
 };
 
 /**
@@ -22,13 +18,13 @@ export const isWebCryptoAvailable = (): boolean => {
  */
 export const generateSecretKey = (): string => {
   // crypto.getRandomValues is available even without secure context
-  if (typeof crypto === 'undefined' || typeof crypto.getRandomValues !== 'function') {
-    throw new Error('Crypto API not available. Please use a modern browser.');
+  if (typeof crypto === "undefined" || typeof crypto.getRandomValues !== "function") {
+    throw new Error("Crypto API not available. Please use a modern browser.");
   }
-  
+
   const array = new Uint8Array(32);
   crypto.getRandomValues(array);
-  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+  return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join("");
 };
 
 /**
@@ -42,14 +38,14 @@ export const hashSecretKey = async (secretKey: string): Promise<string> => {
   if (isWebCryptoAvailable()) {
     const encoder = new TextEncoder();
     const data = encoder.encode(secretKey);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(byte => byte.toString(16).padStart(2, '0')).join('');
+    return hashArray.map((byte) => byte.toString(16).padStart(2, "0")).join("");
   }
-  
+
   // Fallback: Use pure JS SHA-256 for non-secure contexts (e.g., HTTP on iOS)
   // This is a minimal implementation for fallback only
-  console.warn('crypto.subtle unavailable, using JS fallback for SHA-256');
+  console.warn("crypto.subtle unavailable, using JS fallback for SHA-256");
   return sha256Fallback(secretKey);
 };
 
@@ -60,20 +56,17 @@ export const hashSecretKey = async (secretKey: string): Promise<string> => {
 function sha256Fallback(message: string): string {
   // SHA-256 constants
   const K = [
-    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
-    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
-    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
-    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
-    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
-    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
-    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
-    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5, 0xd807aa98,
+    0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174, 0xe49b69c1, 0xefbe4786,
+    0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da, 0x983e5152, 0xa831c66d, 0xb00327c8,
+    0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967, 0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13,
+    0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85, 0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819,
+    0xd6990624, 0xf40e3585, 0x106aa070, 0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a,
+    0x5b9cca4f, 0x682e6ff3, 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7,
+    0xc67178f2,
   ];
 
-  const H = [
-    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
-    0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
-  ];
+  const H = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
 
   const rotr = (x: number, n: number) => (x >>> n) | (x << (32 - n));
   const ch = (x: number, y: number, z: number) => (x & y) ^ (~x & z);
@@ -90,11 +83,11 @@ function sha256Fallback(message: string): string {
 
   // Pre-processing: adding padding bits
   const bitLen = msgLen * 8;
-  const paddingLen = ((msgLen + 8) % 64 < 56) ? 56 - (msgLen % 64) : 120 - (msgLen % 64);
+  const paddingLen = (msgLen + 8) % 64 < 56 ? 56 - (msgLen % 64) : 120 - (msgLen % 64);
   const padded = new Uint8Array(msgLen + paddingLen + 8);
   padded.set(msgBytes);
   padded[msgLen] = 0x80;
-  
+
   // Append length as 64-bit big-endian
   const view = new DataView(padded.buffer);
   view.setUint32(padded.length - 4, bitLen, false);
@@ -134,7 +127,7 @@ function sha256Fallback(message: string): string {
     h[7] = (h[7] + hh) >>> 0;
   }
 
-  return h.map(v => v.toString(16).padStart(8, '0')).join('');
+  return h.map((v) => v.toString(16).padStart(8, "0")).join("");
 }
 
 /**
@@ -143,7 +136,51 @@ function sha256Fallback(message: string): string {
  * @returns true if valid, false otherwise
  */
 export const isValidSecretKey = (key: string): boolean => {
-  if (typeof key !== 'string') return false;
+  if (typeof key !== "string") return false;
   if (key.length !== 64) return false;
   return /^[0-9a-fA-F]{64}$/.test(key);
+};
+
+/**
+ * Fetch a Proof of Work challenge from the server
+ * No authentication required — used before registration
+ */
+export const fetchPoWChallenge = async (): Promise<{
+  id: string;
+  nonce: string;
+  difficulty: number;
+  expires_at: string;
+}> => {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  if (!supabaseUrl) throw new Error("Missing VITE_SUPABASE_URL");
+  const res = await fetch(`${supabaseUrl}/functions/v1/generate-challenge`);
+  if (!res.ok) throw new Error("Failed to fetch PoW challenge");
+  return res.json();
+};
+
+/**
+ * Solve a Proof of Work challenge
+ * Finds a solution where SHA-256(nonce + solution) starts with `difficulty` zero characters
+ * Yields to the browser every 1000 iterations to avoid blocking the UI
+ * @param nonce - The challenge nonce from the server
+ * @param difficulty - Number of leading zeros required in the hash
+ * @returns The hex solution string
+ */
+export const solvePoWChallenge = async (nonce: string, difficulty: number): Promise<string> => {
+  const target = "0".repeat(difficulty);
+  let counter = 0;
+
+  while (true) {
+    const solution = counter.toString(16).padStart(8, "0");
+    const hash = await hashSecretKey(nonce + solution);
+    if (hash.startsWith(target)) {
+      return solution;
+    }
+    counter++;
+
+    // Yield to browser every 1000 iterations to keep UI responsive
+    if (counter % 1000 === 0) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+  }
 };

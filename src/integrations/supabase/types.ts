@@ -14,6 +14,144 @@ export type Database = {
   }
   public: {
     Tables: {
+      _snapshot_direct_messages_20260221: {
+        Row: {
+          content: string | null
+          conversation_id: string | null
+          created_at: string | null
+          edited_at: string | null
+          id: string | null
+          reply_to_id: string | null
+          sender_id: string | null
+        }
+        Insert: {
+          content?: string | null
+          conversation_id?: string | null
+          created_at?: string | null
+          edited_at?: string | null
+          id?: string | null
+          reply_to_id?: string | null
+          sender_id?: string | null
+        }
+        Update: {
+          content?: string | null
+          conversation_id?: string | null
+          created_at?: string | null
+          edited_at?: string | null
+          id?: string | null
+          reply_to_id?: string | null
+          sender_id?: string | null
+        }
+        Relationships: []
+      }
+      _snapshot_direct_messages_compromise_20260221: {
+        Row: {
+          content: string | null
+          conversation_id: string | null
+          created_at: string | null
+          edited_at: string | null
+          id: string | null
+          reply_to_id: string | null
+          sender_id: string | null
+        }
+        Insert: {
+          content?: string | null
+          conversation_id?: string | null
+          created_at?: string | null
+          edited_at?: string | null
+          id?: string | null
+          reply_to_id?: string | null
+          sender_id?: string | null
+        }
+        Update: {
+          content?: string | null
+          conversation_id?: string | null
+          created_at?: string | null
+          edited_at?: string | null
+          id?: string | null
+          reply_to_id?: string | null
+          sender_id?: string | null
+        }
+        Relationships: []
+      }
+      _snapshot_messages_20260221: {
+        Row: {
+          channel_id: string | null
+          content: string | null
+          created_at: string | null
+          edited_at: string | null
+          embed_hidden: boolean | null
+          id: string | null
+          is_pinned: boolean | null
+          is_system_message: boolean | null
+          reply_to_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          channel_id?: string | null
+          content?: string | null
+          created_at?: string | null
+          edited_at?: string | null
+          embed_hidden?: boolean | null
+          id?: string | null
+          is_pinned?: boolean | null
+          is_system_message?: boolean | null
+          reply_to_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          channel_id?: string | null
+          content?: string | null
+          created_at?: string | null
+          edited_at?: string | null
+          embed_hidden?: boolean | null
+          id?: string | null
+          is_pinned?: boolean | null
+          is_system_message?: boolean | null
+          reply_to_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      _snapshot_messages_compromise_20260221: {
+        Row: {
+          channel_id: string | null
+          content: string | null
+          created_at: string | null
+          edited_at: string | null
+          embed_hidden: boolean | null
+          id: string | null
+          is_pinned: boolean | null
+          is_system_message: boolean | null
+          reply_to_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          channel_id?: string | null
+          content?: string | null
+          created_at?: string | null
+          edited_at?: string | null
+          embed_hidden?: boolean | null
+          id?: string | null
+          is_pinned?: boolean | null
+          is_system_message?: boolean | null
+          reply_to_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          channel_id?: string | null
+          content?: string | null
+          created_at?: string | null
+          edited_at?: string | null
+          embed_hidden?: boolean | null
+          id?: string | null
+          is_pinned?: boolean | null
+          is_system_message?: boolean | null
+          reply_to_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       announcement_comment_reactions: {
         Row: {
           comment_id: string
@@ -115,6 +253,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      app_config: {
+        Row: {
+          key: string
+          updated_at: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string | null
+          value?: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
+      auth_rate_limits: {
+        Row: {
+          action: string
+          attempts: number | null
+          ip_hash: string
+          window_start: string | null
+        }
+        Insert: {
+          action: string
+          attempts?: number | null
+          ip_hash: string
+          window_start?: string | null
+        }
+        Update: {
+          action?: string
+          attempts?: number | null
+          ip_hash?: string
+          window_start?: string | null
+        }
+        Relationships: []
       }
       badges: {
         Row: {
@@ -1371,6 +1548,33 @@ export type Database = {
           },
         ]
       }
+      pow_challenges: {
+        Row: {
+          created_at: string
+          difficulty: number
+          expires_at: string
+          id: string
+          nonce: string
+          used: boolean | null
+        }
+        Insert: {
+          created_at?: string
+          difficulty?: number
+          expires_at?: string
+          id?: string
+          nonce: string
+          used?: boolean | null
+        }
+        Update: {
+          created_at?: string
+          difficulty?: number
+          expires_at?: string
+          id?: string
+          nonce?: string
+          used?: boolean | null
+        }
+        Relationships: []
+      }
       reactions: {
         Row: {
           channel_id: string
@@ -2125,96 +2329,6 @@ export type Database = {
           },
         ]
       }
-      user_identity_keys: {
-        Row: {
-          created_at: string | null
-          id: string
-          key_fingerprint: string
-          public_key: string
-          registration_id: number
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          key_fingerprint: string
-          public_key: string
-          registration_id: number
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          key_fingerprint?: string
-          public_key?: string
-          registration_id?: number
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_identity_keys_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_identity_keys_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "users_public"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_key_backups: {
-        Row: {
-          created_at: string | null
-          encrypted_identity_private_key: string
-          id: string
-          iv: string
-          salt: string
-          updated_at: string | null
-          user_id: string | null
-          version: number | null
-        }
-        Insert: {
-          created_at?: string | null
-          encrypted_identity_private_key: string
-          id?: string
-          iv: string
-          salt: string
-          updated_at?: string | null
-          user_id?: string | null
-          version?: number | null
-        }
-        Update: {
-          created_at?: string | null
-          encrypted_identity_private_key?: string
-          id?: string
-          iv?: string
-          salt?: string
-          updated_at?: string | null
-          user_id?: string | null
-          version?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_key_backups_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_key_backups_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "users_public"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       user_preferences: {
         Row: {
           animate_emojis: boolean
@@ -2222,6 +2336,7 @@ export type Database = {
           compact_mode: boolean
           created_at: string
           desktop_notifications_enabled: boolean
+          dm_privacy: string
           id: string
           link_previews_enabled: boolean
           notification_sound_enabled: boolean
@@ -2244,6 +2359,7 @@ export type Database = {
           compact_mode?: boolean
           created_at?: string
           desktop_notifications_enabled?: boolean
+          dm_privacy?: string
           id?: string
           link_previews_enabled?: boolean
           notification_sound_enabled?: boolean
@@ -2266,6 +2382,7 @@ export type Database = {
           compact_mode?: boolean
           created_at?: string
           desktop_notifications_enabled?: boolean
+          dm_privacy?: string
           id?: string
           link_previews_enabled?: boolean
           notification_sound_enabled?: boolean
@@ -2294,51 +2411,6 @@ export type Database = {
             foreignKeyName: "user_preferences_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
-            referencedRelation: "users_public"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_prekeys: {
-        Row: {
-          created_at: string | null
-          device_id: number
-          id: string
-          is_used: boolean | null
-          key_id: number
-          public_key: string
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          device_id: number
-          id?: string
-          is_used?: boolean | null
-          key_id: number
-          public_key: string
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          device_id?: number
-          id?: string
-          is_used?: boolean | null
-          key_id?: number
-          public_key?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_prekeys_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_prekeys_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
             referencedRelation: "users_public"
             referencedColumns: ["id"]
           },
@@ -2408,54 +2480,6 @@ export type Database = {
             foreignKeyName: "user_server_tabs_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
-            referencedRelation: "users_public"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_signed_prekeys: {
-        Row: {
-          created_at: string | null
-          device_id: number
-          id: string
-          is_active: boolean | null
-          key_id: number
-          public_key: string
-          signature: string
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          device_id: number
-          id?: string
-          is_active?: boolean | null
-          key_id: number
-          public_key: string
-          signature: string
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          device_id?: number
-          id?: string
-          is_active?: boolean | null
-          key_id?: number
-          public_key?: string
-          signature?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_signed_prekeys_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_signed_prekeys_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
             referencedRelation: "users_public"
             referencedColumns: ["id"]
           },
@@ -2670,6 +2694,10 @@ export type Database = {
         Args: { _channel_id: string; _user_id: string }
         Returns: boolean
       }
+      can_view_user: {
+        Args: { _requesting_user_id: string; _target_user_id: string }
+        Returns: boolean
+      }
       change_member_role: {
         Args: {
           _new_role: Database["public"]["Enums"]["server_role"]
@@ -2680,6 +2708,16 @@ export type Database = {
         Returns: boolean
       }
       check_e2e_status: { Args: { _user_id: string }; Returns: boolean }
+      check_rate_limit: {
+        Args: {
+          _action: string
+          _ip_hash: string
+          _max_attempts: number
+          _window_seconds: number
+        }
+        Returns: boolean
+      }
+      check_server_membership: { Args: { _server_id: string }; Returns: Json }
       check_user_permission: {
         Args: {
           _channel_id: string
@@ -2700,53 +2738,36 @@ export type Database = {
         Args: { _username: string }
         Returns: boolean
       }
+      cleanup_pow_challenges: { Args: never; Returns: undefined }
       close_expired_polls: { Args: { _channel_id: string }; Returns: number }
       close_poll: { Args: { _poll_id: string }; Returns: boolean }
       count_available_prekeys: {
         Args: { _device_id: number; _user_id: string }
         Returns: number
       }
-      create_category:
-        | {
-            Args: { _name: string; _server_id: string; _user_id: string }
-            Returns: Json
-          }
-        | {
-            Args: {
-              _name: string
-              _position?: number
-              _server_id: string
-              _user_id: string
-            }
-            Returns: Json
-          }
-      create_channel:
-        | {
-            Args: {
-              _category_id?: string
-              _ghost_mode?: boolean
-              _icon?: string
-              _is_private?: boolean
-              _name: string
-              _position?: number
-              _server_id: string
-              _type?: string
-              _user_id?: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              _category_id?: string
-              _is_private?: boolean
-              _name: string
-              _server_id: string
-              _topic?: string
-              _type?: string
-              _user_id: string
-            }
-            Returns: Json
-          }
+      create_category: {
+        Args: {
+          _name: string
+          _position?: number
+          _server_id: string
+          _user_id: string
+        }
+        Returns: Json
+      }
+      create_channel: {
+        Args: {
+          _category_id?: string
+          _ghost_mode?: boolean
+          _icon?: string
+          _is_private?: boolean
+          _name: string
+          _position?: number
+          _server_id: string
+          _type?: string
+          _user_id?: string
+        }
+        Returns: Json
+      }
       create_group_dm: {
         Args: {
           _creator_id: string
@@ -2776,7 +2797,11 @@ export type Database = {
       }
       create_server_role: {
         Args: {
+<<<<<<< HEAD
+          _color?: string
+=======
           _color: string
+>>>>>>> origin/main
           _icon?: string
           _name: string
           _server_id: string
@@ -2800,20 +2825,15 @@ export type Database = {
         }
         Returns: Json
       }
-      create_task_comment:
-        | {
-            Args: { _content: string; _task_id: string; _user_id: string }
-            Returns: Json
-          }
-        | {
-            Args: {
-              _content: string
-              _reply_to_id?: string
-              _task_id: string
-              _user_id: string
-            }
-            Returns: Json
-          }
+      create_task_comment: {
+        Args: {
+          _content: string
+          _reply_to_id?: string
+          _task_id: string
+          _user_id: string
+        }
+        Returns: Json
+      }
       create_thread: {
         Args: { _message_id: string; _user_id: string }
         Returns: string
@@ -2992,6 +3012,8 @@ export type Database = {
           unread_count: number
         }[]
       }
+      get_explore_servers: { Args: never; Returns: Json }
+      get_friend_dashboard: { Args: { _user_id: string }; Returns: Json }
       get_invite_details_by_code: {
         Args: { _invite_code: string }
         Returns: {
@@ -3004,6 +3026,7 @@ export type Database = {
           name: string
         }[]
       }
+      get_maintenance_mode: { Args: never; Returns: boolean }
       get_outgoing_friend_requests: {
         Args: { _user_id: string }
         Returns: Json
@@ -3028,9 +3051,7 @@ export type Database = {
         Args: { _server_id: string; _user_id?: string }
         Returns: Json
       }
-      get_server_members:
-        | { Args: { _server_id: string }; Returns: Json }
-        | { Args: { _server_id: string; _user_id?: string }; Returns: Json }
+      get_server_members: { Args: { _server_id: string }; Returns: Json }
       get_server_roles: { Args: { _server_id: string }; Returns: Json }
       get_task_comments: {
         Args: { _task_id: string; _user_id: string }
@@ -3131,6 +3152,7 @@ export type Database = {
         Args: { _other_user_id: string; _user_id: string }
         Returns: boolean
       }
+      is_maintenance_active: { Args: never; Returns: boolean }
       is_media_channel_member: {
         Args: { _media_id: string; _user_id: string }
         Returns: boolean
@@ -3143,6 +3165,10 @@ export type Database = {
         Args: { _message_id: string; _user_id: string }
         Returns: boolean
       }
+      is_server_admin_or_owner: {
+        Args: { _server_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_server_member: {
         Args: { _server_id: string; _user_id: string }
         Returns: boolean
@@ -3152,16 +3178,18 @@ export type Database = {
         Returns: boolean
       }
       is_username_blocked: { Args: { username: string }; Returns: boolean }
-      join_server_by_invite:
-        | { Args: { _invite_code: string; _user_id: string }; Returns: Json }
-        | {
-            Args: {
-              _invite_code: string
-              _join_source?: string
-              _user_id: string
-            }
-            Returns: Json
-          }
+      join_server_by_invite: {
+        Args: { _invite_code: string; _join_source?: string; _user_id: string }
+        Returns: Json
+      }
+      kick_group_dm_member: {
+        Args: {
+          _conversation_id: string
+          _kicker_id: string
+          _target_user_id: string
+        }
+        Returns: boolean
+      }
       kick_member: {
         Args: { _server_id: string; _target_user_id: string; _user_id: string }
         Returns: undefined
@@ -3418,31 +3446,25 @@ export type Database = {
         }
         Returns: undefined
       }
+      set_dm_privacy_preference: {
+        Args: { _dm_privacy: string; _user_id: string }
+        Returns: undefined
+      }
       set_message_embed_hidden: {
         Args: { _hidden: boolean; _message_id: string; _user_id: string }
         Returns: boolean
       }
-      set_role_permission:
-        | {
-            Args: {
-              _allowed?: boolean
-              _permission: Database["public"]["Enums"]["permission_type"]
-              _role_id?: string
-              _role_name?: string
-              _server_id: string
-              _user_id: string
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              _allowed: boolean
-              _permission: Database["public"]["Enums"]["permission_type"]
-              _role_id: string
-              _user_id: string
-            }
-            Returns: undefined
-          }
+      set_role_permission: {
+        Args: {
+          _allowed?: boolean
+          _permission: Database["public"]["Enums"]["permission_type"]
+          _role_id?: string
+          _role_name?: string
+          _server_id: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
       shares_dm_with: {
         Args: { _other_user_id: string; _user_id: string }
         Returns: boolean
@@ -3485,10 +3507,14 @@ export type Database = {
         Returns: Json
       }
       transfer_ownership: {
+<<<<<<< HEAD
+        Args: { _new_owner_id: string; _server_id: string }
+=======
         Args: {
           _new_owner_id: string
           _server_id: string
         }
+>>>>>>> origin/main
         Returns: boolean
       }
       unassign_task_users: {
@@ -3540,26 +3566,10 @@ export type Database = {
         }
         Returns: undefined
       }
-      update_server:
-        | {
-            Args: {
-              _about?: string
-              _banner_url?: string
-              _icon_url?: string
-              _is_published?: boolean
-              _name?: string
-              _server_id: string
-              _system_channel_id?: string
-              _system_channel_send_join?: boolean
-              _system_channel_send_leave?: boolean
-              _user_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: { _server_id: string; _updates: Json; _user_id: string }
-            Returns: Json
-          }
+      update_server: {
+        Args: { _server_id: string; _updates: Json; _user_id: string }
+        Returns: Json
+      }
       update_server_role: {
         Args: {
           _color?: string
@@ -3587,6 +3597,7 @@ export type Database = {
         Returns: Json
       }
       update_user_last_seen: { Args: { _user_id: string }; Returns: boolean }
+      update_user_presence: { Args: { _user_id: string }; Returns: undefined }
       update_user_profile: {
         Args: { _updates: Json; _user_id: string }
         Returns: Json
@@ -3633,7 +3644,7 @@ export type Database = {
         | "forum"
         | "tasks"
         | "media"
-      friendship_status: "pending" | "accepted" | "blocked"
+      friendship_status: "pending" | "accepted" | "blocked" | "declined"
       mention_type: "user" | "everyone" | "here" | "role"
       notification_type:
         | "mention"
@@ -3819,7 +3830,7 @@ export const Constants = {
         "tasks",
         "media",
       ],
-      friendship_status: ["pending", "accepted", "blocked"],
+      friendship_status: ["pending", "accepted", "blocked", "declined"],
       mention_type: ["user", "everyone", "here", "role"],
       notification_type: [
         "mention",
