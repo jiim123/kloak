@@ -85,9 +85,16 @@ const GhostIcon = ({ className }: { className?: string }) => (
     <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
     <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g>
     <g id="SVGRepo_iconCarrier">
-      <path d="M16 10.5C16 11.3284 15.5523 12 15 12C14.4477 12 14 11.3284 14 10.5C14 9.67157 14.4477 9 15 9C15.5523 9 16 9.67157 16 10.5Z" fill="currentColor"></path>
+      <path
+        d="M16 10.5C16 11.3284 15.5523 12 15 12C14.4477 12 14 11.3284 14 10.5C14 9.67157 14.4477 9 15 9C15.5523 9 16 9.67157 16 10.5Z"
+        fill="currentColor"
+      ></path>
       <ellipse cx="9" cy="10.5" rx="1" ry="1.5" fill="currentColor"></ellipse>
-      <path d="M22 19.723V12.3006C22 6.61173 17.5228 2 12 2C6.47715 2 2 6.61173 2 12.3006V19.723C2 21.0453 3.35098 21.9054 4.4992 21.314C5.42726 20.836 6.5328 20.9069 7.39614 21.4998C8.36736 22.1667 9.63264 22.1667 10.6039 21.4998L10.9565 21.2576C11.5884 20.8237 12.4116 20.8237 13.0435 21.2576L13.3961 21.4998C14.3674 22.1667 15.6326 22.1667 16.6039 21.4998C17.4672 20.9069 18.5727 20.836 19.5008 21.314C20.649 21.9054 22 21.0453 22 19.723Z" stroke="currentColor" strokeWidth="1.5"></path>
+      <path
+        d="M22 19.723V12.3006C22 6.61173 17.5228 2 12 2C6.47715 2 2 6.61173 2 12.3006V19.723C2 21.0453 3.35098 21.9054 4.4992 21.314C5.42726 20.836 6.5328 20.9069 7.39614 21.4998C8.36736 22.1667 9.63264 22.1667 10.6039 21.4998L10.9565 21.2576C11.5884 20.8237 12.4116 20.8237 13.0435 21.2576L13.3961 21.4998C14.3674 22.1667 15.6326 22.1667 16.6039 21.4998C17.4672 20.9069 18.5727 20.836 19.5008 21.314C20.649 21.9054 22 21.0453 22 19.723Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      ></path>
     </g>
   </svg>
 );
@@ -244,11 +251,7 @@ const SortableChannel = ({
     <div className="flex items-center w-full min-w-0">
       {/* Visible drag handle in sort mode on mobile */}
       {isMobile && isSortingMode && isAdmin && (
-        <div
-          {...attributes}
-          {...listeners}
-          className="p-1.5 mr-1 cursor-grab active:cursor-grabbing touch-none"
-        >
+        <div {...attributes} {...listeners} className="p-1.5 mr-1 cursor-grab active:cursor-grabbing touch-none">
           <GripVertical className="w-4 h-4 text-muted-foreground" />
         </div>
       )}
@@ -277,7 +280,6 @@ const SortableChannel = ({
 
         {/* Channel name */}
         <span className="truncate flex-1 text-left">{channel.name}</span>
-
 
         {/* Private indicator */}
         {channel.is_private && <Lock className="w-3 h-3 text-muted-foreground flex-shrink-0" />}
@@ -511,11 +513,7 @@ const SortableCategory = ({
     <div className="flex items-center flex-1">
       {/* Visible drag handle in sort mode on mobile */}
       {isMobile && isSortingMode && isAdmin && (
-        <div
-          {...attributes}
-          {...listeners}
-          className="p-1 mr-1 cursor-grab active:cursor-grabbing touch-none"
-        >
+        <div {...attributes} {...listeners} className="p-1 mr-1 cursor-grab active:cursor-grabbing touch-none">
           <GripVertical className="w-4 h-4 text-muted-foreground" />
         </div>
       )}
@@ -673,10 +671,15 @@ export const ChannelSidebar = () => {
 
   // Fetch per-user channel settings (mute, hide, pin) when channels change
   const { fetchSettings, isHidden, isPinned } = useChannelSettingsStore();
-  const channelIdsKey = channelIds.join(',');
-  useEffect(() => { fetchSettings(channelIds); }, [channelIdsKey]);
+  const channelIdsKey = channelIds.join(",");
+  useEffect(() => {
+    fetchSettings(channelIds);
+  }, [channelIdsKey]);
 
-  const voiceChannelIds = useMemo(() => (channels || []).filter((c) => c.type === "voice").map((c) => c.id), [channels]);
+  const voiceChannelIds = useMemo(
+    () => (channels || []).filter((c) => c.type === "voice").map((c) => c.id),
+    [channels],
+  );
 
   // IMPORTANT: don't watch the voice channel topic we are actively joined to, otherwise we can end up with
   // duplicate Realtime subscriptions to `voice:${channelId}` (watcher + voice join), which can cause
@@ -958,9 +961,7 @@ export const ChannelSidebar = () => {
 
         // If same category, reorder within category
         if ((activeChannel.category_id ?? null) === (targetCategoryId ?? null)) {
-          const categoryChannels = targetCategoryId
-            ? getChannelsForCategory(targetCategoryId)
-            : uncategorizedChannels;
+          const categoryChannels = targetCategoryId ? getChannelsForCategory(targetCategoryId) : uncategorizedChannels;
           const oldIndex = categoryChannels.findIndex((c) => c.id === active.id);
           const newIndex = categoryChannels.findIndex((c) => c.id === over.id);
 
@@ -969,9 +970,7 @@ export const ChannelSidebar = () => {
           }
         } else {
           // Different category - move to that category at the position of the over channel
-          const targetChannels = targetCategoryId
-            ? getChannelsForCategory(targetCategoryId)
-            : uncategorizedChannels;
+          const targetChannels = targetCategoryId ? getChannelsForCategory(targetCategoryId) : uncategorizedChannels;
           const newIndex = targetChannels.findIndex((c) => c.id === over.id);
 
           if (newIndex !== -1) {
@@ -1012,7 +1011,7 @@ export const ChannelSidebar = () => {
           }
           return <Hash className="w-4 h-4 text-muted-foreground" />;
         };
-        
+
         return (
           <div className="flex items-center gap-2 px-3 py-1.5 bg-card border border-border shadow-lg rounded-md text-sm ring-2 ring-primary/30">
             {getIcon()}
@@ -1049,7 +1048,11 @@ export const ChannelSidebar = () => {
           {currentServer.banner_url && (
             <div className="relative h-20 sm:h-24 overflow-hidden rounded-t-2xl">
               <img
-                src={currentServer.banner_url}
+                src={
+                  currentServer.banner_url?.includes("blob:")
+                    ? currentServer.banner_url
+                    : `${currentServer.banner_url}${currentServer.banner_url?.includes("?") ? "&" : "?"}cb=${encodeURIComponent(currentServer.banner_url?.split("/").pop()?.split("?")[0] ?? "")}`
+                }
                 alt={`${currentServer.name} banner`}
                 className="w-full h-full object-cover"
               />
@@ -1170,12 +1173,7 @@ export const ChannelSidebar = () => {
               <GripVertical className="w-4 h-4 text-primary" />
               <span className="text-sm font-medium text-primary">Sorting Mode</span>
             </div>
-            <Button 
-              size="sm" 
-              variant="ghost" 
-              onClick={() => setIsSortingMode(false)}
-              className="h-7 px-2 text-xs"
-            >
+            <Button size="sm" variant="ghost" onClick={() => setIsSortingMode(false)} className="h-7 px-2 text-xs">
               Done
             </Button>
           </div>
@@ -1194,7 +1192,7 @@ export const ChannelSidebar = () => {
               <div
                 className={cn(
                   "flex-1 overflow-y-auto scrollbar-overlay p-2 scrollbar-hide",
-                  isSortingMode && "bg-primary/5 border-2 border-dashed border-primary/20 rounded-lg mx-1 my-1"
+                  isSortingMode && "bg-primary/5 border-2 border-dashed border-primary/20 rounded-lg mx-1 my-1",
                 )}
                 style={{ touchAction: "pan-y" }}
               >
