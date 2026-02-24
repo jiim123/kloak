@@ -132,7 +132,7 @@ export const useRealtimeUsers = () => {
       if (error || !data) return;
 
       // Patch each user's presence
-      data.forEach((user) => {
+      (data as any[]).forEach((user: any) => {
         patchUserAcrossStores({
           id: user.id,
           status: user.status,

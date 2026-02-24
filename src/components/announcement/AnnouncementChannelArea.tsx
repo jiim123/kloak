@@ -272,7 +272,7 @@ export const AnnouncementChannelArea = () => {
       const counts: Record<string, number> = {};
       const activities: Record<string, { time: string; user?: User }> = {};
 
-      for (const announcement of rows) {
+      for (const announcement of rows as any[]) {
         // Get comment count
         const { count } = await supabase
           .from("announcement_comments")

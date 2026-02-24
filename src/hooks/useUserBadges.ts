@@ -38,7 +38,7 @@ export const useUserBadges = (userId: string | undefined) => {
           return;
         }
 
-        const userBadges: Badge[] = (Array.isArray(data) ? data : []) as Badge[];
+        const userBadges: Badge[] = (Array.isArray(data) ? data : []) as unknown as Badge[];
 
         setBadges(userBadges);
       } catch (err) {
