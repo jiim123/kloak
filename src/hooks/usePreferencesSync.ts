@@ -58,9 +58,17 @@ export const usePreferencesSync = () => {
 
     const loadPreferences = async () => {
       try {
+<<<<<<< HEAD
+        const { data, error } = await supabase
+          .from("user_preferences")
+          .select("*")
+          .eq("user_id", user.id)
+          .maybeSingle();
+=======
         const { data, error } = await supabase.rpc('get_user_preferences' as any, {
           _user_id: user.id,
         });
+>>>>>>> origin/main
 
         if (error) {
           console.error("Error loading preferences:", error);

@@ -10,8 +10,13 @@ export const THEMES = [
   { id: "hokori", name: "Hokori", description: "Stark, Japanese-inspired, dramatic minimalism" },
 ] as const;
 
+<<<<<<< HEAD
 export type Theme = (typeof THEMES)[number]["id"];
 export type DmPrivacy = "everyone" | "shared_servers" | "friends" | "no_one";
+=======
+export type Theme = typeof THEMES[number]['id'];
+export type DmPrivacy = 'everyone' | 'shared_servers' | 'friends' | 'no_one';
+>>>>>>> origin/main
 
 export type ModalType =
   | "create-server"
@@ -190,7 +195,11 @@ export const useUIStore = create<UIState>()(
       compactMode: false,
       showTimestamps: true,
       animateEmojis: true,
+<<<<<<< HEAD
       dmPrivacy: "friends",
+=======
+      dmPrivacy: 'friends',
+>>>>>>> origin/main
 
       toggleTheme: () => {
         const currentTheme = get().theme;
