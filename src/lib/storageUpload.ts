@@ -9,6 +9,20 @@ async function requireKeyHash(): Promise<string> {
   return kh;
 }
 
+// Strips all executable content from SVG files before upload
+async function sanitizeSVG(file: File): Promise<File> {
+  const text = await file.text();
+  const sanitized = text
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/\s+on\w+\s*=\s*["'][^"']*["']/gi, "")
+    .replace(/\s+on\w+\s*=\s*[^\s>]*/gi, "")
+    .replace(/(href|xlink:href|src)\s*=\s*["']\s*(javascript|data):[^"']*["']/gi, "")
+    .replace(/<use[^>]*href\s*=\s*["']https?:\/\/[^"']*["'][^>]*>/gi, "")
+    .replace(/<foreignObject[\s\S]*?<\/foreignObject>/gi, "");
+  const blob = new Blob([sanitized], { type: "image/svg+xml" });
+  return new File([blob], file.name, { type: "image/svg+xml" });
+}
+
 /**
  * Upload a file via the secure Edge Function proxy.
  * Returns { publicUrl, path }.
@@ -16,10 +30,20 @@ async function requireKeyHash(): Promise<string> {
 export async function secureUpload(
   bucket: string,
   path: string,
-  file: File | Blob,
+  fileInput: File | Blob,
   options?: { contentType?: string; upsert?: boolean; cacheControl?: string },
 ): Promise<{ publicUrl: string; path: string }> {
   const keyHash = await requireKeyHash();
+
+  // Sanitize SVG files before upload to strip scripts and event handlers
+  let file: File | Blob = fileInput;
+  if (
+    fileInput instanceof File &&
+    (fileInput.type === "image/svg+xml" || fileInput.name.toLowerCase().endsWith(".svg"))
+  ) {
+    file = await sanitizeSVG(fileInput);
+  }
+
   const formData = new FormData();
   formData.append("file", file);
   formData.append("bucket", bucket);
