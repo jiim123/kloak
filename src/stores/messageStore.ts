@@ -37,6 +37,7 @@ interface MessageState {
     before?: string,
     force?: boolean,
     silent?: boolean,
+    skipBootstrap?: boolean,
   ) => Promise<void>;
 
   // Message actions
@@ -192,8 +193,15 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     set({ currentChannelId: channelId, replyingTo: null });
   },
 
-  fetchMessages: async (channelId: string, limit = 50, before?: string, force = false, silent = false) => {
-    const inflightKey = `${channelId}:${before ?? ""}:${force ? 1 : 0}:${limit}`;
+  fetchMessages: async (
+    channelId: string,
+    limit = 50,
+    before?: string,
+    force = false,
+    silent = false,
+    skipBootstrap = false,
+  ) => {
+    const inflightKey = `${channelId}:${before ?? ""}:${force ? 1 : 0}:${limit}:${skipBootstrap ? 1 : 0}`;
     const existingInflight = inflightFetches.get(inflightKey);
     if (existingInflight) return existingInflight;
 
@@ -234,7 +242,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         let messageRows: any[] = [];
         let usedBootstrap = false;
 
-        if (!before) {
+        if (!before && !skipBootstrap) {
           const { data: bootstrapData, error: bootstrapError } = await (supabase.rpc as any)(
             "get_channel_bootstrap_secure",
             {

@@ -56,7 +56,6 @@ import {
   useRealtimeDMs,
   useUnreadDMs,
   useRealtimeMessages,
-  useRealtimeReactions,
   useTauriNotificationActions,
   useRealtimeOwnMembership,
   useRealtimeServerEmojis,
@@ -220,7 +219,6 @@ const AppLayout = () => {
 
   // Real-time channel messages and reactions - at app level for stability
   useRealtimeMessages(currentChannel?.id || null);
-  useRealtimeReactions(currentChannel?.id || null);
 
   // Real-time DMs at app level so messages are received even when not viewing DMs
   const unreadDMs = useUnreadDMs(user?.id || null);

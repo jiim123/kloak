@@ -10,22 +10,48 @@ import type { User } from '@/types';
 import { canRevealGhostIdentityForUser, getGhostPseudonymousUserId } from '@/lib/ghostIdentity';
 
 const CHANNEL_SUBSCRIBE_CATCHUP_MAX_AGE_MS = 12_000;
+const MIN_CATCHUP_FETCH_GAP_MS = 30_000;
+const SUBSCRIPTION_HEALTH_RESYNC_INTERVAL_MS = 8_000;
+const MIN_UNHEALTHY_RESYNC_GAP_MS = 6_000;
+const GHOST_CHANNEL_POLL_FALLBACK_INTERVAL_MS = 10_000;
+const HYBRID_SYNC_INTERVAL_MS = 5_000;
+const HYBRID_SYNC_STALE_EVENT_MS = 10_000;
 
 export const useRealtimeMessages = (channelId: string | null) => {
   const isSettingUpRef = useRef(false);
   const lastSubscribeAtRef = useRef<number>(0);
   const lastEventAtRef = useRef<number>(0);
+  const lastCatchupFetchAtRef = useRef<number>(0);
+  const isSubscribedRef = useRef(false);
+  const lastUnhealthyResyncAtRef = useRef<number>(0);
+  const lastHybridSyncAtRef = useRef<number>(0);
 
   useEffect(() => {
     if (!channelId) {
       return;
     }
 
+    let isActive = true;
+    let isIntentionalClose = false;
     let channel: ReturnType<typeof supabase.channel> | null = null;
     let retryTimeout: NodeJS.Timeout | null = null;
     let retryCount = 0;
-    const MAX_RETRIES = 2; // Reduced retries
-    const RETRY_DELAY = 5000; // Longer delay
+    const RETRY_BASE_DELAY_MS = 2000;
+    const RETRY_MAX_DELAY_MS = 60000;
+
+    const scheduleRetry = (status: 'CLOSED' | 'CHANNEL_ERROR' | 'TIMED_OUT') => {
+      if (!isActive) return;
+      retryCount += 1;
+      const delay = Math.min(RETRY_MAX_DELAY_MS, RETRY_BASE_DELAY_MS * Math.pow(2, retryCount - 1));
+      console.log(
+        `[Realtime] Retrying messages subscription (status=${status}, attempt ${retryCount}, delay=${delay}ms)...`,
+      );
+      if (retryTimeout) clearTimeout(retryTimeout);
+      retryTimeout = setTimeout(() => {
+        if (!isActive) return;
+        setupSubscription();
+      }, delay);
+    };
 
     const setupSubscription = () => {
       // Prevent duplicate setup
@@ -37,6 +63,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
       // Clean up existing subscription if any
       if (channel) {
         try {
+          isIntentionalClose = true;
           supabase.removeChannel(channel);
         } catch (e) {
           // Ignore cleanup errors
@@ -208,10 +235,199 @@ export const useRealtimeMessages = (channelId: string | null) => {
             }
           }
         )
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'reactions',
+            filter: `channel_id=eq.${channelId}`,
+          },
+          (payload) => {
+            try {
+              const newReaction = payload.new as { message_id: string; user_id: string; emoji: string };
+              lastEventAtRef.current = Date.now();
+              const currentUserId = useAuthStore.getState().user?.id;
+
+              const serverState = useServerStore.getState();
+              const isGhostMode =
+                serverState.currentChannel?.id === channelId && !!serverState.currentChannel?.ghost_mode;
+              const revealIdentity = canRevealGhostIdentityForUser({
+                isGhostMode,
+                authorUserId: newReaction.user_id,
+                members: serverState.members,
+                ownerId: serverState.currentServer?.owner_id,
+              });
+              const effectiveReactionUserId = revealIdentity
+                ? newReaction.user_id
+                : getGhostPseudonymousUserId(newReaction.user_id, channelId);
+
+              const { messagesByChannel } = useMessageStore.getState();
+              const channelData = messagesByChannel[channelId];
+              if (!channelData) return;
+
+              const messageIndex = channelData.messages.findIndex((m) => m.id === newReaction.message_id);
+              if (messageIndex === -1) return;
+
+              const message = channelData.messages[messageIndex];
+              const reactions = [...(message.reactions || [])];
+              const existingGroup = reactions.find((r) => r.emoji === newReaction.emoji);
+
+              if (existingGroup) {
+                if (!existingGroup.users.includes(effectiveReactionUserId)) {
+                  existingGroup.count++;
+                  existingGroup.users.push(effectiveReactionUserId);
+                }
+                if (newReaction.user_id === currentUserId) {
+                  existingGroup.hasReacted = true;
+                }
+              } else {
+                reactions.push({
+                  emoji: newReaction.emoji,
+                  count: 1,
+                  users: [effectiveReactionUserId],
+                  hasReacted: newReaction.user_id === currentUserId,
+                });
+              }
+
+              useMessageStore
+                .getState()
+                .updateMessage(newReaction.message_id, { reactions, channel_id: channelId } as any);
+            } catch (error) {
+              console.error('[Realtime] Error processing reaction INSERT:', error);
+            }
+          },
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'reactions',
+            filter: `channel_id=eq.${channelId}`,
+          },
+          (payload) => {
+            try {
+              const oldReaction = payload.old as { id?: string; message_id?: string; user_id?: string; emoji?: string };
+              lastEventAtRef.current = Date.now();
+              const currentUserId = useAuthStore.getState().user?.id;
+
+              if (oldReaction.message_id && oldReaction.emoji && oldReaction.user_id) {
+                const serverState = useServerStore.getState();
+                const isGhostMode =
+                  serverState.currentChannel?.id === channelId && !!serverState.currentChannel?.ghost_mode;
+                const revealIdentity = canRevealGhostIdentityForUser({
+                  isGhostMode,
+                  authorUserId: oldReaction.user_id,
+                  members: serverState.members,
+                  ownerId: serverState.currentServer?.owner_id,
+                });
+                const effectiveReactionUserId = revealIdentity
+                  ? oldReaction.user_id
+                  : getGhostPseudonymousUserId(oldReaction.user_id, channelId);
+
+                const { messagesByChannel } = useMessageStore.getState();
+                const channelData = messagesByChannel[channelId];
+                if (!channelData) return;
+
+                const message = channelData.messages.find((m) => m.id === oldReaction.message_id);
+                if (!message) return;
+
+                const reactions = (message.reactions || [])
+                  .map((r) => {
+                    if (r.emoji !== oldReaction.emoji) return r;
+                    return {
+                      ...r,
+                      count: r.count - 1,
+                      users: r.users.filter((u) => u !== effectiveReactionUserId),
+                      hasReacted: oldReaction.user_id === currentUserId ? false : r.hasReacted,
+                    };
+                  })
+                  .filter((r) => r.count > 0);
+
+                useMessageStore
+                  .getState()
+                  .updateMessage(oldReaction.message_id!, { reactions, channel_id: channelId } as any);
+              } else if (oldReaction.id) {
+                // Fallback when replica identity does not include deleted row values.
+                const { messagesByChannel } = useMessageStore.getState();
+                const channelData = messagesByChannel[channelId];
+                if (!channelData) return;
+
+                const messageIds = channelData.messages.filter((m) => (m.reactions?.length ?? 0) > 0).map((m) => m.id);
+                if (messageIds.length === 0) return;
+
+                supabase
+                  .from('reactions')
+                  .select('message_id, user_id, emoji')
+                  .in('message_id', messageIds)
+                  .then(({ data, error }) => {
+                    if (error) {
+                      console.error('[Realtime] Failed to refetch reactions:', error);
+                      return;
+                    }
+
+                    const serverState = useServerStore.getState();
+                    const isGhostMode =
+                      serverState.currentChannel?.id === channelId && !!serverState.currentChannel?.ghost_mode;
+                    const reactionsByMessage = new Map<
+                      string,
+                      { emoji: string; count: number; users: string[]; hasReacted: boolean }[]
+                    >();
+
+                    for (const msgId of messageIds) {
+                      reactionsByMessage.set(msgId, []);
+                    }
+
+                    for (const row of data || []) {
+                      const revealIdentity = canRevealGhostIdentityForUser({
+                        isGhostMode,
+                        authorUserId: row.user_id,
+                        members: serverState.members,
+                        ownerId: serverState.currentServer?.owner_id,
+                      });
+                      const effectiveReactionUserId = revealIdentity
+                        ? row.user_id
+                        : getGhostPseudonymousUserId(row.user_id, channelId);
+
+                      let msgReactions = reactionsByMessage.get(row.message_id);
+                      if (!msgReactions) {
+                        msgReactions = [];
+                        reactionsByMessage.set(row.message_id, msgReactions);
+                      }
+                      const existing = msgReactions.find((r) => r.emoji === row.emoji);
+                      if (existing) {
+                        existing.count++;
+                        existing.users.push(effectiveReactionUserId);
+                        if (row.user_id === currentUserId) existing.hasReacted = true;
+                      } else {
+                        msgReactions.push({
+                          emoji: row.emoji,
+                          count: 1,
+                          users: [effectiveReactionUserId],
+                          hasReacted: row.user_id === currentUserId,
+                        });
+                      }
+                    }
+
+                    const store = useMessageStore.getState();
+                    for (const [msgId, reactions] of reactionsByMessage) {
+                      store.updateMessage(msgId, { reactions, channel_id: channelId } as any);
+                    }
+                  });
+              }
+            } catch (error) {
+              console.error('[Realtime] Error processing reaction DELETE:', error);
+            }
+          },
+        )
         .subscribe((status, err) => {
+          if (!isActive) return;
           isSettingUpRef.current = false;
           
           if (status === 'SUBSCRIBED') {
+            isIntentionalClose = false;
+            isSubscribedRef.current = true;
             console.log('[Realtime] Successfully subscribed to messages for channel:', channelId);
             retryCount = 0;
             lastSubscribeAtRef.current = Date.now();
@@ -223,10 +439,21 @@ export const useRealtimeMessages = (channelId: string | null) => {
             const hasCached = (cacheEntry?.messages?.length ?? 0) > 0;
             const isFreshEnough =
               !!cacheEntry && Date.now() - cacheEntry.lastFetched < CHANNEL_SUBSCRIBE_CATCHUP_MAX_AGE_MS;
-            if (!hasCached || !isFreshEnough) {
+            const now = Date.now();
+            const canRunCatchup = now - lastCatchupFetchAtRef.current >= MIN_CATCHUP_FETCH_GAP_MS;
+            if ((!hasCached || !isFreshEnough) && canRunCatchup) {
+              lastCatchupFetchAtRef.current = now;
               void store.fetchMessages(channelId, 50, undefined, true, hasCached).catch(() => undefined);
             }
-          } else if (status === 'CHANNEL_ERROR' || status === 'CLOSED' || status === 'TIMED_OUT') {
+          } else if (status === 'CLOSED') {
+            isSubscribedRef.current = false;
+            // CLOSED is expected during channel switch/unmount cleanup.
+            if (!isIntentionalClose) {
+              console.warn('[Realtime] Messages channel closed unexpectedly:', { channelId, status });
+              scheduleRetry(status);
+            }
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            isSubscribedRef.current = false;
             if (err) {
               console.warn('[Realtime] Messages subscribe error:', {
                 channelId,
@@ -239,20 +466,62 @@ export const useRealtimeMessages = (channelId: string | null) => {
             } else {
               console.warn('[Realtime] Messages subscribe status:', { channelId, status });
             }
-            if (retryCount < MAX_RETRIES) {
-              retryCount++;
-              console.log(`[Realtime] Retrying messages subscription (status=${status}, attempt ${retryCount}/${MAX_RETRIES})...`);
-              retryTimeout = setTimeout(() => {
-                setupSubscription();
-              }, RETRY_DELAY * retryCount);
-            } else {
-              console.warn('[Realtime] Max retries reached for messages subscription. Continuing without realtime messages.');
-            }
+            scheduleRetry(status);
           }
         });
     };
 
     setupSubscription();
+
+    // Fallback: if realtime channel is unhealthy, do a silent periodic resync
+    // so users still receive new messages without manual refresh/channel switch.
+    const unhealthyResyncInterval = setInterval(() => {
+      if (!isActive) return;
+      if (document.visibilityState !== 'visible') return;
+      if (isSubscribedRef.current) return;
+      const now = Date.now();
+      if (now - lastUnhealthyResyncAtRef.current < MIN_UNHEALTHY_RESYNC_GAP_MS) return;
+      lastUnhealthyResyncAtRef.current = now;
+      const store = useMessageStore.getState();
+      const hasCached = (store.messagesByChannel[channelId]?.messages?.length ?? 0) > 0;
+      void store.fetchMessages(channelId, 50, undefined, true, hasCached, true).catch(() => undefined);
+    }, SUBSCRIPTION_HEALTH_RESYNC_INTERVAL_MS);
+
+    // Ghost channels get an additional lightweight polling fallback.
+    // This avoids "stuck chat until refresh" even if websocket events are dropped.
+    const ghostPollingFallbackInterval = setInterval(() => {
+      if (!isActive) return;
+      if (document.visibilityState !== 'visible') return;
+      const serverState = useServerStore.getState();
+      const isGhostChannel =
+        serverState.currentChannel?.id === channelId && !!serverState.currentChannel?.ghost_mode;
+      if (!isGhostChannel) return;
+
+      const now = Date.now();
+      if (now - lastUnhealthyResyncAtRef.current < GHOST_CHANNEL_POLL_FALLBACK_INTERVAL_MS) return;
+      lastUnhealthyResyncAtRef.current = now;
+
+      const store = useMessageStore.getState();
+      const hasCached = (store.messagesByChannel[channelId]?.messages?.length ?? 0) > 0;
+      void store.fetchMessages(channelId, 50, undefined, true, hasCached, true).catch(() => undefined);
+    }, GHOST_CHANNEL_POLL_FALLBACK_INTERVAL_MS);
+
+    // Universal hybrid fallback (all channel types):
+    // if subscription is unhealthy OR appears stale, run a lightweight sync.
+    const hybridSyncInterval = setInterval(() => {
+      if (!isActive) return;
+      if (document.visibilityState !== 'visible') return;
+
+      const now = Date.now();
+      const staleEvents = now - lastEventAtRef.current > HYBRID_SYNC_STALE_EVENT_MS;
+      if (isSubscribedRef.current && !staleEvents) return;
+      if (now - lastHybridSyncAtRef.current < HYBRID_SYNC_INTERVAL_MS) return;
+      lastHybridSyncAtRef.current = now;
+
+      const store = useMessageStore.getState();
+      const hasCached = (store.messagesByChannel[channelId]?.messages?.length ?? 0) > 0;
+      void store.fetchMessages(channelId, 20, undefined, true, hasCached, true).catch(() => undefined);
+    }, HYBRID_SYNC_INTERVAL_MS);
 
     // Handle visibility changes to ensure subscription stays active
     const handleVisibilityChange = () => {
@@ -279,11 +548,17 @@ export const useRealtimeMessages = (channelId: string | null) => {
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
+      isActive = false;
+      isIntentionalClose = true;
+      isSubscribedRef.current = false;
       isSettingUpRef.current = false;
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (retryTimeout) {
         clearTimeout(retryTimeout);
       }
+      clearInterval(unhealthyResyncInterval);
+      clearInterval(ghostPollingFallbackInterval);
+      clearInterval(hybridSyncInterval);
       if (channel) {
         try {
           supabase.removeChannel(channel);
