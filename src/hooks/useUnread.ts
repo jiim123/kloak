@@ -22,6 +22,7 @@ interface ServerUnreadInfo {
 
 // OPTIMIZATION: Increased from 15s to 45s - reduced polling frequency
 const UNREAD_POLL_INTERVAL_MS = 45000;
+const UNREAD_FETCH_COOLDOWN_MS = 3000;
 const CHANNEL_READ_EVENT = 'kloak:channel-read';
 
 export const useUnread = (serverChannelIds: string[] = []) => {
@@ -32,6 +33,7 @@ export const useUnread = (serverChannelIds: string[] = []) => {
   const fetchSeqRef = useRef(0);
   const inFlightRef = useRef(false);
   const queuedRef = useRef(false);
+  const lastFetchAtRef = useRef(0);
   const markInFlightRef = useRef<Map<string, Promise<void>>>(new Map());
   const unreadStateRef = useRef<UnreadState>({});
   const channelReadsRefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -46,12 +48,17 @@ export const useUnread = (serverChannelIds: string[] = []) => {
   const fetchUnreadCounts = useCallback(async (opts?: { force?: boolean }) => {
     if (!user || serverChannelIds.length === 0) return;
 
-    // Avoid refetching if channel IDs haven't changed
+    // Debounce bursts while still allowing periodic/background reconciliation.
     const idsString = [...serverChannelIds].sort().join(',');
     const prevIdsString = [...channelIdsRef.current].sort().join(',');
-    if (!opts?.force && idsString === prevIdsString) return;
+    const idsChanged = idsString !== prevIdsString;
+    const now = Date.now();
+    if (!opts?.force && !idsChanged && now - lastFetchAtRef.current < UNREAD_FETCH_COOLDOWN_MS) {
+      return;
+    }
     
     channelIdsRef.current = [...serverChannelIds];
+    lastFetchAtRef.current = now;
     const seq = ++fetchSeqRef.current;
     if (inFlightRef.current) {
       queuedRef.current = true;

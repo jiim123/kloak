@@ -325,24 +325,20 @@ const AppLayout = () => {
     }
   }, [isServerSpecialView, currentServer, currentChannel, setCurrentChannel]);
 
-  // Fetch channels, members, roles, and permissions when server changes
+  // Fetch channels + permissions only when server changes.
+  // Keep this separate from member-sidebar state to avoid repeated channel refetches.
   useEffect(() => {
-    if (currentServer?.id) {
-      fetchChannels(currentServer.id);
-      fetchRolePermissions(currentServer.id);
-      // Members can be large; only fetch when the UI needs them.
-      if (isMemberSidebarOpen || isServerMembersViewAllowed) {
-        fetchMembers(currentServer.id);
-      }
-    }
-  }, [
-    currentServer?.id,
-    fetchChannels,
-    fetchMembers,
-    fetchRolePermissions,
-    isMemberSidebarOpen,
-    isServerMembersViewAllowed,
-  ]);
+    if (!currentServer?.id) return;
+    fetchChannels(currentServer.id);
+    fetchRolePermissions(currentServer.id);
+  }, [currentServer?.id, fetchChannels, fetchRolePermissions]);
+
+  // Members can be large; only fetch when members UI is actually needed.
+  useEffect(() => {
+    if (!currentServer?.id) return;
+    if (!isMemberSidebarOpen && !isServerMembersViewAllowed) return;
+    fetchMembers(currentServer.id);
+  }, [currentServer?.id, isMemberSidebarOpen, isServerMembersViewAllowed, fetchMembers]);
 
   // Clear DM conversation when switching to a server
   useEffect(() => {

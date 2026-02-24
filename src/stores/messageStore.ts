@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
 import { useFriendStore } from "@/stores/friendStore";
+import { useServerStore } from "@/stores/serverStore";
 import { bulkSetUsersInCache } from "@/lib/userCache";
 import type { Message, MessageReply, ReactionGroup, User } from "@/types";
 
@@ -91,11 +92,78 @@ const groupReactions = (reactions: any[], currentUserId?: string): ReactionGroup
   return Object.values(groups);
 };
 
+const toMessageReply = (raw: any): MessageReply | null => {
+  if (!raw || typeof raw !== "object") return null;
+  if (!("id" in raw) || !("content" in raw) || !raw.user) return null;
+  return {
+    id: raw.id as string,
+    content: raw.content as string,
+    user: raw.user as User,
+  };
+};
+
+const isMissingRpcError = (error: any) => {
+  const message = String(error?.message ?? "");
+  return (
+    error?.code === "PGRST202" ||
+    error?.code === "42883" ||
+    message.includes("Could not find the function") ||
+    message.includes("does not exist")
+  );
+};
+
 // Cache expiry time - 5 minutes
 const CACHE_EXPIRY_MS = 5 * 60 * 1000;
+const REPLY_CACHE_EXPIRY_MS = 5 * 60 * 1000;
+const MAX_CACHED_CHANNELS = 12;
+const MAX_MESSAGES_PER_CHANNEL = 300;
+const MAX_REPLY_CACHE_ITEMS = 800;
 
 // In-flight request coalescing (prevents duplicate message fetches during rapid switching)
 const inflightFetches = new Map<string, Promise<void>>();
+const replyCache = new Map<string, { data: MessageReply; cachedAt: number }>();
+
+const trimMessages = (messages: Message[]) => {
+  if (messages.length <= MAX_MESSAGES_PER_CHANNEL) return messages;
+  return messages.slice(messages.length - MAX_MESSAGES_PER_CHANNEL);
+};
+
+const pruneReplyCache = () => {
+  if (replyCache.size <= MAX_REPLY_CACHE_ITEMS) return;
+  const sorted = Array.from(replyCache.entries()).sort((a, b) => a[1].cachedAt - b[1].cachedAt);
+  const toDelete = sorted.slice(0, replyCache.size - MAX_REPLY_CACHE_ITEMS);
+  toDelete.forEach(([key]) => replyCache.delete(key));
+};
+
+const pruneMessagesByChannel = (input: Record<string, ChannelMessages>, keepChannelId?: string) => {
+  const normalized: Record<string, ChannelMessages> = {};
+  for (const [channelId, data] of Object.entries(input)) {
+    normalized[channelId] = {
+      ...data,
+      messages: trimMessages(data.messages || []),
+    };
+  }
+
+  const entries = Object.entries(normalized);
+  if (entries.length <= MAX_CACHED_CHANNELS) return normalized;
+
+  const keep = new Set<string>();
+  if (keepChannelId && normalized[keepChannelId]) keep.add(keepChannelId);
+
+  const sorted = entries.sort((a, b) => (b[1].lastFetched || 0) - (a[1].lastFetched || 0));
+  for (const [channelId] of sorted) {
+    if (keep.size >= MAX_CACHED_CHANNELS) break;
+    keep.add(channelId);
+  }
+
+  const pruned: Record<string, ChannelMessages> = {};
+  for (const channelId of keep) {
+    if (normalized[channelId]) {
+      pruned[channelId] = normalized[channelId];
+    }
+  }
+  return pruned;
+};
 
 export const useMessageStore = create<MessageState>((set, get) => ({
   messagesByChannel: {},
@@ -163,36 +231,112 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         const requestUserId = useAuthStore.getState().user?.id;
         if (!requestUserId) throw new Error("Not authenticated");
 
-        const { data, error } = await supabase.rpc("get_channel_messages_secure", {
-          _channel_id: channelId,
-          _user_id: requestUserId,
-          _limit: limit,
-          _before: before || null,
-          _blocked_user_ids: blockedUserIds,
+        let messageRows: any[] = [];
+        let usedBootstrap = false;
+
+        if (!before) {
+          const { data: bootstrapData, error: bootstrapError } = await (supabase.rpc as any)(
+            "get_channel_bootstrap_secure",
+            {
+              _channel_id: channelId,
+              _user_id: requestUserId,
+              _limit: limit,
+              _blocked_user_ids: blockedUserIds,
+            },
+          );
+
+          if (bootstrapError) {
+            if (!isMissingRpcError(bootstrapError)) {
+              throw bootstrapError;
+            }
+          } else {
+            let payload = bootstrapData;
+            if (typeof payload === "string") {
+              try {
+                payload = JSON.parse(payload);
+              } catch {
+                payload = null;
+              }
+            }
+
+            if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+              const bootstrap = payload as Record<string, any>;
+              messageRows = Array.isArray(bootstrap.messages) ? bootstrap.messages : [];
+              const channelPermissions = Array.isArray(bootstrap.channel_permissions)
+                ? bootstrap.channel_permissions
+                : [];
+              useServerStore.getState().hydrateChannelPermissions(channelId, channelPermissions);
+              usedBootstrap = true;
+            }
+          }
+        }
+
+        if (!usedBootstrap) {
+          const { data, error } = await supabase.rpc("get_channel_messages_secure", {
+            _channel_id: channelId,
+            _user_id: requestUserId,
+            _limit: limit,
+            _before: before || null,
+            _blocked_user_ids: blockedUserIds,
+          });
+          if (error) throw error;
+          messageRows = Array.isArray(data) ? data : [];
+
+          // Bootstrap RPC may be unavailable while migrations roll out.
+          // Ensure channel overrides are still loaded via legacy path.
+          if (!before) {
+            void useServerStore.getState().fetchChannelPermissions(channelId).catch(() => undefined);
+          }
+        }
+
+        const replyMap: Record<string, MessageReply> = {};
+        const missingReplyIds: string[] = [];
+        // Prefer inline `reply_to` from get_channel_messages_secure to avoid an extra RPC.
+        // Fall back to reply cache / get_message_replies_secure only for legacy payloads.
+        messageRows.forEach((msg: any) => {
+          if (!msg?.reply_to_id) return;
+          const replyId = String(msg.reply_to_id);
+
+          const inlineReply = toMessageReply(msg.reply_to);
+          if (inlineReply) {
+            replyMap[replyId] = inlineReply;
+            replyCache.set(replyId, { data: inlineReply, cachedAt: Date.now() });
+            pruneReplyCache();
+            return;
+          }
+
+          const cachedReply = replyCache.get(replyId);
+          if (cachedReply && Date.now() - cachedReply.cachedAt < REPLY_CACHE_EXPIRY_MS) {
+            replyMap[replyId] = cachedReply.data;
+            return;
+          }
+
+          // If the row includes `reply_to` (even null), the server already resolved visibility.
+          const hasInlineField = Object.prototype.hasOwnProperty.call(msg, "reply_to");
+          if (!hasInlineField) {
+            missingReplyIds.push(replyId);
+          }
         });
 
-        if (error) throw error;
-        const messageRows = Array.isArray(data) ? data : [];
+        const dedupedMissingReplyIds = Array.from(new Set(missingReplyIds));
 
-        // Get reply_to_ids that need to be fetched
-        const replyToIds = messageRows.filter((msg: any) => msg.reply_to_id).map((msg: any) => msg.reply_to_id);
-
-        // Fetch reply messages separately if there are any
-        let replyMap: Record<string, MessageReply> = {};
-        if (replyToIds.length > 0) {
+        if (dedupedMissingReplyIds.length > 0) {
           const { data: replyData } = await supabase.rpc("get_message_replies_secure", {
-            _message_ids: replyToIds,
+            _message_ids: dedupedMissingReplyIds,
             _user_id: requestUserId,
             _blocked_user_ids: blockedUserIds,
           });
 
           if (replyData) {
             (replyData as any[]).forEach((reply: any) => {
-              replyMap[reply.id] = {
-                id: reply.id,
-                content: reply.content,
-                user: reply.user as User,
-              };
+              const normalizedReply = toMessageReply(reply);
+              if (!normalizedReply) return;
+              replyMap[normalizedReply.id] = normalizedReply;
+              replyCache.set(normalizedReply.id, {
+                data: normalizedReply,
+                cachedAt: Date.now(),
+              });
+              pruneReplyCache();
             });
           }
         }
@@ -201,7 +345,9 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         const messages: Message[] = messageRows.reverse().map((msg: any) => ({
           ...msg,
           user: msg.user,
-          reply_to: msg.reply_to_id ? replyMap[msg.reply_to_id] : undefined,
+          reply_to: msg.reply_to_id
+            ? toMessageReply(msg.reply_to) || replyMap[msg.reply_to_id]
+            : undefined,
           attachments: msg.attachments || [],
           reactions: groupReactions(
             blockedUserIds.length > 0
@@ -228,8 +374,8 @@ export const useMessageStore = create<MessageState>((set, get) => ({
 
           if (before && existingCache) {
             // Prepend older messages to existing cache
-            return {
-              messagesByChannel: {
+            const nextByChannel = pruneMessagesByChannel(
+              {
                 ...state.messagesByChannel,
                 [channelId]: {
                   messages: [...messages, ...existingCache.messages],
@@ -237,6 +383,10 @@ export const useMessageStore = create<MessageState>((set, get) => ({
                   lastFetched: existingCache.lastFetched,
                 },
               },
+              channelId,
+            );
+            return {
+              messagesByChannel: nextByChannel,
               isLoading: false,
               fetchingChannels: restFetching,
             };
@@ -257,9 +407,8 @@ export const useMessageStore = create<MessageState>((set, get) => ({
               const sorted = Array.from(uniqueById.values()).sort(
                 (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
               );
-
-              return {
-                messagesByChannel: {
+              const nextByChannel = pruneMessagesByChannel(
+                {
                   ...state.messagesByChannel,
                   [channelId]: {
                     messages: sorted,
@@ -267,6 +416,11 @@ export const useMessageStore = create<MessageState>((set, get) => ({
                     lastFetched: Date.now(),
                   },
                 },
+                channelId,
+              );
+
+              return {
+                messagesByChannel: nextByChannel,
                 isLoading: false,
                 fetchingChannels: restFetching,
               };
@@ -286,8 +440,8 @@ export const useMessageStore = create<MessageState>((set, get) => ({
             }
           } else {
             // Fresh fetch - replace cache
-            return {
-              messagesByChannel: {
+            const nextByChannel = pruneMessagesByChannel(
+              {
                 ...state.messagesByChannel,
                 [channelId]: {
                   messages,
@@ -295,6 +449,10 @@ export const useMessageStore = create<MessageState>((set, get) => ({
                   lastFetched: Date.now(),
                 },
               },
+              channelId,
+            );
+            return {
+              messagesByChannel: nextByChannel,
               isLoading: false,
               fetchingChannels: restFetching,
             };
@@ -369,13 +527,16 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         }
 
         return {
-          messagesByChannel: {
-            ...state.messagesByChannel,
-            [channelId]: {
-              ...existingCache,
-              messages: [...existingCache.messages, message],
+          messagesByChannel: pruneMessagesByChannel(
+            {
+              ...state.messagesByChannel,
+              [channelId]: {
+                ...existingCache,
+                messages: [...existingCache.messages, message],
+              },
             },
-          },
+            channelId,
+          ),
           replyingTo: null,
         };
       });
@@ -459,13 +620,16 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         }
 
         return {
-          messagesByChannel: {
-            ...state.messagesByChannel,
-            [channelId]: {
-              ...existingCache,
-              messages: [...existingCache.messages, message],
+          messagesByChannel: pruneMessagesByChannel(
+            {
+              ...state.messagesByChannel,
+              [channelId]: {
+                ...existingCache,
+                messages: [...existingCache.messages, message],
+              },
             },
-          },
+            channelId,
+          ),
           replyingTo: null,
         };
       });
@@ -727,14 +891,17 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       const existingCache = state.messagesByChannel[channelId];
       if (!existingCache) {
         return {
-          messagesByChannel: {
-            ...state.messagesByChannel,
-            [channelId]: {
-              messages: [message],
-              hasMore: true,
-              lastFetched: Date.now(),
+          messagesByChannel: pruneMessagesByChannel(
+            {
+              ...state.messagesByChannel,
+              [channelId]: {
+                messages: [message],
+                hasMore: true,
+                lastFetched: Date.now(),
+              },
             },
-          },
+            channelId,
+          ),
         };
       }
 
@@ -743,13 +910,16 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       }
 
       return {
-        messagesByChannel: {
-          ...state.messagesByChannel,
-          [channelId]: {
-            ...existingCache,
-            messages: [...existingCache.messages, message],
+        messagesByChannel: pruneMessagesByChannel(
+          {
+            ...state.messagesByChannel,
+            [channelId]: {
+              ...existingCache,
+              messages: [...existingCache.messages, message],
+            },
           },
-        },
+          channelId,
+        ),
       };
     });
   },

@@ -324,7 +324,10 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       const fileExt = compressed.name.split(".").pop();
       const filePath = `${user.id}/avatar-${Date.now()}.${fileExt}`;
 
-      const { publicUrl } = await secureUpload("avatars", filePath, file, { upsert: true });
+      const { publicUrl } = await secureUpload("avatars", filePath, file, {
+        upsert: true,
+        cacheControl: "31536000",
+      });
       setLocalAvatarUrl(publicUrl);
       await updateUser({ avatar_url: publicUrl });
       toast.success("Avatar updated!");
@@ -357,7 +360,10 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       const fileExt = compressed.name.split(".").pop();
       const filePath = `${user.id}/banner-${Date.now()}.${fileExt}`;
 
-      const { publicUrl } = await secureUpload("avatars", filePath, file, { upsert: true });
+      const { publicUrl } = await secureUpload("avatars", filePath, file, {
+        upsert: true,
+        cacheControl: "31536000",
+      });
       setLocalBannerUrl(publicUrl);
       await updateUser({ banner_url: publicUrl });
       toast.success("Banner updated!");

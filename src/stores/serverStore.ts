@@ -22,12 +22,25 @@ import type {
 
 // Permission queries can be triggered by multiple components/effects.
 // Use a short TTL cache to avoid sequential re-fetch spam when switching channels.
-const PERMISSIONS_TTL_MS = 60_000;
+const PERMISSIONS_TTL_MS = 5 * 60_000;
 const rolePermissionsCache = new Map<string, { data: RolePermission[]; cachedAt: number }>();
 const channelPermissionsCache = new Map<string, { data: ChannelPermission[]; cachedAt: number }>();
 
 const MEMBERS_CACHE_TTL_MS = 60_000;
 const membersCachedAt = new Map<string, number>();
+
+const normalizeChannelPermissionsRows = (rows: any[]): ChannelPermission[] => {
+  return rows.map((row: any) => ({
+    id: row.id,
+    channel_id: row.channel_id,
+    role_id: row.role_id,
+    role_name: row.role_name as ServerRole | null,
+    user_id: row.user_id || null,
+    permission: row.permission as Permission,
+    allowed: row.allowed,
+    created_at: row.created_at ?? "",
+  }));
+};
 
 interface ServerState {
   servers: ServerWithMembership[];
@@ -121,6 +134,7 @@ interface ServerState {
   rolePermissions: RolePermission[];
   channelPermissions: ChannelPermission[];
   categoryPermissions: CategoryPermission[];
+  hydrateChannelPermissions: (channelId: string, rows: any[]) => void;
   fetchRolePermissions: (serverId: string, opts?: { force?: boolean }) => Promise<void>;
   fetchChannelPermissions: (channelId: string, opts?: { force?: boolean }) => Promise<void>;
   fetchCategoryPermissions: (categoryId: string) => Promise<void>;
@@ -1539,6 +1553,12 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }
   },
 
+  hydrateChannelPermissions: (channelId: string, rows: any[]) => {
+    const permissions = normalizeChannelPermissionsRows(Array.isArray(rows) ? rows : []);
+    channelPermissionsCache.set(channelId, { data: permissions, cachedAt: Date.now() });
+    set({ channelPermissions: permissions });
+  },
+
   fetchRolePermissions: async (serverId: string, opts?: { force?: boolean }) => {
     return deduplicatedFetch(`serverStore:fetchRolePermissions:${serverId}`, async () => {
       try {
@@ -1596,16 +1616,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         }
 
         const rows = Array.isArray(data) ? (data as any[]) : [];
-        const permissions: ChannelPermission[] = rows.map((row: any) => ({
-          id: row.id,
-          channel_id: row.channel_id,
-          role_id: row.role_id,
-          role_name: row.role_name as ServerRole | null,
-          user_id: row.user_id || null,
-          permission: row.permission as Permission,
-          allowed: row.allowed,
-          created_at: row.created_at ?? "",
-        }));
+        const permissions = normalizeChannelPermissionsRows(rows);
 
         channelPermissionsCache.set(channelId, { data: permissions, cachedAt: Date.now() });
         set({ channelPermissions: permissions });

@@ -154,8 +154,7 @@ ActionButtons.displayName = "ActionButtons";
 export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }: MessageInputProps) => {
   const { user } = useAuthStore();
   const { replyingTo, setReplyingTo, sendMessage } = useMessageStore();
-  const { members, currentServer, currentChannel, channels, fetchRolePermissions, fetchChannelPermissions } =
-    useServerStore();
+  const { members, currentServer, currentChannel, channels, fetchRolePermissions } = useServerStore();
   const { getQueuedForChannel } = useOfflineQueueStore();
   const isMobile = useIsMobile();
 
@@ -185,7 +184,6 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
 
   useEffect(() => {
     if (channelId) {
-      fetchChannelPermissions(channelId);
       setContent(getDraft(channelId));
     }
     return () => {
@@ -194,7 +192,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
         return [];
       });
     };
-  }, [channelId, fetchChannelPermissions]);
+  }, [channelId]);
 
   // Auto-focus text input when switching channels so user can type immediately
   useEffect(() => {

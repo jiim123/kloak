@@ -19,12 +19,14 @@ import { FriendItemSkeleton } from "@/components/ui/skeletons";
 import { toast } from "sonner";
 import type { FriendWithUser, UserStatus } from "@/types";
 import { getEffectivePresence } from "@/lib/presence";
+import { useLocation } from "react-router-dom";
 
 interface FriendsListProps {
   onOpenDM: () => void;
 }
 
 export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
+  const location = useLocation();
   const { user } = useAuthStore();
   const {
     friends,
@@ -47,25 +49,26 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
   const [isAddingFriend, setIsAddingFriend] = useState(false);
   const [showAddFriend, setShowAddFriend] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const isFriendsRoute = location.pathname === "/app/friends";
 
-  // Fetch friends on mount
+  // Fetch friends when the friends view is active.
   useEffect(() => {
-    if (user?.id) {
+    if (user?.id && isFriendsRoute) {
       fetchFriends(user.id);
     }
-  }, [user?.id, fetchFriends]);
+  }, [user?.id, isFriendsRoute, fetchFriends]);
 
   // Refetch friends when the tab becomes visible (user switches back to app)
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible" && user?.id) {
+      if (document.visibilityState === "visible" && user?.id && isFriendsRoute) {
         fetchFriends(user.id);
       }
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [user?.id, fetchFriends]);
+  }, [user?.id, isFriendsRoute, fetchFriends]);
 
   const onlineFriends = friends.filter((f) => {
     const presence = getEffectivePresence((f.status as UserStatus) || "offline", f.last_seen);

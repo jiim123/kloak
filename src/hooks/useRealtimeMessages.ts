@@ -3,13 +3,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { useMessageStore } from '@/stores/messageStore';
 import { useFriendStore } from '@/stores/friendStore';
 import { useAuthStore } from '@/stores/authStore';
-import { useConnectionStatus } from './useConnectionStatus';
 import type { Message } from '@/types';
 import { getOrFetchUser, getUserFromCache } from '@/lib/userCache';
 import type { User } from '@/types';
 
+const CHANNEL_SUBSCRIBE_CATCHUP_MAX_AGE_MS = 12_000;
+
 export const useRealtimeMessages = (channelId: string | null) => {
-  const { isConnected, isReconnecting } = useConnectionStatus();
   const isSettingUpRef = useRef(false);
   const lastSubscribeAtRef = useRef<number>(0);
   const lastEventAtRef = useRef<number>(0);
@@ -182,6 +182,16 @@ export const useRealtimeMessages = (channelId: string | null) => {
             retryCount = 0;
             lastSubscribeAtRef.current = Date.now();
             lastEventAtRef.current = Date.now();
+
+            // Catch up channel state after (re)subscribe if cache is missing/stale.
+            const store = useMessageStore.getState();
+            const cacheEntry = store.messagesByChannel[channelId];
+            const hasCached = (cacheEntry?.messages?.length ?? 0) > 0;
+            const isFreshEnough =
+              !!cacheEntry && Date.now() - cacheEntry.lastFetched < CHANNEL_SUBSCRIBE_CATCHUP_MAX_AGE_MS;
+            if (!hasCached || !isFreshEnough) {
+              void store.fetchMessages(channelId, 50, undefined, true, hasCached).catch(() => undefined);
+            }
           } else if (status === 'CHANNEL_ERROR' || status === 'CLOSED' || status === 'TIMED_OUT') {
             if (err) {
               console.warn('[Realtime] Messages subscribe error:', {
@@ -227,16 +237,8 @@ export const useRealtimeMessages = (channelId: string | null) => {
           setupSubscription();
         }
 
-        // Also do a cheap "catch-up" fetch in case realtime was paused and missed events.
-        // This avoids requiring a full page refresh.
-        try {
-          const store = useMessageStore.getState();
-          // Force, but silent if we already have messages.
-          const hasMessages = (store.messagesByChannel[channelId]?.messages?.length ?? 0) > 0;
-          store.fetchMessages(channelId, 50, undefined, true, hasMessages);
-        } catch {
-          // ignore
-        }
+        // MessageList already handles visibility-based catch-up fetches.
+        // Keep realtime recovery here limited to subscription health.
       }
     };
     
@@ -256,5 +258,5 @@ export const useRealtimeMessages = (channelId: string | null) => {
         }
       }
     };
-  }, [channelId, isConnected, isReconnecting]);
+  }, [channelId]);
 };

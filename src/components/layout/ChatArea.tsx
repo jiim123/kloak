@@ -10,7 +10,6 @@ import { useAuthStore } from "@/stores/authStore";
 import { useMessageStore } from "@/stores/messageStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useTyping } from "@/hooks/useTyping";
-import { useRealtimePinnedMessages } from "@/hooks/useRealtimePinnedMessages";
 import { useSwipeGestureRef } from "@/hooks/useSwipeGesture";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MessageSquare, Hash, Pin } from "lucide-react";
@@ -19,6 +18,7 @@ import { fetchServerEmojis } from "@/lib/serverEmojis";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
+import type { Message } from "@/types";
 
 // ── Granular Zustand selectors (stable references, minimal re-renders) ──
 
@@ -30,6 +30,7 @@ const selectUser = (s: ReturnType<typeof useAuthStore.getState>) => s.user;
 const selectSetMobileSidebarOpen = (s: ReturnType<typeof useUIStore.getState>) => s.setMobileSidebarOpen;
 const selectSetMemberSidebarOpen = (s: ReturnType<typeof useUIStore.getState>) => s.setMemberSidebarOpen;
 const selectOpenModal = (s: ReturnType<typeof useUIStore.getState>) => s.openModal;
+const EMPTY_MESSAGES: Message[] = [];
 
 // ── Empty‑channel placeholder (static, extracted to avoid re‑creation) ──
 
@@ -161,20 +162,29 @@ export const ChatArea = () => {
   const channelName = currentChannel?.name ?? "";
   const serverId = currentServer?.id ?? null;
   const isGhostMode = currentChannel?.ghost_mode ?? false;
+  const channelMessages = useMessageStore((s) => {
+    if (!channelId) return EMPTY_MESSAGES;
+    return s.messagesByChannel[channelId]?.messages ?? EMPTY_MESSAGES;
+  });
 
-  // Ensure we have member/role info for chat rendering (role colors, nicknames, ghost-mode admin checks).
-  // We previously lazy-loaded members only when the member sidebar opened, which broke these UI features.
+  // Ensure member data exists for the active server (role colors, nicknames, moderation checks).
+  // This should be server-scoped only; channel switches must not trigger member refetches.
   useEffect(() => {
     if (!serverId) return;
-    if (!currentChannel) return;
     // If the currently loaded members are for a different server (or not loaded yet), load them.
     if (membersServerId !== serverId) {
       fetchMembers(serverId);
     }
-  }, [serverId, currentChannel?.id, membersServerId, fetchMembers]);
+  }, [serverId, membersServerId, fetchMembers]);
 
   const { typingUsers, startTyping, stopTyping } = useTyping(isGhostMode ? null : channelId);
-  const { pinnedMessages } = useRealtimePinnedMessages(channelId);
+  const pinnedMessages = useMemo(() => {
+    if (channelMessages.length === 0) return EMPTY_MESSAGES;
+    return channelMessages
+      .filter((m) => m.is_pinned)
+      .slice()
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [channelMessages]);
   const isMobile = useIsMobile();
 
   // Store emojis as a plain object so reference equality checks work with useMemo

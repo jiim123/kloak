@@ -290,17 +290,16 @@ export const MembersSidebar = () => {
     }
   };
 
-  // Memoized MemberItem component
-  const MemberItem = memo(({ member }: { member: ServerMember }) => {
+  const renderMemberItem = (member: ServerMember) => {
     const displayName = member.nickname || member.user?.display_name || member.user?.username || "Unknown";
     const presence = getMemberPresence(member);
     const memberIsOffline = presence.isOffline;
     const isSelf = member.user_id === user?.id;
     const isServerOwner = currentServer?.owner_id === member.user_id;
 
-    const priorityCustomRoleColor = useMemo(() => {
-      const memberRoles = member.roles || [];
-      if (memberRoles.length === 0) return null;
+    const memberRoles = member.roles || [];
+    let priorityCustomRoleColor: string | null = null;
+    if (memberRoles.length > 0) {
       const resolved = memberRoles
         .map((mr) => roles.find((r) => r.id === mr.id) ?? mr)
         .filter(Boolean) as CustomServerRole[];
@@ -314,8 +313,8 @@ export const MembersSidebar = () => {
         const bPos = typeof best.position === "number" ? best.position : Number.POSITIVE_INFINITY;
         if (aPos < bPos) best = r;
       }
-      return best?.color ?? null;
-    }, [member.roles, roles]);
+      priorityCustomRoleColor = best?.color ?? null;
+    }
 
     const isGradientName = !!priorityCustomRoleColor && priorityCustomRoleColor.startsWith("linear-gradient");
 
@@ -333,6 +332,7 @@ export const MembersSidebar = () => {
 
     const content = (
       <div
+        key={member.id}
         className={cn(
           "group flex items-center gap-2.5 mx-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors",
           "hover:bg-secondary/60 active:bg-secondary/80",
@@ -409,7 +409,7 @@ export const MembersSidebar = () => {
     }
 
     return (
-      <ContextMenu>
+      <ContextMenu key={member.id}>
         <ContextMenuTrigger asChild>{content}</ContextMenuTrigger>
         <ContextMenuContent className="w-52 rounded-xl border-border/50 p-1.5">
           {/* Basic actions */}
@@ -508,9 +508,7 @@ export const MembersSidebar = () => {
         </ContextMenuContent>
       </ContextMenu>
     );
-  });
-
-  MemberItem.displayName = "MemberItem";
+  };
 
   const totalCount = members.length;
 
@@ -529,7 +527,7 @@ export const MembersSidebar = () => {
       {/* Members List */}
       <div className="flex-1 overflow-y-auto py-2">
         {/* Roles section */}
-        {roles
+        {[...roles]
           .sort((a, b) => a.position - b.position)
           .map((role) => {
             const roleMembers = roleGroups.get(role.id) || [];
@@ -542,9 +540,7 @@ export const MembersSidebar = () => {
               <div key={role.id} className="mb-3">
                 <SectionHeader label={role.name} count={roleMembers.length} color={textColor} colorDot={role.color} />
                 <div className="space-y-0.5">
-                  {roleMembers.map((member) => (
-                    <MemberItem key={member.id} member={member} />
-                  ))}
+                  {roleMembers.map((member) => renderMemberItem(member))}
                 </div>
               </div>
             );
@@ -555,9 +551,7 @@ export const MembersSidebar = () => {
           <div className="mb-3">
             <SectionHeader label="Online" count={onlineNoRoleMembers.length} />
             <div className="space-y-0.5">
-              {onlineNoRoleMembers.map((member) => (
-                <MemberItem key={member.id} member={member} />
-              ))}
+              {onlineNoRoleMembers.map((member) => renderMemberItem(member))}
             </div>
           </div>
         )}
@@ -577,9 +571,7 @@ export const MembersSidebar = () => {
             </CollapsibleTrigger>
             <CollapsibleContent>
               <div className="space-y-0.5 pt-1">
-                {offlineNoRoleMembers.map((member) => (
-                  <MemberItem key={member.id} member={member} />
-                ))}
+                {offlineNoRoleMembers.map((member) => renderMemberItem(member))}
               </div>
             </CollapsibleContent>
           </Collapsible>

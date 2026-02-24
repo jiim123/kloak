@@ -14,6 +14,7 @@ let pendingAutoStatus: UserStatus | null = null;
 let pendingAutoUserId: string | null = null;
 const statusInFlight = new Map<UserStatus, Promise<void>>();
 const LAST_SEEN_INTERVAL = 60_000; // 60 seconds minimum between calls
+let initializeAuthInFlight: Promise<void> | null = null;
 
 interface AuthState {
   user: User | null;
@@ -550,6 +551,16 @@ export const useAuthStore = create<AuthState>()(
 
 // Initialize auth on app load
 export const initializeAuth = async () => {
-  const { checkAuth } = useAuthStore.getState();
-  await checkAuth();
+  const { checkAuth, isAuthenticated, isLoading, secretKey } = useAuthStore.getState();
+  if (!secretKey) return;
+  if (isAuthenticated && !isLoading) return;
+  if (initializeAuthInFlight) return initializeAuthInFlight;
+
+  initializeAuthInFlight = (async () => {
+    await checkAuth();
+  })().finally(() => {
+    initializeAuthInFlight = null;
+  });
+
+  return initializeAuthInFlight;
 };

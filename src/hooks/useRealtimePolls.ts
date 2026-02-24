@@ -47,16 +47,22 @@ export const useRealtimePolls = (channelId: string | null) => {
   useEffect(() => {
     if (!channelId) return;
 
+    const hasKnownOpenPollsInChannel = () => {
+      const pollsById = usePollStore.getState().pollsById;
+      return Object.values(pollsById).some((p) => p.channel_id === channelId && !p.is_closed);
+    };
+
     // Close any expired polls when entering a channel (best-effort)
     const closeExpired = () => {
       if (document.visibilityState !== "visible") return;
+      if (!hasKnownOpenPollsInChannel()) return;
       usePollStore
         .getState()
         .closeExpiredPolls(channelId)
         .catch(() => undefined);
     };
 
-    // Run immediately on channel entry
+    // Avoid an RPC on every channel switch when the channel has no known polls.
     closeExpired();
 
     // Also run every 30s to catch polls that expire while user is in the channel

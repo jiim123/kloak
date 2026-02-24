@@ -6,12 +6,15 @@ import { useOnlineStatus } from './useOnlineStatus';
 // OPTIMIZATION: Consolidated heartbeat and latency into single check every 60s
 const COMBINED_CHECK_INTERVAL = 60000; // 60 seconds (was 30s heartbeat + 60s latency)
 const HEARTBEAT_FAILURES_BEFORE_RECONNECT = 2;
+const MIN_HEALTH_CHECK_GAP_MS = 5000;
 
 type RealtimeListener = (connected: boolean) => void;
 
 let sharedRealtimeChannel: ReturnType<typeof supabase.channel> | null = null;
 let sharedCombinedTimer: NodeJS.Timeout | null = null;
 let sharedSubscriberCount = 0;
+let sharedHealthCheckInFlight: Promise<void> | null = null;
+let sharedLastHealthCheckAt = 0;
 const realtimeListeners = new Set<RealtimeListener>();
 
 const notifyRealtimeConnected = (connected: boolean) => {
@@ -45,33 +48,52 @@ export function useConnectionStatus() {
   // Combined heartbeat and latency check - single query instead of two
   const checkConnectionHealth = useCallback(async () => {
     if (!isOnline) return;
-    
-    const start = performance.now();
-    try {
-      const { error } = await supabase.rpc('ping_health');
-      if (error) throw error;
-      
-      // Success - update latency and reset failures
-      const latency = Math.round(performance.now() - start);
-      updateLatency(latency);
-      heartbeatFailuresRef.current = 0;
-      
-      if (connection.status !== 'connected') {
-        setConnectionStatus('connected');
-        resetReconnectAttempts();
-      }
-    } catch (error) {
-      // Connection issue
-      updateLatency(-1);
-      heartbeatFailuresRef.current += 1;
-      
-      if (heartbeatFailuresRef.current >= HEARTBEAT_FAILURES_BEFORE_RECONNECT) {
-        if (connection.status === 'connected') {
-          setConnectionStatus('reconnecting');
-          incrementReconnectAttempts();
+
+    const now = Date.now();
+    if (sharedHealthCheckInFlight) {
+      await sharedHealthCheckInFlight;
+      return;
+    }
+    if (now - sharedLastHealthCheckAt < MIN_HEALTH_CHECK_GAP_MS) {
+      return;
+    }
+
+    const p = (async () => {
+      const start = performance.now();
+      try {
+        const { error } = await supabase.rpc('ping_health');
+        if (error) throw error;
+
+        // Success - update latency and reset failures
+        const latency = Math.round(performance.now() - start);
+        updateLatency(latency);
+        heartbeatFailuresRef.current = 0;
+
+        if (connection.status !== 'connected') {
+          setConnectionStatus('connected');
+          resetReconnectAttempts();
+        }
+      } catch (error) {
+        // Connection issue
+        updateLatency(-1);
+        heartbeatFailuresRef.current += 1;
+
+        if (heartbeatFailuresRef.current >= HEARTBEAT_FAILURES_BEFORE_RECONNECT) {
+          if (connection.status === 'connected') {
+            setConnectionStatus('reconnecting');
+            incrementReconnectAttempts();
+          }
         }
       }
-    }
+    })().finally(() => {
+      if (sharedHealthCheckInFlight === p) {
+        sharedHealthCheckInFlight = null;
+      }
+    });
+
+    sharedLastHealthCheckAt = now;
+    sharedHealthCheckInFlight = p;
+    await p;
   }, [isOnline, connection.status, setConnectionStatus, updateLatency, resetReconnectAttempts, incrementReconnectAttempts]);
 
   // Monitor Supabase realtime connection
@@ -166,13 +188,6 @@ export function useConnectionStatus() {
       // shared timer is cleaned up when last subscriber unmounts
     };
   }, [isOnline, checkConnectionHealth]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (combinedTimerRef.current) clearInterval(combinedTimerRef.current);
-    };
-  }, []);
 
   // Connection quality based on latency
   const connectionQuality = useCallback((): 'excellent' | 'good' | 'poor' | 'disconnected' => {

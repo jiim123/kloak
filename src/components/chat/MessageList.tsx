@@ -23,6 +23,7 @@ interface MessageListProps {
 const VIRTUALIZATION_THRESHOLD = 120;
 const VIRTUAL_OVERSCAN = 20;
 const ESTIMATED_MESSAGE_HEIGHT = 72;
+const CHANNEL_ENTRY_FORCE_REFETCH_MAX_AGE_MS = 12_000;
 
 // Group messages from same user within 1 minute
 const shouldGroupMessages = (current: Message, previous: Message | null): boolean => {
@@ -134,7 +135,8 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
 
   // Unread tracking
   const { getChannelUnread, markAsRead } = useUnreadChannelsContext();
-  const { lastReadAt, firstUnreadMessageId } = getChannelUnread(channelId);
+  const channelUnread = getChannelUnread(channelId);
+  const { lastReadAt, firstUnreadMessageId } = channelUnread;
 
   // Scroll to message from notification
   const { highlightedMessageId } = useScrollToMessage({ messages, isLoading, containerRef });
@@ -167,10 +169,19 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
     setShowJumpToPresent(false);
     setNewMessageCount(0);
 
-    // IMPORTANT: Always force a silent refetch on channel entry so users see newly arrived messages
-    // even if realtime is temporarily unhealthy and the cache is still "fresh".
-    const hasCached = (useMessageStore.getState().messagesByChannel[channelId]?.messages?.length ?? 0) > 0;
-    fetchMessages(channelId, 50, undefined, true, hasCached);
+    const cacheEntry = useMessageStore.getState().messagesByChannel[channelId];
+    const hasCached = (cacheEntry?.messages?.length ?? 0) > 0;
+    const isFreshEnough =
+      !!cacheEntry && Date.now() - cacheEntry.lastFetched < CHANNEL_ENTRY_FORCE_REFETCH_MAX_AGE_MS;
+    const unreadSnapshot = getChannelUnread(channelId);
+    const hasUnreadBacklog = (unreadSnapshot.unreadCount ?? 0) > 0;
+
+    // Avoid forcing a network fetch on every channel switch.
+    // Force when unread exists so switching back reconciles missed realtime updates.
+    const shouldForceRefetch = !hasCached || !isRealtimeConnected || !isFreshEnough || hasUnreadBacklog;
+    if (shouldForceRefetch) {
+      fetchMessages(channelId, 50, undefined, true, hasCached);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelId]);
 

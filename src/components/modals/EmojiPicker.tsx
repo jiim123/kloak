@@ -641,6 +641,8 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange, serve
   const [selectedServerForEmoji, setSelectedServerForEmoji] = useState<string | null>(null);
   const [serverEmojis, setServerEmojis] = useState<Record<string, ServerEmoji[]>>({});
   const [loadingServers, setLoadingServers] = useState<Set<string>>(new Set());
+  const loadedServersRef = useRef<Set<string>>(new Set());
+  const loadingServersRef = useRef<Set<string>>(new Set());
   const searchInputRef = useRef<HTMLInputElement>(null);
   const categoryScrollRef = useRef<HTMLDivElement>(null);
   const serverScrollRef = useRef<HTMLDivElement>(null);
@@ -661,17 +663,20 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange, serve
   const loadServerEmojis = useCallback(
     async (sId: string, opts?: { force?: boolean }) => {
       const force = opts?.force ?? false;
-      if (!force && (serverEmojis[sId] || loadingServers.has(sId))) return;
-      if (loadingServers.has(sId)) return;
+      if (!force && loadedServersRef.current.has(sId)) return;
+      if (loadingServersRef.current.has(sId)) return;
 
+      loadingServersRef.current.add(sId);
       setLoadingServers((prev) => new Set([...prev, sId]));
       try {
         const emojis = await fetchServerEmojis(sId, { force });
+        loadedServersRef.current.add(sId);
         setServerEmojis((prev) => ({ ...prev, [sId]: emojis }));
       } catch (error) {
         console.error("Failed to fetch server emojis:", error);
         setServerEmojis((prev) => ({ ...prev, [sId]: [] }));
       } finally {
+        loadingServersRef.current.delete(sId);
         setLoadingServers((prev) => {
           const next = new Set(prev);
           next.delete(sId);
@@ -679,7 +684,7 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange, serve
         });
       }
     },
-    [serverEmojis, loadingServers],
+    [],
   );
 
   // When emojis change elsewhere (upload/rename/delete), refresh any loaded lists.
@@ -698,52 +703,17 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange, serve
 
   // Load current server emojis when picker opens
   useEffect(() => {
-    if (open && serverId) {
-      loadServerEmojis(serverId);
+    if (open) {
       setSelectedServerForEmoji(serverId);
     }
-  }, [open, serverId, loadServerEmojis]);
-
-  // Lazily load other server emojis in the background (staggered, not all at once)
-  useEffect(() => {
-    if (!open || servers.length === 0) return;
-
-    // Determine which servers still need loading (exclude current server, already loaded ones)
-    const unloaded = servers
-      .map((s) => s.id)
-      .filter((id) => id !== serverId && !serverEmojis[id]);
-
-    if (unloaded.length === 0) return;
-
-    // Background prefetch can explode into dozens of requests for users in many servers.
-    // Cap how many servers we prefetch; everything else remains on-demand when selected.
-    const MAX_BACKGROUND_PREFETCH = servers.length <= 8 ? unloaded.length : 5;
-    const toPrefetch = unloaded.slice(0, MAX_BACKGROUND_PREFETCH);
-
-    // Stagger loads: 1 server every 150ms using requestIdleCallback (or setTimeout fallback)
-    const schedule = typeof requestIdleCallback === "function" ? requestIdleCallback : (cb: () => void) => setTimeout(cb, 0);
-    const timers: number[] = [];
-
-    toPrefetch.forEach((id, idx) => {
-      const timerId = window.setTimeout(() => {
-        schedule(() => loadServerEmojis(id));
-      }, idx * 150);
-      timers.push(timerId);
-    });
-
-    return () => {
-      timers.forEach((t) => clearTimeout(t));
-    };
-    // Only run once when picker opens — intentionally omit serverEmojis from deps
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, servers, serverId]);
+  }, [open, serverId]);
 
   // Load emojis when selecting a different server
   useEffect(() => {
-    if (selectedServerForEmoji) {
+    if (open && selectedServerForEmoji) {
       loadServerEmojis(selectedServerForEmoji);
     }
-  }, [selectedServerForEmoji, loadServerEmojis]);
+  }, [open, selectedServerForEmoji, loadServerEmojis]);
 
   // Check scroll state for category bar
   const updateScrollState = useCallback(() => {

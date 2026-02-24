@@ -2,10 +2,8 @@ import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useMessageStore } from '@/stores/messageStore';
 import { useAuthStore } from '@/stores/authStore';
-import { useConnectionStatus } from './useConnectionStatus';
 
 export const useRealtimeReactions = (channelId: string | null) => {
-  const { isConnected, isReconnecting } = useConnectionStatus();
   const isSettingUpRef = useRef(false);
 
   useEffect(() => {
@@ -13,6 +11,8 @@ export const useRealtimeReactions = (channelId: string | null) => {
       return;
     }
 
+    let isActive = true;
+    let isIntentionalClose = false;
     let channel: ReturnType<typeof supabase.channel> | null = null;
     let retryTimeout: NodeJS.Timeout | null = null;
     let retryCount = 0;
@@ -29,6 +29,7 @@ export const useRealtimeReactions = (channelId: string | null) => {
       // Clean up existing subscription if any
       if (channel) {
         try {
+          isIntentionalClose = true;
           supabase.removeChannel(channel);
         } catch (e) {
           // Ignore cleanup errors
@@ -199,12 +200,20 @@ export const useRealtimeReactions = (channelId: string | null) => {
           }
         )
         .subscribe((status, err) => {
+          if (!isActive) return;
           isSettingUpRef.current = false;
           
           if (status === 'SUBSCRIBED') {
+            isIntentionalClose = false;
             console.log('[Realtime] Successfully subscribed to reactions for channel:', channelId);
             retryCount = 0;
-          } else if (status === 'CHANNEL_ERROR' || status === 'CLOSED' || status === 'TIMED_OUT') {
+          } else if (status === 'CLOSED') {
+            // CLOSED is expected during channel switch/unmount cleanup.
+            // Don't treat it as an error unless it was unintentional.
+            if (!isIntentionalClose) {
+              console.warn('[Realtime] Reactions channel closed unexpectedly:', { channelId, status });
+            }
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
             if (err) {
               console.warn('[Realtime] Reactions subscribe error:', {
                 channelId,
@@ -250,6 +259,8 @@ export const useRealtimeReactions = (channelId: string | null) => {
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
+      isActive = false;
+      isIntentionalClose = true;
       isSettingUpRef.current = false;
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (retryTimeout) {
@@ -263,5 +274,5 @@ export const useRealtimeReactions = (channelId: string | null) => {
         }
       }
     };
-  }, [channelId, isConnected, isReconnecting]);
+  }, [channelId]);
 };
