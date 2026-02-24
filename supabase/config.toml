@@ -3,11 +3,8 @@ project_id = "foquucurnwpqcvgqukpz"
 [functions.get-livekit-token]
 verify_jwt = false
 
-<<<<<<< HEAD
 [functions.maintenance-mode]
 verify_jwt = false
 
-=======
->>>>>>> origin/main
 [functions.update-user-profile]
 verify_jwt = false
