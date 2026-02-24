@@ -1548,18 +1548,17 @@ export const useServerStore = create<ServerState>((set, get) => ({
           return;
         }
 
-        // OPTIMIZATION: Specify only required columns instead of select('*')
-        const { data, error } = await supabase
-          .from("role_permissions")
-          .select("id, server_id, role_id, role_name, permission, allowed, created_at")
-          .eq("server_id", serverId);
+        const { data, error } = await (supabase.rpc as any)("get_role_permissions", {
+          _server_id: serverId,
+        });
 
         if (error) {
           console.error("Query error:", error);
           throw error;
         }
 
-        const permissions: RolePermission[] = (data ?? []).map((row) => ({
+        const rows = Array.isArray(data) ? (data as any[]) : [];
+        const permissions: RolePermission[] = rows.map((row) => ({
           id: row.id,
           server_id: row.server_id,
           role_id: row.role_id,
@@ -1587,18 +1586,17 @@ export const useServerStore = create<ServerState>((set, get) => ({
           return;
         }
 
-        // OPTIMIZATION: Specify only required columns instead of select('*')
-        const { data, error } = await supabase
-          .from("channel_permissions")
-          .select("id, channel_id, role_id, role_name, user_id, permission, allowed, created_at")
-          .eq("channel_id", channelId);
+        const { data, error } = await (supabase.rpc as any)("get_channel_permissions", {
+          _channel_id: channelId,
+        });
 
         if (error) {
           console.error("Query error:", error);
           throw error;
         }
 
-        const permissions: ChannelPermission[] = (data ?? []).map((row: any) => ({
+        const rows = Array.isArray(data) ? (data as any[]) : [];
+        const permissions: ChannelPermission[] = rows.map((row: any) => ({
           id: row.id,
           channel_id: row.channel_id,
           role_id: row.role_id,
@@ -1722,17 +1720,17 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   fetchCategoryPermissions: async (categoryId: string) => {
     try {
-      const { data, error } = await (supabase as any)
-        .from("category_permissions")
-        .select("*")
-        .eq("category_id", categoryId);
+      const { data, error } = await (supabase.rpc as any)("get_category_permissions", {
+        _category_id: categoryId,
+      });
 
       if (error) {
         console.error("Query error:", error);
         throw error;
       }
 
-      const permissions: CategoryPermission[] = (data ?? []).map((row: any) => ({
+      const rows = Array.isArray(data) ? (data as any[]) : [];
+      const permissions: CategoryPermission[] = rows.map((row: any) => ({
         id: row.id,
         category_id: row.category_id,
         role_id: row.role_id,

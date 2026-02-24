@@ -1,6 +1,18 @@
 import { useState, useEffect, useRef, useCallback, useMemo, memo, forwardRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Smile, Reply, Pencil, Trash2, Pin, MoreHorizontal, CornerUpLeft, Copy, Eye, EyeOff, Paperclip } from "lucide-react";
+import {
+  Smile,
+  Reply,
+  Pencil,
+  Trash2,
+  Pin,
+  MoreHorizontal,
+  CornerUpLeft,
+  Copy,
+  Eye,
+  EyeOff,
+  Paperclip,
+} from "lucide-react";
 import { toast } from "sonner";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -37,8 +49,14 @@ import { EmojiPicker } from "@/components/modals/EmojiPicker";
 import type { CustomServerRole, Message, ServerRole } from "@/types";
 import { format } from "date-fns";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
-import { getGlobalEmojiMap, resolveEmojisByNameFallback, resolveQualifiedEmoji, type ResolvedEmoji } from "@/lib/globalEmojiResolver";
+import {
+  getGlobalEmojiMap,
+  resolveEmojisByNameFallback,
+  resolveQualifiedEmoji,
+  type ResolvedEmoji,
+} from "@/lib/globalEmojiResolver";
 import { cn } from "@/lib/utils";
+import { useSignedUrl } from "@/hooks/useSignedUrl";
 import { getPollIdFromContent, isPollMessageContent } from "@/lib/poll";
 
 // Static data moved outside component
@@ -82,6 +100,40 @@ const getStableAnimationKey = (message: Message): string => {
   const timestamp = Math.floor(new Date(message.created_at).getTime() / 1000);
   const contentPrefix = message.content.substring(0, 50);
   return `${timestamp}-${message.user_id}-${contentPrefix}`;
+};
+
+// Renders a single attachment, using a signed URL for private bucket images
+const AttachmentItem = ({
+  attachment,
+}: {
+  attachment: { id: string; file_url: string; file_name: string; file_type?: string; file_size?: number };
+}) => {
+  const signedUrl = useSignedUrl(attachment.file_url);
+
+  return (
+    <div className="relative">
+      {attachment.file_type?.startsWith("image/") ? (
+        <img
+          src={signedUrl ?? undefined}
+          alt={attachment.file_name}
+          className="max-w-full sm:max-w-[400px] max-h-[300px] rounded-lg cursor-pointer hover:opacity-90"
+          loading="lazy"
+        />
+      ) : (
+        <a
+          href={signedUrl ?? attachment.file_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 p-3 bg-secondary rounded-lg hover:bg-secondary/80"
+        >
+          <span className="text-sm font-medium">{attachment.file_name}</span>
+          {attachment.file_size && (
+            <span className="text-xs text-muted-foreground">({Math.round(attachment.file_size / 1024)} KB)</span>
+          )}
+        </a>
+      )}
+    </div>
+  );
 };
 
 export const MessageItem = memo(function MessageItem({
@@ -157,7 +209,7 @@ export const MessageItem = memo(function MessageItem({
 
   // Memoize member lookups
   const channels = useServerStore((state) => state.channels);
-  
+
   const { currentMember, messageMember, usersMap, channelsMap } = useMemo(() => {
     const userMap = new Map<string, { username: string; display_name?: string | null; nickname?: string | null }>();
     members.forEach((m) => {
@@ -169,12 +221,12 @@ export const MessageItem = memo(function MessageItem({
         });
       }
     });
-    
+
     const channelMap = new Map<string, { name: string }>();
     channels.forEach((c) => {
       channelMap.set(c.id, { name: c.name });
     });
-    
+
     return {
       currentMember: members.find((m) => m.user_id === user?.id),
       messageMember: members.find((m) => m.user_id === message.user_id),
@@ -223,10 +275,14 @@ export const MessageItem = memo(function MessageItem({
   // Load global emoji map for cross-server reaction rendering
   useEffect(() => {
     let cancelled = false;
-    getGlobalEmojiMap().then((map) => {
-      if (!cancelled) setGlobalEmojiMap(map);
-    }).catch(() => {});
-    return () => { cancelled = true; };
+    getGlobalEmojiMap()
+      .then((map) => {
+        if (!cancelled) setGlobalEmojiMap(map);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [currentServer?.id]);
 
   // Note: avoid per-message global event listeners; cache invalidation handles freshness.
@@ -441,9 +497,9 @@ export const MessageItem = memo(function MessageItem({
     // Filter out image URLs
     const imageExtensions = /\.(gif|jpe?g|png|webp|bmp|svg)(\?.*)?$/i;
     const imageHosts = [/media\d*\.giphy\.com/i, /i\.giphy\.com/i, /tenor\.com.*\.gif/i, /i\.imgur\.com/i];
-    return urls.some(url => {
+    return urls.some((url) => {
       if (imageExtensions.test(url)) return false;
-      if (imageHosts.some(pattern => pattern.test(url))) return false;
+      if (imageHosts.some((pattern) => pattern.test(url))) return false;
       return true;
     });
   }, [message.content]);
@@ -467,7 +523,7 @@ export const MessageItem = memo(function MessageItem({
     const memberRoles = messageMember.roles || [];
     if (memberRoles.length === 0) return false;
     // Check if any of their roles have manage_messages - simplified check
-    return memberRoles.some(r => r.name === 'Admin' || r.name === 'Moderator');
+    return memberRoles.some((r) => r.name === "Admin" || r.name === "Moderator");
   }, [messageMember, currentServer]);
   const showGhostIdentity = isGhostMode && !messageAuthorIsAdmin;
 
@@ -478,7 +534,7 @@ export const MessageItem = memo(function MessageItem({
     if (!replyMember) return false;
     if (currentServer && replyMember.user_id === currentServer.owner_id) return true;
     const memberRoles = replyMember.roles || [];
-    return memberRoles.some(r => r.name === 'Admin' || r.name === 'Moderator');
+    return memberRoles.some((r) => r.name === "Admin" || r.name === "Moderator");
   }, [message.reply_to?.user?.id, members, isGhostMode, currentServer]);
   const showReplyAuthorIdentity = !isGhostMode || replyAuthorIsAdmin;
 
@@ -855,14 +911,18 @@ export const MessageItem = memo(function MessageItem({
                 {message.is_system_message ? (
                   (() => {
                     // Detect poll result system messages by content pattern
-                    const isPollResult = message.content?.includes('Poll ended');
+                    const isPollResult = message.content?.includes("Poll ended");
                     // Strip the 📊 emoji (and variants) from content for poll results
                     const cleanedContent = isPollResult
-                      ? message.content.replace(/📊\s*/g, '').trim()
+                      ? message.content.replace(/📊\s*/g, "").trim()
                       : message.content;
 
                     const pollIcon = (
-                      <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current flex-shrink-0" xmlns="http://www.w3.org/2000/svg">
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="w-4 h-4 fill-current flex-shrink-0"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
                         <path d="M11.7518706,1.99956021 C13.2716867,1.99956021 14.5037411,3.23161462 14.5037411,4.75143076 L14.5037411,19.2499651 C14.5037411,20.7697812 13.2716867,22.0018356 11.7518706,22.0018356 C10.2320544,22.0018356 9,20.7697812 9,19.2499651 L9,4.75143076 C9,3.23161462 10.2320544,1.99956021 11.7518706,1.99956021 Z M18.7518706,6.99956021 C20.2716867,6.99956021 21.5037411,8.23161462 21.5037411,9.75143076 L21.5037411,19.2499651 C21.5037411,20.7697812 20.2716867,22.0018356 18.7518706,22.0018356 C17.2320544,22.0018356 16,20.7697812 16,19.2499651 L16,9.75143076 C16,8.23161462 17.2320544,6.99956021 18.7518706,6.99956021 Z M4.75187055,11.9995602 C6.27168669,11.9995602 7.5037411,13.2316146 7.5037411,14.7514308 L7.5037411,19.2499651 C7.5037411,20.7697812 6.27168669,22.0018356 4.75187055,22.0018356 C3.23205441,22.0018356 2,20.7697812 2,19.2499651 L2,14.7514308 C2,13.2316146 3.23205441,11.9995602 4.75187055,11.9995602 Z" />
                       </svg>
                     );
@@ -907,9 +967,9 @@ export const MessageItem = memo(function MessageItem({
                           onClick={() => {
                             const el = targetId ? document.getElementById(`message-${targetId}`) : null;
                             if (el) {
-                              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                              el.classList.add('bg-primary/10');
-                              setTimeout(() => el.classList.remove('bg-primary/10'), 2000);
+                              el.scrollIntoView({ behavior: "smooth", block: "center" });
+                              el.classList.add("bg-primary/10");
+                              setTimeout(() => el.classList.remove("bg-primary/10"), 2000);
                             }
                           }}
                         >
@@ -1010,12 +1070,13 @@ export const MessageItem = memo(function MessageItem({
                             );
                           }
                           // Strip attachment/image URLs from content for preview
-                          const attachmentUrlPattern = /https?:\/\/[^\s]*(?:supabase\.co\/storage\/v1\/|\.(?:jpg|jpeg|png|gif|webp|mp4|mov|pdf|zip|rar|doc|docx|xls|xlsx))(?:[^\s]*)/gi;
+                          const attachmentUrlPattern =
+                            /https?:\/\/[^\s]*(?:supabase\.co\/storage\/v1\/|\.(?:jpg|jpeg|png|gif|webp|mp4|mov|pdf|zip|rar|doc|docx|xls|xlsx))(?:[^\s]*)/gi;
                           const textOnly = replyContent
-                            .split('\n')
-                            .map(line => line.replace(attachmentUrlPattern, '').trim())
-                            .filter(line => line.length > 0)
-                            .join(' ');
+                            .split("\n")
+                            .map((line) => line.replace(attachmentUrlPattern, "").trim())
+                            .filter((line) => line.length > 0)
+                            .join(" ");
                           if (!textOnly) {
                             return (
                               <span className="italic flex-shrink-0 flex items-center gap-1">
@@ -1133,30 +1194,7 @@ export const MessageItem = memo(function MessageItem({
                     {!message.is_system_message && message.attachments && message.attachments.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-2">
                         {message.attachments.map((attachment) => (
-                          <div key={attachment.id} className="relative">
-                            {attachment.file_type?.startsWith("image/") ? (
-                              <img
-                                src={attachment.file_url}
-                                alt={attachment.file_name}
-                                className="max-w-full sm:max-w-[400px] max-h-[300px] rounded-lg cursor-pointer hover:opacity-90"
-                                loading="lazy"
-                              />
-                            ) : (
-                              <a
-                                href={attachment.file_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-2 p-3 bg-secondary rounded-lg hover:bg-secondary/80"
-                              >
-                                <span className="text-sm font-medium">{attachment.file_name}</span>
-                                {attachment.file_size && (
-                                  <span className="text-xs text-muted-foreground">
-                                    ({Math.round(attachment.file_size / 1024)} KB)
-                                  </span>
-                                )}
-                              </a>
-                            )}
-                          </div>
+                          <AttachmentItem key={attachment.id} attachment={attachment} />
                         ))}
                       </div>
                     )}
@@ -1193,41 +1231,41 @@ export const MessageItem = memo(function MessageItem({
                                   </div>
                                 </div>
                               ) : (
-                              (() => {
-                                const names = getReactionUserNames(reaction.users);
-                                const preview = names.slice(0, 4);
-                                const remaining = Math.max(0, names.length - preview.length);
-                                return (
-                                  <div className="flex items-center gap-1">
-                                    <div className="shrink-0">{reactionEmojiNodeLarge(reaction.emoji)}</div>
-                                    <div className="min-w-0 text-sm leading-tight">
-                                      <span className="text-muted-foreground">reacted by</span>{" "}
-                                      {preview.map((name, idx) => (
-                                        <span key={`${reaction.emoji}-${name}`}>
-                                          <span className="truncate">{name}</span>
-                                          {idx < preview.length - 1 ? ", " : ""}
-                                        </span>
-                                      ))}
-                                      {remaining > 0 && (
-                                        <>
-                                          {preview.length > 0 ? ", " : ""}
-                                          <button
-                                            type="button"
-                                            className="text-primary underline hover:no-underline"
-                                            onClick={(e) => {
-                                              e.preventDefault();
-                                              e.stopPropagation();
-                                              setReactionDetailsEmoji(reaction.emoji);
-                                            }}
-                                          >
-                                            {remaining} others
-                                          </button>
-                                        </>
-                                      )}
+                                (() => {
+                                  const names = getReactionUserNames(reaction.users);
+                                  const preview = names.slice(0, 4);
+                                  const remaining = Math.max(0, names.length - preview.length);
+                                  return (
+                                    <div className="flex items-center gap-1">
+                                      <div className="shrink-0">{reactionEmojiNodeLarge(reaction.emoji)}</div>
+                                      <div className="min-w-0 text-sm leading-tight">
+                                        <span className="text-muted-foreground">reacted by</span>{" "}
+                                        {preview.map((name, idx) => (
+                                          <span key={`${reaction.emoji}-${name}`}>
+                                            <span className="truncate">{name}</span>
+                                            {idx < preview.length - 1 ? ", " : ""}
+                                          </span>
+                                        ))}
+                                        {remaining > 0 && (
+                                          <>
+                                            {preview.length > 0 ? ", " : ""}
+                                            <button
+                                              type="button"
+                                              className="text-primary underline hover:no-underline"
+                                              onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                setReactionDetailsEmoji(reaction.emoji);
+                                              }}
+                                            >
+                                              {remaining} others
+                                            </button>
+                                          </>
+                                        )}
+                                      </div>
                                     </div>
-                                  </div>
-                                );
-                              })()
+                                  );
+                                })()
                               )}
                             </HoverCardContent>
                           </HoverCard>
@@ -1260,7 +1298,7 @@ export const MessageItem = memo(function MessageItem({
                   )}
 
                   {/* Reply - Hide for announcement channels */}
-                  {(
+                  {
                     <button
                       className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
                       onClick={() => setReplyingTo(message)}
@@ -1269,7 +1307,7 @@ export const MessageItem = memo(function MessageItem({
                     >
                       <Reply className="w-4 h-4" />
                     </button>
-                  )}
+                  }
 
                   {/* Edit (own messages) */}
                   {isOwnMessage && (
@@ -1560,7 +1598,8 @@ export const MessageItem = memo(function MessageItem({
           <div className="max-h-[320px] overflow-auto space-y-1">
             {isGhostMode ? (
               <div className="text-sm text-muted-foreground">
-                {selectedReaction ? selectedReaction.count : 0} {(selectedReaction?.count ?? 0) === 1 ? "person" : "people"} reacted
+                {selectedReaction ? selectedReaction.count : 0}{" "}
+                {(selectedReaction?.count ?? 0) === 1 ? "person" : "people"} reacted
               </div>
             ) : selectedReactionNames.length > 0 ? (
               selectedReactionNames.map((name, idx) => (

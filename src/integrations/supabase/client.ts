@@ -104,10 +104,18 @@ export function setKeyHashHeader(keyHash: string | null) {
 }
 
 /**
- * Get the current key hash.
+ * Get the current key hash (synchronous).
  */
 export function getKeyHash(): string | null {
   return currentKeyHash;
+}
+
+/**
+ * Get the current key hash (async, with localStorage fallback).
+ * Use this when the sync getKeyHash() might return null on first load.
+ */
+export async function getKeyHashAsync(): Promise<string | null> {
+  return ensureKeyHash();
 }
 
 // Import the supabase client like this:

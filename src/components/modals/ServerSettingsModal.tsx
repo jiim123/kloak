@@ -107,7 +107,12 @@ type ServerSettingsForm = z.infer<typeof serverSettingsSchema>;
 
 // Server initials helper
 const getServerInitials = (name: string) =>
-  name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+  name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
 // Owner icon helper - shows crown for server owner
 const getOwnerIcon = (memberId: string, ownerId: string) => {
@@ -189,7 +194,7 @@ export const ServerSettingsModal = () => {
   const [activeTab, setActiveTab] = useState<SettingsTabId>("overview");
   const [editingRole, setEditingRole] = useState<CustomServerRole | null>(null);
   const [editingRolePermissions, setEditingRolePermissions] = useState<CustomServerRole | null>(null);
-  const [roleTab, setRoleTab] = useState<'details' | 'permissions'>('details');
+  const [roleTab, setRoleTab] = useState<"details" | "permissions">("details");
   const [roleName, setRoleName] = useState("");
   const [roleColor, setRoleColor] = useState("#5865F2");
   const [roleIcon, setRoleIcon] = useState<string>("");
@@ -234,9 +239,7 @@ export const ServerSettingsModal = () => {
   // Memoize emoji URLs to prevent regenerating on every render
   const serverEmojisWithUrls = useMemo(() => {
     return serverEmojis.map((emoji) => {
-      const { data: urlData } = supabase.storage
-        .from("server-emojis")
-        .getPublicUrl(emoji.file_path);
+      const { data: urlData } = supabase.storage.from("server-emojis").getPublicUrl(emoji.file_path);
       return { ...emoji, url: urlData.publicUrl };
     });
   }, [serverEmojis]);
@@ -367,7 +370,7 @@ export const ServerSettingsModal = () => {
             onClick={() => {
               if (isMobile) {
                 handleEditRole(role);
-                setRoleTab('permissions');
+                setRoleTab("permissions");
               } else {
                 setEditingRolePermissions(role);
               }
@@ -384,7 +387,7 @@ export const ServerSettingsModal = () => {
             onClick={() => {
               handleEditRole(role);
               if (isMobile) {
-                setRoleTab('details');
+                setRoleTab("details");
               }
             }}
             className="text-[10px] sm:text-xs h-8 px-2 sm:px-3"
@@ -392,7 +395,7 @@ export const ServerSettingsModal = () => {
           >
             <Edit2 className="w-3 h-3" />
           </Button>
-          {role.name !== '@everyone' && (
+          {role.name !== "@everyone" && (
             <Button
               variant="ghost"
               size="sm"
@@ -430,15 +433,13 @@ export const ServerSettingsModal = () => {
 
   // Navigation items for tabs with categories
   const navCategories = useMemo(() => {
-    const categories: Array<{ 
-      label: string; 
-      items: Array<{ id: SettingsTabId; label: string; icon: LucideIcon }> 
+    const categories: Array<{
+      label: string;
+      items: Array<{ id: SettingsTabId; label: string; icon: LucideIcon }>;
     }> = [
       {
         label: "Server",
-        items: [
-          { id: "overview", label: "Overview", icon: Settings },
-        ],
+        items: [{ id: "overview", label: "Overview", icon: Settings }],
       },
       {
         label: "People",
@@ -454,9 +455,7 @@ export const ServerSettingsModal = () => {
     if (canManageEmojis) {
       categories.push({
         label: "Content",
-        items: [
-          { id: "emojis", label: "Emojis", icon: Smile },
-        ],
+        items: [{ id: "emojis", label: "Emojis", icon: Smile }],
       });
     }
 
@@ -464,9 +463,7 @@ export const ServerSettingsModal = () => {
     if (canManageInvites) {
       categories.push({
         label: "Integrations",
-        items: [
-          { id: "invites", label: "Invites", icon: Link2 },
-        ],
+        items: [{ id: "invites", label: "Invites", icon: Link2 }],
       });
     }
 
@@ -475,7 +472,7 @@ export const ServerSettingsModal = () => {
 
   // Flattened navItems for backward compatibility (used in mobile view)
   const navItems = useMemo(() => {
-    return navCategories.flatMap(category => category.items);
+    return navCategories.flatMap((category) => category.items);
   }, [navCategories]);
 
   const {
@@ -816,11 +813,11 @@ export const ServerSettingsModal = () => {
 
       await secureUpload("server-emojis", filePath, emojiFile, { contentType: emojiFile.type, upsert: false });
 
-      const { error: insertError } = await (supabase.rpc as any)('upload_server_emoji', {
+      const { error: insertError } = await (supabase.rpc as any)("upload_server_emoji", {
         _server_id: server.id,
         _user_id: user.id,
         _name: normalized,
-        _file_path: filePath
+        _file_path: filePath,
       });
 
       if (insertError) throw insertError;
@@ -870,7 +867,7 @@ export const ServerSettingsModal = () => {
       return;
     }
     try {
-      const { error } = await (supabase.rpc as any)('rename_server_emoji', {
+      const { error } = await (supabase.rpc as any)("rename_server_emoji", {
         _emoji_id: emojiId,
         _user_id: user.id,
         _new_name: trimmed,
@@ -901,11 +898,11 @@ export const ServerSettingsModal = () => {
     if (!confirm(`Delete emoji "${emoji.name}"?`)) return;
 
     try {
-      const { data: deletedPath, error } = await (supabase.rpc as any)('delete_server_emoji', {
+      const { data: deletedPath, error } = await (supabase.rpc as any)("delete_server_emoji", {
         _emoji_id: emoji.id,
-        _user_id: user.id
+        _user_id: user.id,
       });
-      
+
       if (error) throw error;
       if (deletedPath) {
         await secureDelete("server-emojis", deletedPath as string);
@@ -924,7 +921,10 @@ export const ServerSettingsModal = () => {
 
   const bulkDeleteEmojis = async () => {
     if (!server || !user || selectedEmojiIds.size === 0) return;
-    if (!confirm(`Delete ${selectedEmojiIds.size} emoji${selectedEmojiIds.size > 1 ? 's' : ''}? This cannot be undone.`)) return;
+    if (
+      !confirm(`Delete ${selectedEmojiIds.size} emoji${selectedEmojiIds.size > 1 ? "s" : ""}? This cannot be undone.`)
+    )
+      return;
 
     setIsDeletingEmojis(true);
     let success = 0;
@@ -932,9 +932,9 @@ export const ServerSettingsModal = () => {
 
     for (const emojiId of selectedEmojiIds) {
       try {
-        const { data: deletedPath, error } = await (supabase.rpc as any)('delete_server_emoji', {
+        const { data: deletedPath, error } = await (supabase.rpc as any)("delete_server_emoji", {
           _emoji_id: emojiId,
-          _user_id: user.id
+          _user_id: user.id,
         });
         if (error) throw error;
         if (deletedPath) await secureDelete("server-emojis", deletedPath as string);
@@ -953,7 +953,7 @@ export const ServerSettingsModal = () => {
     setIsDeletingEmojis(false);
 
     if (failed === 0) {
-      toast.success(`Deleted ${success} emoji${success > 1 ? 's' : ''}`);
+      toast.success(`Deleted ${success} emoji${success > 1 ? "s" : ""}`);
     } else {
       toast.warning(`Deleted ${success}, failed ${failed}`);
     }
@@ -1017,7 +1017,9 @@ export const ServerSettingsModal = () => {
     // Clean up old icon files first
     try {
       await secureListAndDelete("server-icons", serverId, "icon");
-    } catch { /* ignore cleanup errors */ }
+    } catch {
+      /* ignore cleanup errors */
+    }
 
     const result = await secureUpload("server-icons", filePath, file, { upsert: true });
 
@@ -1109,7 +1111,9 @@ export const ServerSettingsModal = () => {
     // Clean up old banner files first
     try {
       await secureListAndDelete("server-icons", serverId, "banner");
-    } catch { /* ignore cleanup errors */ }
+    } catch {
+      /* ignore cleanup errors */
+    }
 
     const result = await secureUpload("server-icons", filePath, file, { upsert: true });
 
@@ -1121,10 +1125,12 @@ export const ServerSettingsModal = () => {
 
     setIsUploadingBanner(true);
     try {
-      // Delete banner files from storage (try common extensions)
-      const extensions = ["webp", "png", "jpg", "jpeg"];
-      const filesToRemove = extensions.map(ext => `${server.id}/banner.${ext}`);
-      await secureDelete("server-icons", filesToRemove);
+      // Delete all banner files from storage (handles timestamped filenames like banner-1234567890.webp)
+      try {
+        await secureListAndDelete("server-icons", server.id, "banner");
+      } catch {
+        /* ignore cleanup errors */
+      }
 
       // Update DB
       await updateServer(server.id, user.id, { banner_url: null });
@@ -1151,7 +1157,9 @@ export const ServerSettingsModal = () => {
       // Delete all icon files from storage (handles timestamped filenames)
       try {
         await secureListAndDelete("server-icons", server.id, "icon");
-      } catch { /* ignore cleanup errors */ }
+      } catch {
+        /* ignore cleanup errors */
+      }
 
       // Update DB
       await updateServer(server.id, user.id, { icon_url: null });
@@ -1368,8 +1376,14 @@ export const ServerSettingsModal = () => {
     );
   }
 
-  const displayIconUrl = iconRemoved ? null : (iconPreview || server.icon_url);
-  const displayBannerUrl = bannerRemoved ? null : (bannerPreview || server.banner_url);
+  const bustCache = (url: string | null | undefined): string | null => {
+    if (!url) return null;
+    if (url.startsWith("blob:")) return url;
+    const sep = url.includes("?") ? "&" : "?";
+    return `${url}${sep}cb=${encodeURIComponent(url.split("/").pop()?.split("?")[0] ?? Date.now())}`;
+  };
+  const displayIconUrl = iconRemoved ? null : iconPreview || bustCache(server.icon_url);
+  const displayBannerUrl = bannerRemoved ? null : bannerPreview || bustCache(server.banner_url);
 
   return (
     <>
@@ -1455,7 +1469,9 @@ export const ServerSettingsModal = () => {
                           {displayIconUrl ? (
                             <img src={displayIconUrl} alt={server.name} className="w-full h-full object-cover" />
                           ) : (
-                            <span className="text-base font-bold text-muted-foreground">{getServerInitials(server.name)}</span>
+                            <span className="text-base font-bold text-muted-foreground">
+                              {getServerInitials(server.name)}
+                            </span>
                           )}
                           {isUploadingIcon && (
                             <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
@@ -1750,7 +1766,8 @@ export const ServerSettingsModal = () => {
                               )}
                             </div>
                             <p className="text-xs text-muted-foreground truncate">
-                              {member.user?.username}{server && member.user_id === server.owner_id ? ' • Owner' : ''}
+                              {member.user?.username}
+                              {server && member.user_id === server.owner_id ? " • Owner" : ""}
                             </p>
                           </div>
                           {canManageRoles && (member.user_id !== user?.id || isOwner) && (
@@ -1824,20 +1841,24 @@ export const ServerSettingsModal = () => {
                 (canManageRoles ? (
                   <div className="space-y-4">
                     {editingRole ? (
-                      <Tabs value={roleTab} onValueChange={(v) => setRoleTab(v as 'details' | 'permissions')} className="space-y-4">
+                      <Tabs
+                        value={roleTab}
+                        onValueChange={(v) => setRoleTab(v as "details" | "permissions")}
+                        className="space-y-4"
+                      >
                         <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3">
                           <div className="mb-3">
                             <h4 className="text-sm font-semibold mb-1">Edit Role</h4>
                             <p className="text-xs text-muted-foreground">Modify role settings and permissions</p>
                           </div>
                           <TabsList className="inline-flex h-auto p-1 bg-secondary/50 rounded-xl border border-border/50 w-full">
-                            <TabsTrigger 
+                            <TabsTrigger
                               value="details"
                               className="flex-1 rounded-lg py-2 px-3 text-xs font-medium transition-all data-[state=active]:bg-background data-[state=active]:shadow-sm"
                             >
                               Details
                             </TabsTrigger>
-                            <TabsTrigger 
+                            <TabsTrigger
                               value="permissions"
                               className="flex-1 rounded-lg py-2 px-3 text-xs font-medium transition-all data-[state=active]:bg-background data-[state=active]:shadow-sm"
                             >
@@ -1848,68 +1869,68 @@ export const ServerSettingsModal = () => {
 
                         <TabsContent value="details" className="m-0 space-y-4">
                           <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 space-y-4">
-                      <div className="space-y-3">
-                        <Label className="text-sm">Role Name</Label>
-                        <Input
-                          value={roleName}
-                          onChange={(e) => setRoleName(e.target.value)}
-                          placeholder="Role name"
-                          className="h-10 rounded-xl bg-secondary/50 border-border/30"
-                          maxLength={100}
-                        />
-                      </div>
-                      <RoleColorPicker
-                        colorType={colorType}
-                        onColorTypeChange={setColorType}
-                        color={roleColor}
-                        onColorChange={setRoleColor}
-                        gradientColors={gradientColors}
-                        onGradientColorsChange={setGradientColors}
-                        gradientAngle={gradientAngle}
-                        onGradientAngleChange={setGradientAngle}
-                      />
-                      <div className="space-y-2">
-                        <Label className="text-sm">Role Icon (optional)</Label>
-                        <div className="flex items-center gap-2">
-                          <EmojiGifPicker
-                            disableGif
-                            serverId={server.id}
-                            serverName={server.name}
-                            open={undefined}
-                            onOpenChange={undefined}
-                            onEmojiSelect={(emoji) => setRoleIcon(emoji)}
-                          >
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="h-10 px-3 rounded-xl flex items-center gap-2"
-                            >
-                              <Smile className="w-4 h-4" />
-                              <span className="text-sm">{roleIcon ? "Change" : "Select"}</span>
-                            </Button>
-                          </EmojiGifPicker>
-                          <div className="flex-1 min-w-0">
-                            {roleIcon ? (
+                            <div className="space-y-3">
+                              <Label className="text-sm">Role Name</Label>
+                              <Input
+                                value={roleName}
+                                onChange={(e) => setRoleName(e.target.value)}
+                                placeholder="Role name"
+                                className="h-10 rounded-xl bg-secondary/50 border-border/30"
+                                maxLength={100}
+                              />
+                            </div>
+                            <RoleColorPicker
+                              colorType={colorType}
+                              onColorTypeChange={setColorType}
+                              color={roleColor}
+                              onColorChange={setRoleColor}
+                              gradientColors={gradientColors}
+                              onGradientColorsChange={setGradientColors}
+                              gradientAngle={gradientAngle}
+                              onGradientAngleChange={setGradientAngle}
+                            />
+                            <div className="space-y-2">
+                              <Label className="text-sm">Role Icon (optional)</Label>
                               <div className="flex items-center gap-2">
-                                <RoleIconPreview icon={roleIcon} serverId={server.id} />
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="w-8 h-8 rounded-xl"
-                                  onClick={() => setRoleIcon("")}
-                                  title="Clear role icon"
+                                <EmojiGifPicker
+                                  disableGif
+                                  serverId={server.id}
+                                  serverName={server.name}
+                                  open={undefined}
+                                  onOpenChange={undefined}
+                                  onEmojiSelect={(emoji) => setRoleIcon(emoji)}
                                 >
-                                  <X className="w-3.5 h-3.5" />
-                                </Button>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-10 px-3 rounded-xl flex items-center gap-2"
+                                  >
+                                    <Smile className="w-4 h-4" />
+                                    <span className="text-sm">{roleIcon ? "Change" : "Select"}</span>
+                                  </Button>
+                                </EmojiGifPicker>
+                                <div className="flex-1 min-w-0">
+                                  {roleIcon ? (
+                                    <div className="flex items-center gap-2">
+                                      <RoleIconPreview icon={roleIcon} serverId={server.id} />
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="w-8 h-8 rounded-xl"
+                                        onClick={() => setRoleIcon("")}
+                                        title="Clear role icon"
+                                      >
+                                        <X className="w-3.5 h-3.5" />
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <p className="text-xs text-muted-foreground truncate">Emoji or server emoji</p>
+                                  )}
+                                </div>
                               </div>
-                            ) : (
-                              <p className="text-xs text-muted-foreground truncate">Emoji or server emoji</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
+                            </div>
                             <Button
                               onClick={handleUpdateRole}
                               disabled={!roleName.trim()}
@@ -1927,7 +1948,7 @@ export const ServerSettingsModal = () => {
                                 setColorType("solid");
                                 setGradientColors(["#5865F2", "#7289DA"]);
                                 setGradientAngle(135);
-                                setRoleTab('details');
+                                setRoleTab("details");
                               }}
                               className="h-10 rounded-xl w-full"
                             >
@@ -1938,11 +1959,7 @@ export const ServerSettingsModal = () => {
 
                         <TabsContent value="permissions" className="m-0">
                           {server && (
-                            <RolePermissionsEditor
-                              role={editingRole}
-                              serverId={server.id}
-                              onClose={() => {}}
-                            />
+                            <RolePermissionsEditor role={editingRole} serverId={server.id} onClose={() => {}} />
                           )}
                         </TabsContent>
                       </Tabs>
@@ -2048,7 +2065,7 @@ export const ServerSettingsModal = () => {
                               >
                                 <Edit2 className="w-3 h-3" />
                               </Button>
-                              {role.name !== '@everyone' && (
+                              {role.name !== "@everyone" && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -2170,7 +2187,9 @@ export const ServerSettingsModal = () => {
                       <div className="flex items-center justify-between flex-wrap gap-2">
                         <h4 className="text-sm font-semibold">Server Emojis</h4>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">{serverEmojis.length}/{MAX_SERVER_EMOJIS}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {serverEmojis.length}/{MAX_SERVER_EMOJIS}
+                          </span>
                           {serverEmojis.length > 0 && (
                             <Button
                               type="button"
@@ -2183,7 +2202,7 @@ export const ServerSettingsModal = () => {
                               }}
                               className="text-xs h-7"
                             >
-                              {isMultiSelectMode ? 'Cancel' : 'Select'}
+                              {isMultiSelectMode ? "Cancel" : "Select"}
                             </Button>
                           )}
                         </div>
@@ -2200,11 +2219,11 @@ export const ServerSettingsModal = () => {
                               if (selectedEmojiIds.size === serverEmojis.length) {
                                 setSelectedEmojiIds(new Set());
                               } else {
-                                setSelectedEmojiIds(new Set(serverEmojis.map(e => e.id)));
+                                setSelectedEmojiIds(new Set(serverEmojis.map((e) => e.id)));
                               }
                             }}
                           >
-                            {selectedEmojiIds.size === serverEmojis.length ? 'Deselect All' : 'Select All'}
+                            {selectedEmojiIds.size === serverEmojis.length ? "Deselect All" : "Select All"}
                           </Button>
                           {selectedEmojiIds.size > 0 && (
                             <Button
@@ -2240,23 +2259,27 @@ export const ServerSettingsModal = () => {
                                 className={cn(
                                   "group flex items-center gap-3 px-3 py-2 transition-colors",
                                   isMultiSelectMode ? "cursor-pointer hover:bg-secondary/30" : "hover:bg-secondary/20",
-                                  isMultiSelectMode && selectedEmojiIds.has(emoji.id) && "bg-primary/10"
+                                  isMultiSelectMode && selectedEmojiIds.has(emoji.id) && "bg-primary/10",
                                 )}
-                                onClick={isMultiSelectMode ? () => {
-                                  setSelectedEmojiIds(prev => {
-                                    const next = new Set(prev);
-                                    if (next.has(emoji.id)) next.delete(emoji.id);
-                                    else next.add(emoji.id);
-                                    return next;
-                                  });
-                                } : undefined}
+                                onClick={
+                                  isMultiSelectMode
+                                    ? () => {
+                                        setSelectedEmojiIds((prev) => {
+                                          const next = new Set(prev);
+                                          if (next.has(emoji.id)) next.delete(emoji.id);
+                                          else next.add(emoji.id);
+                                          return next;
+                                        });
+                                      }
+                                    : undefined
+                                }
                               >
                                 {isMultiSelectMode && (
                                   <div className="w-5 flex items-center justify-center">
                                     <Checkbox
                                       checked={selectedEmojiIds.has(emoji.id)}
                                       onCheckedChange={() => {
-                                        setSelectedEmojiIds(prev => {
+                                        setSelectedEmojiIds((prev) => {
                                           const next = new Set(prev);
                                           if (next.has(emoji.id)) next.delete(emoji.id);
                                           else next.add(emoji.id);
@@ -2275,13 +2298,22 @@ export const ServerSettingsModal = () => {
                                 />
                                 <div className="min-w-0 flex-1">
                                   {editingEmojiId === emoji.id && !isMultiSelectMode ? (
-                                    <form onSubmit={(e) => { e.preventDefault(); renameServerEmoji(emoji.id, editingEmojiName); }}>
+                                    <form
+                                      onSubmit={(e) => {
+                                        e.preventDefault();
+                                        renameServerEmoji(emoji.id, editingEmojiName);
+                                      }}
+                                    >
                                       <input
                                         autoFocus
                                         className="w-full text-xs font-medium bg-secondary/50 border border-border rounded px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-ring/50"
                                         value={editingEmojiName}
-                                        onChange={(e) => setEditingEmojiName(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                                        onKeyDown={(e) => { if (e.key === 'Escape') setEditingEmojiId(null); }}
+                                        onChange={(e) =>
+                                          setEditingEmojiName(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))
+                                        }
+                                        onKeyDown={(e) => {
+                                          if (e.key === "Escape") setEditingEmojiId(null);
+                                        }}
                                         onBlur={() => setTimeout(() => setEditingEmojiId(null), 150)}
                                         maxLength={32}
                                       />
@@ -2297,7 +2329,10 @@ export const ServerSettingsModal = () => {
                                       variant="ghost"
                                       size="sm"
                                       rounded="lg"
-                                      onClick={() => { setEditingEmojiId(emoji.id); setEditingEmojiName(emoji.name); }}
+                                      onClick={() => {
+                                        setEditingEmojiId(emoji.id);
+                                        setEditingEmojiName(emoji.name);
+                                      }}
                                       className="text-muted-foreground hover:text-foreground h-6 w-6 p-0"
                                       title="Rename emoji"
                                     >
@@ -2412,7 +2447,9 @@ export const ServerSettingsModal = () => {
                             {displayIconUrl ? (
                               <img src={displayIconUrl} alt={server.name} className="w-full h-full object-cover" />
                             ) : (
-                              <span className="text-base font-bold text-muted-foreground">{getServerInitials(server.name)}</span>
+                              <span className="text-base font-bold text-muted-foreground">
+                                {getServerInitials(server.name)}
+                              </span>
                             )}
                             {isUploadingIcon && (
                               <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
@@ -2759,7 +2796,8 @@ export const ServerSettingsModal = () => {
                                 )}
                               </div>
                               <p className="text-xs text-muted-foreground truncate">
-                                {member.user?.username}{server && member.user_id === server.owner_id ? ' • Owner' : ''}
+                                {member.user?.username}
+                                {server && member.user_id === server.owner_id ? " • Owner" : ""}
                               </p>
                             </div>
 
@@ -3147,7 +3185,9 @@ export const ServerSettingsModal = () => {
                         <div className="flex items-center justify-between flex-wrap gap-2">
                           <h4 className="text-sm font-semibold">Server Emojis</h4>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground">{serverEmojis.length}/{MAX_SERVER_EMOJIS}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {serverEmojis.length}/{MAX_SERVER_EMOJIS}
+                            </span>
                             {serverEmojis.length > 0 && (
                               <Button
                                 type="button"
@@ -3160,7 +3200,7 @@ export const ServerSettingsModal = () => {
                                 }}
                                 className="text-xs h-7"
                               >
-                                {isMultiSelectMode ? 'Cancel' : 'Select'}
+                                {isMultiSelectMode ? "Cancel" : "Select"}
                               </Button>
                             )}
                           </div>
@@ -3177,11 +3217,11 @@ export const ServerSettingsModal = () => {
                                 if (selectedEmojiIds.size === serverEmojis.length) {
                                   setSelectedEmojiIds(new Set());
                                 } else {
-                                  setSelectedEmojiIds(new Set(serverEmojis.map(e => e.id)));
+                                  setSelectedEmojiIds(new Set(serverEmojis.map((e) => e.id)));
                                 }
                               }}
                             >
-                              {selectedEmojiIds.size === serverEmojis.length ? 'Deselect All' : 'Select All'}
+                              {selectedEmojiIds.size === serverEmojis.length ? "Deselect All" : "Select All"}
                             </Button>
                             {selectedEmojiIds.size > 0 && (
                               <Button
@@ -3217,24 +3257,30 @@ export const ServerSettingsModal = () => {
                                   key={emoji.id}
                                   className={cn(
                                     "group flex items-center gap-3 px-3 sm:px-4 py-2.5 transition-colors",
-                                    isMultiSelectMode ? "cursor-pointer hover:bg-secondary/30" : "hover:bg-secondary/20",
-                                    isMultiSelectMode && selectedEmojiIds.has(emoji.id) && "bg-primary/10"
+                                    isMultiSelectMode
+                                      ? "cursor-pointer hover:bg-secondary/30"
+                                      : "hover:bg-secondary/20",
+                                    isMultiSelectMode && selectedEmojiIds.has(emoji.id) && "bg-primary/10",
                                   )}
-                                  onClick={isMultiSelectMode ? () => {
-                                    setSelectedEmojiIds(prev => {
-                                      const next = new Set(prev);
-                                      if (next.has(emoji.id)) next.delete(emoji.id);
-                                      else next.add(emoji.id);
-                                      return next;
-                                    });
-                                  } : undefined}
+                                  onClick={
+                                    isMultiSelectMode
+                                      ? () => {
+                                          setSelectedEmojiIds((prev) => {
+                                            const next = new Set(prev);
+                                            if (next.has(emoji.id)) next.delete(emoji.id);
+                                            else next.add(emoji.id);
+                                            return next;
+                                          });
+                                        }
+                                      : undefined
+                                  }
                                 >
                                   {isMultiSelectMode && (
                                     <div className="w-6 flex items-center justify-center">
                                       <Checkbox
                                         checked={selectedEmojiIds.has(emoji.id)}
                                         onCheckedChange={() => {
-                                          setSelectedEmojiIds(prev => {
+                                          setSelectedEmojiIds((prev) => {
                                             const next = new Set(prev);
                                             if (next.has(emoji.id)) next.delete(emoji.id);
                                             else next.add(emoji.id);
@@ -3253,13 +3299,22 @@ export const ServerSettingsModal = () => {
                                   />
                                   <div className="min-w-0 flex-1">
                                     {editingEmojiId === emoji.id && !isMultiSelectMode ? (
-                                      <form onSubmit={(e) => { e.preventDefault(); renameServerEmoji(emoji.id, editingEmojiName); }}>
+                                      <form
+                                        onSubmit={(e) => {
+                                          e.preventDefault();
+                                          renameServerEmoji(emoji.id, editingEmojiName);
+                                        }}
+                                      >
                                         <input
                                           autoFocus
                                           className="w-full max-w-[180px] text-sm font-medium bg-secondary/50 border border-border rounded px-2 py-1 outline-none focus:ring-1 focus:ring-ring/50"
                                           value={editingEmojiName}
-                                          onChange={(e) => setEditingEmojiName(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                                          onKeyDown={(e) => { if (e.key === 'Escape') setEditingEmojiId(null); }}
+                                          onChange={(e) =>
+                                            setEditingEmojiName(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))
+                                          }
+                                          onKeyDown={(e) => {
+                                            if (e.key === "Escape") setEditingEmojiId(null);
+                                          }}
                                           onBlur={() => setTimeout(() => setEditingEmojiId(null), 150)}
                                           maxLength={32}
                                         />
@@ -3275,7 +3330,10 @@ export const ServerSettingsModal = () => {
                                         variant="ghost"
                                         size="sm"
                                         rounded="xl"
-                                        onClick={() => { setEditingEmojiId(emoji.id); setEditingEmojiName(emoji.name); }}
+                                        onClick={() => {
+                                          setEditingEmojiId(emoji.id);
+                                          setEditingEmojiName(emoji.name);
+                                        }}
                                         className="text-muted-foreground hover:text-foreground h-7 w-7 p-0"
                                         title="Rename emoji"
                                       >

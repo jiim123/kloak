@@ -4,8 +4,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
-import { useMaintenanceMode } from "./hooks/useMaintenanceMode";
-import { MaintenancePage } from "./components/MaintenancePage";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Invite from "./pages/Invite";
@@ -25,18 +23,6 @@ const queryClient = new QueryClient();
 const EmptyRoute = () => null;
 
 const AppContent = () => {
-  const { isMaintenance, loading } = useMaintenanceMode();
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary" />
-      </div>
-    );
-  }
-
-  if (isMaintenance) return <MaintenancePage />;
-
   return (
     <BrowserRouter>
       <Routes>
