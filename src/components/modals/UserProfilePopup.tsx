@@ -215,22 +215,23 @@ export const UserProfilePopup = () => {
         if (error) throw error;
         if (!data) throw new Error("Profile not found");
 
+        const d = data as any;
         setProfileUser({
-          id: data.id,
-          username: data.username,
-          display_name: data.display_name,
-          avatar_url: data.avatar_url,
-          banner_url: data.banner_url ?? null,
-          avatar_decoration: data.avatar_decoration,
-          profile_effect: (data as any).profile_effect ?? null,
-          banner_color: data.banner_color || "#5865F2",
-          profile_theme_primary: data.profile_theme_primary ?? null,
-          profile_theme_accent: data.profile_theme_accent ?? null,
-          bio: data.bio,
-          status: data.status as UserStatus,
-          custom_status: data.custom_status,
-          created_at: data.created_at,
-          last_seen: data.last_seen,
+           id: d.id,
+           username: d.username,
+           display_name: d.display_name,
+           avatar_url: d.avatar_url,
+           banner_url: d.banner_url ?? null,
+           avatar_decoration: d.avatar_decoration,
+           profile_effect: d.profile_effect ?? null,
+           banner_color: d.banner_color || "#5865F2",
+           profile_theme_primary: d.profile_theme_primary ?? null,
+           profile_theme_accent: d.profile_theme_accent ?? null,
+           bio: d.bio,
+           status: d.status as UserStatus,
+           custom_status: d.custom_status,
+           created_at: d.created_at,
+           last_seen: d.last_seen,
         });
 
         // Find shared servers

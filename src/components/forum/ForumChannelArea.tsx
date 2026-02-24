@@ -228,7 +228,7 @@ export const ForumChannelArea = () => {
         }
 
         const threadsWithInfo: Thread[] = (threadsData || []).map((thread) => {
-          const rawMessage = (messagesData || []).find((m) => m.id === thread.message_id);
+          const rawMessage = ((messagesData || []) as any[]).find((m: any) => m.id === thread.message_id);
           const summary = summaryByThreadId.get(thread.id);
 
           // Transform raw reactions to ReactionGroup format

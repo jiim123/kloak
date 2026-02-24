@@ -192,7 +192,7 @@ export const useUnread = (serverChannelIds: string[] = []) => {
                 _blocked_user_ids: [],
               });
 
-              fallbackMessageId = Array.isArray(latestMessages) && latestMessages.length > 0 ? latestMessages[0].id : null;
+              fallbackMessageId = Array.isArray(latestMessages) && latestMessages.length > 0 ? (latestMessages[0] as any).id : null;
 
               if (fallbackMessageId) {
                 const { error: fallbackError } = await supabase.rpc('mark_channel_read', {
@@ -313,7 +313,7 @@ export const useUnread = (serverChannelIds: string[] = []) => {
               });
 
               const messageId =
-                Array.isArray(latestMessages) && latestMessages.length > 0 ? latestMessages[0].id : null;
+                Array.isArray(latestMessages) && latestMessages.length > 0 ? (latestMessages[0] as any).id : null;
               if (!messageId) return;
 
               const { error: fallbackError } = await supabase.rpc('mark_channel_read', {

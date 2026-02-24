@@ -70,7 +70,7 @@ export const useRealtimeDMs = ({
             _message_ids: [newMsg.reply_to_id],
             _user_id: userId,
           });
-          const replyData = Array.isArray(replyRows) ? replyRows[0] : null;
+          const replyData = Array.isArray(replyRows) ? (replyRows[0] as any) : null;
           if (replyData) {
             reply_to = {
               id: replyData.id,
