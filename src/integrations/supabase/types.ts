@@ -2670,6 +2670,11 @@ export type Database = {
         Args: { _emoji: string; _message_id: string; _user_id: string }
         Returns: Json
       }
+      assert_function_execute_surface_strict: {
+        Args: never
+        Returns: undefined
+      }
+      assert_no_dangerous_table_privileges: { Args: never; Returns: undefined }
       assert_request_user: {
         Args: { _expected_user_id: string }
         Returns: string
@@ -2681,6 +2686,25 @@ export type Database = {
       assign_task_users: {
         Args: { _assignee_ids: string[]; _task_id: string; _user_id: string }
         Returns: Json
+      }
+      audit_function_execute_surface: {
+        Args: never
+        Returns: {
+          anon_exec: boolean
+          authenticated_exec: boolean
+          function_name: string
+          identity_args: string
+          is_security_definer: boolean
+          public_exec: boolean
+        }[]
+      }
+      audit_table_dangerous_privileges: {
+        Args: never
+        Returns: {
+          grantee: string
+          privilege_type: string
+          table_name: string
+        }[]
       }
       ban_member: {
         Args: { _server_id: string; _target_user_id: string; _user_id: string }
@@ -2797,11 +2821,7 @@ export type Database = {
       }
       create_server_role: {
         Args: {
-<<<<<<< HEAD
           _color?: string
-=======
-          _color: string
->>>>>>> origin/main
           _icon?: string
           _name: string
           _server_id: string
@@ -2981,6 +3001,16 @@ export type Database = {
         }
         Returns: Json
       }
+      get_channel_messages_secure: {
+        Args: {
+          _before?: string
+          _blocked_user_ids?: string[]
+          _channel_id: string
+          _limit?: number
+          _user_id: string
+        }
+        Returns: Json
+      }
       get_channel_permissions: { Args: { _channel_id: string }; Returns: Json }
       get_channel_server_id: { Args: { _channel_id: string }; Returns: string }
       get_channel_tasks: {
@@ -2995,6 +3025,10 @@ export type Database = {
       }
       get_deletion_preview: { Args: { _user_id: string }; Returns: Json }
       get_dm_conversation_id: { Args: { _message_id: string }; Returns: string }
+      get_dm_message_conversation_secure: {
+        Args: { _message_id: string; _user_id: string }
+        Returns: string
+      }
       get_dm_messages: {
         Args: {
           _before_id?: string
@@ -3003,6 +3037,14 @@ export type Database = {
           _user_id: string
         }
         Returns: Json
+      }
+      get_dm_messages_by_ids_secure: {
+        Args: { _message_ids: string[]; _user_id: string }
+        Returns: Json
+      }
+      get_dm_other_participant: {
+        Args: { _conversation_id: string; _user_id: string }
+        Returns: string
       }
       get_dm_unread_counts: {
         Args: { _user_id: string }
@@ -3027,11 +3069,35 @@ export type Database = {
         }[]
       }
       get_maintenance_mode: { Args: never; Returns: boolean }
+      get_message_replies_secure: {
+        Args: {
+          _blocked_user_ids?: string[]
+          _message_ids: string[]
+          _user_id: string
+        }
+        Returns: Json
+      }
+      get_messages_by_ids_secure: {
+        Args: {
+          _blocked_user_ids?: string[]
+          _message_ids: string[]
+          _user_id: string
+        }
+        Returns: Json
+      }
       get_outgoing_friend_requests: {
         Args: { _user_id: string }
         Returns: Json
       }
       get_pending_friend_requests: { Args: { _user_id: string }; Returns: Json }
+      get_pinned_messages_secure: {
+        Args: {
+          _blocked_user_ids?: string[]
+          _channel_id: string
+          _user_id: string
+        }
+        Returns: Json
+      }
       get_request_user_id: { Args: never; Returns: string }
       get_role_permissions: { Args: { _server_id: string }; Returns: Json }
       get_server_by_invite_code: {
@@ -3052,7 +3118,23 @@ export type Database = {
         Returns: Json
       }
       get_server_members: { Args: { _server_id: string }; Returns: Json }
+      get_server_recent_announcements_secure: {
+        Args: { _limit?: number; _server_id: string; _user_id: string }
+        Returns: Json
+      }
       get_server_roles: { Args: { _server_id: string }; Returns: Json }
+      get_server_roles_secure: {
+        Args: { _server_id: string; _user_id: string }
+        Returns: Json
+      }
+      get_shared_server_ids_secure: {
+        Args: {
+          _requesting_user_id: string
+          _server_ids: string[]
+          _target_user_id: string
+        }
+        Returns: Json
+      }
       get_task_comments: {
         Args: { _task_id: string; _user_id: string }
         Returns: Json
@@ -3068,7 +3150,15 @@ export type Database = {
         Returns: Json
       }
       get_thread_summaries: { Args: { _thread_ids: string[] }; Returns: Json }
+      get_user_badges_secure: {
+        Args: { _requesting_user_id: string; _target_user_id: string }
+        Returns: Json
+      }
       get_user_by_id: { Args: { _user_id: string }; Returns: Json }
+      get_user_dm_conversation_ids_secure: {
+        Args: { _user_id: string }
+        Returns: Json
+      }
       get_user_dm_conversations: {
         Args: { _user_id: string }
         Returns: {
@@ -3082,10 +3172,23 @@ export type Database = {
         Args: { _poll_id: string; _user_id: string }
         Returns: number[]
       }
+      get_user_preferences: { Args: { _user_id: string }; Returns: Json }
+      get_user_profile_secure: {
+        Args: { _requesting_user_id: string; _target_user_id: string }
+        Returns: Json
+      }
       get_user_server_folders: { Args: { _user_id: string }; Returns: Json }
       get_user_server_tabs: { Args: { _user_id: string }; Returns: string[] }
       get_user_servers: { Args: { _user_id: string }; Returns: Json }
       get_user_voice_settings: { Args: { p_user_id: string }; Returns: Json }
+      get_users_basic_secure: {
+        Args: { _target_user_ids: string[]; _user_id: string }
+        Returns: Json
+      }
+      get_users_presence_secure: {
+        Args: { _target_user_ids: string[]; _user_id: string }
+        Returns: Json
+      }
       has_channel_access: {
         Args: { _channel_id: string; _user_id: string }
         Returns: boolean
@@ -3166,6 +3269,10 @@ export type Database = {
         Returns: boolean
       }
       is_server_admin_or_owner: {
+        Args: { _server_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_server_banned_secure: {
         Args: { _server_id: string; _user_id: string }
         Returns: boolean
       }
@@ -3256,6 +3363,7 @@ export type Database = {
         Args: { _message_id: string; _pinned: boolean; _user_id: string }
         Returns: undefined
       }
+      ping_health: { Args: never; Returns: boolean }
       post_system_message: {
         Args: { _channel_id: string; _content: string; _user_id: string }
         Returns: string
@@ -3345,6 +3453,7 @@ export type Database = {
         Args: { _device_id: number; _prekeys: Json; _user_id: string }
         Returns: number
       }
+      request_client_identifier: { Args: never; Returns: string }
       requesting_user_id: { Args: never; Returns: string }
       reset_user_secret_key: {
         Args: { _new_key_hash: string; _user_id: string }
@@ -3507,14 +3616,7 @@ export type Database = {
         Returns: Json
       }
       transfer_ownership: {
-<<<<<<< HEAD
         Args: { _new_owner_id: string; _server_id: string }
-=======
-        Args: {
-          _new_owner_id: string
-          _server_id: string
-        }
->>>>>>> origin/main
         Returns: boolean
       }
       unassign_task_users: {
