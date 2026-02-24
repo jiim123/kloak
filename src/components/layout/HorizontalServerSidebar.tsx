@@ -42,12 +42,7 @@ import {
   closestCenter,
 } from "@dnd-kit/core";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
-import {
-  SortableContext,
-  useSortable,
-  horizontalListSortingStrategy,
-  arrayMove,
-} from "@dnd-kit/sortable";
+import { SortableContext, useSortable, horizontalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
   Dialog,
@@ -154,6 +149,13 @@ const serverItemVariants = {
   }),
 };
 
+const bustCache = (url: string | null | undefined): string | null => {
+  if (!url) return null;
+  if (url.startsWith("blob:")) return url;
+  const sep = url.includes("?") ? "&" : "?";
+  return `${url}${sep}cb=${encodeURIComponent(url.split("/").pop()?.split("?")[0] ?? "")}`;
+};
+
 const ServerIconVisual = ({
   server,
   getServerColor,
@@ -172,7 +174,11 @@ const ServerIconVisual = ({
     >
       {server.icon_url ? (
         <Avatar className="w-10 h-10 border-0 rounded-[4px]">
-          <AvatarImage src={server.icon_url} alt={server.name} className="object-cover rounded-[4px]" />
+          <AvatarImage
+            src={bustCache(server.icon_url) ?? undefined}
+            alt={server.name}
+            className="object-cover rounded-[4px]"
+          />
           <AvatarFallback className={cn("rounded-[4px]", getServerColor(server.name))}>
             {getServerInitials(server.name)}
           </AvatarFallback>
@@ -332,7 +338,7 @@ const HorizontalFolderItem = ({
                         {server.icon_url ? (
                           <Avatar className="w-8 h-8 border-0 rounded-[4px]">
                             <AvatarImage
-                              src={server.icon_url}
+                              src={bustCache(server.icon_url) ?? undefined}
                               alt={server.name}
                               className="object-cover rounded-[4px]"
                             />
@@ -494,7 +500,9 @@ const HorizontalSortableServerItem = forwardRef<
             layout
             className={cn(
               "relative",
-              isOver && !isDragging && "before:absolute before:left-[-6px] before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-8 before:bg-primary before:rounded-full"
+              isOver &&
+                !isDragging &&
+                "before:absolute before:left-[-6px] before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-8 before:bg-primary before:rounded-full",
             )}
           >
             <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
@@ -534,7 +542,11 @@ const HorizontalSortableServerItem = forwardRef<
                   >
                     {server.icon_url ? (
                       <Avatar className="w-10 h-10 border-0 rounded-[4px]">
-                        <AvatarImage src={server.icon_url} alt={server.name} className="object-cover rounded-[4px]" />
+                        <AvatarImage
+                          src={bustCache(server.icon_url) ?? undefined}
+                          alt={server.name}
+                          className="object-cover rounded-[4px]"
+                        />
                         <AvatarFallback className={cn("rounded-[4px]", getServerColor(server.name))}>
                           {getServerInitials(server.name)}
                         </AvatarFallback>
@@ -660,28 +672,39 @@ export const HorizontalServerSidebar = () => {
     if (!user?.id) return;
 
     const channel = supabase
-      .channel('sidebar-server-updates')
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'servers' },
-        (payload) => {
-          const updated = payload.new as any;
-          if (!updated?.id) return;
-          // Check membership at callback time to avoid stale closure
-          const currentServers = useServerStore.getState().servers;
-          if (!currentServers.some((s) => s.id === updated.id)) return;
-          useServerStore.setState((state) => ({
-            servers: state.servers.map((s) =>
-              s.id === updated.id
-                ? { ...s, name: updated.name, icon_url: updated.icon_url ?? null, banner_url: updated.banner_url ?? null, about: updated.about, is_published: updated.is_published }
-                : s
-            ),
-            currentServer: state.currentServer?.id === updated.id
-              ? { ...state.currentServer, name: updated.name, icon_url: updated.icon_url ?? null, banner_url: updated.banner_url ?? null, about: updated.about, is_published: updated.is_published }
+      .channel("sidebar-server-updates")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "servers" }, (payload) => {
+        const updated = payload.new as any;
+        if (!updated?.id) return;
+        // Check membership at callback time to avoid stale closure
+        const currentServers = useServerStore.getState().servers;
+        if (!currentServers.some((s) => s.id === updated.id)) return;
+        useServerStore.setState((state) => ({
+          servers: state.servers.map((s) =>
+            s.id === updated.id
+              ? {
+                  ...s,
+                  name: updated.name,
+                  icon_url: updated.icon_url ?? null,
+                  banner_url: updated.banner_url ?? null,
+                  about: updated.about,
+                  is_published: updated.is_published,
+                }
+              : s,
+          ),
+          currentServer:
+            state.currentServer?.id === updated.id
+              ? {
+                  ...state.currentServer,
+                  name: updated.name,
+                  icon_url: updated.icon_url ?? null,
+                  banner_url: updated.banner_url ?? null,
+                  about: updated.about,
+                  is_published: updated.is_published,
+                }
               : state.currentServer,
-          }));
-        }
-      )
+        }));
+      })
       .subscribe();
 
     return () => {
@@ -959,21 +982,24 @@ export const HorizontalServerSidebar = () => {
       if (posA === posB) return 0;
       return posA - posB;
     });
-    setOrderedServerIds(sorted.map(s => s.id));
+    setOrderedServerIds(sorted.map((s) => s.id));
   }, [servers]);
 
   // Save server order to database
-  const saveServerOrder = useCallback(async (newOrderIds: string[]) => {
-    if (!user?.id) return;
-    try {
-      await supabase.rpc('reorder_user_servers' as any, {
-        _user_id: user.id,
-        _server_ids: newOrderIds,
-      });
-    } catch (err) {
-      console.error("Failed to save server order:", err);
-    }
-  }, [user?.id]);
+  const saveServerOrder = useCallback(
+    async (newOrderIds: string[]) => {
+      if (!user?.id) return;
+      try {
+        await supabase.rpc("reorder_user_servers" as any, {
+          _user_id: user.id,
+          _server_ids: newOrderIds,
+        });
+      } catch (err) {
+        console.error("Failed to save server order:", err);
+      }
+    },
+    [user?.id],
+  );
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -1026,11 +1052,11 @@ export const HorizontalServerSidebar = () => {
   );
 
   const folderById = useMemo(() => new Map(folderState.folders.map((f) => [f.id, f])), [folderState.folders]);
-  
+
   // Filter and order root servers based on orderedServerIds
   const rootServers = useMemo(() => {
     const notInFolder = servers.filter((s) => !folderById.has(folderState.serverToFolder[s.id] || ""));
-    const serversMap = new Map(notInFolder.map(s => [s.id, s]));
+    const serversMap = new Map(notInFolder.map((s) => [s.id, s]));
     // Return servers in orderedServerIds order, filtering to only those not in folders
     const ordered: ServerWithMembership[] = [];
     for (const id of orderedServerIds) {
@@ -1047,7 +1073,7 @@ export const HorizontalServerSidebar = () => {
   }, [servers, folderState.serverToFolder, folderById, orderedServerIds]);
 
   // IDs for SortableContext
-  const sortableServerIds = useMemo(() => rootServers.map(s => getServerDragId(s.id)), [rootServers]);
+  const sortableServerIds = useMemo(() => rootServers.map((s) => getServerDragId(s.id)), [rootServers]);
 
   const serversById = useMemo(() => new Map(servers.map((s) => [s.id, s])), [servers]);
 
@@ -1366,7 +1392,6 @@ export const HorizontalServerSidebar = () => {
 
         {/* Support Us button */}
         <SupportUsButton tooltipsEnabled={tooltipsEnabled} />
-
       </div>
 
       {/* Dialogs */}
