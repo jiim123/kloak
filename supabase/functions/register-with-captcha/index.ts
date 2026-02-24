@@ -210,13 +210,14 @@ Deno.serve(async (req) => {
     }
 
     if (error) {
-      if (error.message.includes("Username already taken")) {
+      const errMsg = error.message ?? "";
+      if (errMsg.includes("Username already taken")) {
         return new Response(
           JSON.stringify({ error: "Username already taken" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      if (error.message.includes("reserved")) {
+      if (errMsg.includes("reserved")) {
         return new Response(
           JSON.stringify({ error: "This username is reserved" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
