@@ -487,25 +487,13 @@ export const useServerStore = create<ServerState>((set, get) => ({
       };
 
       // Defense-in-depth: verify user is not banned after RPC returns
-<<<<<<< HEAD
-      const { data: banCheck } = await supabase
-        .from("server_members")
-        .select("is_banned")
-        .eq("server_id", server.id)
-        .eq("user_id", userId)
-        .maybeSingle();
-
-      if (banCheck?.is_banned) {
-        set({ error: "You are banned from this server" });
-=======
-      const { data: isBanned } = await supabase.rpc('is_server_banned_secure', {
+      const { data: isBanned } = await supabase.rpc('is_server_banned_secure' as any, {
         _server_id: server.id,
         _user_id: userId,
       });
 
       if (isBanned) {
-        set({ error: 'You are banned from this server' });
->>>>>>> origin/main
+        set({ error: "You are banned from this server" });
         return null;
       }
 
@@ -1309,27 +1297,16 @@ export const useServerStore = create<ServerState>((set, get) => ({
   transferOwnership: async (serverId: string, newOwnerId: string) => {
     try {
       const currentOwnerId = useAuthStore.getState().user?.id;
-<<<<<<< HEAD
       if (!currentOwnerId) throw new Error("Not authenticated");
 
       let { error } = await supabase.rpc("transfer_ownership", {
-=======
-      if (!currentOwnerId) throw new Error('Not authenticated');
-
-      let { error } = await supabase.rpc('transfer_ownership', {
->>>>>>> origin/main
         _server_id: serverId,
         _new_owner_id: newOwnerId,
       });
 
       // Backward compatibility: some DBs may still have only the legacy 3-arg signature.
-<<<<<<< HEAD
       if (error?.code === "PGRST202") {
         const legacy = await (supabase as any).rpc("transfer_ownership", {
-=======
-      if (error?.code === 'PGRST202') {
-        const legacy = await (supabase as any).rpc('transfer_ownership', {
->>>>>>> origin/main
           _server_id: serverId,
           _current_owner_id: currentOwnerId,
           _new_owner_id: newOwnerId,
@@ -1363,25 +1340,16 @@ export const useServerStore = create<ServerState>((set, get) => ({
   fetchRoles: async (serverId: string) => {
     return deduplicatedFetch(`serverStore:fetchRoles:${serverId}`, async () => {
       try {
-<<<<<<< HEAD
-        // OPTIMIZATION: Specify only required columns instead of select('*')
-        const { data, error } = await supabase
-          .from("server_roles")
-          .select("id, server_id, name, color, icon, position, created_at")
-          .eq("server_id", serverId)
-          .order("position", { ascending: true });
-=======
         const userId = useAuthStore.getState().user?.id;
         if (!userId) {
           set({ roles: [] });
           return;
         }
 
-        const { data, error } = await supabase.rpc('get_server_roles_secure', {
+        const { data, error } = await supabase.rpc('get_server_roles_secure' as any, {
           _server_id: serverId,
           _user_id: userId,
         });
->>>>>>> origin/main
 
         if (error) throw error;
 
