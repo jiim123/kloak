@@ -122,9 +122,9 @@ export const UserProfilePopup = () => {
         .select("declined_at")
         .eq("requester_id", currentUser.id)
         .eq("addressee_id", userId)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== "PGRST116") {
+      if (error) {
         console.error("Failed to check cooldown:", error);
         return;
       }
