@@ -57,17 +57,118 @@ export async function resolveRequestUserId(
   supabase: ReturnType<typeof createServiceClient>,
   req: Request,
 ): Promise<string | null> {
-  const keyHash = req.headers.get("x-key-hash")?.trim();
+  const debugAuth = req.headers.get("x-debug-auth") === "1";
+  const rawKeyHash = req.headers.get("x-key-hash");
+  const keyHash = rawKeyHash ? rawKeyHash.trim() : "";
   if (!keyHash) return null;
 
-  const { data, error } = await supabase
+  const normalizedKeyHash = /^[a-fA-F0-9]{64}$/.test(keyHash) ? keyHash.toLowerCase() : keyHash;
+
+  let matchedUserAuth = false;
+  let matchedUsersLegacy = false;
+
+  // Prefer RPC-based resolution to avoid RLS blocking direct reads on user_auth.
+  try {
+    const rpcClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+      global: {
+        headers: {
+          "x-key-hash": normalizedKeyHash,
+        },
+      },
+    });
+    const { data: rpcUserId, error: rpcError } = await rpcClient.rpc("get_request_user_id");
+    if (!rpcError && rpcUserId) {
+      matchedUserAuth = true;
+      if (debugAuth) {
+        console.log("[edge-auth] rpc get_request_user_id match", {
+          keyHashLen: keyHash.length,
+          isHex64: /^[a-fA-F0-9]{64}$/.test(keyHash),
+          normalized: normalizedKeyHash !== keyHash,
+        });
+      }
+      return rpcUserId as string;
+    }
+  } catch {
+    // ignore RPC errors and fall back to direct reads for legacy deployments
+  }
+
+  let { data, error } = await supabase
     .from("user_auth")
     .select("user_id")
-    .eq("key_hash", keyHash)
+    .eq("key_hash", normalizedKeyHash)
     .single();
 
-  if (error || !data?.user_id) return null;
-  return data.user_id as string;
+  if (!error && data?.user_id) {
+    matchedUserAuth = true;
+    if (debugAuth) {
+      console.log("[edge-auth] user_auth match", {
+        keyHashLen: keyHash.length,
+        isHex64: /^[a-fA-F0-9]{64}$/.test(keyHash),
+        normalized: normalizedKeyHash !== keyHash,
+      });
+    }
+    return data.user_id as string;
+  }
+
+  if (normalizedKeyHash !== keyHash) {
+    const retry = await supabase
+      .from("user_auth")
+      .select("user_id")
+      .eq("key_hash", keyHash)
+      .single();
+    data = retry.data;
+    error = retry.error;
+    if (!error && data?.user_id) {
+      matchedUserAuth = true;
+      if (debugAuth) {
+        console.log("[edge-auth] user_auth match (raw)", {
+          keyHashLen: keyHash.length,
+          isHex64: /^[a-fA-F0-9]{64}$/.test(keyHash),
+          normalized: true,
+        });
+      }
+      return data.user_id as string;
+    }
+  }
+
+  // Legacy fallback: some older deployments stored key_hash on users instead of user_auth.
+  // Attempt a read if the column still exists, and backfill user_auth on success.
+  try {
+    const legacy = await supabase
+      .from("users")
+      .select("id")
+      .eq("key_hash", normalizedKeyHash)
+      .maybeSingle();
+
+    if (!legacy.error && legacy.data?.id) {
+      const legacyUserId = legacy.data.id as string;
+      matchedUsersLegacy = true;
+      const insertResult = await supabase.from("user_auth").insert({
+        user_id: legacyUserId,
+        key_hash: normalizedKeyHash,
+      });
+
+      if (insertResult.error && !/duplicate|already exists/i.test(insertResult.error.message)) {
+        console.warn("[edge-auth] Failed to backfill user_auth:", insertResult.error.message);
+      }
+
+      return legacyUserId;
+    }
+  } catch {
+    // ignore legacy fallback errors (e.g. column missing)
+  }
+
+  if (debugAuth) {
+    console.log("[edge-auth] resolve failed", {
+      keyHashLen: keyHash.length,
+      isHex64: /^[a-fA-F0-9]{64}$/.test(keyHash),
+      normalized: normalizedKeyHash !== keyHash,
+      matchedUserAuth,
+      matchedUsersLegacy,
+    });
+  }
+  return null;
 }
 
 export async function getAuthContext(
