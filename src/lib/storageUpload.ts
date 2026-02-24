@@ -1,10 +1,10 @@
-import { getKeyHash } from "@/integrations/supabase/client";
+import { getKeyHashAsync } from "@/integrations/supabase/client";
 
 const STORAGE_FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/storage-upload`;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-function requireKeyHash(): string {
-  const kh = getKeyHash();
+async function requireKeyHash(): Promise<string> {
+  const kh = await getKeyHashAsync();
   if (!kh) throw new Error("Not authenticated");
   return kh;
 }
@@ -19,8 +19,7 @@ export async function secureUpload(
   file: File | Blob,
   options?: { contentType?: string; upsert?: boolean; cacheControl?: string },
 ): Promise<{ publicUrl: string; path: string }> {
-  const keyHash = requireKeyHash();
-
+  const keyHash = await requireKeyHash();
   const formData = new FormData();
   formData.append("file", file);
   formData.append("bucket", bucket);
@@ -30,7 +29,6 @@ export async function secureUpload(
   if (options?.cacheControl) {
     formData.append("cacheControl", options.cacheControl);
   }
-
   const res = await fetch(STORAGE_FUNCTION_URL, {
     method: "POST",
     headers: {
@@ -39,12 +37,10 @@ export async function secureUpload(
     },
     body: formData,
   });
-
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: "Upload failed" }));
     throw new Error(err.error || "Upload failed");
   }
-
   return res.json();
 }
 
@@ -52,9 +48,8 @@ export async function secureUpload(
  * Delete file(s) via the secure Edge Function proxy.
  */
 export async function secureDelete(bucket: string, pathOrPaths: string | string[]): Promise<void> {
-  const keyHash = requireKeyHash();
+  const keyHash = await requireKeyHash();
   const body = Array.isArray(pathOrPaths) ? { bucket, paths: pathOrPaths } : { bucket, path: pathOrPaths };
-
   const res = await fetch(STORAGE_FUNCTION_URL, {
     method: "DELETE",
     headers: {
@@ -64,7 +59,6 @@ export async function secureDelete(bucket: string, pathOrPaths: string | string[
     },
     body: JSON.stringify(body),
   });
-
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: "Delete failed" }));
     throw new Error(err.error || "Delete failed");
@@ -76,8 +70,7 @@ export async function secureDelete(bucket: string, pathOrPaths: string | string[
  * Used for cleanup-before-upload patterns (e.g. old server icons).
  */
 export async function secureListAndDelete(bucket: string, prefix: string, searchFilter?: string): Promise<void> {
-  const keyHash = requireKeyHash();
-
+  const keyHash = await requireKeyHash();
   const res = await fetch(STORAGE_FUNCTION_URL, {
     method: "POST",
     headers: {
@@ -87,7 +80,6 @@ export async function secureListAndDelete(bucket: string, prefix: string, search
     },
     body: JSON.stringify({ action: "listAndDelete", bucket, prefix, searchFilter }),
   });
-
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: "List+delete failed" }));
     throw new Error(err.error || "List+delete failed");
