@@ -10,10 +10,8 @@ interface ServerAuthGuardProps {
 /**
  * Route guard for all /app/servers/:serverId routes.
  *
- * Fetches the current user's membership record from Supabase before rendering.
- * Because the `server_members` SELECT policy now enforces membership server-side,
- * a non-member (or banned user) will receive an empty result — this guard treats
- * that as unauthorised and redirects to /app immediately.
+ * Uses an identity-bound RPC to verify that the current user is an active
+ * member of the target server before rendering.
  *
  * Data integrity note: the `servers` UPDATE policy also restricts edits to
  * users with role 'owner' or 'admin' via is_server_admin_or_owner(), so even
@@ -29,10 +27,10 @@ export const ServerAuthGuard = ({ children }: ServerAuthGuardProps) => {
   const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
-    // Wait until auth has initialised
+    // Wait until auth has initialized
     if (isAuthLoading) return;
 
-    // No user → auth guard in AppLayout will redirect, nothing to do here
+    // No user -> auth guard in AppLayout will redirect, nothing to do here
     if (!user?.id || !serverId) {
       setChecking(false);
       return;
@@ -42,21 +40,14 @@ export const ServerAuthGuard = ({ children }: ServerAuthGuardProps) => {
 
     (async () => {
       try {
-        // Ask Supabase for this specific membership row.
-        // The server-side RLS policy on server_members only returns rows where
-        // the requesting user is a non-banned member of that server.
-        // If the row doesn't come back, access is denied.
-        const { data, error } = await supabase
-          .from('server_members')
-          .select('id, is_banned')
-          .eq('server_id', serverId)
-          .eq('user_id', user.id)
-          .maybeSingle();
+        const { data, error } = await supabase.rpc('is_server_member', {
+          _server_id: serverId,
+          _user_id: user.id,
+        });
 
         if (cancelled) return;
 
-        if (error || !data || data.is_banned) {
-          // No membership record returned (or banned) — server-side enforcement
+        if (error || !data) {
           navigate('/app', { replace: true });
           return;
         }
