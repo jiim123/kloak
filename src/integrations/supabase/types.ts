@@ -2797,11 +2797,7 @@ export type Database = {
       }
       create_server_role: {
         Args: {
-<<<<<<< HEAD
-          _color?: string
-=======
           _color: string
->>>>>>> origin/main
           _icon?: string
           _name: string
           _server_id: string
@@ -3507,14 +3503,10 @@ export type Database = {
         Returns: Json
       }
       transfer_ownership: {
-<<<<<<< HEAD
-        Args: { _new_owner_id: string; _server_id: string }
-=======
         Args: {
           _new_owner_id: string
           _server_id: string
         }
->>>>>>> origin/main
         Returns: boolean
       }
       unassign_task_users: {
