@@ -399,53 +399,59 @@ export const useMessageStore = create<MessageState>((set, get) => ({
               fetchingChannels: restFetching,
             };
           } else if (force && existingCache && existingCache.messages.length > 0) {
-            // Force refetch (e.g., on visibility change) - merge new messages intelligently
-            const existingIds = new Set(existingCache.messages.map((m) => m.id));
-            const newMessages = messages.filter((m) => !existingIds.has(m.id));
-
-            if (newMessages.length > 0) {
-              const merged = [...existingCache.messages, ...newMessages];
-              const uniqueById = new Map<string, Message>();
-              merged.forEach((msg) => {
-                const existing = uniqueById.get(msg.id);
-                if (!existing || new Date(msg.created_at).getTime() > new Date(existing.created_at).getTime()) {
-                  uniqueById.set(msg.id, msg);
-                }
-              });
-              const sorted = Array.from(uniqueById.values()).sort(
-                (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-              );
+            // Force refetch reconcile:
+            // - apply edits to existing messages
+            // - remove deleted messages from the fetched "latest window"
+            // - append truly new messages
+            if (messages.length === 0) {
               const nextByChannel = pruneMessagesByChannel(
                 {
                   ...state.messagesByChannel,
                   [channelId]: {
-                    messages: sorted,
+                    messages: [],
                     hasMore,
                     lastFetched: Date.now(),
                   },
                 },
                 channelId,
               );
-
               return {
                 messagesByChannel: nextByChannel,
                 isLoading: false,
                 fetchingChannels: restFetching,
               };
-            } else {
-              // No new messages, just update timestamp
-              return {
-                messagesByChannel: {
-                  ...state.messagesByChannel,
-                  [channelId]: {
-                    ...existingCache,
-                    lastFetched: Date.now(),
-                  },
-                },
-                isLoading: false,
-                fetchingChannels: restFetching,
-              };
             }
+
+            const fetchedIds = new Set(messages.map((m) => m.id));
+            const oldestFetchedTs = new Date(messages[0].created_at).getTime();
+
+            // Keep older paginated history outside the refreshed top window.
+            const preservedOlder = existingCache.messages.filter((m) => {
+              const ts = new Date(m.created_at).getTime();
+              return ts < oldestFetchedTs && !fetchedIds.has(m.id);
+            });
+
+            const reconciled = [...preservedOlder, ...messages].sort(
+              (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+            );
+
+            const nextByChannel = pruneMessagesByChannel(
+              {
+                ...state.messagesByChannel,
+                [channelId]: {
+                  messages: reconciled,
+                  hasMore,
+                  lastFetched: Date.now(),
+                },
+              },
+              channelId,
+            );
+
+            return {
+              messagesByChannel: nextByChannel,
+              isLoading: false,
+              fetchingChannels: restFetching,
+            };
           } else {
             // Fresh fetch - replace cache
             const nextByChannel = pruneMessagesByChannel(
