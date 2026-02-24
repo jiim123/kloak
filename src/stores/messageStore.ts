@@ -510,6 +510,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       // 3. Map RPC response to Message type
       const message: Message = {
         ...data,
+        is_own: true,
         user: currentUser && currentUser.id === userId ? currentUser : undefined,
         reply_to: replyData,
         attachments: [],
@@ -600,6 +601,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         id: msgData.id,
         channel_id: msgData.channel_id,
         user_id: msgData.user_id,
+        is_own: true,
         reply_to_id: msgData.reply_to_id,
         content: msgData.content,
         is_pinned: msgData.is_pinned || false,

@@ -253,6 +253,7 @@ export interface Message {
   id: string;
   channel_id: string;
   user_id: string;
+  is_own?: boolean;
   reply_to_id: string | null;
   content: string;
   is_pinned: boolean;

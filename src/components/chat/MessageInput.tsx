@@ -24,6 +24,7 @@ import { AttachmentPreviewBar, PendingAttachment } from "./AttachmentPreviewBar"
 import { secureUpload } from "@/lib/storageUpload";
 import { showWarning, handleError } from "@/lib/errorHandler";
 import { messageRateLimiter, validateMessageContent } from "@/lib/security";
+import { canRevealGhostIdentityForUser } from "@/lib/ghostIdentity";
 import { toast } from "sonner";
 
 interface MessageInputProps {
@@ -212,9 +213,20 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const currentMember = useMemo(() => members.find((m) => m.user_id === user?.id), [members, user?.id]);
   const isMuted = currentMember?.is_muted || false;
   const isReadOnlyChannel = currentChannel?.is_read_only || false;
+  const isGhostMode = currentChannel?.ghost_mode || false;
   const canSendMessagesPermission = hasPermission("send_messages");
   const canSendInReadOnly = isReadOnlyChannel ? hasPermission("manage_messages") : true;
   const canSendMessage = !isMuted && canSendMessagesPermission && canSendInReadOnly;
+  const showReplyAuthorIdentity = useMemo(
+    () =>
+      canRevealGhostIdentityForUser({
+        isGhostMode,
+        authorUserId: replyingTo?.user?.id,
+        members,
+        ownerId: currentServer?.owner_id,
+      }),
+    [isGhostMode, replyingTo?.user?.id, members, currentServer?.owner_id],
+  );
 
   const resizeTextarea = useCallback(() => {
     if (!textareaRef.current) return;
@@ -394,7 +406,12 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       {replyingTo && (
         <div className="flex items-center gap-2 px-4 py-2 bg-muted/40 border-b border-border/50 rounded-t-2xl">
           <span className="text-xs text-muted-foreground">
-            Replying to <span className="text-primary">@{replyingTo.user?.username}</span>
+            Replying to{" "}
+            {showReplyAuthorIdentity ? (
+              <span className="text-primary">@{replyingTo.user?.username || "unknown"}</span>
+            ) : (
+              <span className="text-primary italic">Anonymous</span>
+            )}
           </span>
           <button onClick={() => setReplyingTo(null)} className="ml-auto p-1">
             <X className="w-4 h-4" />

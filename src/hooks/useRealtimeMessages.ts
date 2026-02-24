@@ -3,9 +3,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useMessageStore } from '@/stores/messageStore';
 import { useFriendStore } from '@/stores/friendStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useServerStore } from '@/stores/serverStore';
 import type { Message } from '@/types';
 import { getOrFetchUser, getUserFromCache } from '@/lib/userCache';
 import type { User } from '@/types';
+import { canRevealGhostIdentityForUser, getGhostPseudonymousUserId } from '@/lib/ghostIdentity';
 
 const CHANNEL_SUBSCRIBE_CATCHUP_MAX_AGE_MS = 12_000;
 
@@ -84,16 +86,25 @@ export const useRealtimeMessages = (channelId: string | null) => {
                 // IMPORTANT: Don't block on fetching user data; add message immediately.
                 // We'll hydrate the author in the background if needed.
                 const localUser = useAuthStore.getState().user;
+                const serverState = useServerStore.getState();
+                const isGhostMode =
+                  serverState.currentChannel?.id === channelId && !!serverState.currentChannel?.ghost_mode;
+                const revealIdentity = canRevealGhostIdentityForUser({
+                  isGhostMode,
+                  authorUserId: newMsg.user_id,
+                  members: serverState.members,
+                  ownerId: serverState.currentServer?.owner_id,
+                });
+                const ghostUserId = getGhostPseudonymousUserId(newMsg.user_id, channelId);
                 const cachedUser = getUserFromCache(newMsg.user_id);
-                let user: User | null =
-                  localUser?.id === newMsg.user_id ? (localUser as any as User) : cachedUser;
+                let user: User | null = null;
 
-                if (!user) {
+                if (!revealIdentity) {
                   const nowIso = new Date().toISOString();
                   user = {
-                    id: newMsg.user_id,
-                    username: 'unknown',
-                    display_name: null,
+                    id: 'anonymous',
+                    username: 'anonymous',
+                    display_name: 'Anonymous',
                     avatar_url: null,
                     banner_url: null,
                     avatar_decoration: null,
@@ -107,13 +118,36 @@ export const useRealtimeMessages = (channelId: string | null) => {
                     created_at: nowIso,
                     last_seen: null,
                   } satisfies User;
+                } else {
+                  user = localUser?.id === newMsg.user_id ? (localUser as any as User) : cachedUser;
+                  if (!user) {
+                    const nowIso = new Date().toISOString();
+                    user = {
+                      id: newMsg.user_id,
+                      username: 'unknown',
+                      display_name: null,
+                      avatar_url: null,
+                      banner_url: null,
+                      avatar_decoration: null,
+                      profile_effect: null,
+                      banner_color: '#111111',
+                      profile_theme_primary: null,
+                      profile_theme_accent: null,
+                      bio: null,
+                      status: 'offline',
+                      custom_status: null,
+                      created_at: nowIso,
+                      last_seen: null,
+                    } satisfies User;
+                  }
                 }
                 
                 // Build message with minimal data
                 const message: Message = {
                   id: newMsg.id,
                   channel_id: newMsg.channel_id,
-                  user_id: newMsg.user_id,
+                  user_id: revealIdentity ? newMsg.user_id : ghostUserId,
+                  is_own: localUser?.id === newMsg.user_id,
                   reply_to_id: newMsg.reply_to_id,
                   content: newMsg.content,
                   is_pinned: newMsg.is_pinned || false,
@@ -143,7 +177,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
                 useMessageStore.getState().addMessage(message);
 
                 // Hydrate author info asynchronously (no UI delay).
-                if (!cachedUser && localUser?.id !== newMsg.user_id) {
+                if (revealIdentity && !cachedUser && localUser?.id !== newMsg.user_id) {
                   void getOrFetchUser(newMsg.user_id)
                     .then((u) => {
                       if (!u) return;
