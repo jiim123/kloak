@@ -487,7 +487,7 @@ export const ServerSettingsModal = () => {
   });
 
   // Real-time members updates
-  useRealtimeMembers(isOpen && server ? server.id : null);
+  useRealtimeMembers(isOpen && server ? server.id : null, { full: isOpen && activeTab === "members" });
 
   // Load + subscribe to banned members for the Bans tab
   useEffect(() => {
@@ -542,10 +542,9 @@ export const ServerSettingsModal = () => {
     };
   }, [isOpen, server?.id, user?.id]);
 
-  // Fetch members and roles when modal opens
+  // Fetch roles and initialize settings when modal opens
   useEffect(() => {
     if (isOpen && server) {
-      fetchMembers(server.id);
       fetchRoles(server.id);
       reset({ name: server.name, about: server.about || "" });
       // Reset icon state
@@ -573,7 +572,14 @@ export const ServerSettingsModal = () => {
       setGradientColors(["#5865F2", "#7289DA"]);
       setGradientAngle(135);
     }
-  }, [isOpen, server, fetchMembers, fetchRoles, reset]);
+  }, [isOpen, server, fetchRoles, reset]);
+
+  // Load full member roster only while the Members tab is active.
+  useEffect(() => {
+    if (!isOpen || !server?.id) return;
+    if (activeTab !== "members") return;
+    fetchMembers(server.id, { full: true });
+  }, [isOpen, server?.id, activeTab, fetchMembers]);
 
   // Load server emojis when modal opens
   useEffect(() => {

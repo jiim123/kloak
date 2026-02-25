@@ -718,7 +718,7 @@ export const ServerSettingsPage = () => {
   });
 
   // Real-time members updates
-  useRealtimeMembers(server ? server.id : null);
+  useRealtimeMembers(server ? server.id : null, { full: activeTab === "members" });
 
   // Load + subscribe to banned members for the Bans tab
   useEffect(() => {
@@ -806,10 +806,9 @@ export const ServerSettingsPage = () => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [closeServerSettings]);
 
-  // Fetch members and roles when page opens
+  // Fetch roles and initialize settings when page opens
   useEffect(() => {
     if (server) {
-      fetchMembers(server.id);
       fetchRoles(server.id);
       reset({ name: server.name, about: server.about || '' });
 
@@ -843,7 +842,14 @@ export const ServerSettingsPage = () => {
       setGradientColors(['#5865F2', '#7289DA']);
       setGradientAngle(135);
     }
-  }, [server, fetchMembers, fetchRoles, reset]);
+  }, [server, fetchRoles, reset]);
+
+  // Load full member roster only when the Members tab is active.
+  useEffect(() => {
+    if (!server?.id) return;
+    if (activeTab !== "members") return;
+    fetchMembers(server.id, { full: true });
+  }, [server?.id, activeTab, fetchMembers]);
 
   const loadInvites = async () => {
     if (!server?.id || !user?.id) return;

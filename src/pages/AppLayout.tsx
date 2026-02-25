@@ -335,7 +335,7 @@ const AppLayout = () => {
   useEffect(() => {
     if (!currentServer?.id) return;
     if (!isMemberSidebarOpen && !isServerMembersViewAllowed) return;
-    fetchMembers(currentServer.id);
+    fetchMembers(currentServer.id, { full: isServerMembersViewAllowed });
   }, [currentServer?.id, isMemberSidebarOpen, isServerMembersViewAllowed, fetchMembers]);
 
   // Clear DM conversation when switching to a server

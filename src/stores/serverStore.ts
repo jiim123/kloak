@@ -26,8 +26,19 @@ const PERMISSIONS_TTL_MS = 5 * 60_000;
 const rolePermissionsCache = new Map<string, { data: RolePermission[]; cachedAt: number }>();
 const channelPermissionsCache = new Map<string, { data: ChannelPermission[]; cachedAt: number }>();
 
+type MembersFetchMode = "lite" | "full";
+
 const MEMBERS_CACHE_TTL_MS = 180_000;
 const membersCachedAt = new Map<string, number>();
+const getMembersCacheKey = (serverId: string, mode: MembersFetchMode) => `${serverId}:${mode}`;
+const clearMembersCacheForServer = (serverId: string) => {
+  const prefix = `${serverId}:`;
+  for (const key of membersCachedAt.keys()) {
+    if (key.startsWith(prefix)) {
+      membersCachedAt.delete(key);
+    }
+  }
+};
 
 const normalizeChannelPermissionsRows = (rows: any[]): ChannelPermission[] => {
   return rows.map((row: any) => ({
@@ -52,6 +63,7 @@ interface ServerState {
   isMembersLoading: boolean;
   /** Which server the current `members` list belongs to (even if empty after a failed fetch). */
   membersServerId: string | null;
+  membersFetchMode: MembersFetchMode | null;
   isLoading: boolean;
   error: string | null;
 
@@ -104,7 +116,7 @@ interface ServerState {
   moveChannelToCategory: (channelId: string, categoryId: string | null) => Promise<void>;
 
   // Member actions
-  fetchMembers: (serverId: string) => Promise<void>;
+  fetchMembers: (serverId: string, opts?: { force?: boolean; full?: boolean }) => Promise<void>;
   updateMember: (memberId: string, updates: Partial<ServerMember>) => Promise<void>;
   kickMember: (serverId: string, userId: string) => Promise<void>;
   banMember: (serverId: string, userId: string) => Promise<void>;
@@ -193,6 +205,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
   members: [],
   isMembersLoading: false,
   membersServerId: null,
+  membersFetchMode: null,
   roles: [],
   rolePermissions: [],
   channelPermissions: [],
@@ -270,6 +283,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
               categories: [],
               members: [],
               membersServerId: null,
+              membersFetchMode: null,
               isLoading: false,
             });
             return;
@@ -583,6 +597,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         categories: [],
         members: [],
         membersServerId: null,
+        membersFetchMode: null,
       }));
     } catch (error) {
       console.error("Failed to delete server:", error);
@@ -617,6 +632,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         categories: [],
         members: [],
         membersServerId: null,
+        membersFetchMode: null,
         isMembersLoading: true,
       });
     } else {
@@ -1101,18 +1117,24 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }
   },
 
-  fetchMembers: async (serverId: string) => {
+  fetchMembers: async (serverId: string, opts?: { force?: boolean; full?: boolean }) => {
+    const mode: MembersFetchMode = opts?.full ? "full" : "lite";
     const state = get();
-    const cachedAt = membersCachedAt.get(serverId);
-    if (
+    const modeCacheKey = getMembersCacheKey(serverId, mode);
+    const modeCachedAt = membersCachedAt.get(modeCacheKey);
+
+    const hasFreshSameMode =
       state.membersServerId === serverId &&
-      cachedAt != null &&
-      Date.now() - cachedAt < MEMBERS_CACHE_TTL_MS
-    ) {
+      state.membersFetchMode === mode &&
+      modeCachedAt != null &&
+      Date.now() - modeCachedAt < MEMBERS_CACHE_TTL_MS;
+
+    if (!opts?.force && hasFreshSameMode) {
       return;
     }
-    return deduplicatedFetch(`serverStore:fetchMembers:${serverId}`, async () => {
-      set({ isMembersLoading: true, membersServerId: serverId });
+
+    return deduplicatedFetch(`serverStore:fetchMembers:${serverId}:${mode}`, async () => {
+      set({ isMembersLoading: true, membersServerId: serverId, membersFetchMode: mode });
       try {
         // Fetch roles first if not already loaded
         const { roles: currentRoles } = get();
@@ -1120,11 +1142,29 @@ export const useServerStore = create<ServerState>((set, get) => ({
           await get().fetchRoles(serverId);
         }
 
-        // Use RPC function to bypass RLS
-        const { data, error } = await supabase.rpc("get_server_members", { _server_id: serverId });
+        // Use lightweight member RPC for global surfaces; full member RPC only for member pages/settings.
+        const userId = useAuthStore.getState().user?.id;
+        const rpcName = mode === "full" ? "get_server_members_full_secure" : "get_server_members";
+        const rpcParams =
+          mode === "full" ? { _server_id: serverId, _user_id: userId } : { _server_id: serverId };
+
+        let data: any = null;
+        let error: any = null;
+
+        if (mode === "full" && !userId) {
+          throw new Error("Not authenticated");
+        }
+
+        ({ data, error } = await (supabase.rpc as any)(rpcName, rpcParams));
+
+        // Rolling deploy safety: if the new RPC isn't available yet, gracefully fall back.
+        if (error && mode === "full" && error.code === "PGRST202") {
+          console.warn("get_server_members_full_secure unavailable, falling back to get_server_members");
+          ({ data, error } = await (supabase.rpc as any)("get_server_members", { _server_id: serverId }));
+        }
 
         if (error) {
-          console.error("get_server_members RPC error:", error);
+          console.error(`${rpcName} RPC error:`, error);
           throw error;
         }
 
@@ -1206,12 +1246,17 @@ export const useServerStore = create<ServerState>((set, get) => ({
           bulkSetUsersInCache(memberUsers as any);
         }
 
-        membersCachedAt.set(serverId, Date.now());
-        set({ members, isMembersLoading: false, membersServerId: serverId });
+        const now = Date.now();
+        membersCachedAt.set(modeCacheKey, now);
+        if (mode === "full") {
+          // Full roster is a strict superset of lightweight member data.
+          membersCachedAt.set(getMembersCacheKey(serverId, "lite"), now);
+        }
+        set({ members, isMembersLoading: false, membersServerId: serverId, membersFetchMode: mode });
       } catch (error) {
         console.error("Failed to fetch members:", error);
         // Set empty array on error to prevent stale data
-        set({ members: [], isMembersLoading: false, membersServerId: serverId });
+        set({ members: [], isMembersLoading: false, membersServerId: serverId, membersFetchMode: mode });
       }
     });
   },
@@ -1274,7 +1319,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
       if (error) throw error;
 
-      membersCachedAt.delete(serverId);
+      clearMembersCacheForServer(serverId);
       set((state) => ({
         members: state.members.filter((m) => m.user_id !== targetUserId),
       }));
@@ -1298,7 +1343,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
       if (error) throw error;
 
-      membersCachedAt.delete(serverId);
+      clearMembersCacheForServer(serverId);
       set((state) => ({
         members: state.members.filter((m) => m.user_id !== targetUserId),
       }));
@@ -1330,7 +1375,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
       if (error) throw error;
 
-      membersCachedAt.delete(serverId);
+      clearMembersCacheForServer(serverId);
       const { members } = get();
       const currentOwnerMember = members.find((m) => m.user_id === currentOwnerId && m.server_id === serverId);
       const newOwnerMember = members.find((m) => m.user_id === newOwnerId && m.server_id === serverId);
@@ -1512,8 +1557,9 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
       if (error) throw error;
 
-      // Refresh members to get authoritative data
-      await get().fetchMembers(currentServer.id);
+      // Refresh members to get authoritative data, preserving the active member-fetch mode.
+      const shouldUseFull = get().membersServerId === currentServer.id && get().membersFetchMode === "full";
+      await get().fetchMembers(currentServer.id, { force: true, full: shouldUseFull });
     } catch (error) {
       // Rollback on failure
       set({ members: prevMembers });
@@ -1543,8 +1589,9 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
       if (error) throw error;
 
-      // Refresh members to get authoritative data
-      await get().fetchMembers(currentServer.id);
+      // Refresh members to get authoritative data, preserving the active member-fetch mode.
+      const shouldUseFull = get().membersServerId === currentServer.id && get().membersFetchMode === "full";
+      await get().fetchMembers(currentServer.id, { force: true, full: shouldUseFull });
     } catch (error) {
       // Rollback on failure
       set({ members: prevMembers });
@@ -1982,6 +2029,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
       channels: [],
       members: [],
       membersServerId: null,
+      membersFetchMode: null,
       roles: [],
     }),
 }));

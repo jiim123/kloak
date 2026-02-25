@@ -145,13 +145,13 @@ export const MembersSidebar = () => {
   // Get current user's member for role comparison
   const currentUserMember = members.find((m) => m.user_id === user?.id);
 
-  // Calculate online count (all members not offline) - must be before early return
+  // Presence summary for header
   const onlineCount = useMemo(() => {
     return members.filter((m) => !getMemberPresence(m).isOffline).length;
   }, [members]);
 
-  // Group members: roles first (only online members with roles), then online (only no-role members)
-  const { roleGroups, onlineNoRoleMembers } = useMemo(() => {
+  // Group members: roles first (all members with roles), then all no-role members.
+  const { roleGroups, noRoleMembers } = useMemo(() => {
     const rolePositionById = new Map<string, number>();
     roles.forEach((r) => rolePositionById.set(r.id, r.position));
 
@@ -184,14 +184,12 @@ export const MembersSidebar = () => {
     members.forEach((member) => {
       const memberRoles = member.roles || [];
       if (memberRoles.length > 0) {
-        if (!getMemberPresence(member).isOffline) {
-          const priorityRole = memberRoles.reduce((prev, curr) =>
-            getResolvedRolePosition(curr) < getResolvedRolePosition(prev) ? curr : prev,
-          );
-          const roleMembers = roleGroupsMap.get(priorityRole.id) || [];
-          roleMembers.push(member);
-          roleGroupsMap.set(priorityRole.id, roleMembers);
-        }
+        const priorityRole = memberRoles.reduce((prev, curr) =>
+          getResolvedRolePosition(curr) < getResolvedRolePosition(prev) ? curr : prev,
+        );
+        const roleMembers = roleGroupsMap.get(priorityRole.id) || [];
+        roleMembers.push(member);
+        roleGroupsMap.set(priorityRole.id, roleMembers);
       } else {
         noRoleMembers.push(member);
       }
@@ -201,15 +199,9 @@ export const MembersSidebar = () => {
       roleGroupsMap.set(roleId, membersList.sort(sortMembers));
     });
 
-    const online: ServerMember[] = [];
-
-    noRoleMembers.forEach((member) => {
-      if (!getMemberPresence(member).isOffline) online.push(member);
-    });
-
     return {
       roleGroups: roleGroupsMap,
-      onlineNoRoleMembers: online.sort(sortMembers),
+      noRoleMembers: noRoleMembers.sort(sortMembers),
     };
   }, [members, roles]);
 
@@ -501,7 +493,7 @@ export const MembersSidebar = () => {
     );
   };
 
-  const visibleCount = onlineCount;
+  const visibleCount = members.length;
 
   const sidebarContent = (
     <div className="h-full flex flex-col bg-background/50 border-l border-border/50 w-full">
@@ -509,7 +501,9 @@ export const MembersSidebar = () => {
       <div className="px-4 py-3 border-b border-border/50">
         <h3 className="text-sm font-semibold">Members</h3>
         <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
-          <span>Online members: {onlineCount}</span>
+          <span>{visibleCount} member{visibleCount !== 1 ? "s" : ""}</span>
+          <span>•</span>
+          <span>{onlineCount} online</span>
         </p>
       </div>
 
@@ -535,12 +529,12 @@ export const MembersSidebar = () => {
             );
           })}
 
-        {/* Online section - only members with no roles */}
-        {onlineNoRoleMembers.length > 0 && (
+        {/* Members with no custom roles */}
+        {noRoleMembers.length > 0 && (
           <div className="mb-3">
-            <SectionHeader label="Online" count={onlineNoRoleMembers.length} />
+            <SectionHeader label="Members" count={noRoleMembers.length} />
             <div className="space-y-0.5">
-              {onlineNoRoleMembers.map((member) => renderMemberItem(member))}
+              {noRoleMembers.map((member) => renderMemberItem(member))}
             </div>
           </div>
         )}

@@ -4,7 +4,8 @@ import { useServerStore } from '@/stores/serverStore';
 import { toast } from '@/hooks/use-toast';
 import { useRealtimeUserUpdates } from './useRealtimeUserUpdates';
 
-export const useRealtimeMembers = (serverId: string | null) => {
+export const useRealtimeMembers = (serverId: string | null, opts?: { full?: boolean }) => {
+  const useFull = opts?.full === true;
   // Use refs to avoid recreating subscription when store functions change
   const fetchMembersRef = useRef(useServerStore.getState().fetchMembers);
   const fetchRolesRef = useRef(useServerStore.getState().fetchRoles);
@@ -39,12 +40,12 @@ export const useRealtimeMembers = (serverId: string | null) => {
       const now = Date.now();
       if (now - lastRefresh < 120_000) return;
       lastRefresh = now;
-      fetchMembersRef.current(serverId);
+      fetchMembersRef.current(serverId, { force: true, full: useFull });
     };
 
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [serverId]);
+  }, [serverId, useFull]);
 
   useEffect(() => {
     if (!serverId) return;
@@ -169,7 +170,7 @@ export const useRealtimeMembers = (serverId: string | null) => {
         () => {
           // Refresh roles when any role changes, then refresh members for role assignments
           fetchRolesRef.current(serverId);
-          fetchMembersRef.current(serverId);
+          fetchMembersRef.current(serverId, { force: true, full: useFull });
         }
       )
       // Listen for member role assignments (server_member_roles table)
@@ -185,7 +186,7 @@ export const useRealtimeMembers = (serverId: string | null) => {
           const memberExists = members.some(m => m.id === payload.new.member_id);
           if (memberExists) {
             // Full refetch needed to get updated role data
-            fetchMembersRef.current(serverId);
+            fetchMembersRef.current(serverId, { force: true, full: useFull });
           }
         }
       )
@@ -200,7 +201,7 @@ export const useRealtimeMembers = (serverId: string | null) => {
           const { members } = useServerStore.getState();
           const memberExists = members.some(m => m.id === payload.old.member_id);
           if (memberExists) {
-            fetchMembersRef.current(serverId);
+            fetchMembersRef.current(serverId, { force: true, full: useFull });
           }
         }
       )
@@ -209,5 +210,5 @@ export const useRealtimeMembers = (serverId: string | null) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [serverId]);
+  }, [serverId, useFull]);
 };
