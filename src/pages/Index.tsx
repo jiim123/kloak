@@ -81,22 +81,7 @@ const Index = () => {
       <SEO {...SEO_CONFIG.home} />
       <div className="w-full">
         <NavigationMenu />
-        <main className="pt-16">
-          {/* Infrastructure Notice Banner */}
-          <div className="bg-green-500/10 border-b border-green-500/30">
-            <div className="max-w-5xl mx-auto px-6 py-5 text-center space-y-2">
-              <h3 className="text-sm font-semibold text-green-400 tracking-wide uppercase">We're Coming Back</h3>
-              <p className="text-sm text-green-200/80 leading-relaxed">
-                First, thank you for your patience. We know a few days of silence isn't easy, and you deserved better
-                communication from us. That's on us. Here's where things stand: the investigation and restructure we
-                mentioned is underway. We're not done, but we've reached a point where we're ready to cautiously open
-                the doors again and observe how everything holds up in real conditions. Starting very soon, Kloak will
-                be back online for a limited window. Think of it as a controlled test run. We'll be watching everything
-                closely: performance, stability, security. If something doesn't look right, we'll pause, dig in, and fix
-                it before continuing. No shortcuts. That's the loop we're committing to: open, observe, pause if needed,
-                audit, repeat. Thank you for your continued support. The Kloak Team
-              </p>
-            </div>
+        <main className="pt-16"
           </div>
 
           {/* Hero Section */}
