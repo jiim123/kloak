@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo, memo } from "react";
-import { Smile, Reply, Pencil, Trash2, Copy, CornerUpLeft, MoreHorizontal } from "lucide-react";
+import { Smile, Reply, Pencil, Trash2, Copy, CornerUpLeft, MoreHorizontal, Paperclip } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
@@ -26,7 +26,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { formatMessageTimestamp } from "@/lib/format";
 import type { DirectMessage } from "@/types";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
-import { MessageContent } from "@/components/chat/MessageContent";
+import { MessageContent, ReplyPreview } from "@/components/chat/MessageContent";
+import { isImageOnlyMessage } from "@/lib/message";
 import { toast } from "sonner";
 
 interface DMMessageItemProps {
@@ -293,7 +294,7 @@ export const DMMessageItem = memo(function DMMessageItem({
                     className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1 cursor-pointer hover:text-foreground flex-nowrap overflow-hidden"
                     onClick={(e) => {
                       e.stopPropagation();
-                      const targetEl = document.getElementById(`dm-message-${message.reply_to!.id}`);
+                      const targetEl = document.getElementById(`message-${message.reply_to!.id}`);
                       if (targetEl) {
                         targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
                         targetEl.classList.add("animate-highlight-message");
@@ -304,12 +305,39 @@ export const DMMessageItem = memo(function DMMessageItem({
                     <CornerUpLeft className="w-3 h-3 flex-shrink-0" />
                     <span className="flex-shrink-0">Replying to</span>
                     <span className="font-medium text-primary flex-shrink-0">
-                      @{message.reply_to.sender?.username || "unknown"}
+                      @{message.reply_to.sender?.display_name || message.reply_to.sender?.username || "unknown"}
                     </span>
-                    <span className="truncate max-w-[120px] sm:max-w-[200px]">
-                      {message.reply_to.content.slice(0, 30)}
-                      {message.reply_to.content.length > 30 ? "..." : ""}
-                    </span>
+                    {(() => {
+                      const replyContent = message.reply_to.content;
+                      if (isImageOnlyMessage(replyContent)) {
+                        return (
+                          <span className="italic flex-shrink-0 flex items-center gap-1">
+                            <Paperclip className="w-3 h-3" />
+                            attachment
+                          </span>
+                        );
+                      }
+                      const attachmentUrlPattern =
+                        /https?:\/\/[^\s]*(?:supabase\.co\/storage\/v1\/|\.(?:jpg|jpeg|png|gif|webp|mp4|mov|pdf|zip|rar|doc|docx|xls|xlsx))(?:[^\s]*)/gi;
+                      const textOnly = replyContent
+                        .split("\n")
+                        .map((line) => line.replace(attachmentUrlPattern, "").trim())
+                        .filter((line) => line.length > 0)
+                        .join(" ");
+                      if (!textOnly) {
+                        return (
+                          <span className="italic flex-shrink-0 flex items-center gap-1">
+                            <Paperclip className="w-3 h-3" />
+                            attachment
+                          </span>
+                        );
+                      }
+                      return (
+                        <span className="truncate max-w-[120px] sm:max-w-[200px]">
+                          <ReplyPreview content={textOnly} maxLength={30} />
+                        </span>
+                      );
+                    })()}
                   </div>
                 )}
 
