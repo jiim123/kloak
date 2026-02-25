@@ -1,7 +1,7 @@
-import { create } from 'zustand';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuthStore } from '@/stores/authStore';
-import type { DMConversation, DirectMessage, User, ReactionGroup } from '@/types';
+import { create } from "zustand";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuthStore } from "@/stores/authStore";
+import type { DMConversation, DirectMessage, User, ReactionGroup } from "@/types";
 
 interface DMState {
   conversations: DMConversation[];
@@ -19,7 +19,12 @@ interface DMState {
 
   // Message actions
   fetchMessages: (conversationId: string, userId: string, limit?: number, before?: string) => Promise<void>;
-  sendMessage: (conversationId: string, senderId: string, content: string, replyToId?: string) => Promise<DirectMessage | null>;
+  sendMessage: (
+    conversationId: string,
+    senderId: string,
+    content: string,
+    replyToId?: string,
+  ) => Promise<DirectMessage | null>;
   editMessage: (messageId: string, senderId: string, content: string) => Promise<void>;
   deleteMessage: (messageId: string, senderId: string) => Promise<void>;
 
@@ -38,7 +43,7 @@ interface DMState {
   updateMessage: (conversationId: string, messageId: string, updates: Partial<DirectMessage>) => void;
   removeMessage: (conversationId: string, messageId: string) => void;
   updateConversation: (conversationId: string, updates: Partial<DMConversation>) => void;
-  
+
   // Getters
   getMessages: (conversationId: string) => DirectMessage[];
 }
@@ -80,7 +85,7 @@ export const useDMStore = create<DMState>((set, get) => ({
 
     try {
       // Use RPC function to fetch conversations
-      const { data, error } = await supabase.rpc('get_user_dm_conversations', {
+      const { data, error } = await supabase.rpc("get_user_dm_conversations", {
         _user_id: userId,
       });
 
@@ -88,9 +93,7 @@ export const useDMStore = create<DMState>((set, get) => ({
 
       const dataArray = Array.isArray(data) ? data : [];
       const conversations: DMConversation[] = dataArray.map((conv: any) => {
-        const otherParticipant = conv.participants?.find(
-          (p: any) => p.user_id !== userId
-        );
+        const otherParticipant = conv.participants?.find((p: any) => p.user_id !== userId);
 
         return {
           id: conv.conversation?.id || conv.id,
@@ -106,7 +109,7 @@ export const useDMStore = create<DMState>((set, get) => ({
 
       set({ conversations, isLoading: false });
     } catch (error) {
-      console.error('Failed to fetch conversations:', error);
+      console.error("Failed to fetch conversations:", error);
       set({ isLoading: false });
     }
   },
@@ -114,7 +117,7 @@ export const useDMStore = create<DMState>((set, get) => ({
   openConversation: async (userId: string, otherUserId: string) => {
     try {
       // Use RPC function to open or create conversation
-      const { data, error } = await supabase.rpc('open_dm_conversation', {
+      const { data, error } = await supabase.rpc("open_dm_conversation", {
         _user_id: userId,
         _other_user_id: otherUserId,
       });
@@ -124,7 +127,7 @@ export const useDMStore = create<DMState>((set, get) => ({
       const convData = data as { id: string; created_at: string };
 
       // Fetch other user details
-      const { data: userData } = await supabase.rpc('get_user_by_id', {
+      const { data: userData } = await supabase.rpc("get_user_by_id", {
         _user_id: otherUserId,
       });
 
@@ -136,7 +139,7 @@ export const useDMStore = create<DMState>((set, get) => ({
 
       // Check if conversation already exists in state
       const existingConv = get().conversations.find((c) => c.id === conversation.id);
-      
+
       if (existingConv) {
         set({ currentConversation: existingConv });
         return existingConv;
@@ -149,14 +152,14 @@ export const useDMStore = create<DMState>((set, get) => ({
 
       return conversation;
     } catch (error) {
-      console.error('Failed to open conversation:', error);
+      console.error("Failed to open conversation:", error);
       return null;
     }
   },
 
   createGroupConversation: async (userId: string, participantIds: string[], name?: string) => {
     try {
-      const { data, error } = await supabase.rpc('create_group_dm', {
+      const { data, error } = await supabase.rpc("create_group_dm", {
         _creator_id: userId,
         _participant_ids: participantIds,
         _name: name || null,
@@ -193,7 +196,7 @@ export const useDMStore = create<DMState>((set, get) => ({
 
       return conversation;
     } catch (error) {
-      console.error('Failed to create group conversation:', error);
+      console.error("Failed to create group conversation:", error);
       return null;
     }
   },
@@ -201,16 +204,16 @@ export const useDMStore = create<DMState>((set, get) => ({
   setCurrentConversation: (conversation) => {
     // Persist current conversation ID for restoration
     if (conversation) {
-      localStorage.setItem('kloak-current-dm-id', conversation.id);
+      localStorage.setItem("kloak-current-dm-id", conversation.id);
     } else {
-      localStorage.removeItem('kloak-current-dm-id');
+      localStorage.removeItem("kloak-current-dm-id");
     }
     set({ currentConversation: conversation });
   },
 
   closeConversation: async (conversationId: string, userId: string) => {
     try {
-      const { error } = await supabase.rpc('close_dm_conversation', {
+      const { error } = await supabase.rpc("close_dm_conversation" as any, {
         _conversation_id: conversationId,
         _user_id: userId,
       });
@@ -227,7 +230,7 @@ export const useDMStore = create<DMState>((set, get) => ({
 
       return true;
     } catch (error) {
-      console.error('Failed to close conversation:', error);
+      console.error("Failed to close conversation:", error);
       return false;
     }
   },
@@ -241,7 +244,7 @@ export const useDMStore = create<DMState>((set, get) => ({
 
     try {
       // Use RPC function to fetch messages
-      const { data, error } = await supabase.rpc('get_dm_messages', {
+      const { data, error } = await supabase.rpc("get_dm_messages", {
         _conversation_id: conversationId,
         _user_id: userId,
         _limit: limit,
@@ -254,14 +257,14 @@ export const useDMStore = create<DMState>((set, get) => ({
 
       // Fetch reactions separately for each message
       const messageIds = dataArray.map((msg: any) => msg.id);
-      
+
       let reactions: any[] = [];
       if (messageIds.length > 0) {
         // Only fetch columns we need (optimized query)
         const { data: reactionData } = await supabase
-          .from('dm_reactions')
-          .select('id, message_id, user_id, emoji')
-          .in('message_id', messageIds);
+          .from("dm_reactions")
+          .select("id, message_id, user_id, emoji")
+          .in("message_id", messageIds);
         reactions = reactionData || [];
       }
 
@@ -278,7 +281,7 @@ export const useDMStore = create<DMState>((set, get) => ({
         const uniqueReplyIds = [...new Set(replyToIds)];
         // First check if any are in the current batch
         const batchMap = new Map(reversedData.map((m: any) => [m.id, m]));
-        const missingIds = uniqueReplyIds.filter(id => !batchMap.has(id));
+        const missingIds = uniqueReplyIds.filter((id) => !batchMap.has(id));
 
         // Map from batch
         for (const id of uniqueReplyIds) {
@@ -288,24 +291,24 @@ export const useDMStore = create<DMState>((set, get) => ({
               id: found.id,
               content: found.content,
               sender_id: found.sender_id,
-              sender: found.sender ? { username: found.sender.username } as any : undefined,
+              sender: found.sender ? ({ username: found.sender.username } as any) : undefined,
             };
           }
         }
 
         // Fetch missing ones from guarded RPC
         if (missingIds.length > 0) {
-          const { data: replyData } = await supabase.rpc('get_dm_messages_by_ids_secure', {
+          const { data: replyData } = await supabase.rpc("get_dm_messages_by_ids_secure", {
             _message_ids: missingIds,
             _user_id: userId,
           });
           if (replyData) {
-            for (const r of (replyData as any[])) {
+            for (const r of replyData as any[]) {
               replyToMap[r.id] = {
                 id: r.id,
                 content: r.content,
                 sender_id: r.sender_id,
-                sender: r.sender ? { username: r.sender.username } as any : undefined,
+                sender: r.sender ? ({ username: r.sender.username } as any) : undefined,
               };
             }
           }
@@ -324,7 +327,7 @@ export const useDMStore = create<DMState>((set, get) => ({
 
       set((state) => {
         const currentMessages = state.messagesByConversation[conversationId] || [];
-        
+
         if (before) {
           // Prepend older messages
           return {
@@ -346,7 +349,7 @@ export const useDMStore = create<DMState>((set, get) => ({
         }
       });
     } catch (error) {
-      console.error('Failed to fetch DM messages:', error);
+      console.error("Failed to fetch DM messages:", error);
       set({ isLoading: false });
     }
   },
@@ -354,7 +357,7 @@ export const useDMStore = create<DMState>((set, get) => ({
   sendMessage: async (conversationId: string, senderId: string, content: string, replyToId?: string) => {
     try {
       // Use RPC function to send message
-      const { data, error } = await supabase.rpc('send_dm', {
+      const { data, error } = await supabase.rpc("send_dm", {
         _conversation_id: conversationId,
         _sender_id: senderId,
         _content: content,
@@ -363,13 +366,20 @@ export const useDMStore = create<DMState>((set, get) => ({
 
       if (error) throw error;
 
-      const msgData = data as { id: string; conversation_id: string; sender_id: string; content: string; reply_to_id: string | null; edited_at: string | null; created_at: string };
+      const msgData = data as {
+        id: string;
+        conversation_id: string;
+        sender_id: string;
+        content: string;
+        reply_to_id: string | null;
+        edited_at: string | null;
+        created_at: string;
+      };
 
       // Fetch sender details
       const localUser = useAuthStore.getState().user;
-      const { data: userData } = localUser?.id === senderId
-        ? { data: localUser }
-        : await supabase.rpc('get_user_by_id', { _user_id: senderId });
+      const { data: userData } =
+        localUser?.id === senderId ? { data: localUser } : await supabase.rpc("get_user_by_id", { _user_id: senderId });
 
       // Look up reply_to from local cache if replyToId is provided
       let reply_to: DirectMessage | null = null;
@@ -389,13 +399,13 @@ export const useDMStore = create<DMState>((set, get) => ({
         reactions: [],
       };
 
-    // Add message to local state immediately (optimistic update)
-    // This ensures the sender sees their message even if Realtime is delayed
-    get().addMessage(conversationId, message);
+      // Add message to local state immediately (optimistic update)
+      // This ensures the sender sees their message even if Realtime is delayed
+      get().addMessage(conversationId, message);
 
       return message;
     } catch (error) {
-      console.error('Failed to send DM:', error);
+      console.error("Failed to send DM:", error);
       return null;
     }
   },
@@ -403,7 +413,7 @@ export const useDMStore = create<DMState>((set, get) => ({
   editMessage: async (messageId: string, senderId: string, content: string) => {
     try {
       // Use RPC function to edit message
-      const { data, error } = await supabase.rpc('edit_dm', {
+      const { data, error } = await supabase.rpc("edit_dm", {
         _message_id: messageId,
         _sender_id: senderId,
         _content: content,
@@ -418,20 +428,20 @@ export const useDMStore = create<DMState>((set, get) => ({
         const newMessagesByConversation = { ...state.messagesByConversation };
         for (const conversationId in newMessagesByConversation) {
           newMessagesByConversation[conversationId] = newMessagesByConversation[conversationId].map((m) =>
-            m.id === messageId ? { ...m, content: editedData.content, edited_at: editedData.edited_at } : m
+            m.id === messageId ? { ...m, content: editedData.content, edited_at: editedData.edited_at } : m,
           );
         }
         return { messagesByConversation: newMessagesByConversation };
       });
     } catch (error) {
-      console.error('Failed to edit DM:', error);
+      console.error("Failed to edit DM:", error);
     }
   },
 
   deleteMessage: async (messageId: string, senderId: string) => {
     try {
       // Use RPC function to delete message
-      const { error } = await supabase.rpc('delete_dm', {
+      const { error } = await supabase.rpc("delete_dm", {
         _message_id: messageId,
         _sender_id: senderId,
       });
@@ -443,20 +453,20 @@ export const useDMStore = create<DMState>((set, get) => ({
         const newMessagesByConversation = { ...state.messagesByConversation };
         for (const conversationId in newMessagesByConversation) {
           newMessagesByConversation[conversationId] = newMessagesByConversation[conversationId].filter(
-            (m) => m.id !== messageId
+            (m) => m.id !== messageId,
           );
         }
         return { messagesByConversation: newMessagesByConversation };
       });
     } catch (error) {
-      console.error('Failed to delete DM:', error);
+      console.error("Failed to delete DM:", error);
     }
   },
 
   addReaction: async (messageId: string, userId: string, emoji: string) => {
     try {
       // Use RPC function to add reaction
-      const { error } = await supabase.rpc('add_dm_reaction', {
+      const { error } = await supabase.rpc("add_dm_reaction", {
         _message_id: messageId,
         _user_id: userId,
         _emoji: emoji,
@@ -493,14 +503,14 @@ export const useDMStore = create<DMState>((set, get) => ({
         return { messagesByConversation: newMessagesByConversation };
       });
     } catch (error) {
-      console.error('Failed to add reaction:', error);
+      console.error("Failed to add reaction:", error);
     }
   },
 
   removeReaction: async (messageId: string, userId: string, emoji: string) => {
     try {
       // Use RPC function to remove reaction
-      const { error } = await supabase.rpc('remove_dm_reaction', {
+      const { error } = await supabase.rpc("remove_dm_reaction", {
         _message_id: messageId,
         _user_id: userId,
         _emoji: emoji,
@@ -537,19 +547,19 @@ export const useDMStore = create<DMState>((set, get) => ({
         return { messagesByConversation: newMessagesByConversation };
       });
     } catch (error) {
-      console.error('Failed to remove reaction:', error);
+      console.error("Failed to remove reaction:", error);
     }
   },
 
   addMessage: (conversationId: string, message: DirectMessage) => {
     set((state) => {
       const currentMessages = state.messagesByConversation[conversationId] || [];
-      
+
       // Check for duplicate
       if (currentMessages.some((m) => m.id === message.id)) {
         return state;
       }
-      
+
       return {
         messagesByConversation: {
           ...state.messagesByConversation,
@@ -565,9 +575,7 @@ export const useDMStore = create<DMState>((set, get) => ({
       return {
         messagesByConversation: {
           ...state.messagesByConversation,
-          [conversationId]: currentMessages.map((m) =>
-            m.id === messageId ? { ...m, ...updates } : m
-          ),
+          [conversationId]: currentMessages.map((m) => (m.id === messageId ? { ...m, ...updates } : m)),
         },
       };
     });
@@ -587,9 +595,7 @@ export const useDMStore = create<DMState>((set, get) => ({
 
   updateConversation: (conversationId, updates) => {
     set((state) => ({
-      conversations: state.conversations.map((c) =>
-        c.id === conversationId ? { ...c, ...updates } : c
-      ),
+      conversations: state.conversations.map((c) => (c.id === conversationId ? { ...c, ...updates } : c)),
     }));
   },
 
@@ -599,7 +605,7 @@ export const useDMStore = create<DMState>((set, get) => ({
 
   updateGroupName: async (conversationId: string, userId: string, newName: string) => {
     try {
-      const { error } = await supabase.rpc('update_group_dm_name', {
+      const { error } = await supabase.rpc("update_group_dm_name", {
         _conversation_id: conversationId,
         _user_id: userId,
         _new_name: newName,
@@ -610,23 +616,24 @@ export const useDMStore = create<DMState>((set, get) => ({
       // Update local state
       set((state) => ({
         conversations: state.conversations.map((c) =>
-          c.id === conversationId ? { ...c, name: newName.trim() || null } : c
+          c.id === conversationId ? { ...c, name: newName.trim() || null } : c,
         ),
-        currentConversation: state.currentConversation?.id === conversationId
-          ? { ...state.currentConversation, name: newName.trim() || null }
-          : state.currentConversation,
+        currentConversation:
+          state.currentConversation?.id === conversationId
+            ? { ...state.currentConversation, name: newName.trim() || null }
+            : state.currentConversation,
       }));
 
       return true;
     } catch (error) {
-      console.error('Failed to update group name:', error);
+      console.error("Failed to update group name:", error);
       return false;
     }
   },
 
   addGroupMembers: async (conversationId: string, userId: string, memberIds: string[]) => {
     try {
-      const { error } = await supabase.rpc('add_group_dm_members', {
+      const { error } = await supabase.rpc("add_group_dm_members", {
         _conversation_id: conversationId,
         _user_id: userId,
         _new_member_ids: memberIds,
@@ -635,14 +642,14 @@ export const useDMStore = create<DMState>((set, get) => ({
       if (error) throw error;
       return true;
     } catch (error) {
-      console.error('Failed to add group members:', error);
+      console.error("Failed to add group members:", error);
       return false;
     }
   },
 
   leaveGroup: async (conversationId: string, userId: string) => {
     try {
-      const { error } = await supabase.rpc('leave_group_dm', {
+      const { error } = await supabase.rpc("leave_group_dm", {
         _conversation_id: conversationId,
         _user_id: userId,
       });
@@ -652,24 +659,22 @@ export const useDMStore = create<DMState>((set, get) => ({
       // Remove conversation from local state
       set((state) => ({
         conversations: state.conversations.filter((c) => c.id !== conversationId),
-        currentConversation: state.currentConversation?.id === conversationId
-          ? null
-          : state.currentConversation,
+        currentConversation: state.currentConversation?.id === conversationId ? null : state.currentConversation,
         messagesByConversation: Object.fromEntries(
-          Object.entries(state.messagesByConversation).filter(([key]) => key !== conversationId)
+          Object.entries(state.messagesByConversation).filter(([key]) => key !== conversationId),
         ),
       }));
 
       return true;
     } catch (error) {
-      console.error('Failed to leave group:', error);
+      console.error("Failed to leave group:", error);
       return false;
     }
   },
 
   kickGroupMember: async (conversationId: string, kickerId: string, targetUserId: string) => {
     try {
-      const { data, error } = await supabase.rpc('kick_group_dm_member' as any, {
+      const { data, error } = await supabase.rpc("kick_group_dm_member" as any, {
         _conversation_id: conversationId,
         _kicker_id: kickerId,
         _target_user_id: targetUserId,
@@ -678,7 +683,7 @@ export const useDMStore = create<DMState>((set, get) => ({
       if (error) throw error;
       return data === true;
     } catch (error) {
-      console.error('Failed to kick group member:', error);
+      console.error("Failed to kick group member:", error);
       return false;
     }
   },
