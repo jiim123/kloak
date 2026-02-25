@@ -1,42 +1,38 @@
-import { useState, useRef, useCallback, useEffect, useMemo, memo } from 'react';
-import { Smile, Reply, Pencil, Trash2, Copy, CornerUpLeft, MoreHorizontal } from 'lucide-react';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-} from '@/components/ui/drawer';
+import { useState, useRef, useCallback, useEffect, useMemo, memo } from "react";
+import { Smile, Reply, Pencil, Trash2, Copy, CornerUpLeft, MoreHorizontal } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
   ContextMenuTrigger,
-} from '@/components/ui/context-menu';
+} from "@/components/ui/context-menu";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { EmojiPicker } from '@/components/modals/EmojiPicker';
-import { useDMStore } from '@/stores/dmStore';
-import { useAuthStore } from '@/stores/authStore';
-import { useUIStore } from '@/stores/uiStore';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { formatMessageTimestamp } from '@/lib/format';
-import type { DirectMessage } from '@/types';
-import { AvatarWithDecoration } from '@/components/ui/avatar-with-decoration';
-import { MessageContent } from '@/components/chat/MessageContent';
-import { toast } from 'sonner';
+} from "@/components/ui/dropdown-menu";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { EmojiPicker } from "@/components/modals/EmojiPicker";
+import { useDMStore } from "@/stores/dmStore";
+import { useAuthStore } from "@/stores/authStore";
+import { useUIStore } from "@/stores/uiStore";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { formatMessageTimestamp } from "@/lib/format";
+import type { DirectMessage } from "@/types";
+import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
+import { MessageContent } from "@/components/chat/MessageContent";
+import { toast } from "sonner";
 
 interface DMMessageItemProps {
   message: DirectMessage;
   isFirst: boolean;
+  isHighlighted?: boolean;
   onReply: (message: DirectMessage) => void;
 }
 
@@ -44,12 +40,17 @@ interface DMMessageItemProps {
 const animatedDMMessages = new Set<string>();
 
 const getStableAnimationKey = (message: DirectMessage): string => {
-  const timestamp = Math.floor(new Date(message.created_at || '').getTime() / 1000);
+  const timestamp = Math.floor(new Date(message.created_at || "").getTime() / 1000);
   const contentPrefix = message.content.substring(0, 50);
   return `${timestamp}-${message.sender_id}-${contentPrefix}`;
 };
 
-export const DMMessageItem = memo(function DMMessageItem({ message, isFirst, onReply }: DMMessageItemProps) {
+export const DMMessageItem = memo(function DMMessageItem({
+  message,
+  isFirst,
+  isHighlighted,
+  onReply,
+}: DMMessageItemProps) {
   const { user } = useAuthStore();
   // Extract each DM store function separately to avoid re-renders on unrelated changes
   const editMessage = useDMStore((state) => state.editMessage);
@@ -59,7 +60,7 @@ export const DMMessageItem = memo(function DMMessageItem({ message, isFirst, onR
   const otherUser = useDMStore((state) => state.currentConversation?.other_user);
   const openModal = useUIStore((state) => state.openModal);
   const isMobile = useIsMobile();
-  
+
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [showMobileActions, setShowMobileActions] = useState(false);
@@ -67,13 +68,16 @@ export const DMMessageItem = memo(function DMMessageItem({ message, isFirst, onR
   const [reactionDetailsEmoji, setReactionDetailsEmoji] = useState<string | null>(null);
   const [showDesktopEmojiPicker, setShowDesktopEmojiPicker] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
-  
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   // Stable animation key
-  const animationKey = useMemo(() => getStableAnimationKey(message), [message.created_at, message.sender_id, message.content]);
-  
+  const animationKey = useMemo(
+    () => getStableAnimationKey(message),
+    [message.created_at, message.sender_id, message.content],
+  );
+
   // Check animation status ONCE on mount
   const shouldAnimate = useMemo(() => {
     if (animatedDMMessages.has(animationKey)) return false;
@@ -88,19 +92,19 @@ export const DMMessageItem = memo(function DMMessageItem({ message, isFirst, onR
   const isOwnMessage = user?.id === message.sender_id;
 
   // Check if current user is mentioned in this message
-  const isMentioned = user?.id && (
-    message.content.includes(`<@${user.id}>`) ||
-    message.content.includes('@everyone') ||
-    message.content.includes('@here')
-  );
+  const isMentioned =
+    user?.id &&
+    (message.content.includes(`<@${user.id}>`) ||
+      message.content.includes("@everyone") ||
+      message.content.includes("@here"));
 
   // Memoized formatted timestamps
   const formattedTime = useMemo(() => {
-    const timeStr = format(new Date(message.created_at || ''), 'h:mm a');
-    return timeStr.replace(/\s+/, '\u00A0');
+    const timeStr = format(new Date(message.created_at || ""), "h:mm a");
+    return timeStr.replace(/\s+/, "\u00A0");
   }, [message.created_at]);
 
-  const formattedTimestamp = useMemo(() => formatMessageTimestamp(message.created_at || ''), [message.created_at]);
+  const formattedTimestamp = useMemo(() => formatMessageTimestamp(message.created_at || ""), [message.created_at]);
 
   // Long press handlers for mobile
   const handleTouchStart = useCallback(() => {
@@ -146,20 +150,23 @@ export const DMMessageItem = memo(function DMMessageItem({ message, isFirst, onR
     setShowMobileActions(false);
   };
 
-  const handleDesktopAddReaction = useCallback(async (emoji: string) => {
-    if (!user) return;
-    await addReaction(message.id, user.id, emoji);
-    setShowDesktopEmojiPicker(false);
-  }, [user, message.id, addReaction]);
+  const handleDesktopAddReaction = useCallback(
+    async (emoji: string) => {
+      if (!user) return;
+      await addReaction(message.id, user.id, emoji);
+      setShowDesktopEmojiPicker(false);
+    },
+    [user, message.id, addReaction],
+  );
 
   const handleCopyText = useCallback(() => {
     navigator.clipboard.writeText(message.content);
-    toast.success('Message copied');
+    toast.success("Message copied");
   }, [message.content]);
 
   const handleCopyMessageId = useCallback(() => {
     navigator.clipboard.writeText(message.id);
-    toast.success('Message ID copied');
+    toast.success("Message ID copied");
   }, [message.id]);
 
   const handleStartEditing = useCallback(() => {
@@ -167,11 +174,11 @@ export const DMMessageItem = memo(function DMMessageItem({ message, isFirst, onR
     setIsEditing(true);
   }, [message.content]);
 
-  const quickReactions = ['👍', '❤️', '😂', '😮', '😢', '🎉'];
+  const quickReactions = ["👍", "❤️", "😂", "😮", "😢", "🎉"];
 
   const nameForUserId = useCallback(
     (userId: string) => {
-      if (user?.id && userId === user.id) return 'You';
+      if (user?.id && userId === user.id) return "You";
       if (otherUser?.id && userId === otherUser.id) return otherUser.display_name ?? otherUser.username;
       return userId;
     },
@@ -207,27 +214,28 @@ export const DMMessageItem = memo(function DMMessageItem({ message, isFirst, onR
 
   // Computed class names
   const outerClassName = useMemo(() => {
-    const base = 'px-0';
-    const padding = isFirst ? 'py-1' : 'py-px';
-    const animation = shouldAnimate ? 'animate-message-slide-in' : '';
+    const base = "px-0";
+    const padding = isFirst ? "py-1" : "py-px";
+    const animation = shouldAnimate ? "animate-message-slide-in" : "";
     return `${base} ${padding} ${animation}`.trim();
   }, [isFirst, shouldAnimate]);
 
   const innerClassName = useMemo(() => {
     const classes = [
-      'group relative flex px-3 rounded-lg transition-colors duration-200 hover:bg-muted/40',
-      isFirst ? 'gap-3 py-1.5' : 'gap-3 py-0.5',
+      "group relative flex px-3 rounded-lg transition-colors duration-200 hover:bg-muted/40",
+      isFirst ? "gap-3 py-1.5" : "gap-3 py-0.5",
     ];
-    if (isMentioned) classes.push('bg-amber-950/50 border-l-2 border-l-amber-500');
-    return classes.join(' ');
+    if (isMentioned) classes.push("bg-amber-950/50 border-l-2 border-l-amber-500");
+    if (isHighlighted) classes.push("animate-highlight-message bg-primary/20 ring-2 ring-primary/50");
+    return classes.join(" ");
   }, [isFirst, isMentioned]);
 
   return (
     <>
       <div
-        id={`dm-message-${message.id}`}
+        id={`message-${message.id}`}
         className={outerClassName}
-        style={shouldAnimate ? { animationFillMode: 'both' } : undefined}
+        style={shouldAnimate ? { animationFillMode: "both" } : undefined}
       >
         <ContextMenu>
           <ContextMenuTrigger asChild disabled={isMobile}>
@@ -242,18 +250,14 @@ export const DMMessageItem = memo(function DMMessageItem({ message, isFirst, onR
               {/* Avatar / Timestamp column */}
               <div className="w-10 flex-shrink-0">
                 {isFirst && message.sender ? (
-                  <div 
-                    className="dm-avatar-click cursor-pointer" 
+                  <div
+                    className="dm-avatar-click cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();
-                      openModal('userProfile', { userId: message.sender_id });
+                      openModal("userProfile", { userId: message.sender_id });
                     }}
                   >
-                    <AvatarWithDecoration 
-                      user={message.sender} 
-                      className="w-10 h-10"
-                      active={isRowHovered}
-                    />
+                    <AvatarWithDecoration user={message.sender} className="w-10 h-10" active={isRowHovered} />
                   </div>
                 ) : (
                   <div className="h-full flex items-center justify-center">
@@ -268,11 +272,11 @@ export const DMMessageItem = memo(function DMMessageItem({ message, isFirst, onR
               <div className="flex-1 min-w-0">
                 {isFirst && (
                   <div className="flex items-baseline gap-2 mb-0.5 font-[Inter,system-ui,sans-serif]">
-                    <span 
+                    <span
                       className="dm-username-click text-[14px] sm:text-[15px] font-medium text-foreground leading-tight cursor-pointer hover:underline"
                       onClick={(e) => {
                         e.stopPropagation();
-                        openModal('userProfile', { userId: message.sender_id });
+                        openModal("userProfile", { userId: message.sender_id });
                       }}
                     >
                       {message.sender?.display_name || message.sender?.username}
@@ -291,19 +295,20 @@ export const DMMessageItem = memo(function DMMessageItem({ message, isFirst, onR
                       e.stopPropagation();
                       const targetEl = document.getElementById(`dm-message-${message.reply_to!.id}`);
                       if (targetEl) {
-                        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        targetEl.classList.add('animate-highlight-message');
-                        setTimeout(() => targetEl.classList.remove('animate-highlight-message'), 2000);
+                        targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
+                        targetEl.classList.add("animate-highlight-message");
+                        setTimeout(() => targetEl.classList.remove("animate-highlight-message"), 2000);
                       }
                     }}
                   >
                     <CornerUpLeft className="w-3 h-3 flex-shrink-0" />
                     <span className="flex-shrink-0">Replying to</span>
                     <span className="font-medium text-primary flex-shrink-0">
-                      @{message.reply_to.sender?.username || 'unknown'}
+                      @{message.reply_to.sender?.username || "unknown"}
                     </span>
                     <span className="truncate max-w-[120px] sm:max-w-[200px]">
-                      {message.reply_to.content.slice(0, 30)}{message.reply_to.content.length > 30 ? '...' : ''}
+                      {message.reply_to.content.slice(0, 30)}
+                      {message.reply_to.content.length > 30 ? "..." : ""}
                     </span>
                   </div>
                 )}
@@ -316,23 +321,23 @@ export const DMMessageItem = memo(function DMMessageItem({ message, isFirst, onR
                       onChange={(e) => setEditContent(e.target.value)}
                       className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm resize-none outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 min-h-[60px] max-h-[300px] overflow-y-auto"
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
+                        if (e.key === "Enter" && !e.shiftKey) {
                           e.preventDefault();
                           handleEdit();
                         }
-                        if (e.key === 'Escape') {
+                        if (e.key === "Escape") {
                           handleCancelEdit();
                         }
                       }}
-                      style={{ lineHeight: '1.5' }}
+                      style={{ lineHeight: "1.5" }}
                     />
                     <div className="flex gap-2 text-[11px]">
                       <span className="text-muted-foreground">
-                        escape to{' '}
+                        escape to{" "}
                         <button className="text-primary hover:underline" onClick={handleCancelEdit}>
                           cancel
                         </button>
-                        {' • '}enter to{' '}
+                        {" • "}enter to{" "}
                         <button className="text-primary hover:underline" onClick={handleEdit}>
                           save
                         </button>
@@ -341,17 +346,11 @@ export const DMMessageItem = memo(function DMMessageItem({ message, isFirst, onR
                   </div>
                 ) : (
                   <div className="text-[14px] sm:text-[14px] font-normal leading-[1.5] font-[Inter,system-ui,sans-serif]">
-                    <MessageContent 
-                      content={message.content} 
-                      currentUserId={user?.id}
-                      messageId={message.id}
-                    />
+                    <MessageContent content={message.content} currentUserId={user?.id} messageId={message.id} />
                   </div>
                 )}
 
-                {message.edited_at && !isEditing && (
-                  <span className="text-[10px] text-muted-foreground">(edited)</span>
-                )}
+                {message.edited_at && !isEditing && <span className="text-[10px] text-muted-foreground">(edited)</span>}
 
                 {/* Reactions */}
                 {message.reactions && message.reactions.length > 0 && (
@@ -363,10 +362,10 @@ export const DMMessageItem = memo(function DMMessageItem({ message, isFirst, onR
                             <button
                               onClick={() => handleReactionClick(reaction.emoji)}
                               className={cn(
-                                'flex items-center gap-2 px-3 py-1.5 rounded-full border transition-colors duration-200',
+                                "flex items-center gap-2 px-3 py-1.5 rounded-full border transition-colors duration-200",
                                 reaction.hasReacted
-                                  ? 'bg-primary/20 border-primary text-primary'
-                                  : 'bg-secondary/80 border-transparent hover:border-border hover:bg-secondary'
+                                  ? "bg-primary/20 border-primary text-primary"
+                                  : "bg-secondary/80 border-transparent hover:border-border hover:bg-secondary",
                               )}
                             >
                               <span className="text-xl leading-none font-emoji">{reaction.emoji}</span>
@@ -385,16 +384,16 @@ export const DMMessageItem = memo(function DMMessageItem({ message, isFirst, onR
                                   <span className="text-2xl leading-none font-emoji">{reaction.emoji}</span>
                                 </div>
                                 <div className="min-w-0 text-sm leading-tight">
-                                  <span className="text-muted-foreground">reacted by</span>{' '}
+                                  <span className="text-muted-foreground">reacted by</span>{" "}
                                   {preview.map((name, idx) => (
                                     <span key={`${reaction.emoji}-${name}`}>
                                       <span className="truncate">{name}</span>
-                                      {idx < preview.length - 1 ? ', ' : ''}
+                                      {idx < preview.length - 1 ? ", " : ""}
                                     </span>
                                   ))}
                                   {remaining > 0 && (
                                     <>
-                                      {preview.length > 0 ? ', ' : ''}
+                                      {preview.length > 0 ? ", " : ""}
                                       <button
                                         type="button"
                                         className="text-primary underline hover:no-underline"
@@ -545,7 +544,7 @@ export const DMMessageItem = memo(function DMMessageItem({ message, isFirst, onR
           <DrawerHeader className="pb-2">
             <DrawerTitle className="text-sm font-medium text-muted-foreground">Message Actions</DrawerTitle>
           </DrawerHeader>
-          
+
           <div className="px-4 pb-8">
             {/* Quick reactions */}
             <div className="flex justify-center gap-3 mb-4 pb-4 border-b border-border">
@@ -556,8 +555,8 @@ export const DMMessageItem = memo(function DMMessageItem({ message, isFirst, onR
                     key={emoji}
                     onClick={() => handleReactionClick(emoji)}
                     className={cn(
-                      'text-2xl p-2 rounded-full active:scale-90 transition-transform',
-                      existingReaction?.hasReacted ? 'bg-primary/20' : 'hover:bg-accent'
+                      "text-2xl p-2 rounded-full active:scale-90 transition-transform",
+                      existingReaction?.hasReacted ? "bg-primary/20" : "hover:bg-accent",
                     )}
                   >
                     {emoji}
@@ -622,7 +621,7 @@ export const DMMessageItem = memo(function DMMessageItem({ message, isFirst, onR
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <span className="text-base leading-none font-emoji">{reactionDetailsEmoji ?? ''}</span>
+              <span className="text-base leading-none font-emoji">{reactionDetailsEmoji ?? ""}</span>
               <span>Reactions</span>
             </DialogTitle>
           </DialogHeader>
@@ -630,7 +629,7 @@ export const DMMessageItem = memo(function DMMessageItem({ message, isFirst, onR
           <div className="max-h-[320px] overflow-auto space-y-1">
             {selectedReactionNames.length > 0 ? (
               selectedReactionNames.map((name, idx) => (
-                <div key={`${reactionDetailsEmoji ?? 'reaction'}-${idx}`} className="text-sm">
+                <div key={`${reactionDetailsEmoji ?? "reaction"}-${idx}`} className="text-sm">
                   {name}
                 </div>
               ))
