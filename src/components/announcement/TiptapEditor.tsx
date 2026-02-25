@@ -425,6 +425,10 @@ function htmlToMarkdown(html: string): string {
   temp.innerHTML = html;
   
   let markdown = '';
+
+  const ensureBlockSeparation = () => {
+    if (markdown && !markdown.endsWith('\n')) markdown += '\n';
+  };
   
   const processNode = (node: Node): void => {
     if (node.nodeType === Node.TEXT_NODE) {
@@ -433,6 +437,11 @@ function htmlToMarkdown(html: string): string {
       const el = node as HTMLElement;
       const tag = el.tagName.toLowerCase();
       const children = Array.from(el.childNodes);
+      const isBlock = ['h1', 'h2', 'h3', 'p', 'pre', 'hr', 'div'].includes(tag);
+
+      if (isBlock) {
+        ensureBlockSeparation();
+      }
       
       switch (tag) {
         case 'h1':
@@ -445,6 +454,15 @@ function htmlToMarkdown(html: string): string {
           markdown += '### ' + el.textContent?.trim() + '\n';
           break;
         case 'p':
+          // Preserve empty lines (<p><br></p>) as a single newline.
+          if (children.length === 1 && children[0].nodeType === Node.ELEMENT_NODE) {
+            const onlyChild = children[0] as HTMLElement;
+            if (onlyChild.tagName.toLowerCase() === 'br') {
+              if (!markdown.endsWith('\n')) markdown += '\n';
+              break;
+            }
+          }
+
           children.forEach(processNode);
           if (!markdown.endsWith('\n')) markdown += '\n';
           break;
@@ -519,6 +537,8 @@ function htmlToMarkdown(html: string): string {
             markdown += '\n---\n';
           } else {
             children.forEach(processNode);
+            // Treat divs as blocks to avoid merging adjacent lines (e.g., when the editor outputs div blocks).
+            if (!markdown.endsWith('\n')) markdown += '\n';
           }
           break;
         default:

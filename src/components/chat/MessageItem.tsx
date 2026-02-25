@@ -1142,7 +1142,7 @@ export const MessageItem = memo(function MessageItem({
                                 : content.split("\n").slice(1).join("\n").trim();
 
                             return (
-                              <div className="space-y-2">
+                              <div className="space-y-2 !block">
                                 {title && <h3 className="text-lg font-semibold text-foreground">{title}</h3>}
                                 {announcementContent && (
                                   <MessageContent
