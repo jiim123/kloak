@@ -38,7 +38,7 @@ import {
   recordRegistrationAttempt,
   logBlockedUsernameAttempt,
 } from "@/utils/blockedUsernames";
-import HCaptcha from "@hcaptcha/react-hcaptcha";
+
 import { MAINTENANCE_MODE, REGISTRATION_DISABLED } from "@/lib/maintenance";
 
 const tabContentVariants = {
@@ -90,9 +90,6 @@ const Auth = () => {
   const [secretKey, setSecretKey] = useState("");
   const [showSecretKey, setShowSecretKey] = useState(false);
 
-  // hCaptcha (registration only); when set, registration goes through Edge Function with captcha
-  const hcaptchaSiteKey = import.meta.env.VITE_HCAPTCHA_SITE_KEY as string | undefined;
-  const hcaptchaRef = useRef<HCaptcha | null>(null);
 
   // Check for saved session on mount
   useEffect(() => {
@@ -232,47 +229,18 @@ const Auth = () => {
     try {
       recordRegistrationAttempt();
 
-      let captchaToken: string | null = null;
-      if (hcaptchaSiteKey && hcaptchaRef.current) {
-        setLoading(true);
-        try {
-          const result = await hcaptchaRef.current.execute({ async: true });
-          captchaToken = result?.response ?? null;
-        } catch (captchaErr) {
-          console.warn("Captcha cancelled or failed:", captchaErr);
-          toast({
-            variant: "destructive",
-            title: "Verification required",
-            description: "Please complete the captcha to create an account.",
-          });
-          return;
-        } finally {
-          setLoading(false);
-        }
-        if (!captchaToken) {
-          toast({
-            variant: "destructive",
-            title: "Verification required",
-            description: "Please complete the captcha to create an account.",
-          });
-          return;
-        }
-      }
-
       // Set modal flag BEFORE createAccount so the redirect useEffect
       // won't navigate away when the user is set in the store.
       setShowWelcomeModal(true);
-      const result = await createAccount(username.trim().toLowerCase(), captchaToken);
+      const result = await createAccount(username.trim().toLowerCase());
       if (result) {
         setGeneratedKey(result.secretKey);
       } else {
         setShowWelcomeModal(false);
-        hcaptchaRef.current?.resetCaptcha();
       }
     } catch (err) {
       console.error("Account creation error:", err);
       setShowWelcomeModal(false);
-      hcaptchaRef.current?.resetCaptcha();
       toast({
         variant: "destructive",
         title: "Account creation failed",
@@ -526,17 +494,6 @@ const Auth = () => {
                           {renderUsernameSuggestions()}
                         </div>
 
-                        {hcaptchaSiteKey && (
-                          <div className="flex justify-center">
-                            <HCaptcha
-                              ref={hcaptchaRef}
-                              sitekey={hcaptchaSiteKey}
-                              theme="dark"
-                              size="normal"
-                            />
-                          </div>
-                        )}
-
                         <Button
                           type="submit"
                           className="w-full"
@@ -749,17 +706,6 @@ const Auth = () => {
                           {renderUsernameHelperText()}
                           {renderUsernameSuggestions()}
                         </div>
-
-                        {hcaptchaSiteKey && (
-                          <div className="flex justify-center">
-                            <HCaptcha
-                              ref={hcaptchaRef}
-                              sitekey={hcaptchaSiteKey}
-                              theme="dark"
-                              size="normal"
-                            />
-                          </div>
-                        )}
 
                         <Button
                           type="submit"

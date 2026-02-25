@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { getKeyHash, supabase, setKeyHashHeader } from "@/integrations/supabase/client";
-import { generateSecretKey, hashSecretKey, isValidSecretKey } from "@/lib/crypto";
+import { generateSecretKey, hashSecretKey, isValidSecretKey, fetchPoWChallenge, solvePoWChallenge } from "@/lib/crypto";
 import { authRateLimiter, accountCreationRateLimiter, validateUsername } from "@/lib/security";
 import { setUserInCache, invalidateUser } from "@/lib/userCache";
 import type { User, UserStatus } from "@/types";
@@ -43,7 +43,7 @@ interface AuthState {
 
   // Auth methods
   checkAuth: () => Promise<boolean>;
-  createAccount: (username: string, hcaptchaToken?: string | null) => Promise<{ secretKey: string; user: User } | null>;
+  createAccount: (username: string) => Promise<{ secretKey: string; user: User } | null>;
   login: (secretKey: string) => Promise<boolean>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => Promise<void>;
@@ -95,7 +95,7 @@ export const useAuthStore = create<AuthState>()(
         return success;
       },
 
-      createAccount: async (username: string, hcaptchaToken?: string | null) => {
+      createAccount: async (username: string) => {
         set({ isLoading: true, error: null });
 
         // Rate limit account creation to prevent abuse
@@ -120,26 +120,26 @@ export const useAuthStore = create<AuthState>()(
           const normalizedUsername = username.toLowerCase().trim();
           const bannerColor = "#5865F2";
 
-          if (!hcaptchaToken) {
-            set({ error: "Please complete captcha before creating an account.", isLoading: false });
-            return null;
-          }
-
           const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
           if (!supabaseUrl) {
             set({ error: "Registration is not configured. Missing VITE_SUPABASE_URL.", isLoading: false });
             return null;
           }
 
+          // Solve Proof of Work challenge
+          const challenge = await fetchPoWChallenge();
+          const solution = await solvePoWChallenge(challenge.nonce, challenge.difficulty);
+
           let data: Record<string, unknown> | null = null;
           let errorMessage: string | null = null;
-          const res = await fetch(`${supabaseUrl}/functions/v1/register-with-captcha`, {
+          const res = await fetch(`${supabaseUrl}/functions/v1/register-with-pow`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               username: normalizedUsername,
               key_hash: keyHash,
-              hcaptcha_response: hcaptchaToken,
+              challenge_id: challenge.id,
+              solution,
               banner_color: bannerColor,
             }),
           });
