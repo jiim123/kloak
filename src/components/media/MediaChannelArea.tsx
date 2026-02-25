@@ -108,10 +108,11 @@ export const MediaChannelArea = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch media items
-  const fetchMediaItems = useCallback(async () => {
+  const fetchMediaItems = useCallback(async (options?: { silent?: boolean }) => {
     if (!currentChannel) return;
+    const silent = options?.silent ?? false;
 
-    setIsLoading(true);
+    if (!silent) setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from("media_items" as any)
@@ -129,7 +130,7 @@ export const MediaChannelArea = () => {
     } catch (err) {
       console.error("Failed to fetch media items:", err);
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   }, [currentChannel]);
 
@@ -142,7 +143,18 @@ export const MediaChannelArea = () => {
     if (!currentChannel) return;
 
     const channel = supabase
-      .channel(`media_items:${currentChannel.id}`)
+      .channel(`media_items:${currentChannel.id}`, {
+        config: {
+          broadcast: { self: false },
+        },
+      })
+      .on(
+        "broadcast",
+        { event: "media_items" },
+        () => {
+          void fetchMediaItems({ silent: true });
+        },
+      )
       .on(
         "postgres_changes",
         {
@@ -152,7 +164,7 @@ export const MediaChannelArea = () => {
           filter: `channel_id=eq.${currentChannel.id}`,
         },
         () => {
-          fetchMediaItems();
+          void fetchMediaItems({ silent: true });
         },
       )
       .subscribe();
@@ -302,6 +314,7 @@ export const MediaChannelArea = () => {
       toast.success("Media uploaded successfully!");
       setIsUploadModalOpen(false);
       resetUploadForm();
+      await fetchMediaItems({ silent: true });
     } catch (err) {
       console.error("Upload failed:", err);
       toast.error("Failed to upload media");
@@ -320,6 +333,7 @@ export const MediaChannelArea = () => {
 
       if (error) throw error;
       toast.success("Media deleted");
+      await fetchMediaItems({ silent: true });
     } catch (err) {
       console.error("Failed to delete:", err);
       toast.error("Failed to delete media");
@@ -596,6 +610,52 @@ export const MediaChannelArea = () => {
   );
 };
 
+const escapeHtml = (text: string): string => {
+  const entities: Record<string, string> = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  };
+  return text.replace(/[&<>"']/g, (char) => entities[char] ?? char);
+};
+
+const isSafeHttpUrl = (url: string): boolean => {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+};
+
+const renderMediaDescriptionHtml = (content: string): string => {
+  // Minimal markdown subset: bold, italic, strikethrough, links. No images/mentions/spoilers/etc.
+  let html = escapeHtml(content);
+
+  // Strikethrough ~~text~~
+  html = html.replace(/~~([^~]+)~~/g, "<del>$1</del>");
+
+  // Bold **text**
+  html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+
+  // Italic *text* (avoid matching inside URLs)
+  html = html.replace(/(?<![:/])\*([^*]+)\*(?!\*)/g, "<em>$1</em>");
+
+  // Linkify safe URLs (http/https only)
+  const urlPattern = /https?:\/\/[^\s<]+/g;
+  html = html.replace(urlPattern, (rawUrl) => {
+    if (!isSafeHttpUrl(rawUrl)) return rawUrl;
+    const safeUrl = escapeHtml(rawUrl);
+    return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 hover:opacity-90">${safeUrl}</a>`;
+  });
+
+  // Preserve line breaks
+  html = html.replace(/\n/g, "<br>");
+  return html;
+};
+
 // Media Card Component
 const MediaCard = ({
   item,
@@ -774,7 +834,12 @@ const MediaLightbox = ({ item, onClose }: { item: MediaItem; onClose: () => void
             {(item.title || item.description) && (
               <div className="mt-4 text-center">
                 {item.title && <h3 className="text-lg font-semibold text-white mb-1">{item.title}</h3>}
-                {item.description && <p className="text-sm text-white/70">{item.description}</p>}
+                {item.description && (
+                  <div
+                    className="text-sm text-white/70 text-center max-w-3xl mx-auto break-words"
+                    dangerouslySetInnerHTML={{ __html: renderMediaDescriptionHtml(item.description) }}
+                  />
+                )}
               </div>
             )}
           </div>

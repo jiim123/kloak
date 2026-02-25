@@ -142,10 +142,11 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
   }, []);
 
   // Fetch comments
-  const fetchComments = useCallback(async () => {
+  const fetchComments = useCallback(async (options?: { silent?: boolean }) => {
     if (!mediaId) return;
+    const silent = options?.silent ?? false;
 
-    setIsLoading(true);
+    if (!silent) setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from("media_comments" as any)
@@ -227,7 +228,7 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
     } catch (error) {
       handleError(error, "Failed to fetch comments");
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   }, [mediaId, user?.id, groupReactions]);
 
@@ -241,6 +242,20 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
           broadcast: { self: false },
         },
       })
+      .on(
+        "broadcast",
+        { event: "media_comments" },
+        () => {
+          void fetchComments({ silent: true });
+        }
+      )
+      .on(
+        "broadcast",
+        { event: "media_comment_reactions" },
+        () => {
+          void fetchComments({ silent: true });
+        }
+      )
       .on(
         "postgres_changes",
         {
@@ -476,7 +491,7 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
         });
 
         if (error) throw error;
-        // Real-time sync is handled by postgres_changes subscription
+        await fetchComments({ silent: true });
       } catch (error) {
         handleError(error, "Failed to send comment");
         setReplyContent(content);
@@ -485,7 +500,7 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
         setIsSendingReply(false);
       }
     },
-    [user, replyContent, replyingToComment, mediaId]
+    [user, replyContent, replyingToComment, mediaId, fetchComments]
   );
 
   const handleEdit = useCallback(async () => {
@@ -500,14 +515,14 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
       });
 
       if (error) throw error;
-      // Real-time sync is handled by postgres_changes subscription
+      await fetchComments({ silent: true });
 
       setEditingCommentId(null);
       setEditContent("");
     } catch (error) {
       handleError(error, "Failed to edit comment");
     }
-  }, [editingCommentId, editContent]);
+  }, [editingCommentId, editContent, user?.id, fetchComments]);
 
   const handleDelete = useCallback(async (commentId: string) => {
     try {
@@ -516,11 +531,11 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
         _user_id: user?.id
       });
       if (error) throw error;
-      // Real-time sync is handled by postgres_changes subscription
+      await fetchComments({ silent: true });
     } catch (error) {
       handleError(error, "Failed to delete comment");
     }
-  }, [canManageMessages, user?.id]);
+  }, [user?.id, fetchComments]);
 
   const handleReaction = useCallback(async (commentId: string, emoji: string) => {
     if (!user) return;
