@@ -59,6 +59,7 @@ import { cn } from "@/lib/utils";
 import { useSignedUrl } from "@/hooks/useSignedUrl";
 import { getPollIdFromContent, isPollMessageContent } from "@/lib/poll";
 import { canRevealGhostIdentityForUser } from "@/lib/ghostIdentity";
+import { getUserFromCache, getOrFetchUser } from "@/lib/userCache";
 
 // Static data moved outside component
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "👋", "🔥", "👀", "💯", "🙌", "😍", "🤔"] as const;
@@ -450,10 +451,29 @@ export const MessageItem = memo(function MessageItem({
     return map;
   }, [members, user?.id]);
 
+  const [, forceReactionUpdate] = useState(0);
+
   const getReactionUserNames = useCallback(
     (userIds: string[]) => {
       const unique = Array.from(new Set(userIds));
-      return unique.map((id) => memberNameById.get(id) ?? (id === user?.id ? "You" : id));
+      const unknownIds: string[] = [];
+      const names = unique.map((id) => {
+        const memberName = memberNameById.get(id);
+        if (memberName) return memberName;
+        if (id === user?.id) return "You";
+        // Try user cache as fallback for users not in the member list
+        const cached = getUserFromCache(id);
+        if (cached) return cached.display_name ?? cached.username;
+        unknownIds.push(id);
+        return id; // temporary fallback
+      });
+      // Trigger async fetch for unknown users so next render resolves them
+      if (unknownIds.length > 0) {
+        Promise.all(unknownIds.map((id) => getOrFetchUser(id))).then(() => {
+          forceReactionUpdate((n) => n + 1);
+        });
+      }
+      return names;
     },
     [memberNameById, user?.id],
   );

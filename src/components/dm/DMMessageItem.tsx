@@ -28,6 +28,7 @@ import type { DirectMessage } from "@/types";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { MessageContent, ReplyPreview } from "@/components/chat/MessageContent";
 import { isImageOnlyMessage } from "@/lib/message";
+import { getUserFromCache, getOrFetchUser } from "@/lib/userCache";
 import { toast } from "sonner";
 
 interface DMMessageItemProps {
@@ -177,10 +178,15 @@ export const DMMessageItem = memo(function DMMessageItem({
 
   const quickReactions = ["👍", "❤️", "😂", "😮", "😢", "🎉"];
 
+  const [, forceReactionUpdate] = useState(0);
+
   const nameForUserId = useCallback(
     (userId: string) => {
       if (user?.id && userId === user.id) return "You";
       if (otherUser?.id && userId === otherUser.id) return otherUser.display_name ?? otherUser.username;
+      // Try user cache as fallback
+      const cached = getUserFromCache(userId);
+      if (cached) return cached.display_name ?? cached.username;
       return userId;
     },
     [user?.id, otherUser?.id, otherUser?.display_name, otherUser?.username],
@@ -189,9 +195,17 @@ export const DMMessageItem = memo(function DMMessageItem({
   const getReactionUserNames = useCallback(
     (userIds: string[]) => {
       const unique = Array.from(new Set(userIds));
-      return unique.map(nameForUserId);
+      const names = unique.map(nameForUserId);
+      // Fetch unknown users (still showing as UUIDs) so next render resolves them
+      const unknownIds = unique.filter((id) => names[unique.indexOf(id)] === id && id !== user?.id);
+      if (unknownIds.length > 0) {
+        Promise.all(unknownIds.map((id) => getOrFetchUser(id))).then(() => {
+          forceReactionUpdate((n) => n + 1);
+        });
+      }
+      return names;
     },
-    [nameForUserId],
+    [nameForUserId, user?.id],
   );
 
   const selectedReaction = useMemo(() => {
