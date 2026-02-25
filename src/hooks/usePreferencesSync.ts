@@ -44,6 +44,14 @@ export const usePreferencesSync = () => {
     setShowTimestamps,
     setAnimateEmojis,
     setDmPrivacy,
+    enableMentionNotifications,
+    setEnableMentionNotifications,
+    enableDMNotifications,
+    setEnableDMNotifications,
+    enableFriendRequestNotifications,
+    setEnableFriendRequestNotifications,
+    enableServerInviteNotifications,
+    setEnableServerInviteNotifications,
   } = useUIStore();
 
   const hasLoadedFromDB = useRef(false);
@@ -58,7 +66,7 @@ export const usePreferencesSync = () => {
 
     const loadPreferences = async () => {
       try {
-        const { data, error } = await supabase.rpc('get_user_preferences' as any, {
+        const { data, error } = await supabase.rpc("get_user_preferences" as any, {
           _user_id: user.id,
         });
 
@@ -126,10 +134,22 @@ export const usePreferencesSync = () => {
           if (typeof data.animate_emojis === "boolean") {
             setAnimateEmojis(data.animate_emojis);
           }
-          if (typeof (data as any).dm_privacy === 'string') {
+          if (typeof (data as any).dm_privacy === "string") {
             setDmPrivacy((data as any).dm_privacy);
           }
-          
+          if (typeof data.enable_mention_notifications === "boolean") {
+            setEnableMentionNotifications(data.enable_mention_notifications);
+          }
+          if (typeof data.enable_dm_notifications === "boolean") {
+            setEnableDMNotifications(data.enable_dm_notifications);
+          }
+          if (typeof data.enable_friend_request_notifications === "boolean") {
+            setEnableFriendRequestNotifications(data.enable_friend_request_notifications);
+          }
+          if (typeof data.enable_server_invite_notifications === "boolean") {
+            setEnableServerInviteNotifications(data.enable_server_invite_notifications);
+          }
+
           isUpdating.current = false;
         } else {
           // Create initial preferences record via secure RPC
@@ -153,6 +173,10 @@ export const usePreferencesSync = () => {
               show_timestamps: showTimestamps,
               animate_emojis: animateEmojis,
               dm_privacy: dmPrivacy,
+              enable_mention_notifications: enableMentionNotifications,
+              enable_dm_notifications: enableDMNotifications,
+              enable_friend_request_notifications: enableFriendRequestNotifications,
+              enable_server_invite_notifications: enableServerInviteNotifications,
             },
           });
         }
@@ -194,6 +218,10 @@ export const usePreferencesSync = () => {
             show_timestamps: showTimestamps,
             animate_emojis: animateEmojis,
             dm_privacy: dmPrivacy,
+            enable_mention_notifications: enableMentionNotifications,
+            enable_dm_notifications: enableDMNotifications,
+            enable_friend_request_notifications: enableFriendRequestNotifications,
+            enable_server_invite_notifications: enableServerInviteNotifications,
           },
         });
       } catch (err) {
@@ -220,6 +248,10 @@ export const usePreferencesSync = () => {
     showTimestamps,
     animateEmojis,
     dmPrivacy,
+    enableMentionNotifications,
+    enableDMNotifications,
+    enableFriendRequestNotifications,
+    enableServerInviteNotifications,
     isAuthenticated,
     user?.id,
   ]);
