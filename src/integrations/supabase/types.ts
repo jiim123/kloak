@@ -14,36 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      _snapshot_direct_messages_20260221: {
-        Row: {
-          content: string | null
-          conversation_id: string | null
-          created_at: string | null
-          edited_at: string | null
-          id: string | null
-          reply_to_id: string | null
-          sender_id: string | null
-        }
-        Insert: {
-          content?: string | null
-          conversation_id?: string | null
-          created_at?: string | null
-          edited_at?: string | null
-          id?: string | null
-          reply_to_id?: string | null
-          sender_id?: string | null
-        }
-        Update: {
-          content?: string | null
-          conversation_id?: string | null
-          created_at?: string | null
-          edited_at?: string | null
-          id?: string | null
-          reply_to_id?: string | null
-          sender_id?: string | null
-        }
-        Relationships: []
-      }
       _snapshot_direct_messages_compromise_20260221: {
         Row: {
           content: string | null
@@ -71,45 +41,6 @@ export type Database = {
           id?: string | null
           reply_to_id?: string | null
           sender_id?: string | null
-        }
-        Relationships: []
-      }
-      _snapshot_messages_20260221: {
-        Row: {
-          channel_id: string | null
-          content: string | null
-          created_at: string | null
-          edited_at: string | null
-          embed_hidden: boolean | null
-          id: string | null
-          is_pinned: boolean | null
-          is_system_message: boolean | null
-          reply_to_id: string | null
-          user_id: string | null
-        }
-        Insert: {
-          channel_id?: string | null
-          content?: string | null
-          created_at?: string | null
-          edited_at?: string | null
-          embed_hidden?: boolean | null
-          id?: string | null
-          is_pinned?: boolean | null
-          is_system_message?: boolean | null
-          reply_to_id?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          channel_id?: string | null
-          content?: string | null
-          created_at?: string | null
-          edited_at?: string | null
-          embed_hidden?: boolean | null
-          id?: string | null
-          is_pinned?: boolean | null
-          is_system_message?: boolean | null
-          reply_to_id?: string | null
-          user_id?: string | null
         }
         Relationships: []
       }
@@ -2337,6 +2268,10 @@ export type Database = {
           created_at: string
           desktop_notifications_enabled: boolean
           dm_privacy: string
+          enable_dm_notifications: boolean
+          enable_friend_request_notifications: boolean
+          enable_mention_notifications: boolean
+          enable_server_invite_notifications: boolean
           id: string
           link_previews_enabled: boolean
           notification_sound_enabled: boolean
@@ -2360,6 +2295,10 @@ export type Database = {
           created_at?: string
           desktop_notifications_enabled?: boolean
           dm_privacy?: string
+          enable_dm_notifications?: boolean
+          enable_friend_request_notifications?: boolean
+          enable_mention_notifications?: boolean
+          enable_server_invite_notifications?: boolean
           id?: string
           link_previews_enabled?: boolean
           notification_sound_enabled?: boolean
@@ -2383,6 +2322,10 @@ export type Database = {
           created_at?: string
           desktop_notifications_enabled?: boolean
           dm_privacy?: string
+          enable_dm_notifications?: boolean
+          enable_friend_request_notifications?: boolean
+          enable_mention_notifications?: boolean
+          enable_server_invite_notifications?: boolean
           id?: string
           link_previews_enabled?: boolean
           notification_sound_enabled?: boolean
@@ -2763,6 +2706,10 @@ export type Database = {
         Returns: boolean
       }
       cleanup_pow_challenges: { Args: never; Returns: undefined }
+      close_dm_conversation: {
+        Args: { _conversation_id: string; _user_id: string }
+        Returns: Json
+      }
       close_expired_polls: { Args: { _channel_id: string }; Returns: number }
       close_poll: { Args: { _poll_id: string }; Returns: boolean }
       count_available_prekeys: {
@@ -2991,6 +2938,19 @@ export type Database = {
         Returns: Json
       }
       get_blocked_users: { Args: { _user_id: string }; Returns: Json }
+      get_category_permissions: {
+        Args: { _category_id: string }
+        Returns: Json
+      }
+      get_channel_bootstrap_secure: {
+        Args: {
+          _blocked_user_ids?: string[]
+          _channel_id: string
+          _limit?: number
+          _user_id: string
+        }
+        Returns: Json
+      }
       get_channel_members: { Args: { _channel_id: string }; Returns: Json }
       get_channel_messages: {
         Args: {
@@ -3069,6 +3029,14 @@ export type Database = {
         }[]
       }
       get_maintenance_mode: { Args: never; Returns: boolean }
+      get_message_author_styles_secure: {
+        Args: {
+          _server_id: string
+          _target_user_ids: string[]
+          _user_id: string
+        }
+        Returns: Json
+      }
       get_message_replies_secure: {
         Args: {
           _blocked_user_ids?: string[]
@@ -3117,7 +3085,29 @@ export type Database = {
         Args: { _server_id: string; _user_id?: string }
         Returns: Json
       }
+      get_server_member_count_secure: {
+        Args: { _server_id: string; _user_id: string }
+        Returns: number
+      }
       get_server_members: { Args: { _server_id: string }; Returns: Json }
+      get_server_members_full_secure: {
+        Args: { _server_id: string; _user_id: string }
+        Returns: Json
+      }
+      get_server_members_offline: {
+        Args: { _server_id: string }
+        Returns: Json
+      }
+      get_server_members_online: { Args: { _server_id: string }; Returns: Json }
+      get_server_mention_candidates_secure: {
+        Args: {
+          _limit?: number
+          _query?: string
+          _server_id: string
+          _user_id: string
+        }
+        Returns: Json
+      }
       get_server_recent_announcements_secure: {
         Args: { _limit?: number; _server_id: string; _user_id: string }
         Returns: Json
