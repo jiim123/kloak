@@ -1055,7 +1055,7 @@ export const MessageItem = memo(function MessageItem({
                         <span className="flex-shrink-0">Replying to</span>
                         {showReplyAuthorIdentity ? (
                           <span className="font-medium text-primary flex-shrink-0">
-                            @{message.reply_to.user?.username || "unknown"}
+                            @{message.reply_to.user?.display_name || message.reply_to.user?.username || "unknown"}
                           </span>
                         ) : (
                           <span className="font-medium text-primary italic flex-shrink-0">Anonymous</span>
