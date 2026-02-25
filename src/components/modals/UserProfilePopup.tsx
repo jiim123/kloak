@@ -82,6 +82,9 @@ export const UserProfilePopup = () => {
   const { user: currentUser } = useAuthStore();
   const navigate = useNavigate();
   const { servers, setCurrentServer, currentServer, members } = useServerStore();
+
+  // Stable server IDs — only changes when servers are added/removed, not on any property update
+  const serverIds = useMemo(() => servers.map((s) => s.id), [servers]);
   const {
     friends,
     pendingRequests,
@@ -109,7 +112,7 @@ export const UserProfilePopup = () => {
 
   const isOpen = activeModal === "userProfile";
   const userId = modalData?.userId as string | undefined;
-  
+
   // Fetch user badges
   const { badges: userBadges } = useUserBadges(isOpen ? userId : undefined);
 
@@ -160,7 +163,7 @@ export const UserProfilePopup = () => {
   // Capture still frame after animation plays once to prevent looping
   useEffect(() => {
     if (!profileUser?.profile_effect || !isOpen) return;
-    
+
     const effectSrc = getProfileEffectSrc(profileUser.profile_effect);
     if (!effectSrc) return;
 
@@ -168,24 +171,24 @@ export const UserProfilePopup = () => {
     if (profileEffectStillFrame) return;
 
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    img.crossOrigin = "anonymous";
     img.src = effectSrc;
-    
+
     // Wait for image to load, then after animation duration, capture the last frame
     const captureStillFrame = () => {
       try {
-        const canvas = document.createElement('canvas');
+        const canvas = document.createElement("canvas");
         canvas.width = img.naturalWidth || 800;
         canvas.height = img.naturalHeight || 600;
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext("2d");
         if (!ctx) return;
-        
+
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/png');
+        const dataUrl = canvas.toDataURL("image/png");
         setProfileEffectStillFrame(dataUrl);
         profileEffectAnimationEndedRef.current = true;
       } catch (e) {
-        console.error('Failed to capture still frame:', e);
+        console.error("Failed to capture still frame:", e);
       }
     };
 
@@ -217,29 +220,29 @@ export const UserProfilePopup = () => {
 
         const d = data as any;
         setProfileUser({
-           id: d.id,
-           username: d.username,
-           display_name: d.display_name,
-           avatar_url: d.avatar_url,
-           banner_url: d.banner_url ?? null,
-           avatar_decoration: d.avatar_decoration,
-           profile_effect: d.profile_effect ?? null,
-           banner_color: d.banner_color || "#5865F2",
-           profile_theme_primary: d.profile_theme_primary ?? null,
-           profile_theme_accent: d.profile_theme_accent ?? null,
-           bio: d.bio,
-           status: d.status as UserStatus,
-           custom_status: d.custom_status,
-           created_at: d.created_at,
-           last_seen: d.last_seen,
+          id: d.id,
+          username: d.username,
+          display_name: d.display_name,
+          avatar_url: d.avatar_url,
+          banner_url: d.banner_url ?? null,
+          avatar_decoration: d.avatar_decoration,
+          profile_effect: d.profile_effect ?? null,
+          banner_color: d.banner_color || "#5865F2",
+          profile_theme_primary: d.profile_theme_primary ?? null,
+          profile_theme_accent: d.profile_theme_accent ?? null,
+          bio: d.bio,
+          status: d.status as UserStatus,
+          custom_status: d.custom_status,
+          created_at: d.created_at,
+          last_seen: d.last_seen,
         });
 
         // Find shared servers
-        if (servers.length > 0) {
+        if (serverIds.length > 0) {
           const { data: membershipData, error: membershipError } = await supabase.rpc("get_shared_server_ids_secure", {
             _target_user_id: userId,
             _requesting_user_id: currentUser!.id,
-            _server_ids: servers.map((s) => s.id),
+            _server_ids: serverIds,
           });
 
           if (membershipError) throw membershipError;
@@ -261,7 +264,7 @@ export const UserProfilePopup = () => {
     };
 
     fetchProfile();
-  }, [isOpen, userId, servers, checkCooldown, currentUser?.id]);
+  }, [isOpen, userId, serverIds, checkCooldown, currentUser?.id]);
 
   // Countdown timer effect
   useEffect(() => {
@@ -436,7 +439,10 @@ export const UserProfilePopup = () => {
                 >
                   {/* Banner image */}
                   {bannerUrl && (
-                    <div className="-mx-4 sm:-mx-6 -mt-4 sm:-mt-6 mb-4 h-24 sm:h-28 relative overflow-hidden" style={{ zIndex: 0 }}>
+                    <div
+                      className="-mx-4 sm:-mx-6 -mt-4 sm:-mt-6 mb-4 h-24 sm:h-28 relative overflow-hidden"
+                      style={{ zIndex: 0 }}
+                    >
                       <img
                         src={bannerUrl}
                         alt="Profile banner"
@@ -447,48 +453,56 @@ export const UserProfilePopup = () => {
                   )}
 
                   {/* Profile Effect - rendered once when modal opens, stops after first play, above banner but below content */}
-                  {profileUser.profile_effect && getProfileEffectSrc(profileUser.profile_effect) && (() => {
-                    const effectSrc = getProfileEffectSrc(profileUser.profile_effect);
-                    // Use still frame if animation has ended, otherwise use animated version
-                    const displaySrc = profileEffectAnimationEndedRef.current && profileEffectStillFrame 
-                      ? profileEffectStillFrame 
-                      : effectSrc;
-                    const effectKey = profileEffectPlayedRef.current ? `played-${userId}` : `effect-${profileUser.profile_effect}-${userId}`;
-                    
-                    return (
-                      <div className="absolute -inset-4 sm:-inset-6 pointer-events-none overflow-hidden" style={{ zIndex: 2 }}>
-                        <img
-                          ref={profileEffectImgRef}
-                          key={effectKey}
-                          src={displaySrc!}
-                          alt="Profile effect"
-                          className="absolute top-0 left-0 w-full h-full object-cover object-top"
-                          style={{
-                            imageRendering: 'auto',
-                          }}
-                          onLoad={() => {
-                            if (!profileEffectPlayedRef.current) {
+                  {profileUser.profile_effect &&
+                    getProfileEffectSrc(profileUser.profile_effect) &&
+                    (() => {
+                      const effectSrc = getProfileEffectSrc(profileUser.profile_effect);
+                      // Use still frame if animation has ended, otherwise use animated version
+                      const displaySrc =
+                        profileEffectAnimationEndedRef.current && profileEffectStillFrame
+                          ? profileEffectStillFrame
+                          : effectSrc;
+                      const effectKey = profileEffectPlayedRef.current
+                        ? `played-${userId}`
+                        : `effect-${profileUser.profile_effect}-${userId}`;
+
+                      return (
+                        <div
+                          className="absolute -inset-4 sm:-inset-6 pointer-events-none overflow-hidden"
+                          style={{ zIndex: 2 }}
+                        >
+                          <img
+                            ref={profileEffectImgRef}
+                            key={effectKey}
+                            src={displaySrc!}
+                            alt="Profile effect"
+                            className="absolute top-0 left-0 w-full h-full object-cover object-top"
+                            style={{
+                              imageRendering: "auto",
+                            }}
+                            onLoad={() => {
+                              if (!profileEffectPlayedRef.current) {
+                                profileEffectPlayedRef.current = true;
+                              }
+                            }}
+                            onError={() => {
                               profileEffectPlayedRef.current = true;
-                            }
-                          }}
-                          onError={() => {
-                            profileEffectPlayedRef.current = true;
-                          }}
-                        />
-                      </div>
-                    );
-                  })()}
+                            }}
+                          />
+                        </div>
+                      );
+                    })()}
 
                   {/* Avatar Section */}
-                  <div className={cn("flex items-end gap-4 mb-4 relative", bannerUrl && "-mt-14 sm:-mt-16 pt-2")} style={{ zIndex: 10 }}>
+                  <div
+                    className={cn("flex items-end gap-4 mb-4 relative", bannerUrl && "-mt-14 sm:-mt-16 pt-2")}
+                    style={{ zIndex: 10 }}
+                  >
                     <div className="relative flex-shrink-0">
                       <AvatarWithDecoration user={profileUser} className="w-20 h-20 sm:w-24 sm:h-24" active={true} />
                       {/* Status indicator */}
                       {(() => {
-                        const presence = getEffectivePresence(
-                          profileUser.status || 'offline',
-                          profileUser.last_seen
-                        );
+                        const presence = getEffectivePresence(profileUser.status || "offline", profileUser.last_seen);
                         return (
                           <div
                             className={cn(
@@ -503,19 +517,17 @@ export const UserProfilePopup = () => {
 
                     {/* Name and username - shown next to avatar on larger screens */}
                     <div className="hidden sm:block flex-1 min-w-0 pb-1 pt-2">
-                     <div className="flex items-center gap-2 flex-wrap">
-                       <h2 className="text-xl font-semibold tracking-tight truncate">
-                         {profileUser.display_name || profileUser.username}
-                       </h2>
-                       {userBadges.length > 0 && (
-                         <UserBadges badges={userBadges} />
-                       )}
-                       {profileUser.pronouns && (
-                         <span className="text-sm text-[color:var(--profile-muted)] font-normal">
-                           • {profileUser.pronouns}
-                         </span>
-                       )}
-                     </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h2 className="text-xl font-semibold tracking-tight truncate">
+                          {profileUser.display_name || profileUser.username}
+                        </h2>
+                        {userBadges.length > 0 && <UserBadges badges={userBadges} />}
+                        {profileUser.pronouns && (
+                          <span className="text-sm text-[color:var(--profile-muted)] font-normal">
+                            • {profileUser.pronouns}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-sm font-medium text-[color:var(--profile-muted)] truncate">
                         @{profileUser.username}
                       </p>
@@ -524,19 +536,17 @@ export const UserProfilePopup = () => {
 
                   {/* Name and username - shown below avatar on mobile */}
                   <div className="sm:hidden mb-4 relative" style={{ zIndex: 10 }}>
-                   <div className="flex items-center gap-2 flex-wrap">
-                     <h2 className="text-xl font-semibold tracking-tight">
-                       {profileUser.display_name || profileUser.username}
-                     </h2>
-                     {userBadges.length > 0 && (
-                       <UserBadges badges={userBadges} />
-                     )}
-                     {profileUser.pronouns && (
-                       <span className="text-sm text-[color:var(--profile-muted)] font-normal">
-                         • {profileUser.pronouns}
-                       </span>
-                     )}
-                   </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h2 className="text-xl font-semibold tracking-tight">
+                        {profileUser.display_name || profileUser.username}
+                      </h2>
+                      {userBadges.length > 0 && <UserBadges badges={userBadges} />}
+                      {profileUser.pronouns && (
+                        <span className="text-sm text-[color:var(--profile-muted)] font-normal">
+                          • {profileUser.pronouns}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm font-medium text-[color:var(--profile-muted)]">@{profileUser.username}</p>
                   </div>
 
@@ -647,7 +657,14 @@ export const UserProfilePopup = () => {
                       {/* All buttons inline */}
                       {!isBlocked && (
                         <div className="flex gap-2">
-                          <Button onClick={handleMessage} className="flex-1 rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent" variant="outline" style={{ backgroundColor: '#232629', color: '#fff' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2a2f33'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#232629'}>
+                          <Button
+                            onClick={handleMessage}
+                            className="flex-1 rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent"
+                            variant="outline"
+                            style={{ backgroundColor: "#232629", color: "#fff" }}
+                            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#2a2f33")}
+                            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#232629")}
+                          >
                             <MessageCircle className="w-3.5 h-3.5 mr-1.5" />
                             Message
                           </Button>
@@ -658,9 +675,9 @@ export const UserProfilePopup = () => {
                                 variant="outline"
                                 onClick={handleAcceptRequest}
                                 className="flex-1 rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent"
-                                style={{ backgroundColor: '#232629', color: '#fff' }}
-                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2a2f33'}
-                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#232629'}
+                                style={{ backgroundColor: "#232629", color: "#fff" }}
+                                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#2a2f33")}
+                                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#232629")}
                               >
                                 <Check className="w-3.5 h-3.5 mr-1.5" />
                                 Accept
@@ -669,9 +686,9 @@ export const UserProfilePopup = () => {
                                 variant="outline"
                                 onClick={handleDeclineRequest}
                                 className="flex-1 rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent"
-                                style={{ backgroundColor: '#232629', color: '#fff' }}
-                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2a2f33'}
-                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#232629'}
+                                style={{ backgroundColor: "#232629", color: "#fff" }}
+                                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#2a2f33")}
+                                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#232629")}
                               >
                                 <X className="w-3.5 h-3.5 mr-1.5" />
                                 Decline
@@ -682,10 +699,15 @@ export const UserProfilePopup = () => {
                               variant="outline"
                               onClick={handleFriendAction}
                               disabled={hasSentRequest || isInCooldown || isSendingRequest}
-                              className={cn("flex-1 rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent", isInCooldown && "opacity-80")}
-                              style={{ backgroundColor: '#232629', color: '#fff' }}
-                              onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.backgroundColor = '#2a2f33')}
-                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#232629'}
+                              className={cn(
+                                "flex-1 rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent",
+                                isInCooldown && "opacity-80",
+                              )}
+                              style={{ backgroundColor: "#232629", color: "#fff" }}
+                              onMouseEnter={(e) =>
+                                !e.currentTarget.disabled && (e.currentTarget.style.backgroundColor = "#2a2f33")
+                              }
+                              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#232629")}
                             >
                               {isSendingRequest ? (
                                 <>
@@ -718,9 +740,9 @@ export const UserProfilePopup = () => {
                             variant="outline"
                             onClick={handleBlockUser}
                             className="flex-1 rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent"
-                            style={{ backgroundColor: '#232629', color: '#fff' }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2a2f33'}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#232629'}
+                            style={{ backgroundColor: "#232629", color: "#fff" }}
+                            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#2a2f33")}
+                            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#232629")}
                           >
                             <Ban className="w-3.5 h-3.5 mr-1.5" />
                             Block
@@ -734,9 +756,9 @@ export const UserProfilePopup = () => {
                           variant="outline"
                           onClick={handleUnblockUser}
                           className="rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent"
-                          style={{ backgroundColor: '#232629', color: '#fff' }}
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2a2f33'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#232629'}
+                          style={{ backgroundColor: "#232629", color: "#fff" }}
+                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#2a2f33")}
+                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#232629")}
                         >
                           <Ban className="w-3.5 h-3.5 mr-1.5" />
                           Unblock User
