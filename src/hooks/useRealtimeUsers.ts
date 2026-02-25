@@ -325,7 +325,7 @@ export const useRealtimeUsers = () => {
       rows.forEach((presence) => {
         patchUserAcrossStores({
           id: presence.id,
-          status: presence.status ?? 'offline',
+          status: toUserStatus(presence.status, 'offline'),
           last_seen: presence.last_seen,
         });
       });

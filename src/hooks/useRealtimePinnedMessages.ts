@@ -83,7 +83,7 @@ export const useRealtimePinnedMessages = (channelId: string | null) => {
       });
 
       if (error) throw error;
-      const messageRows = Array.isArray(data) ? (data as PinnedMessageRow[]) : [];
+      const messageRows = Array.isArray(data) ? (data as unknown as PinnedMessageRow[]) : [];
       return messageRows.map((msg) => ({
         ...msg,
         user: msg.user,
