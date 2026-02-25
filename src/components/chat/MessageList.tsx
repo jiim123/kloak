@@ -359,6 +359,8 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
     }
   }, [messages, channelId, markAsRead]);
 
+  const shouldVirtualize = deduplicatedMessages.length >= VIRTUALIZATION_THRESHOLD && !highlightedMessageId;
+
   // Handle scroll events with RAF for better performance
   const handleScroll = useCallback(() => {
     // Cancel any pending RAF to debounce scroll updates
@@ -457,8 +459,6 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
     }
     return -1;
   }, [messages, lastReadAt, firstUnreadMessageId]);
-
-  const shouldVirtualize = deduplicatedMessages.length >= VIRTUALIZATION_THRESHOLD && !highlightedMessageId;
 
   const messageAuthorIds = useMemo(() => {
     const unique = new Set<string>();
