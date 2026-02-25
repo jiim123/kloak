@@ -16,6 +16,7 @@ interface ChannelAutocompleteProps {
   position: { top: number; left: number };
   onSelect: (option: ChannelOption) => void;
   onClose: () => void;
+  onOptionsChange?: (hasOptions: boolean) => void;
 }
 
 const getChannelIcon = (type: string) => {
@@ -31,7 +32,7 @@ const getChannelIcon = (type: string) => {
   }
 };
 
-export const ChannelAutocomplete = ({ query, position, onSelect, onClose }: ChannelAutocompleteProps) => {
+export const ChannelAutocomplete = ({ query, position, onSelect, onClose, onOptionsChange }: ChannelAutocompleteProps) => {
   const { channels } = useServerStore();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -52,6 +53,11 @@ export const ChannelAutocomplete = ({ query, position, onSelect, onClose }: Chan
   useEffect(() => {
     setSelectedIndex(0);
   }, [query]);
+
+  useEffect(() => {
+    onOptionsChange?.(options.length > 0);
+    return () => onOptionsChange?.(false);
+  }, [options.length, onOptionsChange]);
 
   // Keyboard navigation
   const handleKeyDown = useCallback(

@@ -18,6 +18,7 @@ interface MentionAutocompleteProps {
   onSelect: (option: MentionOption) => void;
   onClose: () => void;
   isAdmin?: boolean;
+  onOptionsChange?: (hasOptions: boolean) => void;
 }
 
 export const MentionAutocomplete = ({
@@ -26,6 +27,7 @@ export const MentionAutocomplete = ({
   onSelect,
   onClose,
   isAdmin = false,
+  onOptionsChange,
 }: MentionAutocompleteProps) => {
   const { members } = useServerStore();
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -69,6 +71,11 @@ export const MentionAutocomplete = ({
   useEffect(() => {
     setSelectedIndex(0);
   }, [query]);
+
+  useEffect(() => {
+    onOptionsChange?.(options.length > 0);
+    return () => onOptionsChange?.(false);
+  }, [options.length, onOptionsChange]);
 
   // Keyboard navigation
   const handleKeyDown = useCallback(

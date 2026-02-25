@@ -165,9 +165,11 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const [showMentions, setShowMentions] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
   const [mentionStartIndex, setMentionStartIndex] = useState(-1);
+  const [hasMentionOptions, setHasMentionOptions] = useState(false);
   const [showChannels, setShowChannels] = useState(false);
   const [channelQuery, setChannelQuery] = useState("");
   const [channelStartIndex, setChannelStartIndex] = useState(-1);
+  const [hasChannelOptions, setHasChannelOptions] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showCreatePoll, setShowCreatePoll] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
@@ -209,6 +211,17 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     }
   }, [channelId]);
 
+  // Focus composer when user starts replying from a message action.
+  useEffect(() => {
+    if (!replyingTo) return;
+    const t = textareaRef.current;
+    if (!t) return;
+    const id = requestAnimationFrame(() => {
+      t.focus();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [replyingTo]);
+
   const { hasPermission } = useMemberPermissions(channelId);
   const currentMember = useMemo(() => members.find((m) => m.user_id === user?.id), [members, user?.id]);
   const isMuted = currentMember?.is_muted || false;
@@ -243,6 +256,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       setShowMentions(true);
     } else {
       setShowMentions(false);
+      setHasMentionOptions(false);
     }
 
     const hashIdx = textBefore.lastIndexOf("#");
@@ -252,6 +266,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       setShowChannels(true);
     } else {
       setShowChannels(false);
+      setHasChannelOptions(false);
     }
   }, []);
 
@@ -345,6 +360,53 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     textarea.focus();
   };
 
+  const handleComposerKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      const isAutocompleteOpen = (showMentions && hasMentionOptions) || (showChannels && hasChannelOptions);
+      const autocompleteKeys = ["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"];
+
+      // Let autocomplete handle navigation/selection without submitting.
+      if (isAutocompleteOpen && autocompleteKeys.includes(e.key)) {
+        e.preventDefault();
+        return;
+      }
+
+      // Restore Discord-like "edit your last message" shortcut.
+      if (
+        e.key === "ArrowUp" &&
+        !isMobile &&
+        !content.trim() &&
+        pendingAttachments.length === 0 &&
+        user?.id
+      ) {
+        e.preventDefault();
+        window.dispatchEvent(
+          new CustomEvent("editLastMessage", {
+            detail: { userId: user.id, channelId },
+          }),
+        );
+        return;
+      }
+
+      if (e.key === "Enter" && !e.shiftKey && !isMobile) {
+        e.preventDefault();
+        handleSubmit();
+      }
+    },
+    [
+      showMentions,
+      hasMentionOptions,
+      showChannels,
+      hasChannelOptions,
+      isMobile,
+      content,
+      pendingAttachments.length,
+      user?.id,
+      channelId,
+      handleSubmit,
+    ],
+  );
+
   if (isMuted || (!canSendInReadOnly && isReadOnlyChannel)) {
     return (
       <div className="px-4 pb-6">
@@ -381,8 +443,10 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
             if (opt.id) mentionMappingsRef.current.push({ username: opt.label, userId: opt.id });
             setContent(`${before}@${opt.label} ${after}`);
             setShowMentions(false);
+            setHasMentionOptions(false);
           }}
           onClose={() => setShowMentions(false)}
+          onOptionsChange={setHasMentionOptions}
         />
       )}
 
@@ -396,8 +460,10 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
             channelMappingsRef.current.push({ channelName: opt.name, channelId: opt.id });
             setContent(`${before}#${opt.name} ${after}`);
             setShowChannels(false);
+            setHasChannelOptions(false);
           }}
           onClose={() => setShowChannels(false)}
+          onOptionsChange={setHasChannelOptions}
         />
       )}
 
@@ -428,12 +494,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
         textareaRef={textareaRef}
         handleChange={handleChange}
         setIsFocused={setIsFocused}
-        handleKeyDown={(e: any) => {
-          if (e.key === "Enter" && !e.shiftKey && !isMobile) {
-            e.preventDefault();
-            handleSubmit();
-          }
-        }}
+        handleKeyDown={handleComposerKeyDown}
         handlePaste={() => {}}
         showCreatePoll={showCreatePoll}
         setShowCreatePoll={setShowCreatePoll}
