@@ -56,7 +56,6 @@ import {
   type ResolvedEmoji,
 } from "@/lib/globalEmojiResolver";
 import { cn } from "@/lib/utils";
-import { getUserFromCache, getOrFetchUser } from "@/lib/userCache";
 import { useSignedUrl } from "@/hooks/useSignedUrl";
 import { getPollIdFromContent, isPollMessageContent } from "@/lib/poll";
 import { canRevealGhostIdentityForUser } from "@/lib/ghostIdentity";
@@ -451,81 +450,12 @@ export const MessageItem = memo(function MessageItem({
     return map;
   }, [members, user?.id]);
 
-  // Track extra user names resolved from cache/DB for reaction tooltips
-  const [resolvedNames, setResolvedNames] = useState<Map<string, string>>(new Map());
-
-  // Collect unknown reaction user IDs and resolve them
-  const unknownReactionUserIds = useMemo(() => {
-    const ids = new Set<string>();
-    message.reactions?.forEach((r) =>
-      r.users.forEach((id) => {
-        if (!memberNameById.has(id)) {
-          // Check cache synchronously first
-          const cached = getUserFromCache(id);
-          if (cached) {
-            // Will be picked up below
-          } else {
-            ids.add(id);
-          }
-        }
-      }),
-    );
-    return ids;
-  }, [message.reactions, memberNameById]);
-
-  useEffect(() => {
-    // Sync any already-cached users into resolvedNames
-    const nowResolved = new Map<string, string>();
-    message.reactions?.forEach((r) =>
-      r.users.forEach((id) => {
-        if (!memberNameById.has(id)) {
-          const cached = getUserFromCache(id);
-          if (cached) {
-            nowResolved.set(id, cached.display_name ?? cached.username ?? id);
-          }
-        }
-      }),
-    );
-    if (nowResolved.size > 0) {
-      setResolvedNames((prev) => {
-        const next = new Map(prev);
-        nowResolved.forEach((v, k) => next.set(k, v));
-        return next;
-      });
-    }
-
-    // Fetch unknown ones
-    if (unknownReactionUserIds.size === 0) return;
-    let cancelled = false;
-    (async () => {
-      const fetched = new Map<string, string>();
-      await Promise.all(
-        Array.from(unknownReactionUserIds).map(async (id) => {
-          const u = await getOrFetchUser(id);
-          if (u && !cancelled) {
-            fetched.set(id, u.display_name ?? u.username ?? id);
-          }
-        }),
-      );
-      if (!cancelled && fetched.size > 0) {
-        setResolvedNames((prev) => {
-          const next = new Map(prev);
-          fetched.forEach((v, k) => next.set(k, v));
-          return next;
-        });
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [unknownReactionUserIds, memberNameById, message.reactions]);
-
   const getReactionUserNames = useCallback(
     (userIds: string[]) => {
       const unique = Array.from(new Set(userIds));
-      return unique.map((id) =>
-        memberNameById.get(id) ?? resolvedNames.get(id) ?? (id === user?.id ? "You" : id),
-      );
+      return unique.map((id) => memberNameById.get(id) ?? (id === user?.id ? "You" : id));
     },
-    [memberNameById, resolvedNames, user?.id],
+    [memberNameById, user?.id],
   );
 
   const selectedReaction = useMemo(() => {
