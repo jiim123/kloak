@@ -451,9 +451,12 @@ export const MessageItem = memo(function MessageItem({
   }, [members, user?.id]);
 
   const getReactionUserNames = useCallback(
-    (userIds: string[]) => {
+    (userIds: string[], userNames?: Record<string, string>) => {
       const unique = Array.from(new Set(userIds));
-      return unique.map((id) => memberNameById.get(id) ?? (id === user?.id ? "You" : "Unknown user"));
+      return unique.map((id) => {
+        if (id === user?.id) return "You";
+        return userNames?.[id] ?? memberNameById.get(id) ?? "Unknown user";
+      });
     },
     [memberNameById, user?.id],
   );
@@ -465,7 +468,7 @@ export const MessageItem = memo(function MessageItem({
 
   const selectedReactionNames = useMemo(() => {
     if (!selectedReaction) return [];
-    return getReactionUserNames(selectedReaction.users);
+    return getReactionUserNames(selectedReaction.users, selectedReaction.userNames);
   }, [selectedReaction, getReactionUserNames]);
 
   const RoleIconWrapper = forwardRef<
@@ -1248,7 +1251,7 @@ export const MessageItem = memo(function MessageItem({
                                 </div>
                               ) : (
                                 (() => {
-                                  const names = getReactionUserNames(reaction.users);
+                                  const names = getReactionUserNames(reaction.users, reaction.userNames);
                                   const preview = names.slice(0, 4);
                                   const remaining = Math.max(0, names.length - preview.length);
                                   return (
