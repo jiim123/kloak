@@ -345,6 +345,23 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     sendMessage,
   ]);
 
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      if (!user || isSending) return;
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      const imageItem = Array.from(items).find((it) => it.type.startsWith("image/"));
+      if (!imageItem) return;
+      const file = imageItem.getAsFile();
+      if (!file) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const attachment = { file, preview: URL.createObjectURL(file) };
+      setPendingAttachments((prev) => [...prev, attachment].slice(0, MAX_ATTACHMENTS));
+    },
+    [user, isSending],
+  );
+
   const handleFormat = (type: string, val?: string) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -372,13 +389,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       }
 
       // Restore Discord-like "edit your last message" shortcut.
-      if (
-        e.key === "ArrowUp" &&
-        !isMobile &&
-        !content.trim() &&
-        pendingAttachments.length === 0 &&
-        user?.id
-      ) {
+      if (e.key === "ArrowUp" && !isMobile && !content.trim() && pendingAttachments.length === 0 && user?.id) {
         e.preventDefault();
         window.dispatchEvent(
           new CustomEvent("editLastMessage", {
@@ -474,7 +485,9 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
           <span className="text-xs text-muted-foreground">
             Replying to{" "}
             {showReplyAuthorIdentity ? (
-              <span className="text-primary">@{replyingTo.user?.username || "unknown"}</span>
+              <span className="text-primary">
+                @{replyingTo.user?.display_name || replyingTo.user?.username || "unknown"}
+              </span>
             ) : (
               <span className="text-primary italic">Anonymous</span>
             )}
@@ -495,7 +508,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
         handleChange={handleChange}
         setIsFocused={setIsFocused}
         handleKeyDown={handleComposerKeyDown}
-        handlePaste={() => {}}
+        handlePaste={handlePaste}
         showCreatePoll={showCreatePoll}
         setShowCreatePoll={setShowCreatePoll}
         showEmojiPicker={showEmojiPicker}
