@@ -7,7 +7,6 @@ import type { Notification, NotificationType as DBNotificationType } from '@/typ
 import { isTauri } from '@/lib/tauriRuntime';
 import { playNotificationSound, type NotificationType as SoundNotificationType } from './useNotificationSound';
 
-// Check if a notification type is enabled in user preferences
 const isNotificationTypeEnabled = (type: DBNotificationType): boolean => {
   const state = useUIStore.getState();
   switch (type) {
@@ -24,7 +23,6 @@ const isNotificationTypeEnabled = (type: DBNotificationType): boolean => {
   }
 };
 
-// Map database notification types to sound notification types
 const mapNotificationTypeToSoundType = (dbType: DBNotificationType): SoundNotificationType => {
   switch (dbType) {
     case 'mention':
@@ -44,8 +42,24 @@ export const useRealtimeNotifications = (userId: string | null) => {
   useEffect(() => {
     if (!userId) return;
 
-    // Initial fetch
     fetchNotifications(userId);
+
+    const processIncomingNotification = (notification: Notification) => {
+      const existing = useNotificationStore.getState().notifications.some((n) => n.id === notification.id);
+      if (existing) return;
+
+      if (!isNotificationTypeEnabled(notification.type)) return;
+
+      addNotification(notification);
+
+      if (notification.title === 'You have been kicked' || notification.title === 'You have been banned') {
+        useServerStore.getState().fetchServers(userId);
+      }
+
+      const soundType = mapNotificationTypeToSoundType(notification.type);
+      playNotificationSound(soundType);
+      void showDesktopNotification(notification);
+    };
 
     const channel = supabase
       .channel(`notifications:${userId}`)
@@ -57,29 +71,7 @@ export const useRealtimeNotifications = (userId: string | null) => {
           table: 'notifications',
           filter: `user_id=eq.${userId}`,
         },
-        (payload) => {
-          const notification = payload.new as Notification;
-          
-          // Check if this notification type is enabled by user preferences
-          if (!isNotificationTypeEnabled(notification.type)) {
-            return; // Silently discard — user doesn't want this type
-          }
-          
-          addNotification(notification);
-          
-          // Handle kick/ban notifications - refresh server list immediately
-          if (notification.title === 'You have been kicked' || notification.title === 'You have been banned') {
-            // Refresh servers list to remove the server user was kicked/banned from
-            useServerStore.getState().fetchServers(userId);
-          }
-          
-          // Play notification sound based on type
-          const soundType = mapNotificationTypeToSoundType(notification.type);
-          playNotificationSound(soundType);
-          
-          // Show desktop notification if permitted
-          void showDesktopNotification(notification);
-        }
+        (payload) => processIncomingNotification(payload.new as Notification),
       )
       .on(
         'postgres_changes',
@@ -92,17 +84,39 @@ export const useRealtimeNotifications = (userId: string | null) => {
         (payload) => {
           const oldNotification = payload.old as { id: string };
           removeNotification(oldNotification.id);
-        }
+        },
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (status !== 'SUBSCRIBED') {
+          console.warn('[Realtime] Notifications subscription status:', { status, userId, err });
+        }
+      });
+
+    const pollInterval = window.setInterval(async () => {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('id, user_id, type, title, body, link, is_read, created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (error || !data?.length) return;
+
+      const existingIds = new Set(useNotificationStore.getState().notifications.map((n) => n.id));
+      const unseen = (data as Notification[])
+        .filter((n) => !existingIds.has(n.id))
+        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+      unseen.forEach(processIncomingNotification);
+    }, 15000);
 
     return () => {
+      window.clearInterval(pollInterval);
       supabase.removeChannel(channel);
     };
   }, [userId, fetchNotifications, addNotification, removeNotification]);
 };
 
-// Request browser notification permission
 export const requestNotificationPermission = async (): Promise<boolean> => {
   if (isTauri()) {
     try {
@@ -118,54 +132,37 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
     }
   }
 
-  // Check if Notification API exists (not available on some iOS browsers)
   if (typeof window === 'undefined' || typeof Notification === 'undefined') {
     return false;
   }
 
   try {
-    if (Notification.permission === 'granted') {
-      return true;
-    }
-
-    if (Notification.permission === 'denied') {
-      return false;
-    }
-
+    if (Notification.permission === 'granted') return true;
+    if (Notification.permission === 'denied') return false;
     const permission = await Notification.requestPermission();
     return permission === 'granted';
   } catch {
-    // Notification API may throw on some iOS versions
     return false;
   }
 };
 
-// Track the last notification link for window focus fallback (Windows may not fire onAction for body clicks)
-let lastNotificationLink: string | null = null;
-
-// Show desktop notification
 const showDesktopNotification = async (notification: Notification) => {
-  // Respect user preference
-  if (!useUIStore.getState().desktopNotificationsEnabled) return;
+  const ui = useUIStore.getState();
+  if (isTauri()) {
+    if (!ui.desktopNotificationsEnabled) return;
+  } else {
+    if (!ui.browserNotificationsEnabled) return;
+  }
 
-  // Only show if app isn't focused (browser tab or Tauri window).
-  // Note: In Tauri, `document.visibilityState` is often always "visible", even when unfocused/minimized,
-  // so we must rely on the window focus API when available.
   if (isTauri()) {
     try {
       const { getCurrentWindow } = await import('@tauri-apps/api/window');
       const focused = await getCurrentWindow().isFocused();
       if (focused) return;
-      // If we can check Tauri focus, don't use visibilityState gating.
-      // Proceed to native notification.
     } catch {
-      // If focus check fails, fall back to visibilityState below.
+      // fall through
     }
   }
-
-  // Browser gating: only notify when the tab isn't visible.
-  // (In Tauri this is unreliable; see note above.)
-  if (!isTauri() && document.visibilityState === 'visible') return;
 
   if (isTauri()) {
     try {
@@ -177,47 +174,39 @@ const showDesktopNotification = async (notification: Notification) => {
       }
       if (!granted) return;
 
-      const link = notification.link || "/app";
-
-      // Use plugin's sendNotification (this works for showing notifications)
+      const link = notification.link || '/app';
       sendNotification({
         title: notification.title,
         body: notification.body || undefined,
         autoCancel: true,
-        extra: {
-          link: link,
-        } as any,
+        extra: { link } as Record<string, string>,
       });
     } catch (err) {
-      console.error("Failed to send Tauri notification:", err);
+      console.error('Failed to send Tauri notification:', err);
     }
     return;
   }
 
-  // Check if browser supports Notification API before using it
-  // Use typeof check to prevent ReferenceError on iOS Safari and other mobile browsers
   if (typeof Notification === 'undefined') return;
-  
+
   try {
     if (Notification.permission !== 'granted') return;
 
     const browserNotification = new Notification(notification.title, {
       body: notification.body || undefined,
       icon: '/favicon.ico',
-      tag: notification.id, // Prevents duplicate notifications
+      tag: notification.id,
     });
 
     browserNotification.onclick = () => {
       window.focus();
       if (notification.link) {
-        // Use history.pushState for SPA navigation instead of full page reload
         window.history.pushState({}, '', notification.link);
-        // Dispatch a popstate event to trigger React Router navigation
         window.dispatchEvent(new PopStateEvent('popstate'));
       }
       browserNotification.close();
     };
   } catch {
-    // Silently fail if notification creation fails
+    // ignore notification construction failures
   }
 };
