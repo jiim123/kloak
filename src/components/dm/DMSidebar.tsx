@@ -27,7 +27,7 @@ interface DMSidebarProps {
 export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onShowExploreChange }: DMSidebarProps) => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { conversations, currentConversation, fetchConversations, setCurrentConversation, isLoading } = useDMStore();
+  const { conversations, currentConversation, fetchConversations, setCurrentConversation, closeConversation, isLoading } = useDMStore();
   const { getUnreadCount, markAsRead } = useUnreadDMsContext();
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateGroup, setShowCreateGroup] = useState(false);
@@ -63,12 +63,10 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
     markAsRead(conversation.id);
   };
 
-  const handleCloseConversation = (e: React.MouseEvent, conversationId: string) => {
+  const handleCloseConversation = async (e: React.MouseEvent, conversationId: string) => {
     e.stopPropagation();
-    // For now, just deselect if it's the current one
-    if (currentConversation?.id === conversationId) {
-      setCurrentConversation(null);
-    }
+    if (!user?.id) return;
+    await closeConversation(conversationId, user.id);
   };
 
   const getStatusClass = (status?: string) => {

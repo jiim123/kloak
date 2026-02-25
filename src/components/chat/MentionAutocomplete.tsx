@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useServerStore } from "@/stores/serverStore";
+import { useAuthStore } from "@/stores/authStore";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import type { ServerMember, User } from "@/types";
+import type { User } from "@/types";
 
 interface MentionOption {
   type: "user" | "everyone" | "here";
@@ -29,48 +30,119 @@ export const MentionAutocomplete = ({
   isAdmin = false,
   onOptionsChange,
 }: MentionAutocompleteProps) => {
-  const { members } = useServerStore();
+  const { members, currentServer } = useServerStore();
+  const userId = useAuthStore((s) => s.user?.id);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [candidateUsers, setCandidateUsers] = useState<User[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Build options list
-  const options: MentionOption[] = [];
-
-  // Add special mentions for admins
-  if (isAdmin) {
-    if ("everyone".includes(query.toLowerCase())) {
-      options.push({ type: "everyone", label: "everyone", id: "everyone" });
+  useEffect(() => {
+    let cancelled = false;
+    const serverId = currentServer?.id;
+    if (!serverId || !userId) {
+      setCandidateUsers([]);
+      return;
     }
-    if ("here".includes(query.toLowerCase())) {
-      options.push({ type: "here", label: "here", id: "here" });
-    }
-  }
 
-  // Add user mentions
-  const searchQuery = query.toLowerCase();
-  members
-    .filter(
-      (m) =>
-        m.user?.username?.toLowerCase().includes(searchQuery) ||
-        m.user?.display_name?.toLowerCase().includes(searchQuery) ||
-        m.nickname?.toLowerCase().includes(searchQuery),
-    )
-    .slice(0, 10)
-    .forEach((member) => {
-      if (member.user) {
-        options.push({
-          type: "user",
-          id: member.user_id,
-          label: member.nickname || member.user.display_name || member.user.username,
-          user: member.user,
-        });
+    const fallbackFromMembers = members
+      .filter((m) => !!m.user)
+      .map((m) => ({
+        ...m.user!,
+        display_name: m.nickname || m.user!.display_name,
+      }));
+    setCandidateUsers(fallbackFromMembers);
+
+    const load = async () => {
+      const { data, error } = await (supabase.rpc as any)("get_server_mention_candidates_secure", {
+        _server_id: serverId,
+        _user_id: userId,
+        _query: query,
+        _limit: 200,
+      });
+      if (cancelled || error) return;
+      const rows = Array.isArray(data) ? data : [];
+      const users: User[] = rows.map((row: any) => ({
+        id: row.id,
+        username: row.username,
+        display_name: row.nickname || row.display_name || null,
+        avatar_url: row.avatar_url || null,
+        banner_url: null,
+        avatar_decoration: null,
+        profile_effect: null,
+        banner_color: row.banner_color || "hsl(var(--muted))",
+        profile_theme_primary: null,
+        profile_theme_accent: null,
+        bio: null,
+        status: row.status || "offline",
+        custom_status: null,
+        created_at: "",
+        last_seen: row.last_seen || null,
+      }));
+      setCandidateUsers(users);
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentServer?.id, userId, query, members]);
+
+  const options: MentionOption[] = useMemo(() => {
+    const result: MentionOption[] = [];
+    const seen = new Set<string>();
+
+    if (isAdmin) {
+      if ("everyone".includes(query.toLowerCase())) {
+        result.push({ type: "everyone", label: "everyone", id: "everyone" });
       }
-    });
+      if ("here".includes(query.toLowerCase())) {
+        result.push({ type: "here", label: "here", id: "here" });
+      }
+    }
+
+    const searchQuery = query.toLowerCase();
+    candidateUsers
+      .filter(
+        (u) =>
+          u.username?.toLowerCase().includes(searchQuery) ||
+          u.display_name?.toLowerCase().includes(searchQuery),
+      )
+      .forEach((user) => {
+        if (!user.id || seen.has(user.id)) return;
+        seen.add(user.id);
+        result.push({
+          type: "user",
+          id: user.id,
+          label: user.display_name || user.username,
+          user,
+        });
+      });
+
+    return result;
+  }, [candidateUsers, isAdmin, query]);
+
+  // Keep selected option visible while navigating with keyboard.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const selectedEl = container.querySelector(`[data-mention-index="${selectedIndex}"]`) as HTMLElement | null;
+    if (selectedEl) {
+      selectedEl.scrollIntoView({ block: "nearest" });
+    }
+  }, [selectedIndex, options.length]);
 
   // Reset selection when options change
   useEffect(() => {
     setSelectedIndex(0);
   }, [query]);
+
+  useEffect(() => {
+    if (selectedIndex >= options.length && options.length > 0) {
+      setSelectedIndex(options.length - 1);
+    } else if (options.length === 0 && selectedIndex !== 0) {
+      setSelectedIndex(0);
+    }
+  }, [options.length, selectedIndex]);
 
   useEffect(() => {
     onOptionsChange?.(options.length > 0);
@@ -137,55 +209,54 @@ export const MentionAutocomplete = ({
       <div className="px-3 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/50">
         Mention
       </div>
-      <ScrollArea className="max-h-52">
-        <div className="p-1">
-          {options.map((option, index) => (
-            <div
-              key={option.id || option.type}
-              className={cn(
-                "flex items-center gap-2.5 px-2.5 py-2 cursor-pointer rounded-lg transition-colors duration-150",
-                index === selectedIndex
-                  ? "bg-primary/10 text-foreground"
-                  : "text-foreground/80 hover:bg-muted/50 hover:text-foreground",
-              )}
-              onClick={() => onSelect(option)}
-              onMouseEnter={() => setSelectedIndex(index)}
-            >
-              {option.type === "user" && option.user ? (
-                <>
-                  <Avatar className="w-7 h-7 flex-shrink-0">
-                    <AvatarImage src={option.user.avatar_url || undefined} />
-                    <AvatarFallback
-                      className="text-xs font-medium"
-                      style={{ backgroundColor: option.user.banner_color || "hsl(var(--muted))" }}
-                    >
-                      {option.user.username[0].toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col min-w-0 flex-1">
-                    <span className="font-medium text-[13px] leading-tight truncate">{option.label}</span>
-                    {option.user.username !== option.label && (
-                      <span className="text-[11px] text-muted-foreground truncate">@{option.user.username}</span>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs font-bold text-primary">@</span>
-                  </div>
-                  <div className="flex items-center justify-between flex-1 min-w-0">
-                    <span className="font-medium text-[13px]">@{option.label}</span>
-                    <span className="text-[11px] text-muted-foreground ml-2">
-                      {option.type === "everyone" ? "Notify all" : "Notify online"}
-                    </span>
-                  </div>
-                </>
-              )}
-            </div>
-          ))}
-        </div>
-      </ScrollArea>
+      <div className="max-h-64 overflow-y-auto overscroll-contain p-1">
+        {options.map((option, index) => (
+          <div
+            key={option.id || option.type}
+            data-mention-index={index}
+            className={cn(
+              "flex items-center gap-2.5 px-2.5 py-2 cursor-pointer rounded-lg transition-colors duration-150",
+              index === selectedIndex
+                ? "bg-primary/10 text-foreground"
+                : "text-foreground/80 hover:bg-muted/50 hover:text-foreground",
+            )}
+            onClick={() => onSelect(option)}
+            onMouseEnter={() => setSelectedIndex(index)}
+          >
+            {option.type === "user" && option.user ? (
+              <>
+                <Avatar className="w-7 h-7 flex-shrink-0">
+                  <AvatarImage src={option.user.avatar_url || undefined} />
+                  <AvatarFallback
+                    className="text-xs font-medium"
+                    style={{ backgroundColor: option.user.banner_color || "hsl(var(--muted))" }}
+                  >
+                    {option.user.username[0].toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="font-medium text-[13px] leading-tight truncate">{option.label}</span>
+                  {option.user.username !== option.label && (
+                    <span className="text-[11px] text-muted-foreground truncate">@{option.user.username}</span>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                  <span className="text-xs font-bold text-primary">@</span>
+                </div>
+                <div className="flex items-center justify-between flex-1 min-w-0">
+                  <span className="font-medium text-[13px]">@{option.label}</span>
+                  <span className="text-[11px] text-muted-foreground ml-2">
+                    {option.type === "everyone" ? "Notify all" : "Notify online"}
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

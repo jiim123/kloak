@@ -15,6 +15,7 @@ interface DMState {
   openConversation: (userId: string, otherUserId: string) => Promise<DMConversation | null>;
   createGroupConversation: (userId: string, participantIds: string[], name?: string) => Promise<DMConversation | null>;
   setCurrentConversation: (conversation: DMConversation | null) => void;
+  closeConversation: (conversationId: string, userId: string) => Promise<boolean>;
 
   // Message actions
   fetchMessages: (conversationId: string, userId: string, limit?: number, before?: string) => Promise<void>;
@@ -205,6 +206,30 @@ export const useDMStore = create<DMState>((set, get) => ({
       localStorage.removeItem('kloak-current-dm-id');
     }
     set({ currentConversation: conversation });
+  },
+
+  closeConversation: async (conversationId: string, userId: string) => {
+    try {
+      const { error } = await supabase.rpc('close_dm_conversation', {
+        _conversation_id: conversationId,
+        _user_id: userId,
+      });
+
+      if (error) throw error;
+
+      set((state) => ({
+        conversations: state.conversations.filter((c) => c.id !== conversationId),
+        currentConversation: state.currentConversation?.id === conversationId ? null : state.currentConversation,
+        messagesByConversation: Object.fromEntries(
+          Object.entries(state.messagesByConversation).filter(([key]) => key !== conversationId),
+        ),
+      }));
+
+      return true;
+    } catch (error) {
+      console.error('Failed to close conversation:', error);
+      return false;
+    }
   },
 
   fetchMessages: async (conversationId: string, userId: string, limit = 50, before?: string) => {

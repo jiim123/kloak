@@ -25,6 +25,7 @@ export const ServerOverviewView = () => {
   const navigate = useNavigate();
   const [recentAnnouncements, setRecentAnnouncements] = useState<AnnouncementCard[]>([]);
   const [isLoadingAnnouncements, setIsLoadingAnnouncements] = useState(false);
+  const [totalMemberCount, setTotalMemberCount] = useState<number | null>(null);
 
   const ownerMember = useMemo(() => {
     if (!currentServer) return null;
@@ -88,6 +89,44 @@ export const ServerOverviewView = () => {
     fetchAnnouncements();
   }, [currentServer, channels, userId]);
 
+  // Fetch total (non-banned) member count for overview header.
+  useEffect(() => {
+    if (!currentServer?.id || !userId) {
+      setTotalMemberCount(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchTotalMemberCount = async () => {
+      const { data, error } = await (supabase.rpc as any)("get_server_member_count_secure", {
+        _server_id: currentServer.id,
+        _user_id: userId,
+      });
+
+      if (cancelled || error) return;
+      setTotalMemberCount(typeof data === "number" ? data : 0);
+    };
+
+    fetchTotalMemberCount();
+
+    const channel = supabase
+      .channel(`overview-member-count:${currentServer.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "server_members", filter: `server_id=eq.${currentServer.id}` },
+        () => {
+          fetchTotalMemberCount();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [currentServer?.id, userId]);
+
   if (!currentServer) return null;
 
   const createdAt = currentServer.created_at ? new Date(currentServer.created_at) : null;
@@ -131,7 +170,7 @@ export const ServerOverviewView = () => {
               <div className="mt-1 flex items-center gap-4 flex-wrap text-sm text-muted-foreground">
                 <span className="inline-flex items-center gap-1.5">
                   <Users className="w-4 h-4" />
-                  {members.length} member{members.length === 1 ? "" : "s"}
+                  {(totalMemberCount ?? members.length)} member{(totalMemberCount ?? members.length) === 1 ? "" : "s"}
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <Hash className="w-4 h-4" />

@@ -8,6 +8,7 @@ import { CustomEmojiPopover } from './CustomEmojiPopover';
 import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
 import { fetchServerEmojis } from '@/lib/serverEmojis';
+import { getOrFetchUser } from '@/lib/userCache';
 import {
   getGlobalEmojiMap,
   getGlobalEmojiDuplicates,
@@ -332,8 +333,19 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
   const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
   const [globalEmojiMap, setGlobalEmojiMap] = useState<Map<string, ResolvedEmoji>>(new Map());
   const [emojiPopover, setEmojiPopover] = useState<{ emoji: ResolvedEmoji; rect: DOMRect } | null>(null);
+  const [mentionedUsersMap, setMentionedUsersMap] = useState<Map<string, UserInfo>>(new Map());
   const contentRef = useRef<HTMLDivElement>(null);
   const segments = useMemo(() => parseMessageSegments(content), [content]);
+
+  const mentionedUserIds = useMemo(() => {
+    const ids = new Set<string>();
+    const mentionRegex = /<@(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})>/g;
+    let match: RegExpExecArray | null;
+    while ((match = mentionRegex.exec(content)) !== null) {
+      if (match[1]) ids.add(match[1]);
+    }
+    return Array.from(ids);
+  }, [content]);
 
   // Load server emoji map for :name: rendering (server context only)
   useEffect(() => {
@@ -486,6 +498,43 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
 
     return () => { cancelled = true; };
   }, [content, customEmojiMap, globalEmojiMap]);
+
+  // Ensure mention display names resolve even when members list is online-filtered.
+  useEffect(() => {
+    if (mentionedUserIds.length === 0) {
+      setMentionedUsersMap(new Map());
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      const results = await Promise.all(
+        mentionedUserIds.map(async (id) => {
+          const user = await getOrFetchUser(id);
+          return { id, user };
+        }),
+      );
+
+      if (cancelled) return;
+
+      const map = new Map<string, UserInfo>();
+      results.forEach(({ id, user }) => {
+        if (!user) return;
+        map.set(id, {
+          id: user.id,
+          username: user.username,
+          display_name: user.display_name,
+          nickname: undefined,
+        });
+      });
+      setMentionedUsersMap(map);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mentionedUserIds]);
   
   // Build a map of userId -> user info for quick lookup
   const usersMap = useMemo(() => {
@@ -517,9 +566,16 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
         });
       }
     });
+
+    // Add users resolved from mention IDs in message content (offline-safe fallback).
+    mentionedUsersMap.forEach((userInfo, userId) => {
+      if (!map.has(userId)) {
+        map.set(userId, userInfo);
+      }
+    });
     
     return map;
-  }, [users, members, messageUser]);
+  }, [users, members, messageUser, mentionedUsersMap]);
 
   // Build a map of channelId -> channel info for quick lookup
   const channelsMap = useMemo(() => {
