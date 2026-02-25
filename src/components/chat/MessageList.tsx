@@ -140,7 +140,7 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   const [showJumpToPresent, setShowJumpToPresent] = useState(false);
   const [newMessageCount, setNewMessageCount] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
-  const scrollTopRef = useRef(0);
+  const [scrollTop, setScrollTop] = useState(0);
   const [authorStyleMap, setAuthorStyleMap] = useState<Record<string, MessageAuthorStyle>>({});
   const isNearBottomRef = useRef(true);
   const lastMarkedMessageIdRef = useRef<string | null>(null); // Track last marked message ID instead of boolean
@@ -205,7 +205,8 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
 
     const cacheEntry = useMessageStore.getState().messagesByChannel[channelId];
     const hasCached = (cacheEntry?.messages?.length ?? 0) > 0;
-    const isFreshEnough = !!cacheEntry && Date.now() - cacheEntry.lastFetched < CHANNEL_ENTRY_FORCE_REFETCH_MAX_AGE_MS;
+    const isFreshEnough =
+      !!cacheEntry && Date.now() - cacheEntry.lastFetched < CHANNEL_ENTRY_FORCE_REFETCH_MAX_AGE_MS;
     const unreadSnapshot = getChannelUnread(channelId);
     const hasUnreadBacklog = (unreadSnapshot.unreadCount ?? 0) > 0;
 
@@ -359,8 +360,6 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
     }
   }, [messages, channelId, markAsRead]);
 
-  const shouldVirtualize = deduplicatedMessages.length >= VIRTUALIZATION_THRESHOLD && !highlightedMessageId;
-
   // Handle scroll events with RAF for better performance
   const handleScroll = useCallback(() => {
     // Cancel any pending RAF to debounce scroll updates
@@ -373,19 +372,7 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
       if (!container) return;
 
       const { scrollTop, scrollHeight, clientHeight } = container;
-      scrollTopRef.current = scrollTop;
-      // Update virtual range only when the visible index window actually shifts
-      if (shouldVirtualize && containerHeight > 0) {
-        const rawStart = Math.floor(scrollTop / ESTIMATED_MESSAGE_HEIGHT);
-        const visibleCount = Math.ceil(containerHeight / ESTIMATED_MESSAGE_HEIGHT);
-        const nextStart = Math.max(0, rawStart - VIRTUAL_OVERSCAN);
-        const nextEnd = Math.min(deduplicatedMessages.length - 1, rawStart + visibleCount + VIRTUAL_OVERSCAN);
-        setVirtualRange((prev) =>
-          prev.startIndex === nextStart && prev.endIndex === nextEnd
-            ? prev
-            : { startIndex: nextStart, endIndex: nextEnd },
-        );
-      }
+      setScrollTop(scrollTop);
       const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
 
       const wasNearBottom = isNearBottomRef.current;
@@ -408,7 +395,7 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
 
       scrollRAFRef.current = null;
     });
-  }, [channelId, hasMore, isLoading, deduplicatedMessages, fetchMessages, shouldVirtualize, containerHeight]);
+  }, [channelId, hasMore, isLoading, deduplicatedMessages, fetchMessages]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -440,7 +427,10 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
     // Mark as read, but only if different from last marked message
     if (messages.length > 0) {
       const latestMessage = messages[messages.length - 1];
-      if (!latestMessage.id.startsWith("temp-") && lastMarkedMessageIdRef.current !== latestMessage.id) {
+      if (
+        !latestMessage.id.startsWith("temp-") &&
+        lastMarkedMessageIdRef.current !== latestMessage.id
+      ) {
         markAsRead(channelId, latestMessage.id);
         lastMarkedMessageIdRef.current = latestMessage.id;
       }
@@ -459,6 +449,8 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
     }
     return -1;
   }, [messages, lastReadAt, firstUnreadMessageId]);
+
+  const shouldVirtualize = deduplicatedMessages.length >= VIRTUALIZATION_THRESHOLD && !highlightedMessageId;
 
   const messageAuthorIds = useMemo(() => {
     const unique = new Set<string>();
@@ -487,12 +479,10 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
 
       for (let i = 0; i < missingAuthorStyleIds.length; i += AUTHOR_STYLE_FETCH_CHUNK) {
         const chunk = missingAuthorStyleIds.slice(i, i + AUTHOR_STYLE_FETCH_CHUNK);
-        const { data, error } = await (
-          supabase.rpc as unknown as (
-            fn: string,
-            args: Record<string, unknown>,
-          ) => Promise<{ data: unknown; error: unknown }>
-        )("get_message_author_styles_secure", {
+        const { data, error } = await (supabase.rpc as unknown as (
+          fn: string,
+          args: Record<string, unknown>,
+        ) => Promise<{ data: unknown; error: unknown }>)("get_message_author_styles_secure", {
           _server_id: currentServerId,
           _user_id: user.id,
           _target_user_ids: chunk,
@@ -529,25 +519,24 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   }, [currentServerId, user?.id, missingAuthorStyleIds]);
 
   const estimatedTotalHeight = deduplicatedMessages.length * ESTIMATED_MESSAGE_HEIGHT;
-  const [virtualRange, setVirtualRange] = useState({
-    startIndex: 0,
-    endIndex: Math.max(0, deduplicatedMessages.length - 1),
-  });
-
-  // Recompute virtual range when layout changes (not on every scroll pixel)
-  useEffect(() => {
+  const virtualRange = useMemo(() => {
     if (!shouldVirtualize || containerHeight <= 0) {
-      setVirtualRange({ startIndex: 0, endIndex: Math.max(0, deduplicatedMessages.length - 1) });
-      return;
+      return {
+        startIndex: 0,
+        endIndex: deduplicatedMessages.length - 1,
+      };
     }
-    const rawStart = Math.floor(scrollTopRef.current / ESTIMATED_MESSAGE_HEIGHT);
+
+    const rawStart = Math.floor(scrollTop / ESTIMATED_MESSAGE_HEIGHT);
     const visibleCount = Math.ceil(containerHeight / ESTIMATED_MESSAGE_HEIGHT);
     const startIndex = Math.max(0, rawStart - VIRTUAL_OVERSCAN);
-    const endIndex = Math.min(deduplicatedMessages.length - 1, rawStart + visibleCount + VIRTUAL_OVERSCAN);
-    setVirtualRange((prev) =>
-      prev.startIndex === startIndex && prev.endIndex === endIndex ? prev : { startIndex, endIndex },
+    const endIndex = Math.min(
+      deduplicatedMessages.length - 1,
+      rawStart + visibleCount + VIRTUAL_OVERSCAN,
     );
-  }, [shouldVirtualize, containerHeight, deduplicatedMessages.length]);
+
+    return { startIndex, endIndex };
+  }, [shouldVirtualize, containerHeight, scrollTop, deduplicatedMessages.length]);
 
   const visibleMessages = useMemo(() => {
     if (!shouldVirtualize) return deduplicatedMessages;
@@ -555,7 +544,9 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
     return deduplicatedMessages.slice(virtualRange.startIndex, virtualRange.endIndex + 1);
   }, [shouldVirtualize, deduplicatedMessages, virtualRange.startIndex, virtualRange.endIndex]);
 
-  const topSpacerHeight = shouldVirtualize ? Math.max(0, virtualRange.startIndex * ESTIMATED_MESSAGE_HEIGHT) : 0;
+  const topSpacerHeight = shouldVirtualize
+    ? Math.max(0, virtualRange.startIndex * ESTIMATED_MESSAGE_HEIGHT)
+    : 0;
   const renderedHeight = shouldVirtualize ? visibleMessages.length * ESTIMATED_MESSAGE_HEIGHT : 0;
   const bottomSpacerHeight = shouldVirtualize
     ? Math.max(0, estimatedTotalHeight - topSpacerHeight - renderedHeight)
