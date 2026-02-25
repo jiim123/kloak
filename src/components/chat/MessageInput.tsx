@@ -585,6 +585,7 @@ const MobileOptimizedInput = memo(
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             placeholder={canSendMessage ? `Message #${channelName}` : "Locked"}
             disabled={!canSendMessage}
             className="flex-1 bg-transparent resize-none outline-none py-2 px-1 min-h-[40px] max-h-[160px] text-[15px]"
