@@ -15,7 +15,6 @@ import {
   X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
@@ -72,6 +71,9 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
   const editTextareaRef = useRef<HTMLTextAreaElement>(null);
   const commentsRef = useRef<MediaComment[]>([]);
   const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
+  const [composerFocused, setComposerFocused] = useState(false);
+  const [composerEmojiOpen, setComposerEmojiOpen] = useState(false);
+  const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Update ref when comments change
   useEffect(() => {
@@ -629,6 +631,38 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
     ? comments.find(c => c.id === replyingToComment)
     : null;
 
+  const insertIntoComposer = useCallback((text: string) => {
+    const el = replyTextareaRef.current;
+    if (!el) {
+      setReplyContent((prev) => prev + text);
+      return;
+    }
+    const start = el.selectionStart ?? el.value.length;
+    const end = el.selectionEnd ?? el.value.length;
+    const next = `${el.value.slice(0, start)}${text}${el.value.slice(end)}`;
+    setReplyContent(next);
+    requestAnimationFrame(() => {
+      try {
+        el.focus();
+        const pos = start + text.length;
+        el.setSelectionRange(pos, pos);
+      } catch {
+        // ignore
+      }
+    });
+  }, []);
+
+  const resizeComposer = useCallback(() => {
+    const el = replyTextareaRef.current;
+    if (!el) return;
+    el.style.height = "0px";
+    el.style.height = `${Math.min(Math.max(el.scrollHeight, 40), 160)}px`;
+  }, []);
+
+  useEffect(() => {
+    resizeComposer();
+  }, [replyContent, resizeComposer]);
+
   return (
     <div ref={ref} className="flex flex-col h-full">
       {/* Comments Header */}
@@ -918,31 +952,70 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
               </button>
             </div>
           )}
-          <div className="flex gap-2">
-            <Textarea
-              value={replyContent}
-              onChange={(e) => setReplyContent(e.target.value)}
-              placeholder="Write a comment..."
-              className="min-h-[40px] max-h-[120px] text-sm resize-none"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleReply();
-                }
-              }}
-            />
-            <Button
-              size="icon"
-              onClick={handleReply}
-              disabled={!replyContent.trim() || isSendingReply}
-              className="flex-shrink-0"
-            >
-              {isSendingReply ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4" />
-              )}
-            </Button>
+          <div
+            className={`rounded-2xl bg-card/80 border transition-all ${
+              composerFocused ? "border-primary/30 shadow-lg" : "border-border/50"
+            }`}
+          >
+            <div className="flex items-end gap-2 p-2 sm:p-3">
+              <textarea
+                ref={replyTextareaRef}
+                value={replyContent}
+                onChange={(e) => setReplyContent(e.target.value)}
+                onFocus={() => setComposerFocused(true)}
+                onBlur={() => setComposerFocused(false)}
+                placeholder="Write a comment..."
+                className="flex-1 bg-transparent resize-none outline-none py-2 px-1 min-h-[40px] max-h-[160px] text-[15px]"
+                rows={1}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleReply();
+                  }
+                }}
+              />
+
+              <div className="flex items-center gap-1 mb-0.5 relative">
+                <EmojiGifPicker
+                  onEmojiSelect={(emoji) => insertIntoComposer(emoji)}
+                  onGifSelect={() => {}}
+                  open={composerEmojiOpen}
+                  onOpenChange={setComposerEmojiOpen}
+                  disableGif
+                  serverId={currentServer?.id}
+                  serverName={currentServer?.name}
+                >
+                  <button
+                    type="button"
+                    className="p-2 rounded-xl text-muted-foreground hover:bg-muted/50 transition-colors"
+                    aria-label="Add emoji"
+                    title="Add emoji"
+                    disabled={!currentServer?.id}
+                  >
+                    <Smile className="w-5 h-5" />
+                  </button>
+                </EmojiGifPicker>
+
+                <button
+                  type="button"
+                  onClick={handleReply}
+                  disabled={!replyContent.trim() || isSendingReply}
+                  className={`p-2 rounded-xl transition-all ${
+                    replyContent.trim() && !isSendingReply
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95"
+                      : "bg-muted/50 text-muted-foreground/50 cursor-not-allowed"
+                  }`}
+                  aria-label="Send"
+                  title="Send"
+                >
+                  {isSendingReply ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Send className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
