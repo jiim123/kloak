@@ -13,7 +13,8 @@ import { useUnreadChannelsContext } from "@/hooks/useUnreadChannelsContext";
 import { useScrollToMessage } from "@/hooks/useScrollToMessage";
 import { useRealtimePolls } from "@/hooks/useRealtimePolls";
 import { useConnectionStatus } from "@/hooks/useConnectionStatus";
-import type { Message } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
+import type { CustomServerRole, Message, ServerRole } from "@/types";
 
 interface MessageListProps {
   channelId: string;
@@ -24,6 +25,29 @@ const VIRTUALIZATION_THRESHOLD = 120;
 const VIRTUAL_OVERSCAN = 20;
 const ESTIMATED_MESSAGE_HEIGHT = 72;
 const CHANNEL_ENTRY_FORCE_REFETCH_MAX_AGE_MS = 12_000;
+const AUTHOR_STYLE_FETCH_CHUNK = 100;
+
+interface MessageAuthorStyle {
+  user_id: string;
+  role?: ServerRole | null;
+  nickname?: string | null;
+  roles?: CustomServerRole[];
+}
+
+const parseAuthorStyleRows = (payload: unknown): MessageAuthorStyle[] => {
+  let rows: unknown = payload;
+
+  if (typeof rows === "string") {
+    try {
+      rows = JSON.parse(rows);
+    } catch {
+      return [];
+    }
+  }
+
+  if (!Array.isArray(rows)) return [];
+  return rows.filter((row): row is MessageAuthorStyle => !!row && typeof row === "object" && "user_id" in row);
+};
 
 // Group messages from same user within 1 minute
 const shouldGroupMessages = (current: Message, previous: Message | null): boolean => {
@@ -62,6 +86,7 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   const { isRealtimeConnected } = useConnectionStatus();
   const visibilityBlockedUserIds = useFriendStore((s) => s.visibilityBlockedUserIds);
   const { currentChannel } = useServerStore();
+  const currentServerId = useServerStore((s) => s.currentChannel?.server_id ?? s.currentServer?.id ?? null);
 
   // Polls realtime + auto-close expired (best effort)
   useRealtimePolls(channelId);
@@ -116,6 +141,7 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   const [newMessageCount, setNewMessageCount] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
   const [scrollTop, setScrollTop] = useState(0);
+  const [authorStyleMap, setAuthorStyleMap] = useState<Record<string, MessageAuthorStyle>>({});
   const isNearBottomRef = useRef(true);
   const lastMarkedMessageIdRef = useRef<string | null>(null); // Track last marked message ID instead of boolean
   const prevMessagesLengthRef = useRef(0);
@@ -123,6 +149,7 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   const prevChannelIdRef = useRef<string>(channelId);
   const scrollRAFRef = useRef<number | null>(null); // For requestAnimationFrame
   const refetchTimeoutRef = useRef<NodeJS.Timeout | null>(null); // For refetch timeout
+  const authorStyleServerIdRef = useRef<string | null>(null);
 
   // Detect channel switch during RENDER PHASE (synchronous).
   // This must happen before useLayoutEffect so the flag is already
@@ -132,6 +159,12 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
     prevChannelIdRef.current = channelId;
     needsScrollRef.current = true;
   }
+
+  useEffect(() => {
+    if (authorStyleServerIdRef.current === currentServerId) return;
+    authorStyleServerIdRef.current = currentServerId;
+    setAuthorStyleMap({});
+  }, [currentServerId]);
 
   // Unread tracking
   const { getChannelUnread, markAsRead } = useUnreadChannelsContext();
@@ -157,8 +190,9 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
         );
       }
     };
-    window.addEventListener("editLastMessage" as any, handleEditLastMessage);
-    return () => window.removeEventListener("editLastMessage" as any, handleEditLastMessage);
+    const listener = handleEditLastMessage as unknown as EventListener;
+    window.addEventListener("editLastMessage", listener);
+    return () => window.removeEventListener("editLastMessage", listener);
   }, [channelId, messages]);
 
   // Set current channel and fetch messages (with caching)
@@ -417,6 +451,73 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   }, [messages, lastReadAt, firstUnreadMessageId]);
 
   const shouldVirtualize = deduplicatedMessages.length >= VIRTUALIZATION_THRESHOLD && !highlightedMessageId;
+
+  const messageAuthorIds = useMemo(() => {
+    const unique = new Set<string>();
+    for (const message of deduplicatedMessages) {
+      const authorId = message.user_id;
+      if (!authorId) continue;
+      if (authorId === "anonymous") continue;
+      if (authorId.startsWith("ghost_")) continue;
+      unique.add(authorId);
+    }
+    return Array.from(unique);
+  }, [deduplicatedMessages]);
+
+  const missingAuthorStyleIds = useMemo(
+    () => messageAuthorIds.filter((userId) => !authorStyleMap[userId]),
+    [messageAuthorIds, authorStyleMap],
+  );
+
+  useEffect(() => {
+    if (!currentServerId || !user?.id || missingAuthorStyleIds.length === 0) return;
+
+    let cancelled = false;
+
+    const fetchAuthorStyles = async () => {
+      const next: Record<string, MessageAuthorStyle> = {};
+
+      for (let i = 0; i < missingAuthorStyleIds.length; i += AUTHOR_STYLE_FETCH_CHUNK) {
+        const chunk = missingAuthorStyleIds.slice(i, i + AUTHOR_STYLE_FETCH_CHUNK);
+        const { data, error } = await (supabase.rpc as unknown as (
+          fn: string,
+          args: Record<string, unknown>,
+        ) => Promise<{ data: unknown; error: unknown }>)("get_message_author_styles_secure", {
+          _server_id: currentServerId,
+          _user_id: user.id,
+          _target_user_ids: chunk,
+        });
+
+        if (error) {
+          console.error("Failed to fetch message author styles:", error);
+          return;
+        }
+
+        const rows = parseAuthorStyleRows(data);
+        for (const row of rows) {
+          if (!row.user_id) continue;
+          next[row.user_id] = {
+            user_id: row.user_id,
+            role: row.role ?? null,
+            nickname: row.nickname ?? null,
+            roles: Array.isArray(row.roles) ? row.roles : [],
+          };
+        }
+      }
+
+      if (cancelled || Object.keys(next).length === 0) return;
+      setAuthorStyleMap((prev) => ({ ...prev, ...next }));
+    };
+
+    void fetchAuthorStyles().catch((error) => {
+      console.error("Unexpected error fetching message author styles:", error);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentServerId, user?.id, missingAuthorStyleIds]);
+
   const estimatedTotalHeight = deduplicatedMessages.length * ESTIMATED_MESSAGE_HEIGHT;
   const virtualRange = useMemo(() => {
     if (!shouldVirtualize || containerHeight <= 0) {
@@ -517,6 +618,7 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
                 isGrouped={isGrouped}
                 showNewDivider={showNewDivider}
                 isHighlighted={message.id === highlightedMessageId}
+                authorStyleFallback={authorStyleMap[message.user_id]}
               />
             );
           })}

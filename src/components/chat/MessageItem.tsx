@@ -92,6 +92,11 @@ interface MessageItemProps {
   showNewDivider?: boolean;
   isHighlighted?: boolean;
   onStartEdit?: () => void;
+  authorStyleFallback?: {
+    role?: ServerRole | null;
+    nickname?: string | null;
+    roles?: CustomServerRole[];
+  };
 }
 
 // Track animations by a STABLE key that survives optimistic→real message replacement
@@ -143,6 +148,7 @@ export const MessageItem = memo(function MessageItem({
   showNewDivider,
   isHighlighted,
   onStartEdit,
+  authorStyleFallback,
 }: MessageItemProps) {
   // Selectors - granular to prevent unnecessary re-renders
   const user = useAuthStore((state) => state.user);
@@ -239,6 +245,12 @@ export const MessageItem = memo(function MessageItem({
     };
   }, [members, channels, user?.id, message.user_id]);
 
+  const messageRoles = useMemo(
+    () => messageMember?.roles ?? authorStyleFallback?.roles ?? [],
+    [messageMember?.roles, authorStyleFallback?.roles],
+  );
+  const messageBaseRole = messageMember?.role ?? authorStyleFallback?.role;
+
   // Load server emoji map
   useEffect(() => {
     const serverId = currentServer?.id;
@@ -292,7 +304,7 @@ export const MessageItem = memo(function MessageItem({
   // Note: avoid per-message global event listeners; cache invalidation handles freshness.
 
   const priorityRoleWithIcon = useMemo<Pick<CustomServerRole, "name" | "icon"> | null>(() => {
-    const memberRoles = messageMember?.roles ?? [];
+    const memberRoles = messageRoles;
     if (memberRoles.length === 0) return null;
 
     const resolved: CustomServerRole[] = memberRoles
@@ -321,7 +333,7 @@ export const MessageItem = memo(function MessageItem({
 
     if (!best?.icon) return null;
     return { name: best.name, icon: best.icon };
-  }, [messageMember?.roles, roles]);
+  }, [messageRoles, roles]);
 
   const roleIconNode = useMemo(() => {
     if (!priorityRoleWithIcon?.icon) return null;
@@ -774,7 +786,7 @@ export const MessageItem = memo(function MessageItem({
   }, [compactMode, isMentioned, isHighlighted, isPending, isAnnouncementChannel, isGrouped]);
 
   const topCustomRoleColor = useMemo(() => {
-    const memberRoles = messageMember?.roles ?? [];
+    const memberRoles = messageRoles;
     if (memberRoles.length === 0) return null;
 
     const resolved = memberRoles.map((mr) => roles.find((r) => r.id === mr.id) ?? mr).filter(Boolean);
@@ -791,13 +803,13 @@ export const MessageItem = memo(function MessageItem({
     }
 
     return best?.color ?? null;
-  }, [messageMember?.roles, roles]);
+  }, [messageRoles, roles]);
 
   const usernameColorClass = useMemo(() => {
     if (showGhostIdentity) return "text-muted-foreground";
-    if (!topCustomRoleColor) return getRoleColor(messageMember?.role);
+    if (!topCustomRoleColor) return getRoleColor(messageBaseRole ?? undefined);
     return isGradientColor(topCustomRoleColor) ? "text-transparent" : "text-foreground";
-  }, [topCustomRoleColor, messageMember?.role, showGhostIdentity]);
+  }, [topCustomRoleColor, messageBaseRole, showGhostIdentity]);
 
   const usernameColorStyle = useMemo(() => {
     if (showGhostIdentity) return undefined;
@@ -809,7 +821,7 @@ export const MessageItem = memo(function MessageItem({
 
   const displayName = showGhostIdentity
     ? "Anonymous"
-    : messageMember?.nickname || messageUser?.display_name || messageUser?.username;
+    : messageMember?.nickname || authorStyleFallback?.nickname || messageUser?.display_name || messageUser?.username;
 
   const handleUsernameClick = useCallback(
     (e: React.MouseEvent) => {
