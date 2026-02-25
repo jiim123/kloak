@@ -81,8 +81,7 @@ const Index = () => {
       <SEO {...SEO_CONFIG.home} />
       <div className="w-full">
         <NavigationMenu />
-        <main className="pt-16"
-          </div>
+        <main className="pt-16">
 
           {/* Hero Section */}
           <HeroAscii />
