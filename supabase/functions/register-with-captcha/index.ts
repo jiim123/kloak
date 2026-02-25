@@ -7,7 +7,12 @@ const baseCorsHeaders: Record<string, string> = {
 };
 
 const HCAPTCHA_VERIFY_URL = "https://hcaptcha.com/siteverify";
-const LOCAL_DEV_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"];
+const LOCAL_DEV_ORIGINS = [
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "https://klbetadis.lovable.app",
+  "https://id-preview--67ba8495-ca58-4eeb-80ed-94fbf23fb179.lovable.app",
+];
 
 interface RegisterBody {
   username: string;
