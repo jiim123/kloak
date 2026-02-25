@@ -6,9 +6,14 @@ import { useOnlineStatus } from './useOnlineStatus';
 // OPTIMIZATION: Consolidated heartbeat and latency into single check every 60s
 const COMBINED_CHECK_INTERVAL = 60000; // 60 seconds (was 30s heartbeat + 60s latency)
 const HEARTBEAT_FAILURES_BEFORE_RECONNECT = 2;
-const MIN_HEALTH_CHECK_GAP_MS = 5000;
+const MIN_HEALTH_CHECK_GAP_MS = 20000;
 
 type RealtimeListener = (connected: boolean) => void;
+type RealtimeSubscribeError = {
+  message?: string;
+  name?: string;
+  cause?: unknown;
+};
 
 let sharedRealtimeChannel: ReturnType<typeof supabase.channel> | null = null;
 let sharedCombinedTimer: NodeJS.Timeout | null = null;
@@ -110,6 +115,7 @@ export function useConnectionStatus() {
       sharedRealtimeChannel = channel;
 
       channel.subscribe((status, err) => {
+        const typedErr = err as RealtimeSubscribeError | null | undefined;
         switch (status) {
           case 'SUBSCRIBED':
             notifyRealtimeConnected(true);
@@ -121,9 +127,9 @@ export function useConnectionStatus() {
             if (err) {
               console.warn('[Realtime] connection-status subscribe error:', {
                 status,
-                message: (err as any)?.message,
-                name: (err as any)?.name,
-                cause: (err as any)?.cause,
+                message: typedErr?.message,
+                name: typedErr?.name,
+                cause: typedErr?.cause,
                 details: err,
               });
             }
@@ -139,9 +145,9 @@ export function useConnectionStatus() {
             if (err) {
               console.warn('[Realtime] connection-status timed out:', {
                 status,
-                message: (err as any)?.message,
-                name: (err as any)?.name,
-                cause: (err as any)?.cause,
+                message: typedErr?.message,
+                name: typedErr?.name,
+                cause: typedErr?.cause,
                 details: err,
               });
             }

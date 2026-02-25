@@ -11,7 +11,23 @@ interface UnreadDMState {
   [conversationId: string]: DMUnreadInfo;
 }
 
+type BroadcastMutationOp = "INSERT" | "UPDATE" | "DELETE";
+
+type DmParticipantBroadcastRow = {
+  id?: string;
+  user_id?: string;
+  conversation_id?: string;
+  last_read_at?: string | null;
+};
+
+type BroadcastMutationPayload<T> = {
+  op?: BroadcastMutationOp;
+  new?: T;
+  old?: T;
+};
+
 const REFETCH_COOLDOWN_MS = 5000;
+const DM_UNREAD_POLL_INTERVAL_MS = 120000;
 
 export const useUnreadDMs = (userId: string | null) => {
   const [unreadState, setUnreadState] = useState<UnreadDMState>({});
@@ -142,10 +158,22 @@ export const useUnreadDMs = (userId: string | null) => {
 
   // Reconcile on visibility change only (removed duplicate focus listener)
   useEffect(() => {
+    let hiddenAt: number | null = null;
+
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        fetchUnreadCounts();
+      if (document.visibilityState === 'hidden') {
+        hiddenAt = Date.now();
+        return;
       }
+
+      if (document.visibilityState !== 'visible') return;
+      if (hiddenAt) {
+        const hiddenFor = Date.now() - hiddenAt;
+        hiddenAt = null;
+        if (hiddenFor > 0 && hiddenFor < 15000) return;
+      }
+
+      fetchUnreadCounts();
     };
 
     document.addEventListener('visibilitychange', handleVisibility);
@@ -155,24 +183,50 @@ export const useUnreadDMs = (userId: string | null) => {
     };
   }, [fetchUnreadCounts]);
 
-  // Subscribe to dm_participants INSERT only (not updates to avoid self-trigger loop)
+  // Subscribe to user-scoped DM participant updates via Broadcast.
   useEffect(() => {
     if (!userId) return;
 
     const channel = supabase
-      .channel(`dm-unreads:${userId}`)
+      .channel(`user:${userId}`)
       .on(
-        'postgres_changes',
-        {
-          event: 'INSERT', // Only new participants, not updates (avoids self-trigger on markAsRead)
-          schema: 'public',
-          table: 'dm_participants',
-          filter: `user_id=eq.${userId}`,
+        'broadcast',
+        { event: 'dm_participants' },
+        ({ payload }) => {
+          const eventPayload = payload as BroadcastMutationPayload<DmParticipantBroadcastRow>;
+          const op = eventPayload?.op;
+          if (!op) return;
+
+          if (op === "INSERT") {
+            fetchUnreadCounts({ force: true });
+            return;
+          }
+
+          const row = op === "DELETE" ? eventPayload.old : eventPayload.new;
+          const conversationId = row?.conversation_id;
+          if (!conversationId) {
+            fetchUnreadCounts({ force: true });
+            return;
+          }
+
+          if (op === "DELETE") {
+            setUnreadState((prev) => {
+              const { [conversationId]: _, ...rest } = prev;
+              return rest;
+            });
+            return;
+          }
+
+          // last_read_at updates should clear local unread count for that conversation.
+          setUnreadState((prev) => ({
+            ...prev,
+            [conversationId]: {
+              conversationId,
+              unreadCount: 0,
+              lastReadAt: row?.last_read_at ?? prev[conversationId]?.lastReadAt ?? null,
+            },
+          }));
         },
-        () => {
-          // New conversation created, refetch
-          fetchUnreadCounts({ force: true });
-        }
       )
       .subscribe();
 
@@ -181,13 +235,13 @@ export const useUnreadDMs = (userId: string | null) => {
     };
   }, [userId, fetchUnreadCounts]);
 
-  // Periodic refresh (cheap with RPC, avoids stuck counts when realtime is missed)
+  // Periodic refresh (safety net if events are missed)
   useEffect(() => {
     if (!userId) return;
     const interval = setInterval(() => {
       if (document.visibilityState !== 'visible') return;
       fetchUnreadCounts();
-    }, 60000);
+    }, DM_UNREAD_POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [userId, fetchUnreadCounts]);
 

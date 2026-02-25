@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import { useFriendStore } from '@/stores/friendStore';
@@ -10,14 +10,37 @@ type PinnedCacheEntry = {
   inFlight?: Promise<Message[]>;
 };
 
+type PinnedMessageRow = Omit<Message, "attachments"> & {
+  attachments?: Message["attachments"];
+};
+
 const PINNED_CACHE_TTL_MS = 120_000;
 const pinnedCache = new Map<string, PinnedCacheEntry>();
 const pinnedCacheKey = (channelId: string, userId: string) => `${userId}:${channelId}`;
+
+type BroadcastMutationOp = 'INSERT' | 'UPDATE' | 'DELETE';
+
+type MessageBroadcastRow = {
+  id: string;
+  channel_id: string;
+  is_pinned?: boolean | null;
+};
+
+type BroadcastMutationPayload<T> = {
+  op?: BroadcastMutationOp;
+  new?: T;
+  old?: T;
+};
 
 export const useRealtimePinnedMessages = (channelId: string | null) => {
   const userId = useAuthStore((s) => s.user?.id);
   const [pinnedMessages, setPinnedMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const pinnedIdsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    pinnedIdsRef.current = new Set(pinnedMessages.map((m) => m.id));
+  }, [pinnedMessages]);
 
   const fetchPinnedMessages = useCallback(async (opts?: { force?: boolean }) => {
     if (!channelId || !userId) {
@@ -60,8 +83,8 @@ export const useRealtimePinnedMessages = (channelId: string | null) => {
       });
 
       if (error) throw error;
-      const messageRows = Array.isArray(data) ? data : [];
-      return messageRows.map((msg: any) => ({
+      const messageRows = Array.isArray(data) ? (data as PinnedMessageRow[]) : [];
+      return messageRows.map((msg) => ({
         ...msg,
         user: msg.user,
         attachments: msg.attachments || [],
@@ -101,30 +124,38 @@ export const useRealtimePinnedMessages = (channelId: string | null) => {
     if (!channelId) return;
 
     const channel = supabase
-      .channel(`pinned:${channelId}`)
+      .channel(`chat:${channelId}`)
       .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'messages',
-          filter: `channel_id=eq.${channelId}`,
-        },
-        (payload) => {
-          const updatedMessage = payload.new as any;
-          const previousMessage = payload.old as any;
-          if (!updatedMessage) return;
+        'broadcast',
+        { event: 'messages' },
+        ({ payload }) => {
+          const eventPayload = payload as BroadcastMutationPayload<MessageBroadcastRow>;
+          const op = eventPayload?.op;
+          if (!op) return;
 
-          const pinToggled = previousMessage?.is_pinned !== updatedMessage.is_pinned;
-          const pinnedMessageEdited =
-            updatedMessage.is_pinned === true &&
-            (previousMessage?.content !== updatedMessage.content ||
-              previousMessage?.edited_at !== updatedMessage.edited_at);
-
-          if (pinToggled || pinnedMessageEdited) {
-            fetchPinnedMessages({ force: true });
+          if (op === 'INSERT') {
+            if (eventPayload.new?.is_pinned) {
+              fetchPinnedMessages({ force: true });
+            }
+            return;
           }
-        }
+
+          if (op === 'UPDATE') {
+            const updatedMessage = eventPayload.new;
+            if (!updatedMessage?.id) return;
+            if (updatedMessage.is_pinned || pinnedIdsRef.current.has(updatedMessage.id)) {
+              fetchPinnedMessages({ force: true });
+            }
+            return;
+          }
+
+          if (op === 'DELETE') {
+            const oldId = eventPayload.old?.id;
+            if (oldId && pinnedIdsRef.current.has(oldId)) {
+              fetchPinnedMessages({ force: true });
+            }
+          }
+        },
       )
       .subscribe();
 

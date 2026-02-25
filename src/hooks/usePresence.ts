@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 
-const LAST_SEEN_INTERVAL_MS = 30000; // 30 seconds
+const LAST_SEEN_INTERVAL_MS = 90000; // 90 seconds
 const IDLE_TIMEOUT_MS = 300000; // 5 minutes
 
 export const usePresence = () => {
@@ -77,11 +77,14 @@ export const usePresence = () => {
     // Get the function directly to avoid dependency issues
     const { updateLastSeen } = useAuthStore.getState();
 
-    // Update immediately
-    updateLastSeen();
+    // Update immediately only when visible.
+    if (document.visibilityState === 'visible') {
+      updateLastSeen();
+    }
 
-    // Then update every 30 seconds
+    // Then update periodically while visible.
     lastSeenIntervalRef.current = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
       useAuthStore.getState().updateLastSeen();
     }, LAST_SEEN_INTERVAL_MS);
 

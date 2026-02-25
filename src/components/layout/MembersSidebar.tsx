@@ -1,9 +1,8 @@
-import { useState, useMemo, useEffect, memo } from "react";
+import { useMemo, useEffect, memo } from "react";
 import { cn } from "@/lib/utils";
 import {
   Crown,
   ChevronDown,
-  ChevronRight,
   MessageSquare,
   Edit3,
   UserX,
@@ -32,7 +31,6 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { MembersSidebarSkeleton } from "@/components/ui/skeletons";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import type { ServerMember, CustomServerRole, UserStatus } from "@/types";
@@ -122,7 +120,6 @@ export const MembersSidebar = () => {
   const { openModal, isMemberSidebarOpen, setMemberSidebarOpen } = useUIStore();
   const navigate = useNavigate();
   const { openConversation } = useDMStore();
-  const [offlineExpanded, setOfflineExpanded] = useState(false);
 
   // Subscribe to realtime member updates
   useRealtimeMembers(currentServer?.id || null);
@@ -153,8 +150,8 @@ export const MembersSidebar = () => {
     return members.filter((m) => !getMemberPresence(m).isOffline).length;
   }, [members]);
 
-  // Group members: roles first (only online members with roles), then online/offline (only no-role members)
-  const { roleGroups, onlineNoRoleMembers, offlineNoRoleMembers } = useMemo(() => {
+  // Group members: roles first (only online members with roles), then online (only no-role members)
+  const { roleGroups, onlineNoRoleMembers } = useMemo(() => {
     const rolePositionById = new Map<string, number>();
     roles.forEach((r) => rolePositionById.set(r.id, r.position));
 
@@ -205,20 +202,14 @@ export const MembersSidebar = () => {
     });
 
     const online: ServerMember[] = [];
-    const offline: ServerMember[] = [];
 
     noRoleMembers.forEach((member) => {
-      if (getMemberPresence(member).isOffline) {
-        offline.push(member);
-      } else {
-        online.push(member);
-      }
+      if (!getMemberPresence(member).isOffline) online.push(member);
     });
 
     return {
       roleGroups: roleGroupsMap,
       onlineNoRoleMembers: online.sort(sortMembers),
-      offlineNoRoleMembers: offline.sort(sortMembers),
     };
   }, [members, roles]);
 
@@ -510,7 +501,7 @@ export const MembersSidebar = () => {
     );
   };
 
-  const totalCount = members.length;
+  const visibleCount = onlineCount;
 
   const sidebarContent = (
     <div className="h-full flex flex-col bg-background/50 border-l border-border/50 w-full">
@@ -518,9 +509,7 @@ export const MembersSidebar = () => {
       <div className="px-4 py-3 border-b border-border/50">
         <h3 className="text-sm font-semibold">Members</h3>
         <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
-          <span>Members: {totalCount}</span>
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-          <span>Online: {onlineCount}</span>
+          <span>Online members: {onlineCount}</span>
         </p>
       </div>
 
@@ -556,29 +545,8 @@ export const MembersSidebar = () => {
           </div>
         )}
 
-        {/* Offline section - collapsible */}
-        {offlineNoRoleMembers.length > 0 && (
-          <Collapsible open={offlineExpanded} onOpenChange={setOfflineExpanded}>
-            <CollapsibleTrigger
-              className="flex items-center gap-2 px-3 py-2 w-full hover:bg-secondary/30 rounded-lg mx-2 transition-colors"
-              style={{ width: "calc(100% - 16px)" }}
-            >
-              <div className={cn("transition-transform duration-200", offlineExpanded && "rotate-90")}>
-                <ChevronRight className="w-3 h-3 text-muted-foreground" />
-              </div>
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Offline</span>
-              <span className="text-[11px] font-medium text-muted-foreground/70">{offlineNoRoleMembers.length}</span>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="space-y-0.5 pt-1">
-                {offlineNoRoleMembers.map((member) => renderMemberItem(member))}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        )}
-
         {/* Empty state */}
-        {members.length === 0 && (
+        {visibleCount === 0 && (
           <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
             <div className="w-12 h-12 rounded-xl bg-secondary/50 flex items-center justify-center mb-3">
               <Users className="w-6 h-6 text-muted-foreground/50" />

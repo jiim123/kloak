@@ -35,9 +35,9 @@ export const useRealtimeMembers = (serverId: string | null) => {
 
     const handleVisibility = () => {
       if (document.visibilityState !== 'visible') return;
-      // Throttle: only refresh if at least 30s since last fetch (increased from 10s)
+      // Throttle visibility refreshes; realtime handles most incremental updates.
       const now = Date.now();
-      if (now - lastRefresh < 30_000) return;
+      if (now - lastRefresh < 120_000) return;
       lastRefresh = now;
       fetchMembersRef.current(serverId);
     };

@@ -20,8 +20,29 @@ interface ServerUnreadInfo {
   totalMentions: number;
 }
 
-// OPTIMIZATION: Increased from 15s to 45s - reduced polling frequency
-const UNREAD_POLL_INTERVAL_MS = 45000;
+type BroadcastMutationOp = "INSERT" | "UPDATE" | "DELETE";
+
+type ChannelReadBroadcastRow = {
+  id?: string;
+  user_id?: string;
+  channel_id?: string;
+  last_read_message_id?: string | null;
+  last_read_at?: string | null;
+};
+
+type BroadcastMutationPayload<T> = {
+  op?: BroadcastMutationOp;
+  new?: T;
+  old?: T;
+};
+
+const extractFirstMessageId = (rows: unknown): string | null => {
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  const first = rows[0] as { id?: unknown };
+  return typeof first.id === 'string' ? first.id : null;
+};
+
+const UNREAD_POLL_INTERVAL_MS = 90000;
 const UNREAD_FETCH_COOLDOWN_MS = 3000;
 const CHANNEL_READ_EVENT = 'kloak:channel-read';
 
@@ -36,7 +57,6 @@ export const useUnread = (serverChannelIds: string[] = []) => {
   const lastFetchAtRef = useRef(0);
   const markInFlightRef = useRef<Map<string, Promise<void>>>(new Map());
   const unreadStateRef = useRef<UnreadState>({});
-  const channelReadsRefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const channelIdsKey = [...serverChannelIds].sort().join(',');
 
   useEffect(() => {
@@ -129,7 +149,7 @@ export const useUnread = (serverChannelIds: string[] = []) => {
         fetchUnreadCounts({ force: true });
       }
     }
-  }, [user, channelIdsKey]);
+  }, [user, serverChannelIds]);
 
   // Mark channel as read
   const markAsRead = useCallback(
@@ -178,11 +198,11 @@ export const useUnread = (serverChannelIds: string[] = []) => {
           } else {
             // Avoid a client-side "latest message" query (causes request spam).
             // Let the DB compute the latest message id per channel in a single RPC.
-            const { error: rpcError } = await (supabase.rpc as any)('mark_channels_read', {
+            const { error: rpcError } = await supabase.rpc('mark_channels_read' as never, {
               _channel_ids: [channelId],
               _user_id: user.id,
               _last_read_at: now,
-            });
+            } as never);
 
             let fallbackMessageId: string | null = null;
 
@@ -199,7 +219,7 @@ export const useUnread = (serverChannelIds: string[] = []) => {
                 _blocked_user_ids: [],
               });
 
-              fallbackMessageId = Array.isArray(latestMessages) && latestMessages.length > 0 ? (latestMessages[0] as any).id : null;
+              fallbackMessageId = extractFirstMessageId(latestMessages);
 
               if (fallbackMessageId) {
                 const { error: fallbackError } = await supabase.rpc('mark_channel_read', {
@@ -298,11 +318,11 @@ export const useUnread = (serverChannelIds: string[] = []) => {
 
       try {
         // One RPC instead of N calls (+ avoids "latest message" lookups on the client).
-        const { error: rpcError } = await (supabase.rpc as any)('mark_channels_read', {
+        const { error: rpcError } = await supabase.rpc('mark_channels_read' as never, {
           _channel_ids: channelIds,
           _user_id: user.id,
           _last_read_at: now,
-        });
+        } as never);
 
         if (rpcError) {
           console.warn('mark_channels_read RPC failed:', rpcError.message);
@@ -319,8 +339,7 @@ export const useUnread = (serverChannelIds: string[] = []) => {
                 _blocked_user_ids: [],
               });
 
-              const messageId =
-                Array.isArray(latestMessages) && latestMessages.length > 0 ? (latestMessages[0] as any).id : null;
+              const messageId = extractFirstMessageId(latestMessages);
               if (!messageId) return;
 
               const { error: fallbackError } = await supabase.rpc('mark_channel_read', {
@@ -379,43 +398,55 @@ export const useUnread = (serverChannelIds: string[] = []) => {
     return () => clearInterval(interval);
   }, [user, channelIdsKey, fetchUnreadCounts, serverChannelIds.length]);
 
-  // Subscribe to realtime updates for channel_reads
+  // Subscribe to broadcast updates for current user's channel reads.
   useEffect(() => {
     if (!user) return;
 
     const channel = supabase
-      .channel('channel-reads-updates')
+      .channel(`user:${user.id}`)
       .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'channel_reads',
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          // Refetch on change to channel_reads, but debounce/coalesce bursts
-          // (e.g. switching channels triggers mark_channel_read + realtime UPDATE).
-          if (channelReadsRefetchTimerRef.current) {
-            clearTimeout(channelReadsRefetchTimerRef.current);
-          }
-          channelReadsRefetchTimerRef.current = setTimeout(() => {
-            channelReadsRefetchTimerRef.current = null;
-            channelIdsRef.current = []; // Reset to force refetch
+        'broadcast',
+        { event: 'channel_reads' },
+        ({ payload }) => {
+          const eventPayload = payload as BroadcastMutationPayload<ChannelReadBroadcastRow>;
+          const op = eventPayload?.op;
+          if (!op) return;
+
+          const row = op === "DELETE" ? eventPayload.old : eventPayload.new;
+          const channelId = row?.channel_id;
+          if (!channelId) {
             fetchUnreadCounts({ force: true });
-          }, 250);
-        }
+            return;
+          }
+
+          if (serverChannelIds.length > 0 && !serverChannelIds.includes(channelId)) {
+            return;
+          }
+
+          if (op === "DELETE") {
+            fetchUnreadCounts({ force: true });
+            return;
+          }
+
+          // A channel_read update for this user means unread is cleared for that channel.
+          setUnreadState((prev) => ({
+            ...prev,
+            [channelId]: {
+              unreadCount: 0,
+              mentionCount: 0,
+              lastReadMessageId: row?.last_read_message_id ?? prev[channelId]?.lastReadMessageId ?? null,
+              lastReadAt: row?.last_read_at ?? prev[channelId]?.lastReadAt ?? null,
+              firstUnreadMessageId: null,
+            },
+          }));
+        },
       )
       .subscribe();
 
     return () => {
-      if (channelReadsRefetchTimerRef.current) {
-        clearTimeout(channelReadsRefetchTimerRef.current);
-        channelReadsRefetchTimerRef.current = null;
-      }
       supabase.removeChannel(channel);
     };
-  }, [user, fetchUnreadCounts]);
+  }, [user, fetchUnreadCounts, channelIdsKey, serverChannelIds]);
 
   // Cross-component sync: when any part of the app marks a channel as read,
   // immediately clear that channel locally if it's in our tracked set.

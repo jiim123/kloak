@@ -26,7 +26,7 @@ const PERMISSIONS_TTL_MS = 5 * 60_000;
 const rolePermissionsCache = new Map<string, { data: RolePermission[]; cachedAt: number }>();
 const channelPermissionsCache = new Map<string, { data: ChannelPermission[]; cachedAt: number }>();
 
-const MEMBERS_CACHE_TTL_MS = 60_000;
+const MEMBERS_CACHE_TTL_MS = 180_000;
 const membersCachedAt = new Map<string, number>();
 
 const normalizeChannelPermissionsRows = (rows: any[]): ChannelPermission[] => {

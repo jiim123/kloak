@@ -4,7 +4,7 @@ import { useServerStore } from '@/stores/serverStore';
 import { useFriendStore } from '@/stores/friendStore';
 import { useDMStore } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
-import type { User } from '@/types';
+import type { User, UserStatus } from '@/types';
 
 /**
  * Patches user data across all relevant stores (server members, friends, DMs).
@@ -78,9 +78,70 @@ export const patchUserAcrossStores = (updatedUser: Partial<User> & { id: string 
   });
 };
 
-// Reduced polling interval from 45s to 15s for better presence updates
-// Targeted realtime subscriptions handle most updates; this is fallback for friends list
-const PRESENCE_POLL_INTERVAL_MS = 45_000;
+type PresenceRow = {
+  id: string;
+  status: string | null;
+  last_seen: string | null;
+};
+
+type GlobalPresenceMeta = {
+  user_id?: string;
+  status?: string | null;
+  custom_status?: string | null;
+  last_seen?: string | null;
+  ts?: number;
+};
+
+// Fallback polling only; targeted realtime listeners should handle most updates.
+const GLOBAL_USERS_PRESENCE_TOPIC = 'presence:users-global';
+const PRESENCE_POLL_INTERVAL_MS = 90_000;
+const PRESENCE_FETCH_COOLDOWN_MS = 60_000;
+const PRESENCE_MIN_HIDDEN_MS_FOR_REFETCH = 15_000;
+const PRESENCE_BACKSTOP_POLL_INTERVAL_MS = 300_000;
+
+const toUserStatus = (value: unknown, fallback: UserStatus): UserStatus => {
+  if (value === 'online' || value === 'idle' || value === 'dnd' || value === 'offline') {
+    return value;
+  }
+  return fallback;
+};
+
+const collectPresenceTargetUserIds = (): string[] => {
+  const { friends } = useFriendStore.getState();
+  const { conversations } = useDMStore.getState();
+  const { members } = useServerStore.getState();
+  const userIds = new Set<string>();
+  friends.forEach((f) => userIds.add(f.id));
+  conversations.forEach((c) => {
+    if (c.other_user?.id) userIds.add(c.other_user.id);
+  });
+  members.forEach((member) => userIds.add(member.user_id));
+  return Array.from(userIds);
+};
+
+const collectPollTargetUserIds = (): string[] => {
+  const { friends } = useFriendStore.getState();
+  const { conversations } = useDMStore.getState();
+  const userIds = new Set<string>();
+  friends.forEach((f) => userIds.add(f.id));
+  conversations.forEach((c) => {
+    if (c.other_user?.id) userIds.add(c.other_user.id);
+  });
+  return Array.from(userIds);
+};
+
+const buildOwnPresencePayload = (): GlobalPresenceMeta | null => {
+  const { user, manualStatus } = useAuthStore.getState();
+  if (!user) return null;
+  const status = manualStatus === 'offline' ? 'offline' : toUserStatus(user.status, 'online');
+  return {
+    user_id: user.id,
+    status,
+    custom_status: user.custom_status ?? null,
+    last_seen: user.last_seen ?? null,
+    ts: Date.now(),
+  };
+};
 
 /**
  * Hook for targeted presence updates.
@@ -95,68 +156,206 @@ const PRESENCE_POLL_INTERVAL_MS = 45_000;
  * - Current server members (handled separately by useRealtimeMembers)
  */
 export const useRealtimeUsers = () => {
+  const authUser = useAuthStore((s) => s.user);
+  const manualStatus = useAuthStore((s) => s.manualStatus);
   const lastPollRef = useRef<number>(0);
+  const lastBackstopPollRef = useRef<number>(0);
+  const presenceChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const presenceConnectedRef = useRef(false);
+  const presenceSigByUserRef = useRef<Map<string, string>>(new Map());
+  const tabIdRef = useRef<string>(Math.random().toString(36).slice(2, 10));
+  const applyPresenceRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    const userId = authUser?.id;
+    if (!userId) {
+      const existing = presenceChannelRef.current;
+      presenceChannelRef.current = null;
+      presenceConnectedRef.current = false;
+      presenceSigByUserRef.current.clear();
+      applyPresenceRef.current = null;
+      if (existing) {
+        try {
+          void existing.untrack();
+          supabase.removeChannel(existing);
+        } catch {
+          // ignore cleanup errors
+        }
+      }
+      return;
+    }
+
+    const channel = supabase.channel(GLOBAL_USERS_PRESENCE_TOPIC, {
+      config: { presence: { key: `${userId}:${tabIdRef.current}` } },
+    });
+    presenceChannelRef.current = channel;
+    const presenceSigByUser = presenceSigByUserRef.current;
+
+    const applyPresenceSnapshot = () => {
+      const targetIds = collectPresenceTargetUserIds();
+      if (targetIds.length === 0) return;
+
+      const targetSet = new Set(targetIds);
+      const rawState = channel.presenceState() as Record<string, GlobalPresenceMeta[]>;
+      const latestByUser = new Map<string, GlobalPresenceMeta>();
+
+      Object.values(rawState).forEach((entries) => {
+        if (!Array.isArray(entries)) return;
+        entries.forEach((meta) => {
+          if (!meta || typeof meta.user_id !== 'string') return;
+          const prev = latestByUser.get(meta.user_id);
+          const prevTs = typeof prev?.ts === 'number' ? prev.ts : 0;
+          const nextTs = typeof meta.ts === 'number' ? meta.ts : 0;
+          if (!prev || nextTs >= prevTs) {
+            latestByUser.set(meta.user_id, meta);
+          }
+        });
+      });
+
+      for (const trackedUserId of Array.from(presenceSigByUser.keys())) {
+        if (!targetSet.has(trackedUserId)) {
+          presenceSigByUser.delete(trackedUserId);
+        }
+      }
+
+      targetIds.forEach((targetId) => {
+        const meta = latestByUser.get(targetId);
+        if (!meta) {
+          const offlineSig = 'offline|absent';
+          if (presenceSigByUser.get(targetId) === offlineSig) return;
+          presenceSigByUser.set(targetId, offlineSig);
+          patchUserAcrossStores({ id: targetId, status: 'offline' });
+          return;
+        }
+
+        const status = toUserStatus(meta.status, 'online');
+        const signature = `${status}|${meta.last_seen ?? ''}|${meta.custom_status ?? ''}`;
+        if (presenceSigByUser.get(targetId) === signature) return;
+        presenceSigByUser.set(targetId, signature);
+        patchUserAcrossStores({
+          id: targetId,
+          status,
+          custom_status: meta.custom_status ?? null,
+          last_seen: meta.last_seen ?? null,
+        });
+      });
+    };
+
+    applyPresenceRef.current = applyPresenceSnapshot;
+    const unsubFriends = useFriendStore.subscribe(() => applyPresenceSnapshot());
+    const unsubDMs = useDMStore.subscribe(() => applyPresenceSnapshot());
+
+    channel
+      .on('presence', { event: 'sync' }, applyPresenceSnapshot)
+      .on('presence', { event: 'join' }, applyPresenceSnapshot)
+      .on('presence', { event: 'leave' }, applyPresenceSnapshot)
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          presenceConnectedRef.current = true;
+          const payload = buildOwnPresencePayload();
+          if (payload) {
+            void channel.track(payload).catch(() => undefined);
+          }
+          applyPresenceSnapshot();
+          return;
+        }
+
+        if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          presenceConnectedRef.current = false;
+        }
+      });
+
+    return () => {
+      unsubFriends();
+      unsubDMs();
+      if (presenceChannelRef.current === channel) {
+        presenceChannelRef.current = null;
+      }
+      if (applyPresenceRef.current === applyPresenceSnapshot) {
+        applyPresenceRef.current = null;
+      }
+      presenceConnectedRef.current = false;
+      presenceSigByUser.clear();
+      try {
+        void channel.untrack();
+        supabase.removeChannel(channel);
+      } catch {
+        // ignore cleanup errors
+      }
+    };
+  }, [authUser?.id]);
+
+  useEffect(() => {
+    const channel = presenceChannelRef.current;
+    if (!channel || !presenceConnectedRef.current || !authUser?.id) return;
+    const payload = buildOwnPresencePayload();
+    if (!payload) return;
+    void channel.track(payload).catch(() => undefined);
+  }, [authUser?.id, authUser?.status, authUser?.custom_status, authUser?.last_seen, manualStatus]);
 
   useEffect(() => {
     // Targeted polling: only fetch presence for users we care about
-    const pollPresence = async () => {
+    const pollPresence = async (opts?: { force?: boolean }) => {
       const userId = useAuthStore.getState().user?.id;
       if (!userId) return;
 
-      // Check if we have friends or DMs that need updating
-      const { friends } = useFriendStore.getState();
-      const { conversations } = useDMStore.getState();
+      applyPresenceRef.current?.();
+      const targetUserIds = collectPollTargetUserIds();
+      if (targetUserIds.length === 0) return;
 
-      if (friends.length === 0 && conversations.length === 0) return;
-
-      // Collect user IDs we care about
-      const userIds = new Set<string>();
-      friends.forEach((f) => userIds.add(f.id));
-      conversations.forEach((c) => {
-        if (c.other_user?.id) userIds.add(c.other_user.id);
-      });
-
-      if (userIds.size === 0) return;
-
-      // Throttle: don't poll more than once per 30 seconds
+      // Throttle burst polling.
       const now = Date.now();
-      if (now - lastPollRef.current < 30_000) return;
+      if (presenceConnectedRef.current && !opts?.force) {
+        if (now - lastBackstopPollRef.current < PRESENCE_BACKSTOP_POLL_INTERVAL_MS) return;
+        lastBackstopPollRef.current = now;
+      }
+      if (now - lastPollRef.current < PRESENCE_FETCH_COOLDOWN_MS) return;
       lastPollRef.current = now;
 
       // Fetch only the columns we need (optimized query)
       const { data, error } = await supabase.rpc('get_users_presence_secure', {
         _user_id: userId,
-        _target_user_ids: Array.from(userIds),
+        _target_user_ids: targetUserIds,
       });
 
       if (error || !data) return;
 
       // Patch each user's presence
-      (data as any[]).forEach((user: any) => {
+      const rows = Array.isArray(data) ? (data as PresenceRow[]) : [];
+      rows.forEach((presence) => {
         patchUserAcrossStores({
-          id: user.id,
-          status: user.status,
-          last_seen: user.last_seen,
+          id: presence.id,
+          status: presence.status ?? 'offline',
+          last_seen: presence.last_seen,
         });
       });
     };
 
     // Poll immediately on mount (if tab is visible)
     if (document.visibilityState === 'visible') {
-      pollPresence();
+      pollPresence({ force: true });
     }
 
-    // Poll at reduced frequency (30 seconds instead of 15)
+    // Poll at reduced frequency while the tab is visible.
     const pollInterval = setInterval(() => {
       if (document.visibilityState !== 'visible') return;
       pollPresence();
     }, PRESENCE_POLL_INTERVAL_MS);
 
-    // Also poll when tab becomes visible (but with throttling)
+    // Poll on tab restore only if it was hidden for a while.
+    let hiddenAt: number | null = null;
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        pollPresence();
+      if (document.visibilityState === 'hidden') {
+        hiddenAt = Date.now();
+        return;
       }
+      if (document.visibilityState !== 'visible') return;
+      if (hiddenAt) {
+        const hiddenFor = Date.now() - hiddenAt;
+        hiddenAt = null;
+        if (hiddenFor > 0 && hiddenFor < PRESENCE_MIN_HIDDEN_MS_FOR_REFETCH) return;
+      }
+      pollPresence({ force: true });
     };
     document.addEventListener('visibilitychange', handleVisibility);
 

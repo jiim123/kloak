@@ -18,25 +18,48 @@ interface PollWithVotes {
   userVotes: number[];
 }
 
-const normalizePollRow = (row: any, existingUserVotes: number[] = []): PollWithVotes => {
+type BroadcastMutationOp = "INSERT" | "UPDATE" | "DELETE";
+
+type PollBroadcastRow = {
+  id: string;
+  message_id: string;
+  channel_id: string;
+  created_by?: string;
+  question?: string;
+  options?: string[];
+  allow_multiple?: boolean;
+  ends_at?: string;
+  is_closed?: boolean;
+  results?: number[];
+  total_votes?: number;
+  created_at?: string;
+};
+
+type BroadcastMutationPayload<T> = {
+  op?: BroadcastMutationOp;
+  new?: T;
+  old?: T;
+};
+
+const normalizePollRow = (row: PollBroadcastRow, existingUserVotes: number[] = []): PollWithVotes => {
   const resultsRaw = row?.results;
   const results: number[] = Array.isArray(resultsRaw)
-    ? resultsRaw.map((v: any) => (typeof v === "number" ? v : Number(v) || 0))
+    ? resultsRaw.map((v) => (typeof v === "number" ? v : Number(v) || 0))
     : [];
 
   return {
     id: row.id,
     message_id: row.message_id,
     channel_id: row.channel_id,
-    created_by: row.created_by,
-    question: row.question,
+    created_by: row.created_by ?? "",
+    question: row.question ?? "",
     options: Array.isArray(row.options) ? row.options : [],
     allow_multiple: !!row.allow_multiple,
-    ends_at: row.ends_at,
+    ends_at: row.ends_at ?? "",
     is_closed: !!row.is_closed,
     results,
     total_votes: typeof row.total_votes === "number" ? row.total_votes : Number(row.total_votes) || 0,
-    created_at: row.created_at,
+    created_at: row.created_at ?? "",
     userVotes: existingUserVotes,
   };
 };
@@ -84,26 +107,25 @@ export const useRealtimePolls = (channelId: string | null) => {
       }
 
       channel = supabase
-        .channel(`polls:${channelId}`)
+        .channel(`chat:${channelId}`)
         .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "polls",
-            filter: `channel_id=eq.${channelId}`,
-          },
-          (payload) => {
+          "broadcast",
+          { event: "polls" },
+          ({ payload }) => {
             try {
-              if (payload.eventType === "DELETE") {
-                const oldRow = payload.old as any;
+              const eventPayload = payload as BroadcastMutationPayload<PollBroadcastRow>;
+              const op = eventPayload.op;
+              if (!op) return;
+
+              if (op === "DELETE") {
+                const oldRow = eventPayload.old;
                 if (oldRow?.id) usePollStore.getState().removePoll(oldRow.id);
                 return;
               }
 
-              const row = payload.new as any;
+              const row = eventPayload.new;
               if (!row?.id) return;
-              
+               
               // Preserve existing user votes when updating from realtime
               const existingPoll = usePollStore.getState().pollsById[row.id];
               const existingUserVotes = existingPoll?.userVotes || [];
