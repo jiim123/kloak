@@ -205,8 +205,7 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
 
     const cacheEntry = useMessageStore.getState().messagesByChannel[channelId];
     const hasCached = (cacheEntry?.messages?.length ?? 0) > 0;
-    const isFreshEnough =
-      !!cacheEntry && Date.now() - cacheEntry.lastFetched < CHANNEL_ENTRY_FORCE_REFETCH_MAX_AGE_MS;
+    const isFreshEnough = !!cacheEntry && Date.now() - cacheEntry.lastFetched < CHANNEL_ENTRY_FORCE_REFETCH_MAX_AGE_MS;
     const unreadSnapshot = getChannelUnread(channelId);
     const hasUnreadBacklog = (unreadSnapshot.unreadCount ?? 0) > 0;
 
@@ -362,7 +361,10 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
 
   // Declared here so handleScroll can reference them without forward-declaration errors
   const shouldVirtualize = deduplicatedMessages.length >= VIRTUALIZATION_THRESHOLD && !highlightedMessageId;
-  const [virtualRange, setVirtualRange] = useState({ startIndex: 0, endIndex: Math.max(0, deduplicatedMessages.length - 1) });
+  const [virtualRange, setVirtualRange] = useState({
+    startIndex: 0,
+    endIndex: Math.max(0, deduplicatedMessages.length - 1),
+  });
 
   // Handle scroll events with RAF for better performance
   const handleScroll = useCallback(() => {
@@ -383,7 +385,9 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
         const nextStart = Math.max(0, rawStart - VIRTUAL_OVERSCAN);
         const nextEnd = Math.min(deduplicatedMessages.length - 1, rawStart + visibleCount + VIRTUAL_OVERSCAN);
         setVirtualRange((prev) =>
-          prev.startIndex === nextStart && prev.endIndex === nextEnd ? prev : { startIndex: nextStart, endIndex: nextEnd },
+          prev.startIndex === nextStart && prev.endIndex === nextEnd
+            ? prev
+            : { startIndex: nextStart, endIndex: nextEnd },
         );
       }
       const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
@@ -440,10 +444,7 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
     // Mark as read, but only if different from last marked message
     if (messages.length > 0) {
       const latestMessage = messages[messages.length - 1];
-      if (
-        !latestMessage.id.startsWith("temp-") &&
-        lastMarkedMessageIdRef.current !== latestMessage.id
-      ) {
+      if (!latestMessage.id.startsWith("temp-") && lastMarkedMessageIdRef.current !== latestMessage.id) {
         markAsRead(channelId, latestMessage.id);
         lastMarkedMessageIdRef.current = latestMessage.id;
       }
@@ -463,7 +464,9 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
     return -1;
   }, [messages, lastReadAt, firstUnreadMessageId]);
 
-  const estimatedTotalHeight = deduplicatedMessages.length * ESTIMATED_MESSAGE_HEIGHT; = useMemo(() => {
+  const estimatedTotalHeight = deduplicatedMessages.length * ESTIMATED_MESSAGE_HEIGHT;
+
+  const messageAuthorIds = useMemo(() => {
     const unique = new Set<string>();
     for (const message of deduplicatedMessages) {
       const authorId = message.user_id;
@@ -490,10 +493,12 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
 
       for (let i = 0; i < missingAuthorStyleIds.length; i += AUTHOR_STYLE_FETCH_CHUNK) {
         const chunk = missingAuthorStyleIds.slice(i, i + AUTHOR_STYLE_FETCH_CHUNK);
-        const { data, error } = await (supabase.rpc as unknown as (
-          fn: string,
-          args: Record<string, unknown>,
-        ) => Promise<{ data: unknown; error: unknown }>)("get_message_author_styles_secure", {
+        const { data, error } = await (
+          supabase.rpc as unknown as (
+            fn: string,
+            args: Record<string, unknown>,
+          ) => Promise<{ data: unknown; error: unknown }>
+        )("get_message_author_styles_secure", {
           _server_id: currentServerId,
           _user_id: user.id,
           _target_user_ids: chunk,
@@ -551,9 +556,7 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
     return deduplicatedMessages.slice(virtualRange.startIndex, virtualRange.endIndex + 1);
   }, [shouldVirtualize, deduplicatedMessages, virtualRange.startIndex, virtualRange.endIndex]);
 
-  const topSpacerHeight = shouldVirtualize
-    ? Math.max(0, virtualRange.startIndex * ESTIMATED_MESSAGE_HEIGHT)
-    : 0;
+  const topSpacerHeight = shouldVirtualize ? Math.max(0, virtualRange.startIndex * ESTIMATED_MESSAGE_HEIGHT) : 0;
   const renderedHeight = shouldVirtualize ? visibleMessages.length * ESTIMATED_MESSAGE_HEIGHT : 0;
   const bottomSpacerHeight = shouldVirtualize
     ? Math.max(0, estimatedTotalHeight - topSpacerHeight - renderedHeight)
