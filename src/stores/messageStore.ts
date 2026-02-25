@@ -80,11 +80,18 @@ const groupReactions = (reactions: any[], currentUserId?: string): ReactionGroup
         emoji: reaction.emoji,
         count: 0,
         users: [],
+        userNames: {},
         hasReacted: false,
       };
     }
     groups[reaction.emoji].count++;
     groups[reaction.emoji].users.push(reaction.user_id);
+    // Populate display name if available on the reaction row (from DB join)
+    const name = reaction.users?.display_name || reaction.users?.username;
+    if (name) {
+      groups[reaction.emoji].userNames = groups[reaction.emoji].userNames ?? {};
+      groups[reaction.emoji].userNames![reaction.user_id] = name;
+    }
     if (reaction.user_id === currentUserId) {
       groups[reaction.emoji].hasReacted = true;
     }
@@ -293,7 +300,10 @@ export const useMessageStore = create<MessageState>((set, get) => ({
           // Bootstrap RPC may be unavailable while migrations roll out.
           // Ensure channel overrides are still loaded via legacy path.
           if (!before) {
-            void useServerStore.getState().fetchChannelPermissions(channelId).catch(() => undefined);
+            void useServerStore
+              .getState()
+              .fetchChannelPermissions(channelId)
+              .catch(() => undefined);
           }
         }
 
@@ -353,9 +363,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         const messages: Message[] = messageRows.reverse().map((msg: any) => ({
           ...msg,
           user: msg.user,
-          reply_to: msg.reply_to_id
-            ? toMessageReply(msg.reply_to) || replyMap[msg.reply_to_id]
-            : undefined,
+          reply_to: msg.reply_to_id ? toMessageReply(msg.reply_to) || replyMap[msg.reply_to_id] : undefined,
           attachments: msg.attachments || [],
           reactions: groupReactions(
             blockedUserIds.length > 0
