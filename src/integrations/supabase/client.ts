@@ -122,12 +122,12 @@ export async function getKeyHashAsync(): Promise<string | null> {
 // import { supabase } from "@/integrations/supabase/client";
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    storage: localStorage,
     // This app uses custom key-hash auth, not Supabase Auth sessions.
-    // Disable session persistence to avoid stale Bearer JWTs causing PGRST301
-    // when switching projects/self-hosted instances.
+    // Disable session persistence entirely to avoid stale Bearer JWTs causing
+    // 401 errors (PGRST301) from expired tokens lingering in localStorage.
     persistSession: false,
     autoRefreshToken: false,
+    detectSessionInUrl: false,
   },
   global: {
     fetch: async (input, init) => {
