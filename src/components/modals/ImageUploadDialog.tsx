@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Upload, X, AlertTriangle, Image as ImageIcon } from 'lucide-react';
+import { Upload, X, Image as ImageIcon } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -9,7 +9,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ImageUploadDialogProps {
   open: boolean;
@@ -130,14 +129,6 @@ export const ImageUploadDialog = ({ open, onOpenChange, onUpload }: ImageUploadD
             Share images with this channel (up to {MAX_FILES} at once)
           </DialogDescription>
         </DialogHeader>
-
-        {/* 14-day warning notice */}
-        <Alert variant="default" className="border-[hsl(var(--kloak-warning))]/50 bg-[hsl(var(--kloak-warning))]/10">
-          <AlertTriangle className="h-4 w-4 text-[hsl(var(--kloak-warning))]" />
-          <AlertDescription className="text-sm text-[hsl(var(--kloak-warning))]">
-            <strong>Notice:</strong> Uploaded images are automatically deleted after 14 days to save storage space. Make sure to save important images elsewhere.
-          </AlertDescription>
-        </Alert>
 
         {/* Upload area */}
         <div
