@@ -3,6 +3,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
+import { useAuthorStyles } from "@/hooks/useAuthorStyles";
 import { 
   Send, 
   Loader2, 
@@ -24,7 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { handleError } from "@/lib/errorHandler";
 import { formatMessageTimestamp } from "@/lib/format";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
-import type { User, ReactionGroup } from "@/types";
+import type { User, ReactionGroup, CustomServerRole, ServerRole } from "@/types";
 
 interface MediaComment {
   id: string;
@@ -50,9 +51,22 @@ interface MediaCommentsProps {
   channelId: string;
 }
 
+const ROLE_COLORS: Record<ServerRole, string> = {
+  owner: "text-yellow-400",
+  admin: "text-red-400",
+  moderator: "text-blue-400",
+  member: "text-foreground",
+};
+
+const getRoleColorClass = (role?: ServerRole | null): string => {
+  return role ? ROLE_COLORS[role] || "text-foreground" : "text-foreground";
+};
+
+const isGradientColor = (value?: string | null) => !!value && value.startsWith("linear-gradient");
+
 export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ mediaId, channelId }, ref) => {
   const { user } = useAuthStore();
-  const { currentServer } = useServerStore();
+  const { currentServer, members, roles } = useServerStore();
   const { openModal } = useUIStore();
   const { hasPermission } = useMemberPermissions(channelId);
   const canManageMessages = hasPermission("manage_messages");
@@ -74,6 +88,92 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
   const [composerFocused, setComposerFocused] = useState(false);
   const [composerEmojiOpen, setComposerEmojiOpen] = useState(false);
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const membersByUserId = useMemo(() => {
+    const map = new Map<string, (typeof members)[number]>();
+    members.forEach((member) => map.set(member.user_id, member));
+    return map;
+  }, [members]);
+
+  const rolesById = useMemo(() => {
+    const map = new Map<string, CustomServerRole>();
+    roles.forEach((role) => map.set(role.id, role));
+    return map;
+  }, [roles]);
+
+  const authorStyleTargetIds = useMemo(() => {
+    const ids = new Set<string>();
+    comments.forEach((comment) => {
+      if (comment.user_id) ids.add(comment.user_id);
+      if (comment.user?.id) ids.add(comment.user.id);
+      if (comment.reply_to?.user_id) ids.add(comment.reply_to.user_id);
+      if (comment.reply_to?.user?.id) ids.add(comment.reply_to.user.id);
+    });
+    return Array.from(ids);
+  }, [comments]);
+
+  const authorStyles = useAuthorStyles(currentServer?.id, authorStyleTargetIds);
+
+  const getCommentDisplayName = useCallback(
+    (comment: MediaComment) => {
+      const member = membersByUserId.get(comment.user_id);
+      const fallback = authorStyles[comment.user_id];
+      return (
+        member?.nickname ||
+        fallback?.nickname ||
+        comment.user?.display_name ||
+        comment.user?.username ||
+        "Unknown"
+      );
+    },
+    [membersByUserId, authorStyles],
+  );
+
+  const getCommentUsernameColor = useCallback(
+    (userId?: string) => {
+      if (!userId) return { className: "text-foreground" as const, style: undefined as React.CSSProperties | undefined };
+
+      const member = membersByUserId.get(userId);
+      const fallback = authorStyles[userId];
+      const memberRoles = member?.roles ?? fallback?.roles ?? [];
+      let topCustomRole: CustomServerRole | null = null;
+
+      for (const roleRef of memberRoles) {
+        const resolvedRole = rolesById.get(roleRef.id) ?? roleRef;
+        if (!topCustomRole) {
+          topCustomRole = resolvedRole;
+          continue;
+        }
+        const aPos = typeof resolvedRole.position === "number" ? resolvedRole.position : Number.POSITIVE_INFINITY;
+        const bPos = typeof topCustomRole.position === "number" ? topCustomRole.position : Number.POSITIVE_INFINITY;
+        if (aPos < bPos) topCustomRole = resolvedRole;
+      }
+
+      if (topCustomRole?.color) {
+        if (isGradientColor(topCustomRole.color)) {
+          return {
+            className: "text-transparent",
+            style: {
+              background: topCustomRole.color,
+              WebkitBackgroundClip: "text",
+              backgroundClip: "text",
+              color: "transparent",
+            } as React.CSSProperties,
+          };
+        }
+        return {
+          className: "text-foreground",
+          style: { color: topCustomRole.color } as React.CSSProperties,
+        };
+      }
+
+      return {
+        className: getRoleColorClass(member?.role ?? fallback?.role),
+        style: undefined,
+      };
+    },
+    [membersByUserId, authorStyles, rolesById],
+  );
 
   // Update ref when comments change
   useEffect(() => {
@@ -688,6 +788,9 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
             </div>
           ) : (
             comments.map((comment) => (
+              (() => {
+                const usernameColor = getCommentUsernameColor(comment.user_id || comment.user?.id);
+                return (
               <div
                 key={comment.id}
                 className="group relative py-1 px-2 -mx-2 rounded hover:bg-accent/5 cursor-pointer"
@@ -741,14 +844,15 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
                     <div className="flex items-baseline gap-2">
                       <button
                         type="button"
-                        className="font-medium text-sm text-foreground hover:underline focus:outline-none"
+                        className={`font-medium text-sm hover:underline focus:outline-none ${usernameColor.className}`}
+                        style={usernameColor.style}
                         onClick={() => {
                           if (comment.user) {
                             openModal('userProfile', { userId: comment.user.id });
                           }
                         }}
                       >
-                        {comment.user?.display_name || comment.user?.username || 'Unknown'}
+                        {getCommentDisplayName(comment)}
                       </button>
                       <span className="text-xs text-muted-foreground flex-shrink-0">
                         {formatMessageTimestamp(comment.created_at)}
@@ -923,6 +1027,8 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
                   </div>
                 )}
               </div>
+                );
+              })()
             ))
           )}
         </div>

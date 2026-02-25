@@ -35,9 +35,13 @@ import { MembersSidebarSkeleton } from "@/components/ui/skeletons";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import type { ServerMember, CustomServerRole, UserStatus } from "@/types";
 import { getEffectivePresence } from "@/lib/presence";
+import { hasRecentRealtimePresence } from "@/hooks/useRealtimeUsers";
 
 const getMemberPresence = (member: ServerMember) => {
   const status = (member.user?.status as UserStatus | undefined) ?? "offline";
+  if (status !== "offline" && hasRecentRealtimePresence(member.user_id)) {
+    return { status, isStale: false, isOffline: false };
+  }
   const lastSeen = member.user?.last_seen;
   return getEffectivePresence(status, lastSeen);
 };

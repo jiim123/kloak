@@ -12,6 +12,7 @@ import { useServerStore } from "@/stores/serverStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { useDMStore } from "@/stores/dmStore";
 import { useUserBadges } from "@/hooks/useUserBadges";
+import { useAuthorStyles } from "@/hooks/useAuthorStyles";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -296,11 +297,14 @@ export const UserProfilePopup = () => {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // Get user's roles in current server
-  const userRoles =
-    currentServer && userId
-      ? members.find((m) => m.user_id === userId && m.server_id === currentServer.id)?.roles || []
-      : [];
+  const authorStyles = useAuthorStyles(currentServer?.id, userId ? [userId] : []);
+  // Get user's roles in current server. Fallback to targeted author-style RPC for offline users.
+  const userRoles = useMemo(() => {
+    if (!currentServer || !userId) return [];
+    const memberRoles = members.find((m) => m.user_id === userId && m.server_id === currentServer.id)?.roles;
+    if (memberRoles && memberRoles.length > 0) return memberRoles;
+    return authorStyles[userId]?.roles || [];
+  }, [currentServer, userId, members, authorStyles]);
 
   const handleMessage = async () => {
     if (!currentUser || !profileUser) return;

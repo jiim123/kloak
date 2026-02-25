@@ -8,6 +8,7 @@ import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { useTyping } from "@/hooks/useTyping";
 import { useSwipeGestureRef } from "@/hooks/useSwipeGesture";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuthorStyles } from "@/hooks/useAuthorStyles";
 import {
   MessageSquare,
   Hash,
@@ -218,12 +219,48 @@ export const ForumChannelArea = () => {
     return map;
   }, [roles]);
 
+  const authorStyleTargetIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const thread of threads) {
+      if (thread.created_by) ids.add(thread.created_by);
+      if (thread.message?.user_id) ids.add(thread.message.user_id);
+      if (thread.message?.user?.id) ids.add(thread.message.user.id);
+      if (thread.last_message_author?.id) ids.add(thread.last_message_author.id);
+    }
+    Object.values(threadMessages).forEach((messages) => {
+      messages.forEach((msg) => {
+        if (msg.user_id) ids.add(msg.user_id);
+        if (msg.user?.id) ids.add(msg.user.id);
+      });
+    });
+    return Array.from(ids);
+  }, [threads, threadMessages]);
+
+  const authorStyles = useAuthorStyles(currentChannel?.server_id ?? currentServer?.id, authorStyleTargetIds);
+
+  const getDisplayName = useCallback(
+    (userId?: string | null, messageUser?: User | null) => {
+      if (!userId && !messageUser) return "Unknown";
+      const member = userId ? membersByUserId.get(userId) : undefined;
+      const fallback = userId ? authorStyles[userId] : undefined;
+      return (
+        member?.nickname ||
+        fallback?.nickname ||
+        messageUser?.display_name ||
+        messageUser?.username ||
+        "Unknown"
+      );
+    },
+    [membersByUserId, authorStyles],
+  );
+
   const getUsernameColor = useCallback(
     (userId?: string | null): { className: string; style?: CSSProperties } => {
       if (!userId) return { className: "text-foreground" };
 
       const member = membersByUserId.get(userId);
-      const memberRoles = member?.roles ?? [];
+      const fallback = authorStyles[userId];
+      const memberRoles = member?.roles ?? fallback?.roles ?? [];
       let topCustomRole: CustomServerRole | null = null;
 
       for (const roleRef of memberRoles) {
@@ -257,9 +294,9 @@ export const ForumChannelArea = () => {
         };
       }
 
-      return { className: getRoleColorClass(member?.role) };
+      return { className: getRoleColorClass(member?.role ?? fallback?.role) };
     },
-    [membersByUserId, rolesById],
+    [membersByUserId, rolesById, authorStyles],
   );
 
   // Load server emojis for custom emoji rendering
@@ -1752,7 +1789,7 @@ export const ForumChannelArea = () => {
                           </Avatar>
                           <span className="hidden sm:inline">
                             <span className={opUsernameColor.className} style={opUsernameColor.style}>
-                              {opUser?.display_name || opUser?.username || "Unknown"}
+                              {getDisplayName(opUser?.id || thread.message?.user_id, opUser)}
                             </span>
                           </span>
                         </div>
@@ -1808,7 +1845,7 @@ export const ForumChannelArea = () => {
                               </AvatarFallback>
                             </Avatar>
                             <span className={opUsernameColor.className} style={opUsernameColor.style}>
-                              {opUser?.display_name || opUser?.username || "Unknown"}
+                              {getDisplayName(opUser?.id || thread.message?.user_id, opUser)}
                             </span>
                           </div>
 
@@ -1932,7 +1969,7 @@ export const ForumChannelArea = () => {
                                   openModal("userProfile", { userId: selectedThread.created_by })
                                 }
                               >
-                                {opUser?.display_name || opUser?.username || "Unknown"}
+                                {getDisplayName(selectedThread?.created_by || opUser?.id, opUser)}
                               </span>
                               <span className="text-xs text-muted-foreground">
                                 {selectedThread?.created_at &&
@@ -1994,7 +2031,7 @@ export const ForumChannelArea = () => {
                                     style={msgUsernameColor.style}
                                     onClick={() => msg.user_id && openModal("userProfile", { userId: msg.user_id })}
                                   >
-                                    {msg.user?.display_name || msg.user?.username || "Unknown"}
+                                    {getDisplayName(msg.user_id || msg.user?.id, msg.user)}
                                   </span>
                                   <span className="text-xs text-muted-foreground">
                                     {formatMessageTimestamp(msg.created_at)}
@@ -2323,7 +2360,7 @@ export const ForumChannelArea = () => {
                                     openModal("userProfile", { userId: selectedThread.created_by })
                                   }
                                 >
-                                  {opUser?.display_name || opUser?.username || "Unknown"}
+                                  {getDisplayName(selectedThread?.created_by || opUser?.id, opUser)}
                                 </span>
                                 <span className="text-xs text-muted-foreground">
                                   {selectedThread?.created_at &&
@@ -2385,7 +2422,7 @@ export const ForumChannelArea = () => {
                                       style={msgUsernameColor.style}
                                       onClick={() => msg.user_id && openModal("userProfile", { userId: msg.user_id })}
                                     >
-                                      {msg.user?.display_name || msg.user?.username || "Unknown"}
+                                      {getDisplayName(msg.user_id || msg.user?.id, msg.user)}
                                     </span>
                                     <span className="text-xs text-muted-foreground">
                                       {formatMessageTimestamp(msg.created_at)}

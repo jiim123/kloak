@@ -98,6 +98,15 @@ const PRESENCE_POLL_INTERVAL_MS = 90_000;
 const PRESENCE_FETCH_COOLDOWN_MS = 60_000;
 const PRESENCE_MIN_HIDDEN_MS_FOR_REFETCH = 15_000;
 const PRESENCE_BACKSTOP_POLL_INTERVAL_MS = 300_000;
+const PRESENCE_ABSENT_GRACE_MS = 30_000;
+const RECENT_PRESENCE_WINDOW_MS = 2 * PRESENCE_POLL_INTERVAL_MS;
+
+const recentRealtimePresenceByUser = new Map<string, number>();
+
+export const hasRecentRealtimePresence = (userId: string, nowMs: number = Date.now()): boolean => {
+  const lastSeenAt = recentRealtimePresenceByUser.get(userId);
+  return typeof lastSeenAt === 'number' && nowMs - lastSeenAt <= RECENT_PRESENCE_WINDOW_MS;
+};
 
 const toUserStatus = (value: unknown, fallback: UserStatus): UserStatus => {
   if (value === 'online' || value === 'idle' || value === 'dnd' || value === 'offline') {
@@ -163,6 +172,7 @@ export const useRealtimeUsers = () => {
   const presenceChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const presenceConnectedRef = useRef(false);
   const presenceSigByUserRef = useRef<Map<string, string>>(new Map());
+  const absenceStartedAtByUserRef = useRef<Map<string, number>>(new Map());
   const tabIdRef = useRef<string>(Math.random().toString(36).slice(2, 10));
   const applyPresenceRef = useRef<(() => void) | null>(null);
 
@@ -173,6 +183,8 @@ export const useRealtimeUsers = () => {
       presenceChannelRef.current = null;
       presenceConnectedRef.current = false;
       presenceSigByUserRef.current.clear();
+      absenceStartedAtByUserRef.current.clear();
+      recentRealtimePresenceByUser.clear();
       applyPresenceRef.current = null;
       if (existing) {
         try {
@@ -190,8 +202,10 @@ export const useRealtimeUsers = () => {
     });
     presenceChannelRef.current = channel;
     const presenceSigByUser = presenceSigByUserRef.current;
+    const absenceStartedAtByUser = absenceStartedAtByUserRef.current;
 
     const applyPresenceSnapshot = () => {
+      const nowMs = Date.now();
       const targetIds = collectPresenceTargetUserIds();
       if (targetIds.length === 0) return;
 
@@ -215,19 +229,39 @@ export const useRealtimeUsers = () => {
       for (const trackedUserId of Array.from(presenceSigByUser.keys())) {
         if (!targetSet.has(trackedUserId)) {
           presenceSigByUser.delete(trackedUserId);
+          absenceStartedAtByUser.delete(trackedUserId);
+          recentRealtimePresenceByUser.delete(trackedUserId);
+        }
+      }
+
+      for (const trackedUserId of Array.from(absenceStartedAtByUser.keys())) {
+        if (!targetSet.has(trackedUserId)) {
+          absenceStartedAtByUser.delete(trackedUserId);
         }
       }
 
       targetIds.forEach((targetId) => {
         const meta = latestByUser.get(targetId);
         if (!meta) {
+          if (targetId === userId) return;
+          const absentSince = absenceStartedAtByUser.get(targetId);
+          if (typeof absentSince !== 'number') {
+            absenceStartedAtByUser.set(targetId, nowMs);
+            return;
+          }
+          if (nowMs - absentSince < PRESENCE_ABSENT_GRACE_MS) {
+            return;
+          }
           const offlineSig = 'offline|absent';
           if (presenceSigByUser.get(targetId) === offlineSig) return;
           presenceSigByUser.set(targetId, offlineSig);
+          recentRealtimePresenceByUser.delete(targetId);
           patchUserAcrossStores({ id: targetId, status: 'offline' });
           return;
         }
 
+        absenceStartedAtByUser.delete(targetId);
+        recentRealtimePresenceByUser.set(targetId, nowMs);
         const status = toUserStatus(meta.status, 'online');
         const signature = `${status}|${meta.last_seen ?? ''}|${meta.custom_status ?? ''}`;
         if (presenceSigByUser.get(targetId) === signature) return;
@@ -276,6 +310,8 @@ export const useRealtimeUsers = () => {
       }
       presenceConnectedRef.current = false;
       presenceSigByUser.clear();
+      absenceStartedAtByUser.clear();
+      recentRealtimePresenceByUser.clear();
       try {
         void channel.untrack();
         supabase.removeChannel(channel);
