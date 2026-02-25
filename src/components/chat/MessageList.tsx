@@ -464,8 +464,6 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
     return -1;
   }, [messages, lastReadAt, firstUnreadMessageId]);
 
-  const estimatedTotalHeight = deduplicatedMessages.length * ESTIMATED_MESSAGE_HEIGHT;
-
   const messageAuthorIds = useMemo(() => {
     const unique = new Set<string>();
     for (const message of deduplicatedMessages) {
