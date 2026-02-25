@@ -453,7 +453,7 @@ export const MessageItem = memo(function MessageItem({
   const getReactionUserNames = useCallback(
     (userIds: string[]) => {
       const unique = Array.from(new Set(userIds));
-      return unique.map((id) => memberNameById.get(id) ?? (id === user?.id ? "You" : id));
+      return unique.map((id) => memberNameById.get(id) ?? (id === user?.id ? "You" : "Unknown user"));
     },
     [memberNameById, user?.id],
   );
