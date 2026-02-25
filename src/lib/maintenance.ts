@@ -2,4 +2,4 @@
 export const MAINTENANCE_MODE = import.meta.env.VITE_MAINTENANCE_MODE === "true";
 
 /** When true, new account registration is disabled while login remains functional. */
-export const REGISTRATION_DISABLED = true;
+export const REGISTRATION_DISABLED = false;
