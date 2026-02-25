@@ -1,19 +1,20 @@
-import { useEffect, useRef, useState, useCallback, useMemo, useLayoutEffect } from 'react';
-import { ArrowDown, Ban } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { StackedAvatars } from '@/components/ui/stacked-avatars';
-import { useDMStore } from '@/stores/dmStore';
-import { useAuthStore } from '@/stores/authStore';
-import { useUIStore } from '@/stores/uiStore';
-import { useFriendStore } from '@/stores/friendStore';
-import { useUnreadDMsContext } from '@/hooks/useUnreadDMsContext';
-import { useSwipeGestureRef } from '@/hooks/useSwipeGesture';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { DMMessageInput } from './DMMessageInput';
-import { DMMessageItem } from './DMMessageItem';
-import { DMHeader } from './DMHeader';
-import { GroupChatHeader } from './GroupChatHeader';
-import type { DirectMessage, User } from '@/types';
+import { useEffect, useRef, useState, useCallback, useMemo, useLayoutEffect } from "react";
+import { ArrowDown, Ban } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { StackedAvatars } from "@/components/ui/stacked-avatars";
+import { useDMStore } from "@/stores/dmStore";
+import { useAuthStore } from "@/stores/authStore";
+import { useUIStore } from "@/stores/uiStore";
+import { useFriendStore } from "@/stores/friendStore";
+import { useUnreadDMsContext } from "@/hooks/useUnreadDMsContext";
+import { useSwipeGestureRef } from "@/hooks/useSwipeGesture";
+import { useScrollToMessage } from "@/hooks/useScrollToMessage";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { DMMessageInput } from "./DMMessageInput";
+import { DMMessageItem } from "./DMMessageItem";
+import { DMHeader } from "./DMHeader";
+import { GroupChatHeader } from "./GroupChatHeader";
+import type { DirectMessage, User } from "@/types";
 
 export const DMChatArea = () => {
   const { user } = useAuthStore();
@@ -22,10 +23,10 @@ export const DMChatArea = () => {
   const { blockedUsers, visibilityBlockedUserIds } = useFriendStore();
   const { markAsRead } = useUnreadDMsContext();
   const isMobile = useIsMobile();
-  
+
   // Get messages for current conversation from cache
   const messages = currentConversation ? getMessages(currentConversation.id) : [];
-  
+
   // Check if either user has blocked the other
   // blockedUsers = users that I have blocked
   // visibilityBlockedUserIds = all users in a "blocked" relationship with me (both directions)
@@ -33,12 +34,14 @@ export const DMChatArea = () => {
   const isBlockedByMe = blockedUsers.some((b) => b.id === otherUserId);
   // If other user is in visibility blocked but NOT in my blocked list, they blocked me
   const isBlockedByThem = otherUserId ? visibilityBlockedUserIds.includes(otherUserId) && !isBlockedByMe : false;
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const scrollRAFRef = useRef<number | null>(null);
   const needsScrollRef = useRef(true);
   const prevConversationIdRef = useRef<string | null>(null);
+
+  const { highlightedMessageId } = useScrollToMessage({ messages, isLoading, containerRef: messagesContainerRef });
 
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [newMessageCount, setNewMessageCount] = useState(0);
@@ -71,7 +74,7 @@ export const DMChatArea = () => {
   // useLayoutEffect fires synchronously after DOM mutations but before paint
   useLayoutEffect(() => {
     if (needsScrollRef.current && messages.length > 0) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
+      messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
       setIsAtBottom(true);
       needsScrollRef.current = false;
     }
@@ -82,7 +85,7 @@ export const DMChatArea = () => {
   // Auto-scroll to bottom on new messages
   useEffect(() => {
     if (isAtBottom) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     } else if (messages.length > 0) {
       // Count new messages when not at bottom
       setNewMessageCount((prev) => prev + 1);
@@ -132,7 +135,7 @@ export const DMChatArea = () => {
   }, []);
 
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     setNewMessageCount(0);
     setIsAtBottom(true);
   }, []);
@@ -146,7 +149,7 @@ export const DMChatArea = () => {
       const isFirst =
         !prevMsg ||
         prevMsg.sender_id !== msg.sender_id ||
-        new Date(msg.created_at || '').getTime() - new Date(prevMsg.created_at || '').getTime() > 5 * 60 * 1000;
+        new Date(msg.created_at || "").getTime() - new Date(prevMsg.created_at || "").getTime() > 5 * 60 * 1000;
 
       groups.push({ message: msg, isFirst });
     });
@@ -170,11 +173,9 @@ export const DMChatArea = () => {
   const getGroupDisplayName = useCallback(() => {
     if (!currentConversation) return "";
     if (currentConversation.name) return currentConversation.name;
-    
-    const names = otherParticipants
-      .slice(0, 3)
-      .map((p) => p.display_name || p.username || "Unknown");
-    
+
+    const names = otherParticipants.slice(0, 3).map((p) => p.display_name || p.username || "Unknown");
+
     if (otherParticipants.length > 3) {
       return `${names.join(", ")} and ${otherParticipants.length - 3} others`;
     }
@@ -201,31 +202,22 @@ export const DMChatArea = () => {
     <div ref={swipeRef} className="h-full flex flex-col bg-layout-chat">
       {/* Header - different for group vs 1:1 */}
       {isGroup ? (
-        <GroupChatHeader 
-          conversation={currentConversation} 
-          participants={otherParticipants} 
-        />
+        <GroupChatHeader conversation={currentConversation} participants={otherParticipants} />
       ) : (
         <DMHeader otherUser={otherUser} />
       )}
 
       {/* Messages container */}
-      <div
-        ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto px-4"
-        onScroll={handleScroll}
-      >
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4" onScroll={handleScroll}>
         {/* Start of conversation - different for group vs 1:1 */}
         {isGroup ? (
           <div className="py-8 mb-4">
             <div className="flex items-center gap-4 mb-4">
               <StackedAvatars users={otherParticipants} size="lg" />
             </div>
-            <h2 className="text-2xl font-bold text-foreground">
-              {currentConversation.name || "Group Chat"}
-            </h2>
+            <h2 className="text-2xl font-bold text-foreground">{currentConversation.name || "Group Chat"}</h2>
             <p className="text-muted-foreground">
-              This is the beginning of your group chat with{' '}
+              This is the beginning of your group chat with{" "}
               <span className="font-semibold">{getGroupDisplayName()}</span>.
             </p>
           </div>
@@ -234,7 +226,7 @@ export const DMChatArea = () => {
             <div className="flex items-center gap-4 mb-4">
               <div
                 className="w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl font-bold"
-                style={{ backgroundColor: otherUser?.banner_color || '#5865F2' }}
+                style={{ backgroundColor: otherUser?.banner_color || "#5865F2" }}
               >
                 {otherUser?.avatar_url ? (
                   <img
@@ -243,15 +235,13 @@ export const DMChatArea = () => {
                     className="w-full h-full rounded-full object-cover"
                   />
                 ) : (
-                  (otherUser?.username?.[0] || '?').toUpperCase()
+                  (otherUser?.username?.[0] || "?").toUpperCase()
                 )}
               </div>
             </div>
-            <h2 className="text-2xl font-bold text-foreground">
-              {otherUser?.display_name || otherUser?.username}
-            </h2>
+            <h2 className="text-2xl font-bold text-foreground">{otherUser?.display_name || otherUser?.username}</h2>
             <p className="text-muted-foreground">
-              This is the beginning of your direct message history with{' '}
+              This is the beginning of your direct message history with{" "}
               <span className="font-semibold">@{otherUser?.username}</span>.
             </p>
           </div>
@@ -269,6 +259,7 @@ export const DMChatArea = () => {
                 key={message.id}
                 message={message}
                 isFirst={isFirst}
+                isHighlighted={message.id === highlightedMessageId}
                 onReply={isBlocked ? undefined : setReplyingTo}
               />
             ))}
@@ -281,14 +272,9 @@ export const DMChatArea = () => {
       {/* Jump to present button */}
       {!isAtBottom && (
         <div className="absolute bottom-24 left-1/2 -translate-x-1/2">
-          <Button
-            variant="primary"
-            size="sm"
-            className="gap-2 shadow-lg"
-            onClick={scrollToBottom}
-          >
+          <Button variant="primary" size="sm" className="gap-2 shadow-lg" onClick={scrollToBottom}>
             <ArrowDown className="w-4 h-4" />
-            {newMessageCount > 0 ? `${newMessageCount} new messages` : 'Jump to Present'}
+            {newMessageCount > 0 ? `${newMessageCount} new messages` : "Jump to Present"}
           </Button>
         </div>
       )}
@@ -299,9 +285,7 @@ export const DMChatArea = () => {
           <div className="flex items-center justify-center gap-2 py-4 px-4 bg-secondary rounded-2xl border border-border">
             <Ban className="w-4 h-4 text-muted-foreground" />
             <span className="text-[14px] sm:text-[15px] leading-[1.5] font-[Inter,system-ui,sans-serif] text-muted-foreground">
-              {isBlockedByMe 
-                ? "You have blocked this user" 
-                : "You cannot message this user"}
+              {isBlockedByMe ? "You have blocked this user" : "You cannot message this user"}
             </span>
           </div>
         </div>
@@ -309,7 +293,7 @@ export const DMChatArea = () => {
         /* Message input - matches channel input style */
         <DMMessageInput
           conversationId={currentConversation.id}
-          otherUsername={isGroup ? getGroupDisplayName() : (otherUser?.username || 'user')}
+          otherUsername={isGroup ? getGroupDisplayName() : otherUser?.username || "user"}
           replyingTo={replyingTo}
           onCancelReply={() => setReplyingTo(null)}
         />
