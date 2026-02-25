@@ -11,3 +11,9 @@ verify_jwt = false
 
 [functions.update-user-profile]
 verify_jwt = false
+
+[functions.generate-challenge]
+verify_jwt = false
+
+[functions.register-with-pow]
+verify_jwt = false
