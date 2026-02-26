@@ -11,7 +11,10 @@ interface UseScrollToMessageOptions {
 
 export const useScrollToMessage = ({ messages, isLoading, containerRef }: UseScrollToMessageOptions) => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const targetMessageId = searchParams.get('message');
+  const urlTargetId = searchParams.get('message');
+  // Support both URL params and custom events (custom events avoid useSearchParams re-render cascade in MessageItem)
+  const [eventTargetId, setEventTargetId] = useState<string | null>(null);
+  const targetMessageId = eventTargetId || urlTargetId;
   const hasScrolledRef = useRef(false);
   const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevMessageIdRef = useRef<string | null>(null);
@@ -22,6 +25,15 @@ export const useScrollToMessage = ({ messages, isLoading, containerRef }: UseScr
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
 
   const { fetchMessages, currentChannelId } = useMessageStore();
+
+  // Listen for custom scrollToMessage events (from MessageItem reply clicks)
+  useEffect(() => {
+    const handler = (e: CustomEvent<{ messageId: string }>) => {
+      setEventTargetId(e.detail.messageId);
+    };
+    window.addEventListener("scrollToMessage" as keyof WindowEventMap, handler as EventListener);
+    return () => window.removeEventListener("scrollToMessage" as keyof WindowEventMap, handler as EventListener);
+  }, []);
 
   // Reset when the target message changes
   useEffect(() => {
@@ -36,12 +48,13 @@ export const useScrollToMessage = ({ messages, isLoading, containerRef }: UseScr
 
   // Clear the message param from URL
   const clearMessageParam = useCallback(() => {
-    if (targetMessageId) {
+    setEventTargetId(null);
+    if (urlTargetId) {
       const newParams = new URLSearchParams(searchParams);
       newParams.delete('message');
       setSearchParams(newParams, { replace: true });
     }
-  }, [targetMessageId, searchParams, setSearchParams]);
+  }, [urlTargetId, searchParams, setSearchParams]);
 
   // If the target message isn't loaded, fetch older messages to find it
   useEffect(() => {

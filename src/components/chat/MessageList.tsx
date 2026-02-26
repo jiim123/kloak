@@ -391,6 +391,10 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
     endIndex: Math.max(0, deduplicatedMessages.length - 1),
   });
 
+  // Keep a ref to deduplicatedMessages so handleScroll doesn't recreate on every message/reaction change
+  const deduplicatedMessagesRef = useRef(deduplicatedMessages);
+  deduplicatedMessagesRef.current = deduplicatedMessages;
+
   // Handle scroll events with RAF for better performance
   const handleScroll = useCallback(() => {
     // Cancel any pending RAF to debounce scroll updates
@@ -405,11 +409,12 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
       const { scrollTop, scrollHeight, clientHeight } = container;
       scrollTopRef.current = scrollTop;
       const isScrollingUp = scrollTop < lastScrollTopRef.current;
+      const msgs = deduplicatedMessagesRef.current;
       if (shouldVirtualize && containerHeight > 0) {
         const rawStart = Math.floor(scrollTop / ESTIMATED_MESSAGE_HEIGHT);
         const visibleCount = Math.ceil(containerHeight / ESTIMATED_MESSAGE_HEIGHT);
         const nextStart = Math.max(0, rawStart - VIRTUAL_OVERSCAN);
-        const nextEnd = Math.min(deduplicatedMessages.length - 1, rawStart + visibleCount + VIRTUAL_OVERSCAN);
+        const nextEnd = Math.min(msgs.length - 1, rawStart + visibleCount + VIRTUAL_OVERSCAN);
         setVirtualRange((prev) =>
           prev.startIndex === nextStart && prev.endIndex === nextEnd
             ? prev
@@ -425,12 +430,12 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
 
       // Only update state if the near-bottom status changed
       if (wasNearBottom !== isNearBottom) {
-        setShowJumpToPresent(!isNearBottom && deduplicatedMessages.length > 0);
+        setShowJumpToPresent(!isNearBottom && msgs.length > 0);
       }
 
       // Load more when scrolling to top
       if (isScrollingUp && scrollTop < 100 && hasMore && !isLoading && !isFetchingOlder) {
-        const beforeCursor = deduplicatedMessages[0]?.created_at || channelData?.oldestLoadedAt || undefined;
+        const beforeCursor = msgs[0]?.created_at || channelData?.oldestLoadedAt || undefined;
         if (beforeCursor) {
           prependAnchorRef.current = { prevScrollHeight: scrollHeight, prevScrollTop: scrollTop };
           fetchMessages(channelId, 50, beforeCursor);
@@ -445,7 +450,6 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
     hasMore,
     isLoading,
     isFetchingOlder,
-    deduplicatedMessages,
     channelData?.oldestLoadedAt,
     fetchMessages,
     shouldVirtualize,
