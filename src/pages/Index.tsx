@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Shield,
   Key,
@@ -23,47 +22,7 @@ import HeroAscii from "@/components/landing/HeroAscii";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SEO } from "@/components/seo";
 import { SEO_CONFIG } from "@/lib/seo";
-
-const audienceGroups = [
-  {
-    name: "Gaming Communities",
-    description:
-      "Coordinate raids, share strategies, or rage at your friend screwing up that 1v1. Your voice comms and battle plans stay between you and your squad.",
-  },
-  {
-    name: "Musicians & Producers",
-    description:
-      "Share demos, collaborate on tracks, and jam together. Your unreleased work won't train someone else's AI or leak before you're ready.",
-  },
-  {
-    name: "Artists & Designers",
-    description:
-      "Share work-in-progress, get feedback, build your community. No algorithms deciding who sees your art.",
-  },
-  {
-    name: "Streamers & Creators",
-    description: "Connect with your audience on your terms. No platform mining your community for engagement metrics.",
-  },
-  {
-    name: "Indie Dev Teams",
-    description: "Ship games, share builds, coordinate launches. Your roadmap and source code stay confidential.",
-  },
-  {
-    name: "Creative Collectives",
-    description:
-      "Your community, your culture, your rules. Build spaces that reflect your values, not a corporation's.",
-  },
-];
-
 const Index = () => {
-  const [activeIndex, setActiveIndex] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveIndex((prev) => (prev + 1) % audienceGroups.length);
-    }, 6000);
-    return () => clearInterval(interval);
-  }, []);
 
   const comparisonData = [
     { label: "Messages scanned for ad targeting", others: true, kloak: false },
@@ -82,115 +41,40 @@ const Index = () => {
       <div className="w-full">
         <NavigationMenu />
         <main className="pt-16">
+
           {/* Hero Section */}
           <HeroAscii />
 
           {/* What is Kloak Section */}
-          <section className="relative py-32 md:py-48 px-8 lg:px-16 border-t border-border/20 overflow-hidden">
-            <div className="max-w-7xl mx-auto">
-              {/* Section header */}
+          <section className="relative py-32 md:py-48 px-8 lg:px-16 bg-light text-light-foreground overflow-hidden">
+            <div className="max-w-3xl mx-auto text-center">
               <motion.div
-                className="flex items-center gap-4 mb-12"
+                className="flex items-center justify-center gap-4 mb-12"
                 initial={{ opacity: 0 }}
                 whileInView={{ opacity: 1 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6 }}
               >
-                <span className="font-mono text-primary tracking-widest uppercase">What is Kloak</span>
+                <span className="font-mono text-light-foreground/60 tracking-widest uppercase">What is Kloak</span>
               </motion.div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
-                {/* Left Column - Hook & What It Is */}
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true, margin: "-100px" }}
-                  transition={{ duration: 0.8 }}
-                  className="space-y-8"
-                >
-                  <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-light-foreground leading-tight tracking-tight">
-                    A place to talk without being watched.
-                  </h2>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-100px" }}
+                transition={{ duration: 0.8 }}
+                className="space-y-8"
+              >
+                <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-light-foreground leading-tight tracking-tight">
+                  A place to talk
+                  <br />
+                  without being watched.
+                </h2>
 
-                  <p className="text-[17px] text-muted-foreground leading-[1.7] max-w-xl">
-                    Kloak is a communication platform for communities, teams, and friends. Built from the ground up so
-                    your conversations stay yours.
-                  </p>
-
-                  <div className="flex flex-wrap gap-6 text-sm text-muted-foreground">
-                    <span className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                      No ads
-                    </span>
-                    <span className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                      No micro-transactions
-                    </span>
-                    <span className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                      No algorithm to train
-                    </span>
-                  </div>
-                </motion.div>
-
-                {/* Right Column - Rotating Audience Box */}
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true, margin: "-100px" }}
-                  transition={{ duration: 0.8, delay: 0.2 }}
-                  className="relative"
-                >
-                  <div className="relative rounded-none border border-border/30 bg-background/50 backdrop-blur-sm p-8 md:p-10 min-h-[320px] overflow-hidden">
-                    {/* Label */}
-                    <span className="text-xs font-mono uppercase tracking-widest text-primary/40 mb-6 block">
-                      Built for
-                    </span>
-
-                    {/* Rotating Content */}
-                    <AnimatePresence mode="wait">
-                      <motion.div
-                        key={activeIndex}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        transition={{ duration: 0.2 }}
-                        className="space-y-4"
-                      >
-                        <h3 className="text-2xl md:text-3xl font-medium text-foreground">
-                          {audienceGroups[activeIndex].name}
-                        </h3>
-                        <p className="text-[17px] text-muted-foreground leading-[1.7]">
-                          {audienceGroups[activeIndex].description}
-                        </p>
-                      </motion.div>
-                    </AnimatePresence>
-
-                    {/* Progress Indicators */}
-                    <div className="absolute bottom-8 left-8 right-8 flex gap-2">
-                      {audienceGroups.map((_, i) => (
-                        <button
-                          key={i}
-                          onClick={() => setActiveIndex(i)}
-                          className="flex-1 h-1 rounded-full overflow-hidden bg-border/30 cursor-pointer"
-                        >
-                          <motion.div
-                            className="h-full bg-primary/60 rounded-full"
-                            initial={{ width: "0%" }}
-                            animate={{
-                              width: i === activeIndex ? "100%" : "0%",
-                            }}
-                            transition={{
-                              duration: i === activeIndex ? 6 : 0,
-                              ease: "linear",
-                            }}
-                          />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </motion.div>
-              </div>
+                <p className="text-[17px] text-light-foreground/70 leading-[1.7] max-w-2xl mx-auto">
+                  Kloak is a real-time communication platform built for communities, friend groups, gaming squads, and creative teams. It gives you servers, voice channels, direct messages, roles, and permissions, all without requiring an email, phone number, or password. Your identity is a single cryptographic key that only you hold. No ads, no data harvesting, no algorithm deciding what you see. Just a space to talk, collaborate, and build communities on your own terms.
+                </p>
+              </motion.div>
             </div>
           </section>
 
@@ -211,7 +95,7 @@ const Index = () => {
                 <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
                   What they take.
                   <br />
-                  <span className="text-primary/60">What we don't.</span>
+                   <span>What we don't.</span>
                 </h2>
               </motion.div>
 
@@ -304,56 +188,60 @@ const Index = () => {
                 <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
                   Everything you need.
                   <br />
-                  <span className="text-primary/60">Nothing you don't.</span>
+                  <span>Nothing you don't.</span>
                 </h2>
               </motion.div>
 
-              {/* Feature Grid - Matching Problem Section aesthetics */}
+              {/* Feature Grid */}
               <div className="grid md:grid-cols-2 gap-6">
                 {[
                   {
                     icon: MessageCircle,
-                    title: "Fast Chat",
+                    title: "Real-Time Messaging",
                     description:
-                      "Zero-lag messaging for raids, DMs, and group chats. No ads, no trackers, just your conversations—exactly where you left them.",
-                    accent: true,
+                      "Your messages arrive instantly. Edits, replies, and reactions update live for everyone in the conversation, no refreshing needed.",
                   },
                   {
                     icon: Headphones,
-                    title: "Crystal Voice",
+                    title: "Voice Channels",
                     description:
-                      "Low-latency audio for your squad. No heavy background processes or compressed audio ruining the session.",
-                    accent: false,
+                      "Jump into a voice channel and talk with your group while browsing the rest of the app. Low latency, always ready when you are.",
                   },
                   {
                     icon: Users,
-                    title: "Pure Community",
+                    title: "Servers, Roles & Permissions",
                     description:
-                      "Full control over roles and channels. Build your space without the bloat, distractions, or forced updates.",
-                    accent: false,
+                      "Organize your community with servers, categories, and channels. Assign roles and control exactly who can do what, down to the channel level.",
                   },
                   {
                     icon: Lock,
-                    title: "No Personal Data",
+                    title: "Secret Key Authentication",
                     description:
-                      "No email, no phone number, no trackers. Use a secure key to own your identity—if we don't have it, we can't leak it.",
-                    accent: true,
+                      "No email. No phone number. No password. You get one cryptographic key that is your identity. Nobody can recover it, reset it, or take it from you.",
+                  },
+                  {
+                    icon: Shield,
+                    title: "Direct Messages & Friends",
+                    description:
+                      "Add friends by username, start private conversations, and block anyone you don't want to hear from. Simple and straightforward.",
+                  },
+                  {
+                    icon: Palette,
+                    title: "Themes & Customization",
+                    description:
+                      "Switch between multiple themes instantly. Personalize your profile with avatars, banners, bios, and custom statuses to make it yours.",
                   },
                 ].map((feature, index) => (
                   <motion.div
                     key={feature.title}
-                    className={`relative border border-border/30 p-10 group overflow-hidden ${feature.accent ? "bg-card/50" : "bg-background"}`}
+                    className="relative rounded-lg p-10 group overflow-hidden bg-card/30"
                     initial={{ opacity: 0, y: 30 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.5, delay: index * 0.1 }}
                   >
-                    {/* Subtle corner accent matching Problem Section */}
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-primary/5 to-transparent" />
                     <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 border border-primary/30 flex items-center justify-center shrink-0 group-hover:border-primary/50 transition-colors duration-300">
-                        <feature.icon className="w-6 h-6 text-primary" />
-                      </div>
+                      <feature.icon className="w-5 h-5 text-primary shrink-0 mt-1" />
                       <div className="flex-1">
                         <h3 className="text-lg font-semibold text-foreground mb-3">{feature.title}</h3>
                         <p className="text-[17px] text-muted-foreground leading-[1.7]">{feature.description}</p>
@@ -382,7 +270,7 @@ const Index = () => {
                 <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight mb-6">
                   Built for people
                   <br />
-                  <span className="text-primary/60">Built to have fun.</span>
+                   <span>Built to have fun.</span>
                 </h2>
                 <p className="text-[17px] text-muted-foreground max-w-2xl leading-[1.7]">
                   Whether you're coordinating a raid, mixing a track, or simply just talking to friends and family,
@@ -472,7 +360,7 @@ const Index = () => {
                 <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight mb-6 max-w-2xl mx-auto">
                   Your key.
                   <br />
-                  <span className="text-primary/60">Your community.</span>
+                   <span>Your community.</span>
                 </h2>
                 <p className="text-[17px] text-muted-foreground mb-10 max-w-lg mx-auto leading-[1.7]">
                   No signup forms. No email verification. Generate your cryptographic key and start building your space.
