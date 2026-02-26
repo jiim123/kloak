@@ -28,6 +28,7 @@ interface UserInfo {
 interface ChannelInfo {
   id: string;
   name: string;
+  type?: string;
 }
 
 interface MessageContentProps {
@@ -584,6 +585,7 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
       map.set(channel.id, {
         id: channel.id,
         name: channel.name,
+        type: channel.type,
       });
     });
     return map;

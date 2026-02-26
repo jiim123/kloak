@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Hash, Volume2, Megaphone, Film } from "lucide-react";
+import { Hash, Volume2, Megaphone, Film, MessageSquare } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useServerStore } from "@/stores/serverStore";
 import { cn } from "@/lib/utils";
@@ -25,6 +25,8 @@ const getChannelIcon = (type: string) => {
       return <Volume2 className="w-4 h-4" />;
     case "announcement":
       return <Megaphone className="w-4 h-4" />;
+    case "forum":
+      return <MessageSquare className="w-4 h-4" />;
     case 'media':
       return <Film className="w-4 h-4" />;
     default:
@@ -37,10 +39,16 @@ export const ChannelAutocomplete = ({ query, position, onSelect, onClose, onOpti
   const [selectedIndex, setSelectedIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Build options list - filter text and announcement channels (you can't really "go to" voice channels via link)
+  // Build options list - include channel types that can be linked with #mentions
   const options: ChannelOption[] = channels
     .filter(
-      (c) => (c.type === "text" || c.type === "announcement") && c.name.toLowerCase().includes(query.toLowerCase()),
+      (c) =>
+        (c.type === "text" ||
+          c.type === "announcement" ||
+          c.type === "forum" ||
+          c.type === "media" ||
+          c.type === "voice") &&
+        c.name.toLowerCase().includes(query.toLowerCase()),
     )
     .slice(0, 10)
     .map((channel) => ({

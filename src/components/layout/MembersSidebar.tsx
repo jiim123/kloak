@@ -505,9 +505,10 @@ export const MembersSidebar = () => {
       <div className="px-4 py-3 border-b border-border/50">
         <h3 className="text-sm font-semibold">Members</h3>
         <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
-          <span>{visibleCount} member{visibleCount !== 1 ? "s" : ""}</span>
-          <span>•</span>
           <span>{onlineCount} online</span>
+        </p>
+        <p className="text-[10px] text-muted-foreground/80 mt-1">
+        Showing online members only
         </p>
       </div>
 
@@ -590,3 +591,4 @@ export const MembersSidebar = () => {
   // Desktop: render as inline panel
   return sidebarContent;
 };
+
