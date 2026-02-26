@@ -602,7 +602,7 @@
     font-family: 'General Sans', sans-serif !important;
     font-weight: 500 !important;
     letter-spacing: -0.02em !important; /* -20 */
-    color: #dbd6cb !important;
+    color: hsl(var(--foreground)) !important;
   }
 
   .landing-typography h1 {
