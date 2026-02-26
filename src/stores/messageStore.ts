@@ -380,6 +380,36 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         });
         if (uniqueUsers.size > 0) bulkSetUsersInCache(Array.from(uniqueUsers.values()));
 
+        // Fetch reaction user names for messages that have reactions
+        const messageIdsWithReactions = messages.filter((m) => (m.reactions?.length ?? 0) > 0).map((m) => m.id);
+        if (messageIdsWithReactions.length > 0) {
+          const { data: reactionRows } = await supabase
+            .from("reactions")
+            .select("message_id, user_id, users(username, display_name)")
+            .in("message_id", messageIdsWithReactions);
+          if (reactionRows && reactionRows.length > 0) {
+            // Build a map: messageId → { userId → name }
+            const namesByMessage = new Map<string, Record<string, string>>();
+            for (const row of reactionRows as any[]) {
+              const name = row.users?.display_name || row.users?.username;
+              if (!name) continue;
+              if (!namesByMessage.has(row.message_id)) namesByMessage.set(row.message_id, {});
+              namesByMessage.get(row.message_id)![row.user_id] = name;
+            }
+            // Merge names into already-grouped reactions
+            for (const msg of messages) {
+              const nameMap = namesByMessage.get(msg.id);
+              if (!nameMap || !msg.reactions) continue;
+              for (const group of msg.reactions) {
+                group.userNames = group.userNames ?? {};
+                for (const uid of group.users) {
+                  if (nameMap[uid]) group.userNames[uid] = nameMap[uid];
+                }
+              }
+            }
+          }
+        }
+
         const hasMore = messages.length === limit;
 
         set((state) => {
