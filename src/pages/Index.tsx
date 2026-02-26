@@ -307,56 +307,60 @@ const Index = () => {
                 <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
                   Everything you need.
                   <br />
-                   <span>Nothing you don't.</span>
+                  <span>Nothing you don't.</span>
                 </h2>
               </motion.div>
 
-              {/* Feature Grid - Matching Problem Section aesthetics */}
+              {/* Feature Grid */}
               <div className="grid md:grid-cols-2 gap-6">
                 {[
                   {
                     icon: MessageCircle,
-                    title: "Fast Chat",
+                    title: "Real-Time Messaging",
                     description:
-                      "Zero-lag messaging for raids, DMs, and group chats. No ads, no trackers, just your conversations—exactly where you left them.",
-                    accent: true,
+                      "Instant delivery powered by Supabase Realtime. Messages, edits, and deletions sync across all connected clients without refreshing.",
                   },
                   {
                     icon: Headphones,
-                    title: "Crystal Voice",
+                    title: "Voice Channels",
                     description:
-                      "Low-latency audio for your squad. No heavy background processes or compressed audio ruining the session.",
-                    accent: false,
+                      "WebRTC-based voice with low latency. Join a channel, mute, deafen, and talk to your group while navigating the rest of the app.",
                   },
                   {
                     icon: Users,
-                    title: "Pure Community",
+                    title: "Servers, Roles & Permissions",
                     description:
-                      "Full control over roles and channels. Build your space without the bloat, distractions, or forced updates.",
-                    accent: false,
+                      "Create servers with categories, channels, and custom roles. 30+ granular permissions with channel-level overrides, just like you'd expect.",
                   },
                   {
                     icon: Lock,
-                    title: "No Personal Data",
+                    title: "Secret Key Authentication",
                     description:
-                      "No email, no phone number, no trackers. Use a secure key to own your identity—if we don't have it, we can't leak it.",
-                    accent: true,
+                      "No email. No phone number. No password. A single 64-character cryptographic key is your identity. Lost it? It's gone — by design.",
+                  },
+                  {
+                    icon: Shield,
+                    title: "Direct Messages & Friends",
+                    description:
+                      "Send friend requests by username, manage your list, block users, and have private conversations with full message features.",
+                  },
+                  {
+                    icon: Palette,
+                    title: "Themes & Customization",
+                    description:
+                      "Switch between multiple themes instantly. Customize your profile with avatars, banners, decorations, bios, and custom statuses.",
                   },
                 ].map((feature, index) => (
                   <motion.div
                     key={feature.title}
-                    className={`relative border border-border/30 p-10 group overflow-hidden ${feature.accent ? "bg-card/50" : "bg-background"}`}
+                    className="relative rounded-lg p-10 group overflow-hidden bg-card/30"
                     initial={{ opacity: 0, y: 30 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.5, delay: index * 0.1 }}
                   >
-                    {/* Subtle corner accent matching Problem Section */}
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-primary/5 to-transparent" />
                     <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 border border-primary/30 flex items-center justify-center shrink-0 group-hover:border-primary/50 transition-colors duration-300">
-                        <feature.icon className="w-6 h-6 text-primary" />
-                      </div>
+                      <feature.icon className="w-5 h-5 text-primary shrink-0 mt-1" />
                       <div className="flex-1">
                         <h3 className="text-lg font-semibold text-foreground mb-3">{feature.title}</h3>
                         <p className="text-[17px] text-muted-foreground leading-[1.7]">{feature.description}</p>
