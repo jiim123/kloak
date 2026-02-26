@@ -596,7 +596,7 @@
   .landing-typography h3,
   .landing-typography h4 {
     font-family: 'General Sans', sans-serif !important;
-    font-weight: 600 !important;
+    font-weight: 500 !important;
     letter-spacing: -0.02em !important; /* -20 */
     color: #dbd6cb !important;
   }
