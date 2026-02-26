@@ -339,6 +339,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         name: string;
         owner_id: string;
         invite_code: string;
+        already_member?: boolean;
         icon_url: string | null;
         banner_url: string | null;
         is_published?: boolean;
@@ -488,6 +489,12 @@ export const useServerStore = create<ServerState>((set, get) => ({
           channel_exists?: boolean;
         };
       };
+
+      if (serverData.already_member) {
+        set({ error: "You are already a member of this server" });
+        await get().fetchServers(userId);
+        return null;
+      }
 
       // Log debug info if available
       if (serverData.debug) {

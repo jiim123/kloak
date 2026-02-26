@@ -27,7 +27,7 @@ const Invite = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, secretKey, isLoading: isAuthLoading, checkAuth } = useAuthStore();
-  const { joinServer, setCurrentServer, fetchChannels } = useServerStore();
+  const { joinServer, setCurrentServer, fetchChannels, servers } = useServerStore();
 
   const inviteCode = useMemo(() => (params.inviteCode || "").trim().toUpperCase(), [params.inviteCode]);
   const autoJoin = useMemo(() => new URLSearchParams(location.search).get("autojoin") === "1", [location.search]);
@@ -39,6 +39,7 @@ const Invite = () => {
   const [isJoining, setIsJoining] = useState(false);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [showBannedModal, setShowBannedModal] = useState(false);
+  const isAlreadyMember = !!server && !!servers.find((s) => s.id === server.id);
 
   useEffect(() => {
     if (didInitAuth.current) return;
@@ -119,7 +120,15 @@ const Invite = () => {
       navigate(`/auth?redirect=${encodeURIComponent(returnTo)}`);
       return;
     }
-
+    if (server && isAlreadyMember) {
+      const existingServer = servers.find((s) => s.id === server.id);
+      if (existingServer) {
+        setCurrentServer(existingServer);
+        await fetchChannels(existingServer.id);
+        navigate(`/app/servers/${existingServer.id}`);
+        return;
+      }
+    }
     setIsJoining(true);
     try {
       const joinedServer = await joinServer(inviteCode, activeUser.id);
@@ -215,11 +224,11 @@ const Invite = () => {
                   ) : (
                     <Users className="w-4 h-4 mr-2" />
                   )}
-                  Join Server
+                  {isAlreadyMember ? "Open Server" : "Join Server"}
                   {!isJoining && <ArrowRight className="w-4 h-4 ml-2" />}
                 </Button>
                 <p className="mt-3 text-xs text-muted-foreground text-center">
-                  {user ? "You’ll join immediately." : "You’ll be asked to log in first."}
+                  {isAlreadyMember ? "You are already in this server." : user ? "You’ll join immediately." : "You’ll be asked to log in first."}
                 </p>
               </div>
             </div>
@@ -233,3 +242,4 @@ const Invite = () => {
 };
 
 export default Invite;
+

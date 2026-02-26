@@ -19,13 +19,14 @@ type InviteDetails = {
 export const InviteLinkPreview = ({ inviteCode }: { inviteCode: string }) => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { joinServer, setCurrentServer, fetchChannels } = useServerStore();
+  const { joinServer, setCurrentServer, fetchChannels, servers } = useServerStore();
 
   const normalizedCode = useMemo(() => inviteCode.trim().toUpperCase(), [inviteCode]);
 
   const [invite, setInvite] = useState<InviteDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isJoining, setIsJoining] = useState(false);
+  const isAlreadyMember = !!invite && !!servers.find((s) => s.id === invite.id);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,6 +65,16 @@ export const InviteLinkPreview = ({ inviteCode }: { inviteCode: string }) => {
     if (!user) {
       navigate(`/invite/${normalizedCode}`);
       return;
+    }
+
+    if (invite && isAlreadyMember) {
+      const existingServer = servers.find((s) => s.id === invite.id);
+      if (existingServer) {
+        setCurrentServer(existingServer);
+        await fetchChannels(existingServer.id);
+        navigate(`/app/servers/${existingServer.id}`);
+        return;
+      }
     }
 
     setIsJoining(true);
@@ -133,7 +144,7 @@ export const InviteLinkPreview = ({ inviteCode }: { inviteCode: string }) => {
 
         <Button onClick={handleJoin} disabled={isJoining} className="mt-4 w-full">
           {isJoining && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Join Community
+          {isAlreadyMember ? "Open Server" : "Join Community"}
         </Button>
       </div>
     </div>
