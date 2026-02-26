@@ -26,11 +26,6 @@ export const SEO_CONFIG = {
     description: 'Kloak Cookie Policy. Only essential cookies for authentication and preferences. No tracking, no ads, no third-party analytics. Just what\'s necessary.',
   },
   
-  philosophy: {
-    title: 'Our Philosophy',
-    description: 'Why we built Kloak: communication should be private. Not tracked, analyzed, or sold. Ever. Learn about our commitment to privacy-first architecture.',
-  },
-  
   faq: {
     title: 'FAQ',
     description: 'Frequently asked questions about Kloak. Learn about our privacy-first approach, secret key authentication, and how to use the platform.',
