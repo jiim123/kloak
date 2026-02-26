@@ -3031,6 +3031,18 @@ export type Database = {
           name: string
         }[]
       }
+      get_invite_details_by_codes_secure: {
+        Args: { _invite_codes: string[] }
+        Returns: {
+          about: string
+          banner_url: string
+          icon_url: string
+          id: string
+          invite_code: string
+          inviter_username: string
+          name: string
+        }[]
+      }
       get_maintenance_mode: { Args: never; Returns: boolean }
       get_message_author_styles_secure: {
         Args: {
@@ -3099,6 +3111,17 @@ export type Database = {
       }
       get_server_members_offline: {
         Args: { _server_id: string }
+        Returns: Json
+      }
+      get_server_members_offline_page_secure: {
+        Args: {
+          _cursor_joined_at?: string
+          _cursor_member_id?: string
+          _include_count?: boolean
+          _limit?: number
+          _server_id: string
+          _user_id: string
+        }
         Returns: Json
       }
       get_server_members_online: { Args: { _server_id: string }; Returns: Json }
