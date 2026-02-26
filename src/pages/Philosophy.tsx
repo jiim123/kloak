@@ -46,7 +46,7 @@ const manifestPoints = [
 
 const Philosophy = () => {
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center w-full">
+    <div className="min-h-screen bg-background flex flex-col items-center w-full landing-typography">
       <SEO {...SEO_CONFIG.philosophy} />
       <div className="w-full">
         <NavigationMenu />

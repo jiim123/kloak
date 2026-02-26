@@ -69,7 +69,7 @@ const SectionLabel = ({ number, label }: { number: string; label: string }) => (
 /* ─── Page ─── */
 const Brand = () => {
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center w-full">
+    <div className="min-h-screen bg-background flex flex-col items-center w-full landing-typography">
       <SEO title="Brand Guidelines" description="Official brand guidelines for Kloak. Logos, colors, typography, and usage rules for the privacy-first communication platform." />
       <div className="w-full">
         <NavigationMenu />

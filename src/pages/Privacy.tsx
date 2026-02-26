@@ -80,7 +80,7 @@ const privacyCategories = [
 
 const Privacy = () => {
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center w-full">
+    <div className="min-h-screen bg-background flex flex-col items-center w-full landing-typography">
       <SEO
         title="Privacy Policy | Kloak"
         description="Privacy policy for Kloak. Learn what data we collect, how we protect it, and why we collect less than any other platform."

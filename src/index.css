@@ -552,9 +552,57 @@
 
   /* ========================================
      LANDING PAGE TYPOGRAPHY
+     Scoped to pages outside /app via .landing-typography
      ======================================== */
 
-  /* Landing titles - 1.375em, uppercase, semi-bold, line-height 1.2 */
+  /* Landing body text - 20px = 1.25em, Regular, line-height 1.7 */
+  .landing-typography {
+    font-size: 1.25em;
+    font-weight: 400;
+    line-height: 1.7;
+  }
+
+  .landing-typography h1 {
+    font-size: 2.875em; /* 46px */
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  .landing-typography h2 {
+    font-size: 2.3125em; /* 37px */
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  .landing-typography h3 {
+    font-size: 2em; /* 32px */
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .landing-typography h4 {
+    font-size: 1.6875em; /* 27px */
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  /* Mono text on landing pages - Monaspace Krypton, 17px = 1.0625em, Regular */
+  .landing-typography .font-mono,
+  .landing-typography [class*="font-mono"] {
+    font-size: 1.0625em; /* 17px */
+    font-weight: 400;
+  }
+
+  /* Button text on landing pages - Monaspace Krypton, 17px = 1.0625em, Regular */
+  .landing-typography button,
+  .landing-typography a[role="button"],
+  .landing-typography .btn {
+    font-family: 'Monaspace Krypton', ui-monospace, SFMono-Regular, monospace;
+    font-size: 1.0625em; /* 17px */
+    font-weight: 400;
+  }
+
+  /* Legacy classes kept for backward compat */
   .landing-title {
     font-size: 1.375em;
     font-weight: 600;
@@ -563,7 +611,6 @@
     letter-spacing: 0.02em;
   }
 
-  /* Landing body text - 1em, uppercase, light, line-height 1.5 */
   .landing-body {
     font-size: 1em;
     font-weight: 300;

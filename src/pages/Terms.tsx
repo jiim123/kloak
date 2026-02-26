@@ -94,7 +94,7 @@
  
  const Terms = () => {
    return (
-     <div className="min-h-screen bg-background flex flex-col items-center w-full">
+     <div className="min-h-screen bg-background flex flex-col items-center w-full landing-typography">
        <SEO
          title="Terms of Service | Kloak"
          description="Terms of service for Kloak. Plain English, no tricks. Understand exactly what you're agreeing to."
