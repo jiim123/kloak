@@ -167,6 +167,10 @@
     --success-700: 163 88% 20%; /* #065F46 - active */
     --success-foreground: 0 0% 100%;
 
+    /* Light surface tokens */
+    --light-background: 40 18% 83%;
+    --light-foreground: 40 4% 13%;
+
     /* Core tokens */
     --background: var(--neutral-0);
     --foreground: var(--neutral-800);
