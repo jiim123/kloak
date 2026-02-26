@@ -23,7 +23,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { SEO } from "@/components/seo";
 import { SEO_CONFIG } from "@/lib/seo";
 const Index = () => {
-
   const comparisonData = [
     { label: "Messages scanned for ad targeting", others: true, kloak: false },
     { label: "Creative work used to train AI", others: true, kloak: false },
@@ -41,7 +40,6 @@ const Index = () => {
       <div className="w-full">
         <NavigationMenu />
         <main className="pt-16">
-
           {/* Hero Section */}
           <HeroAscii />
 
@@ -55,7 +53,7 @@ const Index = () => {
                 viewport={{ once: true }}
                 transition={{ duration: 0.6 }}
               >
-                <span className="font-mono text-light-foreground/60 tracking-widest uppercase">What is Kloak</span>
+                <span className="font-mono text-light-foreground tracking-widest uppercase">What is Kloak</span>
               </motion.div>
 
               <motion.div
@@ -71,8 +69,12 @@ const Index = () => {
                   without being watched.
                 </h2>
 
-                <p className="text-[17px] text-light-foreground/70 leading-[1.7] max-w-2xl mx-auto">
-                  Kloak is a real-time communication platform built for communities, friend groups, gaming squads, and creative teams. It gives you servers, voice channels, direct messages, roles, and permissions, all without requiring an email, phone number, or password. Your identity is a single cryptographic key that only you hold. No ads, no data harvesting, no algorithm deciding what you see. Just a space to talk, collaborate, and build communities on your own terms.
+                <p className="text-[17px] text-light-foreground leading-[1.7] max-w-2xl mx-auto">
+                  Kloak is a real-time communication platform built for communities, friend groups, gaming squads, and
+                  creative teams. It gives you servers, voice channels, direct messages, roles, and permissions, all
+                  without requiring an email, phone number, or password. Your identity is a single cryptographic key
+                  that only you hold. No ads, no data harvesting, no algorithm deciding what you see. Just a space to
+                  talk, collaborate, and build communities on your own terms.
                 </p>
               </motion.div>
             </div>
@@ -95,7 +97,7 @@ const Index = () => {
                 <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
                   What they take.
                   <br />
-                   <span>What we don't.</span>
+                  <span>What we don't.</span>
                 </h2>
               </motion.div>
 
@@ -270,7 +272,7 @@ const Index = () => {
                 <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight mb-6">
                   Built for people
                   <br />
-                   <span>Built to have fun.</span>
+                  <span>Built to have fun.</span>
                 </h2>
                 <p className="text-[17px] text-muted-foreground max-w-2xl leading-[1.7]">
                   Whether you're coordinating a raid, mixing a track, or simply just talking to friends and family,
@@ -360,7 +362,7 @@ const Index = () => {
                 <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight mb-6 max-w-2xl mx-auto">
                   Your key.
                   <br />
-                   <span>Your community.</span>
+                  <span>Your community.</span>
                 </h2>
                 <p className="text-[17px] text-muted-foreground mb-10 max-w-lg mx-auto leading-[1.7]">
                   No signup forms. No email verification. Generate your cryptographic key and start building your space.
