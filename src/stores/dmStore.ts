@@ -57,17 +57,11 @@ const groupReactions = (reactions: any[], currentUserId?: string): ReactionGroup
         emoji: reaction.emoji,
         count: 0,
         users: [],
-        userNames: {},
         hasReacted: false,
       };
     }
     groups[reaction.emoji].count++;
     groups[reaction.emoji].users.push(reaction.user_id);
-    const name = reaction.users?.display_name || reaction.users?.username;
-    if (name) {
-      groups[reaction.emoji].userNames = groups[reaction.emoji].userNames ?? {};
-      groups[reaction.emoji].userNames![reaction.user_id] = name;
-    }
     if (reaction.user_id === currentUserId) {
       groups[reaction.emoji].hasReacted = true;
     }
@@ -269,7 +263,7 @@ export const useDMStore = create<DMState>((set, get) => ({
         // Only fetch columns we need (optimized query)
         const { data: reactionData } = await supabase
           .from("dm_reactions")
-          .select("id, message_id, user_id, emoji, users(username, display_name)")
+          .select("id, message_id, user_id, emoji")
           .in("message_id", messageIds);
         reactions = reactionData || [];
       }

@@ -80,18 +80,11 @@ const groupReactions = (reactions: any[], currentUserId?: string): ReactionGroup
         emoji: reaction.emoji,
         count: 0,
         users: [],
-        userNames: {},
         hasReacted: false,
       };
     }
     groups[reaction.emoji].count++;
     groups[reaction.emoji].users.push(reaction.user_id);
-    // Populate display name if available on the reaction row (from DB join)
-    const name = reaction.users?.display_name || reaction.users?.username;
-    if (name) {
-      groups[reaction.emoji].userNames = groups[reaction.emoji].userNames ?? {};
-      groups[reaction.emoji].userNames![reaction.user_id] = name;
-    }
     if (reaction.user_id === currentUserId) {
       groups[reaction.emoji].hasReacted = true;
     }
@@ -300,10 +293,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
           // Bootstrap RPC may be unavailable while migrations roll out.
           // Ensure channel overrides are still loaded via legacy path.
           if (!before) {
-            void useServerStore
-              .getState()
-              .fetchChannelPermissions(channelId)
-              .catch(() => undefined);
+            void useServerStore.getState().fetchChannelPermissions(channelId).catch(() => undefined);
           }
         }
 
@@ -363,7 +353,9 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         const messages: Message[] = messageRows.reverse().map((msg: any) => ({
           ...msg,
           user: msg.user,
-          reply_to: msg.reply_to_id ? toMessageReply(msg.reply_to) || replyMap[msg.reply_to_id] : undefined,
+          reply_to: msg.reply_to_id
+            ? toMessageReply(msg.reply_to) || replyMap[msg.reply_to_id]
+            : undefined,
           attachments: msg.attachments || [],
           reactions: groupReactions(
             blockedUserIds.length > 0
@@ -379,36 +371,6 @@ export const useMessageStore = create<MessageState>((set, get) => ({
           if (m.user) uniqueUsers.set(m.user.id, m.user);
         });
         if (uniqueUsers.size > 0) bulkSetUsersInCache(Array.from(uniqueUsers.values()));
-
-        // Fetch reaction user names for messages that have reactions
-        const messageIdsWithReactions = messages.filter((m) => (m.reactions?.length ?? 0) > 0).map((m) => m.id);
-        if (messageIdsWithReactions.length > 0) {
-          const { data: reactionRows } = await supabase
-            .from("reactions")
-            .select("message_id, user_id, users(username, display_name)")
-            .in("message_id", messageIdsWithReactions);
-          if (reactionRows && reactionRows.length > 0) {
-            // Build a map: messageId → { userId → name }
-            const namesByMessage = new Map<string, Record<string, string>>();
-            for (const row of reactionRows as any[]) {
-              const name = row.users?.display_name || row.users?.username;
-              if (!name) continue;
-              if (!namesByMessage.has(row.message_id)) namesByMessage.set(row.message_id, {});
-              namesByMessage.get(row.message_id)![row.user_id] = name;
-            }
-            // Merge names into already-grouped reactions
-            for (const msg of messages) {
-              const nameMap = namesByMessage.get(msg.id);
-              if (!nameMap || !msg.reactions) continue;
-              for (const group of msg.reactions) {
-                group.userNames = group.userNames ?? {};
-                for (const uid of group.users) {
-                  if (nameMap[uid]) group.userNames[uid] = nameMap[uid];
-                }
-              }
-            }
-          }
-        }
 
         const hasMore = messages.length === limit;
 
