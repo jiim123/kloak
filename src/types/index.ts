@@ -7,7 +7,7 @@
 // User Types
 // ============================================
 
-export type UserStatus = 'online' | 'idle' | 'dnd' | 'offline';
+export type UserStatus = "online" | "idle" | "dnd" | "offline";
 
 export interface User {
   id: string;
@@ -39,7 +39,7 @@ export interface UserProfile extends User {
 // Server Types
 // ============================================
 
-export type ServerRole = 'owner' | 'admin' | 'moderator' | 'member';
+export type ServerRole = "owner" | "admin" | "moderator" | "member";
 
 export interface CustomServerRole {
   id: string;
@@ -51,38 +51,38 @@ export interface CustomServerRole {
   created_at: string;
 }
 
-export type Permission = 
-  | 'manage_server'
-  | 'manage_roles'
-  | 'manage_channels'
-  | 'manage_emojis'
-  | 'kick_members'
-  | 'ban_members'
-  | 'mute_members'
-  | 'deafen_members'
-  | 'move_members'
-  | 'manage_nicknames'
-  | 'change_nickname'
-  | 'manage_messages'
-  | 'pin_messages'
-  | 'send_messages'
-  | 'add_reactions'
-  | 'view_channels'
-  | 'read_message_history'
-  | 'attach_files'
-  | 'embed_links'
-  | 'mention_everyone'
-  | 'mention_roles'
-  | 'use_external_emojis'
-  | 'manage_webhooks'
-  | 'manage_threads'
-  | 'create_instant_invite'
-  | 'transfer_ownership'
-  | 'manage_invites'
-  | 'connect'
-  | 'speak'
-  | 'use_voice_activation'
-  | 'use_application_commands';
+export type Permission =
+  | "manage_server"
+  | "manage_roles"
+  | "manage_channels"
+  | "manage_emojis"
+  | "kick_members"
+  | "ban_members"
+  | "mute_members"
+  | "deafen_members"
+  | "move_members"
+  | "manage_nicknames"
+  | "change_nickname"
+  | "manage_messages"
+  | "pin_messages"
+  | "send_messages"
+  | "add_reactions"
+  | "view_channels"
+  | "read_message_history"
+  | "attach_files"
+  | "embed_links"
+  | "mention_everyone"
+  | "mention_roles"
+  | "use_external_emojis"
+  | "manage_webhooks"
+  | "manage_threads"
+  | "create_instant_invite"
+  | "transfer_ownership"
+  | "manage_invites"
+  | "connect"
+  | "speak"
+  | "use_voice_activation"
+  | "use_application_commands";
 
 export interface RolePermission {
   id: string;
@@ -166,7 +166,7 @@ export interface ServerMember {
 // Channel Types
 // ============================================
 
-export type ChannelType = 'text' | 'voice' | 'announcement' | 'forum' | 'media';
+export type ChannelType = "text" | "voice" | "announcement" | "forum" | "media";
 
 export interface ChannelCategory {
   id: string;
@@ -290,10 +290,11 @@ export interface ReactionGroup {
   emoji: string;
   count: number;
   users: string[]; // user IDs
+  userNames?: Record<string, string>; // user ID → display name or username
   hasReacted: boolean; // current user has reacted
 }
 
-export type MentionType = 'user' | 'everyone' | 'here' | 'role';
+export type MentionType = "user" | "everyone" | "here" | "role";
 
 export interface Mention {
   id: string;
@@ -362,7 +363,7 @@ export interface DMReaction {
 // Friendship Types
 // ============================================
 
-export type FriendshipStatus = 'pending' | 'accepted' | 'blocked';
+export type FriendshipStatus = "pending" | "accepted" | "blocked";
 
 export interface Friendship {
   id: string;
@@ -384,7 +385,7 @@ export interface FriendWithUser extends User {
 // Notification Types
 // ============================================
 
-export type NotificationType = 'mention' | 'dm' | 'friend_request' | 'server_invite';
+export type NotificationType = "mention" | "dm" | "friend_request" | "server_invite";
 
 export interface Notification {
   id: string;
