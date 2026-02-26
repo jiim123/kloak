@@ -112,7 +112,7 @@ const Index = () => {
                   <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
                     A place to talk
                     <br />
-                    <span className="text-primary/60">without being watched.</span>
+                    <span>without being watched.</span>
                   </h2>
 
                   <p className="text-[17px] text-muted-foreground leading-[1.7] max-w-xl">
@@ -214,7 +214,7 @@ const Index = () => {
                 <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
                   What they take.
                   <br />
-                  <span className="text-primary/60">What we don't.</span>
+                   <span>What we don't.</span>
                 </h2>
               </motion.div>
 
@@ -307,7 +307,7 @@ const Index = () => {
                 <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
                   Everything you need.
                   <br />
-                  <span className="text-primary/60">Nothing you don't.</span>
+                   <span>Nothing you don't.</span>
                 </h2>
               </motion.div>
 
@@ -385,7 +385,7 @@ const Index = () => {
                 <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight mb-6">
                   Built for people
                   <br />
-                  <span className="text-primary/60">Built to have fun.</span>
+                   <span>Built to have fun.</span>
                 </h2>
                 <p className="text-[17px] text-muted-foreground max-w-2xl leading-[1.7]">
                   Whether you're coordinating a raid, mixing a track, or simply just talking to friends and family,
@@ -475,7 +475,7 @@ const Index = () => {
                 <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight mb-6 max-w-2xl mx-auto">
                   Your key.
                   <br />
-                  <span className="text-primary/60">Your community.</span>
+                   <span>Your community.</span>
                 </h2>
                 <p className="text-[17px] text-muted-foreground mb-10 max-w-lg mx-auto leading-[1.7]">
                   No signup forms. No email verification. Generate your cryptographic key and start building your space.

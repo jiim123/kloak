@@ -582,13 +582,13 @@
 
   /* Landing body text - 20px = 1.25em, Regular, line-height 1.7 */
   .landing-typography {
-    --foreground: 37 30% 89%;
-    --card-foreground: 37 30% 89%;
-    --muted-foreground: 37 20% 70%;
+    --foreground: 40 16% 82%;
+    --card-foreground: 40 16% 82%;
+    --muted-foreground: 40 16% 82%;
     font-size: 1.25em;
     font-weight: 400;
     line-height: 1.7;
-    color: #e8e4dd;
+    color: #dbd6cb;
   }
 
   .landing-typography h1,
@@ -598,7 +598,7 @@
     font-family: 'New Science', sans-serif !important;
     font-weight: 600 !important;
     letter-spacing: -0.02em !important; /* -20 */
-    color: #e8e4dd !important;
+    color: #dbd6cb !important;
   }
 
   .landing-typography h1 {
