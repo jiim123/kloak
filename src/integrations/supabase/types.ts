@@ -3034,8 +3034,6 @@ export type Database = {
       get_invite_details_by_codes_secure: {
         Args: { _invite_codes: string[] }
         Returns: {
-          about: string
-          banner_url: string
           icon_url: string
           id: string
           invite_code: string

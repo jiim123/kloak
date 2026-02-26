@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Shield,
   Key,
@@ -23,47 +22,7 @@ import HeroAscii from "@/components/landing/HeroAscii";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SEO } from "@/components/seo";
 import { SEO_CONFIG } from "@/lib/seo";
-
-const audienceGroups = [
-  {
-    name: "Gaming Communities",
-    description:
-      "Coordinate raids, share strategies, or rage at your friend screwing up that 1v1. Your voice comms and battle plans stay between you and your squad.",
-  },
-  {
-    name: "Musicians & Producers",
-    description:
-      "Share demos, collaborate on tracks, and jam together. Your unreleased work won't train someone else's AI or leak before you're ready.",
-  },
-  {
-    name: "Artists & Designers",
-    description:
-      "Share work-in-progress, get feedback, build your community. No algorithms deciding who sees your art.",
-  },
-  {
-    name: "Streamers & Creators",
-    description: "Connect with your audience on your terms. No platform mining your community for engagement metrics.",
-  },
-  {
-    name: "Indie Dev Teams",
-    description: "Ship games, share builds, coordinate launches. Your roadmap and source code stay confidential.",
-  },
-  {
-    name: "Creative Collectives",
-    description:
-      "Your community, your culture, your rules. Build spaces that reflect your values, not a corporation's.",
-  },
-];
-
 const Index = () => {
-  const [activeIndex, setActiveIndex] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveIndex((prev) => (prev + 1) % audienceGroups.length);
-    }, 6000);
-    return () => clearInterval(interval);
-  }, []);
 
   const comparisonData = [
     { label: "Messages scanned for ad targeting", others: true, kloak: false },
@@ -88,10 +47,9 @@ const Index = () => {
 
           {/* What is Kloak Section */}
           <section className="relative py-32 md:py-48 px-8 lg:px-16 border-t border-border/20 overflow-hidden">
-            <div className="max-w-7xl mx-auto">
-              {/* Section header */}
+            <div className="max-w-3xl mx-auto text-center">
               <motion.div
-                className="flex items-center gap-4 mb-12"
+                className="flex items-center justify-center gap-4 mb-12"
                 initial={{ opacity: 0 }}
                 whileInView={{ opacity: 1 }}
                 viewport={{ once: true }}
@@ -100,100 +58,38 @@ const Index = () => {
                 <span className="font-mono text-primary tracking-widest uppercase">What is Kloak</span>
               </motion.div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
-                {/* Left Column - Hook & What It Is */}
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true, margin: "-100px" }}
-                  transition={{ duration: 0.8 }}
-                  className="space-y-8"
-                >
-                  <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
-                    A place to talk
-                    <br />
-                    <span>without being watched.</span>
-                  </h2>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-100px" }}
+                transition={{ duration: 0.8 }}
+                className="space-y-8"
+              >
+                <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
+                  A place to talk
+                  <br />
+                  without being watched.
+                </h2>
 
-                  <p className="text-[17px] text-muted-foreground leading-[1.7] max-w-xl">
-                    Kloak is a communication platform for communities, teams, and friends. Built from the ground up so
-                    your conversations stay yours.
-                  </p>
+                <p className="text-[17px] text-muted-foreground leading-[1.7] max-w-2xl mx-auto">
+                  Kloak is a real-time communication platform built for communities, friend groups, gaming squads, and creative teams. It gives you servers, voice channels, direct messages, roles, and permissions, all without requiring an email, phone number, or password. Your identity is a single cryptographic key that only you hold. No ads, no data harvesting, no algorithm deciding what you see. Just a space to talk, collaborate, and build communities on your own terms.
+                </p>
 
-                  <div className="flex flex-wrap gap-6 text-sm text-muted-foreground">
-                    <span className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                      No ads
-                    </span>
-                    <span className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                      No micro-transactions
-                    </span>
-                    <span className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                      No algorithm to train
-                    </span>
-                  </div>
-                </motion.div>
-
-                {/* Right Column - Rotating Audience Box */}
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true, margin: "-100px" }}
-                  transition={{ duration: 0.8, delay: 0.2 }}
-                  className="relative"
-                >
-                  <div className="relative rounded-none border border-border/30 bg-background/50 backdrop-blur-sm p-8 md:p-10 min-h-[320px] overflow-hidden">
-                    {/* Label */}
-                    <span className="text-xs font-mono uppercase tracking-widest text-primary/40 mb-6 block">
-                      Built for
-                    </span>
-
-                    {/* Rotating Content */}
-                    <AnimatePresence mode="wait">
-                      <motion.div
-                        key={activeIndex}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        transition={{ duration: 0.2 }}
-                        className="space-y-4"
-                      >
-                        <h3 className="text-2xl md:text-3xl font-medium text-foreground">
-                          {audienceGroups[activeIndex].name}
-                        </h3>
-                        <p className="text-[17px] text-muted-foreground leading-[1.7]">
-                          {audienceGroups[activeIndex].description}
-                        </p>
-                      </motion.div>
-                    </AnimatePresence>
-
-                    {/* Progress Indicators */}
-                    <div className="absolute bottom-8 left-8 right-8 flex gap-2">
-                      {audienceGroups.map((_, i) => (
-                        <button
-                          key={i}
-                          onClick={() => setActiveIndex(i)}
-                          className="flex-1 h-1 rounded-full overflow-hidden bg-border/30 cursor-pointer"
-                        >
-                          <motion.div
-                            className="h-full bg-primary/60 rounded-full"
-                            initial={{ width: "0%" }}
-                            animate={{
-                              width: i === activeIndex ? "100%" : "0%",
-                            }}
-                            transition={{
-                              duration: i === activeIndex ? 6 : 0,
-                              ease: "linear",
-                            }}
-                          />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </motion.div>
-              </div>
+                <div className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground">
+                  <span className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                    No ads
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                    No micro-transactions
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                    No algorithm to train
+                  </span>
+                </div>
+              </motion.div>
             </div>
           </section>
 
