@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SmokeRing } from "@paper-design/shaders-react";
 import promoVideo from "@/assets/kloak-promo.mp4";
 
 export const HeroImage = () => {
@@ -42,34 +41,17 @@ export const HeroImage = () => {
 
   return (
     <section ref={sectionRef} className="relative overflow-hidden bg-[hsl(var(--neutral-0))]">
-      {/* Top hero area — full viewport */}
-      <div className="relative min-h-screen">
-        {/* Shader background */}
-        <div className="absolute inset-0">
-          <SmokeRing
-            style={{ width: "100%", height: "100%" }}
-            colors={["#4d4d4d"]}
-            colorBack="#0f0f0f"
-            noiseScale={3}
-            noiseIterations={3}
-            radius={0.95}
-            thickness={0.85}
-            innerShape={0.9}
-            speed={0.46}
-            scale={2.24}
-            offsetY={0.46}
-          />
-        </div>
-
-        {/* Main content - with blend mode */}
-        <div className="relative z-10 w-full min-h-screen flex flex-col items-center justify-center px-6 pt-20 md:pt-0 mix-blend-difference">
+      {/* Top hero area — 75vh */}
+      <div className="relative h-[75vh]">
+        {/* Main content */}
+        <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6">
           <div className="max-w-4xl mx-auto text-center">
             {/* Pre-title */}
             <motion.p
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-xs uppercase tracking-[0.3em] text-white mb-8 md:mb-12"
+              className="text-xs uppercase tracking-[0.3em] text-foreground/60 mb-8 md:mb-12"
             >
               Privacy-first communication
             </motion.p>
@@ -81,7 +63,7 @@ export const HeroImage = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
               >
-                <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tight text-white leading-[1.1]">
+                <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tight text-foreground leading-[1.1]">
                   Communication without
                 </h1>
               </motion.div>
@@ -90,7 +72,7 @@ export const HeroImage = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
               >
-                <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tight text-white leading-[1.1]">
+                <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tight text-foreground leading-[1.1]">
                   compromise.
                 </h1>
               </motion.div>
@@ -101,7 +83,7 @@ export const HeroImage = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.8, delay: 0.8 }}
-              className="text-base md:text-lg text-white/70 max-w-xl mx-auto leading-relaxed font-light"
+              className="text-base md:text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed font-light"
             >
               Where your conversations actually belong to you.
             </motion.p>
@@ -119,7 +101,7 @@ export const HeroImage = () => {
             <Link to="/app">
               <Button
                 size="lg"
-                className="rounded-full px-8 h-12 text-sm font-normal tracking-wide bg-white hover:bg-neutral-200 text-black border-0 group"
+                className="rounded-full px-8 h-12 text-sm font-normal tracking-wide bg-foreground hover:bg-foreground/90 text-background border-0 group"
               >
                 Open Kloak
                 <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
@@ -129,7 +111,7 @@ export const HeroImage = () => {
               <Button
                 variant="ghost"
                 size="lg"
-                className="rounded-full px-8 h-12 text-sm font-normal tracking-wide text-white/80 hover:text-white hover:bg-white/10"
+                className="rounded-full px-8 h-12 text-sm font-normal tracking-wide text-muted-foreground hover:text-foreground hover:bg-muted"
               >
                 Our Philosophy
               </Button>
