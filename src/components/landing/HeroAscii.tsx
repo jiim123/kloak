@@ -49,7 +49,7 @@ export const HeroImage = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-[10px] sm:text-xs uppercase tracking-[0.3em] text-foreground/60 mb-6 sm:mb-8 md:mb-12"
+            className="text-[10px] sm:text-xs tracking-[0.3em] text-foreground mb-6 sm:mb-8 md:mb-12"
           >
             Privacy-first communication
           </motion.p>
@@ -107,52 +107,6 @@ export const HeroImage = () => {
           </motion.div>
         </div>
       </div>
-
-      {/* Video showcase — revealed on scroll */}
-      <div className="relative px-6 lg:px-16 pb-24 md:pb-32 pt-8 md:pt-16">
-        {/* Ambient glow */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] rounded-full bg-primary/[0.04] blur-[100px]" />
-        </div>
-
-        <motion.div
-          style={{ scale: videoScale, opacity: videoOpacity, y: videoY }}
-          className="max-w-5xl mx-auto relative z-10"
-        >
-          {/* Browser frame */}
-          <div className="rounded-xl overflow-hidden border border-border/30 bg-[hsl(var(--neutral-50))] shadow-2xl shadow-black/50">
-            {/* Top bar */}
-            <div className="flex items-center gap-2 px-4 py-3 bg-[hsl(var(--neutral-100))] border-b border-border/20">
-              <div className="flex gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-[hsl(var(--neutral-300))]" />
-                <div className="w-3 h-3 rounded-full bg-[hsl(var(--neutral-300))]" />
-                <div className="w-3 h-3 rounded-full bg-[hsl(var(--neutral-300))]" />
-              </div>
-              <div className="flex-1 flex justify-center">
-                <div className="px-4 py-1 rounded-md bg-[hsl(var(--neutral-200))] text-xs text-muted-foreground font-mono">
-                  kloak.app
-                </div>
-              </div>
-              <div className="w-[54px]" />
-            </div>
-
-            {/* Video */}
-            <div className="relative aspect-video bg-black">
-              <video
-                ref={videoRef}
-                src={promoVideo}
-                muted
-                playsInline
-                loop
-                preload="metadata"
-                className="w-full h-full object-cover"
-              />
-            </div>
-          </div>
-
-          {/* Reflection glow */}
-          <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 w-3/4 h-12 bg-primary/[0.05] blur-3xl rounded-full pointer-events-none" />
-        </motion.div>
       </div>
     </section>
   );
