@@ -1,8 +1,8 @@
-import { useMemo } from 'react';
-import { useServerStore } from '@/stores/serverStore';
-import { useAuthStore } from '@/stores/authStore';
-import { evaluatePermission } from '@/lib/permissions';
-import type { Permission } from '@/types';
+import { useMemo, useCallback } from "react";
+import { useServerStore } from "@/stores/serverStore";
+import { useAuthStore } from "@/stores/authStore";
+import { evaluatePermission, canModerateByRoles } from "@/lib/permissions";
+import type { Permission, CustomServerRole, ServerRole } from "@/types";
 
 /**
  * Hook to check if the current user has a specific permission.
@@ -15,13 +15,7 @@ import type { Permission } from '@/types';
  */
 export const useMemberPermissions = (channelId?: string) => {
   const { user } = useAuthStore();
-  const {
-    members,
-    currentServer,
-    rolePermissions,
-    channelPermissions,
-    roles,
-  } = useServerStore();
+  const { members, currentServer, rolePermissions, channelPermissions, roles } = useServerStore();
 
   const currentMember = useMemo(() => {
     if (!user || !currentServer) return null;
@@ -33,40 +27,76 @@ export const useMemberPermissions = (channelId?: string) => {
     return currentServer.owner_id === user.id;
   }, [user, currentServer]);
 
-  const checkPermission = (permission: Permission): boolean => {
-    if (!currentServer || !user) return false;
+  const baseRole = currentMember?.role as ServerRole | undefined;
 
-    return evaluatePermission(
-      permission,
-      isOwner,
-      currentMember?.roles,
-      rolePermissions,
-      channelPermissions,
-      channelId,
-      user.id,
-      roles
-    );
-  };
-
-  return {
-    currentMember,
-    isOwner,
-    hasPermission: checkPermission,
-    canPerformInChannel: (permission: Permission, targetChannelId?: string) => {
+  const checkPermission = useCallback(
+    (permission: Permission): boolean => {
       if (!currentServer || !user) return false;
-      const effectiveChannelId = targetChannelId || channelId;
-      if (!effectiveChannelId) return checkPermission(permission);
-      
       return evaluatePermission(
         permission,
         isOwner,
         currentMember?.roles,
         rolePermissions,
         channelPermissions,
-        effectiveChannelId,
+        channelId,
         user.id,
-        roles
+        roles,
+        baseRole,
       );
     },
+    [currentServer, user, isOwner, currentMember, rolePermissions, channelPermissions, channelId, roles, baseRole],
+  );
+
+  // Check if current user can moderate a target member (kick/ban/mute/role changes)
+  const canModerate = useCallback(
+    (targetRoles?: CustomServerRole[], targetBaseRole?: ServerRole, targetIsOwner?: boolean): boolean => {
+      return canModerateByRoles(
+        isOwner,
+        currentMember?.roles,
+        targetIsOwner ?? false,
+        targetRoles,
+        baseRole,
+        targetBaseRole,
+      );
+    },
+    [isOwner, currentMember, baseRole],
+  );
+
+  return {
+    currentMember,
+    isOwner,
+    baseRole,
+    hasPermission: checkPermission,
+    canModerate,
+    canPerformInChannel: useCallback(
+      (permission: Permission, targetChannelId?: string) => {
+        if (!currentServer || !user) return false;
+        const effectiveChannelId = targetChannelId || channelId;
+        if (!effectiveChannelId) return checkPermission(permission);
+        return evaluatePermission(
+          permission,
+          isOwner,
+          currentMember?.roles,
+          rolePermissions,
+          channelPermissions,
+          effectiveChannelId,
+          user.id,
+          roles,
+          baseRole,
+        );
+      },
+      [
+        currentServer,
+        user,
+        isOwner,
+        currentMember,
+        rolePermissions,
+        channelPermissions,
+        channelId,
+        roles,
+        baseRole,
+        checkPermission,
+      ],
+    ),
   };
 };
