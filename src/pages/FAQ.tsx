@@ -174,12 +174,7 @@ const FAQ = () => {
                   viewport={{ once: true }}
                   transition={{ duration: 0.6 }}
                 >
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="w-12 h-12 border border-primary/30 flex items-center justify-center">
-                      <category.icon className="w-6 h-6 text-primary" />
-                    </div>
-                    <span className="text-xs font-mono text-primary tracking-widest uppercase">{category.title}</span>
-                  </div>
+                  <h4 className="text-muted-foreground tracking-widest uppercase">{category.title}</h4>
                 </motion.div>
 
                 <Accordion type="single" collapsible className="space-y-4">
@@ -195,7 +190,7 @@ const FAQ = () => {
                         value={`${category.title}-${index}`}
                         className="border border-border/30 bg-background hover:bg-card/50 transition-colors px-6 md:px-8"
                       >
-                        <AccordionTrigger className="text-left font-medium hover:no-underline py-6 text-base md:text-lg">
+                        <AccordionTrigger className="text-left font-medium hover:no-underline py-6 text-base md:text-lg font-sans">
                           {item.q}
                         </AccordionTrigger>
                         <AccordionContent className="text-muted-foreground leading-[1.7] pb-6 text-base/6">
