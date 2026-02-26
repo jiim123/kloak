@@ -589,7 +589,7 @@
   /* Mono text on landing pages - Monaspace Krypton, 14px = 0.875em, Regular */
   .landing-typography .font-mono,
   .landing-typography [class*="font-mono"] {
-    font-size: 0.6875em; /* 11px */
+    font-size: 0.625em; /* 10px */
     font-weight: 400;
   }
 
