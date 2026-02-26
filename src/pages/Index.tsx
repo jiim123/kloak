@@ -77,7 +77,7 @@ const Index = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center">
+    <div className="min-h-screen bg-background flex flex-col items-center landing-typography">
       <SEO {...SEO_CONFIG.home} />
       <div className="w-full">
         <NavigationMenu />
@@ -97,7 +97,7 @@ const Index = () => {
                 viewport={{ once: true }}
                 transition={{ duration: 0.6 }}
               >
-                <span className="text-xs font-mono text-primary tracking-widest uppercase">What is Kloak</span>
+                <span className="font-mono text-primary tracking-widest uppercase">What is Kloak</span>
               </motion.div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
@@ -209,7 +209,7 @@ const Index = () => {
               >
                 {/* Section header */}
                 <div className="flex items-center gap-4 mb-4">
-                  <span className="text-xs font-mono text-primary tracking-widest uppercase">The Problem</span>
+                  <span className="font-mono text-primary tracking-widest uppercase">The Problem</span>
                 </div>
                 <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
                   What they take.
@@ -302,7 +302,7 @@ const Index = () => {
               >
                 {/* Section header */}
                 <div className="flex items-center gap-4 mb-4">
-                  <span className="text-xs font-mono text-primary tracking-widest uppercase">Capabilities</span>
+                  <span className="font-mono text-primary tracking-widest uppercase">Capabilities</span>
                 </div>
                 <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
                   Everything you need.
@@ -380,7 +380,7 @@ const Index = () => {
               >
                 {/* Section header */}
                 <div className="flex items-center gap-4 mb-4">
-                  <span className="text-xs font-mono text-primary tracking-widest uppercase">Your Space</span>
+                  <span className="font-mono text-primary tracking-widest uppercase">Your Space</span>
                 </div>
                 <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight mb-6">
                   Built for people
@@ -467,7 +467,7 @@ const Index = () => {
               <div className="text-center">
                 {/* Section header */}
                 <div className="flex items-center justify-center gap-4 mb-6">
-                  <span className="text-xs font-mono text-primary tracking-widest uppercase">Get Started</span>
+                  <span className="font-mono text-primary tracking-widest uppercase">Get Started</span>
                 </div>
                 <div className="w-16 h-16 border border-primary/30 flex items-center justify-center mx-auto mb-8">
                   <Key className="w-8 h-8 text-primary" />

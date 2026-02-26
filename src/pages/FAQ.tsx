@@ -116,7 +116,7 @@ const faqCategories = [
 
 const FAQ = () => {
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center w-full">
+    <div className="min-h-screen bg-background flex flex-col items-center w-full landing-typography">
       <SEO
         title="FAQ"
         description="Frequently asked questions about Kloak. Learn about our privacy-first approach, secret key authentication, and how to use the platform."

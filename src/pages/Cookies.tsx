@@ -74,7 +74,7 @@
  
  const Cookies = () => {
    return (
-     <div className="min-h-screen bg-background flex flex-col items-center w-full">
+     <div className="min-h-screen bg-background flex flex-col items-center w-full landing-typography">
        <SEO
          title="Cookie Policy | Kloak"
          description="Cookie policy for Kloak. We use only essential cookies. No tracking, no advertising, no third-party analytics."

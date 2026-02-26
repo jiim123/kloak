@@ -642,7 +642,7 @@ const Auth = () => {
 
   // Browser version with navigation and footer
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col landing-typography">
       <SEO {...SEO_CONFIG.auth} noIndex />
       {/* Navigation */}
       <NavigationMenu />
