@@ -49,9 +49,9 @@ export const HeroImage = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-[10px] sm:text-xs tracking-[0.3em] text-foreground mb-6 sm:mb-8 md:mb-12"
+            className="font-mono text-[10px] sm:text-xs tracking-[0.3em] text-foreground mb-6 sm:mb-8 md:mb-12"
           >
-            Privacy-first communication
+            Talk privately
           </motion.p>
 
           {/* Main title */}
