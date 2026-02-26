@@ -479,6 +479,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         is_published?: boolean;
         about?: string | null;
         created_at: string;
+        already_member?: boolean;
         debug?: {
           system_channel_join_id: string | null;
           enable_join_messages: boolean | null;
