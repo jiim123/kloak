@@ -132,7 +132,7 @@ const Index = () => {
                         viewport={{ once: true }}
                         transition={{ duration: 0.4, delay: index * 0.05 }}
                       >
-                        <TableCell className="font-light text-muted-foreground text-[17px]">{row.label}</TableCell>
+                        <TableCell className="text-muted-foreground text-[17px]">{row.label}</TableCell>
                         <TableCell className="text-center">
                           {row.others ? (
                             <div className="w-8 h-8 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
