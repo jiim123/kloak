@@ -474,6 +474,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         name: string;
         owner_id: string;
         invite_code: string;
+        already_member?: boolean;
         icon_url: string | null;
         banner_url: string | null;
         is_published?: boolean;
