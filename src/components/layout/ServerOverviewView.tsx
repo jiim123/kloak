@@ -9,6 +9,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import type { Message, User } from "@/types";
+import { getOrFetchUser, getUserFromCache } from "@/lib/userCache";
 
 interface AnnouncementCard {
   id: string;
@@ -26,6 +27,7 @@ export const ServerOverviewView = () => {
   const [recentAnnouncements, setRecentAnnouncements] = useState<AnnouncementCard[]>([]);
   const [isLoadingAnnouncements, setIsLoadingAnnouncements] = useState(false);
   const [totalMemberCount, setTotalMemberCount] = useState<number | null>(null);
+  const [ownerFallbackUser, setOwnerFallbackUser] = useState<User | null>(null);
 
   const ownerMember = useMemo(() => {
     if (!currentServer) return null;
@@ -35,6 +37,39 @@ export const ServerOverviewView = () => {
       null
     );
   }, [currentServer, members]);
+
+  useEffect(() => {
+    if (!currentServer?.owner_id) {
+      setOwnerFallbackUser(null);
+      return;
+    }
+
+    if (ownerMember?.user) {
+      setOwnerFallbackUser(ownerMember.user as User);
+      return;
+    }
+
+    const cachedOwner = getUserFromCache(currentServer.owner_id);
+    if (cachedOwner) {
+      setOwnerFallbackUser(cachedOwner);
+      return;
+    }
+
+    let cancelled = false;
+    const fetchOwner = async () => {
+      try {
+        const fetched = await getOrFetchUser(currentServer.owner_id);
+        if (!cancelled) setOwnerFallbackUser(fetched);
+      } catch {
+        if (!cancelled) setOwnerFallbackUser(null);
+      }
+    };
+
+    void fetchOwner();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentServer?.owner_id, ownerMember?.user]);
 
   // Fetch recent announcements
   useEffect(() => {
@@ -130,10 +165,11 @@ export const ServerOverviewView = () => {
   if (!currentServer) return null;
 
   const createdAt = currentServer.created_at ? new Date(currentServer.created_at) : null;
+  const ownerUser = (ownerMember?.user as User | undefined) ?? ownerFallbackUser;
   const ownerName =
     ownerMember?.nickname ||
-    ownerMember?.user?.display_name ||
-    ownerMember?.user?.username ||
+    ownerUser?.display_name ||
+    ownerUser?.username ||
     "Unknown";
 
   return (
@@ -215,15 +251,15 @@ export const ServerOverviewView = () => {
             </div>
             <div className="mt-3 flex items-center gap-3">
               <Avatar className="w-10 h-10">
-                <AvatarImage src={ownerMember?.user?.avatar_url || undefined} />
-                <AvatarFallback style={{ backgroundColor: ownerMember?.user?.banner_color || "#5865F2" }}>
+                <AvatarImage src={ownerUser?.avatar_url || undefined} />
+                <AvatarFallback style={{ backgroundColor: ownerUser?.banner_color || "#5865F2" }}>
                   {ownerName?.[0]?.toUpperCase() || "?"}
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0">
                 <div className="text-sm font-medium truncate">{ownerName}</div>
                 <div className="text-xs text-muted-foreground truncate">
-                  {ownerMember?.user?.username ? `@${ownerMember.user.username}` : "â€”"}
+                  {ownerUser?.username ? `@${ownerUser.username}` : "—"}
                 </div>
               </div>
             </div>
@@ -277,4 +313,5 @@ export const ServerOverviewView = () => {
     </div>
   );
 };
+
 

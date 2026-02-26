@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo, Fragment } from "react";
 import { Ghost } from "lucide-react";
 import { ChevronDown, Loader2, Hash, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -15,6 +15,7 @@ import { useRealtimePolls } from "@/hooks/useRealtimePolls";
 import { useConnectionStatus } from "@/hooks/useConnectionStatus";
 import { supabase } from "@/integrations/supabase/client";
 import type { CustomServerRole, Message, ServerRole } from "@/types";
+import { format, isSameDay, isToday, isYesterday } from "date-fns";
 
 interface MessageListProps {
   channelId: string;
@@ -80,9 +81,15 @@ const getStableMessageKey = (message: Message): string => {
   return `pending-${timestamp}-${message.user_id}-${contentPrefix}`;
 };
 
+const getDateDividerLabel = (date: Date): string => {
+  if (isToday(date)) return "Today";
+  if (isYesterday(date)) return "Yesterday";
+  return format(date, "EEEE, MMMM d, yyyy");
+};
+
 export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   const { user } = useAuthStore();
-  const { isLoading, fetchMessages, setCurrentChannel, messagesByChannel } = useMessageStore();
+  const { isLoading, fetchMessages, setCurrentChannel, messagesByChannel, fetchingChannels } = useMessageStore();
   const { isRealtimeConnected } = useConnectionStatus();
   const visibilityBlockedUserIds = useFriendStore((s) => s.visibilityBlockedUserIds);
   const { currentChannel } = useServerStore();
@@ -93,6 +100,7 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
 
   // Subscribe to messages for this specific channel
   const channelData = messagesByChannel[channelId];
+  const isFetchingOlder = !!fetchingChannels[channelId];
   const rawMessages = channelData?.messages || [];
   const messages = useMemo(() => {
     if (!visibilityBlockedUserIds || visibilityBlockedUserIds.length === 0) return rawMessages;
@@ -141,6 +149,8 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   const [newMessageCount, setNewMessageCount] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
   const scrollTopRef = useRef(0);
+  const lastScrollTopRef = useRef(0);
+  const prependAnchorRef = useRef<{ prevScrollHeight: number; prevScrollTop: number } | null>(null);
   const [authorStyleMap, setAuthorStyleMap] = useState<Record<string, MessageAuthorStyle>>({});
   const isNearBottomRef = useRef(true);
   const lastMarkedMessageIdRef = useRef<string | null>(null); // Track last marked message ID instead of boolean
@@ -245,6 +255,21 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
       needsScrollRef.current = false;
     }
   }, [deduplicatedMessages.length, channelId]);
+
+  // Preserve viewport position after prepending older messages.
+  // Without this, top-pagination can "pull" the list upward and feel jittery.
+  useLayoutEffect(() => {
+    const anchor = prependAnchorRef.current;
+    const container = containerRef.current;
+    if (!anchor || !container) return;
+
+    const delta = container.scrollHeight - anchor.prevScrollHeight;
+    if (delta !== 0) {
+      container.scrollTop = anchor.prevScrollTop + delta;
+      scrollTopRef.current = container.scrollTop;
+    }
+    prependAnchorRef.current = null;
+  }, [deduplicatedMessages.length]);
 
   // Reconcile after sleep/background: refetch latest when app regains focus/visibility.
   // This ensures we catch any messages that realtime subscriptions might have missed
@@ -379,6 +404,7 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
 
       const { scrollTop, scrollHeight, clientHeight } = container;
       scrollTopRef.current = scrollTop;
+      const isScrollingUp = scrollTop < lastScrollTopRef.current;
       if (shouldVirtualize && containerHeight > 0) {
         const rawStart = Math.floor(scrollTop / ESTIMATED_MESSAGE_HEIGHT);
         const visibleCount = Math.ceil(containerHeight / ESTIMATED_MESSAGE_HEIGHT);
@@ -403,16 +429,28 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
       }
 
       // Load more when scrolling to top
-      if (scrollTop < 100 && hasMore && !isLoading) {
-        const oldestMessage = deduplicatedMessages[0];
-        if (oldestMessage) {
-          fetchMessages(channelId, 50, oldestMessage.created_at);
+      if (isScrollingUp && scrollTop < 100 && hasMore && !isLoading && !isFetchingOlder) {
+        const beforeCursor = deduplicatedMessages[0]?.created_at || channelData?.oldestLoadedAt || undefined;
+        if (beforeCursor) {
+          prependAnchorRef.current = { prevScrollHeight: scrollHeight, prevScrollTop: scrollTop };
+          fetchMessages(channelId, 50, beforeCursor);
         }
       }
 
+      lastScrollTopRef.current = scrollTop;
       scrollRAFRef.current = null;
     });
-  }, [channelId, hasMore, isLoading, deduplicatedMessages, fetchMessages, shouldVirtualize, containerHeight]);
+  }, [
+    channelId,
+    hasMore,
+    isLoading,
+    isFetchingOlder,
+    deduplicatedMessages,
+    channelData?.oldestLoadedAt,
+    fetchMessages,
+    shouldVirtualize,
+    containerHeight,
+  ]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -618,16 +656,28 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
             const previousMessage = index > 0 ? deduplicatedMessages[index - 1] : null;
             const isGrouped = shouldGroupMessages(message, previousMessage);
             const showNewDivider = index === newMessagesDividerIndex && lastMarkedMessageIdRef.current === null;
+            const messageDate = new Date(message.created_at);
+            const previousMessageDate = previousMessage ? new Date(previousMessage.created_at) : null;
+            const showDateDivider = !previousMessageDate || !isSameDay(messageDate, previousMessageDate);
+            const dateDividerLabel = getDateDividerLabel(messageDate);
 
             return (
-              <MessageItem
-                key={getStableMessageKey(message)}
-                message={message}
-                isGrouped={isGrouped}
-                showNewDivider={showNewDivider}
-                isHighlighted={message.id === highlightedMessageId}
-                authorStyleFallback={authorStyleMap[message.user_id]}
-              />
+              <Fragment key={getStableMessageKey(message)}>
+                {showDateDivider && (
+                  <div className="flex items-center gap-3 px-4 my-4">
+                    <div className="h-px flex-1 bg-border/70" />
+                    <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">{dateDividerLabel}</span>
+                    <div className="h-px flex-1 bg-border/70" />
+                  </div>
+                )}
+                <MessageItem
+                  message={message}
+                  isGrouped={isGrouped}
+                  showNewDivider={showNewDivider}
+                  isHighlighted={message.id === highlightedMessageId}
+                  authorStyleFallback={authorStyleMap[message.user_id]}
+                />
+              </Fragment>
             );
           })}
           {shouldVirtualize && bottomSpacerHeight > 0 && <div style={{ height: bottomSpacerHeight }} />}

@@ -10,6 +10,7 @@ interface ChannelMessages {
   messages: Message[];
   hasMore: boolean;
   lastFetched: number;
+  oldestLoadedAt?: string | null;
 }
 
 interface MessageState {
@@ -124,8 +125,9 @@ const MAX_REPLY_CACHE_ITEMS = 800;
 const inflightFetches = new Map<string, Promise<void>>();
 const replyCache = new Map<string, { data: MessageReply; cachedAt: number }>();
 
-const trimMessages = (messages: Message[]) => {
+const trimMessages = (messages: Message[], mode: "newest" | "oldest" = "newest") => {
   if (messages.length <= MAX_MESSAGES_PER_CHANNEL) return messages;
+  if (mode === "oldest") return messages.slice(0, MAX_MESSAGES_PER_CHANNEL);
   return messages.slice(messages.length - MAX_MESSAGES_PER_CHANNEL);
 };
 
@@ -136,12 +138,17 @@ const pruneReplyCache = () => {
   toDelete.forEach(([key]) => replyCache.delete(key));
 };
 
-const pruneMessagesByChannel = (input: Record<string, ChannelMessages>, keepChannelId?: string) => {
+const pruneMessagesByChannel = (
+  input: Record<string, ChannelMessages>,
+  keepChannelId?: string,
+  keepChannelTrimMode: "newest" | "oldest" = "newest",
+) => {
   const normalized: Record<string, ChannelMessages> = {};
   for (const [channelId, data] of Object.entries(input)) {
+    const trimMode = keepChannelId && channelId === keepChannelId ? keepChannelTrimMode : "newest";
     normalized[channelId] = {
       ...data,
-      messages: trimMessages(data.messages || []),
+      messages: trimMessages(data.messages || [], trimMode),
     };
   }
 
@@ -201,7 +208,8 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     silent = false,
     skipBootstrap = false,
   ) => {
-    const inflightKey = `${channelId}:${before ?? ""}:${force ? 1 : 0}:${limit}:${skipBootstrap ? 1 : 0}`;
+    const normalizedBefore = typeof before === "string" && before.trim().length > 0 ? before : undefined;
+    const inflightKey = `${channelId}:${normalizedBefore ?? ""}:${force ? 1 : 0}:${limit}:${skipBootstrap ? 1 : 0}`;
     const existingInflight = inflightFetches.get(inflightKey);
     if (existingInflight) return existingInflight;
 
@@ -210,7 +218,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       const cached = messagesByChannel[channelId];
 
       // If we have cached messages and they're fresh, don't refetch (unless paginating)
-      if (!before && !force && cached && cached.messages.length > 0) {
+      if (!normalizedBefore && !force && cached && cached.messages.length > 0) {
         const isFresh = Date.now() - cached.lastFetched < CACHE_EXPIRY_MS;
         if (isFresh) {
           return;
@@ -228,7 +236,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       }
 
       // Track per-channel fetching (used for pagination spinner only)
-      if (before) {
+      if (normalizedBefore) {
         set((state) => ({
           fetchingChannels: { ...state.fetchingChannels, [channelId]: true },
         }));
@@ -242,7 +250,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         let messageRows: any[] = [];
         let usedBootstrap = false;
 
-        if (!before && !skipBootstrap) {
+        if (!normalizedBefore && !skipBootstrap) {
           const { data: bootstrapData, error: bootstrapError } = await (supabase.rpc as any)(
             "get_channel_bootstrap_secure",
             {
@@ -284,7 +292,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
             _channel_id: channelId,
             _user_id: requestUserId,
             _limit: limit,
-            _before: before || null,
+            _before: normalizedBefore || null,
             _blocked_user_ids: blockedUserIds,
           });
           if (error) throw error;
@@ -292,7 +300,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
 
           // Bootstrap RPC may be unavailable while migrations roll out.
           // Ensure channel overrides are still loaded via legacy path.
-          if (!before) {
+          if (!normalizedBefore) {
             void useServerStore.getState().fetchChannelPermissions(channelId).catch(() => undefined);
           }
         }
@@ -373,6 +381,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         if (uniqueUsers.size > 0) bulkSetUsersInCache(Array.from(uniqueUsers.values()));
 
         const hasMore = messages.length === limit;
+        const oldestFetchedAt = messages[0]?.created_at ?? null;
 
         set((state) => {
           const existingCache = state.messagesByChannel[channelId];
@@ -380,7 +389,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
           // Clear per-channel fetching flag
           const { [channelId]: _, ...restFetching } = state.fetchingChannels;
 
-          if (before && existingCache) {
+          if (normalizedBefore && existingCache) {
             // Prepend older messages to existing cache
             const nextByChannel = pruneMessagesByChannel(
               {
@@ -389,9 +398,11 @@ export const useMessageStore = create<MessageState>((set, get) => ({
                   messages: [...messages, ...existingCache.messages],
                   hasMore,
                   lastFetched: existingCache.lastFetched,
+                  oldestLoadedAt: oldestFetchedAt ?? existingCache.oldestLoadedAt ?? normalizedBefore,
                 },
               },
               channelId,
+              "oldest",
             );
             return {
               messagesByChannel: nextByChannel,
@@ -411,6 +422,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
                     messages: [],
                     hasMore,
                     lastFetched: Date.now(),
+                    oldestLoadedAt: null,
                   },
                 },
                 channelId,
@@ -438,13 +450,14 @@ export const useMessageStore = create<MessageState>((set, get) => ({
             const nextByChannel = pruneMessagesByChannel(
               {
                 ...state.messagesByChannel,
-                [channelId]: {
-                  messages: reconciled,
-                  hasMore,
-                  lastFetched: Date.now(),
+                  [channelId]: {
+                    messages: reconciled,
+                    hasMore,
+                    lastFetched: Date.now(),
+                    oldestLoadedAt: reconciled[0]?.created_at ?? null,
+                  },
                 },
-              },
-              channelId,
+                channelId,
             );
 
             return {
@@ -457,13 +470,14 @@ export const useMessageStore = create<MessageState>((set, get) => ({
             const nextByChannel = pruneMessagesByChannel(
               {
                 ...state.messagesByChannel,
-                [channelId]: {
-                  messages,
-                  hasMore,
-                  lastFetched: Date.now(),
+                  [channelId]: {
+                    messages,
+                    hasMore,
+                    lastFetched: Date.now(),
+                    oldestLoadedAt: oldestFetchedAt,
+                  },
                 },
-              },
-              channelId,
+                channelId,
             );
             return {
               messagesByChannel: nextByChannel,
@@ -910,13 +924,14 @@ export const useMessageStore = create<MessageState>((set, get) => ({
           messagesByChannel: pruneMessagesByChannel(
             {
               ...state.messagesByChannel,
-              [channelId]: {
-                messages: [message],
-                hasMore: true,
-                lastFetched: Date.now(),
+                [channelId]: {
+                  messages: [message],
+                  hasMore: true,
+                  lastFetched: Date.now(),
+                  oldestLoadedAt: message.created_at,
+                },
               },
-            },
-            channelId,
+              channelId,
           ),
         };
       }
