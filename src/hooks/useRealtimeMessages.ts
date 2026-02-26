@@ -1,20 +1,20 @@
-import { useEffect, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useMessageStore } from '@/stores/messageStore';
-import { useFriendStore } from '@/stores/friendStore';
-import { useAuthStore } from '@/stores/authStore';
-import { useServerStore } from '@/stores/serverStore';
-import type { Message } from '@/types';
-import { getOrFetchUser, getUserFromCache } from '@/lib/userCache';
-import type { User } from '@/types';
-import { canRevealGhostIdentityForUser, getGhostPseudonymousUserId } from '@/lib/ghostIdentity';
+import { useEffect, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useMessageStore } from "@/stores/messageStore";
+import { useFriendStore } from "@/stores/friendStore";
+import { useAuthStore } from "@/stores/authStore";
+import { useServerStore } from "@/stores/serverStore";
+import type { Message } from "@/types";
+import { getOrFetchUser, getUserFromCache } from "@/lib/userCache";
+import type { User } from "@/types";
+import { canRevealGhostIdentityForUser, getGhostPseudonymousUserId } from "@/lib/ghostIdentity";
 
 const CHANNEL_SUBSCRIBE_CATCHUP_MAX_AGE_MS = 12_000;
 const MIN_CATCHUP_FETCH_GAP_MS = 30_000;
 const BROADCAST_RESYNC_INTERVAL_MS = 12_000;
 const MIN_BROADCAST_RESYNC_GAP_MS = 6_000;
 
-type BroadcastMutationOp = 'INSERT' | 'UPDATE' | 'DELETE';
+type BroadcastMutationOp = "INSERT" | "UPDATE" | "DELETE";
 
 type MessageBroadcastRow = {
   id: string;
@@ -63,7 +63,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
     const RETRY_BASE_DELAY_MS = 2000;
     const RETRY_MAX_DELAY_MS = 60000;
 
-    const scheduleRetry = (status: 'CLOSED' | 'CHANNEL_ERROR' | 'TIMED_OUT') => {
+    const scheduleRetry = (status: "CLOSED" | "CHANNEL_ERROR" | "TIMED_OUT") => {
       if (!isActive) return;
       retryCount += 1;
       const delay = Math.min(RETRY_MAX_DELAY_MS, RETRY_BASE_DELAY_MS * Math.pow(2, retryCount - 1));
@@ -94,7 +94,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
         }
       }
 
-      console.log('[Realtime] Setting up chat broadcast subscription for channel:', channelId);
+      console.log("[Realtime] Setting up chat broadcast subscription for channel:", channelId);
 
       channel = supabase
         .channel(`chat:${channelId}`, {
@@ -102,348 +102,360 @@ export const useRealtimeMessages = (channelId: string | null) => {
             broadcast: { self: false },
           },
         })
-        .on(
-          'broadcast',
-          { event: 'messages' },
-          async ({ payload }) => {
-            try {
-              const eventPayload = payload as BroadcastMutationPayload<MessageBroadcastRow>;
-              const eventType = eventPayload?.op;
-              if (!eventType) return;
-              lastEventAtRef.current = Date.now();
-               
-              if (eventType === 'INSERT') {
-                const newMsg = eventPayload.new;
-                if (!newMsg?.id || !newMsg.user_id || !newMsg.created_at) return;
-                
-                // Server-side filter should already ensure this, but keep as a guard.
-                if (newMsg.channel_id !== channelId) return;
-                
-                // Mutual block invisibility: don't surface messages from blocked/blocked-by users.
-                const blocked = useFriendStore.getState().visibilityBlockedUserIds;
-                if (Array.isArray(blocked) && blocked.includes(newMsg.user_id)) return;
-                
-                // Get current state directly from store
-                const store = useMessageStore.getState();
-                const existingMessages = store.messagesByChannel[channelId]?.messages || [];
-                
-                // Skip if this message already exists
-                if (existingMessages.some(m => m.id === newMsg.id)) {
-                  return;
-                }
-                
-                // IMPORTANT: Don't block on fetching user data; add message immediately.
-                // We'll hydrate the author in the background if needed.
-                const localUser = useAuthStore.getState().user;
-                const serverState = useServerStore.getState();
-                const isGhostMode =
-                  serverState.currentChannel?.id === channelId && !!serverState.currentChannel?.ghost_mode;
-                const revealIdentity = canRevealGhostIdentityForUser({
-                  isGhostMode,
-                  authorUserId: newMsg.user_id,
-                  members: serverState.members,
-                  ownerId: serverState.currentServer?.owner_id,
-                });
-                const ghostUserId = getGhostPseudonymousUserId(newMsg.user_id, channelId);
-                const cachedUser = getUserFromCache(newMsg.user_id);
-                let user: User | null = null;
+        .on("broadcast", { event: "messages" }, async ({ payload }) => {
+          try {
+            const eventPayload = payload as BroadcastMutationPayload<MessageBroadcastRow>;
+            const eventType = eventPayload?.op;
+            if (!eventType) return;
+            lastEventAtRef.current = Date.now();
 
-                if (!revealIdentity) {
+            if (eventType === "INSERT") {
+              const newMsg = eventPayload.new;
+              if (!newMsg?.id || !newMsg.user_id || !newMsg.created_at) return;
+
+              // Server-side filter should already ensure this, but keep as a guard.
+              if (newMsg.channel_id !== channelId) return;
+
+              // Mutual block invisibility: don't surface messages from blocked/blocked-by users.
+              const blocked = useFriendStore.getState().visibilityBlockedUserIds;
+              if (Array.isArray(blocked) && blocked.includes(newMsg.user_id)) return;
+
+              // Get current state directly from store
+              const store = useMessageStore.getState();
+              const existingMessages = store.messagesByChannel[channelId]?.messages || [];
+
+              // Skip if this message already exists
+              if (existingMessages.some((m) => m.id === newMsg.id)) {
+                return;
+              }
+
+              // IMPORTANT: Don't block on fetching user data; add message immediately.
+              // We'll hydrate the author in the background if needed.
+              const localUser = useAuthStore.getState().user;
+              const serverState = useServerStore.getState();
+              const isGhostMode =
+                serverState.currentChannel?.id === channelId && !!serverState.currentChannel?.ghost_mode;
+              const revealIdentity = canRevealGhostIdentityForUser({
+                isGhostMode,
+                authorUserId: newMsg.user_id,
+                members: serverState.members,
+                ownerId: serverState.currentServer?.owner_id,
+              });
+              const ghostUserId = getGhostPseudonymousUserId(newMsg.user_id, channelId);
+              const cachedUser = getUserFromCache(newMsg.user_id);
+              let user: User | null = null;
+
+              if (!revealIdentity) {
+                const nowIso = new Date().toISOString();
+                user = {
+                  id: "anonymous",
+                  username: "anonymous",
+                  display_name: "Anonymous",
+                  avatar_url: null,
+                  banner_url: null,
+                  avatar_decoration: null,
+                  profile_effect: null,
+                  banner_color: "#111111",
+                  profile_theme_primary: null,
+                  profile_theme_accent: null,
+                  bio: null,
+                  status: "offline",
+                  custom_status: null,
+                  created_at: nowIso,
+                  last_seen: null,
+                } satisfies User;
+              } else {
+                user = localUser?.id === newMsg.user_id ? (localUser as unknown as User) : cachedUser;
+                if (!user) {
                   const nowIso = new Date().toISOString();
                   user = {
-                    id: 'anonymous',
-                    username: 'anonymous',
-                    display_name: 'Anonymous',
+                    id: newMsg.user_id,
+                    username: "unknown",
+                    display_name: null,
                     avatar_url: null,
                     banner_url: null,
                     avatar_decoration: null,
                     profile_effect: null,
-                    banner_color: '#111111',
+                    banner_color: "#111111",
                     profile_theme_primary: null,
                     profile_theme_accent: null,
                     bio: null,
-                    status: 'offline',
+                    status: "offline",
                     custom_status: null,
                     created_at: nowIso,
                     last_seen: null,
                   } satisfies User;
-                } else {
-                  user = localUser?.id === newMsg.user_id ? (localUser as unknown as User) : cachedUser;
-                  if (!user) {
-                    const nowIso = new Date().toISOString();
-                    user = {
-                      id: newMsg.user_id,
-                      username: 'unknown',
-                      display_name: null,
-                      avatar_url: null,
-                      banner_url: null,
-                      avatar_decoration: null,
-                      profile_effect: null,
-                      banner_color: '#111111',
-                      profile_theme_primary: null,
-                      profile_theme_accent: null,
-                      bio: null,
-                      status: 'offline',
-                      custom_status: null,
-                      created_at: nowIso,
-                      last_seen: null,
-                    } satisfies User;
-                  }
-                }
-                
-                // Build message with minimal data
-                const message: Message = {
-                  id: newMsg.id,
-                  channel_id: newMsg.channel_id,
-                  user_id: revealIdentity ? newMsg.user_id : ghostUserId,
-                  is_own: localUser?.id === newMsg.user_id,
-                  reply_to_id: newMsg.reply_to_id,
-                  content: newMsg.content,
-                  is_pinned: newMsg.is_pinned || false,
-                  is_system_message: newMsg.is_system_message || false,
-                  edited_at: newMsg.edited_at,
-                  created_at: newMsg.created_at,
-                  user,
-                  reply_to: undefined,
-                  attachments: [],
-                  reactions: [],
-                };
-                
-                // If there's a reply, try to get it from existing messages
-                if (newMsg.reply_to_id) {
-                  const freshStore = useMessageStore.getState();
-                  const freshMessages = freshStore.messagesByChannel[channelId]?.messages || [];
-                  const replyMsg = freshMessages.find(m => m.id === newMsg.reply_to_id);
-                  if (replyMsg) {
-                    message.reply_to = {
-                      id: replyMsg.id,
-                      content: replyMsg.content,
-                      user: replyMsg.user,
-                    };
-                  }
-                }
-                
-                useMessageStore.getState().addMessage(message);
-
-                // Hydrate author info asynchronously (no UI delay).
-                if (revealIdentity && !cachedUser && localUser?.id !== newMsg.user_id) {
-                  void getOrFetchUser(newMsg.user_id)
-                    .then((u) => {
-                      if (!u) return;
-                      useMessageStore.getState().updateMessage(newMsg.id, { user: u } as Partial<Message>);
-                    })
-                    .catch(() => undefined);
-                }
-              } else if (eventType === 'UPDATE') {
-                const updated = eventPayload.new;
-                if (!updated?.id || !updated.channel_id) return;
-                
-                // Server-side filter should already ensure this, but keep as a guard.
-                if (updated.channel_id !== channelId) return;
-                
-                useMessageStore.getState().updateMessage(updated.id, {
-                  content: updated.content,
-                  edited_at: updated.edited_at,
-                  is_pinned: updated.is_pinned ?? false,
-                });
-              } else if (eventType === 'DELETE') {
-                const oldData = eventPayload.old as { id?: string; channel_id?: string } | undefined;
-                
-                if (oldData?.id) {
-                  useMessageStore.getState().removeMessage(oldData.id);
                 }
               }
-            } catch (error) {
-              console.error('[Realtime] Error processing message event:', error);
-            }
-          }
-        )
-        .on(
-          'broadcast',
-          { event: 'reactions' },
-          ({ payload }) => {
-            try {
-              const eventPayload = payload as BroadcastMutationPayload<ReactionBroadcastRow>;
-              const eventType = eventPayload?.op;
-              if (!eventType) return;
-              lastEventAtRef.current = Date.now();
-              const currentUserId = useAuthStore.getState().user?.id;
 
-              if (eventType === 'INSERT' || eventType === 'UPDATE') {
-                const newReaction = eventPayload.new;
-                if (!newReaction?.message_id || !newReaction?.user_id || !newReaction?.emoji) return;
-                if (newReaction.channel_id && newReaction.channel_id !== channelId) return;
+              // Build message with minimal data
+              const message: Message = {
+                id: newMsg.id,
+                channel_id: newMsg.channel_id,
+                user_id: revealIdentity ? newMsg.user_id : ghostUserId,
+                is_own: localUser?.id === newMsg.user_id,
+                reply_to_id: newMsg.reply_to_id,
+                content: newMsg.content,
+                is_pinned: newMsg.is_pinned || false,
+                is_system_message: newMsg.is_system_message || false,
+                edited_at: newMsg.edited_at,
+                created_at: newMsg.created_at,
+                user,
+                reply_to: undefined,
+                attachments: [],
+                reactions: [],
+              };
 
-                const serverState = useServerStore.getState();
-                const isGhostMode =
-                  serverState.currentChannel?.id === channelId && !!serverState.currentChannel?.ghost_mode;
-                const revealIdentity = canRevealGhostIdentityForUser({
-                  isGhostMode,
-                  authorUserId: newReaction.user_id,
-                  members: serverState.members,
-                  ownerId: serverState.currentServer?.owner_id,
-                });
-                const effectiveReactionUserId = revealIdentity
-                  ? newReaction.user_id
-                  : getGhostPseudonymousUserId(newReaction.user_id, channelId);
-
-                const { messagesByChannel } = useMessageStore.getState();
-                const channelData = messagesByChannel[channelId];
-                if (!channelData) return;
-
-                const messageIndex = channelData.messages.findIndex((m) => m.id === newReaction.message_id);
-                if (messageIndex === -1) return;
-
-                const message = channelData.messages[messageIndex];
-                const reactions = [...(message.reactions || [])];
-                const existingGroup = reactions.find((r) => r.emoji === newReaction.emoji);
-
-                if (existingGroup) {
-                  if (!existingGroup.users.includes(effectiveReactionUserId)) {
-                    existingGroup.count++;
-                    existingGroup.users.push(effectiveReactionUserId);
-                  }
-                  if (newReaction.user_id === currentUserId) {
-                    existingGroup.hasReacted = true;
-                  }
-                } else {
-                  reactions.push({
-                    emoji: newReaction.emoji,
-                    count: 1,
-                    users: [effectiveReactionUserId],
-                    hasReacted: newReaction.user_id === currentUserId,
-                  });
+              // If there's a reply, try to get it from existing messages
+              if (newMsg.reply_to_id) {
+                const freshStore = useMessageStore.getState();
+                const freshMessages = freshStore.messagesByChannel[channelId]?.messages || [];
+                const replyMsg = freshMessages.find((m) => m.id === newMsg.reply_to_id);
+                if (replyMsg) {
+                  message.reply_to = {
+                    id: replyMsg.id,
+                    content: replyMsg.content,
+                    user: replyMsg.user,
+                  };
                 }
-
-                useMessageStore
-                  .getState()
-                  .updateMessage(newReaction.message_id, { reactions, channel_id: channelId } as Partial<Message>);
-                return;
               }
 
-              if (eventType !== 'DELETE') return;
-              const oldReaction = eventPayload.old as ReactionBroadcastRow | undefined;
-              if (oldReaction?.channel_id && oldReaction.channel_id !== channelId) return;
-              if (!oldReaction) return;
+              useMessageStore.getState().addMessage(message);
 
-              if (oldReaction.message_id && oldReaction.emoji && oldReaction.user_id) {
-                const serverState = useServerStore.getState();
-                const isGhostMode =
-                  serverState.currentChannel?.id === channelId && !!serverState.currentChannel?.ghost_mode;
-                const revealIdentity = canRevealGhostIdentityForUser({
-                  isGhostMode,
-                  authorUserId: oldReaction.user_id,
-                  members: serverState.members,
-                  ownerId: serverState.currentServer?.owner_id,
-                });
-                const effectiveReactionUserId = revealIdentity
-                  ? oldReaction.user_id
-                  : getGhostPseudonymousUserId(oldReaction.user_id, channelId);
-
-                const { messagesByChannel } = useMessageStore.getState();
-                const channelData = messagesByChannel[channelId];
-                if (!channelData) return;
-
-                const message = channelData.messages.find((m) => m.id === oldReaction.message_id);
-                if (!message) return;
-
-                const reactions = (message.reactions || [])
-                  .map((r) => {
-                    if (r.emoji !== oldReaction.emoji) return r;
-                    if (!r.users.includes(effectiveReactionUserId)) return r;
-                    return {
-                      ...r,
-                      count: Math.max(0, r.count - 1),
-                      users: r.users.filter((u) => u !== effectiveReactionUserId),
-                      hasReacted: oldReaction.user_id === currentUserId ? false : r.hasReacted,
-                    };
+              // Hydrate author info asynchronously (no UI delay).
+              if (revealIdentity && !cachedUser && localUser?.id !== newMsg.user_id) {
+                void getOrFetchUser(newMsg.user_id)
+                  .then((u) => {
+                    if (!u) return;
+                    useMessageStore.getState().updateMessage(newMsg.id, { user: u } as Partial<Message>);
                   })
-                  .filter((r) => r.count > 0);
-
-                useMessageStore
-                  .getState()
-                  .updateMessage(oldReaction.message_id, { reactions, channel_id: channelId } as Partial<Message>);
-              } else if (oldReaction.id) {
-                // Fallback when delete payload is partial.
-                const { messagesByChannel } = useMessageStore.getState();
-                const channelData = messagesByChannel[channelId];
-                if (!channelData) return;
-
-                const messageIds = channelData.messages.filter((m) => (m.reactions?.length ?? 0) > 0).map((m) => m.id);
-                if (messageIds.length === 0) return;
-
-                supabase
-                  .from('reactions')
-                  .select('message_id, user_id, emoji')
-                  .in('message_id', messageIds)
-                  .then(({ data, error }) => {
-                    if (error) {
-                      console.error('[Realtime] Failed to refetch reactions:', error);
-                      return;
-                    }
-
-                    const serverState = useServerStore.getState();
-                    const isGhostMode =
-                      serverState.currentChannel?.id === channelId && !!serverState.currentChannel?.ghost_mode;
-                    const reactionsByMessage = new Map<
-                      string,
-                      { emoji: string; count: number; users: string[]; hasReacted: boolean }[]
-                    >();
-
-                    for (const msgId of messageIds) {
-                      reactionsByMessage.set(msgId, []);
-                    }
-
-                    for (const row of data || []) {
-                      const revealIdentity = canRevealGhostIdentityForUser({
-                        isGhostMode,
-                        authorUserId: row.user_id,
-                        members: serverState.members,
-                        ownerId: serverState.currentServer?.owner_id,
-                      });
-                      const effectiveReactionUserId = revealIdentity
-                        ? row.user_id
-                        : getGhostPseudonymousUserId(row.user_id, channelId);
-
-                      let msgReactions = reactionsByMessage.get(row.message_id);
-                      if (!msgReactions) {
-                        msgReactions = [];
-                        reactionsByMessage.set(row.message_id, msgReactions);
-                      }
-                      const existing = msgReactions.find((r) => r.emoji === row.emoji);
-                      if (existing) {
-                        existing.count++;
-                        existing.users.push(effectiveReactionUserId);
-                        if (row.user_id === currentUserId) existing.hasReacted = true;
-                      } else {
-                        msgReactions.push({
-                          emoji: row.emoji,
-                          count: 1,
-                          users: [effectiveReactionUserId],
-                          hasReacted: row.user_id === currentUserId,
-                        });
-                      }
-                    }
-
-                    const store = useMessageStore.getState();
-                    for (const [msgId, reactions] of reactionsByMessage) {
-                      store.updateMessage(msgId, { reactions, channel_id: channelId } as Partial<Message>);
-                    }
-                  });
+                  .catch(() => undefined);
               }
-            } catch (error) {
-              console.error('[Realtime] Error processing reaction event:', error);
+            } else if (eventType === "UPDATE") {
+              const updated = eventPayload.new;
+              if (!updated?.id || !updated.channel_id) return;
+
+              // Server-side filter should already ensure this, but keep as a guard.
+              if (updated.channel_id !== channelId) return;
+
+              useMessageStore.getState().updateMessage(updated.id, {
+                content: updated.content,
+                edited_at: updated.edited_at,
+                is_pinned: updated.is_pinned ?? false,
+              });
+            } else if (eventType === "DELETE") {
+              const oldData = eventPayload.old as { id?: string; channel_id?: string } | undefined;
+
+              if (oldData?.id) {
+                useMessageStore.getState().removeMessage(oldData.id);
+              }
             }
-          },
-        )
+          } catch (error) {
+            console.error("[Realtime] Error processing message event:", error);
+          }
+        })
+        .on("broadcast", { event: "reactions" }, ({ payload }) => {
+          try {
+            const eventPayload = payload as BroadcastMutationPayload<ReactionBroadcastRow>;
+            const eventType = eventPayload?.op;
+            if (!eventType) return;
+            lastEventAtRef.current = Date.now();
+            const currentUserId = useAuthStore.getState().user?.id;
+
+            if (eventType === "INSERT" || eventType === "UPDATE") {
+              const newReaction = eventPayload.new;
+              if (!newReaction?.message_id || !newReaction?.user_id || !newReaction?.emoji) return;
+              if (newReaction.channel_id && newReaction.channel_id !== channelId) return;
+
+              const serverState = useServerStore.getState();
+              const isGhostMode =
+                serverState.currentChannel?.id === channelId && !!serverState.currentChannel?.ghost_mode;
+              const revealIdentity = canRevealGhostIdentityForUser({
+                isGhostMode,
+                authorUserId: newReaction.user_id,
+                members: serverState.members,
+                ownerId: serverState.currentServer?.owner_id,
+              });
+              const effectiveReactionUserId = revealIdentity
+                ? newReaction.user_id
+                : getGhostPseudonymousUserId(newReaction.user_id, channelId);
+
+              const { messagesByChannel } = useMessageStore.getState();
+              const channelData = messagesByChannel[channelId];
+              if (!channelData) return;
+
+              const messageIndex = channelData.messages.findIndex((m) => m.id === newReaction.message_id);
+              if (messageIndex === -1) return;
+
+              const message = channelData.messages[messageIndex];
+              const reactions = [...(message.reactions || [])];
+              const existingGroup = reactions.find((r) => r.emoji === newReaction.emoji);
+
+              // Look up name from members store so tooltip shows name not UUID
+              const reactionMember = serverState.members.find((m) => m.user_id === newReaction.user_id);
+              const reactionName =
+                reactionMember?.nickname || reactionMember?.user?.display_name || reactionMember?.user?.username;
+
+              if (existingGroup) {
+                if (!existingGroup.users.includes(effectiveReactionUserId)) {
+                  existingGroup.count++;
+                  existingGroup.users.push(effectiveReactionUserId);
+                  if (reactionName) {
+                    existingGroup.userNames = existingGroup.userNames ?? {};
+                    existingGroup.userNames[effectiveReactionUserId] = reactionName;
+                  }
+                }
+                if (newReaction.user_id === currentUserId) {
+                  existingGroup.hasReacted = true;
+                }
+              } else {
+                const userNames: Record<string, string> = {};
+                if (reactionName) userNames[effectiveReactionUserId] = reactionName;
+                reactions.push({
+                  emoji: newReaction.emoji,
+                  count: 1,
+                  users: [effectiveReactionUserId],
+                  userNames,
+                  hasReacted: newReaction.user_id === currentUserId,
+                });
+              }
+
+              useMessageStore
+                .getState()
+                .updateMessage(newReaction.message_id, { reactions, channel_id: channelId } as Partial<Message>);
+              return;
+            }
+
+            if (eventType !== "DELETE") return;
+            const oldReaction = eventPayload.old as ReactionBroadcastRow | undefined;
+            if (oldReaction?.channel_id && oldReaction.channel_id !== channelId) return;
+            if (!oldReaction) return;
+
+            if (oldReaction.message_id && oldReaction.emoji && oldReaction.user_id) {
+              const serverState = useServerStore.getState();
+              const isGhostMode =
+                serverState.currentChannel?.id === channelId && !!serverState.currentChannel?.ghost_mode;
+              const revealIdentity = canRevealGhostIdentityForUser({
+                isGhostMode,
+                authorUserId: oldReaction.user_id,
+                members: serverState.members,
+                ownerId: serverState.currentServer?.owner_id,
+              });
+              const effectiveReactionUserId = revealIdentity
+                ? oldReaction.user_id
+                : getGhostPseudonymousUserId(oldReaction.user_id, channelId);
+
+              const { messagesByChannel } = useMessageStore.getState();
+              const channelData = messagesByChannel[channelId];
+              if (!channelData) return;
+
+              const message = channelData.messages.find((m) => m.id === oldReaction.message_id);
+              if (!message) return;
+
+              const reactions = (message.reactions || [])
+                .map((r) => {
+                  if (r.emoji !== oldReaction.emoji) return r;
+                  if (!r.users.includes(effectiveReactionUserId)) return r;
+                  return {
+                    ...r,
+                    count: Math.max(0, r.count - 1),
+                    users: r.users.filter((u) => u !== effectiveReactionUserId),
+                    hasReacted: oldReaction.user_id === currentUserId ? false : r.hasReacted,
+                  };
+                })
+                .filter((r) => r.count > 0);
+
+              useMessageStore
+                .getState()
+                .updateMessage(oldReaction.message_id, { reactions, channel_id: channelId } as Partial<Message>);
+            } else if (oldReaction.id) {
+              // Fallback when delete payload is partial.
+              const { messagesByChannel } = useMessageStore.getState();
+              const channelData = messagesByChannel[channelId];
+              if (!channelData) return;
+
+              const messageIds = channelData.messages.filter((m) => (m.reactions?.length ?? 0) > 0).map((m) => m.id);
+              if (messageIds.length === 0) return;
+
+              supabase
+                .from("reactions")
+                .select("message_id, user_id, emoji, users(username, display_name)")
+                .in("message_id", messageIds)
+                .then(({ data, error }) => {
+                  if (error) {
+                    console.error("[Realtime] Failed to refetch reactions:", error);
+                    return;
+                  }
+
+                  const serverState = useServerStore.getState();
+                  const isGhostMode =
+                    serverState.currentChannel?.id === channelId && !!serverState.currentChannel?.ghost_mode;
+                  const reactionsByMessage = new Map<
+                    string,
+                    { emoji: string; count: number; users: string[]; hasReacted: boolean }[]
+                  >();
+
+                  for (const msgId of messageIds) {
+                    reactionsByMessage.set(msgId, []);
+                  }
+
+                  for (const row of data || []) {
+                    const revealIdentity = canRevealGhostIdentityForUser({
+                      isGhostMode,
+                      authorUserId: row.user_id,
+                      members: serverState.members,
+                      ownerId: serverState.currentServer?.owner_id,
+                    });
+                    const effectiveReactionUserId = revealIdentity
+                      ? row.user_id
+                      : getGhostPseudonymousUserId(row.user_id, channelId);
+
+                    let msgReactions = reactionsByMessage.get(row.message_id);
+                    if (!msgReactions) {
+                      msgReactions = [];
+                      reactionsByMessage.set(row.message_id, msgReactions);
+                    }
+                    const existing = msgReactions.find((r) => r.emoji === row.emoji);
+                    const resolvedName = (row as any).users?.display_name || (row as any).users?.username;
+                    if (existing) {
+                      existing.count++;
+                      existing.users.push(effectiveReactionUserId);
+                      if (resolvedName) {
+                        existing.userNames = existing.userNames ?? {};
+                        existing.userNames[effectiveReactionUserId] = resolvedName;
+                      }
+                      if (row.user_id === currentUserId) existing.hasReacted = true;
+                    } else {
+                      const userNames: Record<string, string> = {};
+                      if (resolvedName) userNames[effectiveReactionUserId] = resolvedName;
+                      msgReactions.push({
+                        emoji: row.emoji,
+                        count: 1,
+                        users: [effectiveReactionUserId],
+                        userNames,
+                        hasReacted: row.user_id === currentUserId,
+                      });
+                    }
+                  }
+
+                  const store = useMessageStore.getState();
+                  for (const [msgId, reactions] of reactionsByMessage) {
+                    store.updateMessage(msgId, { reactions, channel_id: channelId } as Partial<Message>);
+                  }
+                });
+            }
+          } catch (error) {
+            console.error("[Realtime] Error processing reaction event:", error);
+          }
+        })
         .subscribe((status, err) => {
           if (!isActive) return;
           isSettingUpRef.current = false;
-          
-          if (status === 'SUBSCRIBED') {
+
+          if (status === "SUBSCRIBED") {
             isIntentionalClose = false;
             isSubscribedRef.current = true;
-            console.log('[Realtime] Successfully subscribed to messages for channel:', channelId);
+            console.log("[Realtime] Successfully subscribed to messages for channel:", channelId);
             retryCount = 0;
             lastSubscribeAtRef.current = Date.now();
             lastEventAtRef.current = Date.now();
@@ -460,18 +472,18 @@ export const useRealtimeMessages = (channelId: string | null) => {
               lastCatchupFetchAtRef.current = now;
               void store.fetchMessages(channelId, 50, undefined, true, hasCached, true).catch(() => undefined);
             }
-          } else if (status === 'CLOSED') {
+          } else if (status === "CLOSED") {
             isSubscribedRef.current = false;
             // CLOSED is expected during channel switch/unmount cleanup.
             if (!isIntentionalClose) {
-              console.warn('[Realtime] Messages channel closed unexpectedly:', { channelId, status });
+              console.warn("[Realtime] Messages channel closed unexpectedly:", { channelId, status });
               scheduleRetry(status);
             }
-          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
             isSubscribedRef.current = false;
             const details = err as { message?: string; name?: string; cause?: unknown } | undefined;
             if (err) {
-              console.warn('[Realtime] Messages subscribe error:', {
+              console.warn("[Realtime] Messages subscribe error:", {
                 channelId,
                 status,
                 message: details?.message,
@@ -480,7 +492,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
                 details: err,
               });
             } else {
-              console.warn('[Realtime] Messages subscribe status:', { channelId, status });
+              console.warn("[Realtime] Messages subscribe status:", { channelId, status });
             }
             scheduleRetry(status);
           }
@@ -492,7 +504,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
     // Single bounded fallback sync: run only when subscription is unhealthy.
     const broadcastResyncInterval = setInterval(() => {
       if (!isActive) return;
-      if (document.visibilityState !== 'visible') return;
+      if (document.visibilityState !== "visible") return;
       if (isSubscribedRef.current) return;
 
       const now = Date.now();
@@ -506,18 +518,18 @@ export const useRealtimeMessages = (channelId: string | null) => {
 
     // Handle visibility changes to ensure subscription stays active
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && channel) {
+      if (document.visibilityState === "visible" && channel) {
         // Browsers may pause/throttle websocket in background. On restore,
         // best-effort re-establish to avoid "stuck" realtime without refresh.
         try {
           const channelState = (channel as unknown as { state?: string }).state;
-          if (channelState === 'closed' || channelState === 'errored' || channelState === 'timed_out') {
-            console.log('[Realtime] Visibility restored; re-establishing messages subscription');
+          if (channelState === "closed" || channelState === "errored" || channelState === "timed_out") {
+            console.log("[Realtime] Visibility restored; re-establishing messages subscription");
             setupSubscription();
           }
         } catch {
           // If we can't check state, try to re-establish anyway.
-          console.log('[Realtime] Visibility restored; re-establishing messages subscription (state unknown)');
+          console.log("[Realtime] Visibility restored; re-establishing messages subscription (state unknown)");
           setupSubscription();
         }
 
@@ -525,15 +537,15 @@ export const useRealtimeMessages = (channelId: string | null) => {
         // Keep realtime recovery here limited to subscription health.
       }
     };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       isActive = false;
       isIntentionalClose = true;
       isSubscribedRef.current = false;
       isSettingUpRef.current = false;
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       if (retryTimeout) {
         clearTimeout(retryTimeout);
       }
