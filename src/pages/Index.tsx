@@ -214,37 +214,37 @@ const Index = () => {
                     icon: MessageCircle,
                     title: "Real-Time Messaging",
                     description:
-                      "Instant delivery powered by Supabase Realtime. Messages, edits, and deletions sync across all connected clients without refreshing.",
+                      "Your messages arrive instantly. Edits, replies, and reactions update live for everyone in the conversation, no refreshing needed.",
                   },
                   {
                     icon: Headphones,
                     title: "Voice Channels",
                     description:
-                      "WebRTC-based voice with low latency. Join a channel, mute, deafen, and talk to your group while navigating the rest of the app.",
+                      "Jump into a voice channel and talk with your group while browsing the rest of the app. Low latency, always ready when you are.",
                   },
                   {
                     icon: Users,
                     title: "Servers, Roles & Permissions",
                     description:
-                      "Create servers with categories, channels, and custom roles. 30+ granular permissions with channel-level overrides, just like you'd expect.",
+                      "Organize your community with servers, categories, and channels. Assign roles and control exactly who can do what, down to the channel level.",
                   },
                   {
                     icon: Lock,
                     title: "Secret Key Authentication",
                     description:
-                      "No email. No phone number. No password. A single 64-character cryptographic key is your identity. Lost it? It's gone — by design.",
+                      "No email. No phone number. No password. You get one cryptographic key that is your identity. Nobody can recover it, reset it, or take it from you.",
                   },
                   {
                     icon: Shield,
                     title: "Direct Messages & Friends",
                     description:
-                      "Send friend requests by username, manage your list, block users, and have private conversations with full message features.",
+                      "Add friends by username, start private conversations, and block anyone you don't want to hear from. Simple and straightforward.",
                   },
                   {
                     icon: Palette,
                     title: "Themes & Customization",
                     description:
-                      "Switch between multiple themes instantly. Customize your profile with avatars, banners, decorations, bios, and custom statuses.",
+                      "Switch between multiple themes instantly. Personalize your profile with avatars, banners, bios, and custom statuses to make it yours.",
                   },
                 ].map((feature, index) => (
                   <motion.div
