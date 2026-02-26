@@ -41,6 +41,31 @@
   font-display: swap;
 }
 
+/* New Science font family */
+@font-face {
+  font-family: "New Science";
+  src: url("/fonts/NewScience-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "New Science";
+  src: url("/fonts/NewScience-Medium.otf") format("opentype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "New Science";
+  src: url("/fonts/NewScience-SemiBold.otf") format("opentype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* Monaspace Krypton monospace font family */
 @font-face {
   font-family: "Monaspace Krypton";
