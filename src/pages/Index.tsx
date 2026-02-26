@@ -15,7 +15,7 @@ import {
   Gamepad2,
   Music,
   Video,
-} from "lucide-react";
+} from "lucidew-react";
 import { Footer } from "@/components/ui/footer-section";
 import { NavigationMenu } from "@/components/layout/NavigationMenu";
 import HeroAscii from "@/components/landing/HeroAscii";
