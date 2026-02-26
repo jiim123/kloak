@@ -107,7 +107,6 @@ export const HeroImage = () => {
           </motion.div>
         </div>
       </div>
-      </div>
     </section>
   );
 };
