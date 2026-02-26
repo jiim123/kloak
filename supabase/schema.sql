@@ -2496,10 +2496,6 @@ BEGIN
     RAISE EXCEPTION 'User not found';
   END IF;
 
-  IF owner_created_at > now() - interval '10 minutes' THEN
-    RAISE EXCEPTION 'Server creation is temporarily restricted for new accounts';
-  END IF;
-
   SELECT count(*) INTO recent_servers_10m
   FROM public.servers s
   WHERE s.owner_id = _owner_id
