@@ -61,7 +61,7 @@ export const HeroImage = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
             >
-              <h1 className="text-[clamp(1.75rem,7vw,6rem)] font-light tracking-tight text-foreground leading-[1.1]">
+              <h1 className="text-[clamp(1.5rem,5vw,6rem)] font-light tracking-tight text-foreground leading-[1.1]">
                 Communication without
               </h1>
             </motion.div>
@@ -70,7 +70,7 @@ export const HeroImage = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
             >
-              <h1 className="text-[clamp(1.75rem,7vw,6rem)] font-light tracking-tight text-foreground leading-[1.1]">
+              <h1 className="text-[clamp(1.5rem,5vw,6rem)] font-light tracking-tight text-foreground leading-[1.1]">
                 compromise.
               </h1>
             </motion.div>
