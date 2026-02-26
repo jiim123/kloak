@@ -98,7 +98,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
           className={cn("w-full justify-start gap-3 h-11", showFriends && "bg-secondary")}
           onClick={() => {
             setCurrentConversation(null);
-            navigate("/app/friends");
+            onShowFriendsChange(true);
           }}
         >
           <Users className="w-5 h-5" />
@@ -106,7 +106,20 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
         </Button>
       </div>
 
-      {/* Explore Button - disabled */}
+      {/* Explore Button */}
+      <div className="px-2 mb-2">
+        <Button
+          variant="ghost"
+          className={cn("w-full justify-start gap-3 h-11", showExplore && "bg-secondary")}
+          onClick={() => {
+            setCurrentConversation(null);
+            onShowExploreChange(true);
+          }}
+        >
+          <Compass className="w-5 h-5" />
+          <span>Explore</span>
+        </Button>
+      </div>
 
       {/* Search */}
       <div className="p-2">

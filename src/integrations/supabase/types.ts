@@ -1876,6 +1876,7 @@ export type Database = {
           icon_url: string | null
           id: string
           invite_code: string
+          is_verified: boolean
           is_published: boolean
           name: string
           owner_id: string
@@ -1891,6 +1892,7 @@ export type Database = {
           icon_url?: string | null
           id?: string
           invite_code: string
+          is_verified?: boolean
           is_published?: boolean
           name: string
           owner_id: string
@@ -1906,6 +1908,7 @@ export type Database = {
           icon_url?: string | null
           id?: string
           invite_code?: string
+          is_verified?: boolean
           is_published?: boolean
           name?: string
           owner_id?: string

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Users, Compass } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
+const PAGE_SIZE = 12;
+
 type ExploreServer = {
   id: string;
   name: string;
@@ -19,14 +21,42 @@ type ExploreServer = {
   created_at: string | null;
   owner_id: string;
   is_published: boolean;
+  is_verified: boolean;
   about: string | null;
   member_count: number;
 };
 
 export const ExploreServers = () => {
+  return <ExploreServersOriginal />;
+};
+
+const LazyCardMount = ({ children }: { children: ReactNode }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const [hasObserved, setHasObserved] = useState(false);
+  const cardRef = (node: HTMLDivElement | null) => {
+    if (!node || hasObserved) return;
+    setHasObserved(true);
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '160px 0px' },
+    );
+
+    observer.observe(node);
+  };
+
   return (
-    <div className="flex-1 flex items-center justify-center text-muted-foreground">
-      <p>Explore is currently disabled.</p>
+    <div ref={cardRef}>
+      {isVisible ? (
+        children
+      ) : (
+        <div className="h-[260px] rounded-2xl border border-border/40 bg-card/30" />
+      )}
     </div>
   );
 };
@@ -39,6 +69,7 @@ const ExploreServersOriginal = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [query, setQuery] = useState('');
   const [items, setItems] = useState<ExploreServer[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const myServerIds = useMemo(() => new Set(myServers.map((s) => s.id)), [myServers]);
 
@@ -69,6 +100,7 @@ const ExploreServersOriginal = () => {
           owner_id: row.owner_id,
           created_at: row.created_at,
           is_published: !!row.is_published,
+          is_verified: !!row.is_verified,
           about: row.about ?? null,
           member_count: Number(row.member_count) ?? 0,
         }));
@@ -126,6 +158,10 @@ const ExploreServersOriginal = () => {
   const handleJoin = async (server: ExploreServer) => {
     if (!user?.id) return;
     if (myServerIds.has(server.id)) return;
+    if (!server.invite_code) {
+      toast.error('This server is missing an invite code');
+      return;
+    }
 
     const joined = await joinServer(server.invite_code, user.id, 'discover');
     if (!joined) {
@@ -138,6 +174,17 @@ const ExploreServersOriginal = () => {
     setCurrentServer(joined);
     navigate(`/app/servers/${joined.id}`);
   };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [query, items.length]);
+
+  const verifiedServers = filtered.filter((s) => s.is_verified);
+  const regularServers = filtered.filter((s) => !s.is_verified);
+  const regularTotalPages = Math.max(1, Math.ceil(regularServers.length / PAGE_SIZE));
+  const safeRegularPage = Math.min(currentPage, regularTotalPages);
+  const regularPageStart = (safeRegularPage - 1) * PAGE_SIZE;
+  const paginated = regularServers.slice(regularPageStart, regularPageStart + PAGE_SIZE);
 
   return (
     <div className="h-full flex flex-col bg-layout-chat overflow-hidden">
@@ -265,102 +312,203 @@ const ExploreServersOriginal = () => {
             )}
           </motion.div>
         ) : (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.6 }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
-          >
-            {filtered.map((s, index) => {
-              const joined = myServerIds.has(s.id);
-              const tags = extractTags(s.about);
-              return (
+          <div className="space-y-6">
+            {verifiedServers.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-foreground">Verified Servers</h3>
+                  <span className="text-xs text-muted-foreground">{verifiedServers.length}</span>
+                </div>
                 <motion.div
-                  key={s.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: index * 0.05 }}
-                  whileHover={{ y: -4, transition: { duration: 0.2 } }}
-                  className={cn(
-                    "relative rounded-2xl border border-border/60 bg-card/40 overflow-hidden",
-                    "hover:bg-card/60 transition-colors cursor-pointer group",
-                  )}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5, delay: 0.5 }}
+                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
                 >
-                  {/* Banner */}
-                  <div className="relative h-24 w-full overflow-hidden">
-                    {s.banner_url ? (
-                      <img
-                        src={s.banner_url}
-                        alt=""
-                        className="h-full w-full object-cover"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="h-full w-full bg-gradient-to-br from-secondary/60 via-secondary/40 to-secondary/20" />
-                    )}
-                    {/* subtle vignette like the reference */}
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/20 to-black/40" />
-                  </div>
-
-                  {/* Floating icon (centered, overlaps banner like the reference) */}
-                  <div className="absolute left-1/2 top-[76px] -translate-x-1/2">
-                    <div className="w-16 h-16 rounded-full bg-background/80 backdrop-blur border border-border shadow-lg overflow-hidden flex items-center justify-center">
-                      <div className="w-14 h-14 rounded-full bg-secondary overflow-hidden flex items-center justify-center">
-                        {s.icon_url ? (
-                          <img src={s.icon_url} alt={s.name} className="w-full h-full object-cover" loading="lazy" />
-                        ) : (
-                          <span className="text-sm font-bold text-foreground">{getInitials(s.name)}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Body */}
-                  <div className="px-4 pb-4 pt-12">
-                    <div className="flex flex-col items-center text-center">
-                      <div className="text-base font-semibold text-foreground truncate w-full">{s.name}</div>
-                      {s.about && (
-                        <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                          {s.about}
+                  {verifiedServers.map((s, index) => {
+                    const joined = myServerIds.has(s.id);
+                    const tags = extractTags(s.about);
+                    return (
+                      <LazyCardMount key={s.id}>
+                        <div
+                          className={cn(
+                            "relative rounded-2xl border border-primary/40 bg-card/40 overflow-hidden",
+                            "bg-card/40 cursor-pointer group",
+                          )}
+                        >
+                          <div className="absolute right-2 top-2 z-10 px-2 py-0.5 rounded-full bg-primary/90 text-primary-foreground text-[10px] font-semibold">
+                            VERIFIED
+                          </div>
+                          <div className="relative h-24 w-full overflow-hidden">
+                            {s.banner_url ? (
+                              <img src={s.banner_url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                            ) : (
+                              <div className="h-full w-full bg-gradient-to-br from-secondary/60 via-secondary/40 to-secondary/20" />
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/20 to-black/40" />
+                          </div>
+                          <div className="absolute left-1/2 top-[76px] -translate-x-1/2">
+                            <div className="w-16 h-16 rounded-full bg-background/80 backdrop-blur border border-border shadow-lg overflow-hidden flex items-center justify-center">
+                              <div className="w-14 h-14 rounded-full bg-secondary overflow-hidden flex items-center justify-center">
+                                {s.icon_url ? (
+                                  <img src={s.icon_url} alt={s.name} className="w-full h-full object-cover" loading="lazy" />
+                                ) : (
+                                  <span className="text-sm font-bold text-foreground">{getInitials(s.name)}</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="px-4 pb-4 pt-12">
+                            <div className="flex flex-col items-center text-center">
+                              <div className="text-base font-semibold text-foreground truncate w-full">{s.name}</div>
+                              {s.about && <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{s.about}</div>}
+                            </div>
+                            {tags.length > 0 && (
+                              <div className="mt-3 flex flex-wrap gap-2 justify-center">
+                                {tags.map((t) => (
+                                  <span
+                                    key={t}
+                                    className="px-2 py-0.5 rounded-full text-[11px] bg-secondary/60 text-muted-foreground border border-border/40"
+                                  >
+                                    {t}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            <div className="mt-3 flex items-center justify-between text-xs">
+                              <div className="text-muted-foreground flex items-center gap-1.5">
+                                <Users className="w-3.5 h-3.5" />
+                                <span>{s.member_count} member{s.member_count === 1 ? '' : 's'}</span>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant={joined ? 'secondary' : 'default'}
+                                disabled={joined}
+                                onClick={() => handleJoin(s)}
+                                className="h-7 px-3 text-xs"
+                              >
+                                {joined ? 'Joined' : 'Join'}
+                              </Button>
+                            </div>
+                          </div>
                         </div>
-                      )}
-                    </div>
-
-                    {/* Tag chips (derived from #tags in about, if present) */}
-                    {tags.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-2 justify-center">
-                        {tags.map((t) => (
-                          <span
-                            key={t}
-                            className="px-2 py-0.5 rounded-full text-[11px] bg-secondary/60 text-muted-foreground border border-border/40"
-                          >
-                            {t}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Footer row */}
-                    <div className="mt-3 flex items-center justify-between text-xs">
-                      <div className="text-muted-foreground flex items-center gap-1.5">
-                        <Users className="w-3.5 h-3.5" />
-                        <span>{s.member_count} member{s.member_count === 1 ? '' : 's'}</span>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant={joined ? 'secondary' : 'default'}
-                        disabled={joined}
-                        onClick={() => handleJoin(s)}
-                        className="h-7 px-3 text-xs"
-                      >
-                        {joined ? 'Joined' : 'Join'}
-                      </Button>
-                    </div>
-                  </div>
+                      </LazyCardMount>
+                    );
+                  })}
                 </motion.div>
-              );
-            })}
-          </motion.div>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-foreground">All Servers</h3>
+                <span className="text-xs text-muted-foreground">{regularServers.length}</span>
+              </div>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.6 }}
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+              >
+                {paginated.map((s, index) => {
+                  const joined = myServerIds.has(s.id);
+                  const tags = extractTags(s.about);
+                  return (
+                    <LazyCardMount key={s.id}>
+                      <div
+                        className={cn(
+                          "relative rounded-2xl border border-border/60 bg-card/40 overflow-hidden",
+                          "bg-card/40 cursor-pointer group",
+                        )}
+                      >
+                        <div className="relative h-24 w-full overflow-hidden">
+                          {s.banner_url ? (
+                            <img src={s.banner_url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                          ) : (
+                            <div className="h-full w-full bg-gradient-to-br from-secondary/60 via-secondary/40 to-secondary/20" />
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/20 to-black/40" />
+                        </div>
+                        <div className="absolute left-1/2 top-[76px] -translate-x-1/2">
+                          <div className="w-16 h-16 rounded-full bg-background/80 backdrop-blur border border-border shadow-lg overflow-hidden flex items-center justify-center">
+                            <div className="w-14 h-14 rounded-full bg-secondary overflow-hidden flex items-center justify-center">
+                              {s.icon_url ? (
+                                <img src={s.icon_url} alt={s.name} className="w-full h-full object-cover" loading="lazy" />
+                              ) : (
+                                <span className="text-sm font-bold text-foreground">{getInitials(s.name)}</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="px-4 pb-4 pt-12">
+                          <div className="flex flex-col items-center text-center">
+                            <div className="text-base font-semibold text-foreground truncate w-full">{s.name}</div>
+                            {s.about && <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{s.about}</div>}
+                          </div>
+                          {tags.length > 0 && (
+                            <div className="mt-3 flex flex-wrap gap-2 justify-center">
+                              {tags.map((t) => (
+                                <span
+                                  key={t}
+                                  className="px-2 py-0.5 rounded-full text-[11px] bg-secondary/60 text-muted-foreground border border-border/40"
+                                >
+                                  {t}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          <div className="mt-3 flex items-center justify-between text-xs">
+                            <div className="text-muted-foreground flex items-center gap-1.5">
+                              <Users className="w-3.5 h-3.5" />
+                              <span>{s.member_count} member{s.member_count === 1 ? '' : 's'}</span>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant={joined ? 'secondary' : 'default'}
+                              disabled={joined}
+                              onClick={() => handleJoin(s)}
+                              className="h-7 px-3 text-xs"
+                            >
+                              {joined ? 'Joined' : 'Join'}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </LazyCardMount>
+                  );
+                })}
+              </motion.div>
+            </div>
+          </div>
+        )}
+
+        {!isLoading && regularServers.length > 0 && (
+          <div className="pt-2 flex items-center justify-between gap-3 flex-wrap">
+            <div className="text-xs text-muted-foreground">
+              Showing {regularPageStart + 1}-{Math.min(regularPageStart + PAGE_SIZE, regularServers.length)} of {regularServers.length}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={safeRegularPage <= 1}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              >
+                Previous
+              </Button>
+              <div className="text-xs text-muted-foreground min-w-[88px] text-center">
+                Page {safeRegularPage} of {regularTotalPages}
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={safeRegularPage >= regularTotalPages}
+                onClick={() => setCurrentPage((p) => Math.min(regularTotalPages, p + 1))}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
         )}
         </div>
       </div>
