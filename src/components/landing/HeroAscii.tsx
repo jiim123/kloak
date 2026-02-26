@@ -42,56 +42,51 @@ export const HeroImage = () => {
   return (
     <section ref={sectionRef} className="relative overflow-hidden bg-[hsl(var(--neutral-0))]">
       {/* Top hero area — 75vh */}
-      <div className="relative h-[75vh]">
-        {/* Main content */}
-        <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-4 sm:px-6">
-          <div className="w-full max-w-4xl mx-auto text-center break-words">
-            {/* Pre-title */}
-            <motion.p
-              initial={{ opacity: 0, y: 10 }}
+      <div className="relative h-[75vh] flex flex-col items-center justify-center px-4 sm:px-6">
+        <div className="w-full max-w-4xl mx-auto text-center">
+          {/* Pre-title */}
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="text-[10px] sm:text-xs uppercase tracking-[0.3em] text-foreground/60 mb-6 sm:mb-8 md:mb-12"
+          >
+            Privacy-first communication
+          </motion.p>
+
+          {/* Main title */}
+          <div className="mb-6 sm:mb-8 md:mb-12">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-xs uppercase tracking-[0.3em] text-foreground/60 mb-8 md:mb-12"
+              transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
             >
-              Privacy-first communication
-            </motion.p>
-
-            {/* Main title */}
-            <div className="mb-8 md:mb-12">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-              >
-                <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tight text-foreground leading-[1.1]">
-                  Communication without
-                </h1>
-              </motion.div>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
-              >
-                <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tight text-foreground leading-[1.1]">
-                  compromise.
-                </h1>
-              </motion.div>
-            </div>
-
-            {/* Subtitle */}
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.8, delay: 0.8 }}
-              className="text-base md:text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed font-light"
+              <h1 className="text-[clamp(1.75rem,7vw,6rem)] font-light tracking-tight text-foreground leading-[1.1]">
+                Communication without
+              </h1>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
             >
-              Where your conversations actually belong to you.
-            </motion.p>
+              <h1 className="text-[clamp(1.75rem,7vw,6rem)] font-light tracking-tight text-foreground leading-[1.1]">
+                compromise.
+              </h1>
+            </motion.div>
           </div>
-        </div>
 
-        {/* CTA - outside blend mode container so buttons render normally */}
-        <div className="absolute bottom-0 left-0 right-0 z-20 flex justify-center pb-12 md:pb-24">
+          {/* Subtitle */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.8 }}
+            className="text-sm sm:text-base md:text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed font-light mb-8"
+          >
+            Where your conversations actually belong to you.
+          </motion.p>
+
+          {/* CTA */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
