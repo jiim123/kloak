@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
+import HCaptcha from "@hcaptcha/react-hcaptcha";
 import { useAuthStore, initializeAuth } from "@/stores/authStore";
 import { markWelcomeSeen } from "@/lib/storage";
 import {
@@ -85,6 +86,10 @@ const Auth = () => {
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([]);
   const [rateLimitCooldown, setRateLimitCooldown] = useState<number | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaError, setCaptchaError] = useState<string | null>(null);
+  const captchaRef = useRef<HCaptcha | null>(null);
+  const hcaptchaSiteKey = import.meta.env.VITE_HCAPTCHA_SITE_KEY as string | undefined;
 
   // Login state
   const [secretKey, setSecretKey] = useState("");
@@ -147,6 +152,9 @@ const Auth = () => {
     setSecretKey("");
     setGeneratedKey(null);
     setUsernameSuggestions([]);
+    setCaptchaToken(null);
+    setCaptchaError(null);
+    captchaRef.current?.resetCaptcha();
   }, [activeTab, setError]);
 
   // Rate limit cooldown countdown
@@ -226,21 +234,37 @@ const Auth = () => {
       return;
     }
 
+    if (!hcaptchaSiteKey) {
+      setError("Registration is not configured. Missing VITE_HCAPTCHA_SITE_KEY.");
+      return;
+    }
+
+    if (!captchaToken) {
+      setCaptchaError("Please complete the captcha challenge.");
+      return;
+    }
+
     try {
       recordRegistrationAttempt();
 
       // Set modal flag BEFORE createAccount so the redirect useEffect
       // won't navigate away when the user is set in the store.
       setShowWelcomeModal(true);
-      const result = await createAccount(username.trim().toLowerCase());
+      const result = await createAccount(username.trim().toLowerCase(), captchaToken);
       if (result) {
         setGeneratedKey(result.secretKey);
       } else {
         setShowWelcomeModal(false);
+        setCaptchaToken(null);
+        setCaptchaError(null);
+        captchaRef.current?.resetCaptcha();
       }
     } catch (err) {
       console.error("Account creation error:", err);
       setShowWelcomeModal(false);
+      setCaptchaToken(null);
+      setCaptchaError(null);
+      captchaRef.current?.resetCaptcha();
       toast({
         variant: "destructive",
         title: "Account creation failed",
@@ -493,6 +517,34 @@ const Auth = () => {
                           {renderUsernameHelperText()}
                           {renderUsernameSuggestions()}
                         </div>
+                        <div className="space-y-2">
+                          {!hcaptchaSiteKey ? (
+                            <p className="text-xs text-destructive">
+                              Registration captcha is not configured. Missing `VITE_HCAPTCHA_SITE_KEY`.
+                            </p>
+                          ) : (
+                            <>
+                              <HCaptcha
+                                ref={captchaRef}
+                                sitekey={hcaptchaSiteKey}
+                                onVerify={(token) => {
+                                  setCaptchaToken(token);
+                                  setCaptchaError(null);
+                                  setError(null);
+                                }}
+                                onExpire={() => {
+                                  setCaptchaToken(null);
+                                  setCaptchaError("Captcha expired. Please verify again.");
+                                }}
+                                onError={() => {
+                                  setCaptchaToken(null);
+                                  setCaptchaError("Captcha failed to load. Please retry.");
+                                }}
+                              />
+                              {captchaError ? <p className="text-xs text-destructive">{captchaError}</p> : null}
+                            </>
+                          )}
+                        </div>
 
                         <Button
                           type="submit"
@@ -501,6 +553,8 @@ const Auth = () => {
                             MAINTENANCE_MODE ||
                             isLoading ||
                             !!usernameError ||
+                            !hcaptchaSiteKey ||
+                            !captchaToken ||
                             (rateLimitCooldown !== null && rateLimitCooldown > 0)
                           }
                         >
@@ -706,6 +760,34 @@ const Auth = () => {
                           {renderUsernameHelperText()}
                           {renderUsernameSuggestions()}
                         </div>
+                        <div className="space-y-2">
+                          {!hcaptchaSiteKey ? (
+                            <p className="text-xs text-destructive">
+                              Registration captcha is not configured. Missing `VITE_HCAPTCHA_SITE_KEY`.
+                            </p>
+                          ) : (
+                            <>
+                              <HCaptcha
+                                ref={captchaRef}
+                                sitekey={hcaptchaSiteKey}
+                                onVerify={(token) => {
+                                  setCaptchaToken(token);
+                                  setCaptchaError(null);
+                                  setError(null);
+                                }}
+                                onExpire={() => {
+                                  setCaptchaToken(null);
+                                  setCaptchaError("Captcha expired. Please verify again.");
+                                }}
+                                onError={() => {
+                                  setCaptchaToken(null);
+                                  setCaptchaError("Captcha failed to load. Please retry.");
+                                }}
+                              />
+                              {captchaError ? <p className="text-xs text-destructive">{captchaError}</p> : null}
+                            </>
+                          )}
+                        </div>
 
                         <Button
                           type="submit"
@@ -714,6 +796,8 @@ const Auth = () => {
                             MAINTENANCE_MODE ||
                             isLoading ||
                             !!usernameError ||
+                            !hcaptchaSiteKey ||
+                            !captchaToken ||
                             (rateLimitCooldown !== null && rateLimitCooldown > 0)
                           }
                         >

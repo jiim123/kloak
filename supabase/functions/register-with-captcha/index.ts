@@ -144,6 +144,12 @@ function hostMatches(requestHost: string, verifyHost: string): boolean {
   return left === right || left.endsWith(`.${right}`) || right.endsWith(`.${left}`);
 }
 
+async function sha256Hex(input: string): Promise<string> {
+  const data = new TextEncoder().encode(input);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(hashBuffer), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 Deno.serve(async (req) => {
   const debugId = requestDebugId();
   const requestOrigin = getRequestOrigin(req);
@@ -175,21 +181,32 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_HCAPTCHA_SITE_KEY"),
     Deno.env.get("VITE_HCAPTCHA_SITE_KEY"),
   ])[0];
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceRoleKey = uniqueNonEmpty([
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
+    Deno.env.get("SERVICE_ROLE_KEY"),
+  ])[0] ?? "";
 
-  if (!secret) {
-    console.error("[register-with-captcha] Missing hCaptcha secret env", {
+  if (!secret || !supabaseUrl || !serviceRoleKey) {
+    console.error("[register-with-captcha] Missing runtime env", {
       debugId,
       envVisible: {
         SUPABASE_HCAPTCHA_SECRET_KEY: !!Deno.env.get("SUPABASE_HCAPTCHA_SECRET_KEY"),
         HCAPTCHA_SECRET_KEY: !!Deno.env.get("HCAPTCHA_SECRET_KEY"),
         HCAPTCHA_SECRET: !!Deno.env.get("HCAPTCHA_SECRET"),
         CAPTCHA_SECRET_KEY: !!Deno.env.get("CAPTCHA_SECRET_KEY"),
+        SUPABASE_URL: !!Deno.env.get("SUPABASE_URL"),
+        SUPABASE_SERVICE_ROLE_KEY: !!Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
+        SERVICE_ROLE_KEY: !!Deno.env.get("SERVICE_ROLE_KEY"),
       },
       expectedAnyOf: [
         "SUPABASE_HCAPTCHA_SECRET_KEY",
         "HCAPTCHA_SECRET_KEY",
         "HCAPTCHA_SECRET",
         "CAPTCHA_SECRET_KEY",
+        "SUPABASE_URL",
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "SERVICE_ROLE_KEY",
       ],
     });
     return jsonResponse(500, { error: "Server configuration error" }, requestOrigin);
@@ -208,6 +225,64 @@ Deno.serve(async (req) => {
     }
 
     const canonicalIp = getCanonicalClientIp(req);
+    const normalizedUsername = username.toLowerCase().trim();
+    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+    // Edge-level rate limiting to block bursts before account creation RPC.
+    const clientScope = canonicalIp
+      ? `ip:${(await sha256Hex(canonicalIp)).slice(0, 32)}`
+      : `kh:${key_hash.toLowerCase().slice(0, 16)}`;
+    const usernameScope = `un:${(await sha256Hex(normalizedUsername)).slice(0, 32)}`;
+    const rateLimitChecks = [
+      {
+        scope: clientScope,
+        action: "edge_register_with_captcha_burst",
+        maxAttempts: 6,
+        windowSeconds: 60,
+        message: "Too many registration attempts. Please wait a minute and try again.",
+      },
+      {
+        scope: clientScope,
+        action: "edge_register_with_captcha_hourly",
+        maxAttempts: 20,
+        windowSeconds: 3600,
+        message: "Registration temporarily limited. Please try again later.",
+      },
+      {
+        scope: usernameScope,
+        action: "edge_register_with_captcha_username",
+        maxAttempts: 4,
+        windowSeconds: 600,
+        message: "Too many attempts for this username. Please wait and try again.",
+      },
+    ];
+    for (const check of rateLimitChecks) {
+      const { data: allowed, error: rateError } = await supabase.rpc("check_rate_limit", {
+        _ip_hash: check.scope,
+        _action: check.action,
+        _max_attempts: check.maxAttempts,
+        _window_seconds: check.windowSeconds,
+      });
+      if (rateError) {
+        console.error("[register-with-captcha] check_rate_limit rpc failed", {
+          debugId,
+          scope: check.scope,
+          action: check.action,
+          error: rateError.message,
+        });
+        return jsonResponse(
+          503,
+          { error: "Registration protection temporarily unavailable. Please retry shortly." },
+          requestOrigin,
+        );
+      }
+      if (!allowed) {
+        return jsonResponse(429, { error: check.message }, requestOrigin);
+      }
+    }
+
     let verifyRes: Response;
     try {
       const verifyBody = new URLSearchParams({
@@ -235,8 +310,10 @@ Deno.serve(async (req) => {
 
     const verifyJson = (await verifyRes.json()) as HCaptchaVerifyResponse;
     if (!verifyJson.success) {
-      console.warn("hCaptcha verification failed:", verifyJson["error-codes"]);
-      return jsonResponse(400, { error: "Captcha verification failed. Please try again." }, requestOrigin);
+      const errorCodes = verifyJson["error-codes"]?.filter(Boolean) ?? [];
+      console.warn("hCaptcha verification failed:", { debugId, errorCodes });
+      const detail = errorCodes.length > 0 ? `: ${errorCodes.join(", ")}` : "";
+      return jsonResponse(400, { error: `Captcha verification failed${detail}` }, requestOrigin);
     }
 
     if (requestOrigin && verifyJson.hostname) {
@@ -247,72 +324,19 @@ Deno.serve(async (req) => {
           requestHost,
           captchaHostname: verifyJson.hostname,
         });
-        return jsonResponse(400, { error: "Captcha verification failed. Please try again." }, requestOrigin);
+        return jsonResponse(
+          400,
+          { error: `Captcha hostname mismatch (request=${requestHost}, captcha=${verifyJson.hostname})` },
+          requestOrigin,
+        );
       }
     }
 
-    const supabaseInternalUrl = Deno.env.get("SUPABASE_INTERNAL_URL");
-    const supabaseExternalUrl = Deno.env.get("SUPABASE_URL");
-    const candidateUrls = uniqueNonEmpty([supabaseInternalUrl, supabaseExternalUrl]);
-    const serviceRoleKey = uniqueNonEmpty([
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
-      Deno.env.get("SERVICE_ROLE_KEY"),
-    ])[0] ?? "";
-    if (candidateUrls.length === 0 || !serviceRoleKey) {
-      console.error("[register-with-captcha] Missing Supabase runtime env", {
-        debugId,
-        hasCandidateUrl: candidateUrls.length > 0,
-        candidateUrlCount: candidateUrls.length,
-        hasServiceRoleKey: !!serviceRoleKey,
-        envVisible: {
-          SUPABASE_INTERNAL_URL: !!Deno.env.get("SUPABASE_INTERNAL_URL"),
-          SUPABASE_URL: !!Deno.env.get("SUPABASE_URL"),
-          SUPABASE_SERVICE_ROLE_KEY: !!Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
-          SERVICE_ROLE_KEY: !!Deno.env.get("SERVICE_ROLE_KEY"),
-        },
-      });
-      return jsonResponse(500, { error: "Server configuration error" }, requestOrigin);
-    }
-    const rpcHeaders: Record<string, string> = {};
-    if (canonicalIp) {
-      rpcHeaders["x-real-ip"] = canonicalIp;
-      rpcHeaders["x-forwarded-for"] = canonicalIp;
-      rpcHeaders["cf-connecting-ip"] = canonicalIp;
-    }
-
-    const normalizedUsername = username.toLowerCase().trim();
-    let data: Record<string, unknown> | null = null;
-    let error: { message?: string } | null = null;
-    const networkErrors: string[] = [];
-    for (const candidateUrl of candidateUrls) {
-      const supabase = createClient(candidateUrl, serviceRoleKey, {
-        global: { headers: rpcHeaders },
-      });
-
-      try {
-        const rpcResult = await supabase.rpc("register_user", {
-          _username: normalizedUsername,
-          _key_hash: key_hash,
-          _banner_color: banner_color ?? "#5865F2",
-        });
-        data = (rpcResult.data as Record<string, unknown> | null) ?? null;
-        error = rpcResult.error;
-        // Stop at first reachable endpoint, regardless of business error.
-        break;
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        networkErrors.push(`${candidateUrl}: ${msg}`);
-      }
-    }
-
-    if (networkErrors.length === candidateUrls.length) {
-      console.error("register_user rpc network failures:", networkErrors);
-      return jsonResponse(
-        502,
-        { error: `register_user rpc network failure: ${networkErrors.join(" | ")}` },
-        requestOrigin,
-      );
-    }
+    const { data, error } = await supabase.rpc("register_user", {
+      _username: normalizedUsername,
+      _key_hash: key_hash,
+      _banner_color: banner_color ?? "#5865F2",
+    });
 
     if (error) {
       const errMsg = error.message ?? "";

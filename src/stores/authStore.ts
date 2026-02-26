@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { getKeyHash, supabase, setKeyHashHeader } from "@/integrations/supabase/client";
-import { generateSecretKey, hashSecretKey, isValidSecretKey, fetchPoWChallenge, solvePoWChallenge } from "@/lib/crypto";
+import { generateSecretKey, hashSecretKey, isValidSecretKey } from "@/lib/crypto";
 import { authRateLimiter, accountCreationRateLimiter, validateUsername } from "@/lib/security";
 import { setUserInCache, invalidateUser } from "@/lib/userCache";
 import type { User, UserStatus } from "@/types";
@@ -43,7 +43,7 @@ interface AuthState {
 
   // Auth methods
   checkAuth: () => Promise<boolean>;
-  createAccount: (username: string) => Promise<{ secretKey: string; user: User } | null>;
+  createAccount: (username: string, hcaptchaResponse: string) => Promise<{ secretKey: string; user: User } | null>;
   login: (secretKey: string) => Promise<boolean>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => Promise<void>;
@@ -95,7 +95,7 @@ export const useAuthStore = create<AuthState>()(
         return success;
       },
 
-      createAccount: async (username: string) => {
+      createAccount: async (username: string, hcaptchaResponse: string) => {
         set({ isLoading: true, error: null });
 
         // Rate limit account creation to prevent abuse
@@ -126,24 +126,43 @@ export const useAuthStore = create<AuthState>()(
             return null;
           }
 
-          // Solve Proof of Work challenge
-          const challenge = await fetchPoWChallenge();
-          const solution = await solvePoWChallenge(challenge.nonce, challenge.difficulty);
-
           let data: Record<string, unknown> | null = null;
           let errorMessage: string | null = null;
-          const res = await fetch(`${supabaseUrl}/functions/v1/register-with-pow`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              username: normalizedUsername,
-              key_hash: keyHash,
-              challenge_id: challenge.id,
-              solution,
-              banner_color: bannerColor,
-            }),
-          });
-          const json = (await res.json()) as { data?: Record<string, unknown>; error?: string };
+          let res: Response;
+          try {
+            res = await fetch(`${supabaseUrl}/functions/v1/register-with-captcha`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                username: normalizedUsername,
+                key_hash: keyHash,
+                hcaptcha_response: hcaptchaResponse,
+                banner_color: bannerColor,
+              }),
+            });
+          } catch (fetchError) {
+            const msg = fetchError instanceof Error ? fetchError.message : "Network request failed";
+            set({
+              error:
+                "Registration endpoint unreachable. Check REGISTER_ALLOWED_ORIGINS/CORS and network connectivity.",
+              isLoading: false,
+            });
+            console.error("Registration fetch failed:", msg);
+            return null;
+          }
+
+          let json: { data?: Record<string, unknown>; error?: string } = {};
+          const responseText = await res.text();
+          if (responseText) {
+            try {
+              json = JSON.parse(responseText) as { data?: Record<string, unknown>; error?: string };
+            } catch {
+              json = {
+                error: `Registration failed with HTTP ${res.status}. Non-JSON response from edge function.`,
+              };
+            }
+          }
+
           if (!res.ok) {
             errorMessage = json.error ?? "Registration failed";
           } else {
