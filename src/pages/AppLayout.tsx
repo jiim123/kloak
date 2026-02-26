@@ -69,6 +69,7 @@ import { useBackgroundSync } from "@/hooks/useBackgroundSync";
 import { usePreferencesSync } from "@/hooks/usePreferencesSync";
 import type { User } from "@/types";
 import { PresenceDebugOverlay } from "@/components/debug/PresenceDebugOverlay";
+import { RealtimeDebugOverlay } from "@/components/debug/RealtimeDebugOverlay";
 import { SEO } from "@/components/seo";
 import { resizeWindowForApp } from "@/lib/tauriRuntime";
 import { MAINTENANCE_MODE } from "@/lib/maintenance";
@@ -724,6 +725,7 @@ const AppLayout = () => {
 
         {/* Dev-only presence diagnostics overlay (toggle via localStorage) */}
         <PresenceDebugOverlay />
+        <RealtimeDebugOverlay />
 
         {/* Nested route placeholder (AppLayout is the /app layout route) */}
         <Outlet />

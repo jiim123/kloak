@@ -12,6 +12,24 @@ interface UseRealtimeDMsOptions {
   onNewMessage?: (message: DirectMessage, conversationId: string) => void;
 }
 
+type BroadcastMutationOp = 'INSERT' | 'UPDATE' | 'DELETE';
+
+type DirectMessageRealtimeRow = {
+  id?: string;
+  conversation_id?: string;
+  sender_id?: string;
+  content?: string | null;
+  created_at?: string;
+  edited_at?: string | null;
+  reply_to_id?: string | null;
+};
+
+type BroadcastMutationPayload<T> = {
+  op?: BroadcastMutationOp;
+  new?: T;
+  old?: T;
+};
+
 const groupReactions = (reactions: any[], currentUserId?: string): ReactionGroup[] => {
   const groups: Record<string, ReactionGroup> = {};
 
@@ -39,25 +57,80 @@ export const useRealtimeDMs = ({
   currentConversationId,
   onNewMessage,
 }: UseRealtimeDMsOptions) => {
-  const { addMessage, updateMessage, removeMessage, updateConversation, fetchConversations } = useDMStore();
+  const { addMessage, updateMessage, removeMessage, updateConversation, fetchConversations, fetchMessages } =
+    useDMStore();
   const conversationIdsRef = useRef<Set<string>>(new Set());
 
   const onNewMessageRef = useRef(onNewMessage);
   onNewMessageRef.current = onNewMessage;
 
-  // Handle incoming message — use payload.new directly + user cache to avoid re-fetch
+  const hydrateMessageRow = useCallback(
+    async (row: DirectMessageRealtimeRow): Promise<DirectMessageRealtimeRow> => {
+      if (!userId || !row?.id) return row;
+
+      const needsHydration =
+        typeof row.content !== 'string' || row.reply_to_id === undefined || row.edited_at === undefined;
+      if (!needsHydration) return row;
+
+      try {
+        const { data } = await supabase.rpc('get_dm_messages_by_ids_secure', {
+          _message_ids: [row.id],
+          _user_id: userId,
+        });
+        const hydrated = Array.isArray(data) ? (data[0] as DirectMessageRealtimeRow | undefined) : undefined;
+        if (!hydrated) return row;
+        return {
+          ...row,
+          ...hydrated,
+          id: hydrated.id ?? row.id,
+        };
+      } catch {
+        return row;
+      }
+    },
+    [userId],
+  );
+
+  // Handle incoming message. Hydrate sparse payloads before adding to the store.
   const handleNewMessage = useCallback(
     async (payload: any) => {
-      const newMsg = payload.new;
-      if (!newMsg) return;
+      if (!userId) return;
+      const incoming = payload?.new as DirectMessageRealtimeRow | undefined;
+      if (!incoming?.id) return;
+
+      const newMsg = await hydrateMessageRow(incoming);
+      if (!newMsg.conversation_id || !newMsg.sender_id || !newMsg.created_at) return;
+
+      // Legacy publication payload can omit content. Fallback to a full conversation refresh.
+      if (typeof newMsg.content !== 'string') {
+        void fetchMessages(newMsg.conversation_id, userId);
+        return;
+      }
 
       // Avoid redundant self lookups on messages we just sent.
       const localUser = useAuthStore.getState().user;
-      const sender =
-        localUser?.id === newMsg.sender_id ? localUser : await getOrFetchUser(newMsg.sender_id);
-      if (!sender) return;
+      const sender = localUser?.id === newMsg.sender_id ? localUser : await getOrFetchUser(newMsg.sender_id);
+      const senderFallback = {
+        id: newMsg.sender_id,
+        username: 'unknown',
+        display_name: null,
+        avatar_url: null,
+        banner_url: null,
+        avatar_decoration: null,
+        profile_effect: null,
+        banner_color: '#5865F2',
+        profile_theme_primary: null,
+        profile_theme_accent: null,
+        bio: null,
+        status: 'offline',
+        custom_status: null,
+        created_at: new Date().toISOString(),
+        last_seen: null,
+        pronouns: null,
+      } as any;
+      const senderData = sender ?? senderFallback;
 
-      // Check local cache for reply-to
+      // Check local cache for reply-to.
       let reply_to: DirectMessage | null = null;
       if (newMsg.reply_to_id) {
         const cachedMessages = useDMStore.getState().messagesByConversation[newMsg.conversation_id] || [];
@@ -65,7 +138,6 @@ export const useRealtimeDMs = ({
         if (cachedReply) {
           reply_to = cachedReply;
         } else {
-          // Fetch only if not in local state
           const { data: replyRows } = await supabase.rpc('get_dm_messages_by_ids_secure', {
             _message_ids: [newMsg.reply_to_id],
             _user_id: userId,
@@ -76,7 +148,7 @@ export const useRealtimeDMs = ({
               id: replyData.id,
               content: replyData.content,
               sender_id: replyData.sender_id,
-              sender: replyData.sender ? { username: replyData.sender.username } as any : undefined,
+              sender: replyData.sender ? ({ username: replyData.sender.username } as any) : undefined,
             } as DirectMessage;
           }
         }
@@ -88,29 +160,29 @@ export const useRealtimeDMs = ({
         sender_id: newMsg.sender_id,
         content: newMsg.content,
         created_at: newMsg.created_at,
-        edited_at: newMsg.edited_at,
-        reply_to_id: newMsg.reply_to_id,
+        edited_at: newMsg.edited_at ?? null,
+        reply_to_id: newMsg.reply_to_id ?? null,
         reply_to,
         sender: {
-          id: sender.id,
-          username: sender.username,
-          display_name: sender.display_name,
-          avatar_url: sender.avatar_url,
-          banner_url: (sender as any).banner_url ?? null,
-          avatar_decoration: (sender as any).avatar_decoration,
-          profile_effect: (sender as any).profile_effect ?? null,
-          banner_color: (sender as any).banner_color || '#5865F2',
-          profile_theme_primary: (sender as any).profile_theme_primary ?? null,
-          profile_theme_accent: (sender as any).profile_theme_accent ?? null,
-          bio: (sender as any).bio,
-          status: sender.status as any,
-          custom_status: (sender as any).custom_status,
-          created_at: sender.created_at,
-          last_seen: (sender as any).last_seen,
-          pronouns: (sender as any).pronouns ?? null,
+          id: senderData.id,
+          username: senderData.username,
+          display_name: senderData.display_name,
+          avatar_url: senderData.avatar_url,
+          banner_url: (senderData as any).banner_url ?? null,
+          avatar_decoration: (senderData as any).avatar_decoration,
+          profile_effect: (senderData as any).profile_effect ?? null,
+          banner_color: (senderData as any).banner_color || '#5865F2',
+          profile_theme_primary: (senderData as any).profile_theme_primary ?? null,
+          profile_theme_accent: (senderData as any).profile_theme_accent ?? null,
+          bio: (senderData as any).bio,
+          status: senderData.status as any,
+          custom_status: (senderData as any).custom_status,
+          created_at: senderData.created_at,
+          last_seen: (senderData as any).last_seen,
+          pronouns: (senderData as any).pronouns ?? null,
         } as any,
         attachments: [],
-        reactions: [], // New messages have no reactions yet
+        reactions: [],
       };
 
       addMessage(newMsg.conversation_id, message);
@@ -120,33 +192,133 @@ export const useRealtimeDMs = ({
         onNewMessageRef.current(message, newMsg.conversation_id);
       }
     },
-    [addMessage, updateConversation, userId]
+    [addMessage, updateConversation, userId, fetchMessages, hydrateMessageRow],
   );
 
   // Handle message updates (edits)
   const handleMessageUpdate = useCallback(
     (payload: any) => {
-      const updatedData = payload.new;
-      if (updatedData.conversation_id) {
+      const updatedData = payload.new as DirectMessageRealtimeRow | undefined;
+      if (updatedData?.conversation_id && updatedData.id) {
         updateMessage(updatedData.conversation_id, updatedData.id, {
           content: updatedData.content,
           edited_at: updatedData.edited_at,
         });
       }
     },
-    [updateMessage]
+    [updateMessage],
   );
 
   // Handle message deletes
   const handleMessageDelete = useCallback(
     (payload: any) => {
-      const deletedData = payload.old;
-      if (deletedData.conversation_id) {
+      const deletedData = payload.old as DirectMessageRealtimeRow | undefined;
+      if (deletedData?.conversation_id && deletedData.id) {
         removeMessage(deletedData.conversation_id, deletedData.id);
       }
     },
-    [removeMessage]
+    [removeMessage],
   );
+
+  // Preferred path: broadcast events on user-scoped topic.
+  useEffect(() => {
+    if (!userId) return;
+
+    const filter = { event: 'direct_messages', scope: `dms-${userId}` };
+    const channel = supabase.channel(`user:${userId}`).on(
+      'broadcast',
+      filter as { event: string },
+      ({ payload }) => {
+        const eventPayload = payload as BroadcastMutationPayload<DirectMessageRealtimeRow>;
+        const op = eventPayload?.op;
+        if (!op) return;
+
+        if (op === 'INSERT' && eventPayload.new) {
+          void handleNewMessage({ new: eventPayload.new });
+          return;
+        }
+        if (op === 'UPDATE' && eventPayload.new) {
+          handleMessageUpdate({ new: eventPayload.new });
+          return;
+        }
+        if (op === 'DELETE' && eventPayload.old) {
+          handleMessageDelete({ old: eventPayload.old });
+        }
+      },
+    );
+
+    // user:<id> is owned/subscribed by useUnread. Only attach scoped listener here.
+    return () => {
+      (channel as unknown as { _off?: (type: string, filter: Record<string, unknown>) => void })._off?.(
+        'broadcast',
+        filter,
+      );
+    };
+  }, [userId, handleNewMessage, handleMessageUpdate, handleMessageDelete]);
+
+  // Fallback path: Postgres Changes for compatibility until broadcast trigger is deployed.
+  useEffect(() => {
+    if (!userId) return;
+
+    // Prime a local set of conversation IDs for this user to avoid
+    // doing a DB lookup for every global direct_messages event.
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.rpc('get_user_dm_conversation_ids_secure', {
+        _user_id: userId,
+      });
+      if (cancelled) return;
+      conversationIdsRef.current = new Set((Array.isArray(data) ? data : []) as string[]);
+    })();
+
+    const channel = supabase
+      .channel(`all-dms:${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'direct_messages',
+        },
+        (payload) => {
+          const convId = payload.new?.conversation_id as string | undefined;
+          if (!convId) return;
+          if (conversationIdsRef.current.size > 0 && !conversationIdsRef.current.has(convId)) return;
+          void handleNewMessage(payload);
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'direct_messages',
+        },
+        handleMessageUpdate,
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'direct_messages',
+        },
+        handleMessageDelete,
+      )
+      .subscribe((status, err) => {
+        if (status !== 'SUBSCRIBED') {
+          console.log('[Realtime] DM subscription status:', { status, userId, err });
+        }
+        if (err) {
+          console.error('[Realtime] DM subscription error:', err);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [userId, handleNewMessage, handleMessageUpdate, handleMessageDelete, currentConversationId]);
 
   // Handle reaction changes
   const handleReactionChange = useCallback(
@@ -183,72 +355,8 @@ export const useRealtimeDMs = ({
       const reactions = groupReactions(reactionsData || [], userId || undefined);
       updateMessage(conversationId!, messageId, { reactions });
     },
-    [userId, updateMessage]
+    [userId, updateMessage],
   );
-
-  useEffect(() => {
-    if (!userId) return;
-
-    // Prime a local set of conversation IDs for this user to avoid
-    // doing a DB lookup for every global direct_messages event.
-    let cancelled = false;
-    (async () => {
-      const { data } = await supabase.rpc('get_user_dm_conversation_ids_secure', {
-        _user_id: userId,
-      });
-      if (cancelled) return;
-      conversationIdsRef.current = new Set((Array.isArray(data) ? data : []) as string[]);
-    })();
-
-    // Subscribe to all direct_messages where user is a participant
-    const channel = supabase
-      .channel(`all-dms:${userId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'direct_messages',
-        },
-        async (payload) => {
-          const convId = payload.new?.conversation_id as string | undefined;
-          if (!convId) return;
-          if (!conversationIdsRef.current.has(convId)) return;
-          handleNewMessage(payload);
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'direct_messages',
-        },
-        handleMessageUpdate
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'direct_messages',
-        },
-        handleMessageDelete
-      )
-      .subscribe((status, err) => {
-        if (status !== 'SUBSCRIBED') {
-          console.log('[Realtime] DM subscription status:', { status, userId, err });
-        }
-        if (err) {
-          console.error('[Realtime] DM subscription error:', err);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-      supabase.removeChannel(channel);
-    };
-  }, [userId, handleNewMessage, handleMessageUpdate, handleMessageDelete]);
 
   // Subscribe to DM reactions
   useEffect(() => {
@@ -263,7 +371,7 @@ export const useRealtimeDMs = ({
           schema: 'public',
           table: 'dm_reactions',
         },
-        handleReactionChange
+        handleReactionChange,
       )
       .on(
         'postgres_changes',
@@ -272,7 +380,7 @@ export const useRealtimeDMs = ({
           schema: 'public',
           table: 'dm_reactions',
         },
-        handleReactionChange
+        handleReactionChange,
       )
       .subscribe();
 
@@ -283,12 +391,21 @@ export const useRealtimeDMs = ({
 
   // Debounced fetchConversations to batch rapid dm_participants events
   const fetchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const debouncedFetchConversations = useCallback((uid: string) => {
-    if (fetchDebounceRef.current) clearTimeout(fetchDebounceRef.current);
-    fetchDebounceRef.current = setTimeout(() => {
-      fetchConversations(uid);
-    }, 500);
-  }, [fetchConversations]);
+  const debouncedFetchConversations = useCallback(
+    (uid: string) => {
+      if (fetchDebounceRef.current) clearTimeout(fetchDebounceRef.current);
+      fetchDebounceRef.current = setTimeout(() => {
+        fetchConversations(uid);
+      }, 500);
+    },
+    [fetchConversations],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (fetchDebounceRef.current) clearTimeout(fetchDebounceRef.current);
+    };
+  }, []);
 
   // Also listen for new conversations
   useEffect(() => {
@@ -304,15 +421,13 @@ export const useRealtimeDMs = ({
           table: 'dm_participants',
           filter: `user_id=eq.${userId}`,
         },
-      (payload) => {
-        // Immediately add the new conversation ID to prevent race conditions
-        const newConvId = payload.new?.conversation_id;
-        if (newConvId) {
-          conversationIdsRef.current.add(newConvId);
-        }
-        // Debounced background refresh for full conversation data
-        debouncedFetchConversations(userId);
-        }
+        (payload) => {
+          const newConvId = payload.new?.conversation_id;
+          if (newConvId) {
+            conversationIdsRef.current.add(newConvId);
+          }
+          debouncedFetchConversations(userId);
+        },
       )
       .on(
         'postgres_changes',
@@ -322,28 +437,25 @@ export const useRealtimeDMs = ({
           table: 'dm_participants',
           filter: `user_id=eq.${userId}`,
         },
-      (payload) => {
-        // Immediately remove the conversation ID
-        const removedConvId = payload.old?.conversation_id;
-        if (removedConvId) {
-          conversationIdsRef.current.delete(removedConvId);
-        }
-        // Debounced background refresh
-        debouncedFetchConversations(userId);
-        }
+        (payload) => {
+          const removedConvId = payload.old?.conversation_id;
+          if (removedConvId) {
+            conversationIdsRef.current.delete(removedConvId);
+          }
+          debouncedFetchConversations(userId);
+        },
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, fetchConversations]);
+  }, [userId, debouncedFetchConversations]);
 
   // Subscribe to user updates for all DM conversation participants
   const conversations = useDMStore((state) => state.conversations);
   const currentConversation = useDMStore((state) => state.currentConversation);
-  
-  // Collect all unique user IDs from conversations (other_user for 1:1, participants for groups)
+
   const participantUserIds = (() => {
     const ids = new Set<string>();
     conversations.forEach((conv) => {
@@ -358,7 +470,7 @@ export const useRealtimeDMs = ({
         });
       }
     });
-    // Also include current conversation participants
+
     if (currentConversation?.participants) {
       currentConversation.participants.forEach((p) => {
         if (p.user_id && p.user_id !== userId) {
@@ -366,12 +478,9 @@ export const useRealtimeDMs = ({
         }
       });
     }
+
     return Array.from(ids);
   })();
 
-  // Subscribe to user updates for DM participants
-  useRealtimeUserUpdates(
-    participantUserIds,
-    `dm-participant-users:${userId || 'none'}`,
-  );
+  useRealtimeUserUpdates(participantUserIds, `dm-participant-users:${userId || 'none'}`);
 };

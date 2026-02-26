@@ -48,6 +48,7 @@ const CHANNEL_READ_EVENT = 'kloak:channel-read';
 
 export const useUnread = (serverChannelIds: string[] = []) => {
   const { user } = useAuthStore();
+  const userId = user?.id ?? null;
   const [unreadState, setUnreadState] = useState<UnreadState>({});
   const [isLoading, setIsLoading] = useState(false);
   const channelIdsRef = useRef<string[]>([]);
@@ -57,11 +58,17 @@ export const useUnread = (serverChannelIds: string[] = []) => {
   const lastFetchAtRef = useRef(0);
   const markInFlightRef = useRef<Map<string, Promise<void>>>(new Map());
   const unreadStateRef = useRef<UnreadState>({});
+  const serverChannelIdsRef = useRef<string[]>(serverChannelIds);
+  const fetchUnreadCountsRef = useRef<(opts?: { force?: boolean }) => Promise<void>>(async () => undefined);
   const channelIdsKey = [...serverChannelIds].sort().join(',');
 
   useEffect(() => {
     unreadStateRef.current = unreadState;
   }, [unreadState]);
+
+  useEffect(() => {
+    serverChannelIdsRef.current = serverChannelIds;
+  }, [serverChannelIds]);
 
   // OPTIMIZATION: Use batch RPC instead of N+1 queries
   // This reduces 50+ queries to a single query per polling cycle
@@ -150,6 +157,10 @@ export const useUnread = (serverChannelIds: string[] = []) => {
       }
     }
   }, [user, serverChannelIds]);
+
+  useEffect(() => {
+    fetchUnreadCountsRef.current = fetchUnreadCounts;
+  }, [fetchUnreadCounts]);
 
   // Mark channel as read
   const markAsRead = useCallback(
@@ -400,10 +411,10 @@ export const useUnread = (serverChannelIds: string[] = []) => {
 
   // Subscribe to broadcast updates for current user's channel reads.
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
 
     const channel = supabase
-      .channel(`user:${user.id}`)
+      .channel(`user:${userId}`)
       .on(
         'broadcast',
         { event: 'channel_reads' },
@@ -415,16 +426,17 @@ export const useUnread = (serverChannelIds: string[] = []) => {
           const row = op === "DELETE" ? eventPayload.old : eventPayload.new;
           const channelId = row?.channel_id;
           if (!channelId) {
-            fetchUnreadCounts({ force: true });
+            fetchUnreadCountsRef.current({ force: true });
             return;
           }
 
-          if (serverChannelIds.length > 0 && !serverChannelIds.includes(channelId)) {
+          const trackedChannels = serverChannelIdsRef.current;
+          if (trackedChannels.length > 0 && !trackedChannels.includes(channelId)) {
             return;
           }
 
           if (op === "DELETE") {
-            fetchUnreadCounts({ force: true });
+            fetchUnreadCountsRef.current({ force: true });
             return;
           }
 
@@ -446,7 +458,7 @@ export const useUnread = (serverChannelIds: string[] = []) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, fetchUnreadCounts, channelIdsKey, serverChannelIds]);
+  }, [userId]);
 
   // Cross-component sync: when any part of the app marks a channel as read,
   // immediately clear that channel locally if it's in our tracked set.

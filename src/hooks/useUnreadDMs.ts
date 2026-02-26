@@ -187,51 +187,55 @@ export const useUnreadDMs = (userId: string | null) => {
   useEffect(() => {
     if (!userId) return;
 
-    const channel = supabase
-      .channel(`user:${userId}`)
-      .on(
-        'broadcast',
-        { event: 'dm_participants' },
-        ({ payload }) => {
-          const eventPayload = payload as BroadcastMutationPayload<DmParticipantBroadcastRow>;
-          const op = eventPayload?.op;
-          if (!op) return;
+    const topic = `user:${userId}`;
+    const filter = { event: "dm_participants", scope: `unread-dms-${userId}` };
+    const channel = supabase.channel(topic).on(
+      "broadcast",
+      filter as { event: string },
+      ({ payload }) => {
+        const eventPayload = payload as BroadcastMutationPayload<DmParticipantBroadcastRow>;
+        const op = eventPayload?.op;
+        if (!op) return;
 
-          if (op === "INSERT") {
-            fetchUnreadCounts({ force: true });
-            return;
-          }
+        if (op === "INSERT") {
+          fetchUnreadCounts({ force: true });
+          return;
+        }
 
-          const row = op === "DELETE" ? eventPayload.old : eventPayload.new;
-          const conversationId = row?.conversation_id;
-          if (!conversationId) {
-            fetchUnreadCounts({ force: true });
-            return;
-          }
+        const row = op === "DELETE" ? eventPayload.old : eventPayload.new;
+        const conversationId = row?.conversation_id;
+        if (!conversationId) {
+          fetchUnreadCounts({ force: true });
+          return;
+        }
 
-          if (op === "DELETE") {
-            setUnreadState((prev) => {
-              const { [conversationId]: _, ...rest } = prev;
-              return rest;
-            });
-            return;
-          }
+        if (op === "DELETE") {
+          setUnreadState((prev) => {
+            const { [conversationId]: _, ...rest } = prev;
+            return rest;
+          });
+          return;
+        }
 
-          // last_read_at updates should clear local unread count for that conversation.
-          setUnreadState((prev) => ({
-            ...prev,
-            [conversationId]: {
-              conversationId,
-              unreadCount: 0,
-              lastReadAt: row?.last_read_at ?? prev[conversationId]?.lastReadAt ?? null,
-            },
-          }));
-        },
-      )
-      .subscribe();
+        // last_read_at updates should clear local unread count for that conversation.
+        setUnreadState((prev) => ({
+          ...prev,
+          [conversationId]: {
+            conversationId,
+            unreadCount: 0,
+            lastReadAt: row?.last_read_at ?? prev[conversationId]?.lastReadAt ?? null,
+          },
+        }));
+      },
+    );
+    // NOTE: `user:${userId}` is owned/subscribed by `useUnread`.
+    // We only attach/detach this specific listener to avoid channel teardown collisions.
 
     return () => {
-      supabase.removeChannel(channel);
+      (channel as unknown as { _off?: (type: string, filter: Record<string, unknown>) => void })._off?.(
+        "broadcast",
+        filter,
+      );
     };
   }, [userId, fetchUnreadCounts]);
 

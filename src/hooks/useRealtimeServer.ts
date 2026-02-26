@@ -19,7 +19,7 @@ function makeDebouncedFn(fn: () => void, ms: number) {
 }
 
 export const useRealtimeServer = (serverId: string | null) => {
-  const { isConnected, isReconnecting } = useConnectionStatus();
+  const { isConnected } = useConnectionStatus();
 
   // Use refs to avoid recreating subscription when store functions or user object changes
   const serverStoreRef = useRef(useServerStore.getState());
@@ -38,6 +38,15 @@ export const useRealtimeServer = (serverId: string | null) => {
       unsubServer();
       unsubAuth();
     };
+  }, []);
+
+  // ----- Helper: handle when user loses access to current channel -----
+  const handleChannelAccessLost = useCallback((sid: string, message: string) => {
+    const { channels, setCurrentChannel } = useServerStore.getState();
+    const remaining = channels.filter(c => c.server_id === sid);
+    const fallback = remaining[0] || null;
+    setCurrentChannel(fallback);
+    toast({ title: message });
   }, []);
 
   // ----- Reconnection recovery -----
@@ -60,16 +69,7 @@ export const useRealtimeServer = (serverId: string | null) => {
     }
 
     prevConnectedRef.current = nowConnected;
-  }, [isConnected, serverId]);
-
-  // ----- Helper: handle when user loses access to current channel -----
-  const handleChannelAccessLost = useCallback((sid: string, message: string) => {
-    const { channels, setCurrentChannel } = useServerStore.getState();
-    const remaining = channels.filter(c => c.server_id === sid);
-    const fallback = remaining[0] || null;
-    setCurrentChannel(fallback);
-    toast({ title: message });
-  }, []);
+  }, [isConnected, serverId, handleChannelAccessLost]);
 
   // ----- Debounced permission refresh -----
   const debouncedRefreshRef = useRef<ReturnType<typeof makeDebouncedFn> | null>(null);
@@ -389,5 +389,5 @@ export const useRealtimeServer = (serverId: string | null) => {
     return () => {
       try { supabase.removeChannel(channel); } catch (e) { /* ignore */ }
     };
-  }, [serverId, isConnected, isReconnecting, handleChannelAccessLost]);
+  }, [serverId, handleChannelAccessLost]);
 };

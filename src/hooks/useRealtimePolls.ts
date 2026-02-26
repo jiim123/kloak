@@ -65,7 +65,7 @@ const normalizePollRow = (row: PollBroadcastRow, existingUserVotes: number[] = [
 };
 
 export const useRealtimePolls = (channelId: string | null) => {
-  const isSettingUpRef = useRef(false);
+  const listenerScopeRef = useRef(`polls-${Math.random().toString(36).slice(2)}`);
 
   useEffect(() => {
     if (!channelId) return;
@@ -92,71 +92,49 @@ export const useRealtimePolls = (channelId: string | null) => {
     // but the PollMessage component may have unmounted (e.g. scrolled away)
     const interval = setInterval(closeExpired, 30_000);
 
-    let channel: ReturnType<typeof supabase.channel> | null = null;
-
-    const setup = () => {
-      if (isSettingUpRef.current) return;
-      isSettingUpRef.current = true;
-
-      if (channel) {
+    const topic = `chat:${channelId}`;
+    const filter = { event: "polls", scope: listenerScopeRef.current };
+    const channel = supabase.channel(topic).on(
+      "broadcast",
+      filter as { event: string },
+      ({ payload }) => {
         try {
-          supabase.removeChannel(channel);
+          const eventPayload = payload as BroadcastMutationPayload<PollBroadcastRow>;
+          const op = eventPayload.op;
+          if (!op) return;
+
+          if (op === "DELETE") {
+            const oldRow = eventPayload.old;
+            if (oldRow?.id) usePollStore.getState().removePoll(oldRow.id);
+            return;
+          }
+
+          const row = eventPayload.new;
+          if (!row?.id) return;
+
+          // Preserve existing user votes when updating from realtime
+          const existingPoll = usePollStore.getState().pollsById[row.id];
+          const existingUserVotes = existingPoll?.userVotes || [];
+          usePollStore.getState().upsertPoll(normalizePollRow(row, existingUserVotes));
+
+          // If this poll just expired but wasn't closed yet, close it
+          if (!row.is_closed && row.ends_at && new Date(row.ends_at).getTime() <= Date.now()) {
+            usePollStore.getState().closePoll(row.id).catch(() => undefined);
+          }
         } catch {
           // ignore
         }
-      }
-
-      channel = supabase
-        .channel(`chat:${channelId}`)
-        .on(
-          "broadcast",
-          { event: "polls" },
-          ({ payload }) => {
-            try {
-              const eventPayload = payload as BroadcastMutationPayload<PollBroadcastRow>;
-              const op = eventPayload.op;
-              if (!op) return;
-
-              if (op === "DELETE") {
-                const oldRow = eventPayload.old;
-                if (oldRow?.id) usePollStore.getState().removePoll(oldRow.id);
-                return;
-              }
-
-              const row = eventPayload.new;
-              if (!row?.id) return;
-               
-              // Preserve existing user votes when updating from realtime
-              const existingPoll = usePollStore.getState().pollsById[row.id];
-              const existingUserVotes = existingPoll?.userVotes || [];
-              usePollStore.getState().upsertPoll(normalizePollRow(row, existingUserVotes));
-
-              // If this poll just expired but wasn't closed yet, close it
-              if (!row.is_closed && row.ends_at && new Date(row.ends_at).getTime() <= Date.now()) {
-                usePollStore.getState().closePoll(row.id).catch(() => undefined);
-              }
-            } catch {
-              // ignore
-            }
-          },
-        )
-        .subscribe(() => {
-          isSettingUpRef.current = false;
-        });
-    };
-
-    setup();
+      },
+    );
+    // NOTE: `chat:${channelId}` is shared and subscribed by `useRealtimeMessages`.
+    // Do not call `.subscribe()` or `removeChannel()` here to avoid channel-ownership thrash.
 
     return () => {
-      isSettingUpRef.current = false;
       clearInterval(interval);
-      if (channel) {
-        try {
-          supabase.removeChannel(channel);
-        } catch {
-          // ignore
-        }
-      }
+      (channel as unknown as { _off?: (type: string, filter: Record<string, unknown>) => void })._off?.(
+        "broadcast",
+        filter,
+      );
     };
   }, [channelId]);
 };

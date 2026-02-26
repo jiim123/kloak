@@ -37,6 +37,7 @@ export const useRealtimePinnedMessages = (channelId: string | null) => {
   const [pinnedMessages, setPinnedMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const pinnedIdsRef = useRef<Set<string>>(new Set());
+  const listenerScopeRef = useRef(`pinned-${Math.random().toString(36).slice(2)}`);
 
   useEffect(() => {
     pinnedIdsRef.current = new Set(pinnedMessages.map((m) => m.id));
@@ -123,44 +124,48 @@ export const useRealtimePinnedMessages = (channelId: string | null) => {
   useEffect(() => {
     if (!channelId) return;
 
-    const channel = supabase
-      .channel(`chat:${channelId}`)
-      .on(
-        'broadcast',
-        { event: 'messages' },
-        ({ payload }) => {
-          const eventPayload = payload as BroadcastMutationPayload<MessageBroadcastRow>;
-          const op = eventPayload?.op;
-          if (!op) return;
+    const topic = `chat:${channelId}`;
+    const filter = { event: "messages", scope: listenerScopeRef.current };
+    const channel = supabase.channel(topic).on(
+      "broadcast",
+      filter as { event: string },
+      ({ payload }) => {
+        const eventPayload = payload as BroadcastMutationPayload<MessageBroadcastRow>;
+        const op = eventPayload?.op;
+        if (!op) return;
 
-          if (op === 'INSERT') {
-            if (eventPayload.new?.is_pinned) {
-              fetchPinnedMessages({ force: true });
-            }
-            return;
+        if (op === "INSERT") {
+          if (eventPayload.new?.is_pinned) {
+            fetchPinnedMessages({ force: true });
           }
+          return;
+        }
 
-          if (op === 'UPDATE') {
-            const updatedMessage = eventPayload.new;
-            if (!updatedMessage?.id) return;
-            if (updatedMessage.is_pinned || pinnedIdsRef.current.has(updatedMessage.id)) {
-              fetchPinnedMessages({ force: true });
-            }
-            return;
+        if (op === "UPDATE") {
+          const updatedMessage = eventPayload.new;
+          if (!updatedMessage?.id) return;
+          if (updatedMessage.is_pinned || pinnedIdsRef.current.has(updatedMessage.id)) {
+            fetchPinnedMessages({ force: true });
           }
+          return;
+        }
 
-          if (op === 'DELETE') {
-            const oldId = eventPayload.old?.id;
-            if (oldId && pinnedIdsRef.current.has(oldId)) {
-              fetchPinnedMessages({ force: true });
-            }
+        if (op === "DELETE") {
+          const oldId = eventPayload.old?.id;
+          if (oldId && pinnedIdsRef.current.has(oldId)) {
+            fetchPinnedMessages({ force: true });
           }
-        },
-      )
-      .subscribe();
+        }
+      },
+    );
+    // NOTE: `chat:${channelId}` is shared and subscribed by `useRealtimeMessages`.
+    // Do not call `.subscribe()` or `removeChannel()` here to avoid channel ownership conflicts.
 
     return () => {
-      supabase.removeChannel(channel);
+      (channel as unknown as { _off?: (type: string, filter: Record<string, unknown>) => void })._off?.(
+        "broadcast",
+        filter,
+      );
     };
   }, [channelId, fetchPinnedMessages]);
 

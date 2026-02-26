@@ -49,6 +49,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
   const lastCatchupFetchAtRef = useRef<number>(0);
   const isSubscribedRef = useRef(false);
   const lastBroadcastResyncAtRef = useRef<number>(0);
+  const listenerScopeRef = useRef(`messages-${Math.random().toString(36).slice(2)}`);
 
   useEffect(() => {
     if (!channelId) {
@@ -62,6 +63,15 @@ export const useRealtimeMessages = (channelId: string | null) => {
     let retryCount = 0;
     const RETRY_BASE_DELAY_MS = 2000;
     const RETRY_MAX_DELAY_MS = 60000;
+    const messageFilter = { event: "messages", scope: listenerScopeRef.current };
+    const reactionFilter = { event: "reactions", scope: listenerScopeRef.current };
+
+    const removeScopedBindings = (target: ReturnType<typeof supabase.channel> | null) => {
+      if (!target) return;
+      const internal = target as unknown as { _off?: (type: string, filter: Record<string, unknown>) => void };
+      internal._off?.("broadcast", messageFilter);
+      internal._off?.("broadcast", reactionFilter);
+    };
 
     const scheduleRetry = (status: 'CLOSED' | 'CHANNEL_ERROR' | 'TIMED_OUT') => {
       if (!isActive) return;
@@ -87,9 +97,9 @@ export const useRealtimeMessages = (channelId: string | null) => {
       // Clean up existing subscription if any
       if (channel) {
         try {
-          isIntentionalClose = true;
-          supabase.removeChannel(channel);
-        } catch (e) {
+          // Shared topic: remove only this hook's listeners.
+          removeScopedBindings(channel);
+        } catch {
           // Ignore cleanup errors
         }
       }
@@ -104,7 +114,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
         })
         .on(
           'broadcast',
-          { event: 'messages' },
+          messageFilter as { event: string },
           async ({ payload }) => {
             try {
               const eventPayload = payload as BroadcastMutationPayload<MessageBroadcastRow>;
@@ -260,7 +270,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
         )
         .on(
           'broadcast',
-          { event: 'reactions' },
+          reactionFilter as { event: string },
           ({ payload }) => {
             try {
               const eventPayload = payload as BroadcastMutationPayload<ReactionBroadcastRow>;
@@ -435,56 +445,64 @@ export const useRealtimeMessages = (channelId: string | null) => {
               console.error('[Realtime] Error processing reaction event:', error);
             }
           },
-        )
-        .subscribe((status, err) => {
-          if (!isActive) return;
-          isSettingUpRef.current = false;
-          
-          if (status === 'SUBSCRIBED') {
-            isIntentionalClose = false;
-            isSubscribedRef.current = true;
-            console.log('[Realtime] Successfully subscribed to messages for channel:', channelId);
-            retryCount = 0;
-            lastSubscribeAtRef.current = Date.now();
-            lastEventAtRef.current = Date.now();
+        );
 
-            // Catch up channel state after (re)subscribe if cache is missing/stale.
-            const store = useMessageStore.getState();
-            const cacheEntry = store.messagesByChannel[channelId];
-            const hasCached = (cacheEntry?.messages?.length ?? 0) > 0;
-            const isFreshEnough =
-              !!cacheEntry && Date.now() - cacheEntry.lastFetched < CHANNEL_SUBSCRIBE_CATCHUP_MAX_AGE_MS;
-            const now = Date.now();
-            const canRunCatchup = now - lastCatchupFetchAtRef.current >= MIN_CATCHUP_FETCH_GAP_MS;
-            if ((!hasCached || !isFreshEnough) && canRunCatchup) {
-              lastCatchupFetchAtRef.current = now;
-              void store.fetchMessages(channelId, 50, undefined, true, hasCached, true).catch(() => undefined);
-            }
-          } else if (status === 'CLOSED') {
-            isSubscribedRef.current = false;
-            // CLOSED is expected during channel switch/unmount cleanup.
-            if (!isIntentionalClose) {
-              console.warn('[Realtime] Messages channel closed unexpectedly:', { channelId, status });
-              scheduleRetry(status);
-            }
-          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            isSubscribedRef.current = false;
-            const details = err as { message?: string; name?: string; cause?: unknown } | undefined;
-            if (err) {
-              console.warn('[Realtime] Messages subscribe error:', {
-                channelId,
-                status,
-                message: details?.message,
-                name: details?.name,
-                cause: details?.cause,
-                details: err,
-              });
-            } else {
-              console.warn('[Realtime] Messages subscribe status:', { channelId, status });
-            }
+      const channelState = (channel as unknown as { state?: string }).state;
+      if (channelState && channelState !== 'closed') {
+        isSettingUpRef.current = false;
+        isSubscribedRef.current = channelState === 'joined';
+        return;
+      }
+
+      channel.subscribe((status, err) => {
+        if (!isActive) return;
+        isSettingUpRef.current = false;
+        
+        if (status === 'SUBSCRIBED') {
+          isIntentionalClose = false;
+          isSubscribedRef.current = true;
+          console.log('[Realtime] Successfully subscribed to messages for channel:', channelId);
+          retryCount = 0;
+          lastSubscribeAtRef.current = Date.now();
+          lastEventAtRef.current = Date.now();
+
+          // Catch up channel state after (re)subscribe if cache is missing/stale.
+          const store = useMessageStore.getState();
+          const cacheEntry = store.messagesByChannel[channelId];
+          const hasCached = (cacheEntry?.messages?.length ?? 0) > 0;
+          const isFreshEnough =
+            !!cacheEntry && Date.now() - cacheEntry.lastFetched < CHANNEL_SUBSCRIBE_CATCHUP_MAX_AGE_MS;
+          const now = Date.now();
+          const canRunCatchup = now - lastCatchupFetchAtRef.current >= MIN_CATCHUP_FETCH_GAP_MS;
+          if ((!hasCached || !isFreshEnough) && canRunCatchup) {
+            lastCatchupFetchAtRef.current = now;
+            void store.fetchMessages(channelId, 50, undefined, true, hasCached, true).catch(() => undefined);
+          }
+        } else if (status === 'CLOSED') {
+          isSubscribedRef.current = false;
+          // CLOSED is expected during channel switch/unmount cleanup.
+          if (!isIntentionalClose) {
+            console.warn('[Realtime] Messages channel closed unexpectedly:', { channelId, status });
             scheduleRetry(status);
           }
-        });
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          isSubscribedRef.current = false;
+          const details = err as { message?: string; name?: string; cause?: unknown } | undefined;
+          if (err) {
+            console.warn('[Realtime] Messages subscribe error:', {
+              channelId,
+              status,
+              message: details?.message,
+              name: details?.name,
+              cause: details?.cause,
+              details: err,
+            });
+          } else {
+            console.warn('[Realtime] Messages subscribe status:', { channelId, status });
+          }
+          scheduleRetry(status);
+        }
+      });
     };
 
     setupSubscription();
@@ -540,6 +558,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
       clearInterval(broadcastResyncInterval);
       if (channel) {
         try {
+          removeScopedBindings(channel);
           supabase.removeChannel(channel);
         } catch (e) {
           // Ignore cleanup errors
