@@ -1876,8 +1876,8 @@ export type Database = {
           icon_url: string | null
           id: string
           invite_code: string
-          is_published: boolean
           is_verified: boolean
+          is_published: boolean
           name: string
           owner_id: string
           system_channel_join_id: string | null
@@ -1892,8 +1892,8 @@ export type Database = {
           icon_url?: string | null
           id?: string
           invite_code: string
-          is_published?: boolean
           is_verified?: boolean
+          is_published?: boolean
           name: string
           owner_id: string
           system_channel_join_id?: string | null
@@ -1908,8 +1908,8 @@ export type Database = {
           icon_url?: string | null
           id?: string
           invite_code?: string
-          is_published?: boolean
           is_verified?: boolean
+          is_published?: boolean
           name?: string
           owner_id?: string
           system_channel_join_id?: string | null
@@ -3345,12 +3345,7 @@ export type Database = {
         Returns: boolean
       }
       mute_member: {
-        Args: {
-          _mute?: boolean
-          _server_id: string
-          _target_user_id: string
-          _user_id: string
-        }
+        Args: { _server_id: string; _target_user_id: string; _user_id: string }
         Returns: undefined
       }
       open_dm_conversation: {
