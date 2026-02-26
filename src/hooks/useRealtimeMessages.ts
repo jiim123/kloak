@@ -4,7 +4,7 @@ import { useMessageStore } from "@/stores/messageStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
-import type { Message } from "@/types";
+import type { Message, ReactionGroup } from "@/types";
 import { getOrFetchUser, getUserFromCache } from "@/lib/userCache";
 import type { User } from "@/types";
 import { canRevealGhostIdentityForUser, getGhostPseudonymousUserId } from "@/lib/ghostIdentity";
@@ -390,10 +390,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
                   const serverState = useServerStore.getState();
                   const isGhostMode =
                     serverState.currentChannel?.id === channelId && !!serverState.currentChannel?.ghost_mode;
-                  const reactionsByMessage = new Map<
-                    string,
-                    { emoji: string; count: number; users: string[]; hasReacted: boolean }[]
-                  >();
+                  const reactionsByMessage = new Map<string, ReactionGroup[]>();
 
                   for (const msgId of messageIds) {
                     reactionsByMessage.set(msgId, []);
