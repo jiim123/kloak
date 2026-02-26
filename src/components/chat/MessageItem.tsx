@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback, useMemo, memo, forwardRef } from "react";
-import { useSearchParams } from "react-router-dom";
 import {
   Smile,
   Reply,
@@ -167,7 +166,6 @@ export const MessageItem = memo(function MessageItem({
   const showTimestamps = useUIStore((state) => state.showTimestamps);
   const openModal = useUIStore((state) => state.openModal);
   const getOptimisticStatus = useSyncStore((state) => state.getOptimisticStatus);
-  const [searchParams, setSearchParams] = useSearchParams();
   const isMobile = useIsMobile();
 
   // State - SEPARATE states for desktop and mobile emoji pickers
@@ -368,23 +366,26 @@ export const MessageItem = memo(function MessageItem({
     [customEmojiMap, globalEmojiMap],
   );
 
-  // Prefetch fallback emoji URLs in one batched request per message render.
+  // Stable key for reaction emoji names — only re-fetch when the set of custom emoji names changes
+  const reactionEmojiKey = useMemo(() => {
+    const reactions = message.reactions ?? [];
+    const names: string[] = [];
+    for (const r of reactions) {
+      const m = r.emoji.match(/^:([a-z0-9_]{2,32}):$/i);
+      if (m) names.push(m[1]);
+    }
+    return names.sort().join(",");
+  }, [message.reactions]);
+
   const [fallbackEmojiUrls, setFallbackEmojiUrls] = useState<Map<string, string | null>>(new Map());
   useEffect(() => {
-    const reactions = message.reactions ?? [];
-    if (reactions.length === 0) return;
-    const names = new Set<string>();
-    for (const r of reactions) {
-      const emoji = r.emoji;
-      const m = emoji.match(/^:([a-z0-9_]{2,32}):$/i);
-      if (!m) continue;
-      // Skip anything we can already resolve locally.
-      if (resolveCustomEmojiUrl(emoji)) continue;
-      names.add(m[1]);
-    }
-    if (names.size === 0) return;
+    if (!reactionEmojiKey) return;
+    const names = reactionEmojiKey.split(",");
+    // Filter to only unresolved names
+    const unresolved = names.filter((name) => !resolveCustomEmojiUrl(`:${name}:`));
+    if (unresolved.length === 0) return;
     let cancelled = false;
-    resolveEmojisByNameFallback(Array.from(names))
+    resolveEmojisByNameFallback(unresolved)
       .then((map) => {
         if (cancelled) return;
         setFallbackEmojiUrls((prev) => {
@@ -397,7 +398,7 @@ export const MessageItem = memo(function MessageItem({
     return () => {
       cancelled = true;
     };
-  }, [message.reactions, resolveCustomEmojiUrl]);
+  }, [reactionEmojiKey, resolveCustomEmojiUrl]);
 
   const reactionEmojiNode = useCallback(
     (emoji: string) => {
@@ -841,14 +842,13 @@ export const MessageItem = memo(function MessageItem({
       e.preventDefault();
       e.stopPropagation();
       if (message.reply_to?.id) {
-        // Set URL param - useScrollToMessage hook will handle scrolling, highlighting,
-        // and fetching older messages if the target isn't loaded yet
-        const newParams = new URLSearchParams(searchParams);
-        newParams.set("message", message.reply_to.id);
-        setSearchParams(newParams, { replace: true });
+        // Dispatch a custom event instead of using useSearchParams (which causes every MessageItem to re-render)
+        window.dispatchEvent(
+          new CustomEvent("scrollToMessage", { detail: { messageId: message.reply_to.id } }),
+        );
       }
     },
-    [message.reply_to?.id, searchParams, setSearchParams],
+    [message.reply_to?.id],
   );
 
   return (
