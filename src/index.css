@@ -586,19 +586,19 @@
     line-height: 1.3;
   }
 
-  /* Mono text on landing pages - Monaspace Krypton, 17px = 1.0625em, Regular */
+  /* Mono text on landing pages - Monaspace Krypton, 14px = 0.875em, Regular */
   .landing-typography .font-mono,
   .landing-typography [class*="font-mono"] {
-    font-size: 1.0625em; /* 17px */
+    font-size: 0.875em; /* 14px */
     font-weight: 400;
   }
 
-  /* Button text on landing pages - Monaspace Krypton, 17px = 1.0625em, Regular */
+  /* Button text on landing pages - Monaspace Krypton, 14px = 0.875em, Regular */
   .landing-typography button,
   .landing-typography a[role="button"],
   .landing-typography .btn {
     font-family: 'Monaspace Krypton', ui-monospace, SFMono-Regular, monospace;
-    font-size: 1.0625em; /* 17px */
+    font-size: 0.875em; /* 14px */
     font-weight: 400;
   }
 
