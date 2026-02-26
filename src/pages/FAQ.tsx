@@ -28,7 +28,7 @@ const faqCategories = [
       },
       {
         q: "Is Kloak free?",
-        a: "Using Kloak will always be free. However, some features that require significant server resources like voice channels and large file storage may require a paid tier in the future. Running servers costs money, and offering premium features helps us keep the core platform free for everyone.",
+        a: "Using Kloak is and will always be free. Features that require significant server resources, such as larger file storage or any other QoL feature, may in the future be offered as optional paid upgrades. Any paid features will be clearly communicated in advance. The core platform, including messaging, servers, and direct messages, will remain free.",
       },
       {
         q: "Is there a mobile app for Kloak?",
@@ -58,7 +58,7 @@ const faqCategories = [
       },
       {
         q: "Is my data encrypted?",
-        a: "Your secret key is hashed using SHA-256 before being stored. We never see or store your actual key. Messages are transmitted securely over encrypted connections.",
+        a: "Your secret key is hashed using SHA-256 before being stored. We never see or store your actual key. All data is transmitted over encrypted HTTPS connections. We are currently working toward implementing end-to-end encryption for messages, which will ensure that only the intended recipients can read them. We will always be transparent about exactly what level of encryption is in place.",
       },
       {
         q: "Why don't you require email or phone for login?",
@@ -70,7 +70,33 @@ const faqCategories = [
       },
       {
         q: "What data does Kloak collect about me?",
-        a: "Only what is absolutely necessary: your username, a hash of your secret key, your messages and content, optional profile information, and server membership records. We do not collect email, phone number, real name, location, or any biometric data.",
+        a: "Kloak collects the minimum required to operate the service: your username, a one-way hash of your secret key, your messages and content, optional profile information you choose to add, and server membership records. No email address, phone number, real name, location, or biometric data is ever collected. Unlike most platforms, we also collect zero analytics, tracking pixels, or behavioral data. There is no advertising infrastructure on Kloak because there is no business model that depends on knowing who you are.",
+      },
+    ],
+  },
+  {
+    title: "Legal & Trust",
+    icon: Key,
+    questions: [
+      {
+        q: "Is there a legal entity behind Kloak?",
+        a: "Kloak is currently an open-source community project without a registered legal entity. We are evaluating the right legal structure as the project grows and will be transparent about any changes.",
+      },
+      {
+        q: "Does GDPR apply to Kloak?",
+        a: "GDPR governs the processing of personal data. Because Kloak collects zero personal data, no email addresses, no phone numbers, no IP logs, no analytics, and no tracking of any kind, GDPR's scope of application to Kloak is extremely limited. Authentication is handled through a cryptographic secret key that cannot be linked back to any real-world identity. There is simply very little personal data for the regulation to govern.",
+      },
+      {
+        q: "Where is my data stored and processed?",
+        a: "Kloak uses Supabase as its backend infrastructure. AWS EU West. Because we collect no personal data, what is stored is limited to message content and server structure. There is no personal profile tied to your account at any stage.",
+      },
+      {
+        q: "Is my data encrypted?",
+        a: "Your secret key is hashed using SHA-256 before being stored. We never see or store your actual key. All data is transmitted over encrypted HTTPS connections. We are currently working toward implementing end-to-end encryption for messages, which will ensure that only the intended recipients can read them. We will always be transparent about exactly what level of encryption is in place.",
+      },
+      {
+        q: "How are donations handled?",
+        a: "Donations are accepted voluntarily through Buy Me a Coffee and different cryptocurrencies and go directly toward server infrastructure and platform development. Donating does not purchase any service or guarantee any specific feature. It is entirely optional support for a free, open-source project. Donors interact with Buy Me a Coffee's own platform, which has its own privacy policy and terms.",
       },
     ],
   },
@@ -104,7 +130,7 @@ const faqCategories = [
       },
       {
         q: "Do you sell or share my data?",
-        a: "Your data is never sold or distributed to external parties. The only exception is for legal compliance, though our minimal data collection practices limit what is actually stored..",
+        a: "Your data is never sold or distributed to external parties. The only exception is for legal compliance, though our minimal data collection practices limit what is actually stored.",
       },
       {
         q: "What behavior is not allowed on Kloak?",
