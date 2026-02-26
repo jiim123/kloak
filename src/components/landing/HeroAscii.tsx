@@ -62,16 +62,7 @@ export const HeroImage = () => {
               transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
             >
               <h1 className="text-[clamp(1.5rem,5vw,6rem)] font-medium tracking-tight text-foreground leading-[1.1]">
-                Communication without
-              </h1>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <h1 className="text-[clamp(1.5rem,5vw,6rem)] font-medium tracking-tight text-foreground leading-[1.1]">
-                compromise.
+                Finally, a Place to Just Be Together.
               </h1>
             </motion.div>
           </div>
