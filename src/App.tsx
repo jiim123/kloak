@@ -12,7 +12,7 @@ import { ServerAuthGuard } from "./components/auth/ServerAuthGuard";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Cookies from "./pages/Cookies";
-import Philosophy from "./pages/Philosophy";
+
 import Join from "./pages/Join";
 import FAQ from "./pages/FAQ";
 import Brand from "./pages/Brand";
@@ -42,7 +42,7 @@ const AppContent = () => {
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/cookies" element={<Cookies />} />
-        <Route path="/philosophy" element={<Philosophy />} />
+        
         <Route path="/join" element={<Join />} />
         <Route path="/faq" element={<FAQ />} />
         <Route path="/brand" element={<Brand />} />
