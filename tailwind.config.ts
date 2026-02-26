@@ -91,6 +91,10 @@ export default {
           chat: "hsl(var(--chat))",
           members: "hsl(var(--members))",
         },
+        light: {
+          DEFAULT: "hsl(var(--light-background))",
+          foreground: "hsl(var(--light-foreground))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
