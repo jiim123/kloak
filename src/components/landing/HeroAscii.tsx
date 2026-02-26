@@ -44,8 +44,8 @@ export const HeroImage = () => {
       {/* Top hero area — 75vh */}
       <div className="relative h-[75vh]">
         {/* Main content */}
-        <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6">
-          <div className="max-w-4xl mx-auto text-center">
+        <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-4 sm:px-6">
+          <div className="w-full max-w-4xl mx-auto text-center break-words">
             {/* Pre-title */}
             <motion.p
               initial={{ opacity: 0, y: 10 }}
@@ -63,7 +63,7 @@ export const HeroImage = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
               >
-                <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tight text-foreground leading-[1.1]">
+                <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tight text-foreground leading-[1.1]">
                   Communication without
                 </h1>
               </motion.div>
@@ -72,7 +72,7 @@ export const HeroImage = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
               >
-                <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tight text-foreground leading-[1.1]">
+                <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tight text-foreground leading-[1.1]">
                   compromise.
                 </h1>
               </motion.div>
