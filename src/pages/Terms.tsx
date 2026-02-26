@@ -90,7 +90,7 @@
         },
         {
           q: "What about liability?",
-          a: "Kloak is a volunteer-driven passion project, not a corporation. There is no registered legal entity, no commercial structure, and no revenue model behind it. We're a small, distributed group of people who care about privacy and build this in our free time. Because of that, Kloak is provided entirely 'as is' with no warranties of any kind. We do our best to keep things running smoothly, but we cannot guarantee uninterrupted service, permanent data retention, or protection against every possible issue. We are not liable for content posted by users, service outages, data loss resulting from lost secret keys, or any third-party actions beyond our control.",
+          a: "Kloak is not a business. There is no registered legal entity, no corporate structure, and no commercial product. It's a passion project run by a small, distributed team of volunteers who believe privacy-first communication should exist. We don't generate revenue and we don't operate under any jurisdiction as a company.\n\nThat said, here's what you should know: Kloak is provided \"as is.\" We work hard to keep it stable, secure, and improving, but we can't make legal guarantees about uptime, data integrity, or anything else, because there's no entity capable of making those guarantees. If something goes wrong, we'll do everything we reasonably can to fix it. But using Kloak means accepting that you're using a volunteer-built platform, not a commercial service with SLAs and legal backstops.\n\nThe biggest liability that falls on you is your secret key. If you lose it, no one can recover your account.",
         },
       ],
    },
