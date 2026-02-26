@@ -79,16 +79,20 @@
    {
      title: "Legal & Liability",
      icon: Scale,
-     questions: [
-       {
-         q: "Can we change these terms?",
-         a: "Yes, but we'll always notify you of significant changes. We won't suddenly change the rules and expect you to comply retroactively. If you disagree with updated terms, you can stop using Kloak and delete your account. Continued use after changes means you accept the new terms.",
-       },
-       {
-         q: "What about liability?",
-         a: "Kloak is provided 'as is.' We do our best to keep the service running and secure, but we can't guarantee 100% uptime or that nothing will ever go wrong. We're not liable for: content created by other users, temporary service interruptions, loss of data due to lost secret keys, or third-party actions or external circumstances.",
-       },
-     ],
+      questions: [
+        {
+          q: "What happens if there is a legal request?",
+          a: "Kloak is not a company, and we have never presented ourselves as one. There is no registered legal entity, no commercial registration, and no corporate structure behind the platform. Kloak is a passion project maintained by a small, distributed team of volunteers located in different parts of the world. Even if a legal request were directed at us, our architecture means we have very limited data to provide. We cannot identify users by real name, email, or phone number because we don't collect that information. We cannot decrypt your secret key because we only store a one-way hash.",
+        },
+        {
+          q: "Can we change these terms?",
+          a: "Yes, but we'll always notify you of significant changes. We won't suddenly change the rules and expect you to comply retroactively. If you disagree with updated terms, you can stop using Kloak and delete your account. Continued use after changes means you accept the new terms.",
+        },
+        {
+          q: "What about liability?",
+          a: "Kloak is provided 'as is.' We do our best to keep the service running and secure, but we can't guarantee 100% uptime or that nothing will ever go wrong. We're not liable for: content created by other users, temporary service interruptions, loss of data due to lost secret keys, or third-party actions or external circumstances.",
+        },
+      ],
    },
  ];
  
