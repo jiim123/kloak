@@ -582,6 +582,8 @@
 
   /* Landing body text - 20px = 1.25em, Regular, line-height 1.7 */
   .landing-typography {
+    --foreground: 37 30% 89%;
+    --card-foreground: 37 30% 89%;
     font-size: 1.25em;
     font-weight: 400;
     line-height: 1.7;
