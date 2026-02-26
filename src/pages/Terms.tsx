@@ -90,7 +90,7 @@
         },
         {
           q: "What about liability?",
-          a: "Kloak is provided 'as is.' We do our best to keep the service running and secure, but we can't guarantee 100% uptime or that nothing will ever go wrong. We're not liable for: content created by other users, temporary service interruptions, loss of data due to lost secret keys, or third-party actions or external circumstances.",
+          a: "Kloak is a volunteer-driven passion project, not a corporation. There is no registered legal entity, no commercial structure, and no revenue model behind it. We're a small, distributed group of people who care about privacy and build this in our free time. Because of that, Kloak is provided entirely 'as is' with no warranties of any kind. We do our best to keep things running smoothly, but we cannot guarantee uninterrupted service, permanent data retention, or protection against every possible issue. We are not liable for content posted by users, service outages, data loss resulting from lost secret keys, or any third-party actions beyond our control.",
         },
       ],
    },
