@@ -519,7 +519,7 @@ const AppLayout = () => {
     <UnreadDMsContext.Provider value={unreadDMsContextValue}>
       <UnreadChannelsContext.Provider value={{ ...unreadChannels, serverChannels, allChannelIds }}>
         <SEO title={desktopTitle} noIndex />
-        <div className="h-screen flex flex-col overflow-hidden">
+        <div className="h-screen flex flex-col overflow-hidden app-layout-font">
           <DesktopTitleBar title={desktopTitle} />
 
           {MAINTENANCE_MODE && (
