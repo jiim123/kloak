@@ -44,7 +44,7 @@ const privacyCategories = [
       },
       {
         q: "What happens if there's a legal request?",
-        a: "We comply with valid Swedish legal requests. However, our architecture means we have very limited data to provide. We cannot identify users by real name, email, or phone number because we don't collect that information. We cannot decrypt your secret key because we only store a one-way hash.",
+        a: "We comply with valid European legal requests. However, our architecture means we have very limited data to provide. We cannot identify users by real name, email, or phone number because we don't collect that information. We cannot decrypt your secret key because we only store a one-way hash.",
       },
     ],
   },
