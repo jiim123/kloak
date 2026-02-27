@@ -195,6 +195,7 @@ const Index = () => {
                 rotation={156}
                 offsetX={-0.24}
                 offsetY={1}
+              />
             </div>
 
             <motion.div
