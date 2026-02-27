@@ -474,7 +474,7 @@ const RolePermissionsEditorInline = ({ role, serverId }: { role: CustomServerRol
       {PERMISSION_GROUPS.map((group) => (
         <div key={group.label} className="space-y-1">
           <div className="mb-3">
-            <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">{group.label}</h4>
+            <h4 className="text-xs font-mono tracking-tight text-muted-foreground">{group.label}</h4>
             <p className="text-xs text-muted-foreground mt-0.5">{group.description}</p>
           </div>
           <div className="space-y-0.5">
