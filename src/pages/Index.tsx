@@ -186,16 +186,15 @@ const Index = () => {
                 width={1280}
                 height={720}
                 colorBack="#dbd7cc"
-                colorFront="#1c1c1c"
+                colorFront="#121212"
                 shape="wave"
                 type="8x8"
-                size={2.8}
-                speed={0.12}
-                scale={2.12}
-                rotation={184}
-                offsetX={0.28}
-                offsetY={0.84}
-              />
+                size={3}
+                speed={0.14}
+                scale={2.04}
+                rotation={156}
+                offsetX={-0.24}
+                offsetY={1}
             </div>
 
             <motion.div
