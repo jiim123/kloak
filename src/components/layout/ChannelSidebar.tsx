@@ -262,7 +262,7 @@ const SortableChannel = ({
           "hover:bg-secondary/80",
           isActive && !isSortingMode && "bg-secondary text-foreground",
           !isActive && "text-muted-foreground hover:text-foreground",
-          isUnread && !isActive && "text-foreground font-semibold",
+          isUnread && !isActive && "text-foreground font-medium",
           isDragging && "opacity-50 shadow-lg ring-2 ring-primary/30 bg-secondary",
           isSortingMode && "cursor-default",
         )}
@@ -286,7 +286,7 @@ const SortableChannel = ({
 
         {/* NSFW badge */}
         {channel.is_nsfw && (
-          <span className="px-1 py-0.5 text-[10px] font-semibold rounded bg-destructive/20 text-destructive uppercase tracking-wide flex-shrink-0">
+          <span className="px-1 py-0.5 text-[10px] font-medium rounded bg-destructive/20 text-destructive uppercase tracking-wide flex-shrink-0">
             NSFW
           </span>
         )}
@@ -519,7 +519,7 @@ const SortableCategory = ({
       )}
       <button
         className={cn(
-          "flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground uppercase tracking-wider flex-1 py-1",
+          "flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground uppercase tracking-wider flex-1 py-1",
           isDragging && "opacity-50",
           isSortingMode && "cursor-default",
         )}
@@ -990,7 +990,7 @@ export const ChannelSidebar = () => {
         return (
           <div className="flex items-center gap-1 px-3 py-1.5 bg-card border border-border shadow-lg rounded-md text-sm ring-2 ring-primary/30">
             <ChevronRight className="w-3 h-3 text-muted-foreground" />
-            <span className="uppercase text-xs font-semibold">{category.name}</span>
+            <span className="uppercase text-xs font-medium">{category.name}</span>
           </div>
         );
       }
@@ -1329,7 +1329,7 @@ export const ChannelSidebar = () => {
                   <div className="mt-4 border-t border-border/30 pt-2">
                     <button
                       onClick={() => setShowHidden(!showHidden)}
-                      className="w-full flex items-center gap-1.5 px-2 py-1 text-xs font-semibold uppercase text-muted-foreground hover:text-foreground transition-colors"
+                      className="w-full flex items-center gap-1.5 px-2 py-1 text-xs font-medium uppercase text-muted-foreground hover:text-foreground transition-colors"
                     >
                       {showHidden ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                       <EyeOff className="w-3 h-3" />
