@@ -160,9 +160,7 @@ export const ChannelContextMenu = ({
       {/* ========== ADMIN SECTION ========== */}
       {isAdmin && (
         <>
-          <ContextMenuLabel className="font-mono font-normal text-xs text-muted-foreground">
-            Channel Management
-          </ContextMenuLabel>
+          <ContextMenuLabel className="font-normal text-xs text-muted-foreground">Channel Management</ContextMenuLabel>
           <ContextMenuItem onClick={() => openModal("edit-channel", { channelId: channel.id })}>
             <Settings className="w-4 h-4 mr-2" />
             Channel Settings
@@ -181,9 +179,7 @@ export const ChannelContextMenu = ({
           </ContextMenuItem>
 
           <ContextMenuSeparator />
-          <ContextMenuLabel className="font-mono font-normal text-xs text-muted-foreground">
-            Organization
-          </ContextMenuLabel>
+          <ContextMenuLabel className="font-normal text-xs text-muted-foreground">Organization</ContextMenuLabel>
           <ContextMenuItem onClick={handleTogglePin}>
             {channelPinned ? <PinOff className="w-4 h-4 mr-2" /> : <Pin className="w-4 h-4 mr-2" />}
             {channelPinned ? "Unpin Channel" : "Pin Channel to Top"}
@@ -213,7 +209,7 @@ export const ChannelContextMenu = ({
           )}
 
           <ContextMenuSeparator />
-          <ContextMenuLabel className="font-mono font-normal text-xs text-muted-foreground">
+          <ContextMenuLabel className="font-normal text-xs text-muted-foreground">
             Notifications & Visibility
           </ContextMenuLabel>
           {onMarkAsRead && (
@@ -232,7 +228,7 @@ export const ChannelContextMenu = ({
           </ContextMenuItem>
 
           <ContextMenuSeparator />
-          <ContextMenuLabel className="font-mono font-normal text-xs text-muted-foreground">
+          <ContextMenuLabel className="font-normal text-xs text-muted-foreground">
             Sharing & Administration
           </ContextMenuLabel>
           <ContextMenuItem onClick={onCopyLink}>
@@ -257,7 +253,7 @@ export const ChannelContextMenu = ({
       {/* ========== MEMBER SECTION ========== */}
       {!isAdmin && (
         <>
-          <ContextMenuLabel className="font-mono font-normal text-xs text-muted-foreground">
+          <ContextMenuLabel className="font-normal text-xs text-muted-foreground">
             Personal Organization
           </ContextMenuLabel>
           <ContextMenuItem onClick={handleTogglePin}>
@@ -280,9 +276,7 @@ export const ChannelContextMenu = ({
           </ContextMenuItem>
 
           <ContextMenuSeparator />
-          <ContextMenuLabel className="font-mono font-normal text-xs text-muted-foreground">
-            Notifications
-          </ContextMenuLabel>
+          <ContextMenuLabel className="  font-normal text-xs text-muted-foreground">Notifications</ContextMenuLabel>
           <ContextMenuItem onClick={handleToggleMute}>
             {channelMuted ? <Volume2 className="w-4 h-4 mr-2" /> : <BellOff className="w-4 h-4 mr-2" />}
             {channelMuted ? "Unmute Channel" : "Mute Channel"}
@@ -328,7 +322,7 @@ export const ChannelContextMenu = ({
           </ContextMenuSub>
 
           <ContextMenuSeparator />
-          <ContextMenuLabel className="font-mono font-normal text-xs text-muted-foreground">Sharing</ContextMenuLabel>
+          <ContextMenuLabel className="font-normal text-xs text-muted-foreground">Sharing</ContextMenuLabel>
           <ContextMenuItem onClick={onCopyLink}>
             <Link className="w-4 h-4 mr-2" />
             Copy Channel Link
