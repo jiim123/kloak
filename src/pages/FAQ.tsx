@@ -96,7 +96,7 @@ const faqCategories = [
       },
       {
         q: "How are donations handled?",
-        a: "Donations are accepted voluntarily through Buy Me a Coffee and different cryptocurrencies and go directly toward server infrastructure and platform development. Donating does not purchase any service or guarantee any specific feature. It is entirely optional support for a free, open-source project. Donors interact with Buy Me a Coffee's own platform, which has its own privacy policy and terms.",
+        a: "Donations are accepted voluntarily through Buy Me a Coffee and different cryptocurrencies and go directly toward server infrastructure and platform development. Donating does not purchase any service or guarantee any specific feature. It is entirely optional support for a free project. Donors interact with Buy Me a Coffee's own platform, which has its own privacy policy and terms.",
       },
     ],
   },
