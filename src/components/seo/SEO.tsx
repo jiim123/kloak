@@ -1,7 +1,7 @@
 import { Helmet } from "react-helmet-async";
 import { useLocation } from "react-router-dom";
 
-const BASE_URL = "https://kloak.lovable.app";
+const BASE_URL = "https://kloak.app/";
 const DEFAULT_TITLE = "Kloak - Private Communication Platform";
 const SITE_NAME = "Kloak";
 const DEFAULT_IMAGE = `${BASE_URL}/favicon.png`;
