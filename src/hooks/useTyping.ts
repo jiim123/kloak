@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { getKeyHash, supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import { useServerStore } from '@/stores/serverStore';
-import { getUserFromCache } from '@/lib/userCache';
+import { getOrFetchUser, getUserFromCache } from '@/lib/userCache';
 import type { TypingUser } from '@/types';
 
 const TYPING_DEBOUNCE_MS = 4500;
@@ -55,10 +55,9 @@ export const useTyping = (channelId: string | null) => {
         const memberUser =
           members.find((m) => !m.is_banned && m.user_id === incomingUserId)?.user ?? null;
         const cachedUser = getUserFromCache(incomingUserId);
-        const trustedUsername = memberUser?.username ?? cachedUser?.username ?? null;
+        const trustedUsername = memberUser?.username ?? cachedUser?.username ?? 'Someone';
         const trustedDisplayName =
           memberUser?.display_name ?? cachedUser?.display_name ?? null;
-        if (!trustedUsername) return;
 
         setTypingUsers((prev) => {
           const existing = prev.find((u) => u.user_id === incomingUserId);
@@ -84,6 +83,24 @@ export const useTyping = (channelId: string | null) => {
             },
           ];
         });
+
+        // Resolve a trusted profile name when not available locally (common on DM/cold cache paths).
+        if (!memberUser && !cachedUser) {
+          void getOrFetchUser(incomingUserId).then((fetched) => {
+            if (!fetched) return;
+            setTypingUsers((prev) =>
+              prev.map((u) =>
+                u.user_id === incomingUserId
+                  ? {
+                      ...u,
+                      username: fetched.username || u.username,
+                      display_name: fetched.display_name ?? u.display_name,
+                    }
+                  : u
+              )
+            );
+          });
+        }
       })
       .on('broadcast', { event: 'stop_typing' }, ({ payload }) => {
         const incomingUserId = typeof payload?.user_id === 'string' ? payload.user_id : '';
@@ -92,7 +109,11 @@ export const useTyping = (channelId: string | null) => {
           prev.filter((u) => u.user_id !== incomingUserId)
         );
       })
-      .subscribe();
+      .subscribe((status, err) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('Typing channel subscribe failed', status, err);
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
