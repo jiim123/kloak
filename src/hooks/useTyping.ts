@@ -1,16 +1,21 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { getKeyHash, supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
+import { useServerStore } from '@/stores/serverStore';
+import { getUserFromCache } from '@/lib/userCache';
 import type { TypingUser } from '@/types';
 
-const TYPING_DEBOUNCE_MS = 2000;
+const TYPING_DEBOUNCE_MS = 4500;
 const TYPING_TIMEOUT_MS = 5000;
 const STALE_CLEANUP_INTERVAL_MS = 1000;
+const UUID_V4ish_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+type TypingEvent = 'typing' | 'stop_typing';
 
 export const useTyping = (channelId: string | null) => {
   const { user } = useAuthStore();
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
   const lastTypingTime = useRef<number>(0);
+  const hasAnnouncedTypingRef = useRef(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
@@ -31,6 +36,7 @@ export const useTyping = (channelId: string | null) => {
   // Clear typing users when channel changes
   useEffect(() => {
     setTypingUsers([]);
+    hasAnnouncedTypingRef.current = false;
   }, [channelId]);
 
   // Subscribe to typing events
@@ -42,31 +48,48 @@ export const useTyping = (channelId: string | null) => {
 
     channel
       .on('broadcast', { event: 'typing' }, ({ payload }) => {
-        if (payload.user_id === user.id) return;
+        const incomingUserId = typeof payload?.user_id === 'string' ? payload.user_id : '';
+        if (!UUID_V4ish_RE.test(incomingUserId) || incomingUserId === user.id) return;
+
+        const members = useServerStore.getState().members;
+        const memberUser =
+          members.find((m) => !m.is_banned && m.user_id === incomingUserId)?.user ?? null;
+        const cachedUser = getUserFromCache(incomingUserId);
+        const trustedUsername = memberUser?.username ?? cachedUser?.username ?? null;
+        const trustedDisplayName =
+          memberUser?.display_name ?? cachedUser?.display_name ?? null;
+        if (!trustedUsername) return;
 
         setTypingUsers((prev) => {
-          const existing = prev.find((u) => u.user_id === payload.user_id);
+          const existing = prev.find((u) => u.user_id === incomingUserId);
           if (existing) {
             return prev.map((u) =>
-              u.user_id === payload.user_id
-                ? { ...u, started_at: Date.now() }
+              u.user_id === incomingUserId
+                ? {
+                    ...u,
+                    username: trustedUsername,
+                    display_name: trustedDisplayName,
+                    started_at: Date.now(),
+                  }
                 : u
             );
           }
           return [
             ...prev,
             {
-              user_id: payload.user_id,
-              username: payload.username,
-              display_name: payload.display_name || null,
+              user_id: incomingUserId,
+              username: trustedUsername,
+              display_name: trustedDisplayName,
               started_at: Date.now(),
             },
           ];
         });
       })
       .on('broadcast', { event: 'stop_typing' }, ({ payload }) => {
+        const incomingUserId = typeof payload?.user_id === 'string' ? payload.user_id : '';
+        if (!UUID_V4ish_RE.test(incomingUserId)) return;
         setTypingUsers((prev) =>
-          prev.filter((u) => u.user_id !== payload.user_id)
+          prev.filter((u) => u.user_id !== incomingUserId)
         );
       })
       .subscribe();
@@ -77,34 +100,39 @@ export const useTyping = (channelId: string | null) => {
     };
   }, [channelId, user]);
 
+  const publishTypingEvent = useCallback(async (event: TypingEvent) => {
+    if (!channelId || !user) return;
+    const keyHash = getKeyHash();
+    if (!keyHash) return;
+
+    const { error } = await supabase.functions.invoke('broadcast-typing', {
+      body: { channel_id: channelId, event },
+      headers: { 'x-key-hash': keyHash },
+    });
+    if (error) throw error;
+  }, [channelId, user]);
+
+  const stopTyping = useCallback(() => {
+    if (!user) return;
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+    if (!hasAnnouncedTypingRef.current) return;
+    hasAnnouncedTypingRef.current = false;
+    void publishTypingEvent('stop_typing').catch(() => undefined);
+  }, [user, publishTypingEvent]);
+
   const startTyping = useCallback(() => {
-    if (!channelRef.current || !user) return;
+    if (!user) return;
 
     const now = Date.now();
-    if (now - lastTypingTime.current < TYPING_DEBOUNCE_MS) return;
+    if (hasAnnouncedTypingRef.current && now - lastTypingTime.current < TYPING_DEBOUNCE_MS) return;
 
     lastTypingTime.current = now;
-
-    const sendPayload = {
-      type: 'broadcast',
-      event: 'typing',
-      payload: {
-        user_id: user.id,
-        username: user.username,
-        display_name: user.display_name,
-      },
-    };
-    // Newer realtime-js prefers httpSend(event, payload) for REST delivery (send() fallback will be deprecated).
-    const ch: any = channelRef.current as any;
-    try {
-      if (typeof ch.httpSend === 'function') {
-        void ch.httpSend(sendPayload.event, sendPayload.payload).catch(() => undefined);
-      } else {
-        void ch.send(sendPayload).catch(() => undefined);
-      }
-    } catch {
-      // ignore
-    }
+    hasAnnouncedTypingRef.current = true;
+    void publishTypingEvent('typing').catch(() => undefined);
 
     // Auto-stop after timeout
     if (typingTimeoutRef.current) {
@@ -113,34 +141,7 @@ export const useTyping = (channelId: string | null) => {
     typingTimeoutRef.current = setTimeout(() => {
       stopTyping();
     }, TYPING_TIMEOUT_MS);
-  }, [user]);
-
-  const stopTyping = useCallback(() => {
-    if (!channelRef.current || !user) return;
-
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-      typingTimeoutRef.current = null;
-    }
-
-    const sendPayload = {
-      type: 'broadcast',
-      event: 'stop_typing',
-      payload: {
-        user_id: user.id,
-      },
-    };
-    const ch: any = channelRef.current as any;
-    try {
-      if (typeof ch.httpSend === 'function') {
-        void ch.httpSend(sendPayload.event, sendPayload.payload).catch(() => undefined);
-      } else {
-        void ch.send(sendPayload).catch(() => undefined);
-      }
-    } catch {
-      // ignore
-    }
-  }, [user]);
+  }, [user, publishTypingEvent, stopTyping]);
 
   return {
     typingUsers: typingUsers.filter((u) => u.user_id !== user?.id),

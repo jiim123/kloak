@@ -8,8 +8,14 @@ interface TypingIndicatorProps {
 export const TypingIndicator = ({ typingUsers }: TypingIndicatorProps) => {
   if (typingUsers.length === 0) return null;
 
+  const clampName = (value: string | null | undefined): string => {
+    const normalized = (value ?? '').trim();
+    if (!normalized) return 'Unknown';
+    return normalized.length > 32 ? `${normalized.slice(0, 32)}…` : normalized;
+  };
+
   const formatTypingText = (): string => {
-    const names = typingUsers.map((u) => u.display_name || u.username);
+    const names = typingUsers.map((u) => clampName(u.display_name || u.username));
 
     if (names.length === 1) {
       return `${names[0]} is typing`;
@@ -27,7 +33,7 @@ export const TypingIndicator = ({ typingUsers }: TypingIndicatorProps) => {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 8 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
-        className="h-6 px-4 flex items-center gap-2 text-sm text-muted-foreground"
+        className="h-6 min-w-0 px-4 flex items-center gap-2 text-sm text-muted-foreground"
       >
         {/* Shimmer typing indicator - sliding gradient highlight */}
         <div className="relative w-10 h-1.5 bg-foreground/20 rounded-full overflow-hidden">
@@ -46,7 +52,7 @@ export const TypingIndicator = ({ typingUsers }: TypingIndicatorProps) => {
             }}
           />
         </div>
-        <span>{formatTypingText()}</span>
+        <span className="truncate">{formatTypingText()}</span>
       </motion.div>
     </AnimatePresence>
   );

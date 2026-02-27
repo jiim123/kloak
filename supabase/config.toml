@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.register-with-pow]
 verify_jwt = false
+
+[functions.broadcast-typing]
+verify_jwt = false
