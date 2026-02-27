@@ -44,45 +44,6 @@ export type Database = {
         }
         Relationships: []
       }
-      _snapshot_messages_compromise_20260221: {
-        Row: {
-          channel_id: string | null
-          content: string | null
-          created_at: string | null
-          edited_at: string | null
-          embed_hidden: boolean | null
-          id: string | null
-          is_pinned: boolean | null
-          is_system_message: boolean | null
-          reply_to_id: string | null
-          user_id: string | null
-        }
-        Insert: {
-          channel_id?: string | null
-          content?: string | null
-          created_at?: string | null
-          edited_at?: string | null
-          embed_hidden?: boolean | null
-          id?: string | null
-          is_pinned?: boolean | null
-          is_system_message?: boolean | null
-          reply_to_id?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          channel_id?: string | null
-          content?: string | null
-          created_at?: string | null
-          edited_at?: string | null
-          embed_hidden?: boolean | null
-          id?: string | null
-          is_pinned?: boolean | null
-          is_system_message?: boolean | null
-          reply_to_id?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       announcement_comment_reactions: {
         Row: {
           comment_id: string
