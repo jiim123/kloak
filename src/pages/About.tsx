@@ -58,7 +58,7 @@ const About = () => {
           <section className="relative py-24 px-8 lg:px-16 bg-card/50 border-b border-border/20">
             <div className="max-w-3xl mx-auto">
               <motion.div {...sectionAnim}>
-                <h4 className="text-muted-foreground tracking-widest uppercase mb-12">About Kloak</h4>
+                <h4 className="text-muted-foreground tracking-widest  mb-12">About Kloak</h4>
                 <div className="space-y-6 text-foreground text-base md:text-lg leading-[1.8]">
                   <p>
                     Kloak is a community-driven communication platform created by people who are genuinely passionate
@@ -81,7 +81,7 @@ const About = () => {
           <section className="relative py-24 px-8 lg:px-16 border-b border-border/20">
             <div className="max-w-3xl mx-auto">
               <motion.div {...sectionAnim}>
-                <h4 className="text-muted-foreground tracking-widest uppercase mb-12">How it started</h4>
+                <h4 className="text-muted-foreground tracking-widest mb-12">How it started</h4>
                 <div className="space-y-6 text-foreground/85 text-base md:text-lg leading-[1.8]">
                   <p>
                     In January 2026, we quietly opened the doors to a very, very early alpha, almost like a shell. No
@@ -104,7 +104,7 @@ const About = () => {
           <section className="relative py-24 px-8 lg:px-16 bg-card/50 border-b border-border/20">
             <div className="max-w-3xl mx-auto">
               <motion.div {...sectionAnim}>
-                <h4 className="text-muted-foreground tracking-widest uppercase mb-12">Where we are now</h4>
+                <h4 className="text-muted-foreground tracking-widest mb-12">Where we are now</h4>
                 <div className="space-y-6 text-foreground/85 text-base md:text-lg leading-[1.8]">
                   <p>
                     Today, Kloak is maintained by a team of roughly five people, all working on this as a side project
@@ -126,7 +126,7 @@ const About = () => {
           <section className="relative py-24 px-8 lg:px-16 border-b border-border/20">
             <div className="max-w-3xl mx-auto">
               <motion.div {...sectionAnim}>
-                <h4 className="text-muted-foreground tracking-widest uppercase mb-12">What comes next</h4>
+                <h4 className="text-muted-foreground tracking-widest mb-12">What comes next</h4>
                 <div className="space-y-6 text-foreground/85 text-base md:text-lg leading-[1.8]">
                   <p>
                     Our primary focus going forward is to implement a zero-knowledge encryption strategy. This means
@@ -154,7 +154,7 @@ const About = () => {
           <section className="relative py-24 px-8 lg:px-16 bg-card/50 border-b border-border/20">
             <div className="max-w-3xl mx-auto">
               <motion.div {...sectionAnim}>
-                <h4 className="text-muted-foreground tracking-widest uppercase mb-12">Why we do this</h4>
+                <h4 className="text-muted-foreground tracking-widest mb-12">Why we do this</h4>
                 <div className="space-y-6 text-foreground/85 text-base md:text-lg leading-[1.8]">
                   <p>
                     There is no shortage of communication platforms out there. Most of them are free. Most of them are
