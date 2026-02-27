@@ -286,14 +286,14 @@ const SortableChannel = ({
 
         {/* NSFW badge */}
         {channel.is_nsfw && (
-          <span className="px-1 py-0.5 text-[10px] font-medium rounded bg-destructive/20 text-destructive uppercase tracking-wide flex-shrink-0">
+          <span className="px-1 py-0.5 text-[10px] font-mono rounded bg-destructive/40 text-destructive uppercase tracking-wide flex-shrink-0">
             NSFW
           </span>
         )}
 
         {/* Mention badge */}
         {mentionCount > 0 && !isSortingMode && (
-          <span className="px-1.5 py-0.5 text-xs font-bold rounded-full bg-amber-600 text-white flex-shrink-0">
+          <span className="px-1.5 py-0.5 text-xs font-mono rounded-full bg-red-600 text-white flex-shrink-0">
             {mentionCount > 99 ? "99+" : mentionCount}
           </span>
         )}
