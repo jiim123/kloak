@@ -210,8 +210,7 @@ const categories: CategoryData[] = [
   {
     icon: Palette,
     title: "Design",
-    subtitle:
-      "Shape the visual identity of a privacy-preserved platform. Our interfaces are built on Tailwind CSS with a dark theme, glass morphism, and a zinc/emerald color system that prioritizes clarity over decoration.",
+    subtitle: "Shape the visual identity of a privacy-preserved platform.",
     positions: [
       {
         icon: PenTool,
@@ -241,7 +240,6 @@ const categories: CategoryData[] = [
         requirements: [
           "Proficiency in Figma or equivalent design tools with experience building and maintaining component libraries and design tokens",
           "Strong understanding of design system principles: consistent spacing scales, color palettes, typography hierarchies, and component variants",
-          "Experience designing for dark-themed interfaces with glass morphism, layered transparency, and backdrop blur effects",
           "Familiarity with Tailwind CSS utility-first patterns. Our designers work closely with engineers and design decisions translate directly into utility classes",
           "Understanding of responsive component behavior: how elements adapt, reflow, and collapse across viewport sizes without separate mobile designs",
           "Experience designing interactive states: hover, focus, active, disabled, loading, error, and empty states for every component",
