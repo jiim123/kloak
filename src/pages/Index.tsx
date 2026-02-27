@@ -186,15 +186,15 @@ const Index = () => {
                 width={1280}
                 height={720}
                 colorBack="#dbd7cc"
-                colorFront="#222220"
+                colorFront="#1c1c1c"
                 shape="wave"
                 type="8x8"
                 size={2.8}
                 speed={0.12}
-                scale={0.96}
-                rotation={360}
-                offsetX={-0.16}
-                offsetY={-0.16}
+                scale={2.12}
+                rotation={184}
+                offsetX={0.28}
+                offsetY={0.84}
               />
             </div>
 
