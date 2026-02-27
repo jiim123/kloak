@@ -561,11 +561,6 @@ const PositionCard = ({
                 </ul>
               </div>
 
-              <div className="mb-8 border-l-2 border-primary/20 pl-6">
-                <h5 className="text-sm font-mono text-primary tracking-widest uppercase mb-3">Mindset</h5>
-                <p className="text-muted-foreground text-sm leading-relaxed italic">{position.mindset}</p>
-              </div>
-
               <div className="border border-border/20 bg-card/30 p-6 md:p-8 rounded-lg">
                 <h5 className="text-lg font-medium text-foreground mb-2">Interested in this role?</h5>
                 <p className="text-muted-foreground text-sm leading-relaxed mb-5 max-w-xl">
@@ -735,10 +730,10 @@ const Join = () => {
                 transition={{ duration: 0.6 }}
               >
                 <span className="text-xs font-mono text-primary tracking-widest uppercase mb-4 block">
-                  We're Hiring Volunteers
+                  We're looking for volunteers
                 </span>
                 <h2 className="text-3xl sm:text-4xl md:text-5xl font-light text-foreground leading-tight tracking-tight">
-                  Current openings.
+                  Open Positions.
                 </h2>
               </motion.div>
 
