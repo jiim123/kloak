@@ -186,7 +186,7 @@ const Index = () => {
                 width={1280}
                 height={720}
                 colorBack="#dbd7cc"
-                colorFront="#222220"
+                colorFront="#1c1c1c"
                 shape="wave"
                 type="4x4"
                 size={10}
