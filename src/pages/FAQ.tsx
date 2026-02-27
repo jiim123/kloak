@@ -80,7 +80,7 @@ const faqCategories = [
     questions: [
       {
         q: "Is there a legal entity behind Kloak?",
-        a: "Kloak is currently an open-source community project without a registered legal entity. We are evaluating the right legal structure as the project grows and will be transparent about any changes.",
+        a: "Kloak is currently a community project without a registered legal entity. We are evaluating the right legal structure as the project grows and will be transparent about any changes.",
       },
       {
         q: "Does GDPR apply to Kloak?",
