@@ -16,22 +16,58 @@ import {
   Music,
   Video,
 } from "lucide-react";
+import { Dithering } from "@paper-design/shaders-react";
 import { Footer } from "@/components/ui/footer-section";
 import { NavigationMenu } from "@/components/layout/NavigationMenu";
 import HeroAscii from "@/components/landing/HeroAscii";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SEO } from "@/components/seo";
 import { SEO_CONFIG } from "@/lib/seo";
+
 const Index = () => {
-  const comparisonData = [
-    { label: "Messages scanned for ad targeting", others: true, kloak: false },
-    { label: "Creative work used to train AI", others: true, kloak: false },
-    { label: "Algorithm decides who sees your content", others: true, kloak: false },
-    { label: "Premium tiers for basic features", others: true, kloak: false },
-    { label: "Behavioral profiling & analytics", others: true, kloak: false },
-    { label: "Platform can ban your community", others: true, kloak: false },
-    { label: "You own your community data", others: false, kloak: true },
-    { label: "Same features for everyone", others: false, kloak: true },
+  const capabilities = [
+    {
+      icon: MessageCircle,
+      label: "Messaging",
+      title: "Real-Time Messaging",
+      description:
+        "Your messages arrive instantly. Edits, replies, and reactions update live for everyone in the conversation, no refreshing needed.",
+    },
+    {
+      icon: Headphones,
+      label: "Voice",
+      title: "Voice Channels",
+      description:
+        "Jump into a voice channel and talk with your group while browsing the rest of the app. Low latency, always ready when you are.",
+    },
+    {
+      icon: Users,
+      label: "Structure",
+      title: "Servers, Roles & Permissions",
+      description:
+        "Organize your community with servers, categories, and channels. Assign roles and control exactly who can do what, down to the channel level.",
+    },
+    {
+      icon: Lock,
+      label: "Identity",
+      title: "Secret Key Authentication",
+      description:
+        "No email. No phone number. No password. You get one cryptographic key that is your identity. Nobody can recover it, reset it, or take it from you.",
+    },
+    {
+      icon: Shield,
+      label: "Private",
+      title: "Direct Messages & Friends",
+      description:
+        "Add friends by username, start private conversations, and block anyone you don't want to hear from. Simple and straightforward.",
+    },
+    {
+      icon: Palette,
+      label: "Personal",
+      title: "Themes & Customization",
+      description:
+        "Switch between multiple themes instantly. Personalize your profile with avatars, banners, bios, and custom statuses to make it yours.",
+    },
   ];
 
   return (
@@ -80,18 +116,15 @@ const Index = () => {
             </div>
           </section>
 
-
-          {/* Capabilities Section */}
-          <section className="relative py-32 px-8 lg:px-16 border-b border-border/20 overflow-hidden">
+          {/* Capabilities Header */}
+          <section className="relative pt-32 pb-16 px-8 lg:px-16 overflow-hidden">
             <div className="max-w-7xl mx-auto">
               <motion.div
-                className="mb-20"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6 }}
               >
-                {/* Section header */}
                 <div className="flex items-center gap-4 mb-4">
                   <span className="font-mono text-primary tracking-widest uppercase">Capabilities</span>
                 </div>
@@ -101,182 +134,96 @@ const Index = () => {
                   <span>Nothing you don't.</span>
                 </h2>
               </motion.div>
-
-              {/* Feature Grid */}
-              <div className="grid md:grid-cols-2 gap-6">
-                {[
-                  {
-                    icon: MessageCircle,
-                    title: "Real-Time Messaging",
-                    description:
-                      "Your messages arrive instantly. Edits, replies, and reactions update live for everyone in the conversation, no refreshing needed.",
-                  },
-                  {
-                    icon: Headphones,
-                    title: "Voice Channels",
-                    description:
-                      "Jump into a voice channel and talk with your group while browsing the rest of the app. Low latency, always ready when you are.",
-                  },
-                  {
-                    icon: Users,
-                    title: "Servers, Roles & Permissions",
-                    description:
-                      "Organize your community with servers, categories, and channels. Assign roles and control exactly who can do what, down to the channel level.",
-                  },
-                  {
-                    icon: Lock,
-                    title: "Secret Key Authentication",
-                    description:
-                      "No email. No phone number. No password. You get one cryptographic key that is your identity. Nobody can recover it, reset it, or take it from you.",
-                  },
-                  {
-                    icon: Shield,
-                    title: "Direct Messages & Friends",
-                    description:
-                      "Add friends by username, start private conversations, and block anyone you don't want to hear from. Simple and straightforward.",
-                  },
-                  {
-                    icon: Palette,
-                    title: "Themes & Customization",
-                    description:
-                      "Switch between multiple themes instantly. Personalize your profile with avatars, banners, bios, and custom statuses to make it yours.",
-                  },
-                ].map((feature, index) => (
-                  <motion.div
-                    key={feature.title}
-                    className="relative rounded-lg p-10 group overflow-hidden bg-card/30"
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: index * 0.1 }}
-                  >
-                    <div className="flex items-start gap-4">
-                      <feature.icon className="w-5 h-5 text-primary shrink-0 mt-1" />
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-foreground mb-3">{feature.title}</h3>
-                        <p className="text-[17px] text-muted-foreground leading-[1.7]">{feature.description}</p>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
             </div>
           </section>
 
-          {/* Built For Creators Section */}
-          <section className="relative py-32 px-8 lg:px-16 bg-card/50 border-b border-border/20 overflow-hidden">
-            <div className="max-w-7xl mx-auto">
-              <motion.div
-                className="mb-20"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6 }}
+          {/* Individual Capability Sections */}
+          {capabilities.map((capability, index) => {
+            const isEven = index % 2 === 0;
+            return (
+              <section
+                key={capability.title}
+                className={`relative py-24 px-8 lg:px-16 overflow-hidden ${
+                  isEven ? "" : "bg-card/30"
+                } ${index === capabilities.length - 1 ? "border-b border-border/20" : ""}`}
               >
-                {/* Section header */}
-                <div className="flex items-center gap-4 mb-4">
-                  <span className="font-mono text-primary tracking-widest uppercase">Your Space</span>
-                </div>
-                <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight mb-6">
-                  Built for people
-                  <br />
-                  <span>Built to have fun.</span>
-                </h2>
-                <p className="text-[17px] text-muted-foreground max-w-2xl leading-[1.7]">
-                  Whether you're coordinating a raid, mixing a track, or simply just talking to friends and family,
-                  Kloak is the space where your communication lives without being monetized.
-                </p>
-              </motion.div>
-
-              {/* Creator Cards Grid */}
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[
-                  {
-                    icon: Gamepad2,
-                    title: "Gamers & Guilds",
-                    description: "Voice comms, raid coordination, guild management. Your strategies stay in the squad.",
-                  },
-                  {
-                    icon: Music,
-                    title: "Musicians & Producers",
-                    description:
-                      "Share demos, collaborate remotely, build your scene. Your unreleased work stays unreleased.",
-                  },
-                  {
-                    icon: Palette,
-                    title: "Artists & Designers",
-                    description: "Feedback sessions, portfolio sharing, creative critique. No AI scraping your style.",
-                  },
-                  {
-                    icon: Video,
-                    title: "Streamers & Creators",
-                    description: "Community that's actually yours. No algorithm deciding who sees your posts.",
-                  },
-                  {
-                    icon: Zap,
-                    title: "Indie Studios",
-                    description:
-                      "Ship games, share builds, coordinate across time zones. Your roadmap stays confidential.",
-                  },
-                  {
-                    icon: Users,
-                    title: "Creative Collectives",
-                    description:
-                      "Build culture, not just content. Spaces that reflect your values, not a platform's metrics.",
-                  },
-                ].map((card, index) => (
+                <div className="max-w-7xl mx-auto">
                   <motion.div
-                    key={card.title}
-                    className="group relative border border-border/30 p-8 overflow-hidden hover:border-primary/30 transition-colors duration-300 bg-card/30"
+                    className="grid md:grid-cols-[1fr_1.5fr] gap-12 md:gap-20 items-start"
                     initial={{ opacity: 0, y: 30 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: index * 0.08 }}
+                    transition={{ duration: 0.6 }}
                   >
-                    {/* Icon */}
-                    <div className="relative mb-6">
-                      <div className="w-12 h-12 border border-primary/30 flex items-center justify-center group-hover:border-primary/50 transition-colors duration-300">
-                        <card.icon className="w-6 h-6 text-primary" />
+                    {/* Left: Label + Icon */}
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 border border-primary/30 flex items-center justify-center shrink-0">
+                        <capability.icon className="w-6 h-6 text-primary" />
+                      </div>
+                      <div>
+                        <span className="font-mono text-primary/60 tracking-widest uppercase text-xs">
+                          {capability.label}
+                        </span>
+                        <h3 className="text-2xl sm:text-3xl font-light text-foreground leading-tight tracking-tight mt-1">
+                          {capability.title}
+                        </h3>
                       </div>
                     </div>
-                    {/* Content */}
-                    <div className="relative">
-                      <h3 className="text-base font-semibold text-foreground mb-2">{card.title}</h3>
-                      <p className="text-[17px] text-muted-foreground leading-[1.7]">{card.description}</p>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </section>
 
-          {/* CTA Section */}
+                    {/* Right: Description */}
+                    <p className="text-[17px] text-muted-foreground leading-[1.7] md:pt-2">{capability.description}</p>
+                  </motion.div>
+                </div>
+              </section>
+            );
+          })}
+
+          {/* CTA Section with Dithering Background */}
           <section className="relative py-32 px-8 lg:px-16 border-t border-border/20 overflow-hidden">
+            {/* Dithering Shader Background */}
+            <div className="absolute inset-0 z-0">
+              <Dithering
+                width={1280}
+                height={720}
+                colorBack="#dbd7cc"
+                colorFront="#222220"
+                shape="wave"
+                type="4x4"
+                size={10}
+                speed={0.04}
+                scale={1.12}
+                rotation={8}
+                offsetX={-0.32}
+                offsetY={-0.06}
+                style={{ width: "100%", height: "100%" }}
+              />
+            </div>
+
             <motion.div
-              className="max-w-7xl mx-auto relative"
+              className="max-w-7xl mx-auto relative z-10"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
             >
-              <div className="text-center">
+              <div className="text-center" style={{ mixBlendMode: "difference" }}>
                 {/* Section header */}
                 <div className="flex items-center justify-center gap-4 mb-6">
-                  <span className="font-mono text-primary tracking-widest uppercase">Get Started</span>
+                  <span className="font-mono text-white tracking-widest uppercase">Get Started</span>
                 </div>
-                <div className="w-16 h-16 border border-primary/30 flex items-center justify-center mx-auto mb-8">
-                  <Key className="w-8 h-8 text-primary" />
+                <div className="w-16 h-16 border border-white/30 flex items-center justify-center mx-auto mb-8">
+                  <Key className="w-8 h-8 text-white" />
                 </div>
-                <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight mb-6 max-w-2xl mx-auto">
+                <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-white leading-tight tracking-tight mb-6 max-w-2xl mx-auto">
                   Your key.
                   <br />
                   <span>Your community.</span>
                 </h2>
-                <p className="text-[17px] text-muted-foreground mb-10 max-w-lg mx-auto leading-[1.7]">
+                <p className="text-[17px] text-white mb-10 max-w-lg mx-auto leading-[1.7]">
                   No signup forms. No email verification. Generate your cryptographic key and start building your space.
                 </p>
                 <Link to="/auth">
-                  <button className="group relative px-10 py-4 bg-primary text-primary-foreground font-semibold transition-all duration-300 hover:bg-primary/90 uppercase tracking-wider">
+                  <button className="group relative px-10 py-4 bg-white text-black font-semibold transition-all duration-300 hover:bg-white/90 uppercase tracking-wider">
                     <span className="flex items-center gap-2">
                       <Key className="w-5 h-5" />
                       Generate Your Key
