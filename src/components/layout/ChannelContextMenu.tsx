@@ -62,7 +62,17 @@ export const ChannelContextMenu = ({
   const { user } = useAuthStore();
   const { currentServer, createChannel, moveChannelToCategory } = useServerStore();
   const { openModal } = useUIStore();
-  const { isMuted, isHidden, isPinned, getNotificationLevel, toggleMute, toggleHide, togglePin, setNotificationLevel, muteFor } = useChannelSettingsStore();
+  const {
+    isMuted,
+    isHidden,
+    isPinned,
+    getNotificationLevel,
+    toggleMute,
+    toggleHide,
+    togglePin,
+    setNotificationLevel,
+    muteFor,
+  } = useChannelSettingsStore();
 
   const channelMuted = isMuted(channel.id);
   const channelHidden = isHidden(channel.id);
@@ -124,7 +134,7 @@ export const ChannelContextMenu = ({
     toast.success(channelPinned ? "Channel unpinned" : "Channel pinned to top");
   };
 
-  const handleSetNotifLevel = async (level: 'all' | 'mentions' | 'nothing') => {
+  const handleSetNotifLevel = async (level: "all" | "mentions" | "nothing") => {
     await setNotificationLevel(channel.id, level);
     const labels = { all: "All Messages", mentions: "@Mentions Only", nothing: "Nothing" };
     toast.success(`Notifications set to: ${labels[level]}`);
@@ -150,7 +160,7 @@ export const ChannelContextMenu = ({
       {/* ========== ADMIN SECTION ========== */}
       {isAdmin && (
         <>
-          <ContextMenuLabel className="text-xs text-muted-foreground">Channel Management</ContextMenuLabel>
+          <ContextMenuLabel className="font-mono text-xs text-muted-foreground">Channel Management</ContextMenuLabel>
           <ContextMenuItem onClick={() => openModal("edit-channel", { channelId: channel.id })}>
             <Settings className="w-4 h-4 mr-2" />
             Channel Settings
@@ -272,20 +282,20 @@ export const ChannelContextMenu = ({
               Notification Settings
             </ContextMenuSubTrigger>
             <ContextMenuSubContent className="w-48">
-              <ContextMenuItem onClick={() => handleSetNotifLevel('all')}>
+              <ContextMenuItem onClick={() => handleSetNotifLevel("all")}>
                 <BellRing className="w-4 h-4 mr-2" />
                 All Messages
-                {notifLevel === 'all' && <Check className="w-3 h-3 ml-auto" />}
+                {notifLevel === "all" && <Check className="w-3 h-3 ml-auto" />}
               </ContextMenuItem>
-              <ContextMenuItem onClick={() => handleSetNotifLevel('mentions')}>
+              <ContextMenuItem onClick={() => handleSetNotifLevel("mentions")}>
                 <Bell className="w-4 h-4 mr-2" />
                 @Mentions Only
-                {notifLevel === 'mentions' && <Check className="w-3 h-3 ml-auto" />}
+                {notifLevel === "mentions" && <Check className="w-3 h-3 ml-auto" />}
               </ContextMenuItem>
-              <ContextMenuItem onClick={() => handleSetNotifLevel('nothing')}>
+              <ContextMenuItem onClick={() => handleSetNotifLevel("nothing")}>
                 <BellOff className="w-4 h-4 mr-2" />
                 Nothing
-                {notifLevel === 'nothing' && <Check className="w-3 h-3 ml-auto" />}
+                {notifLevel === "nothing" && <Check className="w-3 h-3 ml-auto" />}
               </ContextMenuItem>
             </ContextMenuSubContent>
           </ContextMenuSub>
