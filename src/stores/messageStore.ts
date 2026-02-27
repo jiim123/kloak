@@ -70,6 +70,7 @@ interface MessageState {
   removeMessage: (messageId: string) => void;
   clearMessages: () => void;
   clearChannelCache: (channelId: string) => void;
+  removeMessagesByUser: (userId: string) => void;
 }
 
 const groupReactions = (reactions: any[], currentUserId?: string): ReactionGroup[] => {
@@ -301,7 +302,10 @@ export const useMessageStore = create<MessageState>((set, get) => ({
           // Bootstrap RPC may be unavailable while migrations roll out.
           // Ensure channel overrides are still loaded via legacy path.
           if (!normalizedBefore) {
-            void useServerStore.getState().fetchChannelPermissions(channelId).catch(() => undefined);
+            void useServerStore
+              .getState()
+              .fetchChannelPermissions(channelId)
+              .catch(() => undefined);
           }
         }
 
@@ -361,9 +365,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         const messages: Message[] = messageRows.reverse().map((msg: any) => ({
           ...msg,
           user: msg.user,
-          reply_to: msg.reply_to_id
-            ? toMessageReply(msg.reply_to) || replyMap[msg.reply_to_id]
-            : undefined,
+          reply_to: msg.reply_to_id ? toMessageReply(msg.reply_to) || replyMap[msg.reply_to_id] : undefined,
           attachments: msg.attachments || [],
           reactions: groupReactions(
             blockedUserIds.length > 0
@@ -450,14 +452,14 @@ export const useMessageStore = create<MessageState>((set, get) => ({
             const nextByChannel = pruneMessagesByChannel(
               {
                 ...state.messagesByChannel,
-                  [channelId]: {
-                    messages: reconciled,
-                    hasMore,
-                    lastFetched: Date.now(),
-                    oldestLoadedAt: reconciled[0]?.created_at ?? null,
-                  },
+                [channelId]: {
+                  messages: reconciled,
+                  hasMore,
+                  lastFetched: Date.now(),
+                  oldestLoadedAt: reconciled[0]?.created_at ?? null,
                 },
-                channelId,
+              },
+              channelId,
             );
 
             return {
@@ -470,14 +472,14 @@ export const useMessageStore = create<MessageState>((set, get) => ({
             const nextByChannel = pruneMessagesByChannel(
               {
                 ...state.messagesByChannel,
-                  [channelId]: {
-                    messages,
-                    hasMore,
-                    lastFetched: Date.now(),
-                    oldestLoadedAt: oldestFetchedAt,
-                  },
+                [channelId]: {
+                  messages,
+                  hasMore,
+                  lastFetched: Date.now(),
+                  oldestLoadedAt: oldestFetchedAt,
                 },
-                channelId,
+              },
+              channelId,
             );
             return {
               messagesByChannel: nextByChannel,
@@ -924,14 +926,14 @@ export const useMessageStore = create<MessageState>((set, get) => ({
           messagesByChannel: pruneMessagesByChannel(
             {
               ...state.messagesByChannel,
-                [channelId]: {
-                  messages: [message],
-                  hasMore: true,
-                  lastFetched: Date.now(),
-                  oldestLoadedAt: message.created_at,
-                },
+              [channelId]: {
+                messages: [message],
+                hasMore: true,
+                lastFetched: Date.now(),
+                oldestLoadedAt: message.created_at,
               },
-              channelId,
+            },
+            channelId,
           ),
         };
       }
@@ -1010,6 +1012,21 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     set((state) => {
       const { [channelId]: _, ...rest } = state.messagesByChannel;
       return { messagesByChannel: rest };
+    });
+  },
+
+  removeMessagesByUser: (userId: string) => {
+    set((state) => {
+      const newMessagesByChannel: Record<string, ChannelMessages> = {};
+      for (const [chId, cache] of Object.entries(state.messagesByChannel)) {
+        const filtered = cache.messages.filter((m) => m.user_id !== userId);
+        if (filtered.length !== cache.messages.length) {
+          newMessagesByChannel[chId] = { ...cache, messages: filtered };
+        } else {
+          newMessagesByChannel[chId] = cache;
+        }
+      }
+      return { messagesByChannel: newMessagesByChannel };
     });
   },
 }));
