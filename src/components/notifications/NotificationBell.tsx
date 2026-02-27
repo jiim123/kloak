@@ -99,8 +99,12 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
   const { user } = useAuthStore();
   const { notifications, unreadCount, markAsRead, markAllAsRead, clearAllNotifications, deleteNotification } =
     useNotificationStore();
-  const { enableMentionNotifications, enableDMNotifications, enableFriendRequestNotifications, enableServerInviteNotifications } =
-    useUIStore();
+  const {
+    enableMentionNotifications,
+    enableDMNotifications,
+    enableFriendRequestNotifications,
+    enableServerInviteNotifications,
+  } = useUIStore();
   const { pendingRequests, acceptRequest, declineRequest } = useFriendStore();
   const [isOpen, setIsOpen] = useState(false);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
@@ -259,7 +263,7 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
         <motion.span
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
-          className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
+          className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-xs text-destructive-foreground flex items-center justify-center px-1 font-medium shadow-lg"
         >
           {filteredUnreadCount > 99 ? "99+" : filteredUnreadCount}
         </motion.span>
@@ -278,7 +282,7 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
-          <h3 className="font-semibold">Notifications</h3>
+          <h3 className="font-medium">Notifications</h3>
           <div className="flex items-center gap-1">
             {filteredUnreadCount > 0 && (
               <Button
