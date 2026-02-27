@@ -703,7 +703,7 @@ const Join = () => {
               >
                 Build something
                 <br />
-                <span className="text-primary/60">that matters.</span>
+                <span className="text-primary">that matters.</span>
               </motion.h1>
 
               <motion.p
