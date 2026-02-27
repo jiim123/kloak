@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import kloakLogo from "@/assets/kloak-logo.svg";
 
 const mainLinks = [
-  
+  { title: "About", href: "/about" },
   { title: "Join Us", href: "/join" },
   { title: "FAQ", href: "/faq" },
 ];
