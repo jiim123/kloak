@@ -1,37 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://kloak.lovable.app/</loc>
+    <loc>https://kloak.app/</loc>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://kloak.lovable.app/join</loc>
+    <loc>https://kloak.app/join</loc>
     <changefreq>monthly</changefreq>
     <priority>0.4</priority>
   </url>
   <url>
-    <loc>https://kloak.lovable.app/faq</loc>
+    <loc>https://kloak.app/faq</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://kloak.lovable.app/auth</loc>
+    <loc>https://kloak.app//auth</loc>
     <changefreq>monthly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://kloak.lovable.app/terms</loc>
+    <loc>https://kloak.app//terms</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://kloak.lovable.app/privacy</loc>
+    <loc>https://kloak.app//privacy</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://kloak.lovable.app/cookies</loc>
+    <loc>https://kloak.app//cookies</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
