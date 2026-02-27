@@ -95,13 +95,13 @@ export const HeroImage = () => {
                 <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
-            <Link to="/philosophy">
+            <Link to="/about">
               <Button
                 variant="ghost"
                 size="lg"
                 className="rounded-full px-8 h-12 text-sm font-normal tracking-wide text-muted-foreground hover:text-foreground hover:bg-muted"
               >
-                Our Philosophy
+                About Kloak
               </Button>
             </Link>
           </motion.div>
