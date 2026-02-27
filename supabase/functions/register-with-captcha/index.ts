@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const baseCorsHeaders: Record<string, string> = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Vary": "Origin",
+  Vary: "Origin",
 };
 
 const HCAPTCHA_VERIFY_URL = "https://hcaptcha.com/siteverify";
@@ -182,10 +182,8 @@ Deno.serve(async (req) => {
     Deno.env.get("VITE_HCAPTCHA_SITE_KEY"),
   ])[0];
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const serviceRoleKey = uniqueNonEmpty([
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
-    Deno.env.get("SERVICE_ROLE_KEY"),
-  ])[0] ?? "";
+  const serviceRoleKey =
+    uniqueNonEmpty([Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"), Deno.env.get("SERVICE_ROLE_KEY")])[0] ?? "";
 
   if (!secret || !supabaseUrl || !serviceRoleKey) {
     console.error("[register-with-captcha] Missing runtime env", {
