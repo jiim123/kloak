@@ -18,6 +18,21 @@ import {
   FileText,
   Search,
   Scale,
+  Radio,
+  Database,
+  Cloud,
+  AppWindow,
+  Key,
+  Layers,
+  Move3D,
+  Megaphone,
+  Image,
+  ShieldCheck,
+  Bug,
+  Eye,
+  MessageSquare,
+  Share2,
+  BookOpen,
 } from "lucide-react";
 import { Footer } from "@/components/ui/footer-section";
 import { NavigationMenu } from "@/components/layout/NavigationMenu";
@@ -44,85 +59,150 @@ const categories: CategoryData[] = [
     icon: Code,
     title: "Engineering",
     subtitle:
-      "Build zero-knowledge communication infrastructure from the ground up. Our stack is React, TypeScript, Tailwind CSS, Zustand, and Supabase, with Signal Protocol, Sender Keys, and libsodium on the horizon.",
+      "Build privacy-preserved communication infrastructure from the ground up. Our stack is React, TypeScript, Tailwind CSS, Zustand, and Supabase, with Signal Protocol, Sender Keys, and libsodium on the horizon.",
     positions: [
       {
         icon: Monitor,
-        title: "Frontend Engineer",
+        title: "React UI Engineer",
         description:
-          "Own the client-side experience for a real-time communication platform serving thousands of users. Build performant, accessible interfaces that handle encrypted state, live data subscriptions, and complex interaction patterns across web, PWA, and Tauri desktop environments.",
+          "Build and maintain the component library and page-level interfaces that users interact with every day. This includes message views, channel layouts, sidebars, modals, settings screens, and every pixel in between.",
         mindset:
-          "You write code that respects the user. You question whether a feature needs to exist before building it. You understand that in a zero-knowledge system, the client carries more responsibility than usual because encryption and decryption happen entirely in the browser.",
+          "You care about component architecture, prop contracts, and making interfaces that feel fast even on low-end hardware. You think in terms of reusable patterns and consistent behavior.",
         requirements: [
-          "Strong proficiency in React and TypeScript with experience building complex, stateful applications that handle real-time data",
-          "Working knowledge of Tailwind CSS for component styling and responsive design. Our entire interface is built on Tailwind utility classes",
-          "Familiarity with Zustand or similar lightweight state management libraries for managing client-side state across concurrent real-time subscriptions",
-          "Understanding of real-time communication patterns: WebSockets, presence systems, subscription-based data flows, and state reconciliation strategies",
-          "Experience building accessible, performant interfaces that work across desktop and mobile viewports without separate codebases",
-          "Familiarity with Progressive Web App architecture, service workers, and offline-first patterns",
-          "Experience with or willingness to learn Tauri for desktop application packaging, including bridging between webview and native Rust backends",
-          "Comfort working with Framer Motion or similar animation libraries for micro-interactions and UI transitions",
-          "Ability to read, debug, and refactor existing codebases. We need people who can work within an evolving architecture, not only greenfield projects",
-          "Comfort working with AI-assisted development tools such as Cursor, Lovable, Claude, or GitHub Copilot. We use AI-assisted development extensively and need engineers who can review generated code critically",
+          "Strong proficiency in React and TypeScript with experience building complex component hierarchies",
+          "Deep working knowledge of Tailwind CSS. Our entire interface is built on Tailwind utility classes and every design decision maps directly to them",
+          "Experience building responsive layouts that work across desktop and mobile viewports without separate codebases",
+          "Familiarity with accessible component patterns: keyboard navigation, ARIA attributes, focus management, and screen reader compatibility",
+          "Understanding of React rendering performance: memoization strategies, virtualized lists for large message histories, and avoiding unnecessary re-renders",
+          "Experience with form patterns, validation, and complex interactive states such as multi-step onboarding flows and settings panels",
+          "Ability to translate design specs into pixel-accurate implementations while maintaining clean, maintainable code",
+          "Comfort working with AI-assisted development tools such as Cursor, Lovable, Claude, or GitHub Copilot",
+        ],
+      },
+      {
+        icon: Radio,
+        title: "Real-time Systems Engineer",
+        description:
+          "Own the data flow layer between the server and the UI. This means Supabase real-time subscriptions, Zustand state management, presence systems, typing indicators, and ensuring that encrypted message state stays synchronized across concurrent connections.",
+        mindset:
+          "You understand that real-time communication has different engineering constraints than request-response web apps. You think about race conditions, subscription lifecycles, reconnection strategies, and what happens when the network drops mid-message.",
+        requirements: [
+          "Experience with WebSocket-based real-time data flows, including subscription management, reconnection handling, and backpressure",
+          "Familiarity with Zustand or similar lightweight state management for coordinating client-side state across multiple concurrent subscriptions",
+          "Understanding of presence systems: how to track online/offline status, typing indicators, and active channel membership without excessive polling",
+          "Experience with optimistic updates and the trade-offs between perceived responsiveness and data consistency in real-time systems",
+          "Knowledge of subscription cleanup patterns to prevent memory leaks and stale listeners in long-lived single-page applications",
+          "Understanding of how end-to-end encryption interacts with real-time state: decrypting incoming messages in the subscription handler, managing encrypted payloads in the store",
+          "Proficiency in TypeScript with strong debugging skills for asynchronous, event-driven code",
+          "Experience diagnosing and resolving timing-related bugs in production real-time applications",
         ],
       },
       {
         icon: Lock,
-        title: "Cryptography Engineer",
+        title: "Encryption Engineer",
         description:
-          "Implement and maintain Kloak's zero-knowledge encryption layer. This role is responsible for integrating Signal Protocol for direct messages, Sender Keys for group channels, and client-side file encryption using libsodium. You will build the systems that ensure the server is architecturally incapable of reading user content.",
+          "Implement Kloak's end-to-end encryption layer. This role is responsible for integrating Signal Protocol for direct messages, Sender Keys for group channels, and client-side file encryption using libsodium. You will build the systems that ensure the server is architecturally unable to read user content.",
         mindset:
-          "You understand that cryptographic code is not regular code. It requires a different standard of review, a different tolerance for cleverness, and a deep respect for the difference between theoretically secure and practically secure. You know that the hardest part of E2E encryption is not the math but the key management.",
+          "You understand that cryptographic code requires a different standard of review and a deep respect for the difference between theoretically secure and practically secure. You know that the hardest part of E2E encryption is not the math but the key management.",
         requirements: [
-          "Strong understanding of end-to-end encryption protocols: Signal Protocol (Double Ratchet, X3DH key agreement), Sender Keys for group messaging, and the security properties each provides including forward secrecy and post-compromise security",
-          "Practical experience with cryptographic libraries, particularly libsodium (XChaCha20-Poly1305 for symmetric encryption, X25519 for key exchange, Ed25519 for signing) or equivalent",
+          "Strong understanding of end-to-end encryption protocols: Signal Protocol (Double Ratchet, X3DH key agreement), Sender Keys for group messaging, forward secrecy, and post-compromise security",
+          "Practical experience with cryptographic libraries, particularly libsodium (XChaCha20-Poly1305, X25519, Ed25519) or equivalent",
           "Understanding of key derivation functions (HKDF) and why separating authentication credentials from encryption keys is architecturally critical",
-          "Experience with client-side key management: secure key generation, encrypted local storage of private keys, key rotation, and multi-device key synchronization",
-          "Knowledge of group encryption challenges specific to Discord-style platforms: persistent channel history, large group key distribution, new member access boundaries, and member removal with post-compromise rekeying",
+          "Knowledge of group encryption challenges specific to Discord-style platforms: persistent channel history, large group key distribution, new member access boundaries, and member removal with rekeying",
           "Familiarity with file encryption pipelines: per-file random key generation, streaming encryption for large files, and encrypted key distribution to recipients",
           "Understanding of the migration challenges involved in transitioning a live platform from plaintext to encrypted storage without breaking existing user access",
-          "Proficiency in TypeScript. Our encryption layer runs client-side in React. Experience with Rust is a strong bonus for Tauri desktop integration using libsignal-client",
+          "Proficiency in TypeScript. Our encryption layer runs client-side in React",
           "Ability to write clear technical documentation explaining cryptographic design decisions for both engineers and security auditors",
-          "Awareness of metadata exposure risks. Even with encrypted content, patterns like message timing, channel membership, and message frequency can leak information",
         ],
       },
       {
-        icon: Server,
-        title: "Backend & Infrastructure Engineer",
+        icon: Key,
+        title: "Key Management & Identity Engineer",
         description:
-          "Design and maintain the server-side systems that support zero-knowledge communication. In our architecture, the backend must be reliable and performant while being deliberately excluded from access to user content. This role covers database design, Row Level Security policies, Edge Functions, real-time subscription infrastructure, and hosting operations on Swedish infrastructure.",
+          "Design and build the identity and key lifecycle systems that underpin Kloak's privacy-preserved architecture. This covers secure key generation, encrypted local storage, multi-device key synchronization, device linking flows, and the migration path from our current secret key authentication to full cryptographic identity.",
         mindset:
-          "You build systems that are designed to know as little as possible. You understand that in a zero-knowledge platform, the backend's job is to route encrypted payloads, enforce access control at the database layer, and stay out of the way. You take database security personally.",
+          "You think about key lifecycle the way others think about user sessions. You understand that losing a private key is not a password reset problem, it is a permanent access problem, and you design systems that help users avoid that outcome without compromising the security model.",
         requirements: [
-          "Strong experience with PostgreSQL, including schema design, indexing strategies, query optimization, and understanding of execution plans",
-          "Deep familiarity with Supabase or similar PostgreSQL-backed platforms, including Row Level Security policies, database functions, triggers, and real-time subscriptions",
-          "Experience designing and enforcing server-side access control. Client-side validation is never sufficient. Every sensitive operation must be verified at the database or Edge Function layer",
-          "Understanding of real-time infrastructure: managing WebSocket connections at scale, subscription fan-out, presence tracking, and connection lifecycle management",
-          "Familiarity with Edge Functions or serverless function patterns for authentication token generation, permission verification, and server-side business logic",
-          "Experience with database migration strategies, particularly for platforms transitioning from plaintext to encrypted storage where legacy data must be handled carefully",
-          "Understanding of hosting operations: deployment pipelines, environment isolation, secrets management, and monitoring for a production communication platform",
-          "Familiarity with Swedish or EU hosting providers and the operational implications of hosting under European privacy jurisdiction",
-          "Knowledge of egress cost management and database performance optimization for platforms with real-time usage patterns that can spike unpredictably",
+          "Experience with client-side key management: secure key generation using cryptographically strong random sources, encrypted storage of private key material, and key rotation strategies",
+          "Understanding of multi-device key synchronization patterns: how to give a user access to their identity across phone, browser, and desktop without exposing private keys to the server",
+          "Familiarity with device linking protocols: QR-based pairing, encrypted key transfer, and session approval flows",
+          "Knowledge of key derivation architectures, particularly using HKDF to derive separate encryption and authentication keys from a single root secret",
+          "Understanding of the differences between browser-based key storage (localStorage, IndexedDB), Tauri Stronghold, and native OS keychains (macOS Keychain, Windows Credential Manager)",
+          "Experience designing recovery and backup strategies for cryptographic identity systems where the server cannot assist with key recovery",
+          "Familiarity with non-traditional authentication systems that do not rely on email, password, or third-party identity providers",
+          "Proficiency in TypeScript with bonus points for Rust experience (relevant to Tauri desktop key storage)",
+        ],
+      },
+      {
+        icon: Database,
+        title: "Database Engineer",
+        description:
+          "Own the PostgreSQL layer that powers Kloak. This means schema design, query optimization, Row Level Security policies, database functions and triggers, and ensuring that the database enforces access control independently of the client. In a privacy-preserved system, the database must be reliable and secure while handling data it increasingly cannot read.",
+        mindset:
+          "You take database security personally. You understand that client-side validation is never sufficient and that every sensitive operation must be verified at the database layer. You write RLS policies before you write queries.",
+        requirements: [
+          "Strong experience with PostgreSQL, including normalized schema design, indexing strategies, query optimization, and reading execution plans",
+          "Deep familiarity with Supabase or similar PostgreSQL-backed platforms, including Row Level Security policies, database functions, and triggers",
+          "Experience designing and enforcing server-side access control through RLS. You understand why relying on client-side permission checks is a security anti-pattern",
+          "Knowledge of database migration strategies, particularly for platforms transitioning from plaintext to encrypted storage where legacy data requires careful handling",
+          "Understanding of how real-time subscriptions interact with RLS policies and how to ensure that subscription-level access control is as strict as query-level control",
+          "Experience with PostgreSQL performance tuning for real-time communication workloads: high write throughput, concurrent reads, and managing connection pool limits",
+          "Familiarity with backup strategies, point-in-time recovery, and data lifecycle policies including scheduled deletion of deprecated plaintext data",
+          "Understanding of how encrypted payloads change database design: storing opaque ciphertext, managing encrypted metadata columns, and indexing strategies when content is not searchable",
+        ],
+      },
+      {
+        icon: Cloud,
+        title: "DevOps & Infrastructure Engineer",
+        description:
+          "Manage the deployment pipeline, hosting infrastructure, environment isolation, and operational monitoring for a production communication platform. Ensure that the infrastructure layer reinforces Kloak's privacy guarantees rather than undermining them through logging, caching, or misconfigured services.",
+        mindset:
+          "You understand that infrastructure decisions have privacy consequences. A misconfigured log, an overly verbose error handler, or an unencrypted cache can leak the data that the application layer was designed to protect. You treat operational security as part of the product.",
+        requirements: [
+          "Experience with deployment pipelines for web applications: CI/CD configuration, staging environments, rollback strategies, and automated testing integration",
+          "Knowledge of secrets management: environment variable handling, encrypted secret stores, and ensuring that API keys, database credentials, and signing keys never appear in logs or version control",
+          "Understanding of environment isolation: separating development, staging, and production environments with distinct credentials and access controls",
+          "Experience with monitoring and alerting for real-time applications: tracking WebSocket connection counts, database connection pool usage, API response times, and error rates",
+          "Familiarity with egress cost management and bandwidth optimization for platforms with unpredictable real-time usage spikes",
+          "Knowledge of EU hosting providers and the operational implications of hosting under European privacy jurisdiction",
+          "Understanding of how logging policies impact privacy: what should and should not be logged, log retention periods, and how to ensure that debug logs never capture user content",
           "Bonus: Experience with self-hosting open-source infrastructure components such as LiveKit, and managing TURN/STUN server configurations",
         ],
       },
       {
         icon: Mic,
-        title: "Voice & Media Engineer",
+        title: "Voice Engineer",
         description:
-          "Build Kloak's voice communication layer using LiveKit, integrated with our zero-knowledge architecture. This role covers real-time audio transport, room management, encrypted media streams, and the React component layer that makes voice channels feel native to the platform.",
+          "Build the server-side and transport layer for Kloak's voice communication using LiveKit. This covers SFU deployment, room management, token generation, audio codec configuration, and encrypted media stream handling.",
         mindset:
-          "You care about latency, codec quality, and the invisible complexity behind a voice call that just works. You understand that adding voice to a privacy-focused platform means the audio stream deserves the same architectural protections as text messages.",
+          "You care about latency, call reliability, and the invisible complexity behind audio that just works. You understand that adding voice to a privacy-focused platform means the audio stream deserves the same architectural protections as text messages.",
         requirements: [
           "Experience with WebRTC fundamentals: media capture, peer connections, ICE candidates, TURN/STUN traversal, and the SFU (Selective Forwarding Unit) architecture model",
-          "Familiarity with LiveKit or similar real-time media platforms, including their server SDKs for token generation and client SDKs for room management",
+          "Familiarity with LiveKit or similar real-time media platforms, including server SDKs for token generation and room lifecycle management",
           "Understanding of audio codec configuration, particularly Opus with configurable bitrates, DTX (discontinuous transmission), echo cancellation, and noise suppression",
-          "Experience building React components for real-time communication: participant lists, mute controls, connection state indicators, and voice activity detection UI",
-          "Knowledge of encrypted media stream patterns and how E2E encryption applies to voice channels (insertable streams, frame-level encryption)",
-          "Familiarity with room-based architecture: mapping voice channels to rooms, managing participant permissions, handling join/leave events, and speaker detection",
-          "Understanding of self-hosting considerations for media servers, including capacity planning, TURN server deployment, and network topology for low-latency audio",
-          "Proficiency in TypeScript and React. Voice UI components must integrate cleanly with Kloak's existing sidebar, channel structure, and design system",
+          "Knowledge of encrypted media stream patterns: insertable streams, frame-level encryption, and how E2E encryption applies to voice channels",
+          "Understanding of self-hosting considerations for media servers: capacity planning, TURN server deployment, and network topology for low-latency audio",
+          "Familiarity with room-based architecture: mapping voice channels to rooms, managing participant permissions, and handling join/leave events",
+          "Experience with load testing and diagnosing quality issues in real-time audio systems",
           "Bonus: Experience with video integration, screen sharing, or building custom media processing pipelines",
+        ],
+      },
+      {
+        icon: AppWindow,
+        title: "Desktop Application Engineer",
+        description:
+          "Build and maintain Kloak's desktop application using Tauri. This role bridges the React frontend with native Rust backends for secure key storage, file encryption, and system-level integrations that browsers cannot provide.",
+        mindset:
+          "You understand why a privacy-preserved communication platform benefits from a native wrapper. Browser-based crypto has limitations around key storage, file handling, and system integration that a Tauri shell can solve. You are comfortable working across the TypeScript/Rust boundary.",
+        requirements: [
+          "Experience with Tauri or similar web-to-native frameworks (Electron experience is transferable but Tauri is preferred for its security model)",
+          "Proficiency in Rust at a working level: you can write Tauri commands, handle serialization between Rust and TypeScript, and work with the Tauri plugin ecosystem",
+          "Familiarity with Tauri Stronghold or native OS keychain APIs for secure storage of private key material outside the browser sandbox",
+          "Understanding of how to bridge client-side crypto between browser environments (Web Crypto API) and native Rust backends (libsignal-client, ring, or sodiumoxide)",
+          "Experience with native file system access for encrypted file handling: reading, encrypting, and writing large files without browser memory constraints",
+          "Knowledge of cross-platform build pipelines: building for Windows, macOS, and Linux from a single codebase with platform-specific considerations",
+          "Familiarity with system tray integration, native notifications, auto-update mechanisms, and startup-on-boot configuration",
+          "Understanding of the security implications of webview-based desktop apps: content security policies, IPC security, and preventing webview exploitation",
         ],
       },
     ],
@@ -131,44 +211,114 @@ const categories: CategoryData[] = [
     icon: Palette,
     title: "Design",
     subtitle:
-      "Shape the visual identity of a zero-knowledge platform. Our interfaces are built on Tailwind CSS with a dark theme, glass morphism, and a zinc/emerald color system that prioritizes clarity over decoration.",
+      "Shape the visual identity of a privacy-preserved platform. Our interfaces are built on Tailwind CSS with a dark theme, glass morphism, and a zinc/emerald color system that prioritizes clarity over decoration.",
     positions: [
       {
         icon: PenTool,
-        title: "Product Designer",
+        title: "UX Designer",
         description:
-          "Design the core user experience for encrypted real-time communication. This means solving problems that most messaging platforms never face: key verification flows, encryption status indicators, device linking interfaces, and making zero-knowledge architecture feel invisible to everyday users.",
+          "Design the information architecture, user flows, and interaction patterns for encrypted real-time communication. This means solving problems most messaging platforms never face: key verification flows, device linking, secret key onboarding, and making privacy architecture feel invisible to everyday users.",
         mindset:
-          "You understand that the difference between good and great lives in the hover states, the spacing, the way a transition feels. You also understand that privacy-focused design has unique challenges. Communicating trust, making encryption understandable, and designing for a system where the server cannot help with data recovery all require deliberate, thoughtful solutions.",
+          "You design for comprehension first and aesthetics second. You understand that a confusing encryption prompt or a poorly designed key backup flow can undermine the entire security model. You believe that if a user needs to read a manual to stay safe, the UX has failed.",
         requirements: [
-          "Proficiency in UI/UX design tools such as Figma, Adobe Creative Suite, or equivalent",
-          "Strong understanding of modern web design principles including responsive layouts, WCAG accessibility standards, and scalable design systems",
-          "Experience designing for real-time communication interfaces: message threads, channel navigation, presence indicators, notification patterns, and multi-panel layouts",
-          "Ability to design trust-communicating UI patterns: encryption status indicators, key verification flows, device management screens, and security state visualizations that are intuitive to non-technical users",
-          "Familiarity with Tailwind CSS utility-first design patterns. Our design decisions translate directly into utility classes and our designers work closely with engineers at the implementation level",
-          "Experience designing for dark-themed interfaces with glass morphism, layered transparency, and backdrop blur effects",
-          "Understanding of how design choices impact performance, particularly animation frame rates, GPU compositing, and rendering overhead on lower-end devices",
-          "An eye for subtle, sophisticated aesthetics. We favor clean and professional over loud and flashy",
+          "Experience designing user flows and information architecture for complex, multi-state applications",
+          "Proficiency in wireframing and prototyping tools such as Figma, Sketch, or equivalent",
+          "Understanding of progressive disclosure: revealing complexity gradually rather than overwhelming users with security decisions upfront",
           "Experience designing onboarding flows for non-traditional authentication systems where users manage cryptographic keys rather than email and password",
-          "Bonus: Experience with privacy-focused product design where communicating trust and security state is a core design objective rather than an afterthought",
+          "Ability to design trust-communicating interaction patterns: encryption status indicators, key verification confirmations, and device management flows",
+          "Familiarity with usability testing methods: task-based testing, think-aloud protocols, and translating qualitative feedback into design iterations",
+          "Experience designing for real-time communication patterns: message composition, channel switching, notification handling, and presence indicators",
+          "Understanding of accessibility principles: WCAG compliance, keyboard-first navigation, and designing for assistive technologies",
+        ],
+      },
+      {
+        icon: Layers,
+        title: "UI Designer",
+        description:
+          "Create the visual component layer for Kloak's interface. This includes designing buttons, inputs, cards, modals, dropdowns, tooltips, and every other element in a consistent, scalable design system that translates directly into Tailwind CSS utility classes.",
+        mindset:
+          "You think in systems, not screens. You understand that a well-designed component library makes everything downstream faster and more consistent. You obsess over spacing, color consistency, and the subtle differences between a good interface and a great one.",
+        requirements: [
+          "Proficiency in Figma or equivalent design tools with experience building and maintaining component libraries and design tokens",
+          "Strong understanding of design system principles: consistent spacing scales, color palettes, typography hierarchies, and component variants",
+          "Experience designing for dark-themed interfaces with glass morphism, layered transparency, and backdrop blur effects",
+          "Familiarity with Tailwind CSS utility-first patterns. Our designers work closely with engineers and design decisions translate directly into utility classes",
+          "Understanding of responsive component behavior: how elements adapt, reflow, and collapse across viewport sizes without separate mobile designs",
+          "Experience designing interactive states: hover, focus, active, disabled, loading, error, and empty states for every component",
+          "An eye for subtle, sophisticated aesthetics. We favor clean and professional over loud and flashy",
+          "Understanding of how design choices impact rendering performance, particularly on lower-end devices",
+        ],
+      },
+      {
+        icon: Image,
+        title: "Icon & Asset Designer",
+        description:
+          "Create Kloak's custom visual assets: emoji sets, avatar decorations, badges, rank icons, achievement graphics, and any illustrative elements used across the platform and marketing materials. Every asset must read clearly at sizes ranging from 16 pixels to full resolution.",
+        mindset:
+          "You work at the intersection of illustration and interface design. You understand that a custom emoji set or a well-crafted badge system gives a platform personality and makes users feel ownership over their space. You can deliver at scale without sacrificing craft.",
+        requirements: [
+          "Experience creating icon sets and custom emoji that maintain visual clarity and consistency at multiple resolutions (16px through 512px)",
+          "Proficiency in vector illustration tools: Adobe Illustrator, Figma, Affinity Designer, or equivalent",
+          "Ability to create avatar decorations, profile badges, and rank indicators that work across light and dark contexts",
+          "Understanding of SVG optimization for web: minimizing file size, ensuring crisp rendering, and supporting dynamic color theming",
+          "Experience designing within a constrained visual language: matching an existing color palette, icon weight, and corner radius system",
+          "Ability to produce assets in batch with consistent quality, working from a style guide rather than reinventing the approach for each piece",
+          "Familiarity with exporting assets for web use: appropriate formats (SVG, PNG, WebP), resolution variants, and sprite sheet organization",
+          "Bonus: Experience with pixel art, animated stickers, or collectible digital asset design",
+        ],
+      },
+      {
+        icon: Move3D,
+        title: "Motion Designer",
+        description:
+          "Design and implement animations, transitions, and micro-interactions that give Kloak's interface a sense of life and responsiveness. This includes page transitions, loading states, notification animations, hover effects, and the subtle motion language that makes a real-time app feel fluid.",
+        mindset:
+          "You understand that motion is functional, not decorative. A well-timed transition communicates state change. A loading animation manages expectation. You design motion that helps users understand what just happened and what happens next.",
+        requirements: [
+          "Experience designing and implementing animations for web interfaces using Framer Motion, CSS animations, or Lottie",
+          "Understanding of animation principles: easing curves, duration scaling, staggered entrances, and the relationship between motion and perceived performance",
+          "Ability to create micro-interactions for common UI patterns: button feedback, toast notifications, panel transitions, message arrival animations, and scroll-linked effects",
+          "Knowledge of performance constraints: GPU-composited properties (transform, opacity), avoiding layout thrash, and keeping animations at 60fps on mid-range hardware",
+          "Experience with loading state design: skeleton screens, progress indicators, and transition animations that bridge asynchronous operations",
+          "Familiarity with Framer Motion's animation API: variants, layout animations, exit animations, and gesture-driven interactions",
+          "Ability to document motion specifications clearly enough for engineers to implement them accurately without frame-by-frame handoff",
+          "Bonus: Experience with After Effects, Rive, or similar tools for prototyping complex animation sequences before implementation",
         ],
       },
       {
         icon: Pen,
-        title: "Brand & Visual Designer",
+        title: "Brand Identity Designer",
         description:
-          "Own Kloak's visual identity across every surface: marketing pages, social media, community assets, custom emoji sets, avatar decorations, and motion design. Build the visual language that makes a privacy platform feel alive, distinctive, and approachable rather than sterile or paranoid.",
+          "Own and evolve Kloak's brand identity system. This includes the logo, color system, typography standards, tone of voice guidelines, and the visual rules that ensure consistency as the team and the platform grow.",
         mindset:
-          "You want to prove that privacy and polish are not mutually exclusive. You understand that a platform's visual identity shapes how people feel about it before they ever read a word of copy. You can work across scales, from a 32-pixel emoji to a full landing page layout, with the same attention to craft.",
+          "You want to prove that privacy and polish are not mutually exclusive. You understand that a platform's visual identity shapes how people feel about it before they ever read a word of copy. You build systems that scale, not one-off designs.",
         requirements: [
-          "Experience creating cohesive visual languages: icon sets, typography hierarchies, color systems, and component libraries that maintain consistency across platforms and contexts",
-          "Ability to design motion graphics, micro-interactions, and animations using CSS animations, Lottie, Framer Motion, or After Effects",
-          "Ability to create custom emoji sets, avatar decorations, badges, and visual assets that read clearly at multiple resolutions and across light and dark contexts",
-          "Experience with brand identity systems: logo usage guidelines, tone of voice documentation, and visual standards that can scale across a growing contributor team",
-          "Familiarity with marketing design: landing pages, social media assets, email templates, and promotional materials that communicate value without resorting to fear-based privacy messaging",
+          "Experience developing brand identity systems: logo usage guidelines, color specifications, typography standards, and visual rules that can be followed by a growing contributor team",
           "Strong typographic sensibility and understanding of how type choices communicate trust, professionalism, and approachability simultaneously",
-          "Understanding of how visual assets are implemented in web applications. You do not need to write code, but knowing how your designs translate into Tailwind classes and React components makes collaboration faster",
-          "Bonus: Experience with video production, explainer animations, or visual storytelling for technical products",
+          "Ability to define and document a tone of voice that is direct, honest, and avoids both corporate jargon and fear-based privacy messaging",
+          "Experience creating brand templates and guidelines that non-designers can follow for consistent output",
+          "Understanding of how brand identity translates across mediums: web interfaces, social media, print materials, presentation decks, and documentation",
+          "Ability to evolve an existing brand system without breaking continuity. Kloak already has an established visual direction and this role builds on it rather than replacing it",
+          "Familiarity with accessibility standards in brand design: contrast ratios, colorblind-safe palettes, and legibility at all sizes",
+          "Bonus: Experience building brand identity for privacy, security, or open-source projects where trust is a primary brand attribute",
+        ],
+      },
+      {
+        icon: Megaphone,
+        title: "Marketing Designer",
+        description:
+          "Create the visual materials that introduce Kloak to the world: landing pages, social media assets, email templates, announcement graphics, and promotional materials. Translate Kloak's technical privacy story into visuals that resonate with creative communities, not just security professionals.",
+        mindset:
+          "You understand that marketing for a privacy platform is different. You do not use fear, surveillance imagery, or dark patterns. Instead, you communicate empowerment, independence, and the idea that your tools should work for you, not against you.",
+        requirements: [
+          "Experience designing marketing collateral: landing pages, social media graphics, email headers, and promotional banners",
+          "Ability to communicate complex product value propositions visually, translating technical concepts like encryption and privacy into approachable imagery",
+          "Understanding of web-based marketing design: above-the-fold hierarchy, CTA placement, responsive layout for marketing pages, and conversion-oriented design thinking",
+          "Familiarity with social media asset requirements across platforms: optimal sizes, format constraints, and platform-specific design conventions",
+          "Experience creating visual content that speaks to creative communities (gamers, musicians, artists, streamers) rather than enterprise or security audiences exclusively",
+          "Ability to work within an established brand system, applying existing guidelines to new contexts without drifting from the visual identity",
+          "Understanding of how to A/B test visual approaches and iterate based on engagement data",
+          "Bonus: Experience with video thumbnails, presentation design, or creating visual narratives for product launches",
         ],
       },
     ],
@@ -177,44 +327,77 @@ const categories: CategoryData[] = [
     icon: Shield,
     title: "Security & Privacy",
     subtitle:
-      "Harden a zero-knowledge platform against real-world threats and ensure our privacy claims are backed by verifiable architecture, not just policy. Our stack includes Supabase RLS, Edge Functions, libsodium, Signal Protocol, and Swedish hosting jurisdiction.",
+      "Harden a privacy-preserved platform against real-world threats and ensure our claims are backed by verifiable architecture, not just policy. Our stack includes Supabase RLS, Edge Functions, libsodium, and Signal Protocol.",
     positions: [
       {
-        icon: Search,
-        title: "Application Security Engineer",
+        icon: Bug,
+        title: "Penetration Tester",
         description:
-          "Audit and harden Kloak's security posture across the full stack. Review our Signal Protocol and Sender Key implementations, identify attack surfaces in client-side cryptography, test Row Level Security policies, and ensure that the boundary between encrypted and plaintext data is airtight during the migration to zero-knowledge architecture.",
+          "Actively test Kloak's attack surface across the full stack: client-side JavaScript, Supabase API endpoints, RLS policy bypasses, real-time subscription leaks, and the boundaries between encrypted and plaintext data during the encryption migration. Report findings with clear reproduction steps and severity assessments.",
         mindset:
-          'You think like an attacker so you can defend like a professional. You understand that privacy is not a feature you bolt on. It is an architectural decision that touches every layer of the stack. You are the person who asks "but what if someone tries to..." before code ships.',
+          "You break things methodically to make them stronger. You do not stop at the first vulnerability. You chain findings together to demonstrate real-world impact. You understand that a communication platform has different attack priorities than an e-commerce site.",
         requirements: [
-          "Understanding of web application security fundamentals: OWASP Top 10, XSS, CSRF, injection attacks, and common attack vectors in real-time WebSocket-based applications",
-          "Experience with or strong working knowledge of end-to-end encryption protocols: Signal Protocol (Double Ratchet, X3DH), Sender Keys, and the security properties each provides including forward secrecy, post-compromise security, and deniability",
-          "Familiarity with cryptographic primitives and their correct application: XChaCha20-Poly1305, X25519, Ed25519, HKDF, and the practical use of libsodium or equivalent libraries",
-          "Understanding of client-side key management security: the threat model around browser-based cryptography, encrypted key storage, key rotation schedules, and the differences between webview and native key storage (Tauri Stronghold, OS keychains)",
-          "Experience with PostgreSQL security patterns, particularly Row Level Security, role-based access control, and the critical distinction between client-side and server-side permission enforcement",
-          "Knowledge of authentication security: token handling, session management, secret key-based identity systems, brute force mitigation, and rate limiting strategies",
-          "Experience with penetration testing, vulnerability assessment, or formal security auditing of web applications, with particular interest in candidates who have audited cryptographic implementations",
-          "Ability to identify security anti-patterns in code review, particularly around real-time data subscriptions, API exposure, and the boundaries between encrypted and plaintext data in a partially migrated system",
-          "Knowledge of secure DevOps practices: secrets management, environment isolation, deployment security, and dependency supply chain integrity",
-          "Bonus: Experience with threat modeling, incident response planning, or formal verification of cryptographic protocols",
+          "Experience with web application penetration testing: identifying and exploiting XSS, CSRF, injection, authentication bypass, and authorization flaws",
+          "Familiarity with testing real-time WebSocket-based applications, including subscription hijacking, message injection, and presence system manipulation",
+          "Ability to test Row Level Security policies by crafting direct database queries and API calls that attempt to bypass client-side access control",
+          "Knowledge of authentication attack vectors: brute force, credential stuffing, token theft, session fixation, and attacks specific to non-password identity systems",
+          "Experience with browser developer tools, proxy interception (Burp Suite, mitmproxy), and manual testing methodologies",
+          "Ability to write clear, reproducible vulnerability reports with severity ratings, proof-of-concept steps, and recommended remediations",
+          "Understanding of responsible disclosure practices and the ethics of security testing",
+          "Bonus: Experience testing cryptographic implementations for timing attacks, padding oracles, or key material exposure",
+        ],
+      },
+      {
+        icon: ShieldCheck,
+        title: "Cryptographic Auditor",
+        description:
+          "Review and validate Kloak's encryption implementations for correctness, completeness, and resistance to known attack classes. This includes auditing Signal Protocol integration, Sender Key group encryption, file encryption pipelines, and the key management lifecycle.",
+        mindset:
+          "You read cryptographic code differently than application code. You look for nonce reuse, improper key derivation, missing authentication tags, unsafe random number generation, and the subtle implementation mistakes that turn a theoretically sound protocol into a practically broken one.",
+        requirements: [
+          "Strong understanding of applied cryptography: symmetric encryption (AES-GCM, XChaCha20-Poly1305), asymmetric key exchange (X25519, X3DH), digital signatures (Ed25519), and key derivation (HKDF)",
+          "Familiarity with Signal Protocol internals: Double Ratchet correctness, prekey bundle handling, session state management, and the security properties that must hold across message ordering edge cases",
+          "Ability to audit Sender Key implementations for group messaging: key distribution correctness, rekeying on member removal, and resistance to key compromise",
+          "Knowledge of common cryptographic implementation mistakes: nonce reuse, using encryption without authentication, PRNG seeding issues, and side-channel leakage in JavaScript environments",
+          "Experience reviewing client-side cryptographic code in TypeScript/JavaScript, understanding the limitations of browser-based crypto compared to native implementations",
+          "Understanding of metadata leakage analysis: what information remains visible even when content is properly encrypted",
+          "Ability to produce audit reports that are actionable for engineers, including specific code references and recommended fixes",
+          "Bonus: Experience with formal verification tools or published security research in applied cryptography",
+        ],
+      },
+      {
+        icon: Eye,
+        title: "Security Operations Analyst",
+        description:
+          "Monitor, detect, and respond to security incidents on the Kloak platform. This includes tracking abuse patterns, bot attacks, rate limit evasion, and suspicious authentication activity. Build the detection systems that protect users without requiring surveillance of their content.",
+        mindset:
+          "You understand that security monitoring on a privacy-preserved platform looks different. You cannot inspect message content, so you build detection around behavioral signals, metadata patterns, and infrastructure telemetry. You protect users by watching the system, not the users.",
+        requirements: [
+          "Experience with security monitoring and incident detection for web applications",
+          "Understanding of bot detection and mitigation strategies: rate limiting, behavioral analysis, CAPTCHA integration, and IP reputation systems",
+          "Knowledge of authentication abuse patterns: credential stuffing, brute force attacks, account enumeration, and automated registration abuse",
+          "Familiarity with building detection rules that operate on metadata and behavioral signals rather than content inspection",
+          "Experience with incident response: triage, containment, investigation, and post-incident documentation",
+          "Understanding of abuse patterns specific to communication platforms: spam, harassment campaigns, invite link abuse, and coordinated inauthentic behavior",
+          "Ability to balance security enforcement with privacy principles: blocking abuse without creating surveillance infrastructure",
+          "Bonus: Experience with SIEM tools, log analysis, or building custom detection pipelines",
         ],
       },
       {
         icon: Scale,
         title: "Privacy & Compliance Analyst",
         description:
-          "Ensure Kloak's privacy architecture translates into verifiable, legally sound commitments. Map our zero-knowledge design to GDPR obligations, draft transparent privacy documentation, analyze metadata exposure risks, and help define what Kloak can and cannot guarantee at each stage of our encryption rollout.",
+          "Ensure Kloak's privacy architecture translates into verifiable, legally sound commitments. Map our encryption design to GDPR obligations, draft transparent privacy documentation, analyze metadata exposure risks, and help define what Kloak can and cannot guarantee at each stage of the encryption rollout.",
         mindset:
-          "You believe privacy policy should reflect technical reality, not aspirational marketing. You understand that a platform hosted in Sweden under EU jurisdiction has specific legal advantages and obligations, and that honest communication about capabilities builds more trust than overclaiming.",
+          "You believe privacy policy should reflect technical reality, not aspirational marketing. You understand that honest communication about capabilities builds more trust than overclaiming. You bridge the gap between what the engineering team builds and what the legal framework requires.",
         requirements: [
-          "Understanding of GDPR requirements and how they apply to communication platforms, particularly the principles of data minimization, purpose limitation, and the right to erasure",
-          "Familiarity with the privacy implications of hosting jurisdiction, specifically the advantages and obligations of operating under Swedish and EU data protection law",
-          "Ability to analyze a technical architecture and identify what data the platform actually collects, processes, and retains, including metadata that persists even after content encryption is implemented",
-          "Experience drafting or reviewing privacy policies, terms of service, transparency reports, or data processing agreements that accurately represent technical capabilities without legal jargon that obscures meaning",
-          'Understanding of the distinction between policy-based privacy ("we promise not to look") and architectural privacy ("we cannot look"), and the ability to communicate this distinction clearly to users',
-          "Familiarity with content moderation obligations under EU law, including the Digital Services Act, and how these intersect with zero-knowledge architecture where the platform cannot read user content",
-          "Understanding of lawful interception and data preservation frameworks, and how zero-knowledge encryption affects a platform's ability and obligation to respond to legal requests",
-          "Ability to produce clear, jargon-free user-facing documentation that explains what Kloak protects, what it does not yet protect, and what the roadmap looks like",
+          "Understanding of GDPR requirements and how they apply to communication platforms, particularly data minimization, purpose limitation, and the right to erasure",
+          "Familiarity with the privacy implications of hosting jurisdiction and how EU data protection law affects platform obligations",
+          "Ability to analyze a technical architecture and identify what data the platform actually collects, processes, and retains, including metadata that persists after content encryption",
+          "Experience drafting or reviewing privacy policies, terms of service, transparency reports, or data processing agreements that accurately represent technical capabilities",
+          'Understanding of the distinction between policy-based privacy ("we promise not to look") and architectural privacy ("we cannot look"), and the ability to communicate this clearly',
+          "Familiarity with content moderation obligations under EU law, including the Digital Services Act, and how these intersect with encrypted architecture where the platform cannot read user content",
+          "Understanding of lawful interception and data preservation frameworks, and how encryption affects a platform's ability and obligation to respond to legal requests",
           "Bonus: Experience with open-source licensing, contributor agreements, or the legal frameworks around donation-funded software projects",
         ],
       },
@@ -227,42 +410,93 @@ const categories: CategoryData[] = [
       "Be the bridge between the people who build Kloak and the people who use it. Translate complex encryption and privacy concepts into language that resonates with everyday users, and help grow a community rooted in trust.",
     positions: [
       {
-        icon: Users,
-        title: "Community Manager",
+        icon: MessageSquare,
+        title: "Community Moderator",
         description:
-          "Grow and nurture Kloak's user community across the platform itself and external channels. Moderate with transparency, gather actionable user feedback, and represent the community's voice in product decisions. You are the primary point of contact between users and the team building the product they depend on.",
+          "Maintain a healthy, welcoming environment across Kloak's community spaces. Enforce community guidelines with consistency and transparency, resolve conflicts, and ensure that the community culture reflects Kloak's values of respect, honesty, and user empowerment.",
         mindset:
-          "You believe communities grow best when they are built on trust and transparency, not engagement metrics and algorithmic manipulation. You can explain why zero-knowledge encryption matters without resorting to fear or jargon. You understand that for a privacy platform, the community itself is the primary growth engine.",
+          "You understand that moderation on a privacy-focused platform is philosophically different. You use reactive moderation based on reports and visible behavior, not surveillance or automated content scanning. You enforce rules fairly while respecting the privacy principles the platform was built on.",
         requirements: [
-          "Experience managing or moderating online communities, particularly on platforms like Discord, Slack, Reddit, or similar real-time communication tools",
-          "Strong written communication skills with the ability to explain technical privacy and encryption concepts in plain, accessible language",
-          "Understanding of Kloak's target audiences: gamers, musicians, artists, streamers, small teams, and privacy-conscious users seeking alternatives to surveillance-based platforms",
+          "Experience moderating online communities on platforms like Discord, Slack, Reddit, or similar real-time communication tools",
+          "Strong written communication skills with a calm, fair, and consistent tone even in heated situations",
+          "Ability to enforce community guidelines transparently: clear warnings, consistent consequences, and documented decision-making",
+          "Experience with conflict resolution between community members, including de-escalation techniques and mediation",
+          "Understanding of the difference between reactive moderation (responding to reports) and proactive surveillance, and why Kloak uses the former",
+          "Familiarity with common community abuse patterns: spam, harassment, brigading, and coordinated disruption",
+          "Ability to document moderation actions and contribute to evolving community guidelines based on real incidents",
+          "Bonus: Experience moderating communities with a privacy or open-source focus",
+        ],
+      },
+      {
+        icon: Users,
+        title: "Community Growth Coordinator",
+        description:
+          "Drive organic growth of Kloak's user community through genuine engagement, partnerships, and outreach. Identify and connect with the creative communities (gamers, musicians, artists, streamers) and privacy-conscious users who would benefit most from the platform.",
+        mindset:
+          "You believe that for a privacy platform, the community itself is the primary growth engine. You build relationships, not funnels. You understand that trust-based growth is slower but more sustainable than paid acquisition or growth hacking.",
+        requirements: [
+          "Experience with community growth strategies, particularly grassroots and word-of-mouth approaches rather than paid advertising",
+          "Understanding of Kloak's target audiences: gamers, musicians, artists, streamers, small teams, and privacy-conscious users",
+          "Ability to identify partnership opportunities with aligned communities, creators, and organizations in the privacy and creative spaces",
           "Experience gathering, organizing, and prioritizing user feedback to inform product decisions in a structured and actionable way",
-          "Ability to handle conflict resolution and enforce community standards with fairness and transparency, using a reactive moderation approach rather than surveillance-based monitoring",
-          "Understanding of privacy culture and the broader digital rights landscape, with the ability to articulate why architectural privacy matters without overpromising or misrepresenting current capabilities",
-          "Familiarity with content creation for social media, blog posts, or community announcements in a tone that is direct, honest, and free of marketing fluff",
-          "Experience with or interest in grassroots community growth: building genuine engagement through trust, quality, and word-of-mouth rather than growth hacking or vanity metrics",
-          "Ability to coordinate between community feedback, bug reports, and the development team without requiring deep technical knowledge of the codebase",
-          "Bonus: Experience with support ticket systems, bug reporting workflows, user research methodologies, or open-source community management",
+          "Familiarity with onboarding optimization: understanding why users join, why they stay, and where they drop off",
+          "Ability to coordinate between community needs and the development team without requiring deep technical knowledge of the codebase",
+          "Understanding of privacy culture and the ability to articulate why architectural privacy matters without overpromising or misrepresenting current capabilities",
+          "Bonus: Experience growing communities for open-source projects, indie products, or donation-funded platforms",
+        ],
+      },
+      {
+        icon: Share2,
+        title: "Social Media & Content Coordinator",
+        description:
+          "Manage Kloak's presence across social media and content channels. Create announcements, feature highlights, educational posts, and community updates in a tone that is direct, honest, and free of marketing fluff. Build Kloak's public voice.",
+        mindset:
+          "You communicate privacy as empowerment, not paranoia. You write posts that creative communities actually want to read, not security whitepapers disguised as social content. You understand that consistency and authenticity matter more than viral moments.",
+        requirements: [
+          "Experience managing social media accounts for products, communities, or organizations, with a focus on authentic engagement over vanity metrics",
+          "Strong writing skills with the ability to explain technical privacy concepts in plain, approachable language",
+          "Familiarity with content creation across platforms: Twitter/X, Reddit, Mastodon, blog posts, and community announcements",
+          "Ability to write product updates, feature announcements, and changelogs that are informative without being either overly technical or overly promotional",
+          "Understanding of how to communicate honestly about product capabilities, including what is live today versus what is on the roadmap",
+          "Experience with content scheduling, engagement monitoring, and adapting tone and format to different platform audiences",
+          "Ability to represent Kloak's voice consistently: direct, honest, technically grounded, and respectful of the audience's intelligence",
+          "Bonus: Experience with visual content creation (basic graphics, video clips) or managing content for privacy-focused or open-source projects",
+        ],
+      },
+      {
+        icon: BookOpen,
+        title: "Documentation Writer",
+        description:
+          "Create and maintain user-facing documentation: help guides, FAQ pages, onboarding tutorials, feature explanations, and troubleshooting resources. Make Kloak easy to understand for users who may never have used a privacy-preserved communication platform before.",
+        mindset:
+          "You believe that clear documentation is a form of respect for the user's time. You write for the person who just wants to get something done, not the person who wants to understand the entire system. You keep things concise, scannable, and accurate.",
+        requirements: [
+          "Strong writing skills with the ability to produce clear, structured documentation for non-technical audiences",
+          "Experience creating user-facing help content: getting started guides, feature walkthroughs, FAQ pages, and troubleshooting articles",
+          "Ability to explain encryption and privacy concepts (E2E encryption, secret keys, device linking) in plain language without sacrificing accuracy",
+          "Familiarity with documentation tools and platforms: Markdown, static site generators, Docusaurus, GitBook, Notion, or equivalent",
+          "Understanding of how documentation supports user trust, particularly the importance of honestly representing current capabilities versus planned features",
+          "Ability to maintain and update documentation as features evolve, ensuring that outdated information is caught and corrected promptly",
+          "Experience organizing information hierarchically so users can find answers quickly without reading entire documents",
+          "Bonus: Experience with visual documentation (screenshots, annotated walkthroughs, short video guides)",
         ],
       },
       {
         icon: FileText,
-        title: "Technical Writer",
+        title: "Technical & Security Writer",
         description:
-          "Create and maintain Kloak's documentation across every audience: user-facing help guides, developer onboarding documentation, API references, security whitepapers, and educational content that explains zero-knowledge architecture to non-technical readers. Good documentation is the difference between a product people try and a product people trust.",
+          "Produce developer-facing and security-facing documentation: API references, architecture decision records, encryption protocol overviews, threat model summaries, contributing guidelines, and security whitepapers. Write for engineers, auditors, and contributors who need precise technical information.",
         mindset:
-          "You believe that if it is not documented, it does not exist. You can take a complex cryptographic concept and explain it at three different levels of depth depending on the audience. You understand that for a privacy platform, documentation is not just helpful, it is a trust signal.",
+          "You can take a complex cryptographic concept and explain it at three different levels of depth depending on the audience. You understand that for a privacy platform, technical documentation is not just helpful, it is a trust signal. If it is not documented, it does not exist.",
         requirements: [
-          "Strong technical writing skills with the ability to produce clear, structured documentation for multiple audiences: end users, developers, security auditors, and contributors",
-          "Ability to explain encryption and privacy concepts (E2E encryption, zero-knowledge architecture, key management) in plain language without sacrificing accuracy",
-          "Experience creating and maintaining documentation systems: user guides, FAQs, onboarding flows, changelogs, and knowledge bases",
-          "Familiarity with developer documentation patterns: API references, architecture decision records, setup guides, and contributing guidelines for open-source projects",
+          "Strong technical writing skills with the ability to produce precise documentation for developers, security auditors, and open-source contributors",
+          "Ability to document cryptographic design decisions: protocol choices, key management architecture, and the security properties each component provides",
+          "Familiarity with developer documentation patterns: API references, architecture decision records, setup guides, and contributing guidelines",
           "Ability to write security-facing documentation: threat model summaries, encryption protocol overviews, and privacy whitepapers that are technically precise but accessible",
-          "Experience working with Markdown, static site generators, or documentation platforms such as Docusaurus, GitBook, or Notion",
-          "Understanding of how documentation supports community trust, particularly the importance of honestly representing current capabilities versus planned features",
-          "Ability to maintain consistency across a growing documentation set as the product evolves, including version-aware documentation that tracks feature rollouts",
-          "Bonus: Experience with visual documentation (diagrams, flowcharts, architecture visuals) or producing educational content such as blog posts and explainer articles",
+          "Experience reading and understanding codebases well enough to document their behavior accurately, even if you are not writing the code yourself",
+          "Familiarity with version-aware documentation practices: tracking feature rollouts, flagging capabilities that are planned versus shipped, and maintaining changelogs",
+          "Experience working with engineering teams to extract technical knowledge and translate it into structured, publishable documentation",
+          "Bonus: Experience with diagram tools (Mermaid, draw.io, Excalidraw) for producing architecture visuals and data flow diagrams",
         ],
       },
     ],
@@ -335,8 +569,8 @@ const PositionCard = ({
               <div className="border border-border/20 bg-card/30 p-6 md:p-8 rounded-lg">
                 <h5 className="text-lg font-medium text-foreground mb-2">Interested in this role?</h5>
                 <p className="text-muted-foreground text-sm leading-relaxed mb-5 max-w-xl">
-                  Tell us about yourself, what excites you about zero-knowledge systems, and how you would like to
-                  contribute. Include any relevant work, projects, or ideas.
+                  Tell us about yourself, what excites you about privacy-preserved communication, and how you would like
+                  to contribute. Include any relevant work, projects, or ideas.
                 </p>
                 <a href="mailto:join@kloak.app">
                   <Button size="default" className="h-11 px-6">
@@ -449,7 +683,7 @@ const Join = () => {
     <div className="min-h-screen bg-background flex flex-col items-center w-full landing-typography">
       <SEO
         title="Join Us | Kloak"
-        description="Join the Kloak team. We're building zero-knowledge communication infrastructure and looking for engineers, designers, security specialists, and community builders."
+        description="Join the Kloak team. We're building privacy-preserved communication infrastructure and looking for engineers, designers, security specialists, and community builders."
       />
       <div className="w-full">
         <NavigationMenu />
@@ -483,7 +717,7 @@ const Join = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
               >
-                We're a small indie team building a privacy-preserved communication platform. No investors pushing
+                We're a small indie team building privacy-preserved communication infrastructure. No investors pushing
                 growth metrics. No corporate roadmap. Just passionate volunteers building tools where the server never
                 sees your content.
               </motion.p>
@@ -554,7 +788,7 @@ const Join = () => {
                 </div>
                 <div className="space-y-4">
                   <Heart className="w-8 h-8 text-primary" />
-                  <h3 className="text-xl font-medium text-foreground">Zero-Knowledge by Design</h3>
+                  <h3 className="text-xl font-medium text-foreground">Privacy by Architecture</h3>
                   <p className="text-muted-foreground text-sm leading-relaxed">
                     Privacy is not a feature here. It is the architecture. Every decision starts with what the server
                     should never see.
