@@ -186,7 +186,7 @@ const Index = () => {
                 width={1280}
                 height={720}
                 colorBack="#dbd7cc"
-                colorFront="#1c1c1c"
+                colorFront="#222220"
                 shape="wave"
                 type="4x4"
                 size={10}
@@ -200,13 +200,14 @@ const Index = () => {
             </div>
 
             <motion.div
-              className="max-w-7xl mx-auto relative z-10"
+              className="max-w-7xl mx-auto relative"
+              style={{ mixBlendMode: "difference" }}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
             >
-              <div className="text-center" style={{ mixBlendMode: "difference" }}>
+              <div className="text-center">
                 {/* Section header */}
                 <div className="flex items-center justify-center gap-4 mb-6">
                   <span className="font-mono text-white tracking-widest uppercase">Get Started</span>
