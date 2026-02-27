@@ -289,7 +289,7 @@ export const parseTextContent = (
   );
 
   // Custom emojis :name: or :name~ServerName: — check current server first, then global (cross-server)
-  parsed = parsed.replace(/:([a-z0-9_]{2,32})(?:~([^:]{1,50}))?:/g, (full, name: string, qualifier?: string) => {
+  parsed = parsed.replace(/:([a-z0-9_]{2,12})(?:~([^:]{1,50}))?:/g, (full, name: string, qualifier?: string) => {
     // 1. Current server emoji (no popup needed) — only for unqualified names
     if (!qualifier) {
       const localUrl = customEmojiMap?.get(name);
@@ -407,7 +407,7 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
 
     // Find all text nodes that still contain unresolved :emojiname: patterns
     const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
-    const emojiPattern = /:([a-z0-9_]{2,32})(?:~([^:]{1,50}))?:/g;
+    const emojiPattern = /:([a-z0-9_]{2,12})(?:~([^:]{1,50}))?:/g;
     const nodesToProcess = new Set<Text>();
     const simpleNames = new Set<string>();
     const qualifiedPairs = new Set<string>(); // "name~ServerName"
@@ -879,7 +879,7 @@ export const ReplyPreview = ({ content, maxLength = 50, usersMap }: ReplyPreview
     
     const parts: (string | JSX.Element)[] = [];
     let lastIndex = 0;
-    const emojiRegex = /:([a-z0-9_]{2,32}):/g;
+    const emojiRegex = /:([a-z0-9_]{2,12}):/g;
     let match;
     
     while ((match = emojiRegex.exec(stripped)) !== null) {

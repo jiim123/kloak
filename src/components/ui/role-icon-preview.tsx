@@ -39,7 +39,7 @@ export function RoleIconPreview({ icon, serverId, className = '' }: RoleIconPrev
   }, [serverEmojis]);
 
   // Check if it's a custom emoji (format :name:)
-  const match = icon.match(/^:([a-z0-9_]{2,32}):$/i);
+  const match = icon.match(/^:([a-z0-9_]{2,12}):$/i);
   
   if (match) {
     const emojiName = match[1];

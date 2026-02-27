@@ -210,7 +210,7 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
   // Helper to render emoji
   const reactionEmojiNode = useCallback(
     (emoji: string) => {
-      const match = emoji.match(/^:([a-z0-9_]{2,32}):$/i);
+      const match = emoji.match(/^:([a-z0-9_]{2,12}):$/i);
       if (match) {
         const url = customEmojiMap.get(match[1]);
         if (url) {

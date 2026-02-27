@@ -15,7 +15,7 @@ import JSZip from "jszip";
 
 const MAX_SERVER_EMOJIS = 1000;
 const MAX_ZIP_SIZE = 50 * 1024 * 1024; // 50MB
-const EMOJI_NAME_REGEX = /^[a-z0-9_]{2,32}$/;
+const EMOJI_NAME_REGEX = /^[a-z0-9_]{2,12}$/;
 const IMAGE_EXTENSIONS = new Set(["png", "gif", "webp"]);
 
 type ExtractedEmoji = {
@@ -182,7 +182,7 @@ export const ImportEmojiPackModal = () => {
           let uniqueName = emoji.name;
           let counter = 1;
           while (existingNames.has(uniqueName)) {
-            uniqueName = `${emoji.name.slice(0, 28)}_${counter}`;
+            uniqueName = `${emoji.name.slice(0, 8)}_${counter}`;
             counter++;
           }
 

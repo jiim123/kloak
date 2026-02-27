@@ -100,7 +100,7 @@ const ALLOWED_BANNER_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gi
 
 const MAX_EMOJI_SIZE = 1 * 1024 * 1024; // 1MB
 const ALLOWED_EMOJI_TYPES = ["image/png", "image/gif", "image/webp", "image/jpeg"];
-const EMOJI_NAME_REGEX = /^[a-z0-9_]{2,32}$/;
+const EMOJI_NAME_REGEX = /^[a-z0-9_]{2,12}$/;
 const MAX_SERVER_EMOJIS = 1000;
 
 const serverSettingsSchema = z.object({
@@ -1206,7 +1206,7 @@ export const ServerSettingsPage = () => {
 
     const normalized = emojiName.trim().toLowerCase();
     if (!EMOJI_NAME_REGEX.test(normalized)) {
-      toast.error("Emoji name must be 2-32 characters (a-z, 0-9, underscore)");
+      toast.error("Emoji name must be 2-12 characters (a-z, 0-9, underscore)");
       return;
     }
 
@@ -1265,7 +1265,7 @@ export const ServerSettingsPage = () => {
     }
     const trimmed = newName.trim().toLowerCase();
     if (!EMOJI_NAME_REGEX.test(trimmed)) {
-      toast.error("Emoji name must be 2-32 lowercase letters, numbers, or underscores");
+      toast.error("Emoji name must be 2-12 lowercase letters, numbers, or underscores");
       return;
     }
     if (serverEmojis.some((e) => e.name === trimmed && e.id !== emojiId)) {
@@ -2764,7 +2764,7 @@ export const ServerSettingsPage = () => {
                   <div className="space-y-2">
                     <h4 className="text-sm font-semibold">Custom Emojis</h4>
                     <p className="text-xs text-muted-foreground">
-                      Upload an emoji and set a name (2-32 chars: a-z, 0-9, underscore). Use it in chat as{" "}
+                      Upload an emoji and set a name (2-12 chars: a-z, 0-9, underscore). Use it in chat as{" "}
                       <span className="font-mono">:name:</span>
                     </p>
                   </div>
@@ -2800,7 +2800,7 @@ export const ServerSettingsPage = () => {
                         onChange={(e) => setEmojiName(e.target.value)}
                         placeholder="e.g. cat"
                         className="h-10 text-sm"
-                        maxLength={32}
+                        maxLength={12}
                       />
                     </div>
 
@@ -2961,7 +2961,7 @@ export const ServerSettingsPage = () => {
                                           if (e.key === "Escape") setEditingEmojiId(null);
                                         }}
                                         onBlur={() => setTimeout(() => setEditingEmojiId(null), 150)}
-                                        maxLength={32}
+                                        maxLength={12}
                                       />
                                     </form>
                                   ) : (

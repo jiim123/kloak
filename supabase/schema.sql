@@ -8660,7 +8660,7 @@ BEGIN
   END IF;
 
   -- Validate name format
-  IF _new_name !~ '^[a-z0-9_]{2,32}$' THEN
+  IF _new_name !~ '^[a-z0-9_]{2,12}$' THEN
     RAISE EXCEPTION 'Invalid emoji name format';
   END IF;
 
@@ -11620,6 +11620,11 @@ BEGIN
   END IF;
   IF NOT check_user_server_permission(_user_id, _server_id, 'manage_emojis') THEN
     RAISE EXCEPTION 'Permission denied: you do not have permission to manage emojis';
+  END IF;
+
+  -- Validate name format (2-12 chars: a-z, 0-9, underscore)
+  IF _name !~ '^[a-z0-9_]{2,12}$' THEN
+    RAISE EXCEPTION 'Invalid emoji name format';
   END IF;
 
   -- Enforce 1000 emoji slot limit per server
@@ -20530,4 +20535,8913 @@ CREATE EVENT TRIGGER pgrst_drop_watch ON sql_drop
 --
 -- PostgreSQL database dump complete
 --
+
+ THEN\r\n    RAISE EXCEPTION 'Invalid emoji name format';\r\n  END IF;\r\n\r\n  -- Enforce 1000 emoji slot limit per server\r\n  SELECT count(*) INTO emoji_count FROM server_emojis WHERE server_id = _server_id;
+  IF emoji_count >= 1000 THEN
+    RAISE EXCEPTION 'Server emoji limit reached (1000)';
+  END IF;
+
+  INSERT INTO server_emojis (server_id, name, file_path, created_by)
+  VALUES (_server_id, _name, _file_path, _user_id)
+  RETURNING * INTO new_emoji;
+  RETURN row_to_json(new_emoji);
+END;
+$$;
+
+
+--
+-- Name: upsert_channel_read(uuid, uuid, timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.upsert_channel_read(_user_id uuid, _channel_id uuid, _last_read_at timestamp with time zone) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+BEGIN
+  IF NOT verify_request_identity(_user_id) THEN
+    RAISE EXCEPTION 'Authentication failed';
+  END IF;
+
+  INSERT INTO channel_reads (user_id, channel_id, last_read_at)
+  VALUES (_user_id, _channel_id, _last_read_at)
+  ON CONFLICT (user_id, channel_id)
+  DO UPDATE SET last_read_at = _last_read_at;
+END;
+$$;
+
+
+--
+-- Name: upsert_user_preferences(uuid, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.upsert_user_preferences(_user_id uuid, _prefs jsonb) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+BEGIN
+  -- Identity verification
+  IF NOT verify_request_identity(_user_id) THEN
+    RAISE EXCEPTION 'Unauthorized: identity mismatch';
+  END IF;
+  INSERT INTO user_preferences (
+    user_id, theme, link_previews_enabled,
+    desktop_notifications_enabled, browser_notifications_enabled,
+    notification_sound_enabled, notification_sound_server_mentions,
+    notification_sound_user_mentions, notification_sound_replies,
+    notification_volume, show_message_preview,
+    show_preview_server_mentions, show_preview_user_mentions,
+    show_preview_replies, compact_mode, show_timestamps, animate_emojis,
+    updated_at
+  ) VALUES (
+    _user_id,
+    COALESCE(_prefs->>'theme', 'default'),
+    COALESCE((_prefs->>'link_previews_enabled')::BOOLEAN, TRUE),
+    COALESCE((_prefs->>'desktop_notifications_enabled')::BOOLEAN, TRUE),
+    COALESCE((_prefs->>'browser_notifications_enabled')::BOOLEAN, TRUE),
+    COALESCE((_prefs->>'notification_sound_enabled')::BOOLEAN, TRUE),
+    COALESCE((_prefs->>'notification_sound_server_mentions')::BOOLEAN, TRUE),
+    COALESCE((_prefs->>'notification_sound_user_mentions')::BOOLEAN, TRUE),
+    COALESCE((_prefs->>'notification_sound_replies')::BOOLEAN, TRUE),
+    COALESCE((_prefs->>'notification_volume')::NUMERIC, 0.5),
+    COALESCE((_prefs->>'show_message_preview')::BOOLEAN, TRUE),
+    COALESCE((_prefs->>'show_preview_server_mentions')::BOOLEAN, TRUE),
+    COALESCE((_prefs->>'show_preview_user_mentions')::BOOLEAN, TRUE),
+    COALESCE((_prefs->>'show_preview_replies')::BOOLEAN, TRUE),
+    COALESCE((_prefs->>'compact_mode')::BOOLEAN, FALSE),
+    COALESCE((_prefs->>'show_timestamps')::BOOLEAN, TRUE),
+    COALESCE((_prefs->>'animate_emojis')::BOOLEAN, TRUE),
+    NOW()
+  )
+  ON CONFLICT (user_id) DO UPDATE SET
+    theme = COALESCE(_prefs->>'theme', user_preferences.theme),
+    link_previews_enabled = COALESCE((_prefs->>'link_previews_enabled')::BOOLEAN, user_preferences.link_previews_enabled),
+    desktop_notifications_enabled = COALESCE((_prefs->>'desktop_notifications_enabled')::BOOLEAN, user_preferences.desktop_notifications_enabled),
+    browser_notifications_enabled = COALESCE((_prefs->>'browser_notifications_enabled')::BOOLEAN, user_preferences.browser_notifications_enabled),
+    notification_sound_enabled = COALESCE((_prefs->>'notification_sound_enabled')::BOOLEAN, user_preferences.notification_sound_enabled),
+    notification_sound_server_mentions = COALESCE((_prefs->>'notification_sound_server_mentions')::BOOLEAN, user_preferences.notification_sound_server_mentions),
+    notification_sound_user_mentions = COALESCE((_prefs->>'notification_sound_user_mentions')::BOOLEAN, user_preferences.notification_sound_user_mentions),
+    notification_sound_replies = COALESCE((_prefs->>'notification_sound_replies')::BOOLEAN, user_preferences.notification_sound_replies),
+    notification_volume = COALESCE((_prefs->>'notification_volume')::NUMERIC, user_preferences.notification_volume),
+    show_message_preview = COALESCE((_prefs->>'show_message_preview')::BOOLEAN, user_preferences.show_message_preview),
+    show_preview_server_mentions = COALESCE((_prefs->>'show_preview_server_mentions')::BOOLEAN, user_preferences.show_preview_server_mentions),
+    show_preview_user_mentions = COALESCE((_prefs->>'show_preview_user_mentions')::BOOLEAN, user_preferences.show_preview_user_mentions),
+    show_preview_replies = COALESCE((_prefs->>'show_preview_replies')::BOOLEAN, user_preferences.show_preview_replies),
+    compact_mode = COALESCE((_prefs->>'compact_mode')::BOOLEAN, user_preferences.compact_mode),
+    show_timestamps = COALESCE((_prefs->>'show_timestamps')::BOOLEAN, user_preferences.show_timestamps),
+    animate_emojis = COALESCE((_prefs->>'animate_emojis')::BOOLEAN, user_preferences.animate_emojis),
+    updated_at = NOW();
+END;
+$$;
+
+
+--
+-- Name: upsert_user_voice_settings(uuid, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.upsert_user_voice_settings(p_user_id uuid, p_settings jsonb) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+DECLARE
+  result JSONB;
+BEGIN
+  -- Identity verification
+  IF NOT verify_request_identity(_user_id) THEN
+    RAISE EXCEPTION 'Unauthorized: identity mismatch';
+  END IF;
+  INSERT INTO user_voice_settings (user_id, settings)
+  VALUES (p_user_id, p_settings)
+  ON CONFLICT (user_id)
+  DO UPDATE SET settings = p_settings
+  RETURNING settings INTO result;
+  
+  RETURN result;
+END;
+$$;
+
+
+--
+-- Name: validate_username_on_insert(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.validate_username_on_insert() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $_$
+BEGIN
+  -- Check if username is blocked
+  IF public.is_username_blocked(NEW.username) THEN
+    RAISE EXCEPTION 'Username is reserved or contains restricted words';
+  END IF;
+
+  -- Check length (3-32 characters)
+  IF length(NEW.username) < 3 OR length(NEW.username) > 32 THEN
+    RAISE EXCEPTION 'Username must be between 3 and 32 characters';
+  END IF;
+
+  -- Check allowed characters (alphanumeric, underscores, hyphens)
+  IF NEW.username !~ '^[a-zA-Z0-9_-]+$' THEN
+    RAISE EXCEPTION 'Username can only contain letters, numbers, underscores, and hyphens';
+  END IF;
+
+  -- Cannot start or end with underscore or hyphen
+  IF NEW.username ~ '^[-_]' OR NEW.username ~ '[-_]$' THEN
+    RAISE EXCEPTION 'Username cannot start or end with an underscore or hyphen';
+  END IF;
+
+  -- No consecutive special characters
+  IF NEW.username ~ '[-_]{2,}' THEN
+    RAISE EXCEPTION 'Username cannot contain consecutive special characters';
+  END IF;
+
+  -- Cannot be only numbers
+  IF NEW.username ~ '^\d+$' THEN
+    RAISE EXCEPTION 'Username cannot be only numbers';
+  END IF;
+
+  RETURN NEW;
+END;
+$_$;
+
+
+--
+-- Name: verify_request_identity(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.verify_request_identity(_user_id uuid) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+DECLARE
+  header_hash text;
+  stored_hash text;
+BEGIN
+  BEGIN
+    header_hash := (current_setting('request.headers', true)::json->>'x-key-hash');
+  EXCEPTION WHEN OTHERS THEN
+    RETURN false;
+  END;
+
+  IF header_hash IS NULL OR header_hash = '' THEN
+    RETURN false;
+  END IF;
+
+  SELECT ua.key_hash INTO stored_hash FROM user_auth ua WHERE ua.user_id = _user_id;
+
+  IF stored_hash IS NULL THEN
+    RETURN false;
+  END IF;
+
+  RETURN header_hash = stored_hash;
+END;
+$$;
+
+
+--
+-- Name: vote_poll(uuid, uuid, integer[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.vote_poll(_poll_id uuid, _user_id uuid, _option_indexes integer[]) RETURNS json
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+DECLARE
+  p record;
+  channel_server_id uuid;
+  is_muted boolean;
+  _n integer;
+  _distinct_indexes integer[];
+  _min_idx integer;
+  _max_idx integer;
+  result json;
+BEGIN
+  -- Identity verification
+  IF NOT verify_request_identity(_user_id) THEN
+    RAISE EXCEPTION 'Unauthorized: identity mismatch';
+  END IF;
+  SELECT * INTO p FROM public.polls WHERE id = _poll_id;
+  IF p IS NULL THEN
+    RAISE EXCEPTION 'Poll not found';
+  END IF;
+
+  IF p.is_closed = true OR p.ends_at <= now() THEN
+    -- Close and recompute just in case, then return closed poll state
+    UPDATE public.polls SET is_closed = true WHERE id = _poll_id AND is_closed = false;
+    PERFORM public.recompute_poll_results(_poll_id);
+    SELECT json_build_object(
+      'id', p.id,
+      'channel_id', p.channel_id,
+      'message_id', p.message_id,
+      'question', p.question,
+      'options', p.options,
+      'allow_multiple', p.allow_multiple,
+      'ends_at', p.ends_at,
+      'is_closed', true,
+      'results', (SELECT results FROM public.polls WHERE id = _poll_id),
+      'total_votes', (SELECT total_votes FROM public.polls WHERE id = _poll_id)
+    ) INTO result;
+    RETURN result;
+  END IF;
+
+  _n := COALESCE(array_length(p.options, 1), 0);
+  IF _n = 0 THEN
+    RAISE EXCEPTION 'Poll has no options';
+  END IF;
+
+  IF _option_indexes IS NULL OR COALESCE(array_length(_option_indexes, 1), 0) = 0 THEN
+    RAISE EXCEPTION 'At least one option must be selected';
+  END IF;
+
+  -- normalize to distinct selection
+  SELECT array_agg(DISTINCT x ORDER BY x) INTO _distinct_indexes
+  FROM unnest(_option_indexes) AS x;
+
+  IF p.allow_multiple = false AND COALESCE(array_length(_distinct_indexes, 1), 0) > 1 THEN
+    RAISE EXCEPTION 'This poll only allows one vote';
+  END IF;
+
+  SELECT min(x), max(x) INTO _min_idx, _max_idx FROM unnest(_distinct_indexes) AS x;
+  IF _min_idx < 0 OR _max_idx > (_n - 1) THEN
+    RAISE EXCEPTION 'Invalid poll option';
+  END IF;
+
+  -- Membership/permission checks (mirror send_message)
+  SELECT server_id INTO channel_server_id FROM public.channels WHERE id = p.channel_id;
+
+  SELECT sm.is_muted INTO is_muted FROM public.server_members sm
+  WHERE sm.server_id = channel_server_id AND sm.user_id = _user_id AND sm.is_banned = false;
+
+  IF is_muted IS NULL THEN
+    RAISE EXCEPTION 'Not a member of this server';
+  END IF;
+
+  IF is_muted THEN
+    RAISE EXCEPTION 'You are muted in this server';
+  END IF;
+
+  IF NOT public.check_user_permission(_user_id, p.channel_id, 'send_messages') THEN
+    RAISE EXCEPTION 'You do not have permission to vote in this channel';
+  END IF;
+
+  -- Replace existing votes for this user
+  DELETE FROM public.poll_votes WHERE poll_id = _poll_id AND user_id = _user_id;
+
+  INSERT INTO public.poll_votes (poll_id, user_id, option_index)
+  SELECT _poll_id, _user_id, x
+  FROM unnest(_distinct_indexes) AS x
+  ON CONFLICT (poll_id, user_id, option_index) DO NOTHING;
+
+  PERFORM public.recompute_poll_results(_poll_id);
+
+  SELECT json_build_object(
+    'id', p.id,
+    'channel_id', p.channel_id,
+    'message_id', p.message_id,
+    'question', p.question,
+    'options', p.options,
+    'allow_multiple', p.allow_multiple,
+    'ends_at', p.ends_at,
+    'is_closed', (SELECT is_closed FROM public.polls WHERE id = _poll_id),
+    'results', (SELECT results FROM public.polls WHERE id = _poll_id),
+    'total_votes', (SELECT total_votes FROM public.polls WHERE id = _poll_id)
+  ) INTO result;
+
+  RETURN result;
+END;
+$$;
+
+
+--
+-- Name: apply_rls(jsonb, integer); Type: FUNCTION; Schema: realtime; Owner: -
+--
+
+CREATE FUNCTION realtime.apply_rls(wal jsonb, max_record_bytes integer DEFAULT (1024 * 1024)) RETURNS SETOF realtime.wal_rls
+    LANGUAGE plpgsql
+    AS $$
+declare
+-- Regclass of the table e.g. public.notes
+entity_ regclass = (quote_ident(wal ->> 'schema') || '.' || quote_ident(wal ->> 'table'))::regclass;
+
+-- I, U, D, T: insert, update ...
+action realtime.action = (
+    case wal ->> 'action'
+        when 'I' then 'INSERT'
+        when 'U' then 'UPDATE'
+        when 'D' then 'DELETE'
+        else 'ERROR'
+    end
+);
+
+-- Is row level security enabled for the table
+is_rls_enabled bool = relrowsecurity from pg_class where oid = entity_;
+
+subscriptions realtime.subscription[] = array_agg(subs)
+    from
+        realtime.subscription subs
+    where
+        subs.entity = entity_
+        -- Filter by action early - only get subscriptions interested in this action
+        -- action_filter column can be: '*' (all), 'INSERT', 'UPDATE', or 'DELETE'
+        and (subs.action_filter = '*' or subs.action_filter = action::text);
+
+-- Subscription vars
+roles regrole[] = array_agg(distinct us.claims_role::text)
+    from
+        unnest(subscriptions) us;
+
+working_role regrole;
+claimed_role regrole;
+claims jsonb;
+
+subscription_id uuid;
+subscription_has_access bool;
+visible_to_subscription_ids uuid[] = '{}';
+
+-- structured info for wal's columns
+columns realtime.wal_column[];
+-- previous identity values for update/delete
+old_columns realtime.wal_column[];
+
+error_record_exceeds_max_size boolean = octet_length(wal::text) > max_record_bytes;
+
+-- Primary jsonb output for record
+output jsonb;
+
+begin
+perform set_config('role', null, true);
+
+columns =
+    array_agg(
+        (
+            x->>'name',
+            x->>'type',
+            x->>'typeoid',
+            realtime.cast(
+                (x->'value') #>> '{}',
+                coalesce(
+                    (x->>'typeoid')::regtype, -- null when wal2json version <= 2.4
+                    (x->>'type')::regtype
+                )
+            ),
+            (pks ->> 'name') is not null,
+            true
+        )::realtime.wal_column
+    )
+    from
+        jsonb_array_elements(wal -> 'columns') x
+        left join jsonb_array_elements(wal -> 'pk') pks
+            on (x ->> 'name') = (pks ->> 'name');
+
+old_columns =
+    array_agg(
+        (
+            x->>'name',
+            x->>'type',
+            x->>'typeoid',
+            realtime.cast(
+                (x->'value') #>> '{}',
+                coalesce(
+                    (x->>'typeoid')::regtype, -- null when wal2json version <= 2.4
+                    (x->>'type')::regtype
+                )
+            ),
+            (pks ->> 'name') is not null,
+            true
+        )::realtime.wal_column
+    )
+    from
+        jsonb_array_elements(wal -> 'identity') x
+        left join jsonb_array_elements(wal -> 'pk') pks
+            on (x ->> 'name') = (pks ->> 'name');
+
+for working_role in select * from unnest(roles) loop
+
+    -- Update `is_selectable` for columns and old_columns
+    columns =
+        array_agg(
+            (
+                c.name,
+                c.type_name,
+                c.type_oid,
+                c.value,
+                c.is_pkey,
+                pg_catalog.has_column_privilege(working_role, entity_, c.name, 'SELECT')
+            )::realtime.wal_column
+        )
+        from
+            unnest(columns) c;
+
+    old_columns =
+            array_agg(
+                (
+                    c.name,
+                    c.type_name,
+                    c.type_oid,
+                    c.value,
+                    c.is_pkey,
+                    pg_catalog.has_column_privilege(working_role, entity_, c.name, 'SELECT')
+                )::realtime.wal_column
+            )
+            from
+                unnest(old_columns) c;
+
+    if action <> 'DELETE' and count(1) = 0 from unnest(columns) c where c.is_pkey then
+        return next (
+            jsonb_build_object(
+                'schema', wal ->> 'schema',
+                'table', wal ->> 'table',
+                'type', action
+            ),
+            is_rls_enabled,
+            -- subscriptions is already filtered by entity
+            (select array_agg(s.subscription_id) from unnest(subscriptions) as s where claims_role = working_role),
+            array['Error 400: Bad Request, no primary key']
+        )::realtime.wal_rls;
+
+    -- The claims role does not have SELECT permission to the primary key of entity
+    elsif action <> 'DELETE' and sum(c.is_selectable::int) <> count(1) from unnest(columns) c where c.is_pkey then
+        return next (
+            jsonb_build_object(
+                'schema', wal ->> 'schema',
+                'table', wal ->> 'table',
+                'type', action
+            ),
+            is_rls_enabled,
+            (select array_agg(s.subscription_id) from unnest(subscriptions) as s where claims_role = working_role),
+            array['Error 401: Unauthorized']
+        )::realtime.wal_rls;
+
+    else
+        output = jsonb_build_object(
+            'schema', wal ->> 'schema',
+            'table', wal ->> 'table',
+            'type', action,
+            'commit_timestamp', to_char(
+                ((wal ->> 'timestamp')::timestamptz at time zone 'utc'),
+                'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'
+            ),
+            'columns', (
+                select
+                    jsonb_agg(
+                        jsonb_build_object(
+                            'name', pa.attname,
+                            'type', pt.typname
+                        )
+                        order by pa.attnum asc
+                    )
+                from
+                    pg_attribute pa
+                    join pg_type pt
+                        on pa.atttypid = pt.oid
+                where
+                    attrelid = entity_
+                    and attnum > 0
+                    and pg_catalog.has_column_privilege(working_role, entity_, pa.attname, 'SELECT')
+            )
+        )
+        -- Add "record" key for insert and update
+        || case
+            when action in ('INSERT', 'UPDATE') then
+                jsonb_build_object(
+                    'record',
+                    (
+                        select
+                            jsonb_object_agg(
+                                -- if unchanged toast, get column name and value from old record
+                                coalesce((c).name, (oc).name),
+                                case
+                                    when (c).name is null then (oc).value
+                                    else (c).value
+                                end
+                            )
+                        from
+                            unnest(columns) c
+                            full outer join unnest(old_columns) oc
+                                on (c).name = (oc).name
+                        where
+                            coalesce((c).is_selectable, (oc).is_selectable)
+                            and ( not error_record_exceeds_max_size or (octet_length((c).value::text) <= 64))
+                    )
+                )
+            else '{}'::jsonb
+        end
+        -- Add "old_record" key for update and delete
+        || case
+            when action = 'UPDATE' then
+                jsonb_build_object(
+                        'old_record',
+                        (
+                            select jsonb_object_agg((c).name, (c).value)
+                            from unnest(old_columns) c
+                            where
+                                (c).is_selectable
+                                and ( not error_record_exceeds_max_size or (octet_length((c).value::text) <= 64))
+                        )
+                    )
+            when action = 'DELETE' then
+                jsonb_build_object(
+                    'old_record',
+                    (
+                        select jsonb_object_agg((c).name, (c).value)
+                        from unnest(old_columns) c
+                        where
+                            (c).is_selectable
+                            and ( not error_record_exceeds_max_size or (octet_length((c).value::text) <= 64))
+                            and ( not is_rls_enabled or (c).is_pkey ) -- if RLS enabled, we can't secure deletes so filter to pkey
+                    )
+                )
+            else '{}'::jsonb
+        end;
+
+        -- Create the prepared statement
+        if is_rls_enabled and action <> 'DELETE' then
+            if (select 1 from pg_prepared_statements where name = 'walrus_rls_stmt' limit 1) > 0 then
+                deallocate walrus_rls_stmt;
+            end if;
+            execute realtime.build_prepared_statement_sql('walrus_rls_stmt', entity_, columns);
+        end if;
+
+        visible_to_subscription_ids = '{}';
+
+        for subscription_id, claims in (
+                select
+                    subs.subscription_id,
+                    subs.claims
+                from
+                    unnest(subscriptions) subs
+                where
+                    subs.entity = entity_
+                    and subs.claims_role = working_role
+                    and (
+                        realtime.is_visible_through_filters(columns, subs.filters)
+                        or (
+                          action = 'DELETE'
+                          and realtime.is_visible_through_filters(old_columns, subs.filters)
+                        )
+                    )
+        ) loop
+
+            if not is_rls_enabled or action = 'DELETE' then
+                visible_to_subscription_ids = visible_to_subscription_ids || subscription_id;
+            else
+                -- Check if RLS allows the role to see the record
+                perform
+                    -- Trim leading and trailing quotes from working_role because set_config
+                    -- doesn't recognize the role as valid if they are included
+                    set_config('role', trim(both '"' from working_role::text), true),
+                    set_config('request.jwt.claims', claims::text, true);
+
+                execute 'execute walrus_rls_stmt' into subscription_has_access;
+
+                if subscription_has_access then
+                    visible_to_subscription_ids = visible_to_subscription_ids || subscription_id;
+                end if;
+            end if;
+        end loop;
+
+        perform set_config('role', null, true);
+
+        return next (
+            output,
+            is_rls_enabled,
+            visible_to_subscription_ids,
+            case
+                when error_record_exceeds_max_size then array['Error 413: Payload Too Large']
+                else '{}'
+            end
+        )::realtime.wal_rls;
+
+    end if;
+end loop;
+
+perform set_config('role', null, true);
+end;
+$$;
+
+
+--
+-- Name: broadcast_changes(text, text, text, text, text, record, record, text); Type: FUNCTION; Schema: realtime; Owner: -
+--
+
+CREATE FUNCTION realtime.broadcast_changes(topic_name text, event_name text, operation text, table_name text, table_schema text, new record, old record, level text DEFAULT 'ROW'::text) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    -- Declare a variable to hold the JSONB representation of the row
+    row_data jsonb := '{}'::jsonb;
+BEGIN
+    IF level = 'STATEMENT' THEN
+        RAISE EXCEPTION 'function can only be triggered for each row, not for each statement';
+    END IF;
+    -- Check the operation type and handle accordingly
+    IF operation = 'INSERT' OR operation = 'UPDATE' OR operation = 'DELETE' THEN
+        row_data := jsonb_build_object('old_record', OLD, 'record', NEW, 'operation', operation, 'table', table_name, 'schema', table_schema);
+        PERFORM realtime.send (row_data, event_name, topic_name);
+    ELSE
+        RAISE EXCEPTION 'Unexpected operation type: %', operation;
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE EXCEPTION 'Failed to process the row: %', SQLERRM;
+END;
+
+$$;
+
+
+--
+-- Name: build_prepared_statement_sql(text, regclass, realtime.wal_column[]); Type: FUNCTION; Schema: realtime; Owner: -
+--
+
+CREATE FUNCTION realtime.build_prepared_statement_sql(prepared_statement_name text, entity regclass, columns realtime.wal_column[]) RETURNS text
+    LANGUAGE sql
+    AS $$
+      /*
+      Builds a sql string that, if executed, creates a prepared statement to
+      tests retrive a row from *entity* by its primary key columns.
+      Example
+          select realtime.build_prepared_statement_sql('public.notes', '{"id"}'::text[], '{"bigint"}'::text[])
+      */
+          select
+      'prepare ' || prepared_statement_name || ' as
+          select
+              exists(
+                  select
+                      1
+                  from
+                      ' || entity || '
+                  where
+                      ' || string_agg(quote_ident(pkc.name) || '=' || quote_nullable(pkc.value #>> '{}') , ' and ') || '
+              )'
+          from
+              unnest(columns) pkc
+          where
+              pkc.is_pkey
+          group by
+              entity
+      $$;
+
+
+--
+-- Name: cast(text, regtype); Type: FUNCTION; Schema: realtime; Owner: -
+--
+
+CREATE FUNCTION realtime."cast"(val text, type_ regtype) RETURNS jsonb
+    LANGUAGE plpgsql IMMUTABLE
+    AS $$
+    declare
+      res jsonb;
+    begin
+      execute format('select to_jsonb(%L::'|| type_::text || ')', val)  into res;
+      return res;
+    end
+    $$;
+
+
+--
+-- Name: check_equality_op(realtime.equality_op, regtype, text, text); Type: FUNCTION; Schema: realtime; Owner: -
+--
+
+CREATE FUNCTION realtime.check_equality_op(op realtime.equality_op, type_ regtype, val_1 text, val_2 text) RETURNS boolean
+    LANGUAGE plpgsql IMMUTABLE
+    AS $$
+      /*
+      Casts *val_1* and *val_2* as type *type_* and check the *op* condition for truthiness
+      */
+      declare
+          op_symbol text = (
+              case
+                  when op = 'eq' then '='
+                  when op = 'neq' then '!='
+                  when op = 'lt' then '<'
+                  when op = 'lte' then '<='
+                  when op = 'gt' then '>'
+                  when op = 'gte' then '>='
+                  when op = 'in' then '= any'
+                  else 'UNKNOWN OP'
+              end
+          );
+          res boolean;
+      begin
+          execute format(
+              'select %L::'|| type_::text || ' ' || op_symbol
+              || ' ( %L::'
+              || (
+                  case
+                      when op = 'in' then type_::text || '[]'
+                      else type_::text end
+              )
+              || ')', val_1, val_2) into res;
+          return res;
+      end;
+      $$;
+
+
+--
+-- Name: is_visible_through_filters(realtime.wal_column[], realtime.user_defined_filter[]); Type: FUNCTION; Schema: realtime; Owner: -
+--
+
+CREATE FUNCTION realtime.is_visible_through_filters(columns realtime.wal_column[], filters realtime.user_defined_filter[]) RETURNS boolean
+    LANGUAGE sql IMMUTABLE
+    AS $_$
+    /*
+    Should the record be visible (true) or filtered out (false) after *filters* are applied
+    */
+        select
+            -- Default to allowed when no filters present
+            $2 is null -- no filters. this should not happen because subscriptions has a default
+            or array_length($2, 1) is null -- array length of an empty array is null
+            or bool_and(
+                coalesce(
+                    realtime.check_equality_op(
+                        op:=f.op,
+                        type_:=coalesce(
+                            col.type_oid::regtype, -- null when wal2json version <= 2.4
+                            col.type_name::regtype
+                        ),
+                        -- cast jsonb to text
+                        val_1:=col.value #>> '{}',
+                        val_2:=f.value
+                    ),
+                    false -- if null, filter does not match
+                )
+            )
+        from
+            unnest(filters) f
+            join unnest(columns) col
+                on f.column_name = col.name;
+    $_$;
+
+
+--
+-- Name: list_changes(name, name, integer, integer); Type: FUNCTION; Schema: realtime; Owner: -
+--
+
+CREATE FUNCTION realtime.list_changes(publication name, slot_name name, max_changes integer, max_record_bytes integer) RETURNS SETOF realtime.wal_rls
+    LANGUAGE sql
+    SET log_min_messages TO 'fatal'
+    AS $$
+      with pub as (
+        select
+          concat_ws(
+            ',',
+            case when bool_or(pubinsert) then 'insert' else null end,
+            case when bool_or(pubupdate) then 'update' else null end,
+            case when bool_or(pubdelete) then 'delete' else null end
+          ) as w2j_actions,
+          coalesce(
+            string_agg(
+              realtime.quote_wal2json(format('%I.%I', schemaname, tablename)::regclass),
+              ','
+            ) filter (where ppt.tablename is not null and ppt.tablename not like '% %'),
+            ''
+          ) w2j_add_tables
+        from
+          pg_publication pp
+          left join pg_publication_tables ppt
+            on pp.pubname = ppt.pubname
+        where
+          pp.pubname = publication
+        group by
+          pp.pubname
+        limit 1
+      ),
+      w2j as (
+        select
+          x.*, pub.w2j_add_tables
+        from
+          pub,
+          pg_logical_slot_get_changes(
+            slot_name, null, max_changes,
+            'include-pk', 'true',
+            'include-transaction', 'false',
+            'include-timestamp', 'true',
+            'include-type-oids', 'true',
+            'format-version', '2',
+            'actions', pub.w2j_actions,
+            'add-tables', pub.w2j_add_tables
+          ) x
+      )
+      select
+        xyz.wal,
+        xyz.is_rls_enabled,
+        xyz.subscription_ids,
+        xyz.errors
+      from
+        w2j,
+        realtime.apply_rls(
+          wal := w2j.data::jsonb,
+          max_record_bytes := max_record_bytes
+        ) xyz(wal, is_rls_enabled, subscription_ids, errors)
+      where
+        w2j.w2j_add_tables <> ''
+        and xyz.subscription_ids[1] is not null
+    $$;
+
+
+--
+-- Name: quote_wal2json(regclass); Type: FUNCTION; Schema: realtime; Owner: -
+--
+
+CREATE FUNCTION realtime.quote_wal2json(entity regclass) RETURNS text
+    LANGUAGE sql IMMUTABLE STRICT
+    AS $$
+      select
+        (
+          select string_agg('' || ch,'')
+          from unnest(string_to_array(nsp.nspname::text, null)) with ordinality x(ch, idx)
+          where
+            not (x.idx = 1 and x.ch = '"')
+            and not (
+              x.idx = array_length(string_to_array(nsp.nspname::text, null), 1)
+              and x.ch = '"'
+            )
+        )
+        || '.'
+        || (
+          select string_agg('' || ch,'')
+          from unnest(string_to_array(pc.relname::text, null)) with ordinality x(ch, idx)
+          where
+            not (x.idx = 1 and x.ch = '"')
+            and not (
+              x.idx = array_length(string_to_array(nsp.nspname::text, null), 1)
+              and x.ch = '"'
+            )
+          )
+      from
+        pg_class pc
+        join pg_namespace nsp
+          on pc.relnamespace = nsp.oid
+      where
+        pc.oid = entity
+    $$;
+
+
+--
+-- Name: send(jsonb, text, text, boolean); Type: FUNCTION; Schema: realtime; Owner: -
+--
+
+CREATE FUNCTION realtime.send(payload jsonb, event text, topic text, private boolean DEFAULT true) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  generated_id uuid;
+  final_payload jsonb;
+BEGIN
+  BEGIN
+    -- Generate a new UUID for the id
+    generated_id := gen_random_uuid();
+
+    -- Check if payload has an 'id' key, if not, add the generated UUID
+    IF payload ? 'id' THEN
+      final_payload := payload;
+    ELSE
+      final_payload := jsonb_set(payload, '{id}', to_jsonb(generated_id));
+    END IF;
+
+    -- Set the topic configuration
+    EXECUTE format('SET LOCAL realtime.topic TO %L', topic);
+
+    -- Attempt to insert the message
+    INSERT INTO realtime.messages (id, payload, event, topic, private, extension)
+    VALUES (generated_id, final_payload, event, topic, private, 'broadcast');
+  EXCEPTION
+    WHEN OTHERS THEN
+      -- Capture and notify the error
+      RAISE WARNING 'ErrorSendingBroadcastMessage: %', SQLERRM;
+  END;
+END;
+$$;
+
+
+--
+-- Name: subscription_check_filters(); Type: FUNCTION; Schema: realtime; Owner: -
+--
+
+CREATE FUNCTION realtime.subscription_check_filters() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+    /*
+    Validates that the user defined filters for a subscription:
+    - refer to valid columns that the claimed role may access
+    - values are coercable to the correct column type
+    */
+    declare
+        col_names text[] = coalesce(
+                array_agg(c.column_name order by c.ordinal_position),
+                '{}'::text[]
+            )
+            from
+                information_schema.columns c
+            where
+                format('%I.%I', c.table_schema, c.table_name)::regclass = new.entity
+                and pg_catalog.has_column_privilege(
+                    (new.claims ->> 'role'),
+                    format('%I.%I', c.table_schema, c.table_name)::regclass,
+                    c.column_name,
+                    'SELECT'
+                );
+        filter realtime.user_defined_filter;
+        col_type regtype;
+
+        in_val jsonb;
+    begin
+        for filter in select * from unnest(new.filters) loop
+            -- Filtered column is valid
+            if not filter.column_name = any(col_names) then
+                raise exception 'invalid column for filter %', filter.column_name;
+            end if;
+
+            -- Type is sanitized and safe for string interpolation
+            col_type = (
+                select atttypid::regtype
+                from pg_catalog.pg_attribute
+                where attrelid = new.entity
+                      and attname = filter.column_name
+            );
+            if col_type is null then
+                raise exception 'failed to lookup type for column %', filter.column_name;
+            end if;
+
+            -- Set maximum number of entries for in filter
+            if filter.op = 'in'::realtime.equality_op then
+                in_val = realtime.cast(filter.value, (col_type::text || '[]')::regtype);
+                if coalesce(jsonb_array_length(in_val), 0) > 100 then
+                    raise exception 'too many values for `in` filter. Maximum 100';
+                end if;
+            else
+                -- raises an exception if value is not coercable to type
+                perform realtime.cast(filter.value, col_type);
+            end if;
+
+        end loop;
+
+        -- Apply consistent order to filters so the unique constraint on
+        -- (subscription_id, entity, filters) can't be tricked by a different filter order
+        new.filters = coalesce(
+            array_agg(f order by f.column_name, f.op, f.value),
+            '{}'
+        ) from unnest(new.filters) f;
+
+        return new;
+    end;
+    $$;
+
+
+--
+-- Name: to_regrole(text); Type: FUNCTION; Schema: realtime; Owner: -
+--
+
+CREATE FUNCTION realtime.to_regrole(role_name text) RETURNS regrole
+    LANGUAGE sql IMMUTABLE
+    AS $$ select role_name::regrole $$;
+
+
+--
+-- Name: topic(); Type: FUNCTION; Schema: realtime; Owner: -
+--
+
+CREATE FUNCTION realtime.topic() RETURNS text
+    LANGUAGE sql STABLE
+    AS $$
+select nullif(current_setting('realtime.topic', true), '')::text;
+$$;
+
+
+--
+-- Name: can_insert_object(text, text, uuid, jsonb); Type: FUNCTION; Schema: storage; Owner: -
+--
+
+CREATE FUNCTION storage.can_insert_object(bucketid text, name text, owner uuid, metadata jsonb) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  INSERT INTO "storage"."objects" ("bucket_id", "name", "owner", "metadata") VALUES (bucketid, name, owner, metadata);
+  -- hack to rollback the successful insert
+  RAISE sqlstate 'PT200' using
+  message = 'ROLLBACK',
+  detail = 'rollback successful insert';
+END
+$$;
+
+
+--
+-- Name: enforce_bucket_name_length(); Type: FUNCTION; Schema: storage; Owner: -
+--
+
+CREATE FUNCTION storage.enforce_bucket_name_length() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+begin
+    if length(new.name) > 100 then
+        raise exception 'bucket name "%" is too long (% characters). Max is 100.', new.name, length(new.name);
+    end if;
+    return new;
+end;
+$$;
+
+
+--
+-- Name: extension(text); Type: FUNCTION; Schema: storage; Owner: -
+--
+
+CREATE FUNCTION storage.extension(name text) RETURNS text
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+_parts text[];
+_filename text;
+BEGIN
+	select string_to_array(name, '/') into _parts;
+	select _parts[array_length(_parts,1)] into _filename;
+	-- @todo return the last part instead of 2
+	return reverse(split_part(reverse(_filename), '.', 1));
+END
+$$;
+
+
+--
+-- Name: filename(text); Type: FUNCTION; Schema: storage; Owner: -
+--
+
+CREATE FUNCTION storage.filename(name text) RETURNS text
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+_parts text[];
+BEGIN
+	select string_to_array(name, '/') into _parts;
+	return _parts[array_length(_parts,1)];
+END
+$$;
+
+
+--
+-- Name: foldername(text); Type: FUNCTION; Schema: storage; Owner: -
+--
+
+CREATE FUNCTION storage.foldername(name text) RETURNS text[]
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+_parts text[];
+BEGIN
+	select string_to_array(name, '/') into _parts;
+	return _parts[1:array_length(_parts,1)-1];
+END
+$$;
+
+
+--
+-- Name: get_common_prefix(text, text, text); Type: FUNCTION; Schema: storage; Owner: -
+--
+
+CREATE FUNCTION storage.get_common_prefix(p_key text, p_prefix text, p_delimiter text) RETURNS text
+    LANGUAGE sql IMMUTABLE
+    AS $$
+SELECT CASE
+    WHEN position(p_delimiter IN substring(p_key FROM length(p_prefix) + 1)) > 0
+    THEN left(p_key, length(p_prefix) + position(p_delimiter IN substring(p_key FROM length(p_prefix) + 1)))
+    ELSE NULL
+END;
+$$;
+
+
+--
+-- Name: get_size_by_bucket(); Type: FUNCTION; Schema: storage; Owner: -
+--
+
+CREATE FUNCTION storage.get_size_by_bucket() RETURNS TABLE(size bigint, bucket_id text)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    return query
+        select sum((metadata->>'size')::int) as size, obj.bucket_id
+        from "storage".objects as obj
+        group by obj.bucket_id;
+END
+$$;
+
+
+--
+-- Name: list_multipart_uploads_with_delimiter(text, text, text, integer, text, text); Type: FUNCTION; Schema: storage; Owner: -
+--
+
+CREATE FUNCTION storage.list_multipart_uploads_with_delimiter(bucket_id text, prefix_param text, delimiter_param text, max_keys integer DEFAULT 100, next_key_token text DEFAULT ''::text, next_upload_token text DEFAULT ''::text) RETURNS TABLE(key text, id text, created_at timestamp with time zone)
+    LANGUAGE plpgsql
+    AS $_$
+BEGIN
+    RETURN QUERY EXECUTE
+        'SELECT DISTINCT ON(key COLLATE "C") * from (
+            SELECT
+                CASE
+                    WHEN position($2 IN substring(key from length($1) + 1)) > 0 THEN
+                        substring(key from 1 for length($1) + position($2 IN substring(key from length($1) + 1)))
+                    ELSE
+                        key
+                END AS key, id, created_at
+            FROM
+                storage.s3_multipart_uploads
+            WHERE
+                bucket_id = $5 AND
+                key ILIKE $1 || ''%'' AND
+                CASE
+                    WHEN $4 != '''' AND $6 = '''' THEN
+                        CASE
+                            WHEN position($2 IN substring(key from length($1) + 1)) > 0 THEN
+                                substring(key from 1 for length($1) + position($2 IN substring(key from length($1) + 1))) COLLATE "C" > $4
+                            ELSE
+                                key COLLATE "C" > $4
+                            END
+                    ELSE
+                        true
+                END AND
+                CASE
+                    WHEN $6 != '''' THEN
+                        id COLLATE "C" > $6
+                    ELSE
+                        true
+                    END
+            ORDER BY
+                key COLLATE "C" ASC, created_at ASC) as e order by key COLLATE "C" LIMIT $3'
+        USING prefix_param, delimiter_param, max_keys, next_key_token, bucket_id, next_upload_token;
+END;
+$_$;
+
+
+--
+-- Name: list_objects_with_delimiter(text, text, text, integer, text, text, text); Type: FUNCTION; Schema: storage; Owner: -
+--
+
+CREATE FUNCTION storage.list_objects_with_delimiter(_bucket_id text, prefix_param text, delimiter_param text, max_keys integer DEFAULT 100, start_after text DEFAULT ''::text, next_token text DEFAULT ''::text, sort_order text DEFAULT 'asc'::text) RETURNS TABLE(name text, id uuid, metadata jsonb, updated_at timestamp with time zone, created_at timestamp with time zone, last_accessed_at timestamp with time zone)
+    LANGUAGE plpgsql STABLE
+    AS $_$
+DECLARE
+    v_peek_name TEXT;
+    v_current RECORD;
+    v_common_prefix TEXT;
+
+    -- Configuration
+    v_is_asc BOOLEAN;
+    v_prefix TEXT;
+    v_start TEXT;
+    v_upper_bound TEXT;
+    v_file_batch_size INT;
+
+    -- Seek state
+    v_next_seek TEXT;
+    v_count INT := 0;
+
+    -- Dynamic SQL for batch query only
+    v_batch_query TEXT;
+
+BEGIN
+    -- ========================================================================
+    -- INITIALIZATION
+    -- ========================================================================
+    v_is_asc := lower(coalesce(sort_order, 'asc')) = 'asc';
+    v_prefix := coalesce(prefix_param, '');
+    v_start := CASE WHEN coalesce(next_token, '') <> '' THEN next_token ELSE coalesce(start_after, '') END;
+    v_file_batch_size := LEAST(GREATEST(max_keys * 2, 100), 1000);
+
+    -- Calculate upper bound for prefix filtering (bytewise, using COLLATE "C")
+    IF v_prefix = '' THEN
+        v_upper_bound := NULL;
+    ELSIF right(v_prefix, 1) = delimiter_param THEN
+        v_upper_bound := left(v_prefix, -1) || chr(ascii(delimiter_param) + 1);
+    ELSE
+        v_upper_bound := left(v_prefix, -1) || chr(ascii(right(v_prefix, 1)) + 1);
+    END IF;
+
+    -- Build batch query (dynamic SQL - called infrequently, amortized over many rows)
+    IF v_is_asc THEN
+        IF v_upper_bound IS NOT NULL THEN
+            v_batch_query := 'SELECT o.name, o.id, o.updated_at, o.created_at, o.last_accessed_at, o.metadata ' ||
+                'FROM storage.objects o WHERE o.bucket_id = $1 AND o.name COLLATE "C" >= $2 ' ||
+                'AND o.name COLLATE "C" < $3 ORDER BY o.name COLLATE "C" ASC LIMIT $4';
+        ELSE
+            v_batch_query := 'SELECT o.name, o.id, o.updated_at, o.created_at, o.last_accessed_at, o.metadata ' ||
+                'FROM storage.objects o WHERE o.bucket_id = $1 AND o.name COLLATE "C" >= $2 ' ||
+                'ORDER BY o.name COLLATE "C" ASC LIMIT $4';
+        END IF;
+    ELSE
+        IF v_upper_bound IS NOT NULL THEN
+            v_batch_query := 'SELECT o.name, o.id, o.updated_at, o.created_at, o.last_accessed_at, o.metadata ' ||
+                'FROM storage.objects o WHERE o.bucket_id = $1 AND o.name COLLATE "C" < $2 ' ||
+                'AND o.name COLLATE "C" >= $3 ORDER BY o.name COLLATE "C" DESC LIMIT $4';
+        ELSE
+            v_batch_query := 'SELECT o.name, o.id, o.updated_at, o.created_at, o.last_accessed_at, o.metadata ' ||
+                'FROM storage.objects o WHERE o.bucket_id = $1 AND o.name COLLATE "C" < $2 ' ||
+                'ORDER BY o.name COLLATE "C" DESC LIMIT $4';
+        END IF;
+    END IF;
+
+    -- ========================================================================
+    -- SEEK INITIALIZATION: Determine starting position
+    -- ========================================================================
+    IF v_start = '' THEN
+        IF v_is_asc THEN
+            v_next_seek := v_prefix;
+        ELSE
+            -- DESC without cursor: find the last item in range
+            IF v_upper_bound IS NOT NULL THEN
+                SELECT o.name INTO v_next_seek FROM storage.objects o
+                WHERE o.bucket_id = _bucket_id AND o.name COLLATE "C" >= v_prefix AND o.name COLLATE "C" < v_upper_bound
+                ORDER BY o.name COLLATE "C" DESC LIMIT 1;
+            ELSIF v_prefix <> '' THEN
+                SELECT o.name INTO v_next_seek FROM storage.objects o
+                WHERE o.bucket_id = _bucket_id AND o.name COLLATE "C" >= v_prefix
+                ORDER BY o.name COLLATE "C" DESC LIMIT 1;
+            ELSE
+                SELECT o.name INTO v_next_seek FROM storage.objects o
+                WHERE o.bucket_id = _bucket_id
+                ORDER BY o.name COLLATE "C" DESC LIMIT 1;
+            END IF;
+
+            IF v_next_seek IS NOT NULL THEN
+                v_next_seek := v_next_seek || delimiter_param;
+            ELSE
+                RETURN;
+            END IF;
+        END IF;
+    ELSE
+        -- Cursor provided: determine if it refers to a folder or leaf
+        IF EXISTS (
+            SELECT 1 FROM storage.objects o
+            WHERE o.bucket_id = _bucket_id
+              AND o.name COLLATE "C" LIKE v_start || delimiter_param || '%'
+            LIMIT 1
+        ) THEN
+            -- Cursor refers to a folder
+            IF v_is_asc THEN
+                v_next_seek := v_start || chr(ascii(delimiter_param) + 1);
+            ELSE
+                v_next_seek := v_start || delimiter_param;
+            END IF;
+        ELSE
+            -- Cursor refers to a leaf object
+            IF v_is_asc THEN
+                v_next_seek := v_start || delimiter_param;
+            ELSE
+                v_next_seek := v_start;
+            END IF;
+        END IF;
+    END IF;
+
+    -- ========================================================================
+    -- MAIN LOOP: Hybrid peek-then-batch algorithm
+    -- Uses STATIC SQL for peek (hot path) and DYNAMIC SQL for batch
+    -- ========================================================================
+    LOOP
+        EXIT WHEN v_count >= max_keys;
+
+        -- STEP 1: PEEK using STATIC SQL (plan cached, very fast)
+        IF v_is_asc THEN
+            IF v_upper_bound IS NOT NULL THEN
+                SELECT o.name INTO v_peek_name FROM storage.objects o
+                WHERE o.bucket_id = _bucket_id AND o.name COLLATE "C" >= v_next_seek AND o.name COLLATE "C" < v_upper_bound
+                ORDER BY o.name COLLATE "C" ASC LIMIT 1;
+            ELSE
+                SELECT o.name INTO v_peek_name FROM storage.objects o
+                WHERE o.bucket_id = _bucket_id AND o.name COLLATE "C" >= v_next_seek
+                ORDER BY o.name COLLATE "C" ASC LIMIT 1;
+            END IF;
+        ELSE
+            IF v_upper_bound IS NOT NULL THEN
+                SELECT o.name INTO v_peek_name FROM storage.objects o
+                WHERE o.bucket_id = _bucket_id AND o.name COLLATE "C" < v_next_seek AND o.name COLLATE "C" >= v_prefix
+                ORDER BY o.name COLLATE "C" DESC LIMIT 1;
+            ELSIF v_prefix <> '' THEN
+                SELECT o.name INTO v_peek_name FROM storage.objects o
+                WHERE o.bucket_id = _bucket_id AND o.name COLLATE "C" < v_next_seek AND o.name COLLATE "C" >= v_prefix
+                ORDER BY o.name COLLATE "C" DESC LIMIT 1;
+            ELSE
+                SELECT o.name INTO v_peek_name FROM storage.objects o
+                WHERE o.bucket_id = _bucket_id AND o.name COLLATE "C" < v_next_seek
+                ORDER BY o.name COLLATE "C" DESC LIMIT 1;
+            END IF;
+        END IF;
+
+        EXIT WHEN v_peek_name IS NULL;
+
+        -- STEP 2: Check if this is a FOLDER or FILE
+        v_common_prefix := storage.get_common_prefix(v_peek_name, v_prefix, delimiter_param);
+
+        IF v_common_prefix IS NOT NULL THEN
+            -- FOLDER: Emit and skip to next folder (no heap access needed)
+            name := rtrim(v_common_prefix, delimiter_param);
+            id := NULL;
+            updated_at := NULL;
+            created_at := NULL;
+            last_accessed_at := NULL;
+            metadata := NULL;
+            RETURN NEXT;
+            v_count := v_count + 1;
+
+            -- Advance seek past the folder range
+            IF v_is_asc THEN
+                v_next_seek := left(v_common_prefix, -1) || chr(ascii(delimiter_param) + 1);
+            ELSE
+                v_next_seek := v_common_prefix;
+            END IF;
+        ELSE
+            -- FILE: Batch fetch using DYNAMIC SQL (overhead amortized over many rows)
+            -- For ASC: upper_bound is the exclusive upper limit (< condition)
+            -- For DESC: prefix is the inclusive lower limit (>= condition)
+            FOR v_current IN EXECUTE v_batch_query USING _bucket_id, v_next_seek,
+                CASE WHEN v_is_asc THEN COALESCE(v_upper_bound, v_prefix) ELSE v_prefix END, v_file_batch_size
+            LOOP
+                v_common_prefix := storage.get_common_prefix(v_current.name, v_prefix, delimiter_param);
+
+                IF v_common_prefix IS NOT NULL THEN
+                    -- Hit a folder: exit batch, let peek handle it
+                    v_next_seek := v_current.name;
+                    EXIT;
+                END IF;
+
+                -- Emit file
+                name := v_current.name;
+                id := v_current.id;
+                updated_at := v_current.updated_at;
+                created_at := v_current.created_at;
+                last_accessed_at := v_current.last_accessed_at;
+                metadata := v_current.metadata;
+                RETURN NEXT;
+                v_count := v_count + 1;
+
+                -- Advance seek past this file
+                IF v_is_asc THEN
+                    v_next_seek := v_current.name || delimiter_param;
+                ELSE
+                    v_next_seek := v_current.name;
+                END IF;
+
+                EXIT WHEN v_count >= max_keys;
+            END LOOP;
+        END IF;
+    END LOOP;
+END;
+$_$;
+
+
+--
+-- Name: operation(); Type: FUNCTION; Schema: storage; Owner: -
+--
+
+CREATE FUNCTION storage.operation() RETURNS text
+    LANGUAGE plpgsql STABLE
+    AS $$
+BEGIN
+    RETURN current_setting('storage.operation', true);
+END;
+$$;
+
+
+--
+-- Name: protect_delete(); Type: FUNCTION; Schema: storage; Owner: -
+--
+
+CREATE FUNCTION storage.protect_delete() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    -- Check if storage.allow_delete_query is set to 'true'
+    IF COALESCE(current_setting('storage.allow_delete_query', true), 'false') != 'true' THEN
+        RAISE EXCEPTION 'Direct deletion from storage tables is not allowed. Use the Storage API instead.'
+            USING HINT = 'This prevents accidental data loss from orphaned objects.',
+                  ERRCODE = '42501';
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+
+--
+-- Name: search(text, text, integer, integer, integer, text, text, text); Type: FUNCTION; Schema: storage; Owner: -
+--
+
+CREATE FUNCTION storage.search(prefix text, bucketname text, limits integer DEFAULT 100, levels integer DEFAULT 1, offsets integer DEFAULT 0, search text DEFAULT ''::text, sortcolumn text DEFAULT 'name'::text, sortorder text DEFAULT 'asc'::text) RETURNS TABLE(name text, id uuid, updated_at timestamp with time zone, created_at timestamp with time zone, last_accessed_at timestamp with time zone, metadata jsonb)
+    LANGUAGE plpgsql STABLE
+    AS $_$
+DECLARE
+    v_peek_name TEXT;
+    v_current RECORD;
+    v_common_prefix TEXT;
+    v_delimiter CONSTANT TEXT := '/';
+
+    -- Configuration
+    v_limit INT;
+    v_prefix TEXT;
+    v_prefix_lower TEXT;
+    v_is_asc BOOLEAN;
+    v_order_by TEXT;
+    v_sort_order TEXT;
+    v_upper_bound TEXT;
+    v_file_batch_size INT;
+
+    -- Dynamic SQL for batch query only
+    v_batch_query TEXT;
+
+    -- Seek state
+    v_next_seek TEXT;
+    v_count INT := 0;
+    v_skipped INT := 0;
+BEGIN
+    -- ========================================================================
+    -- INITIALIZATION
+    -- ========================================================================
+    v_limit := LEAST(coalesce(limits, 100), 1500);
+    v_prefix := coalesce(prefix, '') || coalesce(search, '');
+    v_prefix_lower := lower(v_prefix);
+    v_is_asc := lower(coalesce(sortorder, 'asc')) = 'asc';
+    v_file_batch_size := LEAST(GREATEST(v_limit * 2, 100), 1000);
+
+    -- Validate sort column
+    CASE lower(coalesce(sortcolumn, 'name'))
+        WHEN 'name' THEN v_order_by := 'name';
+        WHEN 'updated_at' THEN v_order_by := 'updated_at';
+        WHEN 'created_at' THEN v_order_by := 'created_at';
+        WHEN 'last_accessed_at' THEN v_order_by := 'last_accessed_at';
+        ELSE v_order_by := 'name';
+    END CASE;
+
+    v_sort_order := CASE WHEN v_is_asc THEN 'asc' ELSE 'desc' END;
+
+    -- ========================================================================
+    -- NON-NAME SORTING: Use path_tokens approach (unchanged)
+    -- ========================================================================
+    IF v_order_by != 'name' THEN
+        RETURN QUERY EXECUTE format(
+            $sql$
+            WITH folders AS (
+                SELECT path_tokens[$1] AS folder
+                FROM storage.objects
+                WHERE objects.name ILIKE $2 || '%%'
+                  AND bucket_id = $3
+                  AND array_length(objects.path_tokens, 1) <> $1
+                GROUP BY folder
+                ORDER BY folder %s
+            )
+            (SELECT folder AS "name",
+                   NULL::uuid AS id,
+                   NULL::timestamptz AS updated_at,
+                   NULL::timestamptz AS created_at,
+                   NULL::timestamptz AS last_accessed_at,
+                   NULL::jsonb AS metadata FROM folders)
+            UNION ALL
+            (SELECT path_tokens[$1] AS "name",
+                   id, updated_at, created_at, last_accessed_at, metadata
+             FROM storage.objects
+             WHERE objects.name ILIKE $2 || '%%'
+               AND bucket_id = $3
+               AND array_length(objects.path_tokens, 1) = $1
+             ORDER BY %I %s)
+            LIMIT $4 OFFSET $5
+            $sql$, v_sort_order, v_order_by, v_sort_order
+        ) USING levels, v_prefix, bucketname, v_limit, offsets;
+        RETURN;
+    END IF;
+
+    -- ========================================================================
+    -- NAME SORTING: Hybrid skip-scan with batch optimization
+    -- ========================================================================
+
+    -- Calculate upper bound for prefix filtering
+    IF v_prefix_lower = '' THEN
+        v_upper_bound := NULL;
+    ELSIF right(v_prefix_lower, 1) = v_delimiter THEN
+        v_upper_bound := left(v_prefix_lower, -1) || chr(ascii(v_delimiter) + 1);
+    ELSE
+        v_upper_bound := left(v_prefix_lower, -1) || chr(ascii(right(v_prefix_lower, 1)) + 1);
+    END IF;
+
+    -- Build batch query (dynamic SQL - called infrequently, amortized over many rows)
+    IF v_is_asc THEN
+        IF v_upper_bound IS NOT NULL THEN
+            v_batch_query := 'SELECT o.name, o.id, o.updated_at, o.created_at, o.last_accessed_at, o.metadata ' ||
+                'FROM storage.objects o WHERE o.bucket_id = $1 AND lower(o.name) COLLATE "C" >= $2 ' ||
+                'AND lower(o.name) COLLATE "C" < $3 ORDER BY lower(o.name) COLLATE "C" ASC LIMIT $4';
+        ELSE
+            v_batch_query := 'SELECT o.name, o.id, o.updated_at, o.created_at, o.last_accessed_at, o.metadata ' ||
+                'FROM storage.objects o WHERE o.bucket_id = $1 AND lower(o.name) COLLATE "C" >= $2 ' ||
+                'ORDER BY lower(o.name) COLLATE "C" ASC LIMIT $4';
+        END IF;
+    ELSE
+        IF v_upper_bound IS NOT NULL THEN
+            v_batch_query := 'SELECT o.name, o.id, o.updated_at, o.created_at, o.last_accessed_at, o.metadata ' ||
+                'FROM storage.objects o WHERE o.bucket_id = $1 AND lower(o.name) COLLATE "C" < $2 ' ||
+                'AND lower(o.name) COLLATE "C" >= $3 ORDER BY lower(o.name) COLLATE "C" DESC LIMIT $4';
+        ELSE
+            v_batch_query := 'SELECT o.name, o.id, o.updated_at, o.created_at, o.last_accessed_at, o.metadata ' ||
+                'FROM storage.objects o WHERE o.bucket_id = $1 AND lower(o.name) COLLATE "C" < $2 ' ||
+                'ORDER BY lower(o.name) COLLATE "C" DESC LIMIT $4';
+        END IF;
+    END IF;
+
+    -- Initialize seek position
+    IF v_is_asc THEN
+        v_next_seek := v_prefix_lower;
+    ELSE
+        -- DESC: find the last item in range first (static SQL)
+        IF v_upper_bound IS NOT NULL THEN
+            SELECT o.name INTO v_peek_name FROM storage.objects o
+            WHERE o.bucket_id = bucketname AND lower(o.name) COLLATE "C" >= v_prefix_lower AND lower(o.name) COLLATE "C" < v_upper_bound
+            ORDER BY lower(o.name) COLLATE "C" DESC LIMIT 1;
+        ELSIF v_prefix_lower <> '' THEN
+            SELECT o.name INTO v_peek_name FROM storage.objects o
+            WHERE o.bucket_id = bucketname AND lower(o.name) COLLATE "C" >= v_prefix_lower
+            ORDER BY lower(o.name) COLLATE "C" DESC LIMIT 1;
+        ELSE
+            SELECT o.name INTO v_peek_name FROM storage.objects o
+            WHERE o.bucket_id = bucketname
+            ORDER BY lower(o.name) COLLATE "C" DESC LIMIT 1;
+        END IF;
+
+        IF v_peek_name IS NOT NULL THEN
+            v_next_seek := lower(v_peek_name) || v_delimiter;
+        ELSE
+            RETURN;
+        END IF;
+    END IF;
+
+    -- ========================================================================
+    -- MAIN LOOP: Hybrid peek-then-batch algorithm
+    -- Uses STATIC SQL for peek (hot path) and DYNAMIC SQL for batch
+    -- ========================================================================
+    LOOP
+        EXIT WHEN v_count >= v_limit;
+
+        -- STEP 1: PEEK using STATIC SQL (plan cached, very fast)
+        IF v_is_asc THEN
+            IF v_upper_bound IS NOT NULL THEN
+                SELECT o.name INTO v_peek_name FROM storage.objects o
+                WHERE o.bucket_id = bucketname AND lower(o.name) COLLATE "C" >= v_next_seek AND lower(o.name) COLLATE "C" < v_upper_bound
+                ORDER BY lower(o.name) COLLATE "C" ASC LIMIT 1;
+            ELSE
+                SELECT o.name INTO v_peek_name FROM storage.objects o
+                WHERE o.bucket_id = bucketname AND lower(o.name) COLLATE "C" >= v_next_seek
+                ORDER BY lower(o.name) COLLATE "C" ASC LIMIT 1;
+            END IF;
+        ELSE
+            IF v_upper_bound IS NOT NULL THEN
+                SELECT o.name INTO v_peek_name FROM storage.objects o
+                WHERE o.bucket_id = bucketname AND lower(o.name) COLLATE "C" < v_next_seek AND lower(o.name) COLLATE "C" >= v_prefix_lower
+                ORDER BY lower(o.name) COLLATE "C" DESC LIMIT 1;
+            ELSIF v_prefix_lower <> '' THEN
+                SELECT o.name INTO v_peek_name FROM storage.objects o
+                WHERE o.bucket_id = bucketname AND lower(o.name) COLLATE "C" < v_next_seek AND lower(o.name) COLLATE "C" >= v_prefix_lower
+                ORDER BY lower(o.name) COLLATE "C" DESC LIMIT 1;
+            ELSE
+                SELECT o.name INTO v_peek_name FROM storage.objects o
+                WHERE o.bucket_id = bucketname AND lower(o.name) COLLATE "C" < v_next_seek
+                ORDER BY lower(o.name) COLLATE "C" DESC LIMIT 1;
+            END IF;
+        END IF;
+
+        EXIT WHEN v_peek_name IS NULL;
+
+        -- STEP 2: Check if this is a FOLDER or FILE
+        v_common_prefix := storage.get_common_prefix(lower(v_peek_name), v_prefix_lower, v_delimiter);
+
+        IF v_common_prefix IS NOT NULL THEN
+            -- FOLDER: Handle offset, emit if needed, skip to next folder
+            IF v_skipped < offsets THEN
+                v_skipped := v_skipped + 1;
+            ELSE
+                name := split_part(rtrim(storage.get_common_prefix(v_peek_name, v_prefix, v_delimiter), v_delimiter), v_delimiter, levels);
+                id := NULL;
+                updated_at := NULL;
+                created_at := NULL;
+                last_accessed_at := NULL;
+                metadata := NULL;
+                RETURN NEXT;
+                v_count := v_count + 1;
+            END IF;
+
+            -- Advance seek past the folder range
+            IF v_is_asc THEN
+                v_next_seek := lower(left(v_common_prefix, -1)) || chr(ascii(v_delimiter) + 1);
+            ELSE
+                v_next_seek := lower(v_common_prefix);
+            END IF;
+        ELSE
+            -- FILE: Batch fetch using DYNAMIC SQL (overhead amortized over many rows)
+            -- For ASC: upper_bound is the exclusive upper limit (< condition)
+            -- For DESC: prefix_lower is the inclusive lower limit (>= condition)
+            FOR v_current IN EXECUTE v_batch_query
+                USING bucketname, v_next_seek,
+                    CASE WHEN v_is_asc THEN COALESCE(v_upper_bound, v_prefix_lower) ELSE v_prefix_lower END, v_file_batch_size
+            LOOP
+                v_common_prefix := storage.get_common_prefix(lower(v_current.name), v_prefix_lower, v_delimiter);
+
+                IF v_common_prefix IS NOT NULL THEN
+                    -- Hit a folder: exit batch, let peek handle it
+                    v_next_seek := lower(v_current.name);
+                    EXIT;
+                END IF;
+
+                -- Handle offset skipping
+                IF v_skipped < offsets THEN
+                    v_skipped := v_skipped + 1;
+                ELSE
+                    -- Emit file
+                    name := split_part(v_current.name, v_delimiter, levels);
+                    id := v_current.id;
+                    updated_at := v_current.updated_at;
+                    created_at := v_current.created_at;
+                    last_accessed_at := v_current.last_accessed_at;
+                    metadata := v_current.metadata;
+                    RETURN NEXT;
+                    v_count := v_count + 1;
+                END IF;
+
+                -- Advance seek past this file
+                IF v_is_asc THEN
+                    v_next_seek := lower(v_current.name) || v_delimiter;
+                ELSE
+                    v_next_seek := lower(v_current.name);
+                END IF;
+
+                EXIT WHEN v_count >= v_limit;
+            END LOOP;
+        END IF;
+    END LOOP;
+END;
+$_$;
+
+
+--
+-- Name: search_by_timestamp(text, text, integer, integer, text, text, text, text); Type: FUNCTION; Schema: storage; Owner: -
+--
+
+CREATE FUNCTION storage.search_by_timestamp(p_prefix text, p_bucket_id text, p_limit integer, p_level integer, p_start_after text, p_sort_order text, p_sort_column text, p_sort_column_after text) RETURNS TABLE(key text, name text, id uuid, updated_at timestamp with time zone, created_at timestamp with time zone, last_accessed_at timestamp with time zone, metadata jsonb)
+    LANGUAGE plpgsql STABLE
+    AS $_$
+DECLARE
+    v_cursor_op text;
+    v_query text;
+    v_prefix text;
+BEGIN
+    v_prefix := coalesce(p_prefix, '');
+
+    IF p_sort_order = 'asc' THEN
+        v_cursor_op := '>';
+    ELSE
+        v_cursor_op := '<';
+    END IF;
+
+    v_query := format($sql$
+        WITH raw_objects AS (
+            SELECT
+                o.name AS obj_name,
+                o.id AS obj_id,
+                o.updated_at AS obj_updated_at,
+                o.created_at AS obj_created_at,
+                o.last_accessed_at AS obj_last_accessed_at,
+                o.metadata AS obj_metadata,
+                storage.get_common_prefix(o.name, $1, '/') AS common_prefix
+            FROM storage.objects o
+            WHERE o.bucket_id = $2
+              AND o.name COLLATE "C" LIKE $1 || '%%'
+        ),
+        -- Aggregate common prefixes (folders)
+        -- Both created_at and updated_at use MIN(obj_created_at) to match the old prefixes table behavior
+        aggregated_prefixes AS (
+            SELECT
+                rtrim(common_prefix, '/') AS name,
+                NULL::uuid AS id,
+                MIN(obj_created_at) AS updated_at,
+                MIN(obj_created_at) AS created_at,
+                NULL::timestamptz AS last_accessed_at,
+                NULL::jsonb AS metadata,
+                TRUE AS is_prefix
+            FROM raw_objects
+            WHERE common_prefix IS NOT NULL
+            GROUP BY common_prefix
+        ),
+        leaf_objects AS (
+            SELECT
+                obj_name AS name,
+                obj_id AS id,
+                obj_updated_at AS updated_at,
+                obj_created_at AS created_at,
+                obj_last_accessed_at AS last_accessed_at,
+                obj_metadata AS metadata,
+                FALSE AS is_prefix
+            FROM raw_objects
+            WHERE common_prefix IS NULL
+        ),
+        combined AS (
+            SELECT * FROM aggregated_prefixes
+            UNION ALL
+            SELECT * FROM leaf_objects
+        ),
+        filtered AS (
+            SELECT *
+            FROM combined
+            WHERE (
+                $5 = ''
+                OR ROW(
+                    date_trunc('milliseconds', %I),
+                    name COLLATE "C"
+                ) %s ROW(
+                    COALESCE(NULLIF($6, '')::timestamptz, 'epoch'::timestamptz),
+                    $5
+                )
+            )
+        )
+        SELECT
+            split_part(name, '/', $3) AS key,
+            name,
+            id,
+            updated_at,
+            created_at,
+            last_accessed_at,
+            metadata
+        FROM filtered
+        ORDER BY
+            COALESCE(date_trunc('milliseconds', %I), 'epoch'::timestamptz) %s,
+            name COLLATE "C" %s
+        LIMIT $4
+    $sql$,
+        p_sort_column,
+        v_cursor_op,
+        p_sort_column,
+        p_sort_order,
+        p_sort_order
+    );
+
+    RETURN QUERY EXECUTE v_query
+    USING v_prefix, p_bucket_id, p_level, p_limit, p_start_after, p_sort_column_after;
+END;
+$_$;
+
+
+--
+-- Name: search_v2(text, text, integer, integer, text, text, text, text); Type: FUNCTION; Schema: storage; Owner: -
+--
+
+CREATE FUNCTION storage.search_v2(prefix text, bucket_name text, limits integer DEFAULT 100, levels integer DEFAULT 1, start_after text DEFAULT ''::text, sort_order text DEFAULT 'asc'::text, sort_column text DEFAULT 'name'::text, sort_column_after text DEFAULT ''::text) RETURNS TABLE(key text, name text, id uuid, updated_at timestamp with time zone, created_at timestamp with time zone, last_accessed_at timestamp with time zone, metadata jsonb)
+    LANGUAGE plpgsql STABLE
+    AS $$
+DECLARE
+    v_sort_col text;
+    v_sort_ord text;
+    v_limit int;
+BEGIN
+    -- Cap limit to maximum of 1500 records
+    v_limit := LEAST(coalesce(limits, 100), 1500);
+
+    -- Validate and normalize sort_order
+    v_sort_ord := lower(coalesce(sort_order, 'asc'));
+    IF v_sort_ord NOT IN ('asc', 'desc') THEN
+        v_sort_ord := 'asc';
+    END IF;
+
+    -- Validate and normalize sort_column
+    v_sort_col := lower(coalesce(sort_column, 'name'));
+    IF v_sort_col NOT IN ('name', 'updated_at', 'created_at') THEN
+        v_sort_col := 'name';
+    END IF;
+
+    -- Route to appropriate implementation
+    IF v_sort_col = 'name' THEN
+        -- Use list_objects_with_delimiter for name sorting (most efficient: O(k * log n))
+        RETURN QUERY
+        SELECT
+            split_part(l.name, '/', levels) AS key,
+            l.name AS name,
+            l.id,
+            l.updated_at,
+            l.created_at,
+            l.last_accessed_at,
+            l.metadata
+        FROM storage.list_objects_with_delimiter(
+            bucket_name,
+            coalesce(prefix, ''),
+            '/',
+            v_limit,
+            start_after,
+            '',
+            v_sort_ord
+        ) l;
+    ELSE
+        -- Use aggregation approach for timestamp sorting
+        -- Not efficient for large datasets but supports correct pagination
+        RETURN QUERY SELECT * FROM storage.search_by_timestamp(
+            prefix, bucket_name, v_limit, levels, start_after,
+            v_sort_ord, v_sort_col, sort_column_after
+        );
+    END IF;
+END;
+$$;
+
+
+--
+-- Name: update_updated_at_column(); Type: FUNCTION; Schema: storage; Owner: -
+--
+
+CREATE FUNCTION storage.update_updated_at_column() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW; 
+END;
+$$;
+
+
+--
+-- Name: http_request(); Type: FUNCTION; Schema: supabase_functions; Owner: -
+--
+
+CREATE FUNCTION supabase_functions.http_request() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'supabase_functions'
+    AS $$
+    DECLARE
+      request_id bigint;
+      payload jsonb;
+      url text := TG_ARGV[0]::text;
+      method text := TG_ARGV[1]::text;
+      headers jsonb DEFAULT '{}'::jsonb;
+      params jsonb DEFAULT '{}'::jsonb;
+      timeout_ms integer DEFAULT 1000;
+    BEGIN
+      IF url IS NULL OR url = 'null' THEN
+        RAISE EXCEPTION 'url argument is missing';
+      END IF;
+
+      IF method IS NULL OR method = 'null' THEN
+        RAISE EXCEPTION 'method argument is missing';
+      END IF;
+
+      IF TG_ARGV[2] IS NULL OR TG_ARGV[2] = 'null' THEN
+        headers = '{"Content-Type": "application/json"}'::jsonb;
+      ELSE
+        headers = TG_ARGV[2]::jsonb;
+      END IF;
+
+      IF TG_ARGV[3] IS NULL OR TG_ARGV[3] = 'null' THEN
+        params = '{}'::jsonb;
+      ELSE
+        params = TG_ARGV[3]::jsonb;
+      END IF;
+
+      IF TG_ARGV[4] IS NULL OR TG_ARGV[4] = 'null' THEN
+        timeout_ms = 1000;
+      ELSE
+        timeout_ms = TG_ARGV[4]::integer;
+      END IF;
+
+      CASE
+        WHEN method = 'GET' THEN
+          SELECT http_get INTO request_id FROM net.http_get(
+            url,
+            params,
+            headers,
+            timeout_ms
+          );
+        WHEN method = 'POST' THEN
+          payload = jsonb_build_object(
+            'old_record', OLD,
+            'record', NEW,
+            'type', TG_OP,
+            'table', TG_TABLE_NAME,
+            'schema', TG_TABLE_SCHEMA
+          );
+
+          SELECT http_post INTO request_id FROM net.http_post(
+            url,
+            payload,
+            params,
+            headers,
+            timeout_ms
+          );
+        ELSE
+          RAISE EXCEPTION 'method argument % is invalid', method;
+      END CASE;
+
+      INSERT INTO supabase_functions.hooks
+        (hook_table_id, hook_name, request_id)
+      VALUES
+        (TG_RELID, TG_NAME, request_id);
+
+      RETURN NEW;
+    END
+  $$;
+
+
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- Name: extensions; Type: TABLE; Schema: _realtime; Owner: -
+--
+
+CREATE TABLE _realtime.extensions (
+    id uuid NOT NULL,
+    type text,
+    settings jsonb,
+    tenant_external_id text,
+    inserted_at timestamp(0) without time zone NOT NULL,
+    updated_at timestamp(0) without time zone NOT NULL
+);
+
+
+--
+-- Name: schema_migrations; Type: TABLE; Schema: _realtime; Owner: -
+--
+
+CREATE TABLE _realtime.schema_migrations (
+    version bigint NOT NULL,
+    inserted_at timestamp(0) without time zone
+);
+
+
+--
+-- Name: tenants; Type: TABLE; Schema: _realtime; Owner: -
+--
+
+CREATE TABLE _realtime.tenants (
+    id uuid NOT NULL,
+    name text,
+    external_id text,
+    jwt_secret text,
+    max_concurrent_users integer DEFAULT 200 NOT NULL,
+    inserted_at timestamp(0) without time zone NOT NULL,
+    updated_at timestamp(0) without time zone NOT NULL,
+    max_events_per_second integer DEFAULT 100 NOT NULL,
+    postgres_cdc_default text DEFAULT 'postgres_cdc_rls'::text,
+    max_bytes_per_second integer DEFAULT 100000 NOT NULL,
+    max_channels_per_client integer DEFAULT 100 NOT NULL,
+    max_joins_per_second integer DEFAULT 500 NOT NULL,
+    suspend boolean DEFAULT false,
+    jwt_jwks jsonb,
+    notify_private_alpha boolean DEFAULT false,
+    private_only boolean DEFAULT false NOT NULL,
+    migrations_ran integer DEFAULT 0,
+    broadcast_adapter character varying(255) DEFAULT 'gen_rpc'::character varying,
+    max_presence_events_per_second integer DEFAULT 1000,
+    max_payload_size_in_kb integer DEFAULT 3000,
+    max_client_presence_events_per_window integer,
+    client_presence_window_ms integer,
+    CONSTRAINT jwt_secret_or_jwt_jwks_required CHECK (((jwt_secret IS NOT NULL) OR (jwt_jwks IS NOT NULL)))
+);
+
+
+--
+-- Name: audit_log_entries; Type: TABLE; Schema: auth; Owner: -
+--
+
+CREATE TABLE auth.audit_log_entries (
+    instance_id uuid,
+    id uuid NOT NULL,
+    payload json,
+    created_at timestamp with time zone,
+    ip_address character varying(64) DEFAULT ''::character varying NOT NULL
+);
+
+
+--
+-- Name: TABLE audit_log_entries; Type: COMMENT; Schema: auth; Owner: -
+--
+
+COMMENT ON TABLE auth.audit_log_entries IS 'Auth: Audit trail for user actions.';
+
+
+--
+-- Name: flow_state; Type: TABLE; Schema: auth; Owner: -
+--
+
+CREATE TABLE auth.flow_state (
+    id uuid NOT NULL,
+    user_id uuid,
+    auth_code text,
+    code_challenge_method auth.code_challenge_method,
+    code_challenge text,
+    provider_type text NOT NULL,
+    provider_access_token text,
+    provider_refresh_token text,
+    created_at timestamp with time zone,
+    updated_at timestamp with time zone,
+    authentication_method text NOT NULL,
+    auth_code_issued_at timestamp with time zone,
+    invite_token text,
+    referrer text,
+    oauth_client_state_id uuid,
+    linking_target_id uuid,
+    email_optional boolean DEFAULT false NOT NULL
+);
+
+
+--
+-- Name: TABLE flow_state; Type: COMMENT; Schema: auth; Owner: -
+--
+
+COMMENT ON TABLE auth.flow_state IS 'Stores metadata for all OAuth/SSO login flows';
+
+
+--
+-- Name: identities; Type: TABLE; Schema: auth; Owner: -
+--
+
+CREATE TABLE auth.identities (
+    provider_id text NOT NULL,
+    user_id uuid NOT NULL,
+    identity_data jsonb NOT NULL,
+    provider text NOT NULL,
+    last_sign_in_at timestamp with time zone,
+    created_at timestamp with time zone,
+    updated_at timestamp with time zone,
+    email text GENERATED ALWAYS AS (lower((identity_data ->> 'email'::text))) STORED,
+    id uuid DEFAULT gen_random_uuid() NOT NULL
+);
+
+
+--
+-- Name: TABLE identities; Type: COMMENT; Schema: auth; Owner: -
+--
+
+COMMENT ON TABLE auth.identities IS 'Auth: Stores identities associated to a user.';
+
+
+--
+-- Name: COLUMN identities.email; Type: COMMENT; Schema: auth; Owner: -
+--
+
+COMMENT ON COLUMN auth.identities.email IS 'Auth: Email is a generated column that references the optional email property in the identity_data';
+
+
+--
+-- Name: instances; Type: TABLE; Schema: auth; Owner: -
+--
+
+CREATE TABLE auth.instances (
+    id uuid NOT NULL,
+    uuid uuid,
+    raw_base_config text,
+    created_at timestamp with time zone,
+    updated_at timestamp with time zone
+);
+
+
+--
+-- Name: TABLE instances; Type: COMMENT; Schema: auth; Owner: -
+--
+
+COMMENT ON TABLE auth.instances IS 'Auth: Manages users across multiple sites.';
+
+
+--
+-- Name: mfa_amr_claims; Type: TABLE; Schema: auth; Owner: -
+--
+
+CREATE TABLE auth.mfa_amr_claims (
+    session_id uuid NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
+    authentication_method text NOT NULL,
+    id uuid NOT NULL
+);
+
+
+--
+-- Name: TABLE mfa_amr_claims; Type: COMMENT; Schema: auth; Owner: -
+--
+
+COMMENT ON TABLE auth.mfa_amr_claims IS 'auth: stores authenticator method reference claims for multi factor authentication';
+
+
+--
+-- Name: mfa_challenges; Type: TABLE; Schema: auth; Owner: -
+--
+
+CREATE TABLE auth.mfa_challenges (
+    id uuid NOT NULL,
+    factor_id uuid NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    verified_at timestamp with time zone,
+    ip_address inet NOT NULL,
+    otp_code text,
+    web_authn_session_data jsonb
+);
+
+
+--
+-- Name: TABLE mfa_challenges; Type: COMMENT; Schema: auth; Owner: -
+--
+
+COMMENT ON TABLE auth.mfa_challenges IS 'auth: stores metadata about challenge requests made';
+
+
+--
+-- Name: mfa_factors; Type: TABLE; Schema: auth; Owner: -
+--
+
+CREATE TABLE auth.mfa_factors (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    friendly_name text,
+    factor_type auth.factor_type NOT NULL,
+    status auth.factor_status NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
+    secret text,
+    phone text,
+    last_challenged_at timestamp with time zone,
+    web_authn_credential jsonb,
+    web_authn_aaguid uuid,
+    last_webauthn_challenge_data jsonb
+);
+
+
+--
+-- Name: TABLE mfa_factors; Type: COMMENT; Schema: auth; Owner: -
+--
+
+COMMENT ON TABLE auth.mfa_factors IS 'auth: stores metadata about factors';
+
+
+--
+-- Name: COLUMN mfa_factors.last_webauthn_challenge_data; Type: COMMENT; Schema: auth; Owner: -
+--
+
+COMMENT ON COLUMN auth.mfa_factors.last_webauthn_challenge_data IS 'Stores the latest WebAuthn challenge data including attestation/assertion for customer verification';
+
+
+--
+-- Name: oauth_authorizations; Type: TABLE; Schema: auth; Owner: -
+--
+
+CREATE TABLE auth.oauth_authorizations (
+    id uuid NOT NULL,
+    authorization_id text NOT NULL,
+    client_id uuid NOT NULL,
+    user_id uuid,
+    redirect_uri text NOT NULL,
+    scope text NOT NULL,
+    state text,
+    resource text,
+    code_challenge text,
+    code_challenge_method auth.code_challenge_method,
+    response_type auth.oauth_response_type DEFAULT 'code'::auth.oauth_response_type NOT NULL,
+    status auth.oauth_authorization_status DEFAULT 'pending'::auth.oauth_authorization_status NOT NULL,
+    authorization_code text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    expires_at timestamp with time zone DEFAULT (now() + '00:03:00'::interval) NOT NULL,
+    approved_at timestamp with time zone,
+    nonce text,
+    CONSTRAINT oauth_authorizations_authorization_code_length CHECK ((char_length(authorization_code) <= 255)),
+    CONSTRAINT oauth_authorizations_code_challenge_length CHECK ((char_length(code_challenge) <= 128)),
+    CONSTRAINT oauth_authorizations_expires_at_future CHECK ((expires_at > created_at)),
+    CONSTRAINT oauth_authorizations_nonce_length CHECK ((char_length(nonce) <= 255)),
+    CONSTRAINT oauth_authorizations_redirect_uri_length CHECK ((char_length(redirect_uri) <= 2048)),
+    CONSTRAINT oauth_authorizations_resource_length CHECK ((char_length(resource) <= 2048)),
+    CONSTRAINT oauth_authorizations_scope_length CHECK ((char_length(scope) <= 4096)),
+    CONSTRAINT oauth_authorizations_state_length CHECK ((char_length(state) <= 4096))
+);
+
+
+--
+-- Name: oauth_client_states; Type: TABLE; Schema: auth; Owner: -
+--
+
+CREATE TABLE auth.oauth_client_states (
+    id uuid NOT NULL,
+    provider_type text NOT NULL,
+    code_verifier text,
+    created_at timestamp with time zone NOT NULL
+);
+
+
+--
+-- Name: TABLE oauth_client_states; Type: COMMENT; Schema: auth; Owner: -
+--
+
+COMMENT ON TABLE auth.oauth_client_states IS 'Stores OAuth states for third-party provider authentication flows where Supabase acts as the OAuth client.';
+
+
+--
+-- Name: oauth_clients; Type: TABLE; Schema: auth; Owner: -
+--
+
+CREATE TABLE auth.oauth_clients (
+    id uuid NOT NULL,
+    client_secret_hash text,
+    registration_type auth.oauth_registration_type NOT NULL,
+    redirect_uris text NOT NULL,
+    grant_types text NOT NULL,
+    client_name text,
+    client_uri text,
+    logo_uri text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    deleted_at timestamp with time zone,
+    client_type auth.oauth_client_type DEFAULT 'confidential'::auth.oauth_client_type NOT NULL,
+    token_endpoint_auth_method text NOT NULL,
+    CONSTRAINT oauth_clients_client_name_length CHECK ((char_length(client_name) <= 1024)),
+    CONSTRAINT oauth_clients_client_uri_length CHECK ((char_length(client_uri) <= 2048)),
+    CONSTRAINT oauth_clients_logo_uri_length CHECK ((char_length(logo_uri) <= 2048)),
+    CONSTRAINT oauth_clients_token_endpoint_auth_method_check CHECK ((token_endpoint_auth_method = ANY (ARRAY['client_secret_basic'::text, 'client_secret_post'::text, 'none'::text])))
+);
+
+
+--
+-- Name: oauth_consents; Type: TABLE; Schema: auth; Owner: -
+--
+
+CREATE TABLE auth.oauth_consents (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    client_id uuid NOT NULL,
+    scopes text NOT NULL,
+    granted_at timestamp with time zone DEFAULT now() NOT NULL,
+    revoked_at timestamp with time zone,
+    CONSTRAINT oauth_consents_revoked_after_granted CHECK (((revoked_at IS NULL) OR (revoked_at >= granted_at))),
+    CONSTRAINT oauth_consents_scopes_length CHECK ((char_length(scopes) <= 2048)),
+    CONSTRAINT oauth_consents_scopes_not_empty CHECK ((char_length(TRIM(BOTH FROM scopes)) > 0))
+);
+
+
+--
+-- Name: one_time_tokens; Type: TABLE; Schema: auth; Owner: -
+--
+
+CREATE TABLE auth.one_time_tokens (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    token_type auth.one_time_token_type NOT NULL,
+    token_hash text NOT NULL,
+    relates_to text NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    CONSTRAINT one_time_tokens_token_hash_check CHECK ((char_length(token_hash) > 0))
+);
+
+
+--
+-- Name: refresh_tokens; Type: TABLE; Schema: auth; Owner: -
+--
+
+CREATE TABLE auth.refresh_tokens (
+    instance_id uuid,
+    id bigint NOT NULL,
+    token character varying(255),
+    user_id character varying(255),
+    revoked boolean,
+    created_at timestamp with time zone,
+    updated_at timestamp with time zone,
+    parent character varying(255),
+    session_id uuid
+);
+
+
+--
+-- Name: TABLE refresh_tokens; Type: COMMENT; Schema: auth; Owner: -
+--
+
+COMMENT ON TABLE auth.refresh_tokens IS 'Auth: Store of tokens used to refresh JWT tokens once they expire.';
+
+
+--
+-- Name: refresh_tokens_id_seq; Type: SEQUENCE; Schema: auth; Owner: -
+--
+
+CREATE SEQUENCE auth.refresh_tokens_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: refresh_tokens_id_seq; Type: SEQUENCE OWNED BY; Schema: auth; Owner: -
+--
+
+ALTER SEQUENCE auth.refresh_tokens_id_seq OWNED BY auth.refresh_tokens.id;
+
+
+--
+-- Name: saml_providers; Type: TABLE; Schema: auth; Owner: -
+--
+
+CREATE TABLE auth.saml_providers (
+    id uuid NOT NULL,
+    sso_provider_id uuid NOT NULL,
+    entity_id text NOT NULL,
+    metadata_xml text NOT NULL,
+    metadata_url text,
+    attribute_mapping jsonb,
+    created_at timestamp with time zone,
+    updated_at timestamp with time zone,
+    name_id_format text,
+    CONSTRAINT "entity_id not empty" CHECK ((char_length(entity_id) > 0)),
+    CONSTRAINT "metadata_url not empty" CHECK (((metadata_url = NULL::text) OR (char_length(metadata_url) > 0))),
+    CONSTRAINT "metadata_xml not empty" CHECK ((char_length(metadata_xml) > 0))
+);
+
+
+--
+-- Name: TABLE saml_providers; Type: COMMENT; Schema: auth; Owner: -
+--
+
+COMMENT ON TABLE auth.saml_providers IS 'Auth: Manages SAML Identity Provider connections.';
+
+
+--
+-- Name: saml_relay_states; Type: TABLE; Schema: auth; Owner: -
+--
+
+CREATE TABLE auth.saml_relay_states (
+    id uuid NOT NULL,
+    sso_provider_id uuid NOT NULL,
+    request_id text NOT NULL,
+    for_email text,
+    redirect_to text,
+    created_at timestamp with time zone,
+    updated_at timestamp with time zone,
+    flow_state_id uuid,
+    CONSTRAINT "request_id not empty" CHECK ((char_length(request_id) > 0))
+);
+
+
+--
+-- Name: TABLE saml_relay_states; Type: COMMENT; Schema: auth; Owner: -
+--
+
+COMMENT ON TABLE auth.saml_relay_states IS 'Auth: Contains SAML Relay State information for each Service Provider initiated login.';
+
+
+--
+-- Name: schema_migrations; Type: TABLE; Schema: auth; Owner: -
+--
+
+CREATE TABLE auth.schema_migrations (
+    version character varying(255) NOT NULL
+);
+
+
+--
+-- Name: TABLE schema_migrations; Type: COMMENT; Schema: auth; Owner: -
+--
+
+COMMENT ON TABLE auth.schema_migrations IS 'Auth: Manages updates to the auth system.';
+
+
+--
+-- Name: sessions; Type: TABLE; Schema: auth; Owner: -
+--
+
+CREATE TABLE auth.sessions (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    created_at timestamp with time zone,
+    updated_at timestamp with time zone,
+    factor_id uuid,
+    aal auth.aal_level,
+    not_after timestamp with time zone,
+    refreshed_at timestamp without time zone,
+    user_agent text,
+    ip inet,
+    tag text,
+    oauth_client_id uuid,
+    refresh_token_hmac_key text,
+    refresh_token_counter bigint,
+    scopes text,
+    CONSTRAINT sessions_scopes_length CHECK ((char_length(scopes) <= 4096))
+);
+
+
+--
+-- Name: TABLE sessions; Type: COMMENT; Schema: auth; Owner: -
+--
+
+COMMENT ON TABLE auth.sessions IS 'Auth: Stores session data associated to a user.';
+
+
+--
+-- Name: COLUMN sessions.not_after; Type: COMMENT; Schema: auth; Owner: -
+--
+
+COMMENT ON COLUMN auth.sessions.not_after IS 'Auth: Not after is a nullable column that contains a timestamp after which the session should be regarded as expired.';
+
+
+--
+-- Name: COLUMN sessions.refresh_token_hmac_key; Type: COMMENT; Schema: auth; Owner: -
+--
+
+COMMENT ON COLUMN auth.sessions.refresh_token_hmac_key IS 'Holds a HMAC-SHA256 key used to sign refresh tokens for this session.';
+
+
+--
+-- Name: COLUMN sessions.refresh_token_counter; Type: COMMENT; Schema: auth; Owner: -
+--
+
+COMMENT ON COLUMN auth.sessions.refresh_token_counter IS 'Holds the ID (counter) of the last issued refresh token.';
+
+
+--
+-- Name: sso_domains; Type: TABLE; Schema: auth; Owner: -
+--
+
+CREATE TABLE auth.sso_domains (
+    id uuid NOT NULL,
+    sso_provider_id uuid NOT NULL,
+    domain text NOT NULL,
+    created_at timestamp with time zone,
+    updated_at timestamp with time zone,
+    CONSTRAINT "domain not empty" CHECK ((char_length(domain) > 0))
+);
+
+
+--
+-- Name: TABLE sso_domains; Type: COMMENT; Schema: auth; Owner: -
+--
+
+COMMENT ON TABLE auth.sso_domains IS 'Auth: Manages SSO email address domain mapping to an SSO Identity Provider.';
+
+
+--
+-- Name: sso_providers; Type: TABLE; Schema: auth; Owner: -
+--
+
+CREATE TABLE auth.sso_providers (
+    id uuid NOT NULL,
+    resource_id text,
+    created_at timestamp with time zone,
+    updated_at timestamp with time zone,
+    disabled boolean,
+    CONSTRAINT "resource_id not empty" CHECK (((resource_id = NULL::text) OR (char_length(resource_id) > 0)))
+);
+
+
+--
+-- Name: TABLE sso_providers; Type: COMMENT; Schema: auth; Owner: -
+--
+
+COMMENT ON TABLE auth.sso_providers IS 'Auth: Manages SSO identity provider information; see saml_providers for SAML.';
+
+
+--
+-- Name: COLUMN sso_providers.resource_id; Type: COMMENT; Schema: auth; Owner: -
+--
+
+COMMENT ON COLUMN auth.sso_providers.resource_id IS 'Auth: Uniquely identifies a SSO provider according to a user-chosen resource ID (case insensitive), useful in infrastructure as code.';
+
+
+--
+-- Name: users; Type: TABLE; Schema: auth; Owner: -
+--
+
+CREATE TABLE auth.users (
+    instance_id uuid,
+    id uuid NOT NULL,
+    aud character varying(255),
+    role character varying(255),
+    email character varying(255),
+    encrypted_password character varying(255),
+    email_confirmed_at timestamp with time zone,
+    invited_at timestamp with time zone,
+    confirmation_token character varying(255),
+    confirmation_sent_at timestamp with time zone,
+    recovery_token character varying(255),
+    recovery_sent_at timestamp with time zone,
+    email_change_token_new character varying(255),
+    email_change character varying(255),
+    email_change_sent_at timestamp with time zone,
+    last_sign_in_at timestamp with time zone,
+    raw_app_meta_data jsonb,
+    raw_user_meta_data jsonb,
+    is_super_admin boolean,
+    created_at timestamp with time zone,
+    updated_at timestamp with time zone,
+    phone text DEFAULT NULL::character varying,
+    phone_confirmed_at timestamp with time zone,
+    phone_change text DEFAULT ''::character varying,
+    phone_change_token character varying(255) DEFAULT ''::character varying,
+    phone_change_sent_at timestamp with time zone,
+    confirmed_at timestamp with time zone GENERATED ALWAYS AS (LEAST(email_confirmed_at, phone_confirmed_at)) STORED,
+    email_change_token_current character varying(255) DEFAULT ''::character varying,
+    email_change_confirm_status smallint DEFAULT 0,
+    banned_until timestamp with time zone,
+    reauthentication_token character varying(255) DEFAULT ''::character varying,
+    reauthentication_sent_at timestamp with time zone,
+    is_sso_user boolean DEFAULT false NOT NULL,
+    deleted_at timestamp with time zone,
+    is_anonymous boolean DEFAULT false NOT NULL,
+    CONSTRAINT users_email_change_confirm_status_check CHECK (((email_change_confirm_status >= 0) AND (email_change_confirm_status <= 2)))
+);
+
+
+--
+-- Name: TABLE users; Type: COMMENT; Schema: auth; Owner: -
+--
+
+COMMENT ON TABLE auth.users IS 'Auth: Stores user login data within a secure schema.';
+
+
+--
+-- Name: COLUMN users.is_sso_user; Type: COMMENT; Schema: auth; Owner: -
+--
+
+COMMENT ON COLUMN auth.users.is_sso_user IS 'Auth: Set this column to true when the account comes from SSO. These accounts can have duplicate emails.';
+
+
+--
+-- Name: announcement_comment_reactions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.announcement_comment_reactions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    comment_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    emoji character varying(32) NOT NULL
+);
+
+ALTER TABLE ONLY public.announcement_comment_reactions REPLICA IDENTITY FULL;
+
+
+--
+-- Name: announcement_comments; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.announcement_comments (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    message_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    content text NOT NULL,
+    reply_to_id uuid,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    edited_at timestamp with time zone
+);
+
+ALTER TABLE ONLY public.announcement_comments REPLICA IDENTITY FULL;
+
+
+--
+-- Name: app_config; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.app_config (
+    key text NOT NULL,
+    value jsonb DEFAULT '{}'::jsonb NOT NULL,
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- Name: auth_rate_limits; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.auth_rate_limits (
+    ip_hash text NOT NULL,
+    action text NOT NULL,
+    attempts integer DEFAULT 1,
+    window_start timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- Name: badges; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.badges (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    name text NOT NULL,
+    icon_url text NOT NULL,
+    description text,
+    created_at timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- Name: category_permissions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.category_permissions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    category_id uuid NOT NULL,
+    role_id uuid,
+    role_name text,
+    user_id uuid,
+    permission text NOT NULL,
+    allowed boolean DEFAULT true NOT NULL,
+    created_at timestamp with time zone DEFAULT now(),
+    CONSTRAINT category_permissions_role_name_check CHECK ((role_name = ANY (ARRAY['owner'::text, 'admin'::text, 'moderator'::text, 'member'::text]))),
+    CONSTRAINT category_permissions_target_check CHECK (((role_id IS NOT NULL) OR (role_name IS NOT NULL) OR (user_id IS NOT NULL)))
+);
+
+ALTER TABLE ONLY public.category_permissions REPLICA IDENTITY FULL;
+
+
+--
+-- Name: channel_categories; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.channel_categories (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    server_id uuid NOT NULL,
+    name character varying(100) NOT NULL,
+    "position" integer DEFAULT 0,
+    is_collapsed boolean DEFAULT false,
+    created_at timestamp with time zone DEFAULT now()
+);
+
+ALTER TABLE ONLY public.channel_categories REPLICA IDENTITY FULL;
+
+
+--
+-- Name: channel_members; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.channel_members (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    channel_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    added_by uuid,
+    created_at timestamp with time zone DEFAULT now()
+);
+
+ALTER TABLE ONLY public.channel_members REPLICA IDENTITY FULL;
+
+
+--
+-- Name: channel_permissions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.channel_permissions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    channel_id uuid NOT NULL,
+    role_id uuid,
+    role_name public.server_role,
+    permission public.permission_type NOT NULL,
+    allowed boolean NOT NULL,
+    created_at timestamp with time zone DEFAULT now(),
+    user_id uuid,
+    CONSTRAINT channel_permissions_target_check CHECK ((((role_id IS NOT NULL) AND (role_name IS NULL) AND (user_id IS NULL)) OR ((role_id IS NULL) AND (role_name IS NOT NULL) AND (user_id IS NULL)) OR ((role_id IS NULL) AND (role_name IS NULL) AND (user_id IS NOT NULL))))
+);
+
+
+--
+-- Name: channel_reads; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.channel_reads (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    channel_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    last_read_message_id uuid,
+    last_read_at timestamp with time zone,
+    mention_count integer DEFAULT 0
+);
+
+
+--
+-- Name: channel_user_settings; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.channel_user_settings (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    channel_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    is_muted boolean DEFAULT false,
+    is_hidden boolean DEFAULT false,
+    is_pinned boolean DEFAULT false,
+    notification_level text DEFAULT 'all'::text,
+    mute_until timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    CONSTRAINT channel_user_settings_notification_level_check CHECK ((notification_level = ANY (ARRAY['all'::text, 'mentions'::text, 'nothing'::text])))
+);
+
+ALTER TABLE ONLY public.channel_user_settings REPLICA IDENTITY FULL;
+
+
+--
+-- Name: channels; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.channels (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    server_id uuid NOT NULL,
+    category_id uuid,
+    name character varying(100) NOT NULL,
+    topic text,
+    type public.channel_type DEFAULT 'text'::public.channel_type,
+    "position" integer DEFAULT 0,
+    is_nsfw boolean DEFAULT false,
+    slowmode_seconds integer DEFAULT 0,
+    created_at timestamp with time zone DEFAULT now(),
+    icon text,
+    is_read_only boolean DEFAULT false,
+    is_private boolean DEFAULT false NOT NULL,
+    block_links boolean DEFAULT false NOT NULL,
+    allowed_link_domains text[] DEFAULT '{}'::text[],
+    ghost_mode boolean DEFAULT false NOT NULL
+);
+
+ALTER TABLE ONLY public.channels REPLICA IDENTITY FULL;
+
+
+--
+-- Name: COLUMN channels.icon; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.channels.icon IS 'Noto Emoji character used as channel icon';
+
+
+--
+-- Name: COLUMN channels.block_links; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.channels.block_links IS 'When true, only admins/owners can post links';
+
+
+--
+-- Name: COLUMN channels.allowed_link_domains; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.channels.allowed_link_domains IS 'Whitelisted domains when block_links is true (e.g. github.com)';
+
+
+--
+-- Name: COLUMN channels.ghost_mode; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.channels.ghost_mode IS 'When true, hides user avatars and usernames (except for admins/owners)';
+
+
+--
+-- Name: declined_friend_requests; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.declined_friend_requests (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    requester_id uuid NOT NULL,
+    addressee_id uuid NOT NULL,
+    declined_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: direct_messages; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.direct_messages (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    conversation_id uuid NOT NULL,
+    sender_id uuid NOT NULL,
+    reply_to_id uuid,
+    content text NOT NULL,
+    edited_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now()
+);
+
+ALTER TABLE ONLY public.direct_messages FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: dm_attachments; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.dm_attachments (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    message_id uuid NOT NULL,
+    file_name text NOT NULL,
+    file_url text NOT NULL,
+    file_type text,
+    file_size integer,
+    width integer,
+    height integer
+);
+
+
+--
+-- Name: dm_conversations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.dm_conversations (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    created_at timestamp with time zone DEFAULT now(),
+    is_group boolean DEFAULT false,
+    name text,
+    created_by uuid
+);
+
+ALTER TABLE ONLY public.dm_conversations REPLICA IDENTITY FULL;
+
+ALTER TABLE ONLY public.dm_conversations FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: dm_participants; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.dm_participants (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    conversation_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    last_read_at timestamp with time zone
+);
+
+ALTER TABLE ONLY public.dm_participants REPLICA IDENTITY FULL;
+
+ALTER TABLE ONLY public.dm_participants FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: dm_reactions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.dm_reactions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    message_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    emoji character varying(64) NOT NULL
+);
+
+ALTER TABLE ONLY public.dm_reactions REPLICA IDENTITY FULL;
+
+
+--
+-- Name: friendships; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.friendships (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    requester_id uuid NOT NULL,
+    addressee_id uuid NOT NULL,
+    status public.friendship_status DEFAULT 'pending'::public.friendship_status,
+    created_at timestamp with time zone DEFAULT now()
+);
+
+ALTER TABLE ONLY public.friendships REPLICA IDENTITY FULL;
+
+
+--
+-- Name: media_comment_reactions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.media_comment_reactions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    comment_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    emoji text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.media_comment_reactions REPLICA IDENTITY FULL;
+
+
+--
+-- Name: media_comments; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.media_comments (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    media_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    content text NOT NULL,
+    reply_to_id uuid,
+    edited_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.media_comments REPLICA IDENTITY FULL;
+
+
+--
+-- Name: media_items; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.media_items (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    channel_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    title text,
+    description text,
+    media_url text NOT NULL,
+    media_type text NOT NULL,
+    thumbnail_url text,
+    width integer,
+    height integer,
+    file_size integer,
+    created_at timestamp with time zone DEFAULT now(),
+    youtube_video_id text,
+    CONSTRAINT media_items_media_type_check CHECK ((media_type = ANY (ARRAY['image'::text, 'video'::text, 'gif'::text, 'youtube'::text])))
+);
+
+ALTER TABLE ONLY public.media_items REPLICA IDENTITY FULL;
+
+
+--
+-- Name: mentions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.mentions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    message_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    mention_type public.mention_type DEFAULT 'user'::public.mention_type
+);
+
+
+--
+-- Name: message_attachments; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.message_attachments (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    message_id uuid NOT NULL,
+    file_name text NOT NULL,
+    file_url text NOT NULL,
+    file_type text,
+    file_size integer,
+    width integer,
+    height integer
+);
+
+
+--
+-- Name: messages; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.messages (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    channel_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    reply_to_id uuid,
+    content text NOT NULL,
+    is_pinned boolean DEFAULT false,
+    edited_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now(),
+    is_system_message boolean DEFAULT false,
+    embed_hidden boolean DEFAULT false NOT NULL
+);
+
+ALTER TABLE ONLY public.messages REPLICA IDENTITY FULL;
+
+ALTER TABLE ONLY public.messages FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: notifications; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.notifications (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    type public.notification_type NOT NULL,
+    title text NOT NULL,
+    body text,
+    link text,
+    is_read boolean DEFAULT false,
+    created_at timestamp with time zone DEFAULT now()
+);
+
+ALTER TABLE ONLY public.notifications REPLICA IDENTITY FULL;
+
+
+--
+-- Name: poll_votes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.poll_votes (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    poll_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    option_index integer NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: polls; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.polls (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    message_id uuid NOT NULL,
+    channel_id uuid NOT NULL,
+    created_by uuid NOT NULL,
+    question text NOT NULL,
+    options text[] NOT NULL,
+    allow_multiple boolean DEFAULT false NOT NULL,
+    ends_at timestamp with time zone NOT NULL,
+    is_closed boolean DEFAULT false NOT NULL,
+    results jsonb DEFAULT '[]'::jsonb NOT NULL,
+    total_votes integer DEFAULT 0 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: pow_challenges; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.pow_challenges (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    nonce text NOT NULL,
+    difficulty integer DEFAULT 4 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    expires_at timestamp with time zone DEFAULT (now() + '00:10:00'::interval) NOT NULL,
+    used boolean DEFAULT false
+);
+
+
+--
+-- Name: reactions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.reactions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    message_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    emoji character varying(64) NOT NULL,
+    channel_id uuid NOT NULL
+);
+
+ALTER TABLE ONLY public.reactions REPLICA IDENTITY FULL;
+
+
+--
+-- Name: role_permissions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.role_permissions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    server_id uuid NOT NULL,
+    role_id uuid,
+    role_name public.server_role,
+    permission public.permission_type NOT NULL,
+    allowed boolean DEFAULT true NOT NULL,
+    created_at timestamp with time zone DEFAULT now(),
+    CONSTRAINT role_permissions_role_check CHECK ((((role_id IS NOT NULL) AND (role_name IS NULL)) OR ((role_id IS NULL) AND (role_name IS NOT NULL))))
+);
+
+
+--
+-- Name: server_emojis; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.server_emojis (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    server_id uuid NOT NULL,
+    name text NOT NULL,
+    file_path text NOT NULL,
+    created_by uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: server_invites; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.server_invites (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    server_id uuid NOT NULL,
+    code character(8) NOT NULL,
+    created_by uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    revoked_at timestamp with time zone,
+    revoked_by uuid,
+    expires_at timestamp with time zone,
+    max_uses integer,
+    uses_count integer DEFAULT 0 NOT NULL
+);
+
+
+--
+-- Name: server_member_roles; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.server_member_roles (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    member_id uuid NOT NULL,
+    role_id uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- Name: server_members; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.server_members (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    server_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    role public.server_role DEFAULT 'member'::public.server_role,
+    nickname character varying(32),
+    is_banned boolean DEFAULT false NOT NULL,
+    is_muted boolean DEFAULT false,
+    joined_at timestamp with time zone DEFAULT now(),
+    join_source text,
+    join_invite_code text,
+    "position" integer
+);
+
+ALTER TABLE ONLY public.server_members REPLICA IDENTITY FULL;
+
+
+--
+-- Name: COLUMN server_members.join_source; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.server_members.join_source IS 'How the member joined: discover, invite_link, or invite (custom server_invites code)';
+
+
+--
+-- Name: COLUMN server_members.join_invite_code; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.server_members.join_invite_code IS 'When join_source = invite, the invite code that was used';
+
+
+--
+-- Name: server_roles; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.server_roles (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    server_id uuid NOT NULL,
+    name character varying(100) NOT NULL,
+    color character varying(255) DEFAULT '#5865F2'::character varying NOT NULL,
+    "position" integer DEFAULT 0,
+    created_at timestamp with time zone DEFAULT now(),
+    icon text
+);
+
+
+--
+-- Name: COLUMN server_roles.color; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.server_roles.color IS 'Role color - can be a hex color (#5865F2) or a CSS gradient (linear-gradient(135deg, #667eea, #764ba2))';
+
+
+--
+-- Name: servers; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.servers (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    name character varying(100) NOT NULL,
+    icon_url text,
+    banner_url text,
+    owner_id uuid NOT NULL,
+    invite_code character(8) NOT NULL,
+    created_at timestamp with time zone DEFAULT now(),
+    is_published boolean DEFAULT false NOT NULL,
+    about text,
+    system_channel_join_id uuid,
+    system_channel_leave_id uuid,
+    enable_join_messages boolean DEFAULT true,
+    enable_leave_messages boolean DEFAULT true
+);
+
+ALTER TABLE ONLY public.servers REPLICA IDENTITY FULL;
+
+ALTER TABLE ONLY public.servers FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: thread_attachments; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.thread_attachments (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    message_id uuid NOT NULL,
+    file_name text NOT NULL,
+    file_url text NOT NULL,
+    file_type text,
+    file_size integer,
+    width integer,
+    height integer
+);
+
+
+--
+-- Name: thread_messages; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.thread_messages (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    thread_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    content text NOT NULL,
+    reply_to_id uuid,
+    edited_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now()
+);
+
+ALTER TABLE ONLY public.thread_messages REPLICA IDENTITY FULL;
+
+
+--
+-- Name: thread_reactions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.thread_reactions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    message_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    emoji character varying(64) NOT NULL
+);
+
+ALTER TABLE ONLY public.thread_reactions REPLICA IDENTITY FULL;
+
+
+--
+-- Name: threads; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.threads (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    channel_id uuid NOT NULL,
+    message_id uuid NOT NULL,
+    created_by uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT now()
+);
+
+ALTER TABLE ONLY public.threads REPLICA IDENTITY FULL;
+
+
+--
+-- Name: user_auth; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.user_auth (
+    user_id uuid NOT NULL,
+    key_hash text NOT NULL,
+    last_key_reset_at timestamp with time zone
+);
+
+ALTER TABLE ONLY public.user_auth FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: user_badges; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.user_badges (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    badge_id uuid NOT NULL,
+    awarded_at timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- Name: user_devices; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.user_devices (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid,
+    device_id integer NOT NULL,
+    device_name character varying(100),
+    identity_public_key text NOT NULL,
+    last_active timestamp with time zone DEFAULT now(),
+    created_at timestamp with time zone DEFAULT now()
+);
+
+ALTER TABLE ONLY public.user_devices FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: user_preferences; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.user_preferences (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    theme text DEFAULT 'default'::text NOT NULL,
+    link_previews_enabled boolean DEFAULT true NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    desktop_notifications_enabled boolean DEFAULT true NOT NULL,
+    notification_sound_enabled boolean DEFAULT true NOT NULL,
+    show_message_preview boolean DEFAULT true NOT NULL,
+    compact_mode boolean DEFAULT false NOT NULL,
+    show_timestamps boolean DEFAULT true NOT NULL,
+    animate_emojis boolean DEFAULT true NOT NULL,
+    browser_notifications_enabled boolean DEFAULT true,
+    notification_sound_server_mentions boolean DEFAULT true,
+    notification_sound_user_mentions boolean DEFAULT true,
+    notification_sound_replies boolean DEFAULT true,
+    notification_volume integer DEFAULT 50,
+    show_preview_server_mentions boolean DEFAULT true,
+    show_preview_user_mentions boolean DEFAULT true,
+    show_preview_replies boolean DEFAULT true,
+    dm_privacy text DEFAULT 'shared_servers'::text NOT NULL,
+    CONSTRAINT notification_volume_range CHECK (((notification_volume >= 0) AND (notification_volume <= 100))),
+    CONSTRAINT user_preferences_dm_privacy_check CHECK ((dm_privacy = ANY (ARRAY['everyone'::text, 'shared_servers'::text, 'friends'::text, 'no_one'::text])))
+);
+
+
+--
+-- Name: user_server_folders; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.user_server_folders (
+    user_id uuid NOT NULL,
+    folder_data jsonb DEFAULT '{"folders": [], "serverToFolder": {}}'::jsonb NOT NULL,
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- Name: TABLE user_server_folders; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.user_server_folders IS 'Stores each user''s server folder organization (synced across devices)';
+
+
+--
+-- Name: user_server_tabs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.user_server_tabs (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    tab_order text[] DEFAULT '{}'::text[] NOT NULL,
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- Name: user_voice_settings; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.user_voice_settings (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    settings jsonb DEFAULT '{}'::jsonb NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT check_settings_shape CHECK (((jsonb_typeof(settings) = 'object'::text) AND (((settings ->> 'inputGain'::text) IS NULL) OR ((((settings ->> 'inputGain'::text))::integer >= 0) AND (((settings ->> 'inputGain'::text))::integer <= 200))) AND (((settings ->> 'outputVolume'::text) IS NULL) OR ((((settings ->> 'outputVolume'::text))::integer >= 0) AND (((settings ->> 'outputVolume'::text))::integer <= 200))) AND (((settings ->> 'voiceMode'::text) IS NULL) OR ((settings ->> 'voiceMode'::text) = ANY (ARRAY['voice_activity'::text, 'push_to_talk'::text]))) AND (((settings ->> 'voiceActivityThreshold'::text) IS NULL) OR ((((settings ->> 'voiceActivityThreshold'::text))::integer >= 0) AND (((settings ->> 'voiceActivityThreshold'::text))::integer <= 100))) AND (((settings ->> 'autoDisconnectMinutes'::text) IS NULL) OR ((((settings ->> 'autoDisconnectMinutes'::text))::integer >= 0) AND (((settings ->> 'autoDisconnectMinutes'::text))::integer <= 60)))))
+);
+
+
+--
+-- Name: users; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.users (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    username character varying(20) NOT NULL,
+    display_name character varying(32),
+    avatar_url text,
+    banner_color character(7) DEFAULT '#5865F2'::bpchar,
+    bio text,
+    status public.user_status DEFAULT 'online'::public.user_status,
+    custom_status character varying(128),
+    created_at timestamp with time zone DEFAULT now(),
+    last_seen timestamp with time zone DEFAULT now(),
+    avatar_decoration text,
+    profile_theme_primary character(7),
+    profile_theme_accent character(7),
+    banner_url text,
+    profile_effect text,
+    pronouns character varying(25) DEFAULT NULL::character varying,
+    CONSTRAINT check_avatar_decoration_is_key CHECK ((avatar_decoration !~~ 'http%'::text)),
+    CONSTRAINT check_profile_effect_is_key CHECK ((profile_effect !~~ 'http%'::text))
+);
+
+ALTER TABLE ONLY public.users REPLICA IDENTITY FULL;
+
+ALTER TABLE ONLY public.users FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: COLUMN users.avatar_decoration; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.users.avatar_decoration IS 'Stores asset key only (e.g. sparkle), frontend maps to URL.';
+
+
+--
+-- Name: COLUMN users.profile_effect; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.users.profile_effect IS 'Stores asset key only (e.g. fire_border), frontend maps to URL.';
+
+
+--
+-- Name: users_public; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.users_public WITH (security_invoker='true') AS
+ SELECT users.id,
+    users.username,
+    users.display_name,
+    users.avatar_url,
+    users.banner_color,
+    users.bio,
+    users.status,
+    users.custom_status,
+    users.created_at,
+    users.avatar_decoration,
+    users.profile_theme_primary,
+    users.profile_theme_accent,
+    users.banner_url,
+    users.profile_effect,
+    users.pronouns,
+        CASE
+            WHEN (users.id = ( SELECT public.requesting_user_id() AS requesting_user_id)) THEN users.last_seen
+            ELSE NULL::timestamp with time zone
+        END AS last_seen
+   FROM public.users;
+
+
+--
+-- Name: messages; Type: TABLE; Schema: realtime; Owner: -
+--
+
+CREATE TABLE realtime.messages (
+    topic text NOT NULL,
+    extension text NOT NULL,
+    payload jsonb,
+    event text,
+    private boolean DEFAULT false,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    inserted_at timestamp without time zone DEFAULT now() NOT NULL,
+    id uuid DEFAULT gen_random_uuid() NOT NULL
+)
+PARTITION BY RANGE (inserted_at);
+
+
+--
+-- Name: messages_2026_02_21; Type: TABLE; Schema: realtime; Owner: -
+--
+
+CREATE TABLE realtime.messages_2026_02_21 (
+    topic text NOT NULL,
+    extension text NOT NULL,
+    payload jsonb,
+    event text,
+    private boolean DEFAULT false,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    inserted_at timestamp without time zone DEFAULT now() NOT NULL,
+    id uuid DEFAULT gen_random_uuid() NOT NULL
+);
+
+
+--
+-- Name: messages_2026_02_22; Type: TABLE; Schema: realtime; Owner: -
+--
+
+CREATE TABLE realtime.messages_2026_02_22 (
+    topic text NOT NULL,
+    extension text NOT NULL,
+    payload jsonb,
+    event text,
+    private boolean DEFAULT false,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    inserted_at timestamp without time zone DEFAULT now() NOT NULL,
+    id uuid DEFAULT gen_random_uuid() NOT NULL
+);
+
+
+--
+-- Name: messages_2026_02_23; Type: TABLE; Schema: realtime; Owner: -
+--
+
+CREATE TABLE realtime.messages_2026_02_23 (
+    topic text NOT NULL,
+    extension text NOT NULL,
+    payload jsonb,
+    event text,
+    private boolean DEFAULT false,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    inserted_at timestamp without time zone DEFAULT now() NOT NULL,
+    id uuid DEFAULT gen_random_uuid() NOT NULL
+);
+
+
+--
+-- Name: messages_2026_02_24; Type: TABLE; Schema: realtime; Owner: -
+--
+
+CREATE TABLE realtime.messages_2026_02_24 (
+    topic text NOT NULL,
+    extension text NOT NULL,
+    payload jsonb,
+    event text,
+    private boolean DEFAULT false,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    inserted_at timestamp without time zone DEFAULT now() NOT NULL,
+    id uuid DEFAULT gen_random_uuid() NOT NULL
+);
+
+
+--
+-- Name: messages_2026_02_25; Type: TABLE; Schema: realtime; Owner: -
+--
+
+CREATE TABLE realtime.messages_2026_02_25 (
+    topic text NOT NULL,
+    extension text NOT NULL,
+    payload jsonb,
+    event text,
+    private boolean DEFAULT false,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    inserted_at timestamp without time zone DEFAULT now() NOT NULL,
+    id uuid DEFAULT gen_random_uuid() NOT NULL
+);
+
+
+--
+-- Name: messages_2026_02_26; Type: TABLE; Schema: realtime; Owner: -
+--
+
+CREATE TABLE realtime.messages_2026_02_26 (
+    topic text NOT NULL,
+    extension text NOT NULL,
+    payload jsonb,
+    event text,
+    private boolean DEFAULT false,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    inserted_at timestamp without time zone DEFAULT now() NOT NULL,
+    id uuid DEFAULT gen_random_uuid() NOT NULL
+);
+
+
+--
+-- Name: messages_2026_02_27; Type: TABLE; Schema: realtime; Owner: -
+--
+
+CREATE TABLE realtime.messages_2026_02_27 (
+    topic text NOT NULL,
+    extension text NOT NULL,
+    payload jsonb,
+    event text,
+    private boolean DEFAULT false,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    inserted_at timestamp without time zone DEFAULT now() NOT NULL,
+    id uuid DEFAULT gen_random_uuid() NOT NULL
+);
+
+
+--
+-- Name: schema_migrations; Type: TABLE; Schema: realtime; Owner: -
+--
+
+CREATE TABLE realtime.schema_migrations (
+    version bigint NOT NULL,
+    inserted_at timestamp(0) without time zone
+);
+
+
+--
+-- Name: subscription; Type: TABLE; Schema: realtime; Owner: -
+--
+
+CREATE TABLE realtime.subscription (
+    id bigint NOT NULL,
+    subscription_id uuid NOT NULL,
+    entity regclass NOT NULL,
+    filters realtime.user_defined_filter[] DEFAULT '{}'::realtime.user_defined_filter[] NOT NULL,
+    claims jsonb NOT NULL,
+    claims_role regrole GENERATED ALWAYS AS (realtime.to_regrole((claims ->> 'role'::text))) STORED NOT NULL,
+    created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    action_filter text DEFAULT '*'::text,
+    CONSTRAINT subscription_action_filter_check CHECK ((action_filter = ANY (ARRAY['*'::text, 'INSERT'::text, 'UPDATE'::text, 'DELETE'::text])))
+);
+
+
+--
+-- Name: subscription_id_seq; Type: SEQUENCE; Schema: realtime; Owner: -
+--
+
+ALTER TABLE realtime.subscription ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME realtime.subscription_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: buckets; Type: TABLE; Schema: storage; Owner: -
+--
+
+CREATE TABLE storage.buckets (
+    id text NOT NULL,
+    name text NOT NULL,
+    owner uuid,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    public boolean DEFAULT false,
+    avif_autodetection boolean DEFAULT false,
+    file_size_limit bigint,
+    allowed_mime_types text[],
+    owner_id text,
+    type storage.buckettype DEFAULT 'STANDARD'::storage.buckettype NOT NULL
+);
+
+
+--
+-- Name: COLUMN buckets.owner; Type: COMMENT; Schema: storage; Owner: -
+--
+
+COMMENT ON COLUMN storage.buckets.owner IS 'Field is deprecated, use owner_id instead';
+
+
+--
+-- Name: buckets_analytics; Type: TABLE; Schema: storage; Owner: -
+--
+
+CREATE TABLE storage.buckets_analytics (
+    name text NOT NULL,
+    type storage.buckettype DEFAULT 'ANALYTICS'::storage.buckettype NOT NULL,
+    format text DEFAULT 'ICEBERG'::text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    deleted_at timestamp with time zone
+);
+
+
+--
+-- Name: buckets_vectors; Type: TABLE; Schema: storage; Owner: -
+--
+
+CREATE TABLE storage.buckets_vectors (
+    id text NOT NULL,
+    type storage.buckettype DEFAULT 'VECTOR'::storage.buckettype NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: iceberg_namespaces; Type: TABLE; Schema: storage; Owner: -
+--
+
+CREATE TABLE storage.iceberg_namespaces (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    bucket_name text NOT NULL,
+    name text NOT NULL COLLATE pg_catalog."C",
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+    catalog_id uuid NOT NULL
+);
+
+
+--
+-- Name: iceberg_tables; Type: TABLE; Schema: storage; Owner: -
+--
+
+CREATE TABLE storage.iceberg_tables (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    namespace_id uuid NOT NULL,
+    bucket_name text NOT NULL,
+    name text NOT NULL COLLATE pg_catalog."C",
+    location text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    remote_table_id text,
+    shard_key text,
+    shard_id text,
+    catalog_id uuid NOT NULL
+);
+
+
+--
+-- Name: migrations; Type: TABLE; Schema: storage; Owner: -
+--
+
+CREATE TABLE storage.migrations (
+    id integer NOT NULL,
+    name character varying(100) NOT NULL,
+    hash character varying(40) NOT NULL,
+    executed_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+--
+-- Name: objects; Type: TABLE; Schema: storage; Owner: -
+--
+
+CREATE TABLE storage.objects (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    bucket_id text,
+    name text,
+    owner uuid,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    last_accessed_at timestamp with time zone DEFAULT now(),
+    metadata jsonb,
+    path_tokens text[] GENERATED ALWAYS AS (string_to_array(name, '/'::text)) STORED,
+    version text,
+    owner_id text,
+    user_metadata jsonb
+);
+
+
+--
+-- Name: COLUMN objects.owner; Type: COMMENT; Schema: storage; Owner: -
+--
+
+COMMENT ON COLUMN storage.objects.owner IS 'Field is deprecated, use owner_id instead';
+
+
+--
+-- Name: s3_multipart_uploads; Type: TABLE; Schema: storage; Owner: -
+--
+
+CREATE TABLE storage.s3_multipart_uploads (
+    id text NOT NULL,
+    in_progress_size bigint DEFAULT 0 NOT NULL,
+    upload_signature text NOT NULL,
+    bucket_id text NOT NULL,
+    key text NOT NULL COLLATE pg_catalog."C",
+    version text NOT NULL,
+    owner_id text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    user_metadata jsonb
+);
+
+
+--
+-- Name: s3_multipart_uploads_parts; Type: TABLE; Schema: storage; Owner: -
+--
+
+CREATE TABLE storage.s3_multipart_uploads_parts (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    upload_id text NOT NULL,
+    size bigint DEFAULT 0 NOT NULL,
+    part_number integer NOT NULL,
+    bucket_id text NOT NULL,
+    key text NOT NULL COLLATE pg_catalog."C",
+    etag text NOT NULL,
+    owner_id text,
+    version text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: vector_indexes; Type: TABLE; Schema: storage; Owner: -
+--
+
+CREATE TABLE storage.vector_indexes (
+    id text DEFAULT gen_random_uuid() NOT NULL,
+    name text NOT NULL COLLATE pg_catalog."C",
+    bucket_id text NOT NULL,
+    data_type text NOT NULL,
+    dimension integer NOT NULL,
+    distance_metric text NOT NULL,
+    metadata_configuration jsonb,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: hooks; Type: TABLE; Schema: supabase_functions; Owner: -
+--
+
+CREATE TABLE supabase_functions.hooks (
+    id bigint NOT NULL,
+    hook_table_id integer NOT NULL,
+    hook_name text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    request_id bigint
+);
+
+
+--
+-- Name: TABLE hooks; Type: COMMENT; Schema: supabase_functions; Owner: -
+--
+
+COMMENT ON TABLE supabase_functions.hooks IS 'Supabase Functions Hooks: Audit trail for triggered hooks.';
+
+
+--
+-- Name: hooks_id_seq; Type: SEQUENCE; Schema: supabase_functions; Owner: -
+--
+
+CREATE SEQUENCE supabase_functions.hooks_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: hooks_id_seq; Type: SEQUENCE OWNED BY; Schema: supabase_functions; Owner: -
+--
+
+ALTER SEQUENCE supabase_functions.hooks_id_seq OWNED BY supabase_functions.hooks.id;
+
+
+--
+-- Name: migrations; Type: TABLE; Schema: supabase_functions; Owner: -
+--
+
+CREATE TABLE supabase_functions.migrations (
+    version text NOT NULL,
+    inserted_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: messages_2026_02_21; Type: TABLE ATTACH; Schema: realtime; Owner: -
+--
+
+ALTER TABLE ONLY realtime.messages ATTACH PARTITION realtime.messages_2026_02_21 FOR VALUES FROM ('2026-02-21 00:00:00') TO ('2026-02-22 00:00:00');
+
+
+--
+-- Name: messages_2026_02_22; Type: TABLE ATTACH; Schema: realtime; Owner: -
+--
+
+ALTER TABLE ONLY realtime.messages ATTACH PARTITION realtime.messages_2026_02_22 FOR VALUES FROM ('2026-02-22 00:00:00') TO ('2026-02-23 00:00:00');
+
+
+--
+-- Name: messages_2026_02_23; Type: TABLE ATTACH; Schema: realtime; Owner: -
+--
+
+ALTER TABLE ONLY realtime.messages ATTACH PARTITION realtime.messages_2026_02_23 FOR VALUES FROM ('2026-02-23 00:00:00') TO ('2026-02-24 00:00:00');
+
+
+--
+-- Name: messages_2026_02_24; Type: TABLE ATTACH; Schema: realtime; Owner: -
+--
+
+ALTER TABLE ONLY realtime.messages ATTACH PARTITION realtime.messages_2026_02_24 FOR VALUES FROM ('2026-02-24 00:00:00') TO ('2026-02-25 00:00:00');
+
+
+--
+-- Name: messages_2026_02_25; Type: TABLE ATTACH; Schema: realtime; Owner: -
+--
+
+ALTER TABLE ONLY realtime.messages ATTACH PARTITION realtime.messages_2026_02_25 FOR VALUES FROM ('2026-02-25 00:00:00') TO ('2026-02-26 00:00:00');
+
+
+--
+-- Name: messages_2026_02_26; Type: TABLE ATTACH; Schema: realtime; Owner: -
+--
+
+ALTER TABLE ONLY realtime.messages ATTACH PARTITION realtime.messages_2026_02_26 FOR VALUES FROM ('2026-02-26 00:00:00') TO ('2026-02-27 00:00:00');
+
+
+--
+-- Name: messages_2026_02_27; Type: TABLE ATTACH; Schema: realtime; Owner: -
+--
+
+ALTER TABLE ONLY realtime.messages ATTACH PARTITION realtime.messages_2026_02_27 FOR VALUES FROM ('2026-02-27 00:00:00') TO ('2026-02-28 00:00:00');
+
+
+--
+-- Name: refresh_tokens id; Type: DEFAULT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.refresh_tokens ALTER COLUMN id SET DEFAULT nextval('auth.refresh_tokens_id_seq'::regclass);
+
+
+--
+-- Name: hooks id; Type: DEFAULT; Schema: supabase_functions; Owner: -
+--
+
+ALTER TABLE ONLY supabase_functions.hooks ALTER COLUMN id SET DEFAULT nextval('supabase_functions.hooks_id_seq'::regclass);
+
+
+--
+-- Name: extensions extensions_pkey; Type: CONSTRAINT; Schema: _realtime; Owner: -
+--
+
+ALTER TABLE ONLY _realtime.extensions
+    ADD CONSTRAINT extensions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: schema_migrations schema_migrations_pkey; Type: CONSTRAINT; Schema: _realtime; Owner: -
+--
+
+ALTER TABLE ONLY _realtime.schema_migrations
+    ADD CONSTRAINT schema_migrations_pkey PRIMARY KEY (version);
+
+
+--
+-- Name: tenants tenants_pkey; Type: CONSTRAINT; Schema: _realtime; Owner: -
+--
+
+ALTER TABLE ONLY _realtime.tenants
+    ADD CONSTRAINT tenants_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: mfa_amr_claims amr_id_pk; Type: CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.mfa_amr_claims
+    ADD CONSTRAINT amr_id_pk PRIMARY KEY (id);
+
+
+--
+-- Name: audit_log_entries audit_log_entries_pkey; Type: CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.audit_log_entries
+    ADD CONSTRAINT audit_log_entries_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: flow_state flow_state_pkey; Type: CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.flow_state
+    ADD CONSTRAINT flow_state_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: identities identities_pkey; Type: CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.identities
+    ADD CONSTRAINT identities_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: identities identities_provider_id_provider_unique; Type: CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.identities
+    ADD CONSTRAINT identities_provider_id_provider_unique UNIQUE (provider_id, provider);
+
+
+--
+-- Name: instances instances_pkey; Type: CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.instances
+    ADD CONSTRAINT instances_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: mfa_amr_claims mfa_amr_claims_session_id_authentication_method_pkey; Type: CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.mfa_amr_claims
+    ADD CONSTRAINT mfa_amr_claims_session_id_authentication_method_pkey UNIQUE (session_id, authentication_method);
+
+
+--
+-- Name: mfa_challenges mfa_challenges_pkey; Type: CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.mfa_challenges
+    ADD CONSTRAINT mfa_challenges_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: mfa_factors mfa_factors_last_challenged_at_key; Type: CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.mfa_factors
+    ADD CONSTRAINT mfa_factors_last_challenged_at_key UNIQUE (last_challenged_at);
+
+
+--
+-- Name: mfa_factors mfa_factors_pkey; Type: CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.mfa_factors
+    ADD CONSTRAINT mfa_factors_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: oauth_authorizations oauth_authorizations_authorization_code_key; Type: CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.oauth_authorizations
+    ADD CONSTRAINT oauth_authorizations_authorization_code_key UNIQUE (authorization_code);
+
+
+--
+-- Name: oauth_authorizations oauth_authorizations_authorization_id_key; Type: CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.oauth_authorizations
+    ADD CONSTRAINT oauth_authorizations_authorization_id_key UNIQUE (authorization_id);
+
+
+--
+-- Name: oauth_authorizations oauth_authorizations_pkey; Type: CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.oauth_authorizations
+    ADD CONSTRAINT oauth_authorizations_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: oauth_client_states oauth_client_states_pkey; Type: CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.oauth_client_states
+    ADD CONSTRAINT oauth_client_states_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: oauth_clients oauth_clients_pkey; Type: CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.oauth_clients
+    ADD CONSTRAINT oauth_clients_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: oauth_consents oauth_consents_pkey; Type: CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.oauth_consents
+    ADD CONSTRAINT oauth_consents_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: oauth_consents oauth_consents_user_client_unique; Type: CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.oauth_consents
+    ADD CONSTRAINT oauth_consents_user_client_unique UNIQUE (user_id, client_id);
+
+
+--
+-- Name: one_time_tokens one_time_tokens_pkey; Type: CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.one_time_tokens
+    ADD CONSTRAINT one_time_tokens_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: refresh_tokens refresh_tokens_pkey; Type: CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.refresh_tokens
+    ADD CONSTRAINT refresh_tokens_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: refresh_tokens refresh_tokens_token_unique; Type: CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.refresh_tokens
+    ADD CONSTRAINT refresh_tokens_token_unique UNIQUE (token);
+
+
+--
+-- Name: saml_providers saml_providers_entity_id_key; Type: CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.saml_providers
+    ADD CONSTRAINT saml_providers_entity_id_key UNIQUE (entity_id);
+
+
+--
+-- Name: saml_providers saml_providers_pkey; Type: CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.saml_providers
+    ADD CONSTRAINT saml_providers_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: saml_relay_states saml_relay_states_pkey; Type: CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.saml_relay_states
+    ADD CONSTRAINT saml_relay_states_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: schema_migrations schema_migrations_pkey; Type: CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.schema_migrations
+    ADD CONSTRAINT schema_migrations_pkey PRIMARY KEY (version);
+
+
+--
+-- Name: sessions sessions_pkey; Type: CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.sessions
+    ADD CONSTRAINT sessions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: sso_domains sso_domains_pkey; Type: CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.sso_domains
+    ADD CONSTRAINT sso_domains_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: sso_providers sso_providers_pkey; Type: CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.sso_providers
+    ADD CONSTRAINT sso_providers_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: users users_phone_key; Type: CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.users
+    ADD CONSTRAINT users_phone_key UNIQUE (phone);
+
+
+--
+-- Name: users users_pkey; Type: CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.users
+    ADD CONSTRAINT users_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: announcement_comment_reactions announcement_comment_reactions_comment_id_user_id_emoji_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.announcement_comment_reactions
+    ADD CONSTRAINT announcement_comment_reactions_comment_id_user_id_emoji_key UNIQUE (comment_id, user_id, emoji);
+
+
+--
+-- Name: announcement_comment_reactions announcement_comment_reactions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.announcement_comment_reactions
+    ADD CONSTRAINT announcement_comment_reactions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: announcement_comments announcement_comments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.announcement_comments
+    ADD CONSTRAINT announcement_comments_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: app_config app_config_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.app_config
+    ADD CONSTRAINT app_config_pkey PRIMARY KEY (key);
+
+
+--
+-- Name: auth_rate_limits auth_rate_limits_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.auth_rate_limits
+    ADD CONSTRAINT auth_rate_limits_pkey PRIMARY KEY (ip_hash, action);
+
+
+--
+-- Name: badges badges_name_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.badges
+    ADD CONSTRAINT badges_name_key UNIQUE (name);
+
+
+--
+-- Name: badges badges_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.badges
+    ADD CONSTRAINT badges_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: category_permissions category_permissions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.category_permissions
+    ADD CONSTRAINT category_permissions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: category_permissions category_permissions_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.category_permissions
+    ADD CONSTRAINT category_permissions_unique UNIQUE (category_id, role_id, role_name, user_id, permission);
+
+
+--
+-- Name: channel_categories channel_categories_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.channel_categories
+    ADD CONSTRAINT channel_categories_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: channel_members channel_members_channel_id_user_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.channel_members
+    ADD CONSTRAINT channel_members_channel_id_user_id_key UNIQUE (channel_id, user_id);
+
+
+--
+-- Name: channel_members channel_members_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.channel_members
+    ADD CONSTRAINT channel_members_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: channel_permissions channel_permissions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.channel_permissions
+    ADD CONSTRAINT channel_permissions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: channel_reads channel_reads_channel_id_user_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.channel_reads
+    ADD CONSTRAINT channel_reads_channel_id_user_id_key UNIQUE (channel_id, user_id);
+
+
+--
+-- Name: channel_reads channel_reads_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.channel_reads
+    ADD CONSTRAINT channel_reads_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: channel_reads channel_reads_user_channel_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.channel_reads
+    ADD CONSTRAINT channel_reads_user_channel_unique UNIQUE (user_id, channel_id);
+
+
+--
+-- Name: channel_user_settings channel_user_settings_channel_id_user_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.channel_user_settings
+    ADD CONSTRAINT channel_user_settings_channel_id_user_id_key UNIQUE (channel_id, user_id);
+
+
+--
+-- Name: channel_user_settings channel_user_settings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.channel_user_settings
+    ADD CONSTRAINT channel_user_settings_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: channels channels_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.channels
+    ADD CONSTRAINT channels_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: declined_friend_requests declined_friend_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.declined_friend_requests
+    ADD CONSTRAINT declined_friend_requests_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: declined_friend_requests declined_friend_requests_requester_id_addressee_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.declined_friend_requests
+    ADD CONSTRAINT declined_friend_requests_requester_id_addressee_id_key UNIQUE (requester_id, addressee_id);
+
+
+--
+-- Name: direct_messages direct_messages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.direct_messages
+    ADD CONSTRAINT direct_messages_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: dm_attachments dm_attachments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dm_attachments
+    ADD CONSTRAINT dm_attachments_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: dm_conversations dm_conversations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dm_conversations
+    ADD CONSTRAINT dm_conversations_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: dm_participants dm_participants_conversation_id_user_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dm_participants
+    ADD CONSTRAINT dm_participants_conversation_id_user_id_key UNIQUE (conversation_id, user_id);
+
+
+--
+-- Name: dm_participants dm_participants_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dm_participants
+    ADD CONSTRAINT dm_participants_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: dm_reactions dm_reactions_message_id_user_id_emoji_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dm_reactions
+    ADD CONSTRAINT dm_reactions_message_id_user_id_emoji_key UNIQUE (message_id, user_id, emoji);
+
+
+--
+-- Name: dm_reactions dm_reactions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dm_reactions
+    ADD CONSTRAINT dm_reactions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: friendships friendships_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.friendships
+    ADD CONSTRAINT friendships_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: friendships friendships_requester_id_addressee_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.friendships
+    ADD CONSTRAINT friendships_requester_id_addressee_id_key UNIQUE (requester_id, addressee_id);
+
+
+--
+-- Name: media_comment_reactions media_comment_reactions_comment_id_user_id_emoji_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.media_comment_reactions
+    ADD CONSTRAINT media_comment_reactions_comment_id_user_id_emoji_key UNIQUE (comment_id, user_id, emoji);
+
+
+--
+-- Name: media_comment_reactions media_comment_reactions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.media_comment_reactions
+    ADD CONSTRAINT media_comment_reactions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: media_comments media_comments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.media_comments
+    ADD CONSTRAINT media_comments_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: media_items media_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.media_items
+    ADD CONSTRAINT media_items_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: mentions mentions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.mentions
+    ADD CONSTRAINT mentions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: message_attachments message_attachments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.message_attachments
+    ADD CONSTRAINT message_attachments_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: messages messages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.messages
+    ADD CONSTRAINT messages_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: notifications notifications_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.notifications
+    ADD CONSTRAINT notifications_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: poll_votes poll_votes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.poll_votes
+    ADD CONSTRAINT poll_votes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: poll_votes poll_votes_poll_id_user_id_option_index_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.poll_votes
+    ADD CONSTRAINT poll_votes_poll_id_user_id_option_index_key UNIQUE (poll_id, user_id, option_index);
+
+
+--
+-- Name: polls polls_message_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.polls
+    ADD CONSTRAINT polls_message_id_key UNIQUE (message_id);
+
+
+--
+-- Name: polls polls_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.polls
+    ADD CONSTRAINT polls_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: pow_challenges pow_challenges_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pow_challenges
+    ADD CONSTRAINT pow_challenges_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: reactions reactions_message_id_user_id_emoji_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.reactions
+    ADD CONSTRAINT reactions_message_id_user_id_emoji_key UNIQUE (message_id, user_id, emoji);
+
+
+--
+-- Name: reactions reactions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.reactions
+    ADD CONSTRAINT reactions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: role_permissions role_permissions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.role_permissions
+    ADD CONSTRAINT role_permissions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: server_emojis server_emojis_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.server_emojis
+    ADD CONSTRAINT server_emojis_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: server_emojis server_emojis_server_id_name_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.server_emojis
+    ADD CONSTRAINT server_emojis_server_id_name_key UNIQUE (server_id, name);
+
+
+--
+-- Name: server_invites server_invites_code_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.server_invites
+    ADD CONSTRAINT server_invites_code_key UNIQUE (code);
+
+
+--
+-- Name: server_invites server_invites_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.server_invites
+    ADD CONSTRAINT server_invites_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: server_member_roles server_member_roles_member_id_role_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.server_member_roles
+    ADD CONSTRAINT server_member_roles_member_id_role_id_key UNIQUE (member_id, role_id);
+
+
+--
+-- Name: server_member_roles server_member_roles_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.server_member_roles
+    ADD CONSTRAINT server_member_roles_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: server_members server_members_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.server_members
+    ADD CONSTRAINT server_members_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: server_members server_members_server_id_user_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.server_members
+    ADD CONSTRAINT server_members_server_id_user_id_key UNIQUE (server_id, user_id);
+
+
+--
+-- Name: server_roles server_roles_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.server_roles
+    ADD CONSTRAINT server_roles_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: server_roles server_roles_server_id_name_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.server_roles
+    ADD CONSTRAINT server_roles_server_id_name_key UNIQUE (server_id, name);
+
+
+--
+-- Name: servers servers_invite_code_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.servers
+    ADD CONSTRAINT servers_invite_code_key UNIQUE (invite_code);
+
+
+--
+-- Name: servers servers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.servers
+    ADD CONSTRAINT servers_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: thread_attachments thread_attachments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.thread_attachments
+    ADD CONSTRAINT thread_attachments_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: thread_messages thread_messages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.thread_messages
+    ADD CONSTRAINT thread_messages_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: thread_reactions thread_reactions_message_id_user_id_emoji_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.thread_reactions
+    ADD CONSTRAINT thread_reactions_message_id_user_id_emoji_key UNIQUE (message_id, user_id, emoji);
+
+
+--
+-- Name: thread_reactions thread_reactions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.thread_reactions
+    ADD CONSTRAINT thread_reactions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: threads threads_message_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.threads
+    ADD CONSTRAINT threads_message_id_key UNIQUE (message_id);
+
+
+--
+-- Name: threads threads_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.threads
+    ADD CONSTRAINT threads_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: user_auth user_auth_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_auth
+    ADD CONSTRAINT user_auth_pkey PRIMARY KEY (user_id);
+
+
+--
+-- Name: user_badges user_badges_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_badges
+    ADD CONSTRAINT user_badges_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: user_badges user_badges_user_id_badge_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_badges
+    ADD CONSTRAINT user_badges_user_id_badge_id_key UNIQUE (user_id, badge_id);
+
+
+--
+-- Name: user_devices user_devices_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_devices
+    ADD CONSTRAINT user_devices_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: user_devices user_devices_user_id_device_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_devices
+    ADD CONSTRAINT user_devices_user_id_device_id_key UNIQUE (user_id, device_id);
+
+
+--
+-- Name: user_preferences user_preferences_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_preferences
+    ADD CONSTRAINT user_preferences_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: user_preferences user_preferences_user_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_preferences
+    ADD CONSTRAINT user_preferences_user_id_key UNIQUE (user_id);
+
+
+--
+-- Name: user_server_folders user_server_folders_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_server_folders
+    ADD CONSTRAINT user_server_folders_pkey PRIMARY KEY (user_id);
+
+
+--
+-- Name: user_server_tabs user_server_tabs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_server_tabs
+    ADD CONSTRAINT user_server_tabs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: user_server_tabs user_server_tabs_user_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_server_tabs
+    ADD CONSTRAINT user_server_tabs_user_id_key UNIQUE (user_id);
+
+
+--
+-- Name: user_voice_settings user_voice_settings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_voice_settings
+    ADD CONSTRAINT user_voice_settings_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: user_voice_settings user_voice_settings_user_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_voice_settings
+    ADD CONSTRAINT user_voice_settings_user_id_key UNIQUE (user_id);
+
+
+--
+-- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: users users_username_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_username_key UNIQUE (username);
+
+
+--
+-- Name: messages messages_pkey; Type: CONSTRAINT; Schema: realtime; Owner: -
+--
+
+ALTER TABLE ONLY realtime.messages
+    ADD CONSTRAINT messages_pkey PRIMARY KEY (id, inserted_at);
+
+
+--
+-- Name: messages_2026_02_21 messages_2026_02_21_pkey; Type: CONSTRAINT; Schema: realtime; Owner: -
+--
+
+ALTER TABLE ONLY realtime.messages_2026_02_21
+    ADD CONSTRAINT messages_2026_02_21_pkey PRIMARY KEY (id, inserted_at);
+
+
+--
+-- Name: messages_2026_02_22 messages_2026_02_22_pkey; Type: CONSTRAINT; Schema: realtime; Owner: -
+--
+
+ALTER TABLE ONLY realtime.messages_2026_02_22
+    ADD CONSTRAINT messages_2026_02_22_pkey PRIMARY KEY (id, inserted_at);
+
+
+--
+-- Name: messages_2026_02_23 messages_2026_02_23_pkey; Type: CONSTRAINT; Schema: realtime; Owner: -
+--
+
+ALTER TABLE ONLY realtime.messages_2026_02_23
+    ADD CONSTRAINT messages_2026_02_23_pkey PRIMARY KEY (id, inserted_at);
+
+
+--
+-- Name: messages_2026_02_24 messages_2026_02_24_pkey; Type: CONSTRAINT; Schema: realtime; Owner: -
+--
+
+ALTER TABLE ONLY realtime.messages_2026_02_24
+    ADD CONSTRAINT messages_2026_02_24_pkey PRIMARY KEY (id, inserted_at);
+
+
+--
+-- Name: messages_2026_02_25 messages_2026_02_25_pkey; Type: CONSTRAINT; Schema: realtime; Owner: -
+--
+
+ALTER TABLE ONLY realtime.messages_2026_02_25
+    ADD CONSTRAINT messages_2026_02_25_pkey PRIMARY KEY (id, inserted_at);
+
+
+--
+-- Name: messages_2026_02_26 messages_2026_02_26_pkey; Type: CONSTRAINT; Schema: realtime; Owner: -
+--
+
+ALTER TABLE ONLY realtime.messages_2026_02_26
+    ADD CONSTRAINT messages_2026_02_26_pkey PRIMARY KEY (id, inserted_at);
+
+
+--
+-- Name: messages_2026_02_27 messages_2026_02_27_pkey; Type: CONSTRAINT; Schema: realtime; Owner: -
+--
+
+ALTER TABLE ONLY realtime.messages_2026_02_27
+    ADD CONSTRAINT messages_2026_02_27_pkey PRIMARY KEY (id, inserted_at);
+
+
+--
+-- Name: subscription pk_subscription; Type: CONSTRAINT; Schema: realtime; Owner: -
+--
+
+ALTER TABLE ONLY realtime.subscription
+    ADD CONSTRAINT pk_subscription PRIMARY KEY (id);
+
+
+--
+-- Name: schema_migrations schema_migrations_pkey; Type: CONSTRAINT; Schema: realtime; Owner: -
+--
+
+ALTER TABLE ONLY realtime.schema_migrations
+    ADD CONSTRAINT schema_migrations_pkey PRIMARY KEY (version);
+
+
+--
+-- Name: buckets_analytics buckets_analytics_pkey; Type: CONSTRAINT; Schema: storage; Owner: -
+--
+
+ALTER TABLE ONLY storage.buckets_analytics
+    ADD CONSTRAINT buckets_analytics_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: buckets buckets_pkey; Type: CONSTRAINT; Schema: storage; Owner: -
+--
+
+ALTER TABLE ONLY storage.buckets
+    ADD CONSTRAINT buckets_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: buckets_vectors buckets_vectors_pkey; Type: CONSTRAINT; Schema: storage; Owner: -
+--
+
+ALTER TABLE ONLY storage.buckets_vectors
+    ADD CONSTRAINT buckets_vectors_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: iceberg_namespaces iceberg_namespaces_pkey; Type: CONSTRAINT; Schema: storage; Owner: -
+--
+
+ALTER TABLE ONLY storage.iceberg_namespaces
+    ADD CONSTRAINT iceberg_namespaces_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: iceberg_tables iceberg_tables_pkey; Type: CONSTRAINT; Schema: storage; Owner: -
+--
+
+ALTER TABLE ONLY storage.iceberg_tables
+    ADD CONSTRAINT iceberg_tables_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: migrations migrations_name_key; Type: CONSTRAINT; Schema: storage; Owner: -
+--
+
+ALTER TABLE ONLY storage.migrations
+    ADD CONSTRAINT migrations_name_key UNIQUE (name);
+
+
+--
+-- Name: migrations migrations_pkey; Type: CONSTRAINT; Schema: storage; Owner: -
+--
+
+ALTER TABLE ONLY storage.migrations
+    ADD CONSTRAINT migrations_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: objects objects_pkey; Type: CONSTRAINT; Schema: storage; Owner: -
+--
+
+ALTER TABLE ONLY storage.objects
+    ADD CONSTRAINT objects_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: s3_multipart_uploads_parts s3_multipart_uploads_parts_pkey; Type: CONSTRAINT; Schema: storage; Owner: -
+--
+
+ALTER TABLE ONLY storage.s3_multipart_uploads_parts
+    ADD CONSTRAINT s3_multipart_uploads_parts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: s3_multipart_uploads s3_multipart_uploads_pkey; Type: CONSTRAINT; Schema: storage; Owner: -
+--
+
+ALTER TABLE ONLY storage.s3_multipart_uploads
+    ADD CONSTRAINT s3_multipart_uploads_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: vector_indexes vector_indexes_pkey; Type: CONSTRAINT; Schema: storage; Owner: -
+--
+
+ALTER TABLE ONLY storage.vector_indexes
+    ADD CONSTRAINT vector_indexes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: hooks hooks_pkey; Type: CONSTRAINT; Schema: supabase_functions; Owner: -
+--
+
+ALTER TABLE ONLY supabase_functions.hooks
+    ADD CONSTRAINT hooks_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: migrations migrations_pkey; Type: CONSTRAINT; Schema: supabase_functions; Owner: -
+--
+
+ALTER TABLE ONLY supabase_functions.migrations
+    ADD CONSTRAINT migrations_pkey PRIMARY KEY (version);
+
+
+--
+-- Name: extensions_tenant_external_id_index; Type: INDEX; Schema: _realtime; Owner: -
+--
+
+CREATE INDEX extensions_tenant_external_id_index ON _realtime.extensions USING btree (tenant_external_id);
+
+
+--
+-- Name: extensions_tenant_external_id_type_index; Type: INDEX; Schema: _realtime; Owner: -
+--
+
+CREATE UNIQUE INDEX extensions_tenant_external_id_type_index ON _realtime.extensions USING btree (tenant_external_id, type);
+
+
+--
+-- Name: tenants_external_id_index; Type: INDEX; Schema: _realtime; Owner: -
+--
+
+CREATE UNIQUE INDEX tenants_external_id_index ON _realtime.tenants USING btree (external_id);
+
+
+--
+-- Name: audit_logs_instance_id_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX audit_logs_instance_id_idx ON auth.audit_log_entries USING btree (instance_id);
+
+
+--
+-- Name: confirmation_token_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE UNIQUE INDEX confirmation_token_idx ON auth.users USING btree (confirmation_token) WHERE ((confirmation_token)::text !~ '^[0-9 ]*$'::text);
+
+
+--
+-- Name: email_change_token_current_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE UNIQUE INDEX email_change_token_current_idx ON auth.users USING btree (email_change_token_current) WHERE ((email_change_token_current)::text !~ '^[0-9 ]*$'::text);
+
+
+--
+-- Name: email_change_token_new_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE UNIQUE INDEX email_change_token_new_idx ON auth.users USING btree (email_change_token_new) WHERE ((email_change_token_new)::text !~ '^[0-9 ]*$'::text);
+
+
+--
+-- Name: factor_id_created_at_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX factor_id_created_at_idx ON auth.mfa_factors USING btree (user_id, created_at);
+
+
+--
+-- Name: flow_state_created_at_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX flow_state_created_at_idx ON auth.flow_state USING btree (created_at DESC);
+
+
+--
+-- Name: identities_email_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX identities_email_idx ON auth.identities USING btree (email text_pattern_ops);
+
+
+--
+-- Name: INDEX identities_email_idx; Type: COMMENT; Schema: auth; Owner: -
+--
+
+COMMENT ON INDEX auth.identities_email_idx IS 'Auth: Ensures indexed queries on the email column';
+
+
+--
+-- Name: identities_user_id_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX identities_user_id_idx ON auth.identities USING btree (user_id);
+
+
+--
+-- Name: idx_auth_code; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX idx_auth_code ON auth.flow_state USING btree (auth_code);
+
+
+--
+-- Name: idx_oauth_client_states_created_at; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX idx_oauth_client_states_created_at ON auth.oauth_client_states USING btree (created_at);
+
+
+--
+-- Name: idx_user_id_auth_method; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX idx_user_id_auth_method ON auth.flow_state USING btree (user_id, authentication_method);
+
+
+--
+-- Name: mfa_challenge_created_at_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX mfa_challenge_created_at_idx ON auth.mfa_challenges USING btree (created_at DESC);
+
+
+--
+-- Name: mfa_factors_user_friendly_name_unique; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE UNIQUE INDEX mfa_factors_user_friendly_name_unique ON auth.mfa_factors USING btree (friendly_name, user_id) WHERE (TRIM(BOTH FROM friendly_name) <> ''::text);
+
+
+--
+-- Name: mfa_factors_user_id_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX mfa_factors_user_id_idx ON auth.mfa_factors USING btree (user_id);
+
+
+--
+-- Name: oauth_auth_pending_exp_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX oauth_auth_pending_exp_idx ON auth.oauth_authorizations USING btree (expires_at) WHERE (status = 'pending'::auth.oauth_authorization_status);
+
+
+--
+-- Name: oauth_clients_deleted_at_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX oauth_clients_deleted_at_idx ON auth.oauth_clients USING btree (deleted_at);
+
+
+--
+-- Name: oauth_consents_active_client_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX oauth_consents_active_client_idx ON auth.oauth_consents USING btree (client_id) WHERE (revoked_at IS NULL);
+
+
+--
+-- Name: oauth_consents_active_user_client_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX oauth_consents_active_user_client_idx ON auth.oauth_consents USING btree (user_id, client_id) WHERE (revoked_at IS NULL);
+
+
+--
+-- Name: oauth_consents_user_order_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX oauth_consents_user_order_idx ON auth.oauth_consents USING btree (user_id, granted_at DESC);
+
+
+--
+-- Name: one_time_tokens_relates_to_hash_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX one_time_tokens_relates_to_hash_idx ON auth.one_time_tokens USING hash (relates_to);
+
+
+--
+-- Name: one_time_tokens_token_hash_hash_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX one_time_tokens_token_hash_hash_idx ON auth.one_time_tokens USING hash (token_hash);
+
+
+--
+-- Name: one_time_tokens_user_id_token_type_key; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE UNIQUE INDEX one_time_tokens_user_id_token_type_key ON auth.one_time_tokens USING btree (user_id, token_type);
+
+
+--
+-- Name: reauthentication_token_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE UNIQUE INDEX reauthentication_token_idx ON auth.users USING btree (reauthentication_token) WHERE ((reauthentication_token)::text !~ '^[0-9 ]*$'::text);
+
+
+--
+-- Name: recovery_token_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE UNIQUE INDEX recovery_token_idx ON auth.users USING btree (recovery_token) WHERE ((recovery_token)::text !~ '^[0-9 ]*$'::text);
+
+
+--
+-- Name: refresh_tokens_instance_id_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX refresh_tokens_instance_id_idx ON auth.refresh_tokens USING btree (instance_id);
+
+
+--
+-- Name: refresh_tokens_instance_id_user_id_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX refresh_tokens_instance_id_user_id_idx ON auth.refresh_tokens USING btree (instance_id, user_id);
+
+
+--
+-- Name: refresh_tokens_parent_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX refresh_tokens_parent_idx ON auth.refresh_tokens USING btree (parent);
+
+
+--
+-- Name: refresh_tokens_session_id_revoked_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX refresh_tokens_session_id_revoked_idx ON auth.refresh_tokens USING btree (session_id, revoked);
+
+
+--
+-- Name: refresh_tokens_updated_at_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX refresh_tokens_updated_at_idx ON auth.refresh_tokens USING btree (updated_at DESC);
+
+
+--
+-- Name: saml_providers_sso_provider_id_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX saml_providers_sso_provider_id_idx ON auth.saml_providers USING btree (sso_provider_id);
+
+
+--
+-- Name: saml_relay_states_created_at_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX saml_relay_states_created_at_idx ON auth.saml_relay_states USING btree (created_at DESC);
+
+
+--
+-- Name: saml_relay_states_for_email_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX saml_relay_states_for_email_idx ON auth.saml_relay_states USING btree (for_email);
+
+
+--
+-- Name: saml_relay_states_sso_provider_id_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX saml_relay_states_sso_provider_id_idx ON auth.saml_relay_states USING btree (sso_provider_id);
+
+
+--
+-- Name: sessions_not_after_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX sessions_not_after_idx ON auth.sessions USING btree (not_after DESC);
+
+
+--
+-- Name: sessions_oauth_client_id_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX sessions_oauth_client_id_idx ON auth.sessions USING btree (oauth_client_id);
+
+
+--
+-- Name: sessions_user_id_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX sessions_user_id_idx ON auth.sessions USING btree (user_id);
+
+
+--
+-- Name: sso_domains_domain_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE UNIQUE INDEX sso_domains_domain_idx ON auth.sso_domains USING btree (lower(domain));
+
+
+--
+-- Name: sso_domains_sso_provider_id_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX sso_domains_sso_provider_id_idx ON auth.sso_domains USING btree (sso_provider_id);
+
+
+--
+-- Name: sso_providers_resource_id_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE UNIQUE INDEX sso_providers_resource_id_idx ON auth.sso_providers USING btree (lower(resource_id));
+
+
+--
+-- Name: sso_providers_resource_id_pattern_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX sso_providers_resource_id_pattern_idx ON auth.sso_providers USING btree (resource_id text_pattern_ops);
+
+
+--
+-- Name: unique_phone_factor_per_user; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE UNIQUE INDEX unique_phone_factor_per_user ON auth.mfa_factors USING btree (user_id, phone);
+
+
+--
+-- Name: user_id_created_at_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX user_id_created_at_idx ON auth.sessions USING btree (user_id, created_at);
+
+
+--
+-- Name: users_email_partial_key; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE UNIQUE INDEX users_email_partial_key ON auth.users USING btree (email) WHERE (is_sso_user = false);
+
+
+--
+-- Name: INDEX users_email_partial_key; Type: COMMENT; Schema: auth; Owner: -
+--
+
+COMMENT ON INDEX auth.users_email_partial_key IS 'Auth: A partial unique index that applies only when is_sso_user is false';
+
+
+--
+-- Name: users_instance_id_email_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX users_instance_id_email_idx ON auth.users USING btree (instance_id, lower((email)::text));
+
+
+--
+-- Name: users_instance_id_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX users_instance_id_idx ON auth.users USING btree (instance_id);
+
+
+--
+-- Name: users_is_anonymous_idx; Type: INDEX; Schema: auth; Owner: -
+--
+
+CREATE INDEX users_is_anonymous_idx ON auth.users USING btree (is_anonymous);
+
+
+--
+-- Name: channel_permissions_role_perm_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX channel_permissions_role_perm_idx ON public.channel_permissions USING btree (channel_id, role_id, permission) WHERE ((role_id IS NOT NULL) AND (user_id IS NULL));
+
+
+--
+-- Name: channel_permissions_rolename_perm_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX channel_permissions_rolename_perm_idx ON public.channel_permissions USING btree (channel_id, role_name, permission) WHERE ((role_name IS NOT NULL) AND (role_id IS NULL) AND (user_id IS NULL));
+
+
+--
+-- Name: channel_permissions_user_perm_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX channel_permissions_user_perm_idx ON public.channel_permissions USING btree (channel_id, user_id, permission) WHERE (user_id IS NOT NULL);
+
+
+--
+-- Name: cp_base_role_unique; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX cp_base_role_unique ON public.channel_permissions USING btree (channel_id, role_name, permission) WHERE (role_name IS NOT NULL);
+
+
+--
+-- Name: cp_custom_role_unique; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX cp_custom_role_unique ON public.channel_permissions USING btree (channel_id, role_id, permission) WHERE (role_id IS NOT NULL);
+
+
+--
+-- Name: idx_announcement_comment_reactions_comment; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_announcement_comment_reactions_comment ON public.announcement_comment_reactions USING btree (comment_id);
+
+
+--
+-- Name: idx_announcement_comment_reactions_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_announcement_comment_reactions_user_id ON public.announcement_comment_reactions USING btree (user_id);
+
+
+--
+-- Name: idx_announcement_comments_message; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_announcement_comments_message ON public.announcement_comments USING btree (message_id);
+
+
+--
+-- Name: idx_announcement_comments_reply_to_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_announcement_comments_reply_to_id ON public.announcement_comments USING btree (reply_to_id) WHERE (reply_to_id IS NOT NULL);
+
+
+--
+-- Name: idx_announcement_comments_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_announcement_comments_user ON public.announcement_comments USING btree (user_id);
+
+
+--
+-- Name: idx_category_permissions_category_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_category_permissions_category_id ON public.category_permissions USING btree (category_id);
+
+
+--
+-- Name: idx_category_permissions_role_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_category_permissions_role_id ON public.category_permissions USING btree (role_id);
+
+
+--
+-- Name: idx_category_permissions_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_category_permissions_user_id ON public.category_permissions USING btree (user_id);
+
+
+--
+-- Name: idx_channel_categories_server_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_channel_categories_server_id ON public.channel_categories USING btree (server_id);
+
+
+--
+-- Name: idx_channel_members_added_by; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_channel_members_added_by ON public.channel_members USING btree (added_by) WHERE (added_by IS NOT NULL);
+
+
+--
+-- Name: idx_channel_members_channel_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_channel_members_channel_id ON public.channel_members USING btree (channel_id);
+
+
+--
+-- Name: idx_channel_members_channel_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_channel_members_channel_user ON public.channel_members USING btree (channel_id, user_id);
+
+
+--
+-- Name: idx_channel_members_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_channel_members_user_id ON public.channel_members USING btree (user_id);
+
+
+--
+-- Name: idx_channel_permissions_channel; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_channel_permissions_channel ON public.channel_permissions USING btree (channel_id);
+
+
+--
+-- Name: idx_channel_permissions_channel_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_channel_permissions_channel_user ON public.channel_permissions USING btree (channel_id, user_id);
+
+
+--
+-- Name: idx_channel_permissions_role_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_channel_permissions_role_id ON public.channel_permissions USING btree (role_id);
+
+
+--
+-- Name: idx_channel_permissions_role_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_channel_permissions_role_name ON public.channel_permissions USING btree (channel_id, role_name);
+
+
+--
+-- Name: idx_channel_permissions_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_channel_permissions_user_id ON public.channel_permissions USING btree (user_id);
+
+
+--
+-- Name: idx_channel_reads_channel; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_channel_reads_channel ON public.channel_reads USING btree (channel_id);
+
+
+--
+-- Name: idx_channel_reads_last_read_message_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_channel_reads_last_read_message_id ON public.channel_reads USING btree (last_read_message_id) WHERE (last_read_message_id IS NOT NULL);
+
+
+--
+-- Name: idx_channel_reads_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_channel_reads_user ON public.channel_reads USING btree (user_id);
+
+
+--
+-- Name: idx_channel_user_settings_channel; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_channel_user_settings_channel ON public.channel_user_settings USING btree (channel_id);
+
+
+--
+-- Name: idx_channel_user_settings_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_channel_user_settings_user ON public.channel_user_settings USING btree (user_id);
+
+
+--
+-- Name: idx_channels_category; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_channels_category ON public.channels USING btree (category_id);
+
+
+--
+-- Name: idx_channels_server_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_channels_server_id ON public.channels USING btree (server_id);
+
+
+--
+-- Name: idx_declined_friend_requests_addressee_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_declined_friend_requests_addressee_id ON public.declined_friend_requests USING btree (addressee_id);
+
+
+--
+-- Name: idx_devices_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_devices_user ON public.user_devices USING btree (user_id);
+
+
+--
+-- Name: idx_direct_messages_content_search; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_direct_messages_content_search ON public.direct_messages USING gin (to_tsvector('english'::regconfig, content));
+
+
+--
+-- Name: idx_direct_messages_conv_created; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_direct_messages_conv_created ON public.direct_messages USING btree (conversation_id, created_at DESC);
+
+
+--
+-- Name: idx_direct_messages_conversation; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_direct_messages_conversation ON public.direct_messages USING btree (conversation_id);
+
+
+--
+-- Name: idx_direct_messages_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_direct_messages_created_at ON public.direct_messages USING btree (created_at DESC);
+
+
+--
+-- Name: idx_direct_messages_reply_to_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_direct_messages_reply_to_id ON public.direct_messages USING btree (reply_to_id) WHERE (reply_to_id IS NOT NULL);
+
+
+--
+-- Name: idx_direct_messages_sender_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_direct_messages_sender_id ON public.direct_messages USING btree (sender_id);
+
+
+--
+-- Name: idx_dm_attachments_message_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_dm_attachments_message_id ON public.dm_attachments USING btree (message_id);
+
+
+--
+-- Name: idx_dm_conversations_created_by; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_dm_conversations_created_by ON public.dm_conversations USING btree (created_by) WHERE (created_by IS NOT NULL);
+
+
+--
+-- Name: idx_dm_conversations_created_by_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_dm_conversations_created_by_created_at ON public.dm_conversations USING btree (created_by, created_at DESC) WHERE (created_by IS NOT NULL);
+
+
+--
+-- Name: idx_dm_participants_conv_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_dm_participants_conv_user ON public.dm_participants USING btree (conversation_id, user_id);
+
+
+--
+-- Name: idx_dm_participants_conversation; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_dm_participants_conversation ON public.dm_participants USING btree (conversation_id);
+
+
+--
+-- Name: idx_dm_participants_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_dm_participants_user ON public.dm_participants USING btree (user_id);
+
+
+--
+-- Name: idx_dm_participants_user_conv; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_dm_participants_user_conv ON public.dm_participants USING btree (user_id, conversation_id);
+
+
+--
+-- Name: idx_dm_reactions_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_dm_reactions_user_id ON public.dm_reactions USING btree (user_id);
+
+
+--
+-- Name: idx_friendships_addressee; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_friendships_addressee ON public.friendships USING btree (addressee_id);
+
+
+--
+-- Name: idx_friendships_requester; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_friendships_requester ON public.friendships USING btree (requester_id);
+
+
+--
+-- Name: idx_media_comment_reactions_comment_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_media_comment_reactions_comment_id ON public.media_comment_reactions USING btree (comment_id);
+
+
+--
+-- Name: idx_media_comment_reactions_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_media_comment_reactions_user_id ON public.media_comment_reactions USING btree (user_id);
+
+
+--
+-- Name: idx_media_comments_media_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_media_comments_media_id ON public.media_comments USING btree (media_id);
+
+
+--
+-- Name: idx_media_comments_reply_to_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_media_comments_reply_to_id ON public.media_comments USING btree (reply_to_id) WHERE (reply_to_id IS NOT NULL);
+
+
+--
+-- Name: idx_media_comments_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_media_comments_user_id ON public.media_comments USING btree (user_id);
+
+
+--
+-- Name: idx_media_items_channel_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_media_items_channel_id ON public.media_items USING btree (channel_id);
+
+
+--
+-- Name: idx_media_items_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_media_items_created_at ON public.media_items USING btree (created_at DESC);
+
+
+--
+-- Name: idx_media_items_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_media_items_user_id ON public.media_items USING btree (user_id);
+
+
+--
+-- Name: idx_mentions_message; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_mentions_message ON public.mentions USING btree (message_id);
+
+
+--
+-- Name: idx_mentions_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_mentions_user ON public.mentions USING btree (user_id);
+
+
+--
+-- Name: idx_message_attachments_message_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_message_attachments_message_id ON public.message_attachments USING btree (message_id);
+
+
+--
+-- Name: idx_messages_channel_created; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_messages_channel_created ON public.messages USING btree (channel_id, created_at DESC);
+
+
+--
+-- Name: idx_messages_channel_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_messages_channel_id ON public.messages USING btree (channel_id);
+
+
+--
+-- Name: idx_messages_content_search; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_messages_content_search ON public.messages USING gin (to_tsvector('english'::regconfig, content));
+
+
+--
+-- Name: idx_messages_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_messages_created_at ON public.messages USING btree (created_at DESC);
+
+
+--
+-- Name: idx_messages_is_system_message; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_messages_is_system_message ON public.messages USING btree (is_system_message) WHERE (is_system_message = true);
+
+
+--
+-- Name: idx_messages_reply_to; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_messages_reply_to ON public.messages USING btree (reply_to_id) WHERE (reply_to_id IS NOT NULL);
+
+
+--
+-- Name: idx_messages_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_messages_user ON public.messages USING btree (user_id);
+
+
+--
+-- Name: idx_messages_user_channel_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_messages_user_channel_created_at ON public.messages USING btree (user_id, channel_id, created_at DESC);
+
+
+--
+-- Name: idx_notifications_unread; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_notifications_unread ON public.notifications USING btree (user_id) WHERE (is_read = false);
+
+
+--
+-- Name: idx_notifications_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_notifications_user ON public.notifications USING btree (user_id);
+
+
+--
+-- Name: idx_poll_votes_poll_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_poll_votes_poll_id ON public.poll_votes USING btree (poll_id);
+
+
+--
+-- Name: idx_poll_votes_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_poll_votes_user_id ON public.poll_votes USING btree (user_id);
+
+
+--
+-- Name: idx_polls_channel_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_polls_channel_id ON public.polls USING btree (channel_id);
+
+
+--
+-- Name: idx_polls_created_by; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_polls_created_by ON public.polls USING btree (created_by);
+
+
+--
+-- Name: idx_polls_ends_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_polls_ends_at ON public.polls USING btree (ends_at);
+
+
+--
+-- Name: idx_polls_message_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_polls_message_id ON public.polls USING btree (message_id);
+
+
+--
+-- Name: idx_pow_challenges_expires_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_pow_challenges_expires_at ON public.pow_challenges USING btree (expires_at);
+
+
+--
+-- Name: idx_reactions_channel_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_reactions_channel_id ON public.reactions USING btree (channel_id);
+
+
+--
+-- Name: idx_reactions_message_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_reactions_message_id ON public.reactions USING btree (message_id);
+
+
+--
+-- Name: idx_reactions_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_reactions_user_id ON public.reactions USING btree (user_id);
+
+
+--
+-- Name: idx_role_permissions_role_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_role_permissions_role_id ON public.role_permissions USING btree (role_id);
+
+
+--
+-- Name: idx_role_permissions_role_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_role_permissions_role_name ON public.role_permissions USING btree (server_id, role_name);
+
+
+--
+-- Name: idx_role_permissions_server_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_role_permissions_server_id ON public.role_permissions USING btree (server_id);
+
+
+--
+-- Name: idx_server_emojis_created_by; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_server_emojis_created_by ON public.server_emojis USING btree (created_by) WHERE (created_by IS NOT NULL);
+
+
+--
+-- Name: idx_server_invites_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_server_invites_code ON public.server_invites USING btree (code);
+
+
+--
+-- Name: idx_server_invites_created_by; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_server_invites_created_by ON public.server_invites USING btree (created_by) WHERE (created_by IS NOT NULL);
+
+
+--
+-- Name: idx_server_invites_revoked_by; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_server_invites_revoked_by ON public.server_invites USING btree (revoked_by) WHERE (revoked_by IS NOT NULL);
+
+
+--
+-- Name: idx_server_invites_server_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_server_invites_server_id ON public.server_invites USING btree (server_id);
+
+
+--
+-- Name: idx_server_member_roles_member; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_server_member_roles_member ON public.server_member_roles USING btree (member_id);
+
+
+--
+-- Name: idx_server_member_roles_role; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_server_member_roles_role ON public.server_member_roles USING btree (role_id);
+
+
+--
+-- Name: idx_server_members_server; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_server_members_server ON public.server_members USING btree (server_id);
+
+
+--
+-- Name: idx_server_members_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_server_members_user ON public.server_members USING btree (user_id);
+
+
+--
+-- Name: idx_server_members_user_position; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_server_members_user_position ON public.server_members USING btree (user_id, "position");
+
+
+--
+-- Name: idx_server_members_user_server; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_server_members_user_server ON public.server_members USING btree (user_id, server_id);
+
+
+--
+-- Name: idx_server_roles_position; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_server_roles_position ON public.server_roles USING btree (server_id, "position");
+
+
+--
+-- Name: idx_server_roles_server_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_server_roles_server_id ON public.server_roles USING btree (server_id);
+
+
+--
+-- Name: idx_servers_invite_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_servers_invite_code ON public.servers USING btree (invite_code);
+
+
+--
+-- Name: idx_servers_is_published; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_servers_is_published ON public.servers USING btree (is_published) WHERE (is_published = true);
+
+
+--
+-- Name: idx_servers_owner_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_servers_owner_id ON public.servers USING btree (owner_id);
+
+
+--
+-- Name: idx_servers_published_created; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_servers_published_created ON public.servers USING btree (created_at DESC) WHERE (is_published = true);
+
+
+--
+-- Name: idx_servers_system_channel_join_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_servers_system_channel_join_id ON public.servers USING btree (system_channel_join_id) WHERE (system_channel_join_id IS NOT NULL);
+
+
+--
+-- Name: idx_servers_system_channel_leave_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_servers_system_channel_leave_id ON public.servers USING btree (system_channel_leave_id) WHERE (system_channel_leave_id IS NOT NULL);
+
+
+--
+-- Name: idx_thread_attachments_message_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_thread_attachments_message_id ON public.thread_attachments USING btree (message_id);
+
+
+--
+-- Name: idx_thread_messages_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_thread_messages_created_at ON public.thread_messages USING btree (created_at);
+
+
+--
+-- Name: idx_thread_messages_reply_to_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_thread_messages_reply_to_id ON public.thread_messages USING btree (reply_to_id) WHERE (reply_to_id IS NOT NULL);
+
+
+--
+-- Name: idx_thread_messages_thread_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_thread_messages_thread_id ON public.thread_messages USING btree (thread_id);
+
+
+--
+-- Name: idx_thread_messages_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_thread_messages_user_id ON public.thread_messages USING btree (user_id);
+
+
+--
+-- Name: idx_thread_reactions_message_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_thread_reactions_message_id ON public.thread_reactions USING btree (message_id);
+
+
+--
+-- Name: idx_thread_reactions_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_thread_reactions_user_id ON public.thread_reactions USING btree (user_id);
+
+
+--
+-- Name: idx_threads_channel_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_threads_channel_id ON public.threads USING btree (channel_id);
+
+
+--
+-- Name: idx_threads_created_by; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_threads_created_by ON public.threads USING btree (created_by);
+
+
+--
+-- Name: idx_threads_message_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_threads_message_id ON public.threads USING btree (message_id);
+
+
+--
+-- Name: idx_user_badges_badge_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_user_badges_badge_id ON public.user_badges USING btree (badge_id);
+
+
+--
+-- Name: idx_user_server_folders_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_user_server_folders_user_id ON public.user_server_folders USING btree (user_id);
+
+
+--
+-- Name: idx_user_voice_settings_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_user_voice_settings_user_id ON public.user_voice_settings USING btree (user_id);
+
+
+--
+-- Name: idx_users_username; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_users_username ON public.users USING btree (username);
+
+
+--
+-- Name: role_permissions_server_role_perm_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX role_permissions_server_role_perm_idx ON public.role_permissions USING btree (server_id, role_id, permission) WHERE (role_id IS NOT NULL);
+
+
+--
+-- Name: role_permissions_server_rolename_perm_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX role_permissions_server_rolename_perm_idx ON public.role_permissions USING btree (server_id, role_name, permission) WHERE ((role_name IS NOT NULL) AND (role_id IS NULL));
+
+
+--
+-- Name: rp_base_role_unique; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX rp_base_role_unique ON public.role_permissions USING btree (server_id, role_name, permission) WHERE (role_name IS NOT NULL);
+
+
+--
+-- Name: server_emojis_server_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX server_emojis_server_id_idx ON public.server_emojis USING btree (server_id);
+
+
+--
+-- Name: servers_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX servers_created_at_idx ON public.servers USING btree (created_at);
+
+
+--
+-- Name: ix_realtime_subscription_entity; Type: INDEX; Schema: realtime; Owner: -
+--
+
+CREATE INDEX ix_realtime_subscription_entity ON realtime.subscription USING btree (entity);
+
+
+--
+-- Name: messages_inserted_at_topic_index; Type: INDEX; Schema: realtime; Owner: -
+--
+
+CREATE INDEX messages_inserted_at_topic_index ON ONLY realtime.messages USING btree (inserted_at DESC, topic) WHERE ((extension = 'broadcast'::text) AND (private IS TRUE));
+
+
+--
+-- Name: messages_2026_02_21_inserted_at_topic_idx; Type: INDEX; Schema: realtime; Owner: -
+--
+
+CREATE INDEX messages_2026_02_21_inserted_at_topic_idx ON realtime.messages_2026_02_21 USING btree (inserted_at DESC, topic) WHERE ((extension = 'broadcast'::text) AND (private IS TRUE));
+
+
+--
+-- Name: messages_2026_02_22_inserted_at_topic_idx; Type: INDEX; Schema: realtime; Owner: -
+--
+
+CREATE INDEX messages_2026_02_22_inserted_at_topic_idx ON realtime.messages_2026_02_22 USING btree (inserted_at DESC, topic) WHERE ((extension = 'broadcast'::text) AND (private IS TRUE));
+
+
+--
+-- Name: messages_2026_02_23_inserted_at_topic_idx; Type: INDEX; Schema: realtime; Owner: -
+--
+
+CREATE INDEX messages_2026_02_23_inserted_at_topic_idx ON realtime.messages_2026_02_23 USING btree (inserted_at DESC, topic) WHERE ((extension = 'broadcast'::text) AND (private IS TRUE));
+
+
+--
+-- Name: messages_2026_02_24_inserted_at_topic_idx; Type: INDEX; Schema: realtime; Owner: -
+--
+
+CREATE INDEX messages_2026_02_24_inserted_at_topic_idx ON realtime.messages_2026_02_24 USING btree (inserted_at DESC, topic) WHERE ((extension = 'broadcast'::text) AND (private IS TRUE));
+
+
+--
+-- Name: messages_2026_02_25_inserted_at_topic_idx; Type: INDEX; Schema: realtime; Owner: -
+--
+
+CREATE INDEX messages_2026_02_25_inserted_at_topic_idx ON realtime.messages_2026_02_25 USING btree (inserted_at DESC, topic) WHERE ((extension = 'broadcast'::text) AND (private IS TRUE));
+
+
+--
+-- Name: messages_2026_02_26_inserted_at_topic_idx; Type: INDEX; Schema: realtime; Owner: -
+--
+
+CREATE INDEX messages_2026_02_26_inserted_at_topic_idx ON realtime.messages_2026_02_26 USING btree (inserted_at DESC, topic) WHERE ((extension = 'broadcast'::text) AND (private IS TRUE));
+
+
+--
+-- Name: messages_2026_02_27_inserted_at_topic_idx; Type: INDEX; Schema: realtime; Owner: -
+--
+
+CREATE INDEX messages_2026_02_27_inserted_at_topic_idx ON realtime.messages_2026_02_27 USING btree (inserted_at DESC, topic) WHERE ((extension = 'broadcast'::text) AND (private IS TRUE));
+
+
+--
+-- Name: subscription_subscription_id_entity_filters_action_filter_key; Type: INDEX; Schema: realtime; Owner: -
+--
+
+CREATE UNIQUE INDEX subscription_subscription_id_entity_filters_action_filter_key ON realtime.subscription USING btree (subscription_id, entity, filters, action_filter);
+
+
+--
+-- Name: bname; Type: INDEX; Schema: storage; Owner: -
+--
+
+CREATE UNIQUE INDEX bname ON storage.buckets USING btree (name);
+
+
+--
+-- Name: bucketid_objname; Type: INDEX; Schema: storage; Owner: -
+--
+
+CREATE UNIQUE INDEX bucketid_objname ON storage.objects USING btree (bucket_id, name);
+
+
+--
+-- Name: buckets_analytics_unique_name_idx; Type: INDEX; Schema: storage; Owner: -
+--
+
+CREATE UNIQUE INDEX buckets_analytics_unique_name_idx ON storage.buckets_analytics USING btree (name) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: idx_iceberg_namespaces_bucket_id; Type: INDEX; Schema: storage; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_iceberg_namespaces_bucket_id ON storage.iceberg_namespaces USING btree (catalog_id, name);
+
+
+--
+-- Name: idx_iceberg_tables_location; Type: INDEX; Schema: storage; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_iceberg_tables_location ON storage.iceberg_tables USING btree (location);
+
+
+--
+-- Name: idx_iceberg_tables_namespace_id; Type: INDEX; Schema: storage; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_iceberg_tables_namespace_id ON storage.iceberg_tables USING btree (catalog_id, namespace_id, name);
+
+
+--
+-- Name: idx_multipart_uploads_list; Type: INDEX; Schema: storage; Owner: -
+--
+
+CREATE INDEX idx_multipart_uploads_list ON storage.s3_multipart_uploads USING btree (bucket_id, key, created_at);
+
+
+--
+-- Name: idx_objects_bucket_id_name; Type: INDEX; Schema: storage; Owner: -
+--
+
+CREATE INDEX idx_objects_bucket_id_name ON storage.objects USING btree (bucket_id, name COLLATE "C");
+
+
+--
+-- Name: idx_objects_bucket_id_name_lower; Type: INDEX; Schema: storage; Owner: -
+--
+
+CREATE INDEX idx_objects_bucket_id_name_lower ON storage.objects USING btree (bucket_id, lower(name) COLLATE "C");
+
+
+--
+-- Name: name_prefix_search; Type: INDEX; Schema: storage; Owner: -
+--
+
+CREATE INDEX name_prefix_search ON storage.objects USING btree (name text_pattern_ops);
+
+
+--
+-- Name: vector_indexes_name_bucket_id_idx; Type: INDEX; Schema: storage; Owner: -
+--
+
+CREATE UNIQUE INDEX vector_indexes_name_bucket_id_idx ON storage.vector_indexes USING btree (name, bucket_id);
+
+
+--
+-- Name: supabase_functions_hooks_h_table_id_h_name_idx; Type: INDEX; Schema: supabase_functions; Owner: -
+--
+
+CREATE INDEX supabase_functions_hooks_h_table_id_h_name_idx ON supabase_functions.hooks USING btree (hook_table_id, hook_name);
+
+
+--
+-- Name: supabase_functions_hooks_request_id_idx; Type: INDEX; Schema: supabase_functions; Owner: -
+--
+
+CREATE INDEX supabase_functions_hooks_request_id_idx ON supabase_functions.hooks USING btree (request_id);
+
+
+--
+-- Name: messages_2026_02_21_inserted_at_topic_idx; Type: INDEX ATTACH; Schema: realtime; Owner: -
+--
+
+ALTER INDEX realtime.messages_inserted_at_topic_index ATTACH PARTITION realtime.messages_2026_02_21_inserted_at_topic_idx;
+
+
+--
+-- Name: messages_2026_02_21_pkey; Type: INDEX ATTACH; Schema: realtime; Owner: -
+--
+
+ALTER INDEX realtime.messages_pkey ATTACH PARTITION realtime.messages_2026_02_21_pkey;
+
+
+--
+-- Name: messages_2026_02_22_inserted_at_topic_idx; Type: INDEX ATTACH; Schema: realtime; Owner: -
+--
+
+ALTER INDEX realtime.messages_inserted_at_topic_index ATTACH PARTITION realtime.messages_2026_02_22_inserted_at_topic_idx;
+
+
+--
+-- Name: messages_2026_02_22_pkey; Type: INDEX ATTACH; Schema: realtime; Owner: -
+--
+
+ALTER INDEX realtime.messages_pkey ATTACH PARTITION realtime.messages_2026_02_22_pkey;
+
+
+--
+-- Name: messages_2026_02_23_inserted_at_topic_idx; Type: INDEX ATTACH; Schema: realtime; Owner: -
+--
+
+ALTER INDEX realtime.messages_inserted_at_topic_index ATTACH PARTITION realtime.messages_2026_02_23_inserted_at_topic_idx;
+
+
+--
+-- Name: messages_2026_02_23_pkey; Type: INDEX ATTACH; Schema: realtime; Owner: -
+--
+
+ALTER INDEX realtime.messages_pkey ATTACH PARTITION realtime.messages_2026_02_23_pkey;
+
+
+--
+-- Name: messages_2026_02_24_inserted_at_topic_idx; Type: INDEX ATTACH; Schema: realtime; Owner: -
+--
+
+ALTER INDEX realtime.messages_inserted_at_topic_index ATTACH PARTITION realtime.messages_2026_02_24_inserted_at_topic_idx;
+
+
+--
+-- Name: messages_2026_02_24_pkey; Type: INDEX ATTACH; Schema: realtime; Owner: -
+--
+
+ALTER INDEX realtime.messages_pkey ATTACH PARTITION realtime.messages_2026_02_24_pkey;
+
+
+--
+-- Name: messages_2026_02_25_inserted_at_topic_idx; Type: INDEX ATTACH; Schema: realtime; Owner: -
+--
+
+ALTER INDEX realtime.messages_inserted_at_topic_index ATTACH PARTITION realtime.messages_2026_02_25_inserted_at_topic_idx;
+
+
+--
+-- Name: messages_2026_02_25_pkey; Type: INDEX ATTACH; Schema: realtime; Owner: -
+--
+
+ALTER INDEX realtime.messages_pkey ATTACH PARTITION realtime.messages_2026_02_25_pkey;
+
+
+--
+-- Name: messages_2026_02_26_inserted_at_topic_idx; Type: INDEX ATTACH; Schema: realtime; Owner: -
+--
+
+ALTER INDEX realtime.messages_inserted_at_topic_index ATTACH PARTITION realtime.messages_2026_02_26_inserted_at_topic_idx;
+
+
+--
+-- Name: messages_2026_02_26_pkey; Type: INDEX ATTACH; Schema: realtime; Owner: -
+--
+
+ALTER INDEX realtime.messages_pkey ATTACH PARTITION realtime.messages_2026_02_26_pkey;
+
+
+--
+-- Name: messages_2026_02_27_inserted_at_topic_idx; Type: INDEX ATTACH; Schema: realtime; Owner: -
+--
+
+ALTER INDEX realtime.messages_inserted_at_topic_index ATTACH PARTITION realtime.messages_2026_02_27_inserted_at_topic_idx;
+
+
+--
+-- Name: messages_2026_02_27_pkey; Type: INDEX ATTACH; Schema: realtime; Owner: -
+--
+
+ALTER INDEX realtime.messages_pkey ATTACH PARTITION realtime.messages_2026_02_27_pkey;
+
+
+--
+-- Name: direct_messages dm_notification_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER dm_notification_trigger AFTER INSERT ON public.direct_messages FOR EACH ROW EXECUTE FUNCTION public.trigger_dm_notification();
+
+
+--
+-- Name: channels enforce_channel_creation_rate_limit; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER enforce_channel_creation_rate_limit BEFORE INSERT ON public.channels FOR EACH ROW EXECUTE FUNCTION public.rate_limit_channel_creation();
+
+
+--
+-- Name: channel_members enforce_channel_member_immutable; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER enforce_channel_member_immutable BEFORE UPDATE ON public.channel_members FOR EACH ROW EXECUTE FUNCTION public.prevent_channel_member_identity_change();
+
+
+--
+-- Name: user_devices enforce_device_key_immutable; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER enforce_device_key_immutable BEFORE UPDATE ON public.user_devices FOR EACH ROW EXECUTE FUNCTION public.prevent_device_key_change();
+
+
+--
+-- Name: friendships enforce_friendship_identity_immutable; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER enforce_friendship_identity_immutable BEFORE UPDATE ON public.friendships FOR EACH ROW EXECUTE FUNCTION public.prevent_friendship_identity_change();
+
+
+--
+-- Name: friendships enforce_friendship_pending_insert; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER enforce_friendship_pending_insert BEFORE INSERT ON public.friendships FOR EACH ROW EXECUTE FUNCTION public.enforce_friendship_pending_on_insert();
+
+
+--
+-- Name: server_members enforce_server_member_immutable_fields; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER enforce_server_member_immutable_fields BEFORE UPDATE ON public.server_members FOR EACH ROW EXECUTE FUNCTION public.prevent_server_member_privilege_change();
+
+
+--
+-- Name: mentions mention_notification_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER mention_notification_trigger AFTER INSERT ON public.mentions FOR EACH ROW EXECUTE FUNCTION public.trigger_mention_notification();
+
+
+--
+-- Name: server_emojis trg_enforce_server_emoji_limit; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_enforce_server_emoji_limit BEFORE INSERT ON public.server_emojis FOR EACH ROW EXECUTE FUNCTION public.enforce_server_emoji_limit();
+
+
+--
+-- Name: dm_participants trg_prevent_dm_participant_identity_change; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_prevent_dm_participant_identity_change BEFORE UPDATE ON public.dm_participants FOR EACH ROW EXECUTE FUNCTION public.prevent_dm_participant_identity_change();
+
+
+--
+-- Name: messages trg_prevent_message_identity_change; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_prevent_message_identity_change BEFORE UPDATE ON public.messages FOR EACH ROW EXECUTE FUNCTION public.prevent_message_identity_change();
+
+
+--
+-- Name: users trg_prevent_username_change; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_prevent_username_change BEFORE UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION public.prevent_username_change();
+
+
+--
+-- Name: reactions trg_set_reaction_channel_id; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_set_reaction_channel_id BEFORE INSERT OR UPDATE OF message_id ON public.reactions FOR EACH ROW EXECUTE FUNCTION public.set_reaction_channel_id();
+
+
+--
+-- Name: user_voice_settings trg_update_voice_settings_timestamp; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_update_voice_settings_timestamp BEFORE UPDATE ON public.user_voice_settings FOR EACH ROW EXECUTE FUNCTION public.update_voice_settings_timestamp();
+
+
+--
+-- Name: friendships trigger_cleanup_declined; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trigger_cleanup_declined AFTER UPDATE ON public.friendships FOR EACH STATEMENT EXECUTE FUNCTION public.delete_old_declined_requests();
+
+
+--
+-- Name: mentions trigger_increment_mention_count; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trigger_increment_mention_count AFTER INSERT ON public.mentions FOR EACH ROW EXECUTE FUNCTION public.increment_mention_count();
+
+
+--
+-- Name: app_config update_app_config_timestamp; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER update_app_config_timestamp BEFORE UPDATE ON public.app_config FOR EACH ROW EXECUTE FUNCTION public.update_modified_column();
+
+
+--
+-- Name: user_preferences update_user_preferences_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER update_user_preferences_updated_at BEFORE UPDATE ON public.user_preferences FOR EACH ROW EXECUTE FUNCTION public.update_user_preferences_updated_at();
+
+
+--
+-- Name: users validate_username_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER validate_username_trigger BEFORE INSERT ON public.users FOR EACH ROW EXECUTE FUNCTION public.validate_username_on_insert();
+
+
+--
+-- Name: subscription tr_check_filters; Type: TRIGGER; Schema: realtime; Owner: -
+--
+
+CREATE TRIGGER tr_check_filters BEFORE INSERT OR UPDATE ON realtime.subscription FOR EACH ROW EXECUTE FUNCTION realtime.subscription_check_filters();
+
+
+--
+-- Name: buckets enforce_bucket_name_length_trigger; Type: TRIGGER; Schema: storage; Owner: -
+--
+
+CREATE TRIGGER enforce_bucket_name_length_trigger BEFORE INSERT OR UPDATE OF name ON storage.buckets FOR EACH ROW EXECUTE FUNCTION storage.enforce_bucket_name_length();
+
+
+--
+-- Name: buckets protect_buckets_delete; Type: TRIGGER; Schema: storage; Owner: -
+--
+
+CREATE TRIGGER protect_buckets_delete BEFORE DELETE ON storage.buckets FOR EACH STATEMENT EXECUTE FUNCTION storage.protect_delete();
+
+
+--
+-- Name: objects protect_objects_delete; Type: TRIGGER; Schema: storage; Owner: -
+--
+
+CREATE TRIGGER protect_objects_delete BEFORE DELETE ON storage.objects FOR EACH STATEMENT EXECUTE FUNCTION storage.protect_delete();
+
+
+--
+-- Name: objects update_objects_updated_at; Type: TRIGGER; Schema: storage; Owner: -
+--
+
+CREATE TRIGGER update_objects_updated_at BEFORE UPDATE ON storage.objects FOR EACH ROW EXECUTE FUNCTION storage.update_updated_at_column();
+
+
+--
+-- Name: extensions extensions_tenant_external_id_fkey; Type: FK CONSTRAINT; Schema: _realtime; Owner: -
+--
+
+ALTER TABLE ONLY _realtime.extensions
+    ADD CONSTRAINT extensions_tenant_external_id_fkey FOREIGN KEY (tenant_external_id) REFERENCES _realtime.tenants(external_id) ON DELETE CASCADE;
+
+
+--
+-- Name: identities identities_user_id_fkey; Type: FK CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.identities
+    ADD CONSTRAINT identities_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: mfa_amr_claims mfa_amr_claims_session_id_fkey; Type: FK CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.mfa_amr_claims
+    ADD CONSTRAINT mfa_amr_claims_session_id_fkey FOREIGN KEY (session_id) REFERENCES auth.sessions(id) ON DELETE CASCADE;
+
+
+--
+-- Name: mfa_challenges mfa_challenges_auth_factor_id_fkey; Type: FK CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.mfa_challenges
+    ADD CONSTRAINT mfa_challenges_auth_factor_id_fkey FOREIGN KEY (factor_id) REFERENCES auth.mfa_factors(id) ON DELETE CASCADE;
+
+
+--
+-- Name: mfa_factors mfa_factors_user_id_fkey; Type: FK CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.mfa_factors
+    ADD CONSTRAINT mfa_factors_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: oauth_authorizations oauth_authorizations_client_id_fkey; Type: FK CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.oauth_authorizations
+    ADD CONSTRAINT oauth_authorizations_client_id_fkey FOREIGN KEY (client_id) REFERENCES auth.oauth_clients(id) ON DELETE CASCADE;
+
+
+--
+-- Name: oauth_authorizations oauth_authorizations_user_id_fkey; Type: FK CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.oauth_authorizations
+    ADD CONSTRAINT oauth_authorizations_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: oauth_consents oauth_consents_client_id_fkey; Type: FK CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.oauth_consents
+    ADD CONSTRAINT oauth_consents_client_id_fkey FOREIGN KEY (client_id) REFERENCES auth.oauth_clients(id) ON DELETE CASCADE;
+
+
+--
+-- Name: oauth_consents oauth_consents_user_id_fkey; Type: FK CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.oauth_consents
+    ADD CONSTRAINT oauth_consents_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: one_time_tokens one_time_tokens_user_id_fkey; Type: FK CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.one_time_tokens
+    ADD CONSTRAINT one_time_tokens_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: refresh_tokens refresh_tokens_session_id_fkey; Type: FK CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.refresh_tokens
+    ADD CONSTRAINT refresh_tokens_session_id_fkey FOREIGN KEY (session_id) REFERENCES auth.sessions(id) ON DELETE CASCADE;
+
+
+--
+-- Name: saml_providers saml_providers_sso_provider_id_fkey; Type: FK CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.saml_providers
+    ADD CONSTRAINT saml_providers_sso_provider_id_fkey FOREIGN KEY (sso_provider_id) REFERENCES auth.sso_providers(id) ON DELETE CASCADE;
+
+
+--
+-- Name: saml_relay_states saml_relay_states_flow_state_id_fkey; Type: FK CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.saml_relay_states
+    ADD CONSTRAINT saml_relay_states_flow_state_id_fkey FOREIGN KEY (flow_state_id) REFERENCES auth.flow_state(id) ON DELETE CASCADE;
+
+
+--
+-- Name: saml_relay_states saml_relay_states_sso_provider_id_fkey; Type: FK CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.saml_relay_states
+    ADD CONSTRAINT saml_relay_states_sso_provider_id_fkey FOREIGN KEY (sso_provider_id) REFERENCES auth.sso_providers(id) ON DELETE CASCADE;
+
+
+--
+-- Name: sessions sessions_oauth_client_id_fkey; Type: FK CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.sessions
+    ADD CONSTRAINT sessions_oauth_client_id_fkey FOREIGN KEY (oauth_client_id) REFERENCES auth.oauth_clients(id) ON DELETE CASCADE;
+
+
+--
+-- Name: sessions sessions_user_id_fkey; Type: FK CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.sessions
+    ADD CONSTRAINT sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: sso_domains sso_domains_sso_provider_id_fkey; Type: FK CONSTRAINT; Schema: auth; Owner: -
+--
+
+ALTER TABLE ONLY auth.sso_domains
+    ADD CONSTRAINT sso_domains_sso_provider_id_fkey FOREIGN KEY (sso_provider_id) REFERENCES auth.sso_providers(id) ON DELETE CASCADE;
+
+
+--
+-- Name: announcement_comment_reactions announcement_comment_reactions_comment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.announcement_comment_reactions
+    ADD CONSTRAINT announcement_comment_reactions_comment_id_fkey FOREIGN KEY (comment_id) REFERENCES public.announcement_comments(id) ON DELETE CASCADE;
+
+
+--
+-- Name: announcement_comment_reactions announcement_comment_reactions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.announcement_comment_reactions
+    ADD CONSTRAINT announcement_comment_reactions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: announcement_comments announcement_comments_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.announcement_comments
+    ADD CONSTRAINT announcement_comments_message_id_fkey FOREIGN KEY (message_id) REFERENCES public.messages(id) ON DELETE CASCADE;
+
+
+--
+-- Name: announcement_comments announcement_comments_reply_to_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.announcement_comments
+    ADD CONSTRAINT announcement_comments_reply_to_id_fkey FOREIGN KEY (reply_to_id) REFERENCES public.announcement_comments(id) ON DELETE CASCADE;
+
+
+--
+-- Name: announcement_comments announcement_comments_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.announcement_comments
+    ADD CONSTRAINT announcement_comments_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: category_permissions category_permissions_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.category_permissions
+    ADD CONSTRAINT category_permissions_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.channel_categories(id) ON DELETE CASCADE;
+
+
+--
+-- Name: category_permissions category_permissions_role_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.category_permissions
+    ADD CONSTRAINT category_permissions_role_id_fkey FOREIGN KEY (role_id) REFERENCES public.server_roles(id) ON DELETE CASCADE;
+
+
+--
+-- Name: category_permissions category_permissions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.category_permissions
+    ADD CONSTRAINT category_permissions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: channel_categories channel_categories_server_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.channel_categories
+    ADD CONSTRAINT channel_categories_server_id_fkey FOREIGN KEY (server_id) REFERENCES public.servers(id) ON DELETE CASCADE;
+
+
+--
+-- Name: channel_members channel_members_added_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.channel_members
+    ADD CONSTRAINT channel_members_added_by_fkey FOREIGN KEY (added_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: channel_members channel_members_channel_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.channel_members
+    ADD CONSTRAINT channel_members_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES public.channels(id) ON DELETE CASCADE;
+
+
+--
+-- Name: channel_members channel_members_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.channel_members
+    ADD CONSTRAINT channel_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: channel_permissions channel_permissions_channel_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.channel_permissions
+    ADD CONSTRAINT channel_permissions_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES public.channels(id) ON DELETE CASCADE;
+
+
+--
+-- Name: channel_permissions channel_permissions_role_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.channel_permissions
+    ADD CONSTRAINT channel_permissions_role_id_fkey FOREIGN KEY (role_id) REFERENCES public.server_roles(id) ON DELETE CASCADE;
+
+
+--
+-- Name: channel_permissions channel_permissions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.channel_permissions
+    ADD CONSTRAINT channel_permissions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: channel_reads channel_reads_channel_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.channel_reads
+    ADD CONSTRAINT channel_reads_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES public.channels(id) ON DELETE CASCADE;
+
+
+--
+-- Name: channel_reads channel_reads_last_read_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.channel_reads
+    ADD CONSTRAINT channel_reads_last_read_message_id_fkey FOREIGN KEY (last_read_message_id) REFERENCES public.messages(id) ON DELETE SET NULL;
+
+
+--
+-- Name: channel_reads channel_reads_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.channel_reads
+    ADD CONSTRAINT channel_reads_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: channel_user_settings channel_user_settings_channel_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.channel_user_settings
+    ADD CONSTRAINT channel_user_settings_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES public.channels(id) ON DELETE CASCADE;
+
+
+--
+-- Name: channel_user_settings channel_user_settings_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.channel_user_settings
+    ADD CONSTRAINT channel_user_settings_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: channels channels_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.channels
+    ADD CONSTRAINT channels_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.channel_categories(id) ON DELETE SET NULL;
+
+
+--
+-- Name: channels channels_server_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.channels
+    ADD CONSTRAINT channels_server_id_fkey FOREIGN KEY (server_id) REFERENCES public.servers(id) ON DELETE CASCADE;
+
+
+--
+-- Name: declined_friend_requests declined_friend_requests_addressee_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.declined_friend_requests
+    ADD CONSTRAINT declined_friend_requests_addressee_id_fkey FOREIGN KEY (addressee_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: declined_friend_requests declined_friend_requests_requester_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.declined_friend_requests
+    ADD CONSTRAINT declined_friend_requests_requester_id_fkey FOREIGN KEY (requester_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: direct_messages direct_messages_conversation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.direct_messages
+    ADD CONSTRAINT direct_messages_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES public.dm_conversations(id) ON DELETE CASCADE;
+
+
+--
+-- Name: direct_messages direct_messages_reply_to_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.direct_messages
+    ADD CONSTRAINT direct_messages_reply_to_id_fkey FOREIGN KEY (reply_to_id) REFERENCES public.direct_messages(id) ON DELETE SET NULL;
+
+
+--
+-- Name: direct_messages direct_messages_sender_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.direct_messages
+    ADD CONSTRAINT direct_messages_sender_id_fkey FOREIGN KEY (sender_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: dm_attachments dm_attachments_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dm_attachments
+    ADD CONSTRAINT dm_attachments_message_id_fkey FOREIGN KEY (message_id) REFERENCES public.direct_messages(id) ON DELETE CASCADE;
+
+
+--
+-- Name: dm_conversations dm_conversations_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dm_conversations
+    ADD CONSTRAINT dm_conversations_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id);
+
+
+--
+-- Name: dm_participants dm_participants_conversation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dm_participants
+    ADD CONSTRAINT dm_participants_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES public.dm_conversations(id) ON DELETE CASCADE;
+
+
+--
+-- Name: dm_participants dm_participants_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dm_participants
+    ADD CONSTRAINT dm_participants_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: dm_reactions dm_reactions_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dm_reactions
+    ADD CONSTRAINT dm_reactions_message_id_fkey FOREIGN KEY (message_id) REFERENCES public.direct_messages(id) ON DELETE CASCADE;
+
+
+--
+-- Name: dm_reactions dm_reactions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dm_reactions
+    ADD CONSTRAINT dm_reactions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: friendships friendships_addressee_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.friendships
+    ADD CONSTRAINT friendships_addressee_id_fkey FOREIGN KEY (addressee_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: friendships friendships_requester_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.friendships
+    ADD CONSTRAINT friendships_requester_id_fkey FOREIGN KEY (requester_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: media_comment_reactions media_comment_reactions_comment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.media_comment_reactions
+    ADD CONSTRAINT media_comment_reactions_comment_id_fkey FOREIGN KEY (comment_id) REFERENCES public.media_comments(id) ON DELETE CASCADE;
+
+
+--
+-- Name: media_comment_reactions media_comment_reactions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.media_comment_reactions
+    ADD CONSTRAINT media_comment_reactions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: media_comments media_comments_media_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.media_comments
+    ADD CONSTRAINT media_comments_media_id_fkey FOREIGN KEY (media_id) REFERENCES public.media_items(id) ON DELETE CASCADE;
+
+
+--
+-- Name: media_comments media_comments_reply_to_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.media_comments
+    ADD CONSTRAINT media_comments_reply_to_id_fkey FOREIGN KEY (reply_to_id) REFERENCES public.media_comments(id) ON DELETE SET NULL;
+
+
+--
+-- Name: media_comments media_comments_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.media_comments
+    ADD CONSTRAINT media_comments_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: media_items media_items_channel_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.media_items
+    ADD CONSTRAINT media_items_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES public.channels(id) ON DELETE CASCADE;
+
+
+--
+-- Name: media_items media_items_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.media_items
+    ADD CONSTRAINT media_items_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: mentions mentions_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.mentions
+    ADD CONSTRAINT mentions_message_id_fkey FOREIGN KEY (message_id) REFERENCES public.messages(id) ON DELETE CASCADE;
+
+
+--
+-- Name: mentions mentions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.mentions
+    ADD CONSTRAINT mentions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: message_attachments message_attachments_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.message_attachments
+    ADD CONSTRAINT message_attachments_message_id_fkey FOREIGN KEY (message_id) REFERENCES public.messages(id) ON DELETE CASCADE;
+
+
+--
+-- Name: messages messages_channel_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.messages
+    ADD CONSTRAINT messages_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES public.channels(id) ON DELETE CASCADE;
+
+
+--
+-- Name: messages messages_reply_to_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.messages
+    ADD CONSTRAINT messages_reply_to_id_fkey FOREIGN KEY (reply_to_id) REFERENCES public.messages(id) ON DELETE SET NULL;
+
+
+--
+-- Name: messages messages_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.messages
+    ADD CONSTRAINT messages_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: notifications notifications_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.notifications
+    ADD CONSTRAINT notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: poll_votes poll_votes_poll_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.poll_votes
+    ADD CONSTRAINT poll_votes_poll_id_fkey FOREIGN KEY (poll_id) REFERENCES public.polls(id) ON DELETE CASCADE;
+
+
+--
+-- Name: poll_votes poll_votes_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.poll_votes
+    ADD CONSTRAINT poll_votes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: polls polls_channel_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.polls
+    ADD CONSTRAINT polls_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES public.channels(id) ON DELETE CASCADE;
+
+
+--
+-- Name: polls polls_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.polls
+    ADD CONSTRAINT polls_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: polls polls_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.polls
+    ADD CONSTRAINT polls_message_id_fkey FOREIGN KEY (message_id) REFERENCES public.messages(id) ON DELETE CASCADE;
+
+
+--
+-- Name: reactions reactions_channel_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.reactions
+    ADD CONSTRAINT reactions_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES public.channels(id) ON DELETE CASCADE;
+
+
+--
+-- Name: reactions reactions_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.reactions
+    ADD CONSTRAINT reactions_message_id_fkey FOREIGN KEY (message_id) REFERENCES public.messages(id) ON DELETE CASCADE;
+
+
+--
+-- Name: reactions reactions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.reactions
+    ADD CONSTRAINT reactions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: role_permissions role_permissions_role_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.role_permissions
+    ADD CONSTRAINT role_permissions_role_id_fkey FOREIGN KEY (role_id) REFERENCES public.server_roles(id) ON DELETE CASCADE;
+
+
+--
+-- Name: role_permissions role_permissions_server_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.role_permissions
+    ADD CONSTRAINT role_permissions_server_id_fkey FOREIGN KEY (server_id) REFERENCES public.servers(id) ON DELETE CASCADE;
+
+
+--
+-- Name: server_emojis server_emojis_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.server_emojis
+    ADD CONSTRAINT server_emojis_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: server_emojis server_emojis_server_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.server_emojis
+    ADD CONSTRAINT server_emojis_server_id_fkey FOREIGN KEY (server_id) REFERENCES public.servers(id) ON DELETE CASCADE;
+
+
+--
+-- Name: server_invites server_invites_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.server_invites
+    ADD CONSTRAINT server_invites_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: server_invites server_invites_revoked_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.server_invites
+    ADD CONSTRAINT server_invites_revoked_by_fkey FOREIGN KEY (revoked_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: server_invites server_invites_server_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.server_invites
+    ADD CONSTRAINT server_invites_server_id_fkey FOREIGN KEY (server_id) REFERENCES public.servers(id) ON DELETE CASCADE;
+
+
+--
+-- Name: server_member_roles server_member_roles_member_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.server_member_roles
+    ADD CONSTRAINT server_member_roles_member_id_fkey FOREIGN KEY (member_id) REFERENCES public.server_members(id) ON DELETE CASCADE;
+
+
+--
+-- Name: server_member_roles server_member_roles_role_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.server_member_roles
+    ADD CONSTRAINT server_member_roles_role_id_fkey FOREIGN KEY (role_id) REFERENCES public.server_roles(id) ON DELETE CASCADE;
+
+
+--
+-- Name: server_members server_members_server_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.server_members
+    ADD CONSTRAINT server_members_server_id_fkey FOREIGN KEY (server_id) REFERENCES public.servers(id) ON DELETE CASCADE;
+
+
+--
+-- Name: server_members server_members_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.server_members
+    ADD CONSTRAINT server_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: server_roles server_roles_server_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.server_roles
+    ADD CONSTRAINT server_roles_server_id_fkey FOREIGN KEY (server_id) REFERENCES public.servers(id) ON DELETE CASCADE;
+
+
+--
+-- Name: servers servers_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.servers
+    ADD CONSTRAINT servers_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: servers servers_system_channel_join_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.servers
+    ADD CONSTRAINT servers_system_channel_join_id_fkey FOREIGN KEY (system_channel_join_id) REFERENCES public.channels(id) ON DELETE SET NULL;
+
+
+--
+-- Name: servers servers_system_channel_leave_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.servers
+    ADD CONSTRAINT servers_system_channel_leave_id_fkey FOREIGN KEY (system_channel_leave_id) REFERENCES public.channels(id) ON DELETE SET NULL;
+
+
+--
+-- Name: thread_attachments thread_attachments_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.thread_attachments
+    ADD CONSTRAINT thread_attachments_message_id_fkey FOREIGN KEY (message_id) REFERENCES public.thread_messages(id) ON DELETE CASCADE;
+
+
+--
+-- Name: thread_messages thread_messages_reply_to_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.thread_messages
+    ADD CONSTRAINT thread_messages_reply_to_id_fkey FOREIGN KEY (reply_to_id) REFERENCES public.thread_messages(id) ON DELETE SET NULL;
+
+
+--
+-- Name: thread_messages thread_messages_thread_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.thread_messages
+    ADD CONSTRAINT thread_messages_thread_id_fkey FOREIGN KEY (thread_id) REFERENCES public.threads(id) ON DELETE CASCADE;
+
+
+--
+-- Name: thread_messages thread_messages_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.thread_messages
+    ADD CONSTRAINT thread_messages_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: thread_reactions thread_reactions_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.thread_reactions
+    ADD CONSTRAINT thread_reactions_message_id_fkey FOREIGN KEY (message_id) REFERENCES public.thread_messages(id) ON DELETE CASCADE;
+
+
+--
+-- Name: thread_reactions thread_reactions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.thread_reactions
+    ADD CONSTRAINT thread_reactions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: threads threads_channel_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.threads
+    ADD CONSTRAINT threads_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES public.channels(id) ON DELETE CASCADE;
+
+
+--
+-- Name: threads threads_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.threads
+    ADD CONSTRAINT threads_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: threads threads_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.threads
+    ADD CONSTRAINT threads_message_id_fkey FOREIGN KEY (message_id) REFERENCES public.messages(id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_auth user_auth_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_auth
+    ADD CONSTRAINT user_auth_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_badges user_badges_badge_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_badges
+    ADD CONSTRAINT user_badges_badge_id_fkey FOREIGN KEY (badge_id) REFERENCES public.badges(id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_badges user_badges_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_badges
+    ADD CONSTRAINT user_badges_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_devices user_devices_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_devices
+    ADD CONSTRAINT user_devices_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_preferences user_preferences_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_preferences
+    ADD CONSTRAINT user_preferences_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_server_folders user_server_folders_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_server_folders
+    ADD CONSTRAINT user_server_folders_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_server_tabs user_server_tabs_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_server_tabs
+    ADD CONSTRAINT user_server_tabs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_voice_settings user_voice_settings_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_voice_settings
+    ADD CONSTRAINT user_voice_settings_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: iceberg_namespaces iceberg_namespaces_catalog_id_fkey; Type: FK CONSTRAINT; Schema: storage; Owner: -
+--
+
+ALTER TABLE ONLY storage.iceberg_namespaces
+    ADD CONSTRAINT iceberg_namespaces_catalog_id_fkey FOREIGN KEY (catalog_id) REFERENCES storage.buckets_analytics(id) ON DELETE CASCADE;
+
+
+--
+-- Name: iceberg_tables iceberg_tables_catalog_id_fkey; Type: FK CONSTRAINT; Schema: storage; Owner: -
+--
+
+ALTER TABLE ONLY storage.iceberg_tables
+    ADD CONSTRAINT iceberg_tables_catalog_id_fkey FOREIGN KEY (catalog_id) REFERENCES storage.buckets_analytics(id) ON DELETE CASCADE;
+
+
+--
+-- Name: iceberg_tables iceberg_tables_namespace_id_fkey; Type: FK CONSTRAINT; Schema: storage; Owner: -
+--
+
+ALTER TABLE ONLY storage.iceberg_tables
+    ADD CONSTRAINT iceberg_tables_namespace_id_fkey FOREIGN KEY (namespace_id) REFERENCES storage.iceberg_namespaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: objects objects_bucketId_fkey; Type: FK CONSTRAINT; Schema: storage; Owner: -
+--
+
+ALTER TABLE ONLY storage.objects
+    ADD CONSTRAINT "objects_bucketId_fkey" FOREIGN KEY (bucket_id) REFERENCES storage.buckets(id);
+
+
+--
+-- Name: s3_multipart_uploads s3_multipart_uploads_bucket_id_fkey; Type: FK CONSTRAINT; Schema: storage; Owner: -
+--
+
+ALTER TABLE ONLY storage.s3_multipart_uploads
+    ADD CONSTRAINT s3_multipart_uploads_bucket_id_fkey FOREIGN KEY (bucket_id) REFERENCES storage.buckets(id);
+
+
+--
+-- Name: s3_multipart_uploads_parts s3_multipart_uploads_parts_bucket_id_fkey; Type: FK CONSTRAINT; Schema: storage; Owner: -
+--
+
+ALTER TABLE ONLY storage.s3_multipart_uploads_parts
+    ADD CONSTRAINT s3_multipart_uploads_parts_bucket_id_fkey FOREIGN KEY (bucket_id) REFERENCES storage.buckets(id);
+
+
+--
+-- Name: s3_multipart_uploads_parts s3_multipart_uploads_parts_upload_id_fkey; Type: FK CONSTRAINT; Schema: storage; Owner: -
+--
+
+ALTER TABLE ONLY storage.s3_multipart_uploads_parts
+    ADD CONSTRAINT s3_multipart_uploads_parts_upload_id_fkey FOREIGN KEY (upload_id) REFERENCES storage.s3_multipart_uploads(id) ON DELETE CASCADE;
+
+
+--
+-- Name: vector_indexes vector_indexes_bucket_id_fkey; Type: FK CONSTRAINT; Schema: storage; Owner: -
+--
+
+ALTER TABLE ONLY storage.vector_indexes
+    ADD CONSTRAINT vector_indexes_bucket_id_fkey FOREIGN KEY (bucket_id) REFERENCES storage.buckets_vectors(id);
+
+
+--
+-- Name: audit_log_entries; Type: ROW SECURITY; Schema: auth; Owner: -
+--
+
+ALTER TABLE auth.audit_log_entries ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: flow_state; Type: ROW SECURITY; Schema: auth; Owner: -
+--
+
+ALTER TABLE auth.flow_state ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: identities; Type: ROW SECURITY; Schema: auth; Owner: -
+--
+
+ALTER TABLE auth.identities ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: instances; Type: ROW SECURITY; Schema: auth; Owner: -
+--
+
+ALTER TABLE auth.instances ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: mfa_amr_claims; Type: ROW SECURITY; Schema: auth; Owner: -
+--
+
+ALTER TABLE auth.mfa_amr_claims ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: mfa_challenges; Type: ROW SECURITY; Schema: auth; Owner: -
+--
+
+ALTER TABLE auth.mfa_challenges ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: mfa_factors; Type: ROW SECURITY; Schema: auth; Owner: -
+--
+
+ALTER TABLE auth.mfa_factors ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: one_time_tokens; Type: ROW SECURITY; Schema: auth; Owner: -
+--
+
+ALTER TABLE auth.one_time_tokens ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: refresh_tokens; Type: ROW SECURITY; Schema: auth; Owner: -
+--
+
+ALTER TABLE auth.refresh_tokens ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: saml_providers; Type: ROW SECURITY; Schema: auth; Owner: -
+--
+
+ALTER TABLE auth.saml_providers ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: saml_relay_states; Type: ROW SECURITY; Schema: auth; Owner: -
+--
+
+ALTER TABLE auth.saml_relay_states ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: schema_migrations; Type: ROW SECURITY; Schema: auth; Owner: -
+--
+
+ALTER TABLE auth.schema_migrations ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: sessions; Type: ROW SECURITY; Schema: auth; Owner: -
+--
+
+ALTER TABLE auth.sessions ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: sso_domains; Type: ROW SECURITY; Schema: auth; Owner: -
+--
+
+ALTER TABLE auth.sso_domains ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: sso_providers; Type: ROW SECURITY; Schema: auth; Owner: -
+--
+
+ALTER TABLE auth.sso_providers ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: users; Type: ROW SECURITY; Schema: auth; Owner: -
+--
+
+ALTER TABLE auth.users ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: declined_friend_requests Addressee can decline; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Addressee can decline" ON public.declined_friend_requests FOR INSERT WITH CHECK ((addressee_id = ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: announcement_comment_reactions Announcement comment reactions viewable by channel members; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Announcement comment reactions viewable by channel members" ON public.announcement_comment_reactions FOR SELECT USING ((EXISTS ( SELECT 1
+   FROM public.announcement_comments ac
+  WHERE ((ac.id = announcement_comment_reactions.comment_id) AND public.is_message_channel_member(ac.message_id, ( SELECT public.requesting_user_id() AS requesting_user_id))))));
+
+
+--
+-- Name: announcement_comments Announcement comments viewable by channel members; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Announcement comments viewable by channel members" ON public.announcement_comments FOR SELECT USING (public.is_message_channel_member(message_id, ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: message_attachments Attachments can be deleted; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Attachments can be deleted" ON public.message_attachments FOR DELETE USING ((message_id IN ( SELECT messages.id
+   FROM public.messages
+  WHERE (messages.user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)))));
+
+
+--
+-- Name: message_attachments Attachments insert by message sender; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Attachments insert by message sender" ON public.message_attachments FOR INSERT WITH CHECK (((( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL) AND (EXISTS ( SELECT 1
+   FROM public.messages m
+  WHERE ((m.id = message_attachments.message_id) AND (m.user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)))))));
+
+
+--
+-- Name: badges Badges are publicly readable; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Badges are publicly readable" ON public.badges FOR SELECT USING (true);
+
+
+--
+-- Name: category_permissions Category permissions viewable by members; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Category permissions viewable by members" ON public.category_permissions FOR SELECT USING (public.is_category_server_member(category_id, ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: channel_permissions Channel permissions viewable by members; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Channel permissions viewable by members" ON public.channel_permissions FOR SELECT USING (public.is_channel_server_member(channel_id, ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: channels Channels viewable by server members; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Channels viewable by server members" ON public.channels FOR SELECT USING ((public.is_server_member(server_id, ( SELECT public.requesting_user_id() AS requesting_user_id)) AND ((is_private = false) OR public.has_private_channel_access(id, ( SELECT public.requesting_user_id() AS requesting_user_id)))));
+
+
+--
+-- Name: dm_conversations DM conversations via RPC only; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "DM conversations via RPC only" ON public.dm_conversations FOR INSERT WITH CHECK (false);
+
+
+--
+-- Name: direct_messages DM participants can read messages; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "DM participants can read messages" ON public.direct_messages FOR SELECT USING (((( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL) AND (EXISTS ( SELECT 1
+   FROM public.dm_participants dp
+  WHERE ((dp.conversation_id = direct_messages.conversation_id) AND (dp.user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)))))));
+
+
+--
+-- Name: direct_messages DM participants can send as self; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "DM participants can send as self" ON public.direct_messages FOR INSERT WITH CHECK (((sender_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) AND (( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL) AND (content IS NOT NULL) AND (length(TRIM(BOTH FROM content)) > 0) AND (length(content) <= 4000) AND (EXISTS ( SELECT 1
+   FROM public.dm_participants dp
+  WHERE ((dp.conversation_id = direct_messages.conversation_id) AND (dp.user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)))))));
+
+
+--
+-- Name: dm_participants DM participants via RPC only; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "DM participants via RPC only" ON public.dm_participants FOR INSERT WITH CHECK (false);
+
+
+--
+-- Name: direct_messages DM senders can delete own messages; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "DM senders can delete own messages" ON public.direct_messages FOR DELETE USING (((sender_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) AND (EXISTS ( SELECT 1
+   FROM public.dm_participants dp
+  WHERE ((dp.conversation_id = direct_messages.conversation_id) AND (dp.user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)))))));
+
+
+--
+-- Name: direct_messages DM senders can edit own messages; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "DM senders can edit own messages" ON public.direct_messages FOR UPDATE USING (((sender_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) AND (( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL) AND (EXISTS ( SELECT 1
+   FROM public.dm_participants dp
+  WHERE ((dp.conversation_id = direct_messages.conversation_id) AND (dp.user_id = ( SELECT public.requesting_user_id() AS requesting_user_id))))))) WITH CHECK (((sender_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) AND (content IS NOT NULL) AND (length(TRIM(BOTH FROM content)) > 0) AND (length(content) <= 4000) AND (EXISTS ( SELECT 1
+   FROM public.dm_participants dp
+  WHERE ((dp.conversation_id = direct_messages.conversation_id) AND (dp.user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)))))));
+
+
+--
+-- Name: declined_friend_requests Involved users can delete declined requests; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Involved users can delete declined requests" ON public.declined_friend_requests FOR DELETE USING (((requester_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) OR (addressee_id = ( SELECT public.requesting_user_id() AS requesting_user_id))));
+
+
+--
+-- Name: friendships Involved users can delete friendship; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Involved users can delete friendship" ON public.friendships FOR DELETE USING (((( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL) AND ((requester_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) OR (addressee_id = ( SELECT public.requesting_user_id() AS requesting_user_id)))));
+
+
+--
+-- Name: friendships Involved users can update friendship; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Involved users can update friendship" ON public.friendships FOR UPDATE USING (((( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL) AND ((requester_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) OR (addressee_id = ( SELECT public.requesting_user_id() AS requesting_user_id))))) WITH CHECK ((((addressee_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) AND (status = ANY (ARRAY['accepted'::public.friendship_status, 'declined'::public.friendship_status, 'blocked'::public.friendship_status]))) OR ((requester_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) AND (status = 'blocked'::public.friendship_status))));
+
+
+--
+-- Name: declined_friend_requests Involved users see declined requests; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Involved users see declined requests" ON public.declined_friend_requests FOR SELECT USING (((requester_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) OR (addressee_id = ( SELECT public.requesting_user_id() AS requesting_user_id))));
+
+
+--
+-- Name: media_comment_reactions Media comment reactions viewable by channel members; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Media comment reactions viewable by channel members" ON public.media_comment_reactions FOR SELECT USING ((EXISTS ( SELECT 1
+   FROM public.media_comments mc
+  WHERE ((mc.id = media_comment_reactions.comment_id) AND public.is_media_channel_member(mc.media_id, ( SELECT public.requesting_user_id() AS requesting_user_id))))));
+
+
+--
+-- Name: media_comments Media comments viewable by channel members; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Media comments viewable by channel members" ON public.media_comments FOR SELECT USING (public.is_media_channel_member(media_id, ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: media_items Media viewable by members; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Media viewable by members" ON public.media_items FOR SELECT USING (public.is_channel_server_member(channel_id, ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: server_member_roles Member roles viewable by server members; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Member roles viewable by server members" ON public.server_member_roles FOR SELECT USING (public.is_member_in_same_server(member_id, ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: channel_categories Members view categories; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Members view categories" ON public.channel_categories FOR SELECT USING (public.is_server_member(server_id, ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: server_members Members viewable by fellow members only; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Members viewable by fellow members only" ON public.server_members FOR SELECT USING (((CURRENT_USER = 'realtime'::name) OR ((( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL) AND public.is_server_member(server_id, ( SELECT public.requesting_user_id() AS requesting_user_id)))));
+
+
+--
+-- Name: mentions Mentions insert via trigger only; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Mentions insert via trigger only" ON public.mentions FOR INSERT WITH CHECK (false);
+
+
+--
+-- Name: mentions Mentions viewable by channel members; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Mentions viewable by channel members" ON public.mentions FOR SELECT USING (public.is_message_channel_member(message_id, ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: message_attachments Message attachments readable by channel access; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Message attachments readable by channel access" ON public.message_attachments FOR SELECT USING (((( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL) AND (EXISTS ( SELECT 1
+   FROM public.messages m
+  WHERE ((m.id = message_attachments.message_id) AND public.can_access_channel(m.channel_id, ( SELECT public.requesting_user_id() AS requesting_user_id)))))));
+
+
+--
+-- Name: messages Messages readable by channel access; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Messages readable by channel access" ON public.messages FOR SELECT USING (((( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL) AND (public.is_maintenance_active() = false) AND public.can_access_channel(channel_id, ( SELECT public.requesting_user_id() AS requesting_user_id))));
+
+
+--
+-- Name: messages Moderators delete messages in their channels; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Moderators delete messages in their channels" ON public.messages FOR DELETE USING (((( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL) AND (public.is_maintenance_active() = false) AND (EXISTS ( SELECT 1
+   FROM (public.server_members sm
+     JOIN public.channels c ON ((c.server_id = sm.server_id)))
+  WHERE ((c.id = messages.channel_id) AND (sm.user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) AND (sm.role = ANY (ARRAY['admin'::public.server_role, 'owner'::public.server_role])) AND (sm.is_banned = false))))));
+
+
+--
+-- Name: notifications Notifications are private and permission-based; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Notifications are private and permission-based" ON public.notifications FOR SELECT TO authenticated USING (((user_id = public.requesting_user_id()) AND ((link !~~ '/channels/%'::text) OR (EXISTS ( SELECT 1
+   FROM public.channels c
+  WHERE ((notifications.link ~~ (('/channels/'::text || c.id) || '%'::text)) AND ((c.is_private = false) OR (EXISTS ( SELECT 1
+           FROM public.channel_members cm
+          WHERE ((cm.channel_id = c.id) AND (cm.user_id = public.requesting_user_id())))))))))));
+
+
+--
+-- Name: dm_attachments Participants add DM attachments; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Participants add DM attachments" ON public.dm_attachments FOR INSERT WITH CHECK (((( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL) AND public.is_dm_message_participant(message_id, ( SELECT public.requesting_user_id() AS requesting_user_id))));
+
+
+--
+-- Name: dm_conversations Participants can view conversations; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Participants can view conversations" ON public.dm_conversations FOR SELECT USING (((( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL) AND public.is_dm_participant(id, ( SELECT public.requesting_user_id() AS requesting_user_id))));
+
+
+--
+-- Name: dm_attachments Participants view DM attachments; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Participants view DM attachments" ON public.dm_attachments FOR SELECT USING (((( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL) AND public.is_dm_participant(public.get_dm_conversation_id(message_id), ( SELECT public.requesting_user_id() AS requesting_user_id))));
+
+
+--
+-- Name: dm_reactions Participants view DM reactions; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Participants view DM reactions" ON public.dm_reactions FOR SELECT USING (((( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL) AND public.is_dm_participant(public.get_dm_conversation_id(message_id), ( SELECT public.requesting_user_id() AS requesting_user_id))));
+
+
+--
+-- Name: dm_participants Participants view conversation members; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Participants view conversation members" ON public.dm_participants FOR SELECT USING (((( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL) AND public.is_dm_participant(conversation_id, ( SELECT public.requesting_user_id() AS requesting_user_id))));
+
+
+--
+-- Name: poll_votes Poll votes viewable by channel members; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Poll votes viewable by channel members" ON public.poll_votes FOR SELECT USING ((EXISTS ( SELECT 1
+   FROM public.polls p
+  WHERE ((p.id = poll_votes.poll_id) AND public.is_channel_server_member(p.channel_id, ( SELECT public.requesting_user_id() AS requesting_user_id))))));
+
+
+--
+-- Name: polls Polls viewable by channel members; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Polls viewable by channel members" ON public.polls FOR SELECT USING (public.is_channel_server_member(channel_id, ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: reactions Reactions are viewable; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Reactions are viewable" ON public.reactions FOR SELECT USING (((CURRENT_USER = 'realtime'::name) OR ((( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL) AND public.can_access_channel(channel_id, ( SELECT public.requesting_user_id() AS requesting_user_id)))));
+
+
+--
+-- Name: role_permissions Role permissions viewable by members; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Role permissions viewable by members" ON public.role_permissions FOR SELECT USING (public.is_server_member(server_id, ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: server_emojis Server emojis are viewable by everyone; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Server emojis are viewable by everyone" ON public.server_emojis FOR SELECT USING (true);
+
+
+--
+-- Name: server_invites Server invites readable by managers; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Server invites readable by managers" ON public.server_invites FOR SELECT USING (((( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL) AND public.check_user_server_permission(( SELECT public.requesting_user_id() AS requesting_user_id), server_id, 'manage_invites'::public.permission_type)));
+
+
+--
+-- Name: channel_members Server members can be added to channels; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Server members can be added to channels" ON public.channel_members FOR INSERT WITH CHECK (((( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL) AND public.is_channel_server_member(channel_id, ( SELECT public.requesting_user_id() AS requesting_user_id)) AND (EXISTS ( SELECT 1
+   FROM (public.channels c
+     JOIN public.server_members sm ON (((sm.server_id = c.server_id) AND (sm.user_id = channel_members.user_id))))
+  WHERE ((c.id = channel_members.channel_id) AND (COALESCE(sm.is_banned, false) = false)))) AND (((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) AND (EXISTS ( SELECT 1
+   FROM public.channels c
+  WHERE ((c.id = channel_members.channel_id) AND (COALESCE(c.is_private, false) = false))))) OR public.check_user_server_permission(( SELECT public.requesting_user_id() AS requesting_user_id), ( SELECT c.server_id
+   FROM public.channels c
+  WHERE (c.id = channel_members.channel_id)), 'manage_channels'::public.permission_type))));
+
+
+--
+-- Name: channel_members Server members view channel members; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Server members view channel members" ON public.channel_members FOR SELECT USING (public.is_channel_server_member(channel_id, ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: server_roles Server roles viewable by members; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Server roles viewable by members" ON public.server_roles FOR SELECT USING (public.is_server_member(server_id, ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: servers Servers are viewable by members or published; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Servers are viewable by members or published" ON public.servers FOR SELECT USING (((COALESCE(is_published, false) = true) OR (owner_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) OR (EXISTS ( SELECT 1
+   FROM public.server_members sm
+  WHERE ((sm.server_id = servers.id) AND (sm.user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) AND (COALESCE(sm.is_banned, false) = false))))));
+
+
+--
+-- Name: servers Servers can be deleted by owner only; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Servers can be deleted by owner only" ON public.servers FOR DELETE USING ((owner_id = ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: servers Servers can be inserted by owner; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Servers can be inserted by owner" ON public.servers FOR INSERT WITH CHECK (((( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL) AND (owner_id = ( SELECT public.requesting_user_id() AS requesting_user_id))));
+
+
+--
+-- Name: servers Servers can be updated by owner only; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Servers can be updated by owner only" ON public.servers FOR UPDATE USING ((owner_id = ( SELECT public.requesting_user_id() AS requesting_user_id))) WITH CHECK ((owner_id = ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: thread_attachments Thread attachments can be deleted; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Thread attachments can be deleted" ON public.thread_attachments FOR DELETE USING ((message_id IN ( SELECT thread_messages.id
+   FROM public.thread_messages
+  WHERE (thread_messages.user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)))));
+
+
+--
+-- Name: thread_attachments Thread attachments insert by message author; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Thread attachments insert by message author" ON public.thread_attachments FOR INSERT WITH CHECK (((( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL) AND (EXISTS ( SELECT 1
+   FROM public.thread_messages tm
+  WHERE ((tm.id = thread_attachments.message_id) AND (tm.user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)))))));
+
+
+--
+-- Name: thread_attachments Thread attachments viewable by channel members; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Thread attachments viewable by channel members" ON public.thread_attachments FOR SELECT USING ((EXISTS ( SELECT 1
+   FROM public.thread_messages tm
+  WHERE ((tm.id = thread_attachments.message_id) AND public.is_thread_channel_member(tm.thread_id, ( SELECT public.requesting_user_id() AS requesting_user_id))))));
+
+
+--
+-- Name: thread_messages Thread messages can be deleted; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Thread messages can be deleted" ON public.thread_messages FOR DELETE USING ((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: thread_messages Thread messages can be inserted; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Thread messages can be inserted" ON public.thread_messages FOR INSERT WITH CHECK (((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) AND (( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL) AND (EXISTS ( SELECT 1
+   FROM public.threads t
+  WHERE ((t.id = thread_messages.thread_id) AND public.can_access_channel(t.channel_id, ( SELECT public.requesting_user_id() AS requesting_user_id)))))));
+
+
+--
+-- Name: thread_messages Thread messages can be updated; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Thread messages can be updated" ON public.thread_messages FOR UPDATE USING ((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id))) WITH CHECK (((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) AND (thread_id = ( SELECT tm.thread_id
+   FROM public.thread_messages tm
+  WHERE (tm.id = thread_messages.id)))));
+
+
+--
+-- Name: thread_messages Thread messages viewable by channel members; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Thread messages viewable by channel members" ON public.thread_messages FOR SELECT USING (public.is_thread_channel_member(thread_id, ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: thread_reactions Thread reactions can be deleted; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Thread reactions can be deleted" ON public.thread_reactions FOR DELETE USING ((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: thread_reactions Thread reactions can be inserted; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Thread reactions can be inserted" ON public.thread_reactions FOR INSERT WITH CHECK (((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) AND (( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL) AND (EXISTS ( SELECT 1
+   FROM (public.thread_messages tm
+     JOIN public.threads t ON ((t.id = tm.thread_id)))
+  WHERE ((tm.id = thread_reactions.message_id) AND public.can_access_channel(t.channel_id, ( SELECT public.requesting_user_id() AS requesting_user_id)) AND public.check_user_permission(( SELECT public.requesting_user_id() AS requesting_user_id), t.channel_id, 'add_reactions'::public.permission_type))))));
+
+
+--
+-- Name: thread_reactions Thread reactions viewable by channel members; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Thread reactions viewable by channel members" ON public.thread_reactions FOR SELECT USING ((EXISTS ( SELECT 1
+   FROM public.thread_messages tm
+  WHERE ((tm.id = thread_reactions.message_id) AND public.is_thread_channel_member(tm.thread_id, ( SELECT public.requesting_user_id() AS requesting_user_id))))));
+
+
+--
+-- Name: threads Threads are viewable; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Threads are viewable" ON public.threads FOR SELECT USING (public.is_channel_server_member(channel_id, ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: threads Threads can be deleted; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Threads can be deleted" ON public.threads FOR DELETE USING ((created_by = ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: threads Threads can be inserted; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Threads can be inserted" ON public.threads FOR INSERT WITH CHECK (((created_by = ( SELECT public.requesting_user_id() AS requesting_user_id)) AND (( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL) AND public.can_access_channel(channel_id, ( SELECT public.requesting_user_id() AS requesting_user_id)) AND (EXISTS ( SELECT 1
+   FROM public.messages m
+  WHERE ((m.id = threads.message_id) AND (m.channel_id = threads.channel_id) AND public.can_access_channel(m.channel_id, ( SELECT public.requesting_user_id() AS requesting_user_id)))))));
+
+
+--
+-- Name: threads Threads can be updated; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Threads can be updated" ON public.threads FOR UPDATE USING ((created_by = ( SELECT public.requesting_user_id() AS requesting_user_id))) WITH CHECK (((created_by = ( SELECT public.requesting_user_id() AS requesting_user_id)) AND (channel_id = ( SELECT t.channel_id
+   FROM public.threads t
+  WHERE (t.id = threads.id))) AND (message_id = ( SELECT t.message_id
+   FROM public.threads t
+  WHERE (t.id = threads.id)))));
+
+
+--
+-- Name: user_badges User badges are publicly readable; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "User badges are publicly readable" ON public.user_badges FOR SELECT USING (true);
+
+
+--
+-- Name: dm_reactions Users add own DM reactions; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users add own DM reactions" ON public.dm_reactions FOR INSERT WITH CHECK (((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) AND (( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL) AND public.is_dm_participant(public.get_dm_conversation_id(message_id), ( SELECT public.requesting_user_id() AS requesting_user_id))));
+
+
+--
+-- Name: reactions Users add own reactions; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users add own reactions" ON public.reactions FOR INSERT WITH CHECK (((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) AND (( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL) AND (EXISTS ( SELECT 1
+   FROM public.messages m
+  WHERE ((m.id = reactions.message_id) AND (m.channel_id = reactions.channel_id) AND public.can_access_channel(m.channel_id, ( SELECT public.requesting_user_id() AS requesting_user_id))))) AND public.check_user_permission(( SELECT public.requesting_user_id() AS requesting_user_id), channel_id, 'add_reactions'::public.permission_type)));
+
+
+--
+-- Name: user_devices Users can delete own devices; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can delete own devices" ON public.user_devices FOR DELETE USING ((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: users Users can delete own record; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can delete own record" ON public.users FOR DELETE USING ((id = ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: user_devices Users can insert own devices; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can insert own devices" ON public.user_devices FOR INSERT WITH CHECK (((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) AND (( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL) AND (identity_public_key IS NOT NULL) AND (length(TRIM(BOTH FROM identity_public_key)) > 0)));
+
+
+--
+-- Name: server_members Users can leave servers; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can leave servers" ON public.server_members FOR DELETE USING ((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: dm_participants Users can remove themselves from DM; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can remove themselves from DM" ON public.dm_participants FOR DELETE USING (((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) AND (( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL)));
+
+
+--
+-- Name: channel_members Users can remove themselves from channels; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can remove themselves from channels" ON public.channel_members FOR DELETE USING (((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) AND (( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL)));
+
+
+--
+-- Name: user_devices Users can update own devices; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can update own devices" ON public.user_devices FOR UPDATE USING ((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id))) WITH CHECK ((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: users Users can update own record; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can update own record" ON public.users FOR UPDATE USING ((id = ( SELECT public.requesting_user_id() AS requesting_user_id))) WITH CHECK ((id = ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: user_devices Users can view own devices; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can view own devices" ON public.user_devices FOR SELECT USING ((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: users Users can view related users; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can view related users" ON public.users FOR SELECT USING (public.can_view_user(id, ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: dm_attachments Users delete own DM attachments; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users delete own DM attachments" ON public.dm_attachments FOR DELETE USING (public.is_dm_message_participant(message_id, ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: messages Users delete their own messages; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users delete their own messages" ON public.messages FOR DELETE USING (((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) AND (( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL) AND (public.is_maintenance_active() = false)));
+
+
+--
+-- Name: messages Users edit their own messages; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users edit their own messages" ON public.messages FOR UPDATE USING (((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) AND (( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL) AND (public.is_maintenance_active() = false) AND public.can_access_channel(channel_id, ( SELECT public.requesting_user_id() AS requesting_user_id)))) WITH CHECK (((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) AND (( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL) AND (public.is_maintenance_active() = false) AND public.can_access_channel(channel_id, ( SELECT public.requesting_user_id() AS requesting_user_id))));
+
+
+--
+-- Name: server_members Users join as member; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users join as member" ON public.server_members FOR INSERT WITH CHECK (((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) AND (role = 'member'::public.server_role) AND (COALESCE(is_banned, false) = false) AND ((EXISTS ( SELECT 1
+   FROM public.servers s
+  WHERE ((s.id = server_members.server_id) AND (COALESCE(s.is_published, false) = true)))) OR (EXISTS ( SELECT 1
+   FROM public.servers s
+  WHERE ((s.id = server_members.server_id) AND (s.owner_id = ( SELECT public.requesting_user_id() AS requesting_user_id))))))));
+
+
+--
+-- Name: channel_user_settings Users manage own channel settings; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users manage own channel settings" ON public.channel_user_settings USING ((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id))) WITH CHECK ((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: user_server_folders Users manage own folders; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users manage own folders" ON public.user_server_folders USING ((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id))) WITH CHECK ((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: media_comment_reactions Users manage own media comment reactions; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users manage own media comment reactions" ON public.media_comment_reactions USING ((( SELECT public.requesting_user_id() AS requesting_user_id) = user_id)) WITH CHECK ((( SELECT public.requesting_user_id() AS requesting_user_id) = user_id));
+
+
+--
+-- Name: media_comments Users manage own media comments; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users manage own media comments" ON public.media_comments USING ((( SELECT public.requesting_user_id() AS requesting_user_id) = user_id)) WITH CHECK ((( SELECT public.requesting_user_id() AS requesting_user_id) = user_id));
+
+
+--
+-- Name: notifications Users manage own notifications; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users manage own notifications" ON public.notifications USING ((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id))) WITH CHECK ((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: user_preferences Users manage own preferences; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users manage own preferences" ON public.user_preferences USING (((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) AND (( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL))) WITH CHECK (((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) AND (( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL)));
+
+
+--
+-- Name: channel_reads Users manage own read state; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users manage own read state" ON public.channel_reads USING ((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id))) WITH CHECK ((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: user_server_tabs Users manage own tabs; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users manage own tabs" ON public.user_server_tabs USING ((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id))) WITH CHECK ((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: user_voice_settings Users manage own voice settings; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users manage own voice settings" ON public.user_voice_settings USING (((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) AND (( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL))) WITH CHECK (((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) AND (( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL)));
+
+
+--
+-- Name: dm_reactions Users remove own DM reactions; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users remove own DM reactions" ON public.dm_reactions FOR DELETE USING ((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: reactions Users remove own reactions; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users remove own reactions" ON public.reactions FOR DELETE USING ((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: friendships Users see own friendships; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users see own friendships" ON public.friendships FOR SELECT USING (((( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL) AND ((requester_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) OR (addressee_id = ( SELECT public.requesting_user_id() AS requesting_user_id)))));
+
+
+--
+-- Name: messages Users send messages as themselves only; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users send messages as themselves only" ON public.messages FOR INSERT WITH CHECK (((user_id = public.requesting_user_id()) AND (public.requesting_user_id() IS NOT NULL) AND (public.is_maintenance_active() = false) AND public.can_access_channel(channel_id, public.requesting_user_id()) AND public.check_user_permission(public.requesting_user_id(), channel_id, 'send_messages'::public.permission_type) AND ((COALESCE(( SELECT c.is_read_only
+   FROM public.channels c
+  WHERE (c.id = messages.channel_id)), false) = false) OR public.check_user_permission(public.requesting_user_id(), channel_id, 'manage_messages'::public.permission_type))));
+
+
+--
+-- Name: friendships Users send own friend requests; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users send own friend requests" ON public.friendships FOR INSERT WITH CHECK (((requester_id = public.requesting_user_id()) AND (public.requesting_user_id() IS NOT NULL) AND (requester_id <> addressee_id) AND (status = 'pending'::public.friendship_status)));
+
+
+--
+-- Name: server_members Users update own non-role data; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users update own non-role data" ON public.server_members FOR UPDATE USING (((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)) AND (( SELECT public.requesting_user_id() AS requesting_user_id) IS NOT NULL))) WITH CHECK ((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: dm_participants Users update own participant record; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users update own participant record" ON public.dm_participants FOR UPDATE USING ((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id))) WITH CHECK ((user_id = ( SELECT public.requesting_user_id() AS requesting_user_id)));
+
+
+--
+-- Name: announcement_comment_reactions; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.announcement_comment_reactions ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: announcement_comments; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.announcement_comments ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: app_config; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.app_config ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: app_config app_config_service_role_only; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY app_config_service_role_only ON public.app_config USING ((CURRENT_USER = 'service_role'::name)) WITH CHECK ((CURRENT_USER = 'service_role'::name));
+
+
+--
+-- Name: auth_rate_limits; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.auth_rate_limits ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: badges; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.badges ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: category_permissions; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.category_permissions ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: channel_categories; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.channel_categories ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: channel_members; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.channel_members ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: channel_permissions; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.channel_permissions ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: channel_reads; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.channel_reads ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: channel_user_settings; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.channel_user_settings ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: channels; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.channels ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: declined_friend_requests; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.declined_friend_requests ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: direct_messages; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.direct_messages ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: dm_attachments; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.dm_attachments ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: dm_conversations; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.dm_conversations ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: dm_participants; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.dm_participants ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: dm_reactions; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.dm_reactions ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: friendships; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.friendships ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: media_comment_reactions; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.media_comment_reactions ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: media_comments; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.media_comments ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: media_items; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.media_items ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: mentions; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.mentions ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: message_attachments; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.message_attachments ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: messages; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: messages messages_account_age_min_2m; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY messages_account_age_min_2m ON public.messages AS RESTRICTIVE FOR INSERT WITH CHECK ((EXISTS ( SELECT 1
+   FROM public.users u
+  WHERE ((u.id = public.requesting_user_id()) AND (u.created_at <= (now() - '00:02:00'::interval))))));
+
+
+--
+-- Name: notifications; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: poll_votes; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.poll_votes ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: polls; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.polls ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: pow_challenges; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.pow_challenges ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: pow_challenges pow_deny_all_delete; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY pow_deny_all_delete ON public.pow_challenges FOR DELETE USING (false);
+
+
+--
+-- Name: pow_challenges pow_deny_all_insert; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY pow_deny_all_insert ON public.pow_challenges FOR INSERT WITH CHECK (false);
+
+
+--
+-- Name: pow_challenges pow_deny_all_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY pow_deny_all_select ON public.pow_challenges FOR SELECT USING (false);
+
+
+--
+-- Name: pow_challenges pow_deny_all_update; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY pow_deny_all_update ON public.pow_challenges FOR UPDATE USING (false) WITH CHECK (false);
+
+
+--
+-- Name: reactions; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.reactions ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: role_permissions; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.role_permissions ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: server_emojis; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.server_emojis ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: server_invites; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.server_invites ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: server_member_roles; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.server_member_roles ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: server_members; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.server_members ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: auth_rate_limits server_only_access; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY server_only_access ON public.auth_rate_limits USING (false) WITH CHECK (false);
+
+
+--
+-- Name: server_roles; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.server_roles ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: servers; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.servers ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: thread_attachments; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.thread_attachments ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: thread_messages; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.thread_messages ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: thread_reactions; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.thread_reactions ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: threads; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.threads ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: user_auth ua_deny_all_delete; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY ua_deny_all_delete ON public.user_auth FOR DELETE USING (false);
+
+
+--
+-- Name: user_auth ua_deny_all_insert; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY ua_deny_all_insert ON public.user_auth FOR INSERT WITH CHECK (false);
+
+
+--
+-- Name: user_auth ua_deny_all_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY ua_deny_all_select ON public.user_auth FOR SELECT USING (false);
+
+
+--
+-- Name: user_auth ua_deny_all_update; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY ua_deny_all_update ON public.user_auth FOR UPDATE USING (false) WITH CHECK (false);
+
+
+--
+-- Name: user_auth; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.user_auth ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: user_badges; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.user_badges ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: user_devices; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.user_devices ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: user_preferences; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.user_preferences ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: user_server_folders; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.user_server_folders ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: user_server_tabs; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.user_server_tabs ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: user_voice_settings; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.user_voice_settings ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: users; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: messages; Type: ROW SECURITY; Schema: realtime; Owner: -
+--
+
+ALTER TABLE realtime.messages ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: buckets; Type: ROW SECURITY; Schema: storage; Owner: -
+--
+
+ALTER TABLE storage.buckets ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: buckets_analytics; Type: ROW SECURITY; Schema: storage; Owner: -
+--
+
+ALTER TABLE storage.buckets_analytics ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: buckets_vectors; Type: ROW SECURITY; Schema: storage; Owner: -
+--
+
+ALTER TABLE storage.buckets_vectors ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: iceberg_namespaces; Type: ROW SECURITY; Schema: storage; Owner: -
+--
+
+ALTER TABLE storage.iceberg_namespaces ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: iceberg_tables; Type: ROW SECURITY; Schema: storage; Owner: -
+--
+
+ALTER TABLE storage.iceberg_tables ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: migrations; Type: ROW SECURITY; Schema: storage; Owner: -
+--
+
+ALTER TABLE storage.migrations ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: objects; Type: ROW SECURITY; Schema: storage; Owner: -
+--
+
+ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: s3_multipart_uploads; Type: ROW SECURITY; Schema: storage; Owner: -
+--
+
+ALTER TABLE storage.s3_multipart_uploads ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: s3_multipart_uploads_parts; Type: ROW SECURITY; Schema: storage; Owner: -
+--
+
+ALTER TABLE storage.s3_multipart_uploads_parts ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: vector_indexes; Type: ROW SECURITY; Schema: storage; Owner: -
+--
+
+ALTER TABLE storage.vector_indexes ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: supabase_realtime; Type: PUBLICATION; Schema: -; Owner: -
+--
+
+CREATE PUBLICATION supabase_realtime WITH (publish = 'insert, update, delete, truncate');
+
+
+--
+-- Name: supabase_realtime_messages_publication; Type: PUBLICATION; Schema: -; Owner: -
+--
+
+CREATE PUBLICATION supabase_realtime_messages_publication WITH (publish = 'insert, update, delete, truncate');
+
+
+--
+-- Name: supabase_realtime channel_reads; Type: PUBLICATION TABLE; Schema: public; Owner: -
+--
+
+ALTER PUBLICATION supabase_realtime ADD TABLE ONLY public.channel_reads;
+
+
+--
+-- Name: supabase_realtime direct_messages; Type: PUBLICATION TABLE; Schema: public; Owner: -
+--
+
+ALTER PUBLICATION supabase_realtime ADD TABLE ONLY public.direct_messages (id, conversation_id, sender_id, created_at);
+
+
+--
+-- Name: supabase_realtime messages; Type: PUBLICATION TABLE; Schema: public; Owner: -
+--
+
+ALTER PUBLICATION supabase_realtime ADD TABLE ONLY public.messages;
+
+
+--
+-- Name: supabase_realtime reactions; Type: PUBLICATION TABLE; Schema: public; Owner: -
+--
+
+ALTER PUBLICATION supabase_realtime ADD TABLE ONLY public.reactions;
+
+
+--
+-- Name: supabase_realtime users; Type: PUBLICATION TABLE; Schema: public; Owner: -
+--
+
+ALTER PUBLICATION supabase_realtime ADD TABLE ONLY public.users;
+
+
+--
+-- Name: supabase_realtime_messages_publication messages; Type: PUBLICATION TABLE; Schema: realtime; Owner: -
+--
+
+ALTER PUBLICATION supabase_realtime_messages_publication ADD TABLE ONLY realtime.messages;
+
+
+--
+-- Name: issue_graphql_placeholder; Type: EVENT TRIGGER; Schema: -; Owner: -
+--
+
+CREATE EVENT TRIGGER issue_graphql_placeholder ON sql_drop
+         WHEN TAG IN ('DROP EXTENSION')
+   EXECUTE FUNCTION extensions.set_graphql_placeholder();
+
+
+--
+-- Name: issue_pg_cron_access; Type: EVENT TRIGGER; Schema: -; Owner: -
+--
+
+CREATE EVENT TRIGGER issue_pg_cron_access ON ddl_command_end
+         WHEN TAG IN ('CREATE EXTENSION')
+   EXECUTE FUNCTION extensions.grant_pg_cron_access();
+
+
+--
+-- Name: issue_pg_graphql_access; Type: EVENT TRIGGER; Schema: -; Owner: -
+--
+
+CREATE EVENT TRIGGER issue_pg_graphql_access ON ddl_command_end
+         WHEN TAG IN ('CREATE FUNCTION')
+   EXECUTE FUNCTION extensions.grant_pg_graphql_access();
+
+
+--
+-- Name: issue_pg_net_access; Type: EVENT TRIGGER; Schema: -; Owner: -
+--
+
+CREATE EVENT TRIGGER issue_pg_net_access ON ddl_command_end
+         WHEN TAG IN ('CREATE EXTENSION')
+   EXECUTE FUNCTION extensions.grant_pg_net_access();
+
+
+--
+-- Name: pgrst_ddl_watch; Type: EVENT TRIGGER; Schema: -; Owner: -
+--
+
+CREATE EVENT TRIGGER pgrst_ddl_watch ON ddl_command_end
+   EXECUTE FUNCTION extensions.pgrst_ddl_watch();
+
+
+--
+-- Name: pgrst_drop_watch; Type: EVENT TRIGGER; Schema: -; Owner: -
+--
+
+CREATE EVENT TRIGGER pgrst_drop_watch ON sql_drop
+   EXECUTE FUNCTION extensions.pgrst_drop_watch();
+
+
+--
+-- PostgreSQL database dump complete
+--
+
 

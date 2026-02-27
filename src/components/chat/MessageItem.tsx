@@ -336,7 +336,7 @@ export const MessageItem = memo(function MessageItem({
   const roleIconNode = useMemo(() => {
     if (!priorityRoleWithIcon?.icon) return null;
     const icon = priorityRoleWithIcon.icon;
-    const match = icon.match(/^:([a-z0-9_]{2,32}):$/);
+    const match = icon.match(/^:([a-z0-9_]{2,12}):$/);
     if (match) {
       const url = customEmojiMap.get(match[1]);
       if (!url) return null;
@@ -350,14 +350,14 @@ export const MessageItem = memo(function MessageItem({
   const resolveCustomEmojiUrl = useCallback(
     (emoji: string): string | undefined => {
       // Match unqualified :name: or qualified :name~ServerName:
-      const qualifiedMatch = emoji.match(/^:([a-z0-9_]{2,32})~(.+):$/i);
+      const qualifiedMatch = emoji.match(/^:([a-z0-9_]{2,12})~(.+):$/i);
       if (qualifiedMatch) {
         const qualifiedKey = `${qualifiedMatch[1]}~${qualifiedMatch[2]}`;
         const qualifiedResolved = resolveQualifiedEmoji(qualifiedKey);
         if (qualifiedResolved) return qualifiedResolved.url;
         return globalEmojiMap.get(qualifiedMatch[1])?.url;
       }
-      const unqualifiedMatch = emoji.match(/^:([a-z0-9_]{2,32}):$/i);
+      const unqualifiedMatch = emoji.match(/^:([a-z0-9_]{2,12}):$/i);
       if (unqualifiedMatch) {
         return customEmojiMap.get(unqualifiedMatch[1]) || globalEmojiMap.get(unqualifiedMatch[1])?.url;
       }
@@ -371,7 +371,7 @@ export const MessageItem = memo(function MessageItem({
     const reactions = message.reactions ?? [];
     const names: string[] = [];
     for (const r of reactions) {
-      const m = r.emoji.match(/^:([a-z0-9_]{2,32}):$/i);
+      const m = r.emoji.match(/^:([a-z0-9_]{2,12}):$/i);
       if (m) names.push(m[1]);
     }
     return names.sort().join(",");
@@ -407,8 +407,8 @@ export const MessageItem = memo(function MessageItem({
         return <img src={url} alt={emoji} className="w-6 h-6 object-contain" loading="lazy" />;
       }
       // Check if it looks like a custom emoji that we can't resolve locally
-      if (/^:[a-z0-9_]{2,32}:$/i.test(emoji)) {
-        const m = emoji.match(/^:([a-z0-9_]{2,32}):$/i);
+      if (/^:[a-z0-9_]{2,12}:$/i.test(emoji)) {
+        const m = emoji.match(/^:([a-z0-9_]{2,12}):$/i);
         const fallbackUrl = m ? fallbackEmojiUrls.get(m[1]) : null;
         if (fallbackUrl) {
           return <img src={fallbackUrl} alt={emoji} className="w-6 h-6 object-contain" loading="lazy" />;
@@ -426,8 +426,8 @@ export const MessageItem = memo(function MessageItem({
       if (url) {
         return <img src={url} alt={emoji} className="w-8 h-8 object-contain" loading="lazy" />;
       }
-      if (/^:[a-z0-9_]{2,32}:$/i.test(emoji)) {
-        const m = emoji.match(/^:([a-z0-9_]{2,32}):$/i);
+      if (/^:[a-z0-9_]{2,12}:$/i.test(emoji)) {
+        const m = emoji.match(/^:([a-z0-9_]{2,12}):$/i);
         const fallbackUrl = m ? fallbackEmojiUrls.get(m[1]) : null;
         if (fallbackUrl) {
           return <img src={fallbackUrl} alt={emoji} className="w-8 h-8 object-contain" loading="lazy" />;
@@ -651,7 +651,7 @@ export const MessageItem = memo(function MessageItem({
 
   const isExternalEmoji = useCallback(
     (emoji: string): boolean => {
-      const match = emoji.match(/^:([a-z0-9_]{2,32}):$/i);
+      const match = emoji.match(/^:([a-z0-9_]{2,12}):$/i);
       if (!match) return false; // native emoji
       // If it exists in the current server's emoji map, it's not external
       if (customEmojiMap.has(match[1])) return false;

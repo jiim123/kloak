@@ -95,7 +95,7 @@ const ALLOWED_ICON_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 const MAX_EMOJI_SIZE = 1 * 1024 * 1024; // 1MB
 const ALLOWED_EMOJI_TYPES = ["image/png", "image/gif", "image/webp", "image/jpeg"];
-const EMOJI_NAME_REGEX = /^[a-z0-9_]{2,32}$/;
+const EMOJI_NAME_REGEX = /^[a-z0-9_]{2,12}$/;
 const MAX_SERVER_EMOJIS = 1000;
 
 const serverSettingsSchema = z.object({
@@ -808,7 +808,7 @@ export const ServerSettingsModal = () => {
 
     const normalized = emojiName.trim().toLowerCase();
     if (!EMOJI_NAME_REGEX.test(normalized)) {
-      toast.error("Emoji name must be 2-32 characters (a-z, 0-9, underscore)");
+      toast.error("Emoji name must be 2-12 characters (a-z, 0-9, underscore)");
       return;
     }
 
@@ -864,7 +864,7 @@ export const ServerSettingsModal = () => {
     }
     const trimmed = newName.trim().toLowerCase();
     if (!EMOJI_NAME_REGEX.test(trimmed)) {
-      toast.error("Emoji name must be 2-32 lowercase letters, numbers, or underscores");
+      toast.error("Emoji name must be 2-12 lowercase letters, numbers, or underscores");
       return;
     }
     // Check for duplicate name
@@ -2175,7 +2175,7 @@ export const ServerSettingsModal = () => {
                           onChange={(e) => setEmojiName(e.target.value)}
                           placeholder="emoji_name"
                           className="h-10 rounded-xl bg-secondary/50 border-border/30 flex-1"
-                          maxLength={32}
+                          maxLength={12}
                         />
                       </div>
                       <Button
@@ -2321,7 +2321,7 @@ export const ServerSettingsModal = () => {
                                           if (e.key === "Escape") setEditingEmojiId(null);
                                         }}
                                         onBlur={() => setTimeout(() => setEditingEmojiId(null), 150)}
-                                        maxLength={32}
+                                        maxLength={12}
                                       />
                                     </form>
                                   ) : (
@@ -3124,7 +3124,7 @@ export const ServerSettingsModal = () => {
                       <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4 space-y-3">
                         <h4 className="text-sm font-semibold">Custom Emojis</h4>
                         <p className="text-xs text-muted-foreground">
-                          Upload an emoji and set a name (2-32 chars: a-z, 0-9, underscore). Use it in chat as{" "}
+                          Upload an emoji and set a name (2-12 chars: a-z, 0-9, underscore). Use it in chat as{" "}
                           <span className="font-mono">:name:</span>
                         </p>
 
@@ -3157,7 +3157,7 @@ export const ServerSettingsModal = () => {
                               onChange={(e) => setEmojiName(e.target.value)}
                               placeholder="e.g. cat"
                               className="h-10 rounded-xl bg-secondary/50 border-border/30"
-                              maxLength={32}
+                              maxLength={12}
                             />
                           </div>
 
@@ -3322,7 +3322,7 @@ export const ServerSettingsModal = () => {
                                             if (e.key === "Escape") setEditingEmojiId(null);
                                           }}
                                           onBlur={() => setTimeout(() => setEditingEmojiId(null), 150)}
-                                          maxLength={32}
+                                          maxLength={12}
                                         />
                                       </form>
                                     ) : (
