@@ -615,7 +615,7 @@ const CategoryAccordion = ({
           </div>
           <div>
             <h3 className="text-xl md:text-2xl font-medium text-foreground">{category.title}</h3>
-            <span className="text-sm text-muted-foreground/60">
+            <span className="text-sm text-muted-foreground">
               {category.positions.length} {category.positions.length === 1 ? "position" : "positions"}
             </span>
           </div>
