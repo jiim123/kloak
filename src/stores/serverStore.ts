@@ -5,6 +5,7 @@ import { saveLastChannel, getLastChannel } from "@/lib/storage";
 import { bulkSetUsersInCache, deduplicatedFetch } from "@/lib/userCache";
 import { useAuthStore } from "./authStore";
 import { useFriendStore } from "./friendStore";
+import { useMessageStore } from "@/stores/messageStore";
 import type {
   Server,
   ServerWithMembership,
@@ -1153,8 +1154,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         // Use lightweight member RPC for global surfaces; full member RPC only for member pages/settings.
         const userId = useAuthStore.getState().user?.id;
         const rpcName = mode === "full" ? "get_server_members_full_secure" : "get_server_members";
-        const rpcParams =
-          mode === "full" ? { _server_id: serverId, _user_id: userId } : { _server_id: serverId };
+        const rpcParams = mode === "full" ? { _server_id: serverId, _user_id: userId } : { _server_id: serverId };
 
         let data: any = null;
         let error: any = null;
@@ -1339,7 +1339,6 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   banMember: async (serverId: string, targetUserId: string) => {
     try {
-      // Get current user from auth store to pass as the banner
       const currentUserId = useAuthStore.getState().user?.id;
       if (!currentUserId) throw new Error("Not authenticated");
 
@@ -1355,6 +1354,9 @@ export const useServerStore = create<ServerState>((set, get) => ({
       set((state) => ({
         members: state.members.filter((m) => m.user_id !== targetUserId),
       }));
+
+      // Purge banned user's messages from the UI
+      useMessageStore.getState().removeMessagesByUser(targetUserId);
     } catch (error) {
       console.error("Failed to ban member:", error);
       throw error;
