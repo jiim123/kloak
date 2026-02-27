@@ -48,8 +48,8 @@ const MAX_LENGTH = 2000;
 const MIN_TEXTAREA_HEIGHT = 40;
 const MAX_TEXTAREA_HEIGHT = 160;
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-const MAX_IMAGE_FILE_SIZE = 1 * 1024 * 1024; // 1MB
-const MAX_ATTACHMENTS = 10;
+const MAX_IMAGE_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_ATTACHMENTS = 5;
 const DRAFT_SAVE_DELAY = 500;
 const TYPING_STOP_DELAY = 2000;
 
@@ -588,7 +588,7 @@ const MobileOptimizedInput = memo(
             onPaste={handlePaste}
             placeholder={canSendMessage ? `Message #${channelName}` : "Locked"}
             disabled={!canSendMessage}
-            className="flex-1 bg-transparent resize-none outline-none py-2 px-1 min-h-[40px] max-h-[160px] text-[15px]"
+            className="font-normal flex-1 bg-transparent resize-none outline-none py-2 px-1 min-h-[40px] max-h-[160px] text-[15px]"
             rows={1}
           />
           <ActionButtons
