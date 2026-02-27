@@ -40,7 +40,7 @@ const privacyCategories = [
     questions: [
       {
         q: "Do you share data with third parties?",
-        a: "No. We do not sell, trade, or share your data with advertisers, data brokers, or anyone else. Period. The only exception: if legally required by Swedish law. Even then, we've collected so little data that there's almost nothing to hand over, we cannot link accounts to real identities because we don't have that information, and we cannot recover or provide your secret key because we only store a hash.",
+        a: "No. We do not sell, trade, or share your data with advertisers, data brokers, or anyone else. Period. The only exception: if legally required by European law. Even then, we've collected so little data that there's almost nothing to hand over, we cannot link accounts to real identities because we don't have that information, and we cannot recover or provide your secret key because we only store a hash.",
       },
       {
         q: "What happens if there's a legal request?",
