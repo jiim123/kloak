@@ -159,7 +159,7 @@ const FAQ = () => {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.6 }}
               >
-                <span className="text-xs font-mono text-background tracking-widest uppercase">Help Center</span>
+                <span className="text-xs font-mono text-background tracking-widest ">Help Center</span>
               </motion.div>
 
               <motion.h1
@@ -200,7 +200,7 @@ const FAQ = () => {
                   viewport={{ once: true }}
                   transition={{ duration: 0.6 }}
                 >
-                  <h4 className="text-muted-foreground tracking-widest uppercase">{category.title}</h4>
+                  <h4 className="font-medium text-muted-foreground tracking-widest">{category.title}</h4>
                 </motion.div>
 
                 <Accordion type="single" collapsible className="space-y-4">
@@ -214,9 +214,9 @@ const FAQ = () => {
                     >
                       <AccordionItem
                         value={`${category.title}-${index}`}
-                        className="border border-border/30 bg-background hover:bg-card/50 transition-colors px-6 md:px-8"
+                        className="border border-border/30 bg-background px-6 md:px-8"
                       >
-                        <AccordionTrigger className="text-left font-medium hover:no-underline py-6 text-base md:text-lg font-sans">
+                        <AccordionTrigger className="text-left font-medium hover:no-underline py-6 text-base md:text-lg font-normal">
                           {item.q}
                         </AccordionTrigger>
                         <AccordionContent className="text-muted-foreground leading-[1.7] pb-6 text-base/6">
