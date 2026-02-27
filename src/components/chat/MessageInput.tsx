@@ -48,8 +48,8 @@ const MAX_LENGTH = 2000;
 const MIN_TEXTAREA_HEIGHT = 40;
 const MAX_TEXTAREA_HEIGHT = 160;
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-const MAX_IMAGE_FILE_SIZE = 1 * 1024 * 1024; // 1MB
-const MAX_ATTACHMENTS = 10;
+const MAX_IMAGE_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_ATTACHMENTS = 5;
 const DRAFT_SAVE_DELAY = 500;
 const TYPING_STOP_DELAY = 2000;
 
