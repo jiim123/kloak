@@ -522,7 +522,7 @@ export const UserProfilePopup = () => {
                     {/* Name and username - shown next to avatar on larger screens */}
                     <div className="hidden sm:block flex-1 min-w-0 pb-1 pt-2">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h2 className="text-xl font-semibold tracking-tight truncate">
+                        <h2 className="text-xl font-medium tracking-tight truncate">
                           {profileUser.display_name || profileUser.username}
                         </h2>
                         {userBadges.length > 0 && <UserBadges badges={userBadges} />}
@@ -638,7 +638,7 @@ export const UserProfilePopup = () => {
                             {sharedServers.map((server) => (
                               <div
                                 key={server.id}
-                                className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-semibold overflow-hidden transition-transform hover:scale-105"
+                                className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-medium overflow-hidden transition-transform hover:scale-105"
                                 style={{ backgroundColor: divider }}
                                 title={server.name}
                               >
@@ -663,7 +663,7 @@ export const UserProfilePopup = () => {
                         <div className="flex gap-2">
                           <Button
                             onClick={handleMessage}
-                            className="flex-1 rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent"
+                            className="font-normal flex-1 rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent"
                             variant="outline"
                             style={{ backgroundColor: "#232629", color: "#fff" }}
                             onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#2a2f33")}
@@ -678,7 +678,7 @@ export const UserProfilePopup = () => {
                               <Button
                                 variant="outline"
                                 onClick={handleAcceptRequest}
-                                className="flex-1 rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent"
+                                className="font-normal flex-1 rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent"
                                 style={{ backgroundColor: "#232629", color: "#fff" }}
                                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#2a2f33")}
                                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#232629")}
@@ -689,7 +689,7 @@ export const UserProfilePopup = () => {
                               <Button
                                 variant="outline"
                                 onClick={handleDeclineRequest}
-                                className="flex-1 rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent"
+                                className="font-normal flex-1 rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent"
                                 style={{ backgroundColor: "#232629", color: "#fff" }}
                                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#2a2f33")}
                                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#232629")}
@@ -704,7 +704,7 @@ export const UserProfilePopup = () => {
                               onClick={handleFriendAction}
                               disabled={hasSentRequest || isInCooldown || isSendingRequest}
                               className={cn(
-                                "flex-1 rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent",
+                                "font-normal flex-1 rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent",
                                 isInCooldown && "opacity-80",
                               )}
                               style={{ backgroundColor: "#232629", color: "#fff" }}
@@ -743,7 +743,7 @@ export const UserProfilePopup = () => {
                           <Button
                             variant="outline"
                             onClick={handleBlockUser}
-                            className="flex-1 rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent"
+                            className="font-normal flex-1 rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent"
                             style={{ backgroundColor: "#232629", color: "#fff" }}
                             onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#2a2f33")}
                             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#232629")}
@@ -759,7 +759,7 @@ export const UserProfilePopup = () => {
                         <Button
                           variant="outline"
                           onClick={handleUnblockUser}
-                          className="rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent"
+                          className="font-normal rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent"
                           style={{ backgroundColor: "#232629", color: "#fff" }}
                           onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#2a2f33")}
                           onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#232629")}
