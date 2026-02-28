@@ -3246,6 +3246,10 @@ export type Database = {
         Args: { _message_id: string; _user_id: string }
         Returns: boolean
       }
+      is_safe_storage_object_key: {
+        Args: { _bucket_id: string; _name: string }
+        Returns: boolean
+      }
       is_server_admin_or_owner: {
         Args: { _server_id: string; _user_id: string }
         Returns: boolean
