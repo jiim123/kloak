@@ -325,7 +325,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       const filePath = `${user.id}/avatar-${Date.now()}.${fileExt}`;
 
       const { publicUrl } = await secureUpload("avatars", filePath, file, {
-        upsert: true,
+        upsert: false,
         cacheControl: "31536000",
       });
       setLocalAvatarUrl(publicUrl);
@@ -361,7 +361,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       const filePath = `${user.id}/banner-${Date.now()}.${fileExt}`;
 
       const { publicUrl } = await secureUpload("avatars", filePath, file, {
-        upsert: true,
+        upsert: false,
         cacheControl: "31536000",
       });
       setLocalBannerUrl(publicUrl);
