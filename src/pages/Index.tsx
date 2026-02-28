@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useRef, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -28,6 +28,84 @@ import { SEO_CONFIG } from "@/lib/seo";
 const LazyDithering = lazy(() =>
   import("@paper-design/shaders-react").then(m => ({ default: m.Dithering }))
 );
+
+/** CTA section – only mounts the heavy WebGL shader when scrolled into view */
+function CtaSection() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); io.disconnect(); } },
+      { rootMargin: "200px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  return (
+    <section ref={ref} className="relative py-32 px-8 lg:px-16 border-t border-border/20 overflow-hidden">
+      <div className="absolute inset-0 z-0">
+        {visible ? (
+          <Suspense fallback={<div className="w-full h-full bg-[#dbd7cc]" />}>
+            <LazyDithering
+              width={1280}
+              height={720}
+              colorBack="#dbd7cc"
+              colorFront="#121212"
+              shape="wave"
+              type="8x8"
+              size={3}
+              speed={0.14}
+              scale={2.04}
+              rotation={156}
+              offsetX={-0.24}
+              offsetY={1}
+            />
+          </Suspense>
+        ) : (
+          <div className="w-full h-full bg-[#dbd7cc]" />
+        )}
+      </div>
+
+      <motion.div
+        className="max-w-7xl mx-auto relative"
+        style={{ mixBlendMode: "difference" }}
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6 }}
+      >
+        <div className="text-center">
+          <div className="flex items-center justify-center gap-4 mb-6">
+            <span className="font-mono text-white tracking-widest uppercase">Get Started</span>
+          </div>
+          <div className="w-16 h-16 border border-white/30 flex items-center justify-center mx-auto mb-8">
+            <Key className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-white leading-tight tracking-tight mb-6 max-w-2xl mx-auto">
+            Your key.
+            <br />
+            <span>Your community.</span>
+          </h2>
+          <p className="text-[17px] text-white mb-10 max-w-lg mx-auto leading-[1.7]">
+            No signup forms. No email verification. Generate your cryptographic key and start building your space.
+          </p>
+          <Link to="/auth">
+            <button className="group relative px-10 py-4 bg-white text-black font-semibold transition-all duration-300 hover:bg-white/90 uppercase tracking-wider">
+              <span className="flex items-center gap-2">
+                <Key className="w-5 h-5" />
+                Generate Your Key
+              </span>
+            </button>
+          </Link>
+        </div>
+      </motion.div>
+    </section>
+  );
+}
 
 const Index = () => {
   const capabilities = [
@@ -184,62 +262,7 @@ const Index = () => {
           })}
 
           {/* CTA Section with Dithering Background */}
-          <section className="relative py-32 px-8 lg:px-16 border-t border-border/20 overflow-hidden">
-            {/* Dithering Shader Background */}
-            <div className="absolute inset-0 z-0">
-              <Suspense fallback={<div className="w-full h-full bg-[#dbd7cc]" />}>
-                <LazyDithering
-                  width={1280}
-                  height={720}
-                  colorBack="#dbd7cc"
-                  colorFront="#121212"
-                  shape="wave"
-                  type="8x8"
-                  size={3}
-                  speed={0.14}
-                  scale={2.04}
-                  rotation={156}
-                  offsetX={-0.24}
-                  offsetY={1}
-                />
-              </Suspense>
-            </div>
-
-            <motion.div
-              className="max-w-7xl mx-auto relative"
-              style={{ mixBlendMode: "difference" }}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-            >
-              <div className="text-center">
-                {/* Section header */}
-                <div className="flex items-center justify-center gap-4 mb-6">
-                  <span className="font-mono text-white tracking-widest uppercase">Get Started</span>
-                </div>
-                <div className="w-16 h-16 border border-white/30 flex items-center justify-center mx-auto mb-8">
-                  <Key className="w-8 h-8 text-white" />
-                </div>
-                <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-white leading-tight tracking-tight mb-6 max-w-2xl mx-auto">
-                  Your key.
-                  <br />
-                  <span>Your community.</span>
-                </h2>
-                <p className="text-[17px] text-white mb-10 max-w-lg mx-auto leading-[1.7]">
-                  No signup forms. No email verification. Generate your cryptographic key and start building your space.
-                </p>
-                <Link to="/auth">
-                  <button className="group relative px-10 py-4 bg-white text-black font-semibold transition-all duration-300 hover:bg-white/90 uppercase tracking-wider">
-                    <span className="flex items-center gap-2">
-                      <Key className="w-5 h-5" />
-                      Generate Your Key
-                    </span>
-                  </button>
-                </Link>
-              </div>
-            </motion.div>
-          </section>
+          <CtaSection />
 
           {/* Footer */}
           <Footer />
