@@ -1,11 +1,13 @@
 import { lazy, Suspense } from "react";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import Index from "./pages/Index";
+
+// Lazy-load UI shell components to defer vendor-ui and vendor-utils chunks from initial load
+const LazyToaster = lazy(() => import("@/components/ui/toaster").then(m => ({ default: m.Toaster })));
+const LazySonner = lazy(() => import("@/components/ui/sonner").then(m => ({ default: m.Toaster })));
+const LazyTooltipProvider = lazy(() => import("@/components/ui/tooltip").then(m => ({ default: m.TooltipProvider })));
 
 // Lazy-load all non-landing routes for code splitting
 const Auth = lazy(() => import("./pages/Auth"));
@@ -62,11 +64,15 @@ const AppContent = () => {
 const App = () => (
   <HelmetProvider>
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <AppContent />
-      </TooltipProvider>
+      <Suspense fallback={null}>
+        <LazyTooltipProvider>
+          <Suspense fallback={null}>
+            <LazyToaster />
+            <LazySonner />
+          </Suspense>
+          <AppContent />
+        </LazyTooltipProvider>
+      </Suspense>
     </QueryClientProvider>
   </HelmetProvider>
 );
