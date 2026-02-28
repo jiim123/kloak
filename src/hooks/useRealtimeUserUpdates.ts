@@ -45,7 +45,7 @@ export const useRealtimeUserUpdates = (
 
       data.forEach((row) => {
         if (!row || typeof row !== 'object' || !('id' in row)) return;
-        const updatedUser = row as User;
+        const updatedUser = row as unknown as User;
         patchUserAcrossStores(updatedUser);
         if (onUpdateRef.current) {
           onUpdateRef.current(updatedUser);
