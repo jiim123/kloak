@@ -89,6 +89,13 @@
         }
       })();
     </script>
+
+    <!-- Critical inline styles to prevent FOUC while CSS loads via JS -->
+    <style>
+      :root { --background: 0 0% 4%; --foreground: 60 9% 85%; }
+      body { margin: 0; background-color: hsl(0, 0%, 4%); color: hsl(60, 9%, 85%); font-family: system-ui, -apple-system, sans-serif; }
+      #root { min-height: 100vh; }
+    </style>
   </head>
 
   <body>
