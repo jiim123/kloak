@@ -39,7 +39,7 @@ serve(async (req) => {
     const safeOffset = Number.isFinite(Number(offset))
       ? Math.max(0, Math.min(Number(offset), 1000))
       : 0;
-    const safeQuery = typeof query === "string" ? query.trim() : "";
+    const safeQuery = typeof query === "string" ? query.trim().slice(0, 200) : "";
 
     const endpoint = safeQuery
       ? `https://api.giphy.com/v1/gifs/search?api_key=${apiKey}&q=${encodeURIComponent(safeQuery)}&limit=${safeLimit}&offset=${safeOffset}&rating=pg-13&lang=en`

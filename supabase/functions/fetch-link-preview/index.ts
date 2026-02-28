@@ -269,9 +269,9 @@ serve(async (req) => {
 
     const { url } = await req.json();
 
-    if (!url) {
+    if (!url || typeof url !== 'string' || url.length > 2048) {
       return new Response(
-        JSON.stringify({ error: 'URL is required' }),
+        JSON.stringify({ error: !url ? 'URL is required' : 'URL too long (max 2048 characters)' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
