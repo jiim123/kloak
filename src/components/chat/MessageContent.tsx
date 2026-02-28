@@ -227,7 +227,7 @@ export const parseTextContent = (
   // Spoiler ||text|| - interactive reveal on click
   parsed = parsed.replace(
     /\|\|([^|]+)\|\|/g,
-    '<span class="spoiler" onclick="this.classList.toggle(\'revealed\')" role="button" tabindex="0" onkeydown="if(event.key===\'Enter\'||event.key===\' \')this.classList.toggle(\'revealed\')">$1</span>'
+    '<span class="spoiler" data-spoiler="true" role="button" tabindex="0">$1</span>'
   );
   
   // Color syntax [color:text] - supports red, orange, yellow, green, blue, purple, pink
@@ -662,6 +662,14 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
       return;
     }
     
+    // Handle spoiler reveal toggle
+    if (target.dataset.spoiler === 'true') {
+      e.preventDefault();
+      e.stopPropagation();
+      target.classList.toggle('revealed');
+      return;
+    }
+
     if (target.classList.contains('mention-clickable') && target.dataset.userId) {
       e.preventDefault();
       e.stopPropagation();
@@ -683,6 +691,12 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' || e.key === ' ') {
       const target = e.target as HTMLElement;
+      // Handle spoiler reveal toggle via keyboard
+      if (target.dataset.spoiler === 'true') {
+        e.preventDefault();
+        target.classList.toggle('revealed');
+        return;
+      }
       if (target.classList.contains('mention-clickable') && target.dataset.userId) {
         e.preventDefault();
         openModal('userProfile', { userId: target.dataset.userId });
