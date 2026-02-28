@@ -54,8 +54,8 @@ export const NavigationMenu = () => {
             {/* Right: CTA + Mobile Menu */}
             <div className="flex items-center gap-3">
               {/* Desktop CTA */}
-              <Link to="/app" className="hidden sm:block py-2">
-                <Button size="sm" rounded="lg">
+              <Link to="/app" className="hidden sm:block">
+                <Button size="sm" rounded="lg" className="min-h-[36px]">
                   Open Kloak
                 </Button>
               </Link>
