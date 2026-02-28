@@ -412,33 +412,43 @@ export const useRealtimeSingleUser = (
 ) => {
   const onUpdateRef = useRef(onUpdate);
   onUpdateRef.current = onUpdate;
+  const viewerId = useAuthStore((s) => s.user?.id ?? null);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !viewerId) return;
 
-    const channel = supabase
-      .channel(`user-presence-${userId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'users',
-          filter: `id=eq.${userId}`,
-        },
-        (payload) => {
-          const updatedUser = payload.new as User;
-          onUpdateRef.current(updatedUser);
-          // Also patch stores for consistency
-          patchUserAcrossStores(updatedUser);
-        }
-      )
-      .subscribe((status) => {
-        console.log(`[useRealtimeSingleUser] Subscription for ${userId}:`, status);
+    let mounted = true;
+
+    const fetchUser = async () => {
+      const { data, error } = await supabase.rpc('get_user_profile_secure', {
+        _target_user_id: userId,
+        _requesting_user_id: viewerId,
       });
 
-    return () => {
-      supabase.removeChannel(channel);
+      if (!mounted || error || !data || typeof data !== 'object') return;
+      const updatedUser = data as User;
+      onUpdateRef.current(updatedUser);
+      patchUserAcrossStores(updatedUser);
     };
-  }, [userId]);
+
+    void fetchUser();
+
+    const intervalId = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      void fetchUser();
+    }, 45000);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        void fetchUser();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      mounted = false;
+      clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [userId, viewerId]);
 };
