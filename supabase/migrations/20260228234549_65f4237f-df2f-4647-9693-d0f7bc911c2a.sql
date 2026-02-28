@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS public.idx_channel_permissions_channel;
