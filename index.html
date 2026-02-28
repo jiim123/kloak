@@ -19,7 +19,6 @@
 
     <!-- Google Fonts: async load to avoid render-blocking -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Stack+Sans+Headline:wght@300;400;500;600;700&display=swap" media="print" onload="this.media='all'" />
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Stack+Sans+Headline:wght@300;400;500;600;700&display=swap" /></noscript>
 
@@ -99,7 +98,13 @@
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Static shell for fast First Contentful Paint - replaced by React on mount -->
+      <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;background:hsl(0,0%,4%)">
+        <img src="/favicon.png" alt="Kloak" width="48" height="48" style="margin-bottom:16px" />
+        <p style="color:hsl(60,9%,85%);font-family:system-ui,-apple-system,sans-serif;font-size:14px;opacity:0.6;margin:0">Loading Kloak…</p>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
