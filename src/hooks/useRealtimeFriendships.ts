@@ -17,13 +17,10 @@ export const useRealtimeFriendships = (userId: string | null) => {
           event: "*",
           schema: "public",
           table: "friendships",
-          filter: `requester_id=eq.${userId}`,
         },
         (payload) => {
           const data = (payload.new as any) || (payload.old as any);
-          // Check if this friendship involves the current user
           if (data?.requester_id === userId || data?.addressee_id === userId) {
-            // Coalesce bursts (e.g. insert/update/delete sequences) into one forced refresh.
             if (refetchTimerRef.current) {
               clearTimeout(refetchTimerRef.current);
             }
