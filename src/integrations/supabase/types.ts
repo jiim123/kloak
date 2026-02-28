@@ -1573,6 +1573,7 @@ export type Database = {
           id: string
           name: string
           server_id: string
+          short_id: number
         }
         Insert: {
           created_at?: string
@@ -1581,6 +1582,7 @@ export type Database = {
           id?: string
           name: string
           server_id: string
+          short_id?: number
         }
         Update: {
           created_at?: string
@@ -1589,6 +1591,7 @@ export type Database = {
           id?: string
           name?: string
           server_id?: string
+          short_id?: number
         }
         Relationships: [
           {
@@ -3259,6 +3262,7 @@ export type Database = {
         Args: { _thread_id: string; _user_id: string }
         Returns: boolean
       }
+      is_unicode_emoji: { Args: { _emoji: string }; Returns: boolean }
       is_username_blocked: { Args: { username: string }; Returns: boolean }
       join_server_by_invite: {
         Args: { _invite_code: string; _join_source?: string; _user_id: string }
@@ -3711,6 +3715,14 @@ export type Database = {
       upsert_user_voice_settings: {
         Args: { p_settings: Json; p_user_id: string }
         Returns: Json
+      }
+      validate_dm_reaction_emoji: {
+        Args: { _emoji: string }
+        Returns: undefined
+      }
+      validate_reaction_emoji: {
+        Args: { _channel_id: string; _emoji: string; _user_id: string }
+        Returns: undefined
       }
       verify_request_identity: { Args: { _user_id: string }; Returns: boolean }
       vote_poll: {
