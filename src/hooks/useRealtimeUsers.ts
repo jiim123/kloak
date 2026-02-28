@@ -426,7 +426,7 @@ export const useRealtimeSingleUser = (
       });
 
       if (!mounted || error || !data || typeof data !== 'object') return;
-      const updatedUser = data as User;
+      const updatedUser = data as unknown as User;
       onUpdateRef.current(updatedUser);
       patchUserAcrossStores(updatedUser);
     };
