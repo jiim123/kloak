@@ -117,7 +117,7 @@ export const HomeLanding = () => {
                 src="/krill/krill-welcome.svg"
                 alt="Happy krill"
                 className="h-52 w-52 sm:h-56 sm:w-56 md:h-44 md:w-44 object-contain"
-                loading="lazy"
+                fetchPriority="high"
               />
             </div>
             <div className="text-center sm:text-left space-y-1 sm:space-y-1.5">
