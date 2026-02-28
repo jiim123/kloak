@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -16,13 +17,17 @@ import {
   Music,
   Video,
 } from "lucide-react";
-import { Dithering } from "@paper-design/shaders-react";
 import { Footer } from "@/components/ui/footer-section";
 import { NavigationMenu } from "@/components/layout/NavigationMenu";
 import HeroAscii from "@/components/landing/HeroAscii";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SEO } from "@/components/seo";
 import { SEO_CONFIG } from "@/lib/seo";
+
+// Lazy-load the heavy WebGL shader component (only visible at bottom of page)
+const LazyDithering = lazy(() =>
+  import("@paper-design/shaders-react").then(m => ({ default: m.Dithering }))
+);
 
 const Index = () => {
   const capabilities = [
@@ -182,20 +187,22 @@ const Index = () => {
           <section className="relative py-32 px-8 lg:px-16 border-t border-border/20 overflow-hidden">
             {/* Dithering Shader Background */}
             <div className="absolute inset-0 z-0">
-              <Dithering
-                width={1280}
-                height={720}
-                colorBack="#dbd7cc"
-                colorFront="#121212"
-                shape="wave"
-                type="8x8"
-                size={3}
-                speed={0.14}
-                scale={2.04}
-                rotation={156}
-                offsetX={-0.24}
-                offsetY={1}
-              />
+              <Suspense fallback={<div className="w-full h-full bg-[#dbd7cc]" />}>
+                <LazyDithering
+                  width={1280}
+                  height={720}
+                  colorBack="#dbd7cc"
+                  colorFront="#121212"
+                  shape="wave"
+                  type="8x8"
+                  size={3}
+                  speed={0.14}
+                  scale={2.04}
+                  rotation={156}
+                  offsetX={-0.24}
+                  offsetY={1}
+                />
+              </Suspense>
             </div>
 
             <motion.div
