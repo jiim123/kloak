@@ -17,6 +17,10 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     <link rel="manifest" href="/site.webmanifest" />
 
+    <!-- Preload critical fonts for LCP (hero heading uses General Sans Medium) -->
+    <link rel="preload" href="/fonts/GeneralSans-Medium.otf" as="font" type="font/otf" crossorigin />
+    <link rel="preload" href="/fonts/GeneralSans-Regular.otf" as="font" type="font/otf" crossorigin />
+
     <!-- Google Fonts: async load to avoid render-blocking -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Stack+Sans+Headline:wght@300;400;500;600;700&display=swap" media="print" onload="this.media='all'" />
@@ -91,8 +95,11 @@
 
     <!-- Critical inline styles to prevent FOUC while CSS loads via JS -->
     <style>
+      /* Critical @font-face so browser can start fetching fonts before JS-injected CSS arrives */
+      @font-face { font-family: "General Sans"; src: url("/fonts/GeneralSans-Medium.otf") format("opentype"); font-weight: 500; font-style: normal; font-display: swap; }
+      @font-face { font-family: "General Sans"; src: url("/fonts/GeneralSans-Regular.otf") format("opentype"); font-weight: 400; font-style: normal; font-display: swap; }
       :root { --background: 0 0% 4%; --foreground: 60 9% 85%; }
-      body { margin: 0; background-color: hsl(0, 0%, 4%); color: hsl(60, 9%, 85%); font-family: system-ui, -apple-system, sans-serif; }
+      body { margin: 0; background-color: hsl(0, 0%, 4%); color: hsl(60, 9%, 85%); font-family: "General Sans", system-ui, -apple-system, sans-serif; }
       #root { min-height: 100vh; }
     </style>
   </head>
