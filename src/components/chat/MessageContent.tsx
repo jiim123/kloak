@@ -8,7 +8,7 @@ import { CustomEmojiPopover } from './CustomEmojiPopover';
 import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
 import { fetchServerEmojis } from '@/lib/serverEmojis';
-import { getOrFetchUser } from '@/lib/userCache';
+import { getOrFetchUser, getUserFromCache } from '@/lib/userCache';
 import {
   getGlobalEmojiMap,
   getGlobalEmojiDuplicates,
@@ -851,13 +851,21 @@ export const ReplyPreview = ({ content, maxLength = 50, usersMap }: ReplyPreview
       .replace(/\|\|([^|]+)\|\|/g, '[spoiler]')
       .replace(/\n/g, ' ');
     
-    // Convert <@userId> mentions to @username
+    // Convert <@userId> mentions to display_name or username
     result = result.replace(
       /<@(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})>/g,
       (match, userId) => {
         const userInfo = resolvedUsersMap.get(userId);
-        const displayName = userInfo?.nickname || userInfo?.display_name || userInfo?.username || 'user';
-        return `@${displayName}`;
+        if (userInfo) {
+          const displayName = userInfo.display_name || userInfo.username || 'user';
+          return `@${displayName}`;
+        }
+        // Fallback: check global user cache
+        const cached = getUserFromCache(userId);
+        if (cached) {
+          return `@${cached.display_name || cached.username || 'user'}`;
+        }
+        return match; // keep raw so re-render after cache populates can resolve it
       }
     );
 
