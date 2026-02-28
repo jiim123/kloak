@@ -19,6 +19,7 @@ import { isImageOnlyMessage } from "@/lib/message";
 import { isPollMessageContent } from "@/lib/poll";
 import { ReplyPreview } from "@/components/chat/MessageContent";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
+import { getOrFetchUser, getUserFromCache } from "@/lib/userCache";
 import type { Message, User, ReactionGroup } from "@/types";
 
 interface AnnouncementComment {
@@ -67,6 +68,7 @@ export const AnnouncementView = ({ message, onClose }: AnnouncementViewProps) =>
   const editTextareaRef = useRef<HTMLTextAreaElement>(null);
   const commentsRef = useRef<AnnouncementComment[]>([]);
   const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
+  const [reactionUserNameOverrides, setReactionUserNameOverrides] = useState<Map<string, string>>(new Map());
 
   // Update ref when comments change
   useEffect(() => {
@@ -460,6 +462,73 @@ export const AnnouncementView = ({ message, onClose }: AnnouncementViewProps) =>
     };
   }, [message.id, fetchComments, user?.id]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const unresolvedUserIds = new Set<string>();
+
+    comments.forEach((comment) => {
+      (comment.reactions || []).forEach((reaction) => {
+        reaction.users.forEach((reactorId) => {
+          if (!reactorId || reactorId === user?.id || reactorId.startsWith("ghost_")) return;
+          if (reactionUserNameOverrides.has(reactorId)) return;
+
+          const reactingComment = comments.find((c) => c.user_id === reactorId);
+          if (reactingComment?.user?.display_name || reactingComment?.user?.username) return;
+
+          const cached = getUserFromCache(reactorId);
+          const cachedName = cached?.display_name ?? cached?.username ?? null;
+          if (cachedName) {
+            setReactionUserNameOverrides((prev) => {
+              if (prev.get(reactorId) === cachedName) return prev;
+              const next = new Map(prev);
+              next.set(reactorId, cachedName);
+              return next;
+            });
+            return;
+          }
+
+          unresolvedUserIds.add(reactorId);
+        });
+      });
+    });
+
+    unresolvedUserIds.forEach((reactorId) => {
+      void getOrFetchUser(reactorId)
+        .then((fetched) => {
+          if (cancelled || !fetched) return;
+          const displayName = fetched.display_name ?? fetched.username;
+          if (!displayName) return;
+          setReactionUserNameOverrides((prev) => {
+            if (prev.get(reactorId) === displayName) return prev;
+            const next = new Map(prev);
+            next.set(reactorId, displayName);
+            return next;
+          });
+        })
+        .catch(() => undefined);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [comments, reactionUserNameOverrides, user?.id]);
+
+  const getReactionDisplayName = useCallback(
+    (reactorId: string) => {
+      if (reactorId === user?.id) return "You";
+      const reactingComment = comments.find((c) => c.user_id === reactorId);
+      if (reactingComment?.user) {
+        return reactingComment.user.display_name || reactingComment.user.username || reactorId;
+      }
+      const overrideName = reactionUserNameOverrides.get(reactorId);
+      if (overrideName) return overrideName;
+      const cached = getUserFromCache(reactorId);
+      if (cached) return cached.display_name ?? cached.username ?? reactorId;
+      return reactorId;
+    },
+    [comments, reactionUserNameOverrides, user?.id],
+  );
+
   const handleReply = useCallback(
     async () => {
       if (!user || !replyContent.trim()) return;
@@ -760,11 +829,9 @@ export const AnnouncementView = ({ message, onClose }: AnnouncementViewProps) =>
                           <div className="flex flex-wrap gap-1 mt-2">
                             {comment.reactions.map((reaction) => {
                               // Get user names for hover card
-                              const reactionUserNames = reaction.users.slice(0, 5).map((userId) => {
-                                if (userId === user?.id) return 'You';
-                                const reactingComment = comments.find(c => c.user_id === userId);
-                                return reactingComment?.user?.display_name || reactingComment?.user?.username || 'Unknown';
-                              });
+                              const reactionUserNames = reaction.users
+                                .slice(0, 5)
+                                .map((reactorId) => getReactionDisplayName(reactorId));
                               const remainingCount = Math.max(0, reaction.users.length - 5);
                               
                               return (

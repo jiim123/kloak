@@ -28,6 +28,7 @@ import type { Message, User, ServerMember, CustomServerRole } from "@/types";
 import { TiptapEditor } from "./TiptapEditor";
 import { AnnouncementView } from "./AnnouncementView";
 import { cn } from "@/lib/utils";
+import { getOrFetchUser, getUserFromCache } from "@/lib/userCache";
 
 const ROLE_COLORS: Record<string, string> = {
   owner: "text-yellow-400",
@@ -74,6 +75,7 @@ export const AnnouncementChannelArea = () => {
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [announcementToDelete, setAnnouncementToDelete] = useState<Message | null>(null);
+  const [reactionUserNameOverrides, setReactionUserNameOverrides] = useState<Map<string, string>>(new Map());
   const createTitleRef = useRef<HTMLInputElement>(null);
   const createTextareaRef = useRef<{ editor: any; dom: HTMLDivElement | null } | null>(null);
   const editTitleRef = useRef<HTMLInputElement>(null);
@@ -315,6 +317,73 @@ export const AnnouncementChannelArea = () => {
       setIsLoading(false);
     }
   }, [currentChannel, user?.id, groupReactions]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const unresolvedUserIds = new Set<string>();
+
+    announcements.forEach((announcement) => {
+      (announcement.reactions || []).forEach((reaction) => {
+        reaction.users.forEach((reactorId) => {
+          if (!reactorId || reactorId === user?.id || reactorId.startsWith("ghost_")) return;
+          if (reactionUserNameOverrides.has(reactorId)) return;
+
+          const member = members.find((m) => m.user_id === reactorId);
+          if (member?.nickname || member?.user?.display_name || member?.user?.username) return;
+
+          const cached = getUserFromCache(reactorId);
+          const cachedName = cached?.display_name ?? cached?.username ?? null;
+          if (cachedName) {
+            setReactionUserNameOverrides((prev) => {
+              if (prev.get(reactorId) === cachedName) return prev;
+              const next = new Map(prev);
+              next.set(reactorId, cachedName);
+              return next;
+            });
+            return;
+          }
+
+          unresolvedUserIds.add(reactorId);
+        });
+      });
+    });
+
+    unresolvedUserIds.forEach((reactorId) => {
+      void getOrFetchUser(reactorId)
+        .then((fetched) => {
+          if (cancelled || !fetched) return;
+          const displayName = fetched.display_name ?? fetched.username;
+          if (!displayName) return;
+          setReactionUserNameOverrides((prev) => {
+            if (prev.get(reactorId) === displayName) return prev;
+            const next = new Map(prev);
+            next.set(reactorId, displayName);
+            return next;
+          });
+        })
+        .catch(() => undefined);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [announcements, members, reactionUserNameOverrides, user?.id]);
+
+  const getReactionDisplayName = useCallback(
+    (reactorId: string) => {
+      if (reactorId === user?.id) return "You";
+      const member = members.find((m) => m.user_id === reactorId);
+      if (member) {
+        return member.nickname || member.user?.display_name || member.user?.username || reactorId;
+      }
+      const overrideName = reactionUserNameOverrides.get(reactorId);
+      if (overrideName) return overrideName;
+      const cached = getUserFromCache(reactorId);
+      if (cached) return cached.display_name ?? cached.username ?? reactorId;
+      return reactorId;
+    },
+    [members, reactionUserNameOverrides, user?.id],
+  );
 
   useEffect(() => {
     fetchAnnouncements();
@@ -881,11 +950,9 @@ export const AnnouncementChannelArea = () => {
                           <div className="flex flex-wrap gap-1.5 mb-4">
                             {announcement.reactions.map((reaction) => {
                               // Get user names for hover card
-                              const reactionUserNames = reaction.users.slice(0, 5).map((userId) => {
-                                if (userId === user?.id) return 'You';
-                                const member = members.find(m => m.user_id === userId);
-                                return member?.nickname || member?.user?.display_name || member?.user?.username || 'Unknown';
-                              });
+                              const reactionUserNames = reaction.users
+                                .slice(0, 5)
+                                .map((reactorId) => getReactionDisplayName(reactorId));
                               const remainingCount = Math.max(0, reaction.users.length - 5);
                               
                               return (

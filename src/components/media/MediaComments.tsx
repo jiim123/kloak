@@ -25,6 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { handleError } from "@/lib/errorHandler";
 import { formatMessageTimestamp } from "@/lib/format";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
+import { getOrFetchUser, getUserFromCache } from "@/lib/userCache";
 import type { User, ReactionGroup, CustomServerRole, ServerRole } from "@/types";
 
 interface MediaComment {
@@ -85,6 +86,7 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
   const editTextareaRef = useRef<HTMLTextAreaElement>(null);
   const commentsRef = useRef<MediaComment[]>([]);
   const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
+  const [reactionUserNameOverrides, setReactionUserNameOverrides] = useState<Map<string, string>>(new Map());
   const [composerFocused, setComposerFocused] = useState(false);
   const [composerEmojiOpen, setComposerEmojiOpen] = useState(false);
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -242,6 +244,81 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
     });
     return Object.values(groups);
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const unresolvedUserIds = new Set<string>();
+
+    comments.forEach((comment) => {
+      (comment.reactions || []).forEach((reaction) => {
+        reaction.users.forEach((reactorId) => {
+          if (!reactorId || reactorId === user?.id || reactorId.startsWith("ghost_")) return;
+          if (reactionUserNameOverrides.has(reactorId)) return;
+
+          const member = membersByUserId.get(reactorId);
+          if (member?.nickname || member?.user?.display_name || member?.user?.username) return;
+
+          const reactingUser = comments.find((c) => c.user_id === reactorId)?.user;
+          if (reactingUser?.display_name || reactingUser?.username) return;
+
+          const cached = getUserFromCache(reactorId);
+          const cachedName = cached?.display_name ?? cached?.username ?? null;
+          if (cachedName) {
+            setReactionUserNameOverrides((prev) => {
+              if (prev.get(reactorId) === cachedName) return prev;
+              const next = new Map(prev);
+              next.set(reactorId, cachedName);
+              return next;
+            });
+            return;
+          }
+
+          unresolvedUserIds.add(reactorId);
+        });
+      });
+    });
+
+    unresolvedUserIds.forEach((reactorId) => {
+      void getOrFetchUser(reactorId)
+        .then((fetched) => {
+          if (cancelled || !fetched) return;
+          const displayName = fetched.display_name ?? fetched.username;
+          if (!displayName) return;
+          setReactionUserNameOverrides((prev) => {
+            if (prev.get(reactorId) === displayName) return prev;
+            const next = new Map(prev);
+            next.set(reactorId, displayName);
+            return next;
+          });
+        })
+        .catch(() => undefined);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [comments, membersByUserId, reactionUserNameOverrides, user?.id]);
+
+  const getReactionDisplayName = useCallback(
+    (reactorId: string) => {
+      if (reactorId === user?.id) return "You";
+
+      const member = membersByUserId.get(reactorId);
+      if (member) return member.nickname || member.user?.display_name || member.user?.username || reactorId;
+
+      const reactingUser = comments.find((c) => c.user_id === reactorId)?.user;
+      if (reactingUser) return reactingUser.display_name || reactingUser.username || reactorId;
+
+      const overrideName = reactionUserNameOverrides.get(reactorId);
+      if (overrideName) return overrideName;
+
+      const cached = getUserFromCache(reactorId);
+      if (cached) return cached.display_name ?? cached.username ?? reactorId;
+
+      return reactorId;
+    },
+    [comments, membersByUserId, reactionUserNameOverrides, user?.id],
+  );
 
   // Fetch comments
   const fetchComments = useCallback(async (options?: { silent?: boolean }) => {
@@ -931,8 +1008,7 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
                                 <div className="min-w-0 text-sm">
                                   <span className="text-muted-foreground">reacted by </span>
                                   {reaction.users.slice(0, 5).map((userId, idx) => {
-                                    const reactingUser = comments.find(c => c.user_id === userId)?.user;
-                                    const name = userId === user?.id ? 'You' : (reactingUser?.display_name || reactingUser?.username || 'Unknown');
+                                    const name = getReactionDisplayName(userId);
                                     return (
                                       <span key={userId}>
                                         <span className="font-medium">{name}</span>

@@ -56,7 +56,7 @@ import { isImageOnlyMessage } from "@/lib/message";
 import { isPollMessageContent } from "@/lib/poll";
 import { MessageContent, ReplyPreview } from "@/components/chat/MessageContent";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
-import { getOrFetchUser } from "@/lib/userCache";
+import { getOrFetchUser, getUserFromCache } from "@/lib/userCache";
 import type { Message, User, ReactionGroup, CustomServerRole, ServerMember, ServerRole } from "@/types";
 
 interface Thread {
@@ -141,6 +141,7 @@ export const ForumChannelArea = () => {
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
   const [showDeleteThreadModal, setShowDeleteThreadModal] = useState(false);
   const [threadToDelete, setThreadToDelete] = useState<Thread | null>(null);
+  const [reactionUserNameOverrides, setReactionUserNameOverrides] = useState<Map<string, string>>(new Map());
   const createTopicTitleRef = useRef<HTMLInputElement>(null);
   const createTopicTextareaRef = useRef<HTMLTextAreaElement>(null);
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -297,6 +298,87 @@ export const ForumChannelArea = () => {
       return { className: getRoleColorClass(member?.role ?? fallback?.role) };
     },
     [membersByUserId, rolesById, authorStyles],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    const unresolvedUserIds = new Set<string>();
+
+    Object.values(threadMessages).forEach((messages) => {
+      messages.forEach((msg) => {
+        (msg.reactions || []).forEach((reaction) => {
+          reaction.users.forEach((reactorId) => {
+            if (!reactorId || reactorId === user?.id || reactorId.startsWith("ghost_")) return;
+            if (reactionUserNameOverrides.has(reactorId)) return;
+
+            const member = membersByUserId.get(reactorId);
+            if (member?.nickname || member?.user?.display_name || member?.user?.username) return;
+
+            const existingFromMessages = messages.find((m) => m.user_id === reactorId || m.user?.id === reactorId);
+            if (existingFromMessages?.user?.display_name || existingFromMessages?.user?.username) return;
+
+            const cached = getUserFromCache(reactorId);
+            const cachedName = cached?.display_name ?? cached?.username ?? null;
+            if (cachedName) {
+              setReactionUserNameOverrides((prev) => {
+                if (prev.get(reactorId) === cachedName) return prev;
+                const next = new Map(prev);
+                next.set(reactorId, cachedName);
+                return next;
+              });
+              return;
+            }
+
+            unresolvedUserIds.add(reactorId);
+          });
+        });
+      });
+    });
+
+    unresolvedUserIds.forEach((reactorId) => {
+      void getOrFetchUser(reactorId)
+        .then((fetched) => {
+          if (cancelled || !fetched) return;
+          const displayName = fetched.display_name ?? fetched.username;
+          if (!displayName) return;
+          setReactionUserNameOverrides((prev) => {
+            if (prev.get(reactorId) === displayName) return prev;
+            const next = new Map(prev);
+            next.set(reactorId, displayName);
+            return next;
+          });
+        })
+        .catch(() => undefined);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [membersByUserId, reactionUserNameOverrides, threadMessages, user?.id]);
+
+  const getReactionDisplayName = useCallback(
+    (reactorId: string) => {
+      if (reactorId === user?.id) return "You";
+
+      const member = membersByUserId.get(reactorId);
+      if (member) return member.nickname || member.user?.display_name || member.user?.username || reactorId;
+
+      const overrideName = reactionUserNameOverrides.get(reactorId);
+      if (overrideName) return overrideName;
+
+      const cached = getUserFromCache(reactorId);
+      if (cached) return cached.display_name ?? cached.username ?? reactorId;
+
+      for (const messages of Object.values(threadMessages)) {
+        const reactingMsg = messages.find((m) => m.user_id === reactorId || m.user?.id === reactorId);
+        if (reactingMsg?.user) {
+          return reactingMsg.user.display_name || reactingMsg.user.username || reactorId;
+        }
+      }
+
+      return reactorId;
+    },
+    [membersByUserId, reactionUserNameOverrides, threadMessages, user?.id],
   );
 
   // Load server emojis for custom emoji rendering
@@ -2121,17 +2203,9 @@ export const ForumChannelArea = () => {
                                       <div className="flex flex-wrap gap-1 mt-2">
                                         {msg.reactions.map((reaction) => {
                                           // Get user names for hover card
-                                          const reactionUserNames = reaction.users.slice(0, 5).map((userId) => {
-                                            if (userId === user?.id) return "You";
-                                            const reactingMsg = threadMessages[selectedThreadId]?.find(
-                                              (m) => m.user_id === userId,
-                                            );
-                                            return (
-                                              reactingMsg?.user?.display_name ||
-                                              reactingMsg?.user?.username ||
-                                              "Unknown"
-                                            );
-                                          });
+                                          const reactionUserNames = reaction.users
+                                            .slice(0, 5)
+                                            .map((reactorId) => getReactionDisplayName(reactorId));
                                           const remainingCount = Math.max(0, reaction.users.length - 5);
 
                                           return (
@@ -2514,17 +2588,9 @@ export const ForumChannelArea = () => {
                                         <div className="flex flex-wrap gap-1 mt-2">
                                           {msg.reactions.map((reaction) => {
                                             // Get user names for hover card
-                                            const reactionUserNames = reaction.users.slice(0, 5).map((userId) => {
-                                              if (userId === user?.id) return "You";
-                                              const reactingMsg = threadMessages[selectedThreadId]?.find(
-                                                (m) => m.user_id === userId,
-                                              );
-                                              return (
-                                                reactingMsg?.user?.display_name ||
-                                                reactingMsg?.user?.username ||
-                                                "Unknown"
-                                              );
-                                            });
+                                            const reactionUserNames = reaction.users
+                                              .slice(0, 5)
+                                              .map((reactorId) => getReactionDisplayName(reactorId));
                                             const remainingCount = Math.max(0, reaction.users.length - 5);
 
                                             return (

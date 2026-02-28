@@ -54,6 +54,7 @@ import {
   resolveQualifiedEmoji,
   type ResolvedEmoji,
 } from "@/lib/globalEmojiResolver";
+import { getOrFetchUser, getUserFromCache } from "@/lib/userCache";
 import { cn } from "@/lib/utils";
 import { useSignedUrl } from "@/hooks/useSignedUrl";
 import { getPollIdFromContent, isPollMessageContent } from "@/lib/poll";
@@ -181,6 +182,7 @@ export const MessageItem = memo(function MessageItem({
   const [hoveredRoleIcon, setHoveredRoleIcon] = useState(false);
   const [isRowHovered, setIsRowHovered] = useState(false);
   const [reactionDetailsEmoji, setReactionDetailsEmoji] = useState<string | null>(null);
+  const [reactionUserNameOverrides, setReactionUserNameOverrides] = useState<Map<string, string>>(new Map());
 
   // Refs
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -454,10 +456,72 @@ export const MessageItem = memo(function MessageItem({
   const getReactionUserNames = useCallback(
     (userIds: string[]) => {
       const unique = Array.from(new Set(userIds));
-      return unique.map((id) => memberNameById.get(id) ?? (id === user?.id ? "You" : id));
+      return unique.map((id) => {
+        if (id === user?.id) return "You";
+        const memberName = memberNameById.get(id);
+        if (memberName) return memberName;
+        const overrideName = reactionUserNameOverrides.get(id);
+        if (overrideName) return overrideName;
+        const cachedUser = getUserFromCache(id);
+        if (cachedUser) return cachedUser.display_name ?? cachedUser.username ?? id;
+        return id;
+      });
     },
-    [memberNameById, user?.id],
+    [memberNameById, reactionUserNameOverrides, user?.id],
   );
+
+  const unresolvedReactionUserIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const reaction of message.reactions ?? []) {
+      for (const uid of reaction.users) {
+        if (!uid || uid === user?.id) continue;
+        if (uid.startsWith("ghost_")) continue;
+        if (memberNameById.has(uid)) continue;
+        if (reactionUserNameOverrides.has(uid)) continue;
+        ids.add(uid);
+      }
+    }
+    return Array.from(ids);
+  }, [memberNameById, message.reactions, reactionUserNameOverrides, user?.id]);
+
+  useEffect(() => {
+    if (unresolvedReactionUserIds.length === 0) return;
+    let cancelled = false;
+
+    unresolvedReactionUserIds.forEach((uid) => {
+      const cachedUser = getUserFromCache(uid);
+      if (cachedUser) {
+        const displayName = cachedUser.display_name ?? cachedUser.username;
+        if (displayName) {
+          setReactionUserNameOverrides((prev) => {
+            if (prev.get(uid) === displayName) return prev;
+            const next = new Map(prev);
+            next.set(uid, displayName);
+            return next;
+          });
+        }
+        return;
+      }
+
+      void getOrFetchUser(uid)
+        .then((fetchedUser) => {
+          if (cancelled || !fetchedUser) return;
+          const displayName = fetchedUser.display_name ?? fetchedUser.username;
+          if (!displayName) return;
+          setReactionUserNameOverrides((prev) => {
+            if (prev.get(uid) === displayName) return prev;
+            const next = new Map(prev);
+            next.set(uid, displayName);
+            return next;
+          });
+        })
+        .catch(() => undefined);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [unresolvedReactionUserIds]);
 
   const selectedReaction = useMemo(() => {
     if (!reactionDetailsEmoji) return null;
