@@ -48,8 +48,21 @@ const BLOCKED_HOSTNAMES = [
   'kubernetes',
 ];
 
-// Validate URL is safe to fetch (prevents SSRF)
-function isUrlSafe(urlString: string): { safe: boolean; error?: string } {
+// Check if an IP address is private/internal
+function isPrivateIp(ip: string): boolean {
+  if (BLOCKED_IP_PATTERNS.some(pattern => pattern.test(ip))) return true;
+  if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(ip)) {
+    const parts = ip.split('.').map(Number);
+    if (parts[0] === 0 || parts[0] === 127 || parts[0] === 10) return true;
+    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+    if (parts[0] === 192 && parts[1] === 168) return true;
+    if (parts[0] === 169 && parts[1] === 254) return true;
+  }
+  return false;
+}
+
+// Validate URL is safe to fetch (prevents SSRF + DNS rebinding)
+async function isUrlSafe(urlString: string): Promise<{ safe: boolean; error?: string }> {
   let parsed: URL;
   try {
     parsed = new URL(urlString);
@@ -69,27 +82,28 @@ function isUrlSafe(urlString: string): { safe: boolean; error?: string } {
     return { safe: false, error: 'Blocked hostname' };
   }
 
-  // Block private IP addresses
-  if (BLOCKED_IP_PATTERNS.some(pattern => pattern.test(hostname))) {
-    return { safe: false, error: 'Private IP addresses not allowed' };
+  // For direct IP addresses, validate immediately
+  if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname)) {
+    if (isPrivateIp(hostname)) {
+      return { safe: false, error: 'Private IP addresses not allowed' };
+    }
+    return { safe: true };
   }
 
-  // Block numeric IPs that resolve to internal ranges (additional check)
-  if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname)) {
-    const parts = hostname.split('.').map(Number);
-    // Additional IP range checks
-    if (parts[0] === 0 || parts[0] === 127 || parts[0] === 10) {
-      return { safe: false, error: 'Private IP addresses not allowed' };
+  // For domain names, resolve DNS and validate ALL resolved IPs
+  // This prevents DNS rebinding attacks (TOCTOU)
+  try {
+    const addresses = await Deno.resolveDns(hostname, 'A');
+    if (!addresses || addresses.length === 0) {
+      return { safe: false, error: 'DNS resolution returned no addresses' };
     }
-    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) {
-      return { safe: false, error: 'Private IP addresses not allowed' };
+    for (const ip of addresses) {
+      if (isPrivateIp(ip)) {
+        return { safe: false, error: 'Domain resolves to private IP' };
+      }
     }
-    if (parts[0] === 192 && parts[1] === 168) {
-      return { safe: false, error: 'Private IP addresses not allowed' };
-    }
-    if (parts[0] === 169 && parts[1] === 254) {
-      return { safe: false, error: 'Link-local addresses not allowed' };
-    }
+  } catch {
+    return { safe: false, error: 'DNS resolution failed' };
   }
 
   return { safe: true };
@@ -103,7 +117,7 @@ async function fetchSafeWithRedirects(
   let currentUrl = initialUrl;
 
   for (let i = 0; i <= maxRedirects; i++) {
-    const validation = isUrlSafe(currentUrl);
+    const validation = await isUrlSafe(currentUrl);
     if (!validation.safe) {
       throw new Error(validation.error || "Unsafe redirect target");
     }
@@ -263,7 +277,7 @@ serve(async (req) => {
     }
 
     // SSRF protection: Validate URL before fetching
-    const urlValidation = isUrlSafe(url);
+    const urlValidation = await isUrlSafe(url);
     if (!urlValidation.safe) {
       console.log(`Blocked unsafe URL: ${url} - ${urlValidation.error}`);
       return new Response(
