@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from "react";
 
-const CHECK_INTERVAL_MS = 60_000; // 1 minute
+const CHECK_INTERVAL_MS = 300_000; // 5 minutes (reduced from 1 min to lower egress)
 
 export function useMaintenanceMode() {
   const [isMaintenance, setIsMaintenance] = useState(false);
