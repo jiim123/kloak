@@ -108,7 +108,7 @@ export const useRealtimeNotifications = (userId: string | null) => {
         .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
       unseen.forEach(processIncomingNotification);
-    }, 15000);
+    }, 120_000); // 2 minutes — safety net only; realtime handles live updates
 
     return () => {
       window.clearInterval(pollInterval);

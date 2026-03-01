@@ -436,7 +436,7 @@ export const useRealtimeSingleUser = (
     const intervalId = setInterval(() => {
       if (document.visibilityState !== 'visible') return;
       void fetchUser();
-    }, 45000);
+    }, 90_000); // 90s (was 45s) — reduced to lower egress
 
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
