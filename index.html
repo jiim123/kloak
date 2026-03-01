@@ -42,7 +42,7 @@
       http-equiv="Content-Security-Policy"
       content="
       default-src 'self';
-      script-src 'self' 'unsafe-inline' https://hcaptcha.com https://*.hcaptcha.com;
+      script-src 'self' https://hcaptcha.com https://*.hcaptcha.com;
       worker-src blob:;
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://hcaptcha.com https://*.hcaptcha.com;
       font-src 'self' https://fonts.gstatic.com;
@@ -77,26 +77,8 @@
     />
     <meta name="twitter:image" content="http://kloak.app/favicon.png" />
 
-    <!-- Theme initialization script - runs before React to prevent flash -->
-    <script>
-      (function() {
-        try {
-          var stored = localStorage.getItem('kloak-ui');
-          if (stored) {
-            var parsed = JSON.parse(stored);
-            var theme = parsed.state && parsed.state.theme;
-            if (theme) {
-              document.documentElement.className = theme;
-              document.documentElement.setAttribute('data-theme', theme);
-            }
-          }
-        } catch (e) {
-          // Fallback to dark theme
-          document.documentElement.className = 'dark';
-          document.documentElement.setAttribute('data-theme', 'dark');
-        }
-      })();
-    </script>
+    <!-- Theme initialization script - external file to allow strict CSP (no unsafe-inline) -->
+    <script src="/theme-init.js"></script>
 
     <!-- Critical inline styles to prevent FOUC while CSS loads via JS -->
     <style>
