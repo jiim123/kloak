@@ -280,7 +280,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
       {/* Header - hidden on mobile since we have MobileHeader */}
       <div className="h-12 px-4 hidden md:flex items-center justify-between border-b border-border shadow-sm">
         <div className="flex items-center gap-4">
-          <h2 className="font-semibold text-foreground">Friends</h2>
+          <h2 className="font-medium text-foreground">Friends</h2>
         </div>
         <Button
           size="sm"
@@ -313,7 +313,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
           {/* Add Friend Form */}
           {showAddFriend && (
             <div className="p-4 border-b border-border bg-secondary/20">
-              <h3 className="font-semibold text-foreground mb-2">Add Friend</h3>
+              <h3 className="font-medium text-foreground mb-2">Add Friend</h3>
               <p className="text-sm text-muted-foreground mb-3">You can add a friend with their username.</p>
               <div className="flex gap-2">
                 <Input
@@ -500,7 +500,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
               <TabsContent value="info" className="m-0">
                 <div className="max-w-3xl mx-auto py-8 px-4 space-y-8">
                   <div className="text-center space-y-4">
-                    <h2 className="text-3xl font-bold text-foreground">Welcome to Kloak</h2>
+                    <h2 className="text-3xl font-medium text-foreground">Welcome to Kloak</h2>
                     <p className="text-muted-foreground max-w-lg mx-auto">
                       Privacy isn't a feature. It's the architecture.
                     </p>
@@ -511,7 +511,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
                       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-4">
                         <Users className="w-5 h-5 text-primary" />
                       </div>
-                      <h3 className="text-lg font-semibold mb-2">Zero Data Collection</h3>
+                      <h3 className="text-lg font-medium mb-2">Zero Data Collection</h3>
                       <p className="text-sm text-muted-foreground">
                         We don't ask for your email, phone number, or identity. We collect only what is essential.
                       </p>
@@ -521,7 +521,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
                       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-4">
                         <Check className="w-5 h-5 text-primary" />
                       </div>
-                      <h3 className="text-lg font-semibold mb-2">Key-Based Auth</h3>
+                      <h3 className="text-lg font-medium mb-2">Key-Based Auth</h3>
                       <p className="text-sm text-muted-foreground">
                         Your account is secured by a cryptographic key only you possess. We cannot access it.
                       </p>
@@ -531,7 +531,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
                       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-4">
                         <Ban className="w-5 h-5 text-primary" />
                       </div>
-                      <h3 className="text-lg font-semibold mb-2">No Tracking</h3>
+                      <h3 className="text-lg font-medium mb-2">No Tracking</h3>
                       <p className="text-sm text-muted-foreground">
                         No ads, no behavior tracking, no profiling. Your data is yours alone.
                       </p>
@@ -541,7 +541,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
                       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-4">
                         <Info className="w-5 h-5 text-primary" />
                       </div>
-                      <h3 className="text-lg font-semibold mb-2">Open Architecture</h3>
+                      <h3 className="text-lg font-medium mb-2">Open Architecture</h3>
                       <p className="text-sm text-muted-foreground">
                         Transparent approach. We tell you exactly what we do and don't do.
                       </p>

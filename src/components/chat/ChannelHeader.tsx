@@ -117,7 +117,7 @@ export const ChannelHeader = ({ channel }: ChannelHeaderProps) => {
         <div className="w-8 h-8 rounded-lg bg-secondary/50 flex items-center justify-center flex-shrink-0">
           <ChannelIcon className="w-4 h-4 text-muted-foreground" />
         </div>
-        <span className="font-semibold text-foreground truncate">{channel.name}</span>
+        <span className="font-medium text-foreground truncate">{channel.name}</span>
 
         {channel.is_private && (
           <Tooltip>

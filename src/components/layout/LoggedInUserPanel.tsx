@@ -92,7 +92,7 @@ export const LoggedInUserPanel = ({
 
       {/* User info */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-foreground truncate">{user?.display_name || user?.username}</p>
+        <p className="text-sm font-medium text-foreground truncate">{user?.display_name || user?.username}</p>
         <p className="text-xs text-muted-foreground truncate">
           {user?.custom_status ||
             (manualStatus === "offline"

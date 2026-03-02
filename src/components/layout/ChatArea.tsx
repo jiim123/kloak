@@ -56,7 +56,7 @@ const NoChannelPlaceholder = () => (
       transition={{ duration: 0.5, delay: 0.1 }}
       className="space-y-3"
     >
-      <h2 className="text-2xl font-bold text-foreground">No Channel Selected</h2>
+      <h2 className="text-2xl font-medium text-foreground">No Channel Selected</h2>
       <p className="text-muted-foreground max-w-md text-sm leading-relaxed">
         Choose a channel from the sidebar to start conversations with your community
       </p>

@@ -111,7 +111,7 @@ export const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
       onBlur,
       editorProps: {
         attributes: {
-          class: 'min-h-[200px] resize-none bg-transparent border-0 focus-visible:ring-0 outline-none text-[14px] leading-[1.5] font-[Inter,system-ui,sans-serif] whitespace-pre-wrap break-words prose prose-sm max-w-none [&_p]:m-0 [&_p]:leading-[1.5] [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:mt-2 [&_h3]:mb-1 [&_img[data-align="center"]]:block [&_img[data-align="center"]]:mx-auto [&_img[data-align="right"]]:block [&_img[data-align="right"]]:ml-auto [&_img[data-align="left"]]:block [&_hr]:my-4 [&_hr]:border-t-2 [&_hr]:border-dotted [&_hr]:border-muted-foreground/50',
+          class: 'min-h-[200px] resize-none bg-transparent border-0 focus-visible:ring-0 outline-none text-[14px] leading-[1.5] font-[Inter,system-ui,sans-serif] whitespace-pre-wrap break-words prose prose-sm max-w-none [&_p]:m-0 [&_p]:leading-[1.5] [&_h1]:text-2xl [&_h1]:font-medium [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-medium [&_h3]:text-lg [&_h3]:font-medium [&_h3]:mt-2 [&_h3]:mb-1 [&_img[data-align="center"]]:block [&_img[data-align="center"]]:mx-auto [&_img[data-align="right"]]:block [&_img[data-align="right"]]:ml-auto [&_img[data-align="left"]]:block [&_hr]:my-4 [&_hr]:border-t-2 [&_hr]:border-dotted [&_hr]:border-muted-foreground/50',
         },
       },
     });

@@ -920,7 +920,7 @@ export const MessageItem = memo(function MessageItem({
       {showNewDivider && (
         <div className="flex items-center gap-2 my-3 px-4">
           <div className="flex-1 h-px bg-destructive/50" />
-          <span className="text-[10px] text-destructive font-bold uppercase tracking-wider">NEW</span>
+          <span className="text-[10px] text-destructive font-medium uppercase tracking-wider">NEW</span>
           <div className="flex-1 h-px bg-destructive/50" />
         </div>
       )}

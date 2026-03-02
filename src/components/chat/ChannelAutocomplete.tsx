@@ -124,7 +124,7 @@ export const ChannelAutocomplete = ({ query, position, onSelect, onClose, onOpti
         left: position.left,
       }}
     >
-      <div className="px-3 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/50">
+      <div className="px-3 py-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wider border-b border-border/50">
         Channels
       </div>
       <ScrollArea className="max-h-52">

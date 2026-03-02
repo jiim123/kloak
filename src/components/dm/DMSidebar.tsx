@@ -137,7 +137,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
 
       {/* Section header with Create Group */}
       <div className="px-4 py-2 flex items-center justify-between">
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Direct Messages</h3>
+        <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Direct Messages</h3>
         <Button
           variant="ghost"
           size="icon-sm"
@@ -242,7 +242,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
                   <span
                     className={cn(
                       "text-sm truncate",
-                      hasUnread ? "font-semibold text-foreground" : "font-medium text-foreground",
+                      hasUnread ? "font-medium text-foreground" : "font-medium text-foreground",
                     )}
                   >
                     {isGroup
@@ -266,7 +266,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
 
               {/* Unread badge or close button */}
               {hasUnread ? (
-                <span className="min-w-[20px] h-5 bg-destructive rounded-full text-xs text-destructive-foreground flex items-center justify-center px-1.5 font-bold">
+                <span className="min-w-[20px] h-5 bg-destructive rounded-full text-xs text-destructive-foreground flex items-center justify-center px-1.5 font-medium">
                   {unreadCount > 99 ? "99+" : unreadCount}
                 </span>
               ) : (

@@ -704,14 +704,14 @@ export const AnnouncementView = ({ message, onClose }: AnnouncementViewProps) =>
         >
           {isMobile ? <ArrowLeft className="w-5 h-5" /> : <X className="w-4 h-4" />}
         </Button>
-        <h3 className="text-lg font-semibold flex-1 truncate">{announcementTitle || "Announcement"}</h3>
+        <h3 className="text-lg font-medium flex-1 truncate">{announcementTitle || "Announcement"}</h3>
       </div>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4">
         {/* Comments */}
         <div className="mb-4">
-          <h4 className="text-sm font-semibold text-muted-foreground mb-3">
+          <h4 className="text-sm font-medium text-muted-foreground mb-3">
             Comments ({comments.length})
           </h4>
         </div>
