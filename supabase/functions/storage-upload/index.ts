@@ -1,5 +1,6 @@
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createServiceClient as createSharedServiceClient, enforceRateLimit, getClientId } from "../_shared/edgeSecurity.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -223,6 +224,20 @@ Deno.serve(async (req) => {
     const userId = await resolveUser(supabase, keyHash);
     if (!userId) {
       return jsonResponse({ error: "Invalid credentials" }, 401);
+    }
+
+    // Rate limit: 60 storage operations per minute per user
+    const sharedClient = createSharedServiceClient();
+    const rateScope = `user:${userId}`;
+    let rateOk = false;
+    try {
+      rateOk = await enforceRateLimit(sharedClient, rateScope, "edge_storage_upload", 60, 60);
+    } catch {
+      // If rate limit backend is unavailable, allow the request
+      rateOk = true;
+    }
+    if (!rateOk) {
+      return jsonResponse({ error: "Rate limited: too many storage operations" }, 429);
     }
 
     // ── DELETE ──

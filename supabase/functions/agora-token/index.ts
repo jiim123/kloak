@@ -1,9 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createServiceClient, enforceRateLimit, getAuthContext } from "../_shared/edgeSecurity.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "authorization, x-client-info, apikey, content-type, x-key-hash, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -15,8 +16,6 @@ const PRIVILEGES = {
   publishDataStream: 4,
 };
 const SERVICE_TYPE_RTC = 1;
-
-// --- Packer functions (little-endian, matching official Agora SDK) ---
 
 function packUint16(val: number): Uint8Array {
   const buf = new Uint8Array(2);
@@ -44,7 +43,6 @@ function packString(str: Uint8Array | string): Uint8Array {
 }
 
 function packMapUint32(map: Record<number, number>): Uint8Array {
-  // Sort by key (matching Python's OrderedDict sorted by key)
   const entries = Object.entries(map)
     .map(([k, v]) => [Number(k), v] as [number, number])
     .sort((a, b) => a[0] - b[0]);
@@ -81,8 +79,6 @@ async function hmacSign(key: Uint8Array, data: Uint8Array): Promise<Uint8Array> 
   return new Uint8Array(sig);
 }
 
-// --- Zlib deflate using DecompressionStream/CompressionStream ---
-
 async function zlibCompress(data: Uint8Array): Promise<Uint8Array> {
   const buf = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
   const stream = new Blob([buf]).stream().pipeThrough(new CompressionStream("deflate"));
@@ -102,8 +98,6 @@ function toBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-// --- Token builder matching official Agora AccessToken2 (Python reference) ---
-
 async function buildToken(
   appId: string, appCert: string, channelName: string, uid: number, expireSeconds: number
 ): Promise<string> {
@@ -111,15 +105,10 @@ async function buildToken(
   const salt = Math.floor(Math.random() * 99999999) + 1;
   const expireTs = expireSeconds > 0 ? issueTs + expireSeconds : 0;
 
-  // Step 1: Build signing key (double HMAC per official spec)
-  // signing = hmac(pack_uint32(issue_ts), app_cert)
-  // signing = hmac(pack_uint32(salt), signing)
   const appCertBytes = new TextEncoder().encode(appCert);
   let signingKey = await hmacSign(packUint32(issueTs), appCertBytes);
   signingKey = await hmacSign(packUint32(salt), signingKey);
 
-  // Step 2: Build service pack
-  // ServiceRtc.pack() = pack_uint16(type) + pack_map_uint32(privileges) + pack_string(channel) + pack_string(uid)
   const privileges: Record<number, number> = {};
   privileges[PRIVILEGES.joinChannel] = expireTs;
   privileges[PRIVILEGES.publishAudioStream] = expireTs;
@@ -134,26 +123,28 @@ async function buildToken(
     packString(uidStr)
   );
 
-  // Step 3: Build signing_info
-  // signing_info = pack_string(app_id) + pack_uint32(issue_ts) + pack_uint32(expire) + pack_uint32(salt) + pack_uint16(service_count) + services
   const signingInfo = concatBytes(
     packString(appId),
     packUint32(issueTs),
     packUint32(expireSeconds),
     packUint32(salt),
-    packUint16(1), // 1 service
+    packUint16(1),
     servicePack
   );
 
-  // Step 4: Sign
   const signature = await hmacSign(signingKey, signingInfo);
 
-  // Step 5: Compress and encode
-  // token = "007" + base64(zlib.compress(pack_string(signature) + signing_info))
   const raw = concatBytes(packString(signature), signingInfo);
   const compressed = await zlibCompress(raw);
 
   return VERSION + toBase64(compressed);
+}
+
+function jsonResponse(body: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 }
 
 serve(async (req) => {
@@ -165,39 +156,44 @@ serve(async (req) => {
     const AGORA_APP_ID = (Deno.env.get("AGORA_APP_ID") || "").trim();
     const AGORA_APP_CERTIFICATE = (Deno.env.get("AGORA_APP_CERTIFICATE") || "").trim();
 
-    console.log(`[agora-token] APP_ID length: ${AGORA_APP_ID.length}, CERT length: ${AGORA_APP_CERTIFICATE.length}`);
-
     if (!AGORA_APP_ID || !AGORA_APP_CERTIFICATE) {
-      console.error("Missing Agora secrets.");
       throw new Error("Agora credentials not configured");
+    }
+
+    // ── Auth check ──
+    const supabase = createServiceClient();
+    const auth = await getAuthContext(supabase, req);
+    if (!auth.requestUserId) {
+      return jsonResponse({ error: "Missing or invalid x-key-hash header" }, 401);
+    }
+
+    // ── Rate limit: 10 token requests per minute per user ──
+    let rateOk = false;
+    try {
+      rateOk = await enforceRateLimit(supabase, auth.scopeBase, "edge_agora_token", 10, 60);
+    } catch (rateError) {
+      const msg = rateError instanceof Error ? rateError.message : "Rate-limit backend unavailable";
+      return jsonResponse({ error: msg }, 503);
+    }
+    if (!rateOk) {
+      return jsonResponse({ error: "Rate limited: too many token requests" }, 429);
     }
 
     const { channelName, uid } = await req.json();
 
     if (!channelName || typeof channelName !== "string") {
-      return new Response(JSON.stringify({ error: "channelName is required" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "channelName is required" }, 400);
     }
 
     if (!uid || typeof uid !== "number") {
-      return new Response(JSON.stringify({ error: "uid (number) is required" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "uid (number) is required" }, 400);
     }
 
     const token = await buildToken(AGORA_APP_ID, AGORA_APP_CERTIFICATE, channelName, uid, 6 * 60 * 60);
 
-    console.log(`[agora-token] Token generated for channel: ${channelName}, uid: ${uid}`);
-
-    return new Response(JSON.stringify({ token, appId: AGORA_APP_ID }), {
-      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ token, appId: AGORA_APP_ID });
   } catch (error) {
-    console.error("Error generating Agora token:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
-    return new Response(JSON.stringify({ error: message }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ error: message }, 500);
   }
 });
