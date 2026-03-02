@@ -188,7 +188,7 @@ export const StatusSelector = ({ children, side = 'right', align = 'start' }: St
           <div className="flex items-center gap-2">
             <AvatarWithDecoration user={user} className="w-10 h-10" active={false} />
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-foreground truncate">
+              <p className="font-medium text-foreground truncate">
                 {user?.display_name || user?.username}
               </p>
               <div className="flex items-center gap-1">

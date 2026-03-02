@@ -88,7 +88,7 @@ export const ProfileEffectModal = ({ open, onOpenChange, onSelect }: ProfileEffe
               <Sparkles className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <DialogTitle className="text-lg font-semibold">Profile Effect</DialogTitle>
+              <DialogTitle className="text-lg font-medium">Profile Effect</DialogTitle>
               <DialogDescription className="text-sm text-muted-foreground">
                 Choose an effect to display in your profile card
               </DialogDescription>

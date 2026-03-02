@@ -140,7 +140,7 @@ export const JoinServerModal = () => {
                   <Users className="w-6 h-6 text-primary" />
                 </div>
                 <div className="text-center">
-                  <DialogTitle className="text-xl font-semibold">Join a Server</DialogTitle>
+                  <DialogTitle className="text-xl font-medium">Join a Server</DialogTitle>
                   <DialogDescription className="text-sm text-muted-foreground mt-1">
                     Enter an invite code to join an existing server
                   </DialogDescription>
@@ -151,7 +151,7 @@ export const JoinServerModal = () => {
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
               {/* Invite Code Input */}
               <div className="space-y-2">
-                <Label htmlFor="inviteCode" className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">
+                <Label htmlFor="inviteCode" className="text-xs font-medium uppercase text-muted-foreground tracking-wide">
                   Invite Code
                 </Label>
                 <Input

@@ -228,7 +228,7 @@ export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissio
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-sm font-semibold">Role Permissions</h3>
+        <h3 className="text-sm font-medium">Role Permissions</h3>
         <p className="text-xs text-muted-foreground mt-1">
           Configure permissions for {roleName}
         </p>
@@ -238,7 +238,7 @@ export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissio
         <div className="space-y-6">
           {PERMISSION_GROUPS.map((group) => (
             <div key={group.label} className="space-y-3">
-              <Label className="text-xs font-semibold text-muted-foreground uppercase">
+              <Label className="text-xs font-medium text-muted-foreground uppercase">
                 {group.label}
               </Label>
               <div className="space-y-2 pl-1">
@@ -257,7 +257,7 @@ export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissio
                         <button
                           onClick={() => handlePermissionChange(permission, false)}
                           className={cn(
-                            "px-3 py-1 text-[10px] font-bold rounded-md transition-all",
+                            "px-3 py-1 text-[10px] font-medium rounded-md transition-all",
                             state === false
                               ? "bg-destructive text-destructive-foreground shadow-sm"
                               : "text-muted-foreground hover:text-foreground"
@@ -268,7 +268,7 @@ export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissio
                         <button
                           onClick={() => handlePermissionChange(permission, null)}
                           className={cn(
-                            "px-3 py-1 text-[10px] font-bold rounded-md transition-all",
+                            "px-3 py-1 text-[10px] font-medium rounded-md transition-all",
                             state === null
                               ? "bg-background text-foreground shadow-sm border border-border"
                               : "text-muted-foreground hover:text-foreground"
@@ -279,7 +279,7 @@ export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissio
                         <button
                           onClick={() => handlePermissionChange(permission, true)}
                           className={cn(
-                            "px-3 py-1 text-[10px] font-bold rounded-md transition-all",
+                            "px-3 py-1 text-[10px] font-medium rounded-md transition-all",
                             state === true
                               ? "bg-emerald-500 text-white shadow-sm"
                               : "text-muted-foreground hover:text-foreground"

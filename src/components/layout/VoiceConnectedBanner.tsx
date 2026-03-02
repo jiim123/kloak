@@ -94,7 +94,7 @@ export function VoiceConnectedBanner({ className }: { className?: string }) {
                 <div className="min-w-0">
                   <div
                     className={cn(
-                      "text-[11px] font-semibold leading-tight",
+                      "text-[11px] font-medium leading-tight",
                       connection.status === "error" ? "text-destructive" : "text-muted-foreground",
                     )}
                   >

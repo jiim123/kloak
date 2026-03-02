@@ -518,7 +518,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const blockedContent = (
     <div className="space-y-6">
       <div>
-        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Blocked Users</Label>
+        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Blocked Users</Label>
         <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
           You won&apos;t see each other&apos;s messages, presence, or server entries while blocked.
         </p>
@@ -593,7 +593,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     <div className="space-y-6">
       {/* Username Display */}
       <div className="space-y-3">
-        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Username</Label>
+        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Username</Label>
         <div className="flex items-center gap-3 p-4 bg-secondary/50 rounded-xl border border-border/50">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
             <User className="w-5 h-5 text-primary" />
@@ -607,7 +607,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
       {/* Secret Key Section - Redesigned */}
       <div className="space-y-4">
-        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Secret Key</Label>
+        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Secret Key</Label>
 
         {/* View Secret Key Card */}
         <div className="p-4 rounded-xl bg-secondary/50 border border-border/50 space-y-3">
@@ -719,7 +719,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       {/* App Updates - Only show in Tauri */}
       {isTauriApp && (
         <div className="space-y-4">
-          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">App Updates</Label>
+          <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">App Updates</Label>
 
           <div className="p-4 rounded-xl bg-secondary/50 border border-border/50 space-y-3">
             <div className="flex items-center gap-3">
@@ -820,7 +820,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       {/* DevTools - Only show in Tauri */}
       {isTauriApp && (
         <div className="space-y-4">
-          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Developer Tools
           </Label>
 
@@ -869,7 +869,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       <div className="pt-6 mt-6 border-t border-destructive/20">
         <div className="p-4 rounded-xl bg-destructive/5 border border-destructive/20 space-y-4">
           <div>
-            <h4 className="text-sm font-semibold text-destructive">Danger Zone</h4>
+            <h4 className="text-sm font-medium text-destructive">Danger Zone</h4>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
               Actions here are irreversible. Please make sure you have saved your secret key before logging out.
             </p>
@@ -963,7 +963,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       <div className="p-4 rounded-xl bg-secondary/30 border border-border/50 space-y-2">
         <div className="flex items-center gap-2 mb-1">
           <Shield className="w-4 h-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold">Direct Message Privacy</h3>
+          <h3 className="text-sm font-medium">Direct Message Privacy</h3>
         </div>
         <p className="text-xs text-muted-foreground mb-2">Control who can start a new DM conversation with you.</p>
         <div className="space-y-2">
@@ -1003,7 +1003,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       <div className="p-4 rounded-xl bg-secondary/30 border border-border/50 space-y-2">
         <div className="flex items-center gap-2 mb-1">
           <Bell className="w-4 h-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold">Notification Types</h3>
+          <h3 className="text-sm font-medium">Notification Types</h3>
         </div>
         <p className="text-xs text-muted-foreground mb-2">Choose which notifications you want to receive</p>
         <SettingsToggle
@@ -1041,7 +1041,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         <div className="p-4 rounded-xl bg-secondary/30 border border-border/50 space-y-2">
           <div className="flex items-center gap-2 mb-1">
             <Monitor className="w-4 h-4 text-muted-foreground" />
-            <h3 className="text-sm font-semibold">Desktop App</h3>
+            <h3 className="text-sm font-medium">Desktop App</h3>
           </div>
           <SettingsToggle
             icon={Monitor}
@@ -1108,7 +1108,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       <div className="p-4 rounded-xl bg-secondary/30 border border-border/50 space-y-2">
         <div className="flex items-center gap-2 mb-1">
           <Globe className="w-4 h-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold">Browser Notifications</h3>
+          <h3 className="text-sm font-medium">Browser Notifications</h3>
         </div>
         <SettingsToggle
           icon={Globe}
@@ -1169,7 +1169,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       <div className="p-4 rounded-xl bg-secondary/30 border border-border/50 space-y-2">
         <div className="flex items-center gap-2 mb-1">
           <Volume2 className="w-4 h-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold">Sound</h3>
+          <h3 className="text-sm font-medium">Sound</h3>
         </div>
         <SettingsToggle
           icon={Volume2}
@@ -1238,7 +1238,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       <div className="p-4 rounded-xl bg-secondary/30 border border-border/50 space-y-2">
         <div className="flex items-center gap-2 mb-1">
           <MessageSquare className="w-4 h-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold">Message Previews</h3>
+          <h3 className="text-sm font-medium">Message Previews</h3>
         </div>
         <SettingsToggle
           icon={MessageSquare}
@@ -1326,7 +1326,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
       {/* Message Display Section */}
       <div className="space-y-2 pt-6 border-t border-border/50">
-        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Message Display</Label>
+        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Message Display</Label>
 
         <SettingsToggle
           icon={MessageSquare}
@@ -1385,7 +1385,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
             {/* Header */}
             <div className="px-5 py-4 border-b border-border flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold">{navItems.find((n) => n.id === activeTab)?.label}</h3>
+                <h3 className="text-lg font-medium">{navItems.find((n) => n.id === activeTab)?.label}</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {activeTab === "account" && "Manage your account"}
                   {activeTab === "profile" && "Customize your profile"}
@@ -1419,7 +1419,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           <div className="w-56 flex-shrink-0 border-r border-border bg-secondary/20 flex flex-col overflow-hidden">
             {/* Settings Title Header */}
             <div className="px-4 pt-5 pb-3">
-              <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground truncate">
+              <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground truncate">
                 User Settings
               </h2>
             </div>
@@ -1478,7 +1478,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
             {/* Content */}
             <div className="p-6 pr-16">
-              <h2 className="text-xl font-bold mb-1">{navItems.find((n) => n.id === activeTab)?.label}</h2>
+              <h2 className="text-xl font-medium mb-1">{navItems.find((n) => n.id === activeTab)?.label}</h2>
               <p className="text-sm text-muted-foreground mb-6">
                 {activeTab === "account" && "Manage your account credentials and security"}
                 {activeTab === "profile" && "Customize how others see you"}
@@ -1578,7 +1578,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
               <div className="space-y-5 py-2">
                 {/* Data to be deleted */}
                 <div className="space-y-3">
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                   <h4 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Data to be deleted
                   </h4>
                   <div className="grid grid-cols-2 gap-2">
@@ -1593,7 +1593,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                         className="flex items-center justify-between p-3 bg-secondary/50 rounded-xl"
                       >
                         <span className="text-sm text-muted-foreground">{item.label}</span>
-                        <span className="font-semibold">{item.count}</span>
+                        <span className="font-medium">{item.count}</span>
                       </div>
                     ))}
                   </div>
@@ -1602,7 +1602,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 {/* Servers to be transferred */}
                 {deletionPreview.servers_to_transfer.length > 0 && (
                   <div className="space-y-3">
-                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    <h4 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       Servers to be transferred
                     </h4>
                     <div className="space-y-2">
@@ -1629,7 +1629,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 {/* Servers to be deleted */}
                 {deletionPreview.servers_to_delete.length > 0 && (
                   <div className="space-y-3">
-                    <h4 className="text-xs font-semibold uppercase tracking-wider text-destructive">
+                    <h4 className="text-xs font-medium uppercase tracking-wider text-destructive">
                       Servers to be deleted
                     </h4>
                     <div className="space-y-2">

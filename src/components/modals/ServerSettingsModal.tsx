@@ -1440,7 +1440,7 @@ export const ServerSettingsModal = () => {
             {/* Header */}
             <div className="px-5 py-4 border-b border-border flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold">
+                <h3 className="text-lg font-medium">
                   {navItems.find((n) => n.id === activeTab)?.label || "Server Settings"}
                 </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -1475,7 +1475,7 @@ export const ServerSettingsModal = () => {
                           {displayIconUrl ? (
                             <img src={displayIconUrl} alt={server.name} className="w-full h-full object-cover" />
                           ) : (
-                            <span className="text-base font-bold text-muted-foreground">
+                            <span className="text-base font-medium text-muted-foreground">
                               {getServerInitials(server.name)}
                             </span>
                           )}
@@ -1626,7 +1626,7 @@ export const ServerSettingsModal = () => {
                   {/* Danger Zone */}
                   {isOwner && (
                     <div className="bg-destructive/10 backdrop-blur-sm rounded-xl border border-destructive/30 p-3 mt-4 space-y-3">
-                      <h4 className="text-sm font-semibold text-destructive">Danger Zone</h4>
+                      <h4 className="text-sm font-medium text-destructive">Danger Zone</h4>
                       <p className="text-xs text-muted-foreground">Delete server permanently.</p>
                       <Button
                         variant="destructive"
@@ -1854,7 +1854,7 @@ export const ServerSettingsModal = () => {
                       >
                         <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3">
                           <div className="mb-3">
-                            <h4 className="text-sm font-semibold mb-1">Edit Role</h4>
+                            <h4 className="text-sm font-medium mb-1">Edit Role</h4>
                             <p className="text-xs text-muted-foreground">Modify role settings and permissions</p>
                           </div>
                           <TabsList className="inline-flex h-auto p-1 bg-secondary/50 rounded-xl border border-border/50 w-full">
@@ -1971,7 +1971,7 @@ export const ServerSettingsModal = () => {
                       </Tabs>
                     ) : (
                       <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 space-y-4">
-                        <h4 className="text-sm font-semibold">Create Role</h4>
+                        <h4 className="text-sm font-medium">Create Role</h4>
                         <div className="space-y-3">
                           <Label className="text-sm">Role Name</Label>
                           <Input
@@ -2045,7 +2045,7 @@ export const ServerSettingsModal = () => {
                     )}
 
                     <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 space-y-3">
-                      <h4 className="text-sm font-semibold">Server Roles</h4>
+                      <h4 className="text-sm font-medium">Server Roles</h4>
                       {roles.length > 0 ? (
                         <div className="space-y-2">
                           {roles.map((role) => (
@@ -2158,7 +2158,7 @@ export const ServerSettingsModal = () => {
                 (canManageEmojis ? (
                   <div className="space-y-4">
                     <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 space-y-3">
-                      <h4 className="text-sm font-semibold">Upload Emoji</h4>
+                      <h4 className="text-sm font-medium">Upload Emoji</h4>
                       <div className="flex items-center gap-3">
                         <div
                           onClick={() => emojiInputRef.current?.click()}
@@ -2191,7 +2191,7 @@ export const ServerSettingsModal = () => {
 
                     <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 space-y-3">
                       <div className="flex items-center justify-between flex-wrap gap-2">
-                        <h4 className="text-sm font-semibold">Server Emojis</h4>
+                        <h4 className="text-sm font-medium">Server Emojis</h4>
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-muted-foreground">
                             {serverEmojis.length}/{MAX_SERVER_EMOJIS}
@@ -2396,7 +2396,7 @@ export const ServerSettingsModal = () => {
                   <Settings className="w-5 h-5 text-primary" />
                 </div>
                 <div className="min-w-0">
-                  <DialogTitle className="text-base sm:text-lg font-semibold">Server Settings</DialogTitle>
+                  <DialogTitle className="text-base sm:text-lg font-medium">Server Settings</DialogTitle>
                   <DialogDescription className="text-xs sm:text-sm text-muted-foreground">
                     Manage your server settings and members
                   </DialogDescription>

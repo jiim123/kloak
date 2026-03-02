@@ -541,7 +541,7 @@ export const UserProfilePopup = () => {
                   {/* Name and username - shown below avatar on mobile */}
                   <div className="sm:hidden mb-4 relative" style={{ zIndex: 10 }}>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h2 className="text-xl font-semibold tracking-tight">
+                      <h2 className="text-xl font-medium tracking-tight">
                         {profileUser.display_name || profileUser.username}
                       </h2>
                       {userBadges.length > 0 && <UserBadges badges={userBadges} />}

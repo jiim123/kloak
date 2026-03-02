@@ -103,12 +103,12 @@ export const NavigationMenu = () => {
             {/* CTA Buttons */}
             <div className="flex flex-col mb-6">
               <Link to="/app" onClick={() => setMenuOpen(false)} className="block">
-                <Button variant="outline" className="w-full h-16 text-lg font-semibold justify-center rounded-none rounded-t-xl">
+                <Button variant="outline" className="w-full h-16 text-lg font-medium justify-center rounded-none rounded-t-xl">
                   Create Account
                 </Button>
               </Link>
               <Link to="/app" onClick={() => setMenuOpen(false)} className="block">
-                <Button className="w-full h-16 text-lg font-semibold justify-center rounded-none rounded-b-xl">
+                <Button className="w-full h-16 text-lg font-medium justify-center rounded-none rounded-b-xl">
                   Open Kloak
                 </Button>
               </Link>

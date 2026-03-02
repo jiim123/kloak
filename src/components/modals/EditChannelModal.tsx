@@ -317,7 +317,7 @@ export const EditChannelModal = () => {
 
       {/* Toggles */}
       <div className="space-y-3">
-        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Channel Options</Label>
+        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Channel Options</Label>
 
         <ToggleCard
           icon={Lock}
@@ -347,7 +347,7 @@ export const EditChannelModal = () => {
 
       {/* Link Restrictions */}
       <div className="space-y-3">
-        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Link Restrictions</Label>
+        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Link Restrictions</Label>
 
         <ToggleCard
           icon={Link2}
@@ -508,7 +508,7 @@ export const EditChannelModal = () => {
   const categoryOverviewContent = (
     <div className="space-y-6">
       <div className="space-y-3">
-        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Category Name</Label>
+        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Category Name</Label>
         <div className="relative">
           <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-secondary/80 flex items-center justify-center">
             <FolderOpen className="h-4 w-4 text-muted-foreground" />
@@ -628,7 +628,7 @@ export const EditChannelModal = () => {
           {/* Header */}
           <div className="px-5 py-4 border-b border-border flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold">{navItems.find((n) => n.id === activeTab)?.label}</h3>
+              <h3 className="text-lg font-medium">{navItems.find((n) => n.id === activeTab)?.label}</h3>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {isCategory ? category?.name : `#${channel?.name}`}
               </p>

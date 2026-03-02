@@ -164,7 +164,7 @@ export const CreateServerModal = () => {
                   <Sparkles className="w-6 h-6 text-primary" />
                 </div>
                 <div className="text-center">
-                  <DialogTitle className="text-xl font-semibold">Add a Server</DialogTitle>
+                  <DialogTitle className="text-xl font-medium">Add a Server</DialogTitle>
                   <DialogDescription className="text-sm text-muted-foreground mt-1">
                     Create your own server or join an existing one
                   </DialogDescription>
@@ -181,7 +181,7 @@ export const CreateServerModal = () => {
                   <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-[hsl(var(--kloak-success))]" />
                 </div>
                 <div className="text-left flex-1 min-w-0">
-                  <p className="font-semibold tracking-tight">Create My Own</p>
+                  <p className="font-medium tracking-tight">Create My Own</p>
                   <p className="text-sm text-muted-foreground truncate">Start fresh with your own server</p>
                 </div>
               </button>
@@ -194,7 +194,7 @@ export const CreateServerModal = () => {
                   <Users className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
                 </div>
                 <div className="text-left flex-1 min-w-0">
-                  <p className="font-semibold tracking-tight">Join a Server</p>
+                  <p className="font-medium tracking-tight">Join a Server</p>
                   <p className="text-sm text-muted-foreground truncate">Enter an invite code to join</p>
                 </div>
               </button>
@@ -207,7 +207,7 @@ export const CreateServerModal = () => {
                   <Compass className="w-5 h-5 sm:w-6 sm:h-6 text-[hsl(var(--kloak-warning))]" />
                 </div>
                 <div className="text-left flex-1 min-w-0">
-                  <p className="font-semibold tracking-tight">Explore Servers</p>
+                  <p className="font-medium tracking-tight">Explore Servers</p>
                   <p className="text-sm text-muted-foreground truncate">Discover and join public communities</p>
                 </div>
               </button>
@@ -220,7 +220,7 @@ export const CreateServerModal = () => {
           <div className="p-4 sm:p-6">
             <DialogHeader className="pb-4">
               <div className="text-center">
-                <DialogTitle className="text-xl font-semibold">Create Your Server</DialogTitle>
+                <DialogTitle className="text-xl font-medium">Create Your Server</DialogTitle>
                 <DialogDescription className="text-sm text-muted-foreground mt-1">
                   Make yours and start talking
                 </DialogDescription>
@@ -259,7 +259,7 @@ export const CreateServerModal = () => {
 
               {/* Server Name */}
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">
+                <Label htmlFor="name" className="text-xs font-medium uppercase text-muted-foreground tracking-wide">
                   Server Name
                 </Label>
                 <Input

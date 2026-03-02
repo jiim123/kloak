@@ -2095,7 +2095,7 @@ export const ServerSettingsPage = () => {
 
             {/* Members Tab */}
             <TabsContent value="members" className="m-0 p-6 pr-16">
-              <h2 className="text-xl font-bold mb-1">Members</h2>
+              <h2 className="text-xl font-medium mb-1">Members</h2>
               <p className="text-sm text-muted-foreground mb-4">
                 {members.length} member{members.length !== 1 ? "s" : ""}
               </p>
@@ -2234,7 +2234,7 @@ export const ServerSettingsPage = () => {
                   <div className="w-64 border-r border-border flex flex-col">
                     <div className="p-4 border-b border-border">
                       <div className="flex items-center justify-between mb-2">
-                        <h4 className="text-sm font-semibold">Roles</h4>
+                        <h4 className="text-sm font-medium">Roles</h4>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -2290,7 +2290,7 @@ export const ServerSettingsPage = () => {
                       <div className="p-6 space-y-6 max-w-2xl">
                         {/* Role Details Section */}
                         <div>
-                          <h3 className="text-lg font-semibold mb-1">Edit Role</h3>
+                          <h3 className="text-lg font-medium mb-1">Edit Role</h3>
                           <p className="text-sm text-muted-foreground">
                             Customize appearance and permissions for this role
                           </p>
@@ -2392,7 +2392,7 @@ export const ServerSettingsPage = () => {
                         {/* Permissions Section */}
                         <Separator />
                         <div>
-                          <h3 className="text-lg font-semibold mb-1">Permissions</h3>
+                          <h3 className="text-lg font-medium mb-1">Permissions</h3>
                           <p className="text-sm text-muted-foreground mb-4">
                             Configure what members with this role can do. Greyed-out permissions are not yet available.
                           </p>
@@ -2404,7 +2404,7 @@ export const ServerSettingsPage = () => {
                           <>
                             <Separator />
                             <div className="pb-8">
-                              <h4 className="text-sm font-semibold text-destructive mb-2">Delete Role</h4>
+                              <h4 className="text-sm font-medium text-destructive mb-2">Delete Role</h4>
                               <p className="text-xs text-muted-foreground mb-3">
                                 Permanently delete this role. It will be removed from all members who have it.
                               </p>
@@ -2420,7 +2420,7 @@ export const ServerSettingsPage = () => {
                       <div className="p-6 max-w-2xl">
                         <div className="space-y-5">
                           <div>
-                            <h3 className="text-lg font-semibold mb-1">Create New Role</h3>
+                            <h3 className="text-lg font-medium mb-1">Create New Role</h3>
                             <p className="text-sm text-muted-foreground">Create a new role for your server</p>
                           </div>
 
@@ -2522,7 +2522,7 @@ export const ServerSettingsPage = () => {
             <TabsContent value="invites" className="m-0 p-6 pr-16">
               {canManageInvites ? (
                 <div className="space-y-4 max-w-4xl">
-                  <h2 className="text-xl font-bold">Invites</h2>
+                  <h2 className="text-xl font-medium">Invites</h2>
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-sm text-muted-foreground">Create, copy, and revoke invite links.</p>
@@ -2692,7 +2692,7 @@ export const ServerSettingsPage = () => {
 
             {/* Bans Tab */}
             <TabsContent value="bans" className="m-0 p-6 pr-16">
-              <h2 className="text-xl font-bold mb-4">Bans</h2>
+              <h2 className="text-xl font-medium mb-4">Bans</h2>
               {bannedMembers.length > 0 ? (
                 <ScrollArea className="h-[calc(100vh-16rem)] pr-4">
                   <div className="space-y-2 max-w-4xl">
@@ -2746,11 +2746,11 @@ export const ServerSettingsPage = () => {
             <TabsContent value="emojis" className="m-0 p-6 pr-16">
               {canManageEmojis ? (
                 <div className="space-y-5 max-w-4xl">
-                  <h2 className="text-xl font-bold">Emojis</h2>
+                  <h2 className="text-xl font-medium">Emojis</h2>
                   {/* Import from emoji.gg */}
                   <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/50">
                     <div className="min-w-0 flex-1">
-                      <h4 className="text-sm font-semibold">Import from emoji.gg</h4>
+                      <h4 className="text-sm font-medium">Import from emoji.gg</h4>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         Browse and import emoji packs from emoji.gg
                       </p>
@@ -2762,7 +2762,7 @@ export const ServerSettingsPage = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <h4 className="text-sm font-semibold">Custom Emojis</h4>
+                    <h4 className="text-sm font-medium">Custom Emojis</h4>
                     <p className="text-xs text-muted-foreground">
                       Upload an emoji and set a name (2-12 chars: a-z, 0-9, underscore). Use it in chat as{" "}
                       <span className="font-mono">:name:</span>
@@ -2830,7 +2830,7 @@ export const ServerSettingsPage = () => {
                   {/* Emoji list */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between flex-wrap gap-2">
-                      <h4 className="text-sm font-semibold">Server Emojis</h4>
+                      <h4 className="text-sm font-medium">Server Emojis</h4>
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-muted-foreground">
                           {serverEmojis.length}/{MAX_SERVER_EMOJIS} slots
@@ -3021,7 +3021,7 @@ export const ServerSettingsPage = () => {
             {canManageChannels && (
               <TabsContent value="integrations" className="m-0 p-6 pr-16">
                 <div className="space-y-5 max-w-3xl">
-                  <h2 className="text-xl font-bold">Integrations</h2>
+                  <h2 className="text-xl font-medium">Integrations</h2>
                   <p className="text-sm text-muted-foreground">
                     Connect external services and import data from other platforms.
                   </p>

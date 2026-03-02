@@ -111,7 +111,7 @@ export const CreateChannelModal = () => {
           </div>
 
           {/* Title & Description */}
-          <h2 className="text-xl font-semibold">{mode === "category" ? "Create Category" : "Create Channel"}</h2>
+          <h2 className="text-xl font-medium">{mode === "category" ? "Create Category" : "Create Channel"}</h2>
           <p className="text-sm text-muted-foreground mt-1">
             {mode === "category"
               ? "Categories help organize your channels"
@@ -125,7 +125,7 @@ export const CreateChannelModal = () => {
             <>
               {/* Channel Type - icon only with dynamic description */}
               <div className="space-y-3">
-                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Channel Type
                 </Label>
                 <RadioGroup
@@ -267,7 +267,7 @@ export const CreateChannelModal = () => {
               {/* Category selector - only when this server has categories */}
               {!presetCategoryId && currentServer && categories.length > 0 && (
                 <div className="space-y-3">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Category
                   </Label>
                   <Select value={categoryId} onValueChange={setCategoryId}>

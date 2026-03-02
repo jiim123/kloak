@@ -349,7 +349,7 @@ export const EditableProfilePreview = ({
                     }}
                     placeholder="Display Name"
                     maxLength={32}
-                    className="h-9 text-lg font-semibold bg-background/80 rounded-lg"
+                    className="h-9 text-lg font-medium bg-background/80 rounded-lg"
                     style={{ color: fg }}
                   />
                   <Button
@@ -370,7 +370,7 @@ export const EditableProfilePreview = ({
                 onClick={() => setIsEditingName(true)}
                 className="flex items-center gap-2 hover:opacity-80 transition-opacity text-left"
               >
-                <span className="text-lg font-semibold" style={{ color: fg }}>
+                <span className="text-lg font-medium" style={{ color: fg }}>
                   {displayName.trim() || user.display_name || user.username}
                 </span>
                 <Pencil className="w-3.5 h-3.5" style={{ color: muted }} />
@@ -518,7 +518,7 @@ export const EditableProfilePreview = ({
           {/* Info Section */}
           <div className="space-y-3">
             <div>
-              <div className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: muted }}>
+              <div className="text-xs font-medium uppercase tracking-wider mb-1" style={{ color: muted }}>
                 Member Since
               </div>
               <div className="text-sm font-medium" style={{ color: fg }}>
@@ -527,14 +527,14 @@ export const EditableProfilePreview = ({
             </div>
 
             <div>
-              <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: muted }}>
+              <div className="text-xs font-medium uppercase tracking-wider mb-2" style={{ color: muted }}>
                 Mutual Servers
               </div>
               <div className="flex items-center gap-1.5">
                 {[1, 2, 3].map((i) => (
                   <div
                     key={i}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-semibold"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-medium"
                     style={{ backgroundColor: divider, color: muted }}
                   >
                     {i}
