@@ -1063,6 +1063,12 @@
   max-width: 100%;
 }
 
+/* Ensure emojis in textareas render at the same size as surrounding text */
+textarea {
+  font-family: inherit, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  font-size: inherit;
+}
+
 /* General Sans for all non-app pages */
 body {
   font-family: "General Sans", system-ui, sans-serif;

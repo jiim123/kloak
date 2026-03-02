@@ -514,7 +514,22 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
         setShowEmojiPicker={setShowEmojiPicker}
         isSending={isSending}
         handleSubmit={handleSubmit}
-        handleEmojiSelect={(emoji: string) => setContent((prev) => prev + emoji)}
+        handleEmojiSelect={(emoji: string) => {
+          const textarea = textareaRef.current;
+          if (textarea) {
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            setContent((prev) => prev.slice(0, start) + emoji + prev.slice(end));
+            // Restore cursor position after the inserted emoji
+            requestAnimationFrame(() => {
+              const newPos = start + emoji.length;
+              textarea.setSelectionRange(newPos, newPos);
+              textarea.focus();
+            });
+          } else {
+            setContent((prev) => prev + emoji);
+          }
+        }}
         currentServer={currentServer}
         onAttachClick={() => fileInputRef.current?.click()}
         pendingAttachments={pendingAttachments}
@@ -587,7 +602,7 @@ const MobileOptimizedInput = memo(
             onPaste={handlePaste}
             placeholder={canSendMessage ? `Message #${channelName}` : "Locked"}
             disabled={!canSendMessage}
-            className="font-normal flex-1 bg-transparent resize-none outline-none py-2 px-1 min-h-[40px] max-h-[160px] text-[15px]"
+            className="font-normal flex-1 bg-transparent resize-none outline-none py-2 px-1 min-h-[40px] max-h-[160px] text-[15px] leading-[1.375]"
             rows={1}
           />
           <ActionButtons
