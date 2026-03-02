@@ -1069,7 +1069,7 @@ export const MessageItem = memo(function MessageItem({
                       <span className="inline font-[Inter,system-ui,sans-serif]">
                         <span
                           onClick={handleUsernameClick}
-                          className={`text-[14px] sm:text-[15px] font-medium leading-tight hover:underline cursor-pointer mr-1.5 ${usernameColorClass}`}
+                          className={`text-sm leading-tight hover:underline cursor-pointer mr-1.5 ${usernameColorClass}`}
                           style={usernameColorStyle}
                         >
                           {displayName}
@@ -1092,7 +1092,7 @@ export const MessageItem = memo(function MessageItem({
                         <div className="flex items-baseline gap-2 mb-0.5 font-[Inter,system-ui,sans-serif]">
                           <span
                             onClick={handleUsernameClick}
-                            className={`text-[14px] sm:text-[15px] font-medium leading-tight hover:underline cursor-pointer ${usernameColorClass}`}
+                            className={`text-sm leading-tight hover:underline cursor-pointer ${usernameColorClass}`}
                             style={usernameColorStyle}
                           >
                             {displayName}
