@@ -226,7 +226,7 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
           {PERMISSION_GROUPS.map((group) => (
             <div key={group.label} className="space-y-1">
               <div className="mb-3">
-                <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">
+                <h4 className="text-xs font-medium uppercase tracking-widest text-muted-foreground/70">
                   {group.label}
                 </h4>
                 <p className="text-xs text-muted-foreground mt-0.5">{group.description}</p>
@@ -266,7 +266,7 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
                           onClick={() => handlePermissionChange(selectedRoleKey!, permission, false)}
                           disabled={isDisabled}
                           className={cn(
-                            "px-2.5 py-1 text-[10px] font-bold rounded-md transition-all",
+                            "px-2.5 py-1 text-[10px] font-medium rounded-md transition-all",
                             state === false
                               ? "bg-destructive text-destructive-foreground shadow-sm"
                               : "text-muted-foreground hover:text-foreground"
@@ -278,7 +278,7 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
                           onClick={() => handlePermissionChange(selectedRoleKey!, permission, null)}
                           disabled={isDisabled}
                           className={cn(
-                            "px-2.5 py-1 text-[10px] font-bold rounded-md transition-all",
+                            "px-2.5 py-1 text-[10px] font-medium rounded-md transition-all",
                             state === null
                               ? "bg-background text-foreground shadow-sm border border-border"
                               : "text-muted-foreground hover:text-foreground"
@@ -290,7 +290,7 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
                           onClick={() => handlePermissionChange(selectedRoleKey!, permission, true)}
                           disabled={isDisabled}
                           className={cn(
-                            "px-2.5 py-1 text-[10px] font-bold rounded-md transition-all",
+                            "px-2.5 py-1 text-[10px] font-medium rounded-md transition-all",
                             state === true
                               ? "bg-emerald-600 text-white shadow-sm"
                               : "text-muted-foreground hover:text-foreground"

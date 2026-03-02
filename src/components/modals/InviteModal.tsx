@@ -124,7 +124,7 @@ export const InviteModal = () => {
             </div>
 
             {/* Title & Description */}
-            <h2 className="text-xl font-semibold pr-8">Invite to {server?.name}</h2>
+            <h2 className="text-xl font-medium pr-8">Invite to {server?.name}</h2>
             <p className="text-sm text-muted-foreground mt-1">Share this code to grant access to your server</p>
           </div>
 
@@ -132,7 +132,7 @@ export const InviteModal = () => {
           <div className="px-6 pb-6 space-y-6">
             {/* Invite options */}
             <div className="space-y-3">
-              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Invite settings
               </Label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -183,12 +183,12 @@ export const InviteModal = () => {
 
             {/* Invite Code Display */}
             <div className="space-y-3">
-              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Invite Code
               </Label>
               <div className="flex items-center gap-3">
                 <div className="flex-1 h-14 flex items-center justify-center rounded-xl border-2 border-primary/20 bg-primary/5">
-                  <span className="font-mono text-xl tracking-[0.25em] font-bold text-primary">
+                  <span className="font-mono text-xl tracking-[0.25em] font-medium text-primary">
                     {displayCode || "--------"}
                   </span>
                 </div>

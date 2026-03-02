@@ -108,7 +108,7 @@ export const GroupChatHeader = ({ conversation, participants }: GroupChatHeaderP
           {/* Group info */}
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <StackedAvatars users={participants} size="sm" />
-            <span className="font-semibold text-foreground truncate">
+            <span className="font-medium text-foreground truncate">
               {getGroupDisplayName()}
             </span>
           </div>

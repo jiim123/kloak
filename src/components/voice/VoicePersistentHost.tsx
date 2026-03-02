@@ -69,7 +69,7 @@ export function VoicePersistentHost() {
                 <Volume2 className="w-5 h-5 text-primary" />
               </div>
               <div className="min-w-0">
-                <div className="font-semibold">You’re already in a voice channel</div>
+                <div className="font-medium">You're already in a voice channel</div>
                 <div className="text-sm text-muted-foreground truncate">
                   Connected to <span className="font-medium text-foreground">{joinedChannel?.name}</span>
                 </div>
@@ -122,4 +122,3 @@ export function VoicePersistentHost() {
 
   return null;
 }
-

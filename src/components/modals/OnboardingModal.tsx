@@ -132,7 +132,7 @@ export const OnboardingModal = ({
                       <Shield className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />
                     </div>
                   </div>
-                  <DialogTitle className="text-xl sm:text-2xl font-bold tracking-tight">
+                  <DialogTitle className="text-xl sm:text-2xl font-medium tracking-tight">
                     Welcome to Kloak!
                   </DialogTitle>
                   <DialogDescription className="text-sm sm:text-base text-muted-foreground">
@@ -239,7 +239,7 @@ export const OnboardingModal = ({
                       <Key className="w-7 h-7 sm:w-8 sm:h-8 text-[hsl(var(--kloak-warning))]" />
                     </div>
                   </div>
-                  <DialogTitle className="text-xl sm:text-2xl font-bold tracking-tight">
+                  <DialogTitle className="text-xl sm:text-2xl font-medium tracking-tight">
                     Your Secret Key is Everything
                   </DialogTitle>
                   <DialogDescription className="text-sm sm:text-base text-muted-foreground">
@@ -307,7 +307,7 @@ export const OnboardingModal = ({
 
                   {/* Storage Instructions */}
                   <div className="p-3 sm:p-4 rounded-xl bg-secondary/30 border border-border/30 backdrop-blur-sm">
-                    <h4 className="font-semibold tracking-tight text-sm sm:text-base mb-2">
+                    <h4 className="font-medium tracking-tight text-sm sm:text-base mb-2">
                       Store it safely:
                     </h4>
                     <ul className="text-xs sm:text-sm text-muted-foreground space-y-1.5">
@@ -368,7 +368,7 @@ export const OnboardingModal = ({
                       <PartyPopper className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />
                     </div>
                   </div>
-                  <DialogTitle className="text-xl sm:text-2xl font-bold tracking-tight">
+                  <DialogTitle className="text-xl sm:text-2xl font-medium tracking-tight">
                     You're All Set!
                   </DialogTitle>
                   <DialogDescription className="text-sm sm:text-base text-muted-foreground">

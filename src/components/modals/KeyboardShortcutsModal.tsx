@@ -83,7 +83,7 @@ export const KeyboardShortcutsModal = () => {
           <div className="space-y-6 pr-4">
             {SHORTCUT_GROUPS.map((group) => (
               <div key={group.name}>
-                <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase">
+                <h3 className="text-sm font-medium mb-3 text-muted-foreground uppercase">
                   {group.name}
                 </h3>
                 <div className="space-y-2">

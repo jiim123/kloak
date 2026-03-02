@@ -90,7 +90,7 @@ export const AvatarDecorationModal = ({ open, onOpenChange, onSelect }: AvatarDe
               <Sparkles className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <DialogTitle className="text-lg font-semibold">Avatar Decoration</DialogTitle>
+              <DialogTitle className="text-lg font-medium">Avatar Decoration</DialogTitle>
               <DialogDescription className="text-sm text-muted-foreground">
                 Choose a decoration to display around your avatar
               </DialogDescription>
