@@ -604,7 +604,7 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
 
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
-      <div ref={containerRef} className="flex-1 overflow-y-auto overflow-x-hidden" onScroll={handleScroll}>
+      <div ref={containerRef} className="flex-1 overflow-y-auto overflow-x-hidden will-change-transform" style={{ contain: 'strict' }} onScroll={handleScroll}>
         {/* Loading skeleton for initial load */}
         {isLoading && messages.length === 0 && <MessageListSkeleton />}
 
