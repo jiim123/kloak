@@ -17,6 +17,7 @@ import { ServerMembersView } from "@/components/layout/ServerMembersView";
 import { MobileHeader } from "@/components/layout/MobileHeader";
 import { MobileSidebar } from "@/components/layout/MobileSidebar";
 import { ConnectionStatus } from "@/components/ui/ConnectionStatus";
+import KloakDrawLoader from "@/components/ui/KloakDrawLoader";
 import { DMSidebar, FriendsList, DMChatArea } from "@/components/dm";
 import { ServerSettingsPage, ChannelSettingsPage } from "@/components/settings";
 import {
@@ -493,7 +494,7 @@ const AppLayout = () => {
   if (isLoading && !user) {
     return (
       <div className="h-screen bg-layout-chat flex items-center justify-center">
-        <div className="animate-pulse-subtle text-primary">Loading...</div>
+        <KloakDrawLoader />
       </div>
     );
   }
