@@ -308,14 +308,17 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
 
     try {
       let finalContent = contentToSend;
+      const uploadedUrls: string[] = [];
       if (pendingAttachments.length > 0) {
-        const urls = [];
         for (const att of pendingAttachments) {
           const fileName = `${user.id}/${Date.now()}-${crypto.randomUUID()}.${att.file.name.split(".").pop()}`;
           const res = await secureUpload("attachments", fileName, att.file, { contentType: att.file.type });
-          urls.push(res.publicUrl);
+          uploadedUrls.push(res.publicUrl);
         }
-        finalContent = finalContent ? `${finalContent}\n${urls.join("\n")}` : urls.join("\n");
+        // Only use URLs as content if there's no text; otherwise attachments are stored separately
+        if (!finalContent) {
+          finalContent = uploadedUrls.join("\n");
+        }
       }
 
       // 🚀 Optimization: The DB Trigger now handles all mention processing automatically.
