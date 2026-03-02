@@ -12,7 +12,7 @@ const SupportUsBox = () => (
         <Heart className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-emerald-400" />
       </div>
       <div className="space-y-0.5 sm:space-y-1 md:space-y-2">
-        <h3 className="font-semibold text-sm sm:text-base md:text-lg">Support Us</h3>
+        <h3 className="font-medium text-sm sm:text-base md:text-lg">Support Us</h3>
         <p className="text-xs sm:text-sm text-muted-foreground px-1">Help keep Kloak running</p>
       </div>
     </div>
@@ -121,7 +121,7 @@ export const HomeLanding = () => {
               />
             </div>
             <div className="text-center sm:text-left space-y-1 sm:space-y-1.5">
-              <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight text-foreground break-words">
+              <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-medium tracking-tight text-foreground break-words">
                 {greeting.text}, <span className="text-primary break-words">{displayName}</span>{" "}
                 <span aria-hidden="true">{greeting.emoji}</span>
               </h1>
@@ -145,7 +145,7 @@ export const HomeLanding = () => {
                   <Plus className="w-4.5 h-4.5 sm:w-5 sm:h-5 md:w-6 md:h-6 text-primary" />
                 </div>
                 <div className="space-y-0.5 sm:space-y-1 md:space-y-2">
-                  <h3 className="font-semibold text-sm sm:text-base md:text-lg">Create Server</h3>
+                  <h3 className="font-medium text-sm sm:text-base md:text-lg">Create Server</h3>
                   <p className="text-xs sm:text-sm text-muted-foreground px-1">Start your own private community</p>
                 </div>
               </div>
@@ -160,7 +160,7 @@ export const HomeLanding = () => {
                   <Users className="w-4.5 h-4.5 sm:w-5 sm:h-5 md:w-6 md:h-6 text-primary" />
                 </div>
                 <div className="space-y-0.5 sm:space-y-1 md:space-y-2">
-                  <h3 className="font-semibold text-sm sm:text-base md:text-lg">Join Server</h3>
+                  <h3 className="font-medium text-sm sm:text-base md:text-lg">Join Server</h3>
                   <p className="text-xs sm:text-sm text-muted-foreground px-1">Enter an invite code to join</p>
                 </div>
               </div>
@@ -175,7 +175,7 @@ export const HomeLanding = () => {
                   <Compass className="w-4.5 h-4.5 sm:w-5 sm:h-5 md:w-6 md:h-6 text-primary" />
                 </div>
                 <div className="space-y-0.5 sm:space-y-1 md:space-y-2">
-                  <h3 className="font-semibold text-sm sm:text-base md:text-lg">Discover</h3>
+                  <h3 className="font-medium text-sm sm:text-base md:text-lg">Discover</h3>
                   <p className="text-xs sm:text-sm text-muted-foreground px-1">Explore public communities</p>
                 </div>
               </div>

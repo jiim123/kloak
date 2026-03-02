@@ -360,7 +360,7 @@ export const EmojiGifPicker = ({
                       <div key={cat.key}>
                         {serverId && serverEmojis.length > 0 && (
                           <div className="mb-4">
-                            <h3 className="text-xs font-semibold text-muted-foreground mb-2 uppercase">
+                            <h3 className="text-xs font-medium text-muted-foreground mb-2 uppercase">
                               {serverName || 'Server Emojis'}
                             </h3>
                             <div className="grid grid-cols-8 gap-1">
@@ -384,7 +384,7 @@ export const EmojiGifPicker = ({
                             </div>
                           </div>
                         )}
-                        <h3 className="text-xs font-semibold text-muted-foreground mb-2 uppercase">
+                        <h3 className="text-xs font-medium text-muted-foreground mb-2 uppercase">
                           {cat.name}
                         </h3>
                         {cat.emojis.length > 0 ? (

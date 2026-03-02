@@ -419,7 +419,7 @@ export const MediaChannelArea = () => {
                   <Film className="w-12 h-12 text-muted-foreground" />
                 </div>
               </div>
-              <h2 className="text-2xl font-bold text-foreground mb-3">Media Gallery</h2>
+              <h2 className="text-2xl font-medium text-foreground mb-3">Media Gallery</h2>
               <p className="text-muted-foreground mb-6 max-w-sm leading-relaxed">
                 Share videos, pictures, and GIFs with your community in this visual gallery.
               </p>
@@ -833,7 +833,7 @@ const MediaLightbox = ({ item, onClose }: { item: MediaItem; onClose: () => void
             {/* Title and description below media */}
             {(item.title || item.description) && (
               <div className="mt-4 text-center">
-                {item.title && <h3 className="text-lg font-semibold text-white mb-1">{item.title}</h3>}
+                {item.title && <h3 className="text-lg font-medium text-white mb-1">{item.title}</h3>}
                 {item.description && (
                   <div
                     className="text-sm text-white/70 text-center max-w-3xl mx-auto break-words"

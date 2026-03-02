@@ -99,7 +99,7 @@ export function PresenceDebugOverlay() {
     <div className="fixed bottom-4 left-4 z-[1000] w-[360px] max-w-[calc(100vw-2rem)]">
       <div className="rounded-xl border border-border bg-background/90 backdrop-blur shadow-xl">
         <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-          <div className="text-sm font-semibold">Presence Debug</div>
+          <div className="text-sm font-medium">Presence Debug</div>
           <button
             onClick={close}
             className="p-1 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground"
@@ -130,7 +130,7 @@ export function PresenceDebugOverlay() {
             <div className="text-right">
               <span
                 className={cn(
-                  'font-semibold',
+                  'font-medium',
                   effective.status === 'online' && 'text-[hsl(var(--kloak-success))]',
                   effective.status === 'idle' && 'text-[hsl(var(--kloak-warning))]',
                   effective.status === 'dnd' && 'text-destructive',

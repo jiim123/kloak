@@ -69,7 +69,7 @@ function ParticipantTile({ participant, member, isYou, isDeafened }: TileProps) 
 
       <div className="px-3 pb-3 flex items-center justify-between gap-2">
         <div className="min-w-0">
-          <div className="text-sm font-semibold truncate">{name}</div>
+          <div className="text-sm font-medium truncate">{name}</div>
           <div className="text-xs text-muted-foreground truncate">{isYou ? "You" : "Member"}</div>
         </div>
         <div className="flex items-center gap-1 text-muted-foreground">
@@ -238,7 +238,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
         <div className="flex items-center gap-2 min-w-0">
           <Volume2 className="w-4 h-4 text-muted-foreground flex-shrink-0" />
           <div className="min-w-0">
-            <div className="text-sm font-semibold truncate">{channel.name}</div>
+            <div className="text-sm font-medium truncate">{channel.name}</div>
             <div className="text-[11px] text-muted-foreground truncate">
               {effectivelyJoined ? "Voice connected" : "Not connected"}
             </div>
@@ -266,7 +266,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
               <div className="relative">
                 <div className="flex items-start gap-3">
                   <div className="min-w-0 flex-1">
-                    <div className="mt-2 text-lg font-semibold text-foreground">
+                    <div className="mt-2 text-lg font-medium text-foreground">
                       Join <span className="text-primary">#{channel.name}</span>
                     </div>
                     <div className="mt-1 text-sm text-muted-foreground leading-relaxed">
@@ -293,7 +293,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
               {/* Screen share stage */}
               <div className="mx-auto w-full max-w-[1100px] rounded-2xl border border-border bg-black/40 overflow-hidden">
                 <div className="px-4 py-3 border-b border-border/60 bg-background/10 flex items-center justify-between">
-                  <div className="text-sm font-semibold truncate">
+                  <div className="text-sm font-medium truncate">
                     {stage.isLocal
                       ? "Your Screen"
                       : `${getMemberDisplayName(memberByUserId.get(stage.identity), { identity: stage.identity, name: stage.identity } as AgoraParticipant)} • Screen`}
