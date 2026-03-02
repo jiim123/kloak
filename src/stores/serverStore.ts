@@ -476,6 +476,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         owner_id: string;
         invite_code: string;
         already_member?: boolean;
+        is_banned?: boolean;
         icon_url: string | null;
         banner_url: string | null;
         is_published?: boolean;
@@ -491,6 +492,12 @@ export const useServerStore = create<ServerState>((set, get) => ({
           channel_exists?: boolean;
         };
       };
+
+      // Defensive: check is_banned from response even if RPC should have raised an exception
+      if (serverData.is_banned) {
+        set({ error: "You are banned from this server" });
+        return null;
+      }
 
       if (serverData.already_member) {
         set({ error: "You are already a member of this server" });
