@@ -628,9 +628,9 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
                     <Ghost className="w-12 h-12 text-muted-foreground" />
                   </div>
                 </div>
-                <h2 className="text-2xl font-bold text-foreground mb-3">Anonymous Channel</h2>
+                <h2 className="text-2xl font-medium text-foreground mb-3">Anonymous Channel</h2>
                 <p className="text-muted-foreground max-w-sm leading-relaxed">
-                  Messages in <span className="font-semibold text-foreground">#{channelName}</span> are anonymous. Your
+                  Messages in <span className="font-medium text-foreground">#{channelName}</span> are anonymous. Your
                   identity stays hidden from other members.
                 </p>
               </>
@@ -639,9 +639,9 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
                 <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
                   <Hash className="w-10 h-10 text-primary" />
                 </div>
-                <h2 className="text-3xl font-bold text-foreground mb-2">Welcome to #{channelName}!</h2>
+                <h2 className="text-3xl font-medium text-foreground mb-2">Welcome to #{channelName}!</h2>
                 <p className="text-muted-foreground mb-4">
-                  This is the start of the <span className="font-semibold">#{channelName}</span> channel.
+                  This is the start of the <span className="font-medium">#{channelName}</span> channel.
                 </p>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Sparkles className="w-4 h-4 text-yellow-500" />
@@ -670,7 +670,7 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
                 {showDateDivider && (
                   <div className="flex items-center gap-3 px-4 my-4">
                     <div className="h-px flex-1 bg-border/70" />
-                    <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">{dateDividerLabel}</span>
+                    <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">{dateDividerLabel}</span>
                     <div className="h-px flex-1 bg-border/70" />
                   </div>
                 )}

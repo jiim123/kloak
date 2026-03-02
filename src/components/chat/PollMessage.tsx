@@ -127,7 +127,7 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
   return (
     <div className="rounded-xl border border-border p-5 max-w-[520px] w-full" style={{ backgroundColor: '#131416' }}>
       <div className="flex items-center justify-between gap-2 mb-1">
-        <div className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+        <div className="flex items-center gap-1.5 text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
           <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg">
             <path d="M11.7518706,1.99956021 C13.2716867,1.99956021 14.5037411,3.23161462 14.5037411,4.75143076 L14.5037411,19.2499651 C14.5037411,20.7697812 13.2716867,22.0018356 11.7518706,22.0018356 C10.2320544,22.0018356 9,20.7697812 9,19.2499651 L9,4.75143076 C9,3.23161462 10.2320544,1.99956021 11.7518706,1.99956021 Z M18.7518706,6.99956021 C20.2716867,6.99956021 21.5037411,8.23161462 21.5037411,9.75143076 L21.5037411,19.2499651 C21.5037411,20.7697812 20.2716867,22.0018356 18.7518706,22.0018356 C17.2320544,22.0018356 16,20.7697812 16,19.2499651 L16,9.75143076 C16,8.23161462 17.2320544,6.99956021 18.7518706,6.99956021 Z M4.75187055,11.9995602 C6.27168669,11.9995602 7.5037411,13.2316146 7.5037411,14.7514308 L7.5037411,19.2499651 C7.5037411,20.7697812 6.27168669,22.0018356 4.75187055,22.0018356 C3.23205441,22.0018356 2,20.7697812 2,19.2499651 L2,14.7514308 C2,13.2316146 3.23205441,11.9995602 4.75187055,11.9995602 Z" />
           </svg>
@@ -136,7 +136,7 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
         {timeLabel && <div className="text-[11px] text-muted-foreground">{timeLabel}</div>}
       </div>
 
-      <div className="text-sm font-semibold mb-3">{poll.question}</div>
+      <div className="text-sm font-medium mb-3">{poll.question}</div>
 
       <div className="space-y-2">
         {showResults ? (
@@ -163,7 +163,7 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
                     )}
                     <div className="text-sm font-medium">{opt}</div>
                   </div>
-                  <div className="text-xs text-muted-foreground font-semibold">
+                  <div className="text-xs text-muted-foreground font-medium">
                     {count} ({pct}%)
                   </div>
                 </div>

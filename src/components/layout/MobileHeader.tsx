@@ -70,7 +70,7 @@ export const MobileHeader = memo(({ isDMView, showFriends, showExplore }: Mobile
         {/* Center: Current channel / view title */}
         <div className="flex-1 flex items-center justify-center gap-1.5 min-w-0 px-2">
           {channelIcon}
-          <h1 className="font-semibold text-foreground truncate text-base leading-tight">{title}</h1>
+          <h1 className="font-medium text-foreground truncate text-base leading-tight">{title}</h1>
         </div>
 
         {/* Right: Action buttons */}

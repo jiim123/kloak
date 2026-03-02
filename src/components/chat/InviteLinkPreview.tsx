@@ -114,7 +114,7 @@ export const InviteLinkPreview = ({ inviteCode }: { inviteCode: string }) => {
     return (
       <div className="mt-2 w-full max-w-sm overflow-hidden rounded-2xl border border-border/60 bg-card/60 shadow-sm backdrop-blur">
         <div className="p-4">
-          <div className="font-semibold leading-tight">Invalid invite</div>
+          <div className="font-medium leading-tight">Invalid invite</div>
           <div className="mt-1 text-xs text-muted-foreground">This invite may be invalid or revoked.</div>
           <Button variant="outline" disabled className="mt-4 w-full">
             Invite Unavailable
@@ -135,7 +135,7 @@ export const InviteLinkPreview = ({ inviteCode }: { inviteCode: string }) => {
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
-            <div className="font-semibold leading-tight truncate">{invite.name}</div>
+            <div className="font-medium leading-tight truncate">{invite.name}</div>
             <div className="mt-0.5 text-xs text-muted-foreground truncate">
               You’ve been invited{invite.inviter_username ? ` by ${invite.inviter_username}` : ""}
             </div>

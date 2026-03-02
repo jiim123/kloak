@@ -610,7 +610,7 @@ export const AnnouncementChannelArea = () => {
     return (
       <div className="h-full flex items-center justify-center bg-background">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-foreground">No Channel Selected</h2>
+          <h2 className="text-2xl font-medium text-foreground">No Channel Selected</h2>
           <p className="text-muted-foreground max-w-md text-sm leading-relaxed mt-2">
             Choose an announcement channel from the sidebar
           </p>
@@ -826,7 +826,7 @@ export const AnnouncementChannelArea = () => {
                     <Megaphone className="w-12 h-12 text-muted-foreground" />
                   </div>
                 </div>
-                <h2 className="text-2xl font-bold text-foreground mb-3">Announcements</h2>
+                <h2 className="text-2xl font-medium text-foreground mb-3">Announcements</h2>
                 <p className="text-muted-foreground max-w-sm leading-relaxed">
                   Share important updates with your community. Announcements support rich text, images, and comments.
                 </p>
@@ -893,7 +893,7 @@ export const AnnouncementChannelArea = () => {
                           />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className={cn("font-semibold text-sm", roleColorClass)} style={roleColorStyle}>
+                              <span className={cn("font-medium text-sm", roleColorClass)} style={roleColorStyle}>
                                 {announcementMember?.nickname || announcement.user?.display_name || announcement.user?.username || "Unknown"}
                               </span>
                               {topCustomRole && (
@@ -930,7 +930,7 @@ export const AnnouncementChannelArea = () => {
                       {/* Content */}
                       <div className="pb-4">
                         {/* Title */}
-                        <h2 className="text-2xl font-bold text-foreground mb-3">
+                        <h2 className="text-2xl font-medium text-foreground mb-3">
                           {announcementTitle}
                         </h2>
                         

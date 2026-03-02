@@ -29,7 +29,7 @@ export const AnnouncementPreview = ({ title, content }: AnnouncementPreviewProps
   return (
     <div className="p-4 border border-border rounded-lg bg-background/50">
       {title && (
-        <h3 className="text-lg font-semibold text-foreground mb-2">{title}</h3>
+        <h3 className="text-lg font-medium text-foreground mb-2">{title}</h3>
       )}
       <div className="text-sm">
         <MessageContent

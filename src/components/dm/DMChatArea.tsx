@@ -215,17 +215,17 @@ export const DMChatArea = () => {
             <div className="flex items-center gap-4 mb-4">
               <StackedAvatars users={otherParticipants} size="lg" />
             </div>
-            <h2 className="text-2xl font-bold text-foreground">{currentConversation.name || "Group Chat"}</h2>
+            <h2 className="text-2xl font-medium text-foreground">{currentConversation.name || "Group Chat"}</h2>
             <p className="text-muted-foreground">
               This is the beginning of your group chat with{" "}
-              <span className="font-semibold">{getGroupDisplayName()}</span>.
+              <span className="font-medium">{getGroupDisplayName()}</span>.
             </p>
           </div>
         ) : (
           <div className="py-8 mb-4">
             <div className="flex items-center gap-4 mb-4">
               <div
-                className="w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl font-bold"
+                className="w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl font-medium"
                 style={{ backgroundColor: otherUser?.banner_color || "#5865F2" }}
               >
                 {otherUser?.avatar_url ? (
@@ -239,10 +239,10 @@ export const DMChatArea = () => {
                 )}
               </div>
             </div>
-            <h2 className="text-2xl font-bold text-foreground">{otherUser?.display_name || otherUser?.username}</h2>
+            <h2 className="text-2xl font-medium text-foreground">{otherUser?.display_name || otherUser?.username}</h2>
             <p className="text-muted-foreground">
               This is the beginning of your direct message history with{" "}
-              <span className="font-semibold">@{otherUser?.username}</span>.
+              <span className="font-medium">@{otherUser?.username}</span>.
             </p>
           </div>
         )}

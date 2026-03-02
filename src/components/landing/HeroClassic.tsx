@@ -35,7 +35,7 @@ export const HeroClassic = () => {
         
         <motion.h1 
           variants={fadeInUp}
-          className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-semibold text-foreground mb-8 leading-[0.95] tracking-tight max-w-4xl"
+          className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-medium text-foreground mb-8 leading-[0.95] tracking-tight max-w-4xl"
         >
           Your chat.
           <br />
