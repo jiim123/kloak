@@ -22,6 +22,92 @@ interface LinkPreview {
   soundcloudUrl?: string; // For SoundCloud embed URL
 }
 
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+const LINK_PREVIEW_PROXY_SECRET = Deno.env.get("LINK_PREVIEW_PROXY_SECRET") || SUPABASE_SERVICE_ROLE_KEY;
+const LINK_PREVIEW_PROXY_FUNCTION = "fetch-link-preview-asset";
+const LINK_PREVIEW_PROXY_TTL_SECONDS = 60 * 60 * 24; // 24h
+
+const textEncoder = new TextEncoder();
+let signingKeyPromise: Promise<CryptoKey> | null = null;
+
+function toBase64Url(bytes: Uint8Array): string {
+  let binary = "";
+  for (const b of bytes) binary += String.fromCharCode(b);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+async function getSigningKey(): Promise<CryptoKey> {
+  if (!LINK_PREVIEW_PROXY_SECRET) {
+    throw new Error("Missing link preview proxy signing secret");
+  }
+  if (!signingKeyPromise) {
+    signingKeyPromise = crypto.subtle.importKey(
+      "raw",
+      textEncoder.encode(LINK_PREVIEW_PROXY_SECRET),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"],
+    );
+  }
+  return signingKeyPromise;
+}
+
+async function signPayload(payload: string): Promise<string> {
+  const key = await getSigningKey();
+  const sigBuffer = await crypto.subtle.sign("HMAC", key, textEncoder.encode(payload));
+  return toBase64Url(new Uint8Array(sigBuffer));
+}
+
+function isHttpUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function isAlreadyProxiedAssetUrl(url: string): boolean {
+  if (!SUPABASE_URL) return false;
+  try {
+    const parsed = new URL(url);
+    const supabaseHost = new URL(SUPABASE_URL).host;
+    return parsed.host === supabaseHost && parsed.pathname.endsWith(`/${LINK_PREVIEW_PROXY_FUNCTION}`);
+  } catch {
+    return false;
+  }
+}
+
+async function buildSignedAssetProxyUrl(targetUrl: string): Promise<string | null> {
+  if (!SUPABASE_URL || !LINK_PREVIEW_PROXY_SECRET) return null;
+  const exp = Math.floor(Date.now() / 1000) + LINK_PREVIEW_PROXY_TTL_SECONDS;
+  const sig = await signPayload(`${exp}:${targetUrl}`);
+  const proxyUrl = new URL(`${SUPABASE_URL.replace(/\/+$/g, "")}/functions/v1/${LINK_PREVIEW_PROXY_FUNCTION}`);
+  proxyUrl.searchParams.set("u", targetUrl);
+  proxyUrl.searchParams.set("exp", String(exp));
+  proxyUrl.searchParams.set("sig", sig);
+  return proxyUrl.toString();
+}
+
+async function proxyExternalAssetUrl(assetUrl?: string): Promise<string | undefined> {
+  if (!assetUrl) return undefined;
+  if (!isHttpUrl(assetUrl)) return assetUrl;
+  if (isAlreadyProxiedAssetUrl(assetUrl)) return assetUrl;
+
+  const safe = await isUrlSafe(assetUrl);
+  if (!safe.safe) return undefined;
+
+  const proxied = await buildSignedAssetProxyUrl(assetUrl);
+  return proxied ?? undefined;
+}
+
+async function proxyPreviewAssets(preview: LinkPreview): Promise<LinkPreview> {
+  preview.image = await proxyExternalAssetUrl(preview.image);
+  preview.favicon = await proxyExternalAssetUrl(preview.favicon);
+  return preview;
+}
+
 // SSRF protection: Block private IPs and cloud metadata endpoints
 const BLOCKED_IP_PATTERNS = [
   /^127\./,                           // localhost
@@ -152,7 +238,9 @@ function extractMetadata(html: string, url: string): LinkPreview {
     const urlObj = new URL(url);
     preview.favicon = `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=32`;
     preview.siteName = urlObj.hostname.replace('www.', '');
-  } catch {}
+  } catch {
+    // Ignore URL parsing failure; preview continues with best-effort metadata.
+  }
   
   // Helper to extract content from meta tags
   const getMetaContent = (property: string): string | undefined => {
@@ -184,7 +272,9 @@ function extractMetadata(html: string, url: string): LinkPreview {
     try {
       const urlObj = new URL(url);
       preview.image = new URL(preview.image, urlObj.origin).href;
-    } catch {}
+    } catch {
+      // Ignore malformed relative image URL.
+    }
   }
   
   // Extract site name
@@ -290,11 +380,12 @@ serve(async (req) => {
 
     // Handle direct images
     if (isDirectImage(url)) {
+      const proxiedImage = await proxyExternalAssetUrl(url);
       return new Response(
         JSON.stringify({
           url,
           type: 'image',
-          image: url,
+          image: proxiedImage,
         }),
         { 
           headers: { 
@@ -317,17 +408,18 @@ serve(async (req) => {
         });
         if (oembedResponse.ok) {
           const oembed = await oembedResponse.json();
+          const preview = await proxyPreviewAssets({
+            url,
+            type: 'youtube',
+            videoId: youtubeId,
+            title: oembed.title,
+            description: oembed.author_name,
+            image: `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`,
+            siteName: 'YouTube',
+            favicon: 'https://www.google.com/s2/favicons?domain=youtube.com&sz=32',
+          });
           return new Response(
-            JSON.stringify({
-              url,
-              type: 'youtube',
-              videoId: youtubeId,
-              title: oembed.title,
-              description: oembed.author_name,
-              image: `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`,
-              siteName: 'YouTube',
-              favicon: 'https://www.google.com/s2/favicons?domain=youtube.com&sz=32',
-            }),
+            JSON.stringify(preview),
             { 
               headers: { 
                 ...corsHeaders, 
@@ -342,15 +434,16 @@ serve(async (req) => {
       }
       
       // Fallback for YouTube
+      const preview = await proxyPreviewAssets({
+        url,
+        type: 'youtube',
+        videoId: youtubeId,
+        image: `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`,
+        siteName: 'YouTube',
+        favicon: 'https://www.google.com/s2/favicons?domain=youtube.com&sz=32',
+      });
       return new Response(
-        JSON.stringify({
-          url,
-          type: 'youtube',
-          videoId: youtubeId,
-          image: `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`,
-          siteName: 'YouTube',
-          favicon: 'https://www.google.com/s2/favicons?domain=youtube.com&sz=32',
-        }),
+        JSON.stringify(preview),
         { 
           headers: { 
             ...corsHeaders, 
@@ -363,13 +456,14 @@ serve(async (req) => {
 
     // Handle Twitter/X - mark as twitter type
     if (isTwitterUrl(url)) {
+      const preview = await proxyPreviewAssets({
+        url,
+        type: 'twitter',
+        siteName: 'X (Twitter)',
+        favicon: 'https://www.google.com/s2/favicons?domain=x.com&sz=32',
+      });
       return new Response(
-        JSON.stringify({
-          url,
-          type: 'twitter',
-          siteName: 'X (Twitter)',
-          favicon: 'https://www.google.com/s2/favicons?domain=x.com&sz=32',
-        }),
+        JSON.stringify(preview),
         { 
           headers: { 
             ...corsHeaders, 
@@ -396,19 +490,20 @@ serve(async (req) => {
         if (response.ok) {
           const html = await response.text();
           const preview = extractMetadata(html, url);
+          const proxied = await proxyPreviewAssets({
+            url,
+            type: 'spotify',
+            spotifyType: spotifyInfo.type,
+            spotifyId: spotifyInfo.id,
+            title: preview.title,
+            description: preview.description,
+            image: preview.image,
+            siteName: 'Spotify',
+            favicon: 'https://www.google.com/s2/favicons?domain=spotify.com&sz=32',
+          });
           
           return new Response(
-            JSON.stringify({
-              url,
-              type: 'spotify',
-              spotifyType: spotifyInfo.type,
-              spotifyId: spotifyInfo.id,
-              title: preview.title,
-              description: preview.description,
-              image: preview.image,
-              siteName: 'Spotify',
-              favicon: 'https://www.google.com/s2/favicons?domain=spotify.com&sz=32',
-            }),
+            JSON.stringify(proxied),
             { 
               headers: { 
                 ...corsHeaders, 
@@ -423,15 +518,16 @@ serve(async (req) => {
       }
       
       // Fallback for Spotify
+      const preview = await proxyPreviewAssets({
+        url,
+        type: 'spotify',
+        spotifyType: spotifyInfo.type,
+        spotifyId: spotifyInfo.id,
+        siteName: 'Spotify',
+        favicon: 'https://www.google.com/s2/favicons?domain=spotify.com&sz=32',
+      });
       return new Response(
-        JSON.stringify({
-          url,
-          type: 'spotify',
-          spotifyType: spotifyInfo.type,
-          spotifyId: spotifyInfo.id,
-          siteName: 'Spotify',
-          favicon: 'https://www.google.com/s2/favicons?domain=spotify.com&sz=32',
-        }),
+        JSON.stringify(preview),
         { 
           headers: { 
             ...corsHeaders, 
@@ -459,18 +555,19 @@ serve(async (req) => {
           // Extract the iframe src from the html field
           const iframeSrcMatch = data.html?.match(/src="([^"]+)"/);
           const embedUrl = iframeSrcMatch ? iframeSrcMatch[1] : null;
+          const preview = await proxyPreviewAssets({
+            url,
+            type: 'soundcloud',
+            title: data.title,
+            description: data.description,
+            image: data.thumbnail_url,
+            siteName: 'SoundCloud',
+            favicon: 'https://www.google.com/s2/favicons?domain=soundcloud.com&sz=32',
+            soundcloudUrl: embedUrl,
+          });
           
           return new Response(
-            JSON.stringify({
-              url,
-              type: 'soundcloud',
-              title: data.title,
-              description: data.description,
-              image: data.thumbnail_url,
-              siteName: 'SoundCloud',
-              favicon: 'https://www.google.com/s2/favicons?domain=soundcloud.com&sz=32',
-              soundcloudUrl: embedUrl,
-            }),
+            JSON.stringify(preview),
             { 
               headers: { 
                 ...corsHeaders, 
@@ -485,13 +582,14 @@ serve(async (req) => {
       }
       
       // Fallback for SoundCloud
+      const preview = await proxyPreviewAssets({
+        url,
+        type: 'soundcloud',
+        siteName: 'SoundCloud',
+        favicon: 'https://www.google.com/s2/favicons?domain=soundcloud.com&sz=32',
+      });
       return new Response(
-        JSON.stringify({
-          url,
-          type: 'soundcloud',
-          siteName: 'SoundCloud',
-          favicon: 'https://www.google.com/s2/favicons?domain=soundcloud.com&sz=32',
-        }),
+        JSON.stringify(preview),
         { 
           headers: { 
             ...corsHeaders, 
@@ -516,12 +614,13 @@ serve(async (req) => {
     if (!response.ok) {
       try {
         const urlObj = new URL(url);
+        const preview = await proxyPreviewAssets({
+          url,
+          siteName: urlObj.hostname.replace('www.', ''),
+          favicon: `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=32`,
+        });
         return new Response(
-          JSON.stringify({
-            url,
-            siteName: urlObj.hostname.replace('www.', ''),
-            favicon: `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=32`,
-          }),
+          JSON.stringify(preview),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       } catch {
@@ -536,11 +635,12 @@ serve(async (req) => {
     
     // Check if it's an image
     if (contentType.startsWith('image/')) {
+      const proxiedImage = await proxyExternalAssetUrl(url);
       return new Response(
         JSON.stringify({
           url,
           type: 'image',
-          image: url,
+          image: proxiedImage,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -564,6 +664,7 @@ serve(async (req) => {
     }
     
     const preview = extractMetadata(html, url);
+    await proxyPreviewAssets(preview);
 
     console.log('Link preview extracted:', preview.title);
 

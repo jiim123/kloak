@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.broadcast-typing]
 verify_jwt = false
+
+[functions.fetch-link-preview-asset]
+verify_jwt = false

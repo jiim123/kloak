@@ -32,6 +32,7 @@ export type ModalType =
   | "search"
   | "changeNickname"
   | "confirmAction"
+  | "external-link-warning"
   | "permission-debug"
   | "import-discord-template"
   | "import-emoji-pack"

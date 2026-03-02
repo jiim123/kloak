@@ -17,6 +17,7 @@ export { QuickSwitcherModal } from './QuickSwitcherModal';
 export { KeyboardShortcutsModal } from './KeyboardShortcutsModal';
 export { DeleteMessageModal } from './DeleteMessageModal';
 export { ConfirmActionModal, ChangeNicknameModal } from './ConfirmActionModal';
+export { ExternalLinkWarningModal } from './ExternalLinkWarningModal';
 export { WelcomeModal } from './WelcomeModal';
 export { OnboardingModal } from './OnboardingModal';
 export { PermissionDebugPanel } from './PermissionDebugPanel';

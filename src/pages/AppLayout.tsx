@@ -35,6 +35,7 @@ import {
   KeyboardShortcutsModal,
   ConfirmActionModal,
   ChangeNicknameModal,
+  ExternalLinkWarningModal,
   PermissionDebugPanel,
   ImportDiscordTemplateModal,
   ImportEmojiPackModal,
@@ -715,6 +716,7 @@ const AppLayout = () => {
         <KeyboardShortcutsModal />
         <ConfirmActionModal />
         <ChangeNicknameModal />
+        <ExternalLinkWarningModal />
         <PermissionDebugPanel />
         <ImportDiscordTemplateModal />
         <ImportEmojiPackModal />

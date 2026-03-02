@@ -77,6 +77,16 @@ const isSafeUrl = (url: string): boolean => {
   }
 };
 
+const shouldWarnForExternalUrl = (url: string): boolean => {
+  try {
+    const parsed = new URL(url);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return false;
+    return parsed.origin !== window.location.origin;
+  } catch {
+    return false;
+  }
+};
+
 // Extract URLs from content
 const extractUrls = (content: string): string[] => {
   const urlPattern = /https?:\/\/[^\s<>`\]]+/g;
@@ -237,10 +247,10 @@ export const parseTextContent = (
   );
   
   // Images with custom format [img:align:width:url]
-  parsed = parsed.replace(/\[img:(\w+):([^:]+):([^\]]+)\]/g, (match, align, width, url) => {
-    const widthStyle = width !== 'auto' ? `width="${width}"` : '';
+  parsed = parsed.replace(/\[img:(\w+):([^:]+):([^\]]+)\]/g, (match, align, _width, url) => {
+    if (!isSafeUrl(url)) return escapeHtml(match);
     const alignClass = align === 'center' ? 'mx-auto block' : align === 'right' ? 'ml-auto block' : 'mr-auto block';
-    return `<img src="${escapeHtml(url)}" alt="Image" ${widthStyle} class="${alignClass} max-w-full rounded-lg my-2 cursor-pointer hover:opacity-90" loading="lazy" data-image-url="${escapeHtml(url)}" data-align="${align}" />`;
+    return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="${alignClass} message-link">View image</a>`;
   });
   
   // URLs - render image URLs inline, others as links (only safe URLs)
@@ -253,8 +263,7 @@ export const parseTextContent = (
         return escapeHtml(url); // Don't linkify unsafe URLs
       }
       if (isImageUrl(url)) {
-        // Render image inline where it appears - constrained width for all screens, left-aligned
-        return `<img src="${escapeHtml(url)}" alt="Image" class="block mr-auto max-w-[320px] sm:max-w-[400px] max-h-80 rounded-lg my-2 cursor-pointer hover:opacity-90 object-contain" loading="lazy" data-image-url="${escapeHtml(url)}" />`;
+        return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="message-link">${escapeHtml(url)}</a>`;
       }
       return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="message-link">${escapeHtml(url)}</a>`;
     }
@@ -592,33 +601,29 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
   }, [channels]);
   
   // Extract URLs for link previews (only from text segments, not code blocks)
-  // Separate image URLs from regular URLs
-  const { imageUrls, linkUrls } = useMemo(() => {
+  const allUrls = useMemo(() => {
     const textContent = segments
       .filter(s => s.type === 'text')
       .map(s => s.content)
       .join(' ');
-    const allUrls = extractUrls(textContent);
-    
-    return {
-      imageUrls: allUrls.filter(url => isImageUrl(url)),
-      linkUrls: allUrls.filter(url => !isImageUrl(url)),
-    };
+    return extractUrls(textContent);
   }, [segments]);
+
+  const imageUrls = useMemo(() => allUrls.filter((url) => isImageUrl(url)), [allUrls]);
 
   const inviteCodes = useMemo(() => {
     const codes = new Set<string>();
-    for (const url of linkUrls) {
+    for (const url of allUrls) {
       const match = url.match(/\/invite\/([A-Za-z0-9]{8})/);
       if (match?.[1]) codes.add(match[1].toUpperCase());
     }
     return Array.from(codes);
-  }, [linkUrls]);
+  }, [allUrls]);
 
-  const nonInviteLinkUrls = useMemo(() => {
-    if (inviteCodes.length === 0) return linkUrls;
-    return linkUrls.filter((url) => !/\/invite\/[A-Za-z0-9]{8}/.test(url));
-  }, [inviteCodes, linkUrls]);
+  const previewUrls = useMemo(() => {
+    if (inviteCodes.length === 0) return allUrls;
+    return allUrls.filter((url) => !/\/invite\/[A-Za-z0-9]{8}/.test(url));
+  }, [inviteCodes, allUrls]);
   
   // Handle click on mentions and channel tags using event delegation
   const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -667,6 +672,14 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
       e.preventDefault();
       e.stopPropagation();
       target.classList.toggle('revealed');
+      return;
+    }
+
+    const anchor = target.closest('a[href]') as HTMLAnchorElement | null;
+    if (anchor && shouldWarnForExternalUrl(anchor.href)) {
+      e.preventDefault();
+      e.stopPropagation();
+      openModal('external-link-warning', { url: anchor.href });
       return;
     }
 
@@ -753,10 +766,10 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
         </div>
       )}
 
-      {/* Link previews (excluding image URLs) */}
-      {linkPreviewsEnabled && !hideEmbeds && nonInviteLinkUrls.length > 0 && (
+      {/* Link previews (image assets are proxied server-side) */}
+      {linkPreviewsEnabled && !hideEmbeds && previewUrls.length > 0 && (
         <div className="flex flex-col gap-2 mt-2">
-          {nonInviteLinkUrls.slice(0, 3).map((url, index) => (
+          {previewUrls.slice(0, 3).map((url, index) => (
             <LinkPreview 
               key={`${url}-${index}`} 
               url={url} 

@@ -184,9 +184,7 @@ export const LinkPreview = ({ url, disabled, messageId }: LinkPreviewProps) => {
             className="w-full aspect-video object-cover"
             onError={(e) => {
               const img = e.target as HTMLImageElement;
-              if (img.src.includes("maxresdefault")) {
-                img.src = `https://img.youtube.com/vi/${preview.videoId}/hqdefault.jpg`;
-              }
+              img.style.display = "none";
             }}
           />
           <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
@@ -314,6 +312,35 @@ export const LinkPreview = ({ url, disabled, messageId }: LinkPreviewProps) => {
 
   // Steam embed - improved layout with game info, price, and buttons
   if (preview.type === "steam" && preview.steamId) {
+    if (!showEmbed) {
+      return (
+        <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[360px] bg-[#1b2838] p-3">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-4 w-4 items-center justify-center rounded bg-[#2a475e] text-[10px] font-bold text-[#66c0f4]">
+              S
+            </span>
+            <span className="text-xs text-[#66c0f4]">Steam Store</span>
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-auto text-xs text-[#66c0f4] hover:text-white transition-colors flex items-center gap-1"
+            >
+              View on Steam
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowEmbed(true)}
+            className="mt-3 w-full rounded-md bg-[#66c0f4] px-3 py-2 text-xs font-medium text-[#1b2838] hover:opacity-90 transition-opacity"
+          >
+            Load Steam widget
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[308px] bg-[#1b2838]">
         {/* Steam widget iframe - sized to show game art, title, price and buttons */}
@@ -328,11 +355,9 @@ export const LinkPreview = ({ url, disabled, messageId }: LinkPreviewProps) => {
         {/* Additional info below the widget */}
         <div className="p-2.5 bg-[#1b2838] border-t border-[#2a475e]">
           <div className="flex items-center gap-2">
-            <img 
-              src="https://store.steampowered.com/favicon.ico" 
-              alt="Steam" 
-              className="w-4 h-4" 
-            />
+            <span className="inline-flex h-4 w-4 items-center justify-center rounded bg-[#2a475e] text-[10px] font-bold text-[#66c0f4]">
+              S
+            </span>
             <span className="text-xs text-[#66c0f4]">Steam Store</span>
             <a
               href={url}
@@ -451,6 +476,37 @@ export const LinkPreview = ({ url, disabled, messageId }: LinkPreviewProps) => {
   if (preview.type === "spotify" && preview.spotifyId && preview.spotifyType) {
     const embedHeight = preview.spotifyType === "track" || preview.spotifyType === "episode" ? 152 : 352;
 
+    if (!showEmbed) {
+      return (
+        <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[400px] bg-[#121212] p-3">
+          <div className="flex items-center gap-2 mb-2">
+            {preview.favicon && <img src={preview.favicon} alt="" className="w-4 h-4" />}
+            <span className="text-xs text-muted-foreground">{preview.siteName || "Spotify"}</span>
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-auto text-xs text-primary hover:underline flex items-center gap-1"
+            >
+              Open
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+          {preview.title && <p className="font-medium text-sm text-foreground line-clamp-2">{preview.title}</p>}
+          {preview.description && (
+            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{preview.description}</p>
+          )}
+          <button
+            type="button"
+            onClick={() => setShowEmbed(true)}
+            className="mt-3 w-full rounded-md bg-[#1db954] px-3 py-2 text-xs font-medium text-black hover:opacity-90 transition-opacity"
+          >
+            Load Spotify embed
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[400px] bg-[#121212]">
         <iframe
@@ -485,6 +541,37 @@ export const LinkPreview = ({ url, disabled, messageId }: LinkPreviewProps) => {
   // SoundCloud embed
   if (preview.type === "soundcloud") {
     if (preview.soundcloudUrl) {
+      if (!showEmbed) {
+        return (
+          <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[400px] bg-secondary/50 p-3">
+            <div className="flex items-center gap-2">
+              {preview.favicon && <img src={preview.favicon} alt="" className="w-4 h-4" />}
+              <span className="text-xs text-muted-foreground">{preview.siteName || "SoundCloud"}</span>
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ml-auto text-xs text-primary hover:underline flex items-center gap-1"
+              >
+                Open
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+            {preview.title && <p className="font-medium text-sm mt-2 line-clamp-2">{preview.title}</p>}
+            {preview.description && (
+              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{preview.description}</p>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowEmbed(true)}
+              className="mt-3 w-full rounded-md bg-[#ff5500] px-3 py-2 text-xs font-medium text-white hover:opacity-90 transition-opacity"
+            >
+              Load SoundCloud embed
+            </button>
+          </div>
+        );
+      }
+
       return (
         <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[400px] bg-[#f2f2f2] dark:bg-[#1a1a1a]">
           <iframe
@@ -572,7 +659,7 @@ export const LinkPreviewNotice = ({ onDismiss }: { onDismiss: () => void }) => (
   <div className="flex items-start gap-2 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-sm">
     <AlertTriangle className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" />
     <div className="flex-1">
-      <p className="text-foreground">Link previews make external requests to fetch website information.</p>
+      <p className="text-foreground">Link previews fetch metadata server-side. Opening links or loading embeds connects directly to external sites.</p>
       <button onClick={onDismiss} className="text-primary hover:underline text-xs mt-1">
         Dismiss
       </button>
