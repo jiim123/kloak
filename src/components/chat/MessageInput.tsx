@@ -348,15 +348,14 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const handlePaste = useCallback(
     (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
       if (!user || isSending) return;
-      const items = e.clipboardData?.items;
-      if (!items) return;
-      const imageItem = Array.from(items).find((it) => it.type.startsWith("image/"));
-      if (!imageItem) return;
-      const file = imageItem.getAsFile();
-      if (!file) return;
+      // Prefer clipboardData.files — it de-duplicates across browsers
+      const files = e.clipboardData?.files;
+      if (!files || files.length === 0) return;
+      const imageFile = Array.from(files).find((f) => f.type.startsWith("image/"));
+      if (!imageFile) return;
       e.preventDefault();
       e.stopPropagation();
-      const attachment = { file, preview: URL.createObjectURL(file) };
+      const attachment = { file: imageFile, preview: URL.createObjectURL(imageFile) };
       setPendingAttachments((prev) => [...prev, attachment].slice(0, MAX_ATTACHMENTS));
     },
     [user, isSending],
