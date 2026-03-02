@@ -782,7 +782,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
       if (error) {
         console.error("[createChannel] RPC error:", error);
-        throw error;
+        throw new Error(error.message || "Failed to create channel");
       }
 
       if (!data) {
