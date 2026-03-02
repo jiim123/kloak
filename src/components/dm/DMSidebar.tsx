@@ -27,7 +27,14 @@ interface DMSidebarProps {
 export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onShowExploreChange }: DMSidebarProps) => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { conversations, currentConversation, fetchConversations, setCurrentConversation, closeConversation, isLoading } = useDMStore();
+  const {
+    conversations,
+    currentConversation,
+    fetchConversations,
+    setCurrentConversation,
+    closeConversation,
+    isLoading,
+  } = useDMStore();
   const { getUnreadCount, markAsRead } = useUnreadDMsContext();
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateGroup, setShowCreateGroup] = useState(false);
@@ -86,7 +93,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
     <div className="h-full flex flex-col bg-layout-sidebar-secondary">
       {/* Header */}
       <div className="h-12 px-4 flex items-center border-b border-border shadow-sm">
-        <h2 className="font-normal text-lg text-foreground">
+        <h2 className="font-medium text-lg text-foreground">
           {showFriends ? "Friends" : showExplore ? "Explore" : "Home"}
         </h2>
       </div>
