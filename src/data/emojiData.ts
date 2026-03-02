@@ -10,6 +10,11 @@ export interface EmojiCategory {
 }
 
 export const EMOJI_DATA: Record<string, EmojiCategory> = {
+  recent: {
+    name: "Recently Used",
+    icon: "🕐",
+    emojis: [], // Populated dynamically from localStorage
+  },
   smileys: {
     name: "Smileys & Emotion",
     icon: "😀",
