@@ -1290,7 +1290,7 @@ export const ForumChannelArea = () => {
       <div className="h-full flex items-center justify-center bg-background">
         <div className="text-center">
           <MessageSquare className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-          <h2 className="text-2xl font-bold text-foreground">No Channel Selected</h2>
+          <h2 className="text-2xl font-medium text-foreground">No Channel Selected</h2>
           <p className="text-muted-foreground max-w-md text-sm leading-relaxed mt-2">
             Choose a forum channel from the sidebar to view threads
           </p>
@@ -1824,7 +1824,7 @@ export const ForumChannelArea = () => {
                   <MessageSquare className="w-12 h-12 text-muted-foreground" />
                 </div>
               </div>
-              <h2 className="text-2xl font-bold text-foreground mb-3">Forum Threads</h2>
+              <h2 className="text-2xl font-medium text-foreground mb-3">Forum Threads</h2>
               <p className="text-muted-foreground max-w-sm leading-relaxed">
                 Start discussions with your community. Topics stay organized and easy to follow.
               </p>
@@ -1859,7 +1859,7 @@ export const ForumChannelArea = () => {
                       {/* Desktop: Single line layout */}
                       <div className="hidden md:flex items-center gap-8 text-sm">
                         {/* Title */}
-                        <span className="font-semibold text-foreground flex-1 min-w-0 truncate">{threadTitle}</span>
+                        <span className="font-medium text-foreground flex-1 min-w-0 truncate">{threadTitle}</span>
 
                         {/* Original Poster */}
                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground flex-shrink-0">
@@ -1914,7 +1914,7 @@ export const ForumChannelArea = () => {
                       {/* Mobile: Stacked layout */}
                       <div className="md:hidden space-y-2">
                         {/* Title */}
-                        <div className="font-semibold text-foreground text-sm">{threadTitle}</div>
+                        <div className="font-medium text-foreground text-sm">{threadTitle}</div>
 
                         {/* Metadata row */}
                         <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -1993,7 +1993,7 @@ export const ForumChannelArea = () => {
                 {/* Desktop: Side-by-side view */}
                 <div className="hidden md:flex md:w-1/2 flex-col border-l border-border">
                   <div className="z-30 flex items-center justify-between border-b border-border bg-background px-4 py-3 shadow-sm">
-                    <h3 className="text-lg font-semibold">{threadTitle}</h3>
+                    <h3 className="text-lg font-medium">{threadTitle}</h3>
                     <div className="flex items-center gap-1">
                       {(user?.id === selectedThread?.created_by || canManageMessages) && (
                         <Button
@@ -2081,7 +2081,7 @@ export const ForumChannelArea = () => {
 
                     {/* Thread Replies */}
                     <div className="mb-4">
-                      <h4 className="text-sm font-semibold text-muted-foreground mb-3">
+                      <h4 className="text-sm font-medium text-muted-foreground mb-3">
                         Replies ({threadMessages[selectedThreadId]?.length || 0})
                       </h4>
                     </div>
@@ -2389,7 +2389,7 @@ export const ForumChannelArea = () => {
                       >
                         <ArrowLeft className="w-5 h-5" />
                       </Button>
-                      <h3 className="text-lg font-semibold flex-1 truncate">{threadTitle}</h3>
+                      <h3 className="text-lg font-medium flex-1 truncate">{threadTitle}</h3>
                       {(user?.id === selectedThread?.created_by || canManageMessages) && (
                         <Button
                           variant="ghost"
@@ -2464,7 +2464,7 @@ export const ForumChannelArea = () => {
 
                       {/* Thread Replies */}
                       <div className="mb-4">
-                        <h4 className="text-sm font-semibold text-muted-foreground mb-3">
+                        <h4 className="text-sm font-medium text-muted-foreground mb-3">
                           Replies ({threadMessages[selectedThreadId]?.length || 0})
                         </h4>
                       </div>

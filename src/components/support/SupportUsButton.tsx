@@ -288,7 +288,7 @@ export const SupportUsButton = ({
 
             {/* Header */}
             <div className="flex items-center justify-between px-4 pb-3">
-              <h3 className="text-base font-semibold text-foreground">
+              <h3 className="text-base font-medium text-foreground">
                 Support Kloak
               </h3>
               <button onClick={close} className="p-1.5 rounded-md hover:bg-secondary/80">
@@ -317,7 +317,7 @@ export const SupportUsButton = ({
               transition={{ duration: 0.15 }}
               className="absolute top-full right-0 mt-2 w-80 bg-popover border border-border/50 rounded-xl shadow-xl p-3 space-y-2 z-50"
             >
-              <h3 className="text-sm font-semibold text-foreground px-1 pb-1">
+              <h3 className="text-sm font-medium text-foreground px-1 pb-1">
                 Support Kloak
               </h3>
               <div className="space-y-2">

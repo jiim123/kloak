@@ -83,7 +83,7 @@ export function VoiceSettingsPanel({ className }: VoiceSettingsPanelProps) {
 
       {/* Section: Audio Devices */}
       <section className="p-4 rounded-xl bg-secondary/30 border border-border/50">
-        <h2 className="text-sm font-semibold text-foreground mb-4">Audio Devices</h2>
+        <h2 className="text-sm font-medium text-foreground mb-4">Audio Devices</h2>
         <AudioDeviceSelector
           inputDeviceId={settings.inputDeviceId}
           outputDeviceId={settings.outputDeviceId}
@@ -100,7 +100,7 @@ export function VoiceSettingsPanel({ className }: VoiceSettingsPanelProps) {
 
       {/* Section: Voice Mode */}
       <section className="p-4 rounded-xl bg-secondary/30 border border-border/50">
-        <h2 className="text-sm font-semibold text-foreground mb-4">Voice Mode</h2>
+        <h2 className="text-sm font-medium text-foreground mb-4">Voice Mode</h2>
         <VoiceModeSelector
           voiceMode={settings.voiceMode}
           voiceActivityThreshold={settings.voiceActivityThreshold}

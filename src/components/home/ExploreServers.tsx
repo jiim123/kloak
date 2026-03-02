@@ -190,7 +190,7 @@ const ExploreServersOriginal = () => {
     <div className="h-full flex flex-col bg-layout-chat overflow-hidden">
       {/* Header - hidden on mobile since we have MobileHeader */}
       <div className="h-12 px-4 hidden md:flex items-center justify-between border-b border-border shadow-sm flex-shrink-0">
-        <h2 className="font-semibold text-foreground">Explore</h2>
+        <h2 className="font-medium text-foreground">Explore</h2>
       </div>
 
       {/* Main content */}
@@ -234,7 +234,7 @@ const ExploreServersOriginal = () => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.2 }}
-                    className="text-2xl md:text-3xl font-bold tracking-tight text-foreground drop-shadow-lg"
+                    className="text-2xl md:text-3xl font-medium tracking-tight text-foreground drop-shadow-lg"
                   >
                     Discover{' '}
                     <span className="text-primary relative inline-block drop-shadow-md">
@@ -316,7 +316,7 @@ const ExploreServersOriginal = () => {
             {verifiedServers.length > 0 && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-foreground">Verified Servers</h3>
+                  <h3 className="text-sm font-medium text-foreground">Verified Servers</h3>
                   <span className="text-xs text-muted-foreground">{verifiedServers.length}</span>
                 </div>
                 <motion.div
@@ -336,7 +336,7 @@ const ExploreServersOriginal = () => {
                             "bg-card/40 cursor-pointer group",
                           )}
                         >
-                          <div className="absolute right-2 top-2 z-10 px-2 py-0.5 rounded-full bg-primary/90 text-primary-foreground text-[10px] font-semibold">
+                          <div className="absolute right-2 top-2 z-10 px-2 py-0.5 rounded-full bg-primary/90 text-primary-foreground text-[10px] font-medium">
                             VERIFIED
                           </div>
                           <div className="relative h-24 w-full overflow-hidden">
@@ -353,14 +353,14 @@ const ExploreServersOriginal = () => {
                                 {s.icon_url ? (
                                   <img src={s.icon_url} alt={s.name} className="w-full h-full object-cover" loading="lazy" />
                                 ) : (
-                                  <span className="text-sm font-bold text-foreground">{getInitials(s.name)}</span>
+                                  <span className="text-sm font-medium text-foreground">{getInitials(s.name)}</span>
                                 )}
                               </div>
                             </div>
                           </div>
                           <div className="px-4 pb-4 pt-12">
                             <div className="flex flex-col items-center text-center">
-                              <div className="text-base font-semibold text-foreground truncate w-full">{s.name}</div>
+                              <div className="text-base font-medium text-foreground truncate w-full">{s.name}</div>
                               {s.about && <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{s.about}</div>}
                             </div>
                             {tags.length > 0 && (
@@ -401,7 +401,7 @@ const ExploreServersOriginal = () => {
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-foreground">All Servers</h3>
+                <h3 className="text-sm font-medium text-foreground">All Servers</h3>
                 <span className="text-xs text-muted-foreground">{regularServers.length}</span>
               </div>
               <motion.div
@@ -435,14 +435,14 @@ const ExploreServersOriginal = () => {
                               {s.icon_url ? (
                                 <img src={s.icon_url} alt={s.name} className="w-full h-full object-cover" loading="lazy" />
                               ) : (
-                                <span className="text-sm font-bold text-foreground">{getInitials(s.name)}</span>
+                                <span className="text-sm font-medium text-foreground">{getInitials(s.name)}</span>
                               )}
                             </div>
                           </div>
                         </div>
                         <div className="px-4 pb-4 pt-12">
                           <div className="flex flex-col items-center text-center">
-                            <div className="text-base font-semibold text-foreground truncate w-full">{s.name}</div>
+                            <div className="text-base font-medium text-foreground truncate w-full">{s.name}</div>
                             {s.about && <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{s.about}</div>}
                           </div>
                           {tags.length > 0 && (

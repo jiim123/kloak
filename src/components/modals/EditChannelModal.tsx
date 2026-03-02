@@ -247,7 +247,7 @@ export const EditChannelModal = () => {
   const channelOverviewContent = (
     <div className="space-y-6">
       <div className="space-y-3">
-        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Channel Name</Label>
+        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Channel Name</Label>
         <div className="relative">
           <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-secondary/80 flex items-center justify-center">
             <Hash className="h-4 w-4 text-muted-foreground" />
@@ -264,7 +264,7 @@ export const EditChannelModal = () => {
       </div>
 
       <div className="space-y-3">
-        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
           Channel Topic
           <span className="text-muted-foreground/70 font-normal normal-case ml-1">(optional)</span>
         </Label>
@@ -292,7 +292,7 @@ export const EditChannelModal = () => {
     <div className="space-y-6">
       {/* Slowmode */}
       <div className="space-y-3">
-        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Slowmode</Label>
+        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Slowmode</Label>
         <Select value={slowmodeSeconds} onValueChange={setSlowmodeSeconds}>
           <SelectTrigger className="h-11 rounded-xl border-border/50 bg-secondary/30">
             <div className="flex items-center gap-3">

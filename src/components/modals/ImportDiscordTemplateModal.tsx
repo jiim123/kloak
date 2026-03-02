@@ -105,7 +105,7 @@ export const ImportDiscordTemplateModal = () => {
                 <Download className="w-6 h-6 text-primary" />
               </div>
               <div className="text-center">
-                <DialogTitle className="text-xl font-semibold">Import Discord Template</DialogTitle>
+                <DialogTitle className="text-xl font-medium">Import Discord Template</DialogTitle>
                 <DialogDescription className="text-sm text-muted-foreground mt-1">
                   Import categories, channels, and roles from a Discord server template
                 </DialogDescription>
@@ -118,7 +118,7 @@ export const ImportDiscordTemplateModal = () => {
               <div className="flex items-center gap-3 p-4 bg-[hsl(var(--kloak-success))]/10 border border-[hsl(var(--kloak-success))]/20 rounded-xl">
                 <CheckCircle2 className="w-5 h-5 text-[hsl(var(--kloak-success))] flex-shrink-0" />
                 <div className="flex-1">
-                  <p className="font-semibold text-[hsl(var(--kloak-success))]">Import Successful!</p>
+                  <p className="font-medium text-[hsl(var(--kloak-success))]">Import Successful!</p>
                   <p className="text-sm text-muted-foreground mt-1">
                     {importResult.imported?.categories || 0} categories, {importResult.imported?.channels || 0} channels, and {importResult.imported?.roles || 0} roles imported.
                   </p>
@@ -132,7 +132,7 @@ export const ImportDiscordTemplateModal = () => {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
               {/* Template URL Input */}
               <div className="space-y-2">
-                <Label htmlFor="templateUrl" className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">
+                <Label htmlFor="templateUrl" className="text-xs font-medium uppercase text-muted-foreground tracking-wide">
                   Discord Template URL
                 </Label>
                 <Input
@@ -166,7 +166,7 @@ export const ImportDiscordTemplateModal = () => {
                 <div className="flex items-start gap-3 p-4 bg-destructive/10 border border-destructive/20 rounded-xl">
                   <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <p className="font-semibold text-destructive">Import Failed</p>
+                    <p className="font-medium text-destructive">Import Failed</p>
                     <p className="text-sm text-muted-foreground mt-1">{importResult.error}</p>
                   </div>
                 </div>

@@ -39,7 +39,7 @@ export const WelcomeModal = ({ open, onClose }: WelcomeModalProps) => {
                   <Shield className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />
                 </div>
               </div>
-              <DialogTitle className="text-xl sm:text-2xl font-bold tracking-tight">Welcome to Kloak!</DialogTitle>
+              <DialogTitle className="text-xl sm:text-2xl font-medium tracking-tight">Welcome to Kloak!</DialogTitle>
               <DialogDescription className="text-sm sm:text-base text-muted-foreground">
                 Your privacy-first messaging experience starts here.
               </DialogDescription>
@@ -53,7 +53,7 @@ export const WelcomeModal = ({ open, onClose }: WelcomeModalProps) => {
                     <Key className="w-4 h-4 sm:w-5 sm:h-5 text-[hsl(var(--kloak-warning))]" />
                   </div>
                   <div className="space-y-1.5 min-w-0">
-                    <h3 className="font-semibold tracking-tight text-foreground text-sm sm:text-base">
+                    <h3 className="font-medium tracking-tight text-foreground text-sm sm:text-base">
                       Your Secret Key is Everything
                     </h3>
                     <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
@@ -70,10 +70,10 @@ export const WelcomeModal = ({ open, onClose }: WelcomeModalProps) => {
               <div className="p-3 sm:p-4 rounded-xl bg-secondary/30 border border-border/30 backdrop-blur-sm">
                 <div className="flex items-start gap-3">
                   <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-primary/15 flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs sm:text-sm font-bold text-primary">1</span>
+                    <span className="text-xs sm:text-sm font-medium text-primary">1</span>
                   </div>
                   <div className="space-y-2 min-w-0">
-                    <h4 className="font-semibold tracking-tight text-sm sm:text-base">Store Your Key Safely</h4>
+                    <h4 className="font-medium tracking-tight text-sm sm:text-base">Store Your Key Safely</h4>
                     <ul className="text-xs sm:text-sm text-muted-foreground space-y-1.5">
                       <li className="flex items-start gap-2">
                         <span className="text-primary mt-0.5">•</span>
@@ -96,10 +96,10 @@ export const WelcomeModal = ({ open, onClose }: WelcomeModalProps) => {
               <div className="p-3 sm:p-4 rounded-xl bg-secondary/30 border border-border/30 backdrop-blur-sm">
                 <div className="flex items-start gap-3">
                   <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-primary/15 flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs sm:text-sm font-bold text-primary">2</span>
+                    <span className="text-xs sm:text-sm font-medium text-primary">2</span>
                   </div>
                   <div className="space-y-2 min-w-0">
-                    <h4 className="font-semibold tracking-tight text-sm sm:text-base">Finding Your Key Later</h4>
+                    <h4 className="font-medium tracking-tight text-sm sm:text-base">Finding Your Key Later</h4>
                     <div className="text-xs sm:text-sm text-muted-foreground p-2.5 sm:p-3 rounded-lg bg-secondary/50 border border-border/20">
                       <div className="flex items-center gap-2 mb-1.5">
                         <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />

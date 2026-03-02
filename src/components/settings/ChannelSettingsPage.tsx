@@ -238,7 +238,7 @@ export const ChannelSettingsPage = () => {
   const channelOverviewContent = (
     <div className="space-y-6">
       <div className="space-y-3">
-        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Channel Name</Label>
+        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Channel Name</Label>
         <div className="relative">
           <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-secondary/80 flex items-center justify-center">
             <Hash className="h-4 w-4 text-muted-foreground" />
@@ -255,7 +255,7 @@ export const ChannelSettingsPage = () => {
       </div>
 
       <div className="space-y-3">
-        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
           Channel Topic
           <span className="text-muted-foreground/70 font-normal normal-case ml-1">(optional)</span>
         </Label>
@@ -283,7 +283,7 @@ export const ChannelSettingsPage = () => {
     <div className="space-y-6">
       {/* Slowmode */}
       <div className="space-y-3">
-        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Slowmode</Label>
+        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Slowmode</Label>
         <Select value={slowmodeSeconds} onValueChange={setSlowmodeSeconds}>
           <SelectTrigger className="h-11 rounded-xl border-border/50 bg-secondary/30">
             <div className="flex items-center gap-3">
@@ -308,7 +308,7 @@ export const ChannelSettingsPage = () => {
 
       {/* Toggles */}
       <div className="space-y-3">
-        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Channel Options</Label>
+        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Channel Options</Label>
 
         <ToggleCard
           icon={Lock}
@@ -338,7 +338,7 @@ export const ChannelSettingsPage = () => {
 
       {/* Link Restrictions */}
       <div className="space-y-3">
-        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Link Restrictions</Label>
+        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Link Restrictions</Label>
 
         <ToggleCard
           icon={Link2}
@@ -476,7 +476,7 @@ export const ChannelSettingsPage = () => {
   const categoryOverviewContent = (
     <div className="space-y-6">
       <div className="space-y-3">
-        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Category Name</Label>
+        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Category Name</Label>
         <div className="relative">
           <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-secondary/80 flex items-center justify-center">
             <FolderOpen className="h-4 w-4 text-muted-foreground" />
@@ -559,7 +559,7 @@ export const ChannelSettingsPage = () => {
         <div className="w-56 flex-shrink-0 border-r border-border bg-secondary/20 flex flex-col overflow-hidden">
           {/* Channel/Category Name Header */}
           <div className="px-4 pt-5 pb-3">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground truncate">
+            <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground truncate">
               {isCategory ? category?.name : `# ${channel?.name}`}
             </h2>
             <p className="text-[10px] text-muted-foreground/60 mt-0.5">
@@ -621,7 +621,7 @@ export const ChannelSettingsPage = () => {
 
           {/* Content */}
           <div className="p-6 pr-16">
-            <h2 className="text-xl font-bold mb-1">{navItems.find((n) => n.id === activeTab)?.label}</h2>
+            <h2 className="text-xl font-medium mb-1">{navItems.find((n) => n.id === activeTab)?.label}</h2>
             <p className="text-sm text-muted-foreground mb-6">
               {activeTab === "overview" && (isCategory ? "Basic category information" : "Basic channel information")}
               {activeTab === "settings" && (isCategory ? "Category configuration options" : "Channel configuration options")}

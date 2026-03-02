@@ -215,7 +215,7 @@ export function PermissionDebugPanel() {
                                             <Info className="h-4 w-4" />
                                             <AlertDescription>
                                                 <div className="space-y-2">
-                                                    <p className="font-semibold">Permission Resolution Order:</p>
+                                                    <p className="font-medium">Permission Resolution Order:</p>
                                                     <ol className="list-decimal list-inside space-y-1 text-sm">
                                                         <li>
                                                             <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
@@ -310,7 +310,7 @@ export function PermissionDebugPanel() {
                                                                         <XCircle className="h-6 w-6 text-red-500" />
                                                                     )}
                                                                     <div>
-                                                                        <p className="font-semibold">
+                                                                        <p className="font-medium">
                                                                             {info.has_permission ? 'Permission Granted' : 'Permission Denied'}
                                                                         </p>
                                                                         <p className="text-sm text-muted-foreground">

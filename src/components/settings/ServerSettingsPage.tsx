@@ -515,7 +515,7 @@ const RolePermissionsEditorInline = ({ role, serverId }: { role: CustomServerRol
                       onClick={() => handlePermissionChange(permission, false)}
                       disabled={isDisabled}
                       className={cn(
-                        "px-2.5 py-1 text-[10px] font-bold rounded-md transition-all",
+                        "px-2.5 py-1 text-[10px] font-medium rounded-md transition-all",
                         state === false
                           ? "bg-destructive text-destructive-foreground shadow-sm"
                           : "text-muted-foreground hover:text-foreground",
@@ -527,7 +527,7 @@ const RolePermissionsEditorInline = ({ role, serverId }: { role: CustomServerRol
                       onClick={() => handlePermissionChange(permission, null)}
                       disabled={isDisabled}
                       className={cn(
-                        "px-2.5 py-1 text-[10px] font-bold rounded-md transition-all",
+                        "px-2.5 py-1 text-[10px] font-medium rounded-md transition-all",
                         state === null
                           ? "bg-background text-foreground shadow-sm border border-border"
                           : "text-muted-foreground hover:text-foreground",
@@ -539,7 +539,7 @@ const RolePermissionsEditorInline = ({ role, serverId }: { role: CustomServerRol
                       onClick={() => handlePermissionChange(permission, true)}
                       disabled={isDisabled}
                       className={cn(
-                        "px-2.5 py-1 text-[10px] font-bold rounded-md transition-all",
+                        "px-2.5 py-1 text-[10px] font-medium rounded-md transition-all",
                         state === true
                           ? "bg-emerald-600 text-white shadow-sm"
                           : "text-muted-foreground hover:text-foreground",
@@ -1770,7 +1770,7 @@ export const ServerSettingsPage = () => {
           <div className="w-56 flex-shrink-0 border-r border-border bg-secondary/20 flex flex-col overflow-hidden">
             {/* Server Name Header */}
             <div className="px-4 pt-5 pb-3">
-              <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground truncate">
+              <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground truncate">
                 {server.name}
               </h2>
             </div>
@@ -1791,7 +1791,7 @@ export const ServerSettingsPage = () => {
                 {canManageEmojis && (
                   <>
                     <div className="px-3 pt-4 pb-1.5 w-full">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
+                      <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">
                         Customization
                       </span>
                     </div>
@@ -1807,7 +1807,7 @@ export const ServerSettingsPage = () => {
 
                 {/* User Management Section */}
                 <div className="px-3 pt-4 pb-1.5 w-full">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
+                  <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">
                     User Management
                   </span>
                 </div>
@@ -1846,7 +1846,7 @@ export const ServerSettingsPage = () => {
                 {canManageChannels && (
                   <>
                     <div className="px-3 pt-4 pb-1.5 w-full">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
+                      <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">
                         Integrations
                       </span>
                     </div>
@@ -1894,7 +1894,7 @@ export const ServerSettingsPage = () => {
 
             {/* Overview Tab */}
             <TabsContent value="overview" className="m-0 p-6 pr-16">
-              <h2 className="text-xl font-bold mb-6">Overview</h2>
+              <h2 className="text-xl font-medium mb-6">Overview</h2>
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 max-w-3xl">
                 {/* Server Icon */}
                 <div className="flex items-center gap-4">

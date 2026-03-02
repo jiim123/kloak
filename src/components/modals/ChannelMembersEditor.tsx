@@ -106,7 +106,7 @@ export const ChannelMembersEditor = ({ channelId, serverId, onClose }: ChannelMe
       {/* Current Members */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Channel Members ({currentChannelMembers.length})
           </h3>
         </div>
@@ -154,7 +154,7 @@ export const ChannelMembersEditor = ({ channelId, serverId, onClose }: ChannelMe
 
       {/* Add Members */}
       <div className="space-y-3">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
           Add Members
         </h3>
 
