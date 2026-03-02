@@ -537,11 +537,13 @@ export const MembersSidebar = () => {
             {isServerOwner && <Crown className="w-3 h-3 text-amber-400 flex-shrink-0" />}
             <span
               className={cn(
-                "text-[14px] sm:text-[15px] font-medium truncate leading-tight",
+                "text-sm truncate",
                 memberIsOffline
                   ? "text-muted-foreground/70"
                   : priorityCustomRoleColor
-                    ? ""
+                    ? isGradientName
+                      ? "font-medium"
+                      : ""
                     : "text-foreground",
               )}
               style={
