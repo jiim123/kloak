@@ -322,18 +322,20 @@ export const DMMessageInput = ({ conversationId, otherUsername, replyingTo, onCa
   const handlePaste = useCallback(
     (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
       if (!user || isSending) return;
-      const items = e.clipboardData?.items;
-      if (!items) return;
-      const imageItem = Array.from(items).find((it) => it.type.startsWith("image/"));
-      if (!imageItem) {
+      // Prefer clipboardData.files to avoid duplicate items across browsers
+      const files = e.clipboardData?.files;
+      if (!files || files.length === 0) {
         requestAnimationFrame(() => resizeTextarea());
         return;
       }
-      const file = imageItem.getAsFile();
-      if (!file) return;
+      const imageFile = Array.from(files).find((f) => f.type.startsWith("image/"));
+      if (!imageFile) {
+        requestAnimationFrame(() => resizeTextarea());
+        return;
+      }
       e.preventDefault();
       e.stopPropagation();
-      addFilesToQueue([file]);
+      addFilesToQueue([imageFile]);
     },
     [user, isSending, addFilesToQueue, resizeTextarea],
   );
