@@ -531,7 +531,7 @@
   h5,
   h6 {
     letter-spacing: -0.015em;
-    @apply font-semibold;
+    @apply font-medium;
   }
 
   h1 {
