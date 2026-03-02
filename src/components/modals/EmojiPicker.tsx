@@ -9,6 +9,7 @@ import { fetchServerEmojis, ServerEmoji } from "@/lib/serverEmojis";
 import { getGlobalEmojiDuplicates } from "@/lib/globalEmojiResolver";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { EMOJI_DATA, EmojiCategory } from "@/data/emojiData";
+import { getRecentEmojis, saveRecentEmoji } from "@/lib/emojiRecents";
 
 interface EmojiPickerProps {
   children: React.ReactNode;
@@ -17,31 +18,6 @@ interface EmojiPickerProps {
   onOpenChange?: (open: boolean) => void;
   serverId?: string;
 }
-
-// Recent emoji storage
-const RECENT_EMOJIS_KEY = "kloak-recent-emojis";
-const MAX_RECENT_EMOJIS = 24;
-
-const getRecentEmojis = (): string[] => {
-  try {
-    const stored = localStorage.getItem(RECENT_EMOJIS_KEY);
-    if (!stored) return [];
-    return JSON.parse(stored);
-  } catch {
-    return [];
-  }
-};
-
-const saveRecentEmoji = (emoji: string) => {
-  try {
-    const recent = getRecentEmojis();
-    const filtered = recent.filter((e) => e !== emoji);
-    const updated = [emoji, ...filtered].slice(0, MAX_RECENT_EMOJIS);
-    localStorage.setItem(RECENT_EMOJIS_KEY, JSON.stringify(updated));
-  } catch {
-    // Ignore storage errors
-  }
-};
 
 export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange, serverId }: EmojiPickerProps) => {
   const [search, setSearch] = useState("");

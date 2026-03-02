@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo, memo, forwardRef } from "react";
+import { getTopEmojis } from "@/lib/emojiRecents";
 import { FluentEmoji } from "@/components/ui/FluentEmoji";
 import {
   Smile,
@@ -169,6 +170,7 @@ export const MessageItem = memo(function MessageItem({
   const openModal = useUIStore((state) => state.openModal);
   const getOptimisticStatus = useSyncStore((state) => state.getOptimisticStatus);
   const isMobile = useIsMobile();
+  const topEmojis = useMemo(() => getTopEmojis(3), []);
 
   // State - SEPARATE states for desktop and mobile emoji pickers
   const [isEditing, setIsEditing] = useState(false);
@@ -1360,6 +1362,18 @@ export const MessageItem = memo(function MessageItem({
               {/* Hover actions - Desktop only - skip for system messages */}
               {!isEditing && !message.is_system_message && (
                 <div className="absolute right-2 -top-4 hidden md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 md:flex items-center gap-1 bg-background/95 backdrop-blur-sm border border-border rounded-xl shadow-xl p-1 transition-opacity duration-200">
+                  {/* Quick reactions - top 3 most used */}
+                  {canAddReactions && topEmojis.map((emoji) => (
+                    <button
+                      key={`quick-${emoji}`}
+                      className="p-1.5 rounded-lg bg-transparent hover:bg-muted transition-colors"
+                      onClick={() => handleAddReaction(emoji)}
+                      aria-label={`React with ${emoji}`}
+                      title={`React with ${emoji}`}
+                    >
+                      <FluentEmoji emoji={emoji} size={18} />
+                    </button>
+                  ))}
                   {/* Reactions - Desktop */}
                   {canAddReactions && (
                     <EmojiPicker

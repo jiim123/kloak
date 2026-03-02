@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo, memo } from "react";
+import { getTopEmojis } from "@/lib/emojiRecents";
 import { FluentEmoji } from "@/components/ui/FluentEmoji";
 import { Smile, Reply, Pencil, Trash2, Copy, CornerUpLeft, MoreHorizontal, Paperclip } from "lucide-react";
 import { format } from "date-fns";
@@ -107,6 +108,7 @@ export const DMMessageItem = memo(function DMMessageItem({
   }, [message.created_at]);
 
   const formattedTimestamp = useMemo(() => formatMessageTimestamp(message.created_at || ""), [message.created_at]);
+  const topEmojis = useMemo(() => getTopEmojis(3), []);
 
   // Long press handlers for mobile
   const handleTouchStart = useCallback(() => {
@@ -450,6 +452,18 @@ export const DMMessageItem = memo(function DMMessageItem({
               {/* Hover actions - Desktop only */}
               {!isEditing && (
                 <div className="absolute right-2 -top-4 hidden md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 md:flex items-center gap-1 bg-background/95 backdrop-blur-sm border border-border rounded-xl shadow-xl p-1 transition-opacity duration-200">
+                  {/* Quick reactions - top 3 most used */}
+                  {topEmojis.map((emoji) => (
+                    <button
+                      key={`quick-${emoji}`}
+                      className="p-1.5 rounded-lg bg-transparent hover:bg-muted transition-colors"
+                      onClick={() => handleReactionClick(emoji)}
+                      aria-label={`React with ${emoji}`}
+                      title={`React with ${emoji}`}
+                    >
+                      <FluentEmoji emoji={emoji} size={18} />
+                    </button>
+                  ))}
                   {/* Add reaction */}
                   <EmojiPicker
                     open={showDesktopEmojiPicker}
