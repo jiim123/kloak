@@ -295,8 +295,8 @@ const Brand = () => {
                 >
                   <span className="text-[10px] font-mono text-muted-foreground/50 tracking-widest uppercase block mb-6">Primary</span>
                   <p className="text-4xl font-extralight text-foreground tracking-tight mb-1">Aa</p>
-                  <p className="text-lg font-light text-foreground/60 mb-4">Stack Sans Headline</p>
-                  <p className="text-muted-foreground/50 text-xs">Weights 300–700. Headings & body.</p>
+                  <p className="text-lg font-light text-foreground/60 mb-4">General Sans</p>
+                  <p className="text-muted-foreground/50 text-xs">Weights 300–500. Headings & body.</p>
                   {/* Giant ghost letter */}
                   <span className="absolute -right-6 -bottom-10 text-[180px] font-extralight text-foreground/[0.02] select-none leading-none">A</span>
                 </motion.div>

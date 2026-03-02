@@ -503,7 +503,7 @@
 
   html {
     font-family:
-      "Stack Sans Headline", "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", system-ui,
+      "General Sans", "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", system-ui,
       sans-serif;
     /* Disable pull-to-refresh and overscroll */
     overscroll-behavior: none;
@@ -1076,7 +1076,7 @@ body {
   font-family: "General Sans", system-ui, sans-serif;
 }
 
-/* Restore Stack Sans for /app routes */
+/* App layout font */
 .app-layout-font {
-  font-family: "Stack Sans Headline", "Noto Color Emoji", system-ui, sans-serif;
+  font-family: "General Sans", "Noto Color Emoji", system-ui, sans-serif;
 }
