@@ -8,7 +8,15 @@ import { useServerStore } from "@/stores/serverStore";
 import { fetchServerEmojis, ServerEmoji } from "@/lib/serverEmojis";
 import { getGlobalEmojiDuplicates } from "@/lib/globalEmojiResolver";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { EMOJI_DATA } from "@/data/emojiData";
+import { EMOJI_DATA, EmojiCategory } from "@/data/emojiData";
+
+interface EmojiPickerProps {
+  children: React.ReactNode;
+  onEmojiSelect: (emoji: string) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  serverId?: string;
+}
 
 // Recent emoji storage
 const RECENT_EMOJIS_KEY = "kloak-recent-emojis";
