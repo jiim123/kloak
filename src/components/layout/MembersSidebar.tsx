@@ -1,17 +1,6 @@
 import { useMemo, useEffect, memo, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import {
-  Crown,
-  ChevronDown,
-  MessageSquare,
-  Edit3,
-  UserX,
-  Ban,
-  VolumeX,
-  Shield,
-  Users,
-  Loader2,
-} from "lucide-react";
+import { Crown, ChevronDown, MessageSquare, Edit3, UserX, Ban, VolumeX, Shield, Users, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -88,7 +77,17 @@ const getMemberPresence = (member: ServerMember) => {
 
 // Memoized Status indicator component
 const StatusIndicator = memo(
-  ({ status, isStale, isInvisible, className }: { status?: string; isStale?: boolean; isInvisible?: boolean; className?: string }) => {
+  ({
+    status,
+    isStale,
+    isInvisible,
+    className,
+  }: {
+    status?: string;
+    isStale?: boolean;
+    isInvisible?: boolean;
+    className?: string;
+  }) => {
     // Show hollow circle for the current user when invisible
     if (isInvisible) {
       return (
@@ -139,7 +138,7 @@ const SectionHeader = memo(
           style={colorDot.startsWith("linear-gradient") ? { background: colorDot } : { backgroundColor: colorDot }}
         />
       )}
-      <span className="text-[11px] font-semibold uppercase tracking-wider" style={color ? { color } : undefined}>
+      <span className="text-[11px] font-medium uppercase tracking-wider" style={color ? { color } : undefined}>
         {label}
       </span>
       <span className="text-[11px] font-medium text-muted-foreground/70">{count}</span>
@@ -358,7 +357,6 @@ export const MembersSidebar = () => {
 
     // Sort by custom role position then alphabetically
     const sortMembers = (a: ServerMember, b: ServerMember) => {
-
       const aPriorityPos =
         a.roles && a.roles.length > 0 ? Math.min(...a.roles.map(getResolvedRolePosition)) : Number.POSITIVE_INFINITY;
       const bPriorityPos =
@@ -501,13 +499,12 @@ export const MembersSidebar = () => {
     const canMod = canModerateByRoles(currentUserIsOwner, currentUserMember?.roles, isServerOwner, member.roles);
     const canKick = checkPermission("kick_members") && canMod && !isSelf;
     const canBan = checkPermission("ban_members") && canMod && !isSelf;
-    const canChangeNickname =
-      checkPermission("manage_nicknames") && (canMod || isSelf);
+    const canChangeNickname = checkPermission("manage_nicknames") && (canMod || isSelf);
     const canTransfer = currentUserIsOwner && !isSelf && !isServerOwner;
-    const canManageRoles = checkPermission("manage_roles") && (canMod || (isSelf && isServerOwner) || currentUserIsOwner);
+    const canManageRoles =
+      checkPermission("manage_roles") && (canMod || (isSelf && isServerOwner) || currentUserIsOwner);
 
-    const hasAdminActions =
-      canKick || canBan || canChangeNickname || canTransfer || canManageRoles;
+    const hasAdminActions = canKick || canBan || canChangeNickname || canTransfer || canManageRoles;
 
     const content = (
       <div
@@ -644,7 +641,9 @@ export const MembersSidebar = () => {
                   {/* Custom roles */}
                   {roles.length > 0 && (
                     <>
-                      <div className="px-2 py-1 mt-1 text-[10px] font-semibold uppercase text-muted-foreground tracking-wider">Custom Roles</div>
+                      <div className="px-2 py-1 mt-1 text-[10px] font-medium uppercase text-muted-foreground tracking-wider">
+                        Custom Roles
+                      </div>
                       {roles.map((role) => {
                         const memberRoles = member.roles || [];
                         const hasRole = memberRoles.some((r) => r.id === role.id);
@@ -693,7 +692,7 @@ export const MembersSidebar = () => {
     <div className="h-full flex flex-col bg-background/50 border-l border-border/50 w-full">
       {/* Header */}
       <div className="px-4 py-3 border-b border-border/50">
-        <h3 className="text-sm font-semibold">Members</h3>
+        <h3 className="text-sm font-medium">Members</h3>
         <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
           <span className="text-muted-foreground">{onlineCount} online</span>
           {totalMemberCount != null && <span className="text-muted-foreground">•</span>}
@@ -716,9 +715,7 @@ export const MembersSidebar = () => {
             return (
               <div key={role.id} className="mb-3">
                 <SectionHeader label={role.name} count={roleMembers.length} color={textColor} colorDot={role.color} />
-                <div className="space-y-0.5">
-                  {roleMembers.map((member) => renderMemberItem(member))}
-                </div>
+                <div className="space-y-0.5">{roleMembers.map((member) => renderMemberItem(member))}</div>
               </div>
             );
           })}
@@ -727,9 +724,7 @@ export const MembersSidebar = () => {
         {noRoleMembers.length > 0 && (
           <div className="mb-3">
             <SectionHeader label="Members" count={noRoleMembers.length} />
-            <div className="space-y-0.5">
-              {noRoleMembers.map((member) => renderMemberItem(member))}
-            </div>
+            <div className="space-y-0.5">{noRoleMembers.map((member) => renderMemberItem(member))}</div>
           </div>
         )}
 
@@ -740,10 +735,13 @@ export const MembersSidebar = () => {
             className="w-full flex items-center gap-2 px-3 py-2 hover:bg-secondary/40 transition-colors"
             onClick={() => setIsOfflineExpanded((v) => !v)}
           >
-            <ChevronDown className={cn("w-3.5 h-3.5 text-muted-foreground transition-transform", isOfflineExpanded && "rotate-180")} />
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Offline
-            </span>
+            <ChevronDown
+              className={cn(
+                "w-3.5 h-3.5 text-muted-foreground transition-transform",
+                isOfflineExpanded && "rotate-180",
+              )}
+            />
+            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Offline</span>
             {offlineDisplayCount != null && (
               <span className="text-[11px] font-medium text-muted-foreground/70">{offlineDisplayCount}</span>
             )}
@@ -804,10 +802,7 @@ export const MembersSidebar = () => {
           onInteractOutside={(event) => {
             // Prevent closing when interacting with context menus or dropdowns
             const target = event.target as HTMLElement | null;
-            if (
-              target?.closest('[data-radix-popper-content-wrapper]') ||
-              target?.closest('[role="menu"]')
-            ) {
+            if (target?.closest("[data-radix-popper-content-wrapper]") || target?.closest('[role="menu"]')) {
               event.preventDefault();
             }
           }}
@@ -815,9 +810,7 @@ export const MembersSidebar = () => {
           <SheetHeader className="sr-only">
             <SheetTitle>Members</SheetTitle>
           </SheetHeader>
-          <div className="h-full bg-layout-members">
-            {sidebarContent}
-          </div>
+          <div className="h-full bg-layout-members">{sidebarContent}</div>
         </SheetContent>
       </Sheet>
     );
@@ -826,4 +819,3 @@ export const MembersSidebar = () => {
   // Desktop: render as inline panel
   return sidebarContent;
 };
-
