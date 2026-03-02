@@ -25,26 +25,33 @@ export const TypingIndicator = ({ typingUsers }: TypingIndicatorProps) => {
   };
 
   return (
-    <div className="h-7 min-w-0 px-4 flex items-center shrink-0">
+    <div className="h-8 min-w-0 px-4 flex items-center shrink-0">
       <AnimatePresence mode="wait">
         {typingUsers.length > 0 && (
           <motion.div
             key="typing"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="flex items-center gap-2 text-sm text-muted-foreground"
+            className="inline-flex items-center gap-2 px-3 py-1 rounded-full border"
+            style={{
+              borderColor: "#666666",
+              color: "#666666",
+            }}
           >
-            {/* Shimmer typing indicator - sliding gradient highlight */}
-            <div className="relative w-10 h-1.5 bg-foreground/20 rounded-full overflow-hidden">
+            {/* Shimmer typing indicator */}
+            <div
+              className="relative w-8 h-1.5 rounded-full overflow-hidden"
+              style={{ backgroundColor: "rgba(102, 102, 102, 0.25)" }}
+            >
               <motion.div
-                className="absolute inset-y-0 w-6 rounded-full"
+                className="absolute inset-y-0 w-5 rounded-full"
                 style={{
-                  background: "linear-gradient(90deg, transparent, hsl(var(--foreground) / 0.6), transparent)",
+                  background: "linear-gradient(90deg, transparent, #666666, transparent)",
                 }}
                 animate={{
-                  x: [-24, 40],
+                  x: [-20, 32],
                 }}
                 transition={{
                   duration: 2,
@@ -53,7 +60,7 @@ export const TypingIndicator = ({ typingUsers }: TypingIndicatorProps) => {
                 }}
               />
             </div>
-            <span className="truncate">{formatTypingText()}</span>
+            <span className="text-xs font-medium truncate">{formatTypingText()}</span>
           </motion.div>
         )}
       </AnimatePresence>
