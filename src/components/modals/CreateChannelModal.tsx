@@ -69,7 +69,7 @@ export const CreateChannelModal = () => {
       if (mode === "category") {
         const result = await createCategory(currentServer.id, name.trim(), user.id);
         if (!result) {
-          setError("Failed to create category. Check permissions.");
+          setError("Failed to create category. Please check your permissions.");
           return;
         }
       } else {
@@ -77,7 +77,7 @@ export const CreateChannelModal = () => {
         const actualChannelType: ChannelType = selectedChannelType;
         const result = await createChannel(currentServer.id, name.trim(), actualChannelType, user.id, selectedCategoryId, undefined, isPrivate, false);
         if (!result) {
-          setError("Failed to create channel. Check permissions.");
+          setError("Failed to create channel. Please check your permissions.");
           return;
         }
       }
