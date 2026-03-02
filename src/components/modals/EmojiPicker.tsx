@@ -266,7 +266,7 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange, serve
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>{children}</PopoverTrigger>
       <PopoverContent
-        className="w-[320px] sm:w-[380px] p-0 bg-card border-border/50 rounded-2xl shadow-2xl overflow-hidden"
+        className="w-[280px] sm:w-[340px] p-0 bg-card border-border/50 rounded-2xl shadow-2xl overflow-hidden"
         side="top"
         align="end"
         sideOffset={12}
@@ -379,7 +379,7 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange, serve
                       Results for "{search.trim()}"
                     </span>
                   </div>
-                  <div className="grid grid-cols-5 sm:grid-cols-6 gap-0.5">
+                   <div className="grid grid-cols-4 gap-1">
                     {filteredEmojis.map((item, i) =>
                       item.type === "native" ? (
                         <button
@@ -389,7 +389,7 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange, serve
                           onClick={() => handleSelect(item.emoji)}
                           onMouseDown={(e) => e.preventDefault()}
                         >
-                          <FluentEmoji emoji={item.emoji} size={28} />
+                          <FluentEmoji emoji={item.emoji} size={36} />
                         </button>
                       ) : (
                         <button
@@ -403,7 +403,7 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange, serve
                           <img
                             src={item.emoji.url}
                             alt={item.emoji.name}
-                            className="w-7 h-7 sm:w-8 sm:h-8 object-contain"
+                             className="w-9 h-9 object-contain"
                           />
                         </button>
                       ),
@@ -433,7 +433,7 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange, serve
                     <p className="text-sm text-muted-foreground">Loading emojis...</p>
                   </div>
                 ) : currentServerEmojis.length > 0 ? (
-                  <div className="grid grid-cols-5 sm:grid-cols-6 gap-0.5">
+                   <div className="grid grid-cols-4 gap-1">
                     {currentServerEmojis.map((emoji) => (
                       <button
                         key={emoji.id}
@@ -443,7 +443,7 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange, serve
                         onMouseDown={(e) => e.preventDefault()}
                         title={`:${emoji.name}:`}
                       >
-                        <img src={emoji.url} alt={emoji.name} className="w-7 h-7 sm:w-8 sm:h-8 object-contain" />
+                        <img src={emoji.url} alt={emoji.name} className="w-9 h-9 object-contain" />
                       </button>
                     ))}
                   </div>
@@ -478,7 +478,7 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange, serve
                       </div>
 
                       {cat.emojis.length > 0 ? (
-                        <div className="grid grid-cols-5 sm:grid-cols-6 gap-0.5">
+                        <div className="grid grid-cols-4 gap-1">
                           {cat.emojis.map((emoji, i) => {
                             // Check if this is a custom emoji (format: :name:)
                             const isCustomEmoji = cat.key === "recent" && emoji.startsWith(":") && emoji.endsWith(":") && emoji.length > 2;
@@ -506,7 +506,7 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange, serve
                                     <img
                                       src={customEmoji.url}
                                       alt={emojiName}
-                                      className="w-7 h-7 sm:w-8 sm:h-8 object-contain"
+                                      className="w-9 h-9 object-contain"
                                     />
                                   </button>
                                 );
@@ -538,7 +538,7 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange, serve
                                 onClick={() => handleSelect(emoji)}
                                 onMouseDown={(e) => e.preventDefault()}
                               >
-                                <FluentEmoji emoji={emoji} size={28} />
+                                <FluentEmoji emoji={emoji} size={36} />
                               </button>
                             );
                           })}
