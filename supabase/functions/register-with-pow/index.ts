@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { createServiceClient, enforceRateLimit, getClientId } from "../_shared/edgeSecurity.ts";
 
 interface RegisterBody {
   username: string;
@@ -50,6 +51,23 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
+
+    // Rate limit: 5 registration attempts per 5 minutes per client IP
+    const sharedClient = createServiceClient();
+    const clientId = getClientId(req);
+    const rateScope = `client:${clientId}`;
+    let rateOk = false;
+    try {
+      rateOk = await enforceRateLimit(sharedClient, rateScope, "edge_register_pow", 5, 300);
+    } catch {
+      rateOk = true;
+    }
+    if (!rateOk) {
+      return new Response(JSON.stringify({ error: "Rate limited: too many registration attempts" }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Fetch the challenge
     const { data: challenge, error: challengeError } = await supabase

@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { AccessToken } from "https://esm.sh/livekit-server-sdk@2.13.0";
+import { createServiceClient, enforceRateLimit, getAuthContext } from "../_shared/edgeSecurity.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,8 +10,6 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
@@ -19,23 +17,6 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
-}
-
-function createServiceClient() {
-  return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-}
-
-async function resolveRequestUserId(supabase: ReturnType<typeof createServiceClient>, keyHash: string) {
-  const { data, error } = await supabase
-    .from("user_auth")
-    .select("user_id")
-    .eq("key_hash", keyHash)
-    .single();
-
-  if (error || !data?.user_id) return null;
-  return data.user_id as string;
 }
 
 function normalizeLiveKitUrl(url: string): string {
@@ -80,16 +61,25 @@ serve(async (req) => {
       return jsonResponse({ error: "room and identity must be UUIDs" }, 400);
     }
 
-    const keyHash = req.headers.get("x-key-hash");
-    if (!keyHash) {
-      return jsonResponse({ error: "Missing x-key-hash header" }, 401);
+    const supabase = createServiceClient();
+    const auth = await getAuthContext(supabase, req);
+    if (!auth.requestUserId) {
+      return jsonResponse({ error: "Missing or invalid x-key-hash header" }, 401);
     }
 
-    const supabase = createServiceClient();
-    const requestUserId = await resolveRequestUserId(supabase, keyHash);
-    if (!requestUserId) {
-      return jsonResponse({ error: "Invalid credentials" }, 401);
+    // Rate limit: 10 token requests per minute per user
+    let rateOk = false;
+    try {
+      rateOk = await enforceRateLimit(supabase, auth.scopeBase, "edge_livekit_token", 10, 60);
+    } catch (rateError) {
+      const msg = rateError instanceof Error ? rateError.message : "Rate-limit backend unavailable";
+      return jsonResponse({ error: msg }, 503);
     }
+    if (!rateOk) {
+      return jsonResponse({ error: "Rate limited: too many token requests" }, 429);
+    }
+
+    const requestUserId = auth.requestUserId;
 
     if (requestUserId !== identity) {
       return jsonResponse({ error: "Identity mismatch" }, 403);

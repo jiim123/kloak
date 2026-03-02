@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { createServiceClient, enforceRateLimit, getClientId } from "../_shared/edgeSecurity.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -12,6 +13,23 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
+
+    // Rate limit: 10 challenge generations per minute per client IP
+    const sharedClient = createServiceClient();
+    const clientId = getClientId(req);
+    const rateScope = `client:${clientId}`;
+    let rateOk = false;
+    try {
+      rateOk = await enforceRateLimit(sharedClient, rateScope, "edge_generate_challenge", 10, 60);
+    } catch {
+      rateOk = true; // fail open if rate limit backend unavailable
+    }
+    if (!rateOk) {
+      return new Response(JSON.stringify({ error: "Rate limited: too many challenge requests" }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Generate a random nonce
     const nonceBytes = new Uint8Array(16);
