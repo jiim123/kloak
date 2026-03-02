@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { FluentEmoji } from "@/components/ui/FluentEmoji";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useUIStore } from "@/stores/uiStore";
@@ -112,7 +113,7 @@ export const AnnouncementView = ({ message, onClose }: AnnouncementViewProps) =>
           return <img src={url} alt={emoji} className="w-6 h-6 object-contain" loading="lazy" />;
         }
       }
-      return <span className="text-xl leading-none font-emoji">{emoji}</span>;
+      return <FluentEmoji emoji={emoji} size={24} />;
     },
     [customEmojiMap],
   );

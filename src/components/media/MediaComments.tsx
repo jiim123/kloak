@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, forwardRef, useMemo } from "react";
+import { FluentEmoji } from "@/components/ui/FluentEmoji";
 import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useUIStore } from "@/stores/uiStore";
@@ -219,7 +220,7 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
           return <img src={url} alt={emoji} className="w-6 h-6 object-contain" loading="lazy" />;
         }
       }
-      return <span className="text-xl leading-none font-emoji">{emoji}</span>;
+      return <FluentEmoji emoji={emoji} size={24} />;
     },
     [customEmojiMap],
   );

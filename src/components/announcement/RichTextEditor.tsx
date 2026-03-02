@@ -369,7 +369,7 @@ export const RichTextEditor = forwardRef<HTMLDivElement, RichTextEditorProps>(
         onPaste={handlePaste}
         data-placeholder={placeholder}
         className="min-h-[200px] resize-none bg-transparent border-0 focus-visible:ring-0 outline-none text-[14px] leading-[1.5] font-[Inter,system-ui,sans-serif] whitespace-pre-wrap break-words [&:empty]:before:content-[attr(data-placeholder)] [&:empty]:before:text-muted-foreground [&_p]:inline [&_div]:inline [&_p]:m-0 [&_div]:m-0"
-        style={{ fontFamily: "system-ui, -apple-system, sans-serif, 'Noto Color Emoji'" }}
+        style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}
       />
     );
   }

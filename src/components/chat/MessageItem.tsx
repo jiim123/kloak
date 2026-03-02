@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo, memo, forwardRef } from "react";
+import { FluentEmoji } from "@/components/ui/FluentEmoji";
 import {
   Smile,
   Reply,
@@ -346,7 +347,7 @@ export const MessageItem = memo(function MessageItem({
         <img src={url} alt={icon} className="inline-block w-4 h-4 align-text-bottom object-contain" loading="lazy" />
       );
     }
-    return <span className="text-sm leading-none font-emoji">{icon}</span>;
+    return <FluentEmoji emoji={icon} size={16} className="align-text-bottom" />;
   }, [priorityRoleWithIcon?.icon, customEmojiMap]);
 
   const resolveCustomEmojiUrl = useCallback(
@@ -417,7 +418,7 @@ export const MessageItem = memo(function MessageItem({
         }
         return <span className="text-sm leading-none text-muted-foreground">{emoji}</span>;
       }
-      return <span className="text-xl leading-none font-emoji">{emoji}</span>;
+      return <FluentEmoji emoji={emoji} size={24} />;
     },
     [fallbackEmojiUrls, resolveCustomEmojiUrl],
   );
@@ -436,7 +437,7 @@ export const MessageItem = memo(function MessageItem({
         }
         return <span className="text-sm leading-none text-muted-foreground">{emoji}</span>;
       }
-      return <span className="text-2xl leading-none font-emoji">{emoji}</span>;
+      return <FluentEmoji emoji={emoji} size={32} />;
     },
     [fallbackEmojiUrls, resolveCustomEmojiUrl],
   );

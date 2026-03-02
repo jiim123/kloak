@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, type ReactNode } from "react";
+import { FluentEmoji } from "@/components/ui/FluentEmoji";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   ChevronDown,
@@ -184,7 +185,7 @@ const SortableChannel = ({
   // Determine the icon to display
   const getChannelIcon = () => {
     if (channel.icon) {
-      return <span className="text-base font-emoji">{channel.icon}</span>;
+      return <FluentEmoji emoji={channel.icon} size={18} />;
     }
     if (channel.type === "voice") {
       return (
@@ -1001,7 +1002,7 @@ export const ChannelSidebar = () => {
       if (channel) {
         const getIcon = () => {
           if (channel.icon) {
-            return <span className="text-base font-emoji">{channel.icon}</span>;
+            return <FluentEmoji emoji={channel.icon} size={18} />;
           }
           if (channel.type === "voice") {
             return <Volume2 className="w-4 h-4 text-muted-foreground" />;

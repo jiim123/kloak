@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { FluentEmoji } from "@/components/ui/FluentEmoji";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -2061,7 +2062,7 @@ export const ServerSettingsModal = () => {
                                     : { backgroundColor: role.color }
                                 }
                               />
-                              {role.icon && <span className="text-sm font-emoji leading-none">{role.icon}</span>}
+                              {role.icon && <FluentEmoji emoji={role.icon} size={16} />}
                               <span className="text-sm font-medium flex-1">{role.name}</span>
                               <Button
                                 variant="ghost"

@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo, memo } from "react";
+import { FluentEmoji } from "@/components/ui/FluentEmoji";
 import { Smile, Reply, Pencil, Trash2, Copy, CornerUpLeft, MoreHorizontal, Paperclip } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -396,7 +397,7 @@ export const DMMessageItem = memo(function DMMessageItem({
                                   : "bg-secondary/80 border-transparent hover:border-border hover:bg-secondary",
                               )}
                             >
-                              <span className="text-xl leading-none font-emoji">{reaction.emoji}</span>
+                              <FluentEmoji emoji={reaction.emoji} size={24} />
                               <span className="text-sm font-medium">{reaction.count}</span>
                             </button>
                           </span>
@@ -409,7 +410,7 @@ export const DMMessageItem = memo(function DMMessageItem({
                             return (
                               <div className="flex items-center gap-1">
                                 <div className="shrink-0">
-                                  <span className="text-2xl leading-none font-emoji">{reaction.emoji}</span>
+                                  <FluentEmoji emoji={reaction.emoji} size={32} />
                                 </div>
                                 <div className="min-w-0 text-sm leading-tight">
                                   <span className="text-muted-foreground">reacted by</span>{" "}
@@ -649,7 +650,7 @@ export const DMMessageItem = memo(function DMMessageItem({
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <span className="text-base leading-none font-emoji">{reactionDetailsEmoji ?? ""}</span>
+              {reactionDetailsEmoji && <FluentEmoji emoji={reactionDetailsEmoji} size={18} />}
               <span>Reactions</span>
             </DialogTitle>
           </DialogHeader>

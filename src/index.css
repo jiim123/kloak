@@ -103,14 +103,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Noto Color Emoji font-face - load full version for better coverage */
-@font-face {
-  font-family: "Noto Color Emoji";
-  src: url("https://cdn.jsdelivr.net/npm/@aspect-ui/noto-color-emoji-font@1.0.0/fonts/NotoColorEmoji-Regular.woff2")
-    format("woff2");
-  font-display: swap;
-  unicode-range: U+200D, U+2600-26FF, U+2700-27BF, U+FE00-FE0F, U+1F000-1FFFF;
-}
 
 @layer base {
   /* ========================================
@@ -503,15 +495,15 @@
 
   html {
     font-family:
-      "General Sans", "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", system-ui,
+      "General Sans", system-ui,
       sans-serif;
     /* Disable pull-to-refresh and overscroll */
     overscroll-behavior: none;
   }
 
-  /* Emoji-specific styling to ensure proper rendering */
-  .emoji-text {
-    font-family: "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+  /* Fluent Emoji 3D inline images */
+  .fluent-emoji {
+    vertical-align: -0.15em;
   }
 
   body {
@@ -1078,5 +1070,5 @@ body {
 
 /* App layout font */
 .app-layout-font {
-  font-family: "General Sans", "Noto Color Emoji", system-ui, sans-serif;
+  font-family: "General Sans", system-ui, sans-serif;
 }
