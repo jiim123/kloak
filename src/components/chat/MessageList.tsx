@@ -604,7 +604,7 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
 
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
-      <div ref={containerRef} className="flex-1 overflow-y-auto overflow-x-hidden will-change-transform" style={{ contain: 'strict' }} onScroll={handleScroll}>
+      <div ref={containerRef} className="flex-1 overflow-y-auto overflow-x-hidden" onScroll={handleScroll}>
         {/* Loading skeleton for initial load */}
         {isLoading && messages.length === 0 && <MessageListSkeleton />}
 
@@ -670,7 +670,9 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
                 {showDateDivider && (
                   <div className="flex items-center gap-3 px-4 my-4">
                     <div className="h-px flex-1 bg-border/70" />
-                    <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">{dateDividerLabel}</span>
+                    <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
+                      {dateDividerLabel}
+                    </span>
                     <div className="h-px flex-1 bg-border/70" />
                   </div>
                 )}
@@ -692,28 +694,38 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
       </div>
 
       {/* Jump to present button */}
+      {/* Jump to present button */}
       <AnimatePresence>
         {showJumpToPresent && (
           <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.9 }}
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
+            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
             className="absolute bottom-4 right-4 z-10"
           >
-            <Button
+            <button
               onClick={scrollToBottom}
-              variant="primary"
-              className="relative overflow-hidden rounded-full shadow-xl px-4 py-2 h-auto"
+              className="flex items-center gap-2 px-4 py-2 rounded-full border backdrop-blur-sm transition-colors duration-150"
+              style={{
+                backgroundColor: "rgba(252, 98, 43, 0.08)",
+                borderColor: "rgba(252, 98, 43, 0.35)",
+                color: "#fc622b",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "rgba(252, 98, 43, 0.15)";
+                e.currentTarget.style.borderColor = "rgba(252, 98, 43, 0.6)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "rgba(252, 98, 43, 0.08)";
+                e.currentTarget.style.borderColor = "rgba(252, 98, 43, 0.35)";
+              }}
             >
-              {/* Content */}
-              <div className="relative flex items-center gap-2">
-                <ChevronDown className="w-4 h-4" />
-                <span className="text-sm font-medium">
-                  {newMessageCount > 0 ? `${newMessageCount} new` : "Jump to present"}
-                </span>
-              </div>
-            </Button>
+              <ChevronDown className="w-4 h-4" />
+              <span className="text-sm font-medium">
+                {newMessageCount > 0 ? `${newMessageCount} new` : "Jump to present"}
+              </span>
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
