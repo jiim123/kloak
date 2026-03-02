@@ -1,15 +1,14 @@
 import { useMemo } from "react";
 import { useUIStore } from "@/stores/uiStore";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 export const ExternalLinkWarningModal = () => {
   const { activeModal, modalData, closeModal } = useUIStore();
@@ -35,30 +34,33 @@ export const ExternalLinkWarningModal = () => {
       return;
     }
 
-    // Open only in a new tab; keep the current tab in-app.
     window.open(url, "_blank", "noopener,noreferrer");
     handleClose();
   };
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Open External Link?</AlertDialogTitle>
-          <AlertDialogDescription className="space-y-2">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Open External Link?</DialogTitle>
+          <DialogDescription className="space-y-2">
             <p>This link goes to an external website.</p>
             <p className="text-destructive font-medium">
-            Proceed with caution — only if you trust the link, as it might expose your IP or browser details to the destination site.
+              Proceed with caution. Only continue if you trust this destination.
             </p>
             {hostname && <p className="font-medium text-foreground break-all">{hostname}</p>}
             <p className="text-xs break-all">{url}</p>
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleContinue}>Continue</AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={handleClose}>
+            Cancel
+          </Button>
+          <Button type="button" onClick={handleContinue}>
+            Continue
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };

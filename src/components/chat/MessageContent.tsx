@@ -87,6 +87,38 @@ const shouldWarnForExternalUrl = (url: string): boolean => {
   }
 };
 
+const getSupabaseHost = (): string | null => {
+  try {
+    const raw = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+    if (!raw) return null;
+    return new URL(raw).host.toLowerCase();
+  } catch {
+    return null;
+  }
+};
+
+const SUPABASE_HOST = getSupabaseHost();
+
+// Only inline images that are first-party/trusted; external image links remain non-inline.
+const isTrustedInlineImageUrl = (url: string): boolean => {
+  try {
+    const parsed = new URL(url);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return false;
+
+    const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+    if (currentOrigin && parsed.origin === currentOrigin) return true;
+
+    if (SUPABASE_HOST && parsed.host.toLowerCase() === SUPABASE_HOST) {
+      if (parsed.pathname.includes('/storage/v1/object/')) return true;
+      if (parsed.pathname.endsWith('/functions/v1/fetch-link-preview-asset')) return true;
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
+};
+
 // Extract URLs from content
 const extractUrls = (content: string): string[] => {
   const urlPattern = /https?:\/\/[^\s<>`\]]+/g;
@@ -247,9 +279,13 @@ export const parseTextContent = (
   );
   
   // Images with custom format [img:align:width:url]
-  parsed = parsed.replace(/\[img:(\w+):([^:]+):([^\]]+)\]/g, (match, align, _width, url) => {
+  parsed = parsed.replace(/\[img:(\w+):([^:]+):([^\]]+)\]/g, (match, align, width, url) => {
     if (!isSafeUrl(url)) return escapeHtml(match);
     const alignClass = align === 'center' ? 'mx-auto block' : align === 'right' ? 'ml-auto block' : 'mr-auto block';
+    if (isTrustedInlineImageUrl(url)) {
+      const widthStyle = width !== 'auto' ? `width="${escapeHtml(width)}"` : '';
+      return `<img src="${escapeHtml(url)}" alt="Image" ${widthStyle} class="${alignClass} max-w-full rounded-lg my-2 cursor-pointer hover:opacity-90" loading="lazy" data-image-url="${escapeHtml(url)}" data-align="${align}" />`;
+    }
     return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="${alignClass} message-link">View image</a>`;
   });
   
@@ -263,6 +299,9 @@ export const parseTextContent = (
         return escapeHtml(url); // Don't linkify unsafe URLs
       }
       if (isImageUrl(url)) {
+        if (isTrustedInlineImageUrl(url)) {
+          return `<img src="${escapeHtml(url)}" alt="Image" class="block mr-auto max-w-[320px] sm:max-w-[400px] max-h-80 rounded-lg my-2 cursor-pointer hover:opacity-90 object-contain" loading="lazy" data-image-url="${escapeHtml(url)}" />`;
+        }
         return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="message-link">${escapeHtml(url)}</a>`;
       }
       return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="message-link">${escapeHtml(url)}</a>`;
@@ -609,7 +648,10 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
     return extractUrls(textContent);
   }, [segments]);
 
-  const imageUrls = useMemo(() => allUrls.filter((url) => isImageUrl(url)), [allUrls]);
+  const imageUrls = useMemo(
+    () => allUrls.filter((url) => isImageUrl(url) && isTrustedInlineImageUrl(url)),
+    [allUrls],
+  );
 
   const inviteCodes = useMemo(() => {
     const codes = new Set<string>();

@@ -143,12 +143,14 @@ export const LinkPreview = ({ url, disabled, messageId }: LinkPreviewProps) => {
 
   // Direct image
   if (preview.type === "image") {
+    const lightboxUrl = preview.image || url;
     return (
       <a href={url} target="_blank" rel="noopener noreferrer" className="block mt-2">
         <img
-          src={preview.image}
+          src={lightboxUrl}
           alt="Linked image"
           className="max-w-full sm:max-w-[400px] max-h-[300px] rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+          data-image-url={lightboxUrl}
           onError={(e) => {
             (e.target as HTMLImageElement).style.display = "none";
           }}
