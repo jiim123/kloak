@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { FluentEmoji } from '@/components/ui/FluentEmoji';
 import { fetchServerEmojis, type ServerEmoji } from '@/lib/serverEmojis';
 
 interface RoleIconPreviewProps {
@@ -57,9 +58,9 @@ export function RoleIconPreview({ icon, serverId, className = '' }: RoleIconPrev
     }
     
     // Custom emoji not found, show raw text
-    return <span className={`text-sm font-emoji leading-none ${className}`}>{icon}</span>;
+    return <span className={`text-sm leading-none ${className}`}>{icon}</span>;
   }
 
-  // Native emoji
-  return <span className={`text-sm font-emoji leading-none ${className}`}>{icon}</span>;
+  // Native emoji - render as Fluent Emoji 3D
+  return <FluentEmoji emoji={icon} size={18} className={className} />;
 }

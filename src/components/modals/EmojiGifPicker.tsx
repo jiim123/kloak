@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
+import { FluentEmoji } from '@/components/ui/FluentEmoji';
 import { Search, X, Smile, Image as ImageIcon, Loader2 } from 'lucide-react';
 import {
   Popover,
@@ -302,13 +303,13 @@ export const EmojiGifPicker = ({
                     variant="ghost"
                     size="sm"
                     className={cn(
-                      "flex-shrink-0 px-3 py-2 rounded-none border-b-2 border-transparent font-emoji",
+                      "flex-shrink-0 px-3 py-2 rounded-none border-b-2 border-transparent",
                       activeCategory === cat.key && "border-primary bg-accent"
                     )}
                     onClick={() => setActiveCategory(cat.key)}
                     title={cat.name}
                   >
-                    <span className="text-lg font-emoji">{cat.icon}</span>
+                    <FluentEmoji emoji={cat.icon} size={20} />
                   </Button>
                 ))}
               </div>
@@ -341,11 +342,11 @@ export const EmojiGifPicker = ({
                         <button
                           key={`${emoji}-${i}`}
                           type="button"
-                          className="w-8 h-8 p-0 text-xl hover:bg-accent rounded-md flex items-center justify-center font-emoji transition-colors"
+                          className="w-8 h-8 p-0 hover:bg-accent rounded-md flex items-center justify-center transition-colors"
                           onClick={() => handleEmojiSelect(emoji)}
                           onMouseDown={(e) => e.preventDefault()}
                         >
-                          {emoji}
+                          <FluentEmoji emoji={emoji} size={22} />
                         </button>
                       ))}
                     </div>
@@ -390,14 +391,14 @@ export const EmojiGifPicker = ({
                         {cat.emojis.length > 0 ? (
                           <div className="grid grid-cols-8 gap-1">
                             {cat.emojis.map((emoji, i) => (
-                              <button
+                                <button
                                 key={`${emoji}-${i}`}
                                 type="button"
-                                className="w-8 h-8 p-0 text-xl hover:bg-accent rounded-md flex items-center justify-center font-emoji transition-colors"
+                                className="w-8 h-8 p-0 hover:bg-accent rounded-md flex items-center justify-center transition-colors"
                                 onClick={() => handleEmojiSelect(emoji)}
                                 onMouseDown={(e) => e.preventDefault()}
                               >
-                                {emoji}
+                                <FluentEmoji emoji={emoji} size={22} />
                               </button>
                             ))}
                           </div>

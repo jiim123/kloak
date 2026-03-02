@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo, type CSSProperties } from "react";
+import { FluentEmoji } from "@/components/ui/FluentEmoji";
 import { ChannelHeader } from "@/components/chat/ChannelHeader";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -418,7 +419,7 @@ export const ForumChannelArea = () => {
           return <img src={url} alt={emoji} className="w-6 h-6 object-contain" loading="lazy" />;
         }
       }
-      return <span className="text-xl leading-none font-emoji">{emoji}</span>;
+      return <FluentEmoji emoji={emoji} size={24} />;
     },
     [customEmojiMap],
   );

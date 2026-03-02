@@ -14,9 +14,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['General Sans', 'Noto Color Emoji', 'system-ui', 'sans-serif'],
+        sans: ['General Sans', 'system-ui', 'sans-serif'],
         mono: ['Monaspace Krypton', 'ui-monospace', 'SFMono-Regular', 'monospace'],
-        emoji: ['Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",

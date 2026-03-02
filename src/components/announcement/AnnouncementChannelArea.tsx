@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { FluentEmoji } from "@/components/ui/FluentEmoji";
 import type React from "react";
 import { ChannelHeader } from "@/components/chat/ChannelHeader";
 import { MessageContent } from "@/components/chat/MessageContent";
@@ -119,7 +120,7 @@ export const AnnouncementChannelArea = () => {
           return <img src={url} alt={emoji} className="w-6 h-6 object-contain" loading="lazy" />;
         }
       }
-      return <span className="text-xl leading-none font-emoji">{emoji}</span>;
+      return <FluentEmoji emoji={emoji} size={24} />;
     },
     [customEmojiMap],
   );

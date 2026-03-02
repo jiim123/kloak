@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { FluentEmoji } from "@/components/ui/FluentEmoji";
 import { Search, X, Clock, ChevronLeft, ChevronRight } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -938,7 +939,7 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange, serve
                       )}
                     />
                   ) : (
-                    <span className="text-xl leading-none">{cat.icon}</span>
+                    <FluentEmoji emoji={cat.icon} size={22} />
                   )}
                 </button>
               ))}
@@ -977,11 +978,11 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange, serve
                         <button
                           key={`search-native-${item.emoji}-${i}`}
                           type="button"
-                          className="aspect-square text-[28px] sm:text-[32px] hover:bg-muted/50 active:scale-90 rounded-lg flex items-center justify-center transition-all duration-150"
+                          className="aspect-square hover:bg-muted/50 active:scale-90 rounded-lg flex items-center justify-center transition-all duration-150 p-1"
                           onClick={() => handleSelect(item.emoji)}
                           onMouseDown={(e) => e.preventDefault()}
                         >
-                          {item.emoji}
+                          <FluentEmoji emoji={item.emoji} size={28} />
                         </button>
                       ) : (
                         <button
@@ -1042,7 +1043,7 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange, serve
                 ) : (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <div className="w-12 h-12 rounded-xl bg-muted/30 flex items-center justify-center mb-3">
-                      <span className="text-2xl">😢</span>
+                      <FluentEmoji emoji="😢" size={28} />
                     </div>
                     <p className="text-sm font-medium text-muted-foreground">No custom emojis</p>
                     <p className="text-xs text-muted-foreground/60 mt-1.5 max-w-[180px]">
@@ -1062,7 +1063,7 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange, serve
                         {cat.key === "recent" ? (
                           <Clock className="w-4 h-4 text-muted-foreground" />
                         ) : (
-                          <span className="text-base">{cat.icon}</span>
+                          <FluentEmoji emoji={cat.icon} size={18} />
                         )}
                         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           {cat.name}
@@ -1126,11 +1127,11 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange, serve
                               <button
                                 key={`${cat.key}-${emoji}-${i}`}
                                 type="button"
-                                className="aspect-square text-[28px] sm:text-[32px] hover:bg-muted/50 active:scale-90 rounded-lg flex items-center justify-center transition-all duration-150"
+                                className="aspect-square hover:bg-muted/50 active:scale-90 rounded-lg flex items-center justify-center transition-all duration-150 p-1"
                                 onClick={() => handleSelect(emoji)}
                                 onMouseDown={(e) => e.preventDefault()}
                               >
-                                {emoji}
+                                <FluentEmoji emoji={emoji} size={28} />
                               </button>
                             );
                           })}

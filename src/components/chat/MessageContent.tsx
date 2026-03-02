@@ -1,4 +1,5 @@
 import { useMemo, useCallback, useEffect, useState, useRef } from 'react';
+import { replaceNativeEmojisInElement } from '@/lib/fluentEmoji';
 import { useNavigate } from 'react-router-dom';
 import { CodeBlock, InlineCode } from './CodeBlock';
 import { LinkPreview } from './LinkPreview';
@@ -546,6 +547,19 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
     })();
 
     return () => { cancelled = true; };
+  }, [content, customEmojiMap, globalEmojiMap]);
+
+  // Replace native emoji characters with Fluent Emoji 3D images
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    // Run after a microtask to let the custom emoji pass complete first
+    const timer = setTimeout(() => {
+      // Reset processed flag so we can re-process after custom emoji pass
+      delete el.dataset.fluentProcessed;
+      replaceNativeEmojisInElement(el);
+    }, 50);
+    return () => clearTimeout(timer);
   }, [content, customEmojiMap, globalEmojiMap]);
 
   // Ensure mention display names resolve even when members list is online-filtered.
