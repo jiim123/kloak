@@ -677,9 +677,13 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
   }, [allUrls]);
 
   const previewUrls = useMemo(() => {
-    if (inviteCodes.length === 0) return allUrls;
-    return allUrls.filter((url) => !/\/invite\/[A-Za-z0-9]{8}/.test(url));
-  }, [inviteCodes, allUrls]);
+    // Filter out image URLs (already rendered inline) and invite links (handled separately)
+    return allUrls.filter((url) => {
+      if (isImageUrl(url) && isTrustedInlineImageUrl(url)) return false;
+      if (/\/invite\/[A-Za-z0-9]{8}/.test(url)) return false;
+      return true;
+    });
+  }, [allUrls]);
   
   // Handle click on mentions and channel tags using event delegation
   const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
