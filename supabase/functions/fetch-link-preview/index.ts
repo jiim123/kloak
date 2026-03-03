@@ -22,13 +22,20 @@ interface LinkPreview {
   soundcloudUrl?: string;
   // Platform-specific IDs
   twitterId?: string;
+  twitterText?: string; // Full tweet text
+  twitterMediaType?: string; // 'photo', 'video', 'gif', 'multi_photo'
+  twitterMediaUrls?: string[]; // Array of media URLs (images/video thumbnails)
+  twitterVideoUrl?: string; // Direct video URL if available
+  twitterLikes?: string;
+  twitterRetweets?: string;
+  twitterReplies?: string;
   redditSubreddit?: string;
   redditPostId?: string;
   redditAuthor?: string;
   redditScore?: string;
   redditComments?: string;
-  linkedinType?: string; // post, article, profile, company
-  facebookType?: string; // post, video, page
+  linkedinType?: string;
+  facebookType?: string;
   facebookVideoId?: string;
   // Steam enriched data
   steamId?: string;
@@ -607,24 +614,86 @@ serve(async (req) => {
       }), 200, 86400);
     }
 
-    // ── Twitter/X ──
+    // ── Twitter/X – use fxtwitter API for rich data ──
     if (isTwitterUrl(url)) {
       const twitterId = getTwitterPostId(url);
       const twitterAuthor = getTwitterAuthor(url);
-      // Fetch OG metadata for title/description
-      const fetched = await fetchAndExtract(url);
-      const preview = await proxyPreviewAssets({
+      
+      let preview: LinkPreview = {
         url,
         type: 'twitter',
         twitterId: twitterId || undefined,
         author: twitterAuthor ? `@${twitterAuthor}` : undefined,
-        title: fetched?.preview.title,
-        description: fetched?.preview.description,
-        image: fetched?.preview.image,
         siteName: 'X (Twitter)',
         favicon: 'https://www.google.com/s2/favicons?domain=x.com&sz=32',
-      });
-      return jsonResponse(preview);
+      };
+
+      // Try fxtwitter API for rich tweet data (text, media, stats)
+      if (twitterId && twitterAuthor) {
+        try {
+          const fxUrl = `https://api.fxtwitter.com/${twitterAuthor}/status/${twitterId}`;
+          const fxResponse = await fetch(fxUrl, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LinkPreviewBot/1.0)' },
+            signal: AbortSignal.timeout(FETCH_TIMEOUT),
+          });
+          if (fxResponse.ok) {
+            const fxData = await fxResponse.json();
+            const tweet = fxData?.tweet;
+            if (tweet) {
+              preview.twitterText = tweet.text;
+              preview.author = `@${tweet.author?.screen_name || twitterAuthor}`;
+              preview.title = tweet.author?.name || preview.title;
+              preview.authorAvatar = tweet.author?.avatar_url;
+
+              // Stats
+              if (tweet.likes != null) preview.twitterLikes = String(tweet.likes);
+              if (tweet.retweets != null) preview.twitterRetweets = String(tweet.retweets);
+              if (tweet.replies != null) preview.twitterReplies = String(tweet.replies);
+
+              // Media
+              if (tweet.media?.all && tweet.media.all.length > 0) {
+                const media = tweet.media.all;
+                const mediaUrls: string[] = [];
+                let mediaType = 'photo';
+                let videoUrl: string | undefined;
+
+                for (const m of media) {
+                  if (m.type === 'video' || m.type === 'gif') {
+                    mediaType = m.type;
+                    videoUrl = m.url;
+                    if (m.thumbnail_url) mediaUrls.push(m.thumbnail_url);
+                  } else if (m.type === 'photo') {
+                    mediaUrls.push(m.url);
+                  }
+                }
+
+                if (media.length > 1 && mediaType === 'photo') mediaType = 'multi_photo';
+
+                preview.twitterMediaType = mediaType;
+                preview.twitterMediaUrls = mediaUrls;
+                if (videoUrl) preview.twitterVideoUrl = videoUrl;
+                if (mediaUrls.length > 0 && !preview.image) {
+                  preview.image = mediaUrls[0];
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.log('fxtwitter API failed, falling back to OG scrape');
+        }
+      }
+
+      // Fallback: if no tweet text from fxtwitter, try OG scrape
+      if (!preview.twitterText) {
+        const fetched = await fetchAndExtract(url);
+        if (fetched) {
+          preview.title = preview.title || fetched.preview.title;
+          preview.description = fetched.preview.description;
+          preview.image = preview.image || fetched.preview.image;
+        }
+      }
+
+      return jsonResponse(await proxyPreviewAssets(preview));
     }
 
     // ── LinkedIn ──
