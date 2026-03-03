@@ -249,15 +249,6 @@ export const parseTextContent = (
     '<div class="separator-dots my-4 text-center text-muted-foreground" style="font-size: 1.5rem; letter-spacing: 0.5rem;">•••</div>',
   );
 
-  // Headings - must be at start of line or after newline
-  // Process in reverse order (h3, h2, h1) to avoid conflicts
-  // ### Heading 3
-  parsed = parsed.replace(/^###\s+(.+?)$/gm, '<h3 class="text-lg font-medium mt-2 mb-1">$1</h3>');
-  // ## Heading 2
-  parsed = parsed.replace(/^##\s+(.+?)$/gm, '<h2 class="text-xl font-medium mt-3 mb-1">$1</h2>');
-  // # Heading 1
-  parsed = parsed.replace(/^#\s+(.+?)$/gm, '<h1 class="text-2xl font-medium mt-4 mb-2">$1</h1>');
-
   // Bold **text**
   parsed = parsed.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
 
