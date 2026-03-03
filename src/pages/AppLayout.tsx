@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams, useLocation, useParams, Outlet } from "re
 import { useAuthStore, initializeAuth } from "@/stores/authStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useServerStore } from "@/stores/serverStore";
+import { useVoiceStore } from "@/stores/voiceStore";
 import { useVoiceSettingsStore } from "@/stores/voiceSettingsStore";
 import { getLastChannel } from "@/lib/storage";
 import { ServerSidebar } from "@/components/layout/ServerSidebar";
@@ -97,8 +98,22 @@ const AppLayout = () => {
   } = useServerStore();
   const { conversations, currentConversation, setCurrentConversation, fetchConversations } = useDMStore();
   const { fetchFriends } = useFriendStore();
-  const isMobile = useIsMobile();
+  const isMobileRaw = useIsMobile();
+  const joinedVoiceChannelId = useVoiceStore((s) => s.joinedChannelId);
+  const [lockedLayoutIsMobile, setLockedLayoutIsMobile] = useState<boolean | null>(null);
   const { hasPermission } = useMemberPermissions();
+
+  // Keep the active layout mode stable while connected to voice.
+  // This prevents VoicePersistentHost from unmounting during window state/size changes.
+  useEffect(() => {
+    if (joinedVoiceChannelId) {
+      setLockedLayoutIsMobile((prev) => (prev === null ? isMobileRaw : prev));
+      return;
+    }
+    setLockedLayoutIsMobile(null);
+  }, [joinedVoiceChannelId, isMobileRaw]);
+
+  const isMobile = lockedLayoutIsMobile ?? isMobileRaw;
 
   // Determine current view based on route
   const currentPath = location.pathname.replace("/app", "") || "/";

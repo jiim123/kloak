@@ -92,8 +92,13 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
   const { isLoading, fetchMessages, setCurrentChannel, messagesByChannel, fetchingChannels } = useMessageStore();
   const { isRealtimeConnected } = useConnectionStatus();
   const visibilityBlockedUserIds = useFriendStore((s) => s.visibilityBlockedUserIds);
-  const { currentChannel } = useServerStore();
+  const currentChannel = useServerStore((s) => s.currentChannel);
+  const channels = useServerStore((s) => s.channels);
   const currentServerId = useServerStore((s) => s.currentChannel?.server_id ?? s.currentServer?.id ?? null);
+  const isVoiceAttachedTextChannel = useMemo(
+    () => !!channels.find((c) => c.id === channelId)?.linked_voice_channel_id,
+    [channels, channelId],
+  );
 
   // Polls realtime + auto-close expired (best effort)
   useRealtimePolls(channelId);
@@ -639,14 +644,25 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
                 <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
                   <Hash className="w-10 h-10 text-primary" />
                 </div>
-                <h2 className="text-3xl font-medium text-foreground mb-2">Welcome to #{channelName}!</h2>
-                <p className="text-muted-foreground mb-4">
-                  This is the start of the <span className="font-medium">#{channelName}</span> channel.
-                </p>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Sparkles className="w-4 h-4 text-yellow-500" />
-                  <span>Be the first to send a message!</span>
-                </div>
+                {isVoiceAttachedTextChannel ? (
+                  <>
+                    <h2 className="text-2xl font-medium text-foreground mb-2">No messages yet</h2>
+                    <p className="text-muted-foreground">
+                      Use <span className="font-medium">#{channelName}</span> to chat while in voice.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h2 className="text-3xl font-medium text-foreground mb-2">Welcome to #{channelName}!</h2>
+                    <p className="text-muted-foreground mb-4">
+                      This is the start of the <span className="font-medium">#{channelName}</span> channel.
+                    </p>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Sparkles className="w-4 h-4 text-yellow-500" />
+                      <span>Be the first to send a message!</span>
+                    </div>
+                  </>
+                )}
               </>
             )}
           </div>

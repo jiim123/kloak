@@ -725,7 +725,7 @@ export const ChannelSidebar = () => {
   const [showHidden, setShowHidden] = useState(false);
 
   const { uncategorizedChannels, sortedCategories, hiddenChannels } = useMemo(() => {
-    const safeChannels = channels || [];
+    const safeChannels = (channels || []).filter((channel) => !channel.linked_voice_channel_id);
     const safeCategories = categories || [];
     const hidden = safeChannels.filter((channel) => isHidden(channel.id));
     const uncategorized = safeChannels
@@ -745,7 +745,7 @@ export const ChannelSidebar = () => {
   const getChannelsForCategory = useCallback(
     (categoryId: string) => {
       return (channels || [])
-        .filter((c) => c.category_id === categoryId && !isHidden(c.id))
+        .filter((c) => c.category_id === categoryId && !c.linked_voice_channel_id && !isHidden(c.id))
         .sort((a, b) => {
           const aPinned = isPinned(a.id) ? 0 : 1;
           const bPinned = isPinned(b.id) ? 0 : 1;
@@ -754,6 +754,58 @@ export const ChannelSidebar = () => {
         });
     },
     [channels],
+  );
+
+  const channelById = useMemo(() => {
+    const map = new Map<string, Channel>();
+    for (const channel of channels || []) {
+      map.set(channel.id, channel);
+    }
+    return map;
+  }, [channels]);
+
+  const linkedTextIdsByVoiceId = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const channel of channels || []) {
+      if (channel.type !== "text" || !channel.linked_voice_channel_id) continue;
+      const voiceId = channel.linked_voice_channel_id;
+      const existing = map.get(voiceId);
+      if (existing) {
+        existing.push(channel.id);
+      } else {
+        map.set(voiceId, [channel.id]);
+      }
+    }
+    return map;
+  }, [channels]);
+
+  // Sidebar-only resolver:
+  // surface linked voice-text unread/mentions on the parent voice channel row.
+  const getSidebarChannelUnread = useCallback(
+    (channelId: string) => {
+      const base = getChannelUnread(channelId);
+      const channel = channelById.get(channelId);
+      if (!channel || channel.type !== "voice") return base;
+
+      const linkedTextIds = linkedTextIdsByVoiceId.get(channelId);
+      if (!linkedTextIds || linkedTextIds.length === 0) return base;
+
+      let unreadCount = base.unreadCount;
+      let mentionCount = base.mentionCount;
+
+      for (const linkedId of linkedTextIds) {
+        const linkedInfo = getChannelUnread(linkedId);
+        unreadCount += linkedInfo.unreadCount;
+        mentionCount += linkedInfo.mentionCount;
+      }
+
+      return {
+        ...base,
+        unreadCount,
+        mentionCount,
+      };
+    },
+    [getChannelUnread, channelById, linkedTextIdsByVoiceId],
   );
 
   // Configure sensors dynamically based on sort mode:
@@ -1268,7 +1320,7 @@ export const ChannelSidebar = () => {
                         strategy={verticalListSortingStrategy}
                       >
                         {uncategorizedChannels.map((channel) => {
-                          const { unreadCount, mentionCount } = getChannelUnread(channel.id);
+                          const { unreadCount, mentionCount } = getSidebarChannelUnread(channel.id);
                           return (
                             <SortableChannel
                               key={channel.id}
@@ -1304,7 +1356,7 @@ export const ChannelSidebar = () => {
                       isCollapsed={collapsedCategories.has(category.id)}
                       isAdmin={isAdmin}
                       currentChannelId={currentChannel?.id}
-                      getChannelUnread={getChannelUnread}
+                      getChannelUnread={getSidebarChannelUnread}
                       onToggle={() => toggleCategory(category.id)}
                       onSelectChannel={handleSelectChannel}
                       onAddChannel={() => openModal("create-channel", { categoryId: category.id })}
@@ -1339,7 +1391,7 @@ export const ChannelSidebar = () => {
                     {showHidden && (
                       <div className="mt-1 space-y-0.5 opacity-60">
                         {hiddenChannels.map((channel) => {
-                          const { unreadCount, mentionCount } = getChannelUnread(channel.id);
+                          const { unreadCount, mentionCount } = getSidebarChannelUnread(channel.id);
                           return (
                             <SortableChannel
                               key={channel.id}

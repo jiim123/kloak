@@ -182,6 +182,8 @@ export interface Channel {
   id: string;
   server_id: string;
   category_id: string | null;
+  /** Set on attached text channels that belong to a voice channel */
+  linked_voice_channel_id?: string | null;
   name: string;
   topic: string | null;
   type: ChannelType;

@@ -809,6 +809,9 @@ export const useServerStore = create<ServerState>((set, get) => ({
         id: String(channelData.id),
         server_id: String(channelData.server_id),
         category_id: channelData.category_id ? String(channelData.category_id) : null,
+        linked_voice_channel_id: channelData.linked_voice_channel_id
+          ? String(channelData.linked_voice_channel_id)
+          : null,
         name: String(channelData.name),
         topic: channelData.topic ? String(channelData.topic) : null,
         type: (String(channelData.type) as ChannelType) || "text",
@@ -950,6 +953,9 @@ export const useServerStore = create<ServerState>((set, get) => ({
         id: channelData.id ? String(channelData.id) : undefined,
         server_id: channelData.server_id ? String(channelData.server_id) : undefined,
         category_id: channelData.category_id ? String(channelData.category_id) : null,
+        linked_voice_channel_id: channelData.linked_voice_channel_id
+          ? String(channelData.linked_voice_channel_id)
+          : null,
         name: channelData.name ? String(channelData.name) : undefined,
         topic: channelData.topic ? String(channelData.topic) : null,
         type: channelData.type ? (String(channelData.type) as ChannelType) : undefined,
@@ -997,8 +1003,14 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }
 
     set((state) => ({
-      channels: state.channels.filter((c) => c.id !== channelId),
-      currentChannel: state.currentChannel?.id === channelId ? null : state.currentChannel,
+      channels: state.channels.filter(
+        (c) => c.id !== channelId && c.linked_voice_channel_id !== channelId
+      ),
+      currentChannel:
+        state.currentChannel?.id === channelId ||
+        state.currentChannel?.linked_voice_channel_id === channelId
+          ? null
+          : state.currentChannel,
     }));
   },
 

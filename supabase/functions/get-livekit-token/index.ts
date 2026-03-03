@@ -44,10 +44,6 @@ serve(async (req) => {
       return jsonResponse({ error: "LiveKit is not configured" }, 500);
     }
 
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      return jsonResponse({ error: "Supabase service credentials not configured" }, 500);
-    }
-
     const body = await req.json().catch(() => ({}));
     const room = typeof body?.room === "string" ? body.room : null;
     const identity = typeof body?.identity === "string" ? body.identity : null;

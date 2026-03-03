@@ -225,8 +225,12 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const { hasPermission } = useMemberPermissions(channelId);
   const currentMember = useMemo(() => members.find((m) => m.user_id === user?.id), [members, user?.id]);
   const isMuted = currentMember?.is_muted || false;
-  const isReadOnlyChannel = currentChannel?.is_read_only || false;
-  const isGhostMode = currentChannel?.ghost_mode || false;
+  const activeChannel = useMemo(
+    () => channels.find((c) => c.id === channelId) || currentChannel || null,
+    [channels, channelId, currentChannel],
+  );
+  const isReadOnlyChannel = activeChannel?.is_read_only || false;
+  const isGhostMode = activeChannel?.ghost_mode || false;
   const canSendMessagesPermission = hasPermission("send_messages");
   const canSendInReadOnly = isReadOnlyChannel ? hasPermission("manage_messages") : true;
   const canSendMessage = !isMuted && canSendMessagesPermission && canSendInReadOnly;

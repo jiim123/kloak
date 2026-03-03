@@ -172,6 +172,7 @@ export const useRealtimeServer = (serverId: string | null) => {
                 id: newChannel.id,
                 server_id: newChannel.server_id,
                 category_id: newChannel.category_id,
+                linked_voice_channel_id: newChannel.linked_voice_channel_id ?? null,
                 name: newChannel.name,
                 topic: newChannel.topic,
                 type: newChannel.type || 'text',
@@ -203,6 +204,9 @@ export const useRealtimeServer = (serverId: string | null) => {
               id: String(updated.id),
               server_id: String(updated.server_id),
               category_id: updated.category_id ? String(updated.category_id) : null,
+              linked_voice_channel_id: updated.linked_voice_channel_id
+                ? String(updated.linked_voice_channel_id)
+                : null,
               name: String(updated.name),
               topic: updated.topic ? String(updated.topic) : null,
               type: (String(updated.type) as any) || 'text',
