@@ -1992,7 +1992,7 @@ export const ForumChannelArea = () => {
             return (
               <>
                 {/* Desktop: Side-by-side view */}
-                <div className="hidden md:flex md:w-1/2 flex-col border-l border-border">
+                {!isMobile && <div className="hidden md:flex md:w-1/2 flex-col border-l border-border">
                   <div className="z-30 flex items-center justify-between border-b border-border bg-background px-4 py-3 shadow-sm">
                     <h3 className="text-lg font-medium">{threadTitle}</h3>
                     <div className="flex items-center gap-1">
@@ -2371,7 +2371,7 @@ export const ForumChannelArea = () => {
 
                   {/* Reply Input */}
                   {renderThreadReplyComposer(selectedThreadId)}
-                </div>
+                </div>}
 
                 {/* Mobile: Full-screen overlay */}
                 {isMobile && (
