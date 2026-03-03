@@ -24,7 +24,10 @@ interface MessageListProps {
   manageCurrentChannel?: boolean;
 }
 
-const VIRTUALIZATION_THRESHOLD = 120;
+// Fixed-height virtualization caused visible scroll jitter with mixed-height rows
+// (images/GIFs/embeds/date dividers). Keep virtualization disabled until the
+// list uses measured row heights.
+const VIRTUALIZATION_THRESHOLD = Number.POSITIVE_INFINITY;
 const VIRTUAL_OVERSCAN = 20;
 const ESTIMATED_MESSAGE_HEIGHT = 72;
 const CHANNEL_ENTRY_FORCE_REFETCH_MAX_AGE_MS = 12_000;

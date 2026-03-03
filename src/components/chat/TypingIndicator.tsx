@@ -7,9 +7,9 @@ interface TypingIndicatorProps {
 
 export const TypingIndicator = ({ typingUsers }: TypingIndicatorProps) => {
   const clampName = (value: string | null | undefined): string => {
-    const normalized = (value ?? '').trim();
-    if (!normalized) return 'Unknown';
-    return normalized.length > 32 ? `${normalized.slice(0, 32)}…` : normalized;
+    const normalized = (value ?? "").trim();
+    if (!normalized) return "Unknown";
+    return normalized.length > 32 ? `${normalized.slice(0, 32)}...` : normalized;
   };
 
   const formatTypingText = (): string => {
@@ -25,22 +25,28 @@ export const TypingIndicator = ({ typingUsers }: TypingIndicatorProps) => {
   };
 
   return (
-    <div className="h-8 min-w-0 px-4 flex items-center shrink-0">
-      <AnimatePresence mode="wait">
-        {typingUsers.length > 0 && (
+    <AnimatePresence initial={false}>
+      {typingUsers.length > 0 && (
+        <motion.div
+          key="typing-row"
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 32 }}
+          exit={{ opacity: 0, height: 0 }}
+          transition={{ duration: 0.18, ease: "easeOut" }}
+          className="min-w-0 px-4 flex items-center shrink-0 overflow-hidden"
+        >
           <motion.div
             key="typing"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
+            initial={{ scale: 0.95 }}
+            animate={{ scale: 1 }}
+            exit={{ scale: 0.95 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
             className="inline-flex items-center gap-2 px-3 py-1 rounded-full border"
             style={{
               borderColor: "#666666",
               color: "#666666",
             }}
           >
-            {/* Shimmer typing indicator */}
             <div
               className="relative w-8 h-1.5 rounded-full overflow-hidden"
               style={{ backgroundColor: "rgba(102, 102, 102, 0.25)" }}
@@ -62,8 +68,8 @@ export const TypingIndicator = ({ typingUsers }: TypingIndicatorProps) => {
             </div>
             <span className="text-xs font-medium truncate">{formatTypingText()}</span>
           </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };

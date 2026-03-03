@@ -1,11 +1,11 @@
 {
-  "version": "1.0.0",
-  "notes": "Release 1.0.0",
-  "pub_date": "2026-02-12T18:42:22.080Z",
+  "version": "1.0.2",
+  "notes": "Release 1.0.2",
+  "pub_date": "2026-03-03T15:38:10.206Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUQjQ3c2MrVmdldENQVkovUG01dlpNMk40bXA0YTc3SktZZzlYc3V3UExxaitKdWNHbjByKzVBaW0yWTJBUnNkSW4rdUh5WDdlQ05jbWRmT3k2eHIrcHZHU1JkYUdGRGdZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwOTIxMDA3CWZpbGU6S2xvYWtfMS4wLjBfeDY0LXNldHVwLmV4ZQpUTVlHb09FeVBuYTJMaXNCVUQySEtUM2ZJYlpjbmRMWkFrS1dEYWxmeEU0QkdEdXEreFdOb3NlakF5bXBhdWRVSElGOXNqTW9vNDIvK3dLMXdyNG1EUT09Cg==",
-      "url": "https://github.com/kloakapp/kloak-clients/releases/download/v1.0.0/Kloak_1.0.0_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUQjQ3c2MrVmdldEVZaTB6R1hUMU5yQWkySGQwY2JrNDRnaVIrYlNSSGZrR0V6bGlUY1NuM2lGS2d1UjhWbFpCV2s2L053VWhxUnM3ZU96cVJmYUV3Y2tXTkc5YlFqaGdrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcyNTUyMjkwCWZpbGU6S2xvYWtfMS4wLjJfeDY0LXNldHVwLmV4ZQpSL0hJUzZLWldsaXVRc2c1WXNldzE2bTYwUklJZlNDdTBxT3U2dk5GNjZmMVlLbG9VNXZsUytyT1RuSDRxSEtXUkU2RWkrWmVuUEpzMFVPd2g0enNEdz09Cg==",
+      "url": "https://github.com/kloakapp/kloak-clients/releases/download/v1.0.2/Kloak_1.0.2_x64-setup.exe"
     }
   }
 }

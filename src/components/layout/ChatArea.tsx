@@ -270,7 +270,7 @@ export const ChatArea = () => {
       {/* Messages */}
       <MessageList channelId={currentChannel.id} channelName={channelName} />
 
-      {/* Typing indicator — fixed-height row, never shifts layout */}
+      {/* Typing indicator — only shown when active to avoid empty spacer */}
       {!isGhostMode && <TypingIndicator typingUsers={typingUsers} />}
 
       {/* Message input */}

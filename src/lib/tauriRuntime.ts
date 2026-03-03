@@ -67,7 +67,7 @@ export function isElectron(): boolean {
 }
 
 export function getAuthEntryPath(): "/auth" | "/desktop-auth" {
-  return isElectron() ? "/desktop-auth" : "/auth";
+  return isTauri() || isElectron() ? "/desktop-auth" : "/auth";
 }
 
 /**

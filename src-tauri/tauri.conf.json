@@ -1,10 +1,10 @@
 {
   "productName": "Kloak",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "identifier": "com.kloak.desktop",
   "build": {
     "frontendDist": "../dist",
-    "devUrl": "http://127.0.0.1:1420",
+    "devUrl": "http://127.0.0.1:8080",
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build"
   },
@@ -12,7 +12,7 @@
     "windows": [
       {
         "label": "main",
-        "url": "auth?tauriWindow=main",
+        "url": "desktop-auth?tauriWindow=main",
         "title": "Kloak",
         "width": 420,
         "height": 620,
@@ -27,7 +27,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline' https://hcaptcha.com https://*.hcaptcha.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://hcaptcha.com https://*.hcaptcha.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http:; media-src 'self' blob: https:; connect-src 'self' http://ipc.localhost https://*.supabase.co wss://*.supabase.co https://api.kibun.social wss://api.kibun.social https://api.giphy.com https://media.giphy.com https://media0.giphy.com https://media1.giphy.com https://media2.giphy.com https://media3.giphy.com https://media4.giphy.com https://hcaptcha.com https://*.hcaptcha.com https://sentry.hcaptcha.com; frame-src https://www.youtube.com https://player.vimeo.com https://store.steampowered.com https://open.spotify.com https://w.soundcloud.com https://player.twitch.tv https://clips.twitch.tv https://player.kick.com https://hcaptcha.com https://*.hcaptcha.com; object-src 'none'; base-uri 'self'; form-action 'self';"
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline' https://hcaptcha.com https://*.hcaptcha.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://hcaptcha.com https://*.hcaptcha.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http:; media-src 'self' blob: https:; connect-src 'self' http://ipc.localhost https://foquucurnwpqcvgqukpz.supabase.co https://*.supabase.co https://*.functions.supabase.co wss://*.supabase.co https://api.kibun.social wss://api.kibun.social https://api.giphy.com https://media.giphy.com https://media0.giphy.com https://media1.giphy.com https://media2.giphy.com https://media3.giphy.com https://media4.giphy.com https://hcaptcha.com https://*.hcaptcha.com https://sentry.hcaptcha.com; frame-src https://www.youtube.com https://player.vimeo.com https://store.steampowered.com https://open.spotify.com https://w.soundcloud.com https://player.twitch.tv https://clips.twitch.tv https://player.kick.com https://hcaptcha.com https://*.hcaptcha.com; object-src 'none'; base-uri 'self'; form-action 'self';"
     }
   },
   "bundle": {

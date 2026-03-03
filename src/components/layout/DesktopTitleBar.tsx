@@ -15,7 +15,7 @@ export function DesktopTitleBar({ title }: { title?: string }) {
   const location = useLocation();
 
   return (
-    <div className="hidden md:flex h-9 w-full select-none items-stretch border-b border-white/5 bg-layout-sidebar text-foreground">
+    <div className="flex h-9 w-full select-none items-stretch border-b border-white/5 bg-layout-sidebar text-foreground">
       {/* Drag region + title */}
       <div
         className="flex min-w-0 flex-1 items-center justify-center px-3 text-sm"
