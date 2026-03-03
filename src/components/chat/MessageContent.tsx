@@ -1,15 +1,15 @@
-import { useMemo, useCallback, useEffect, useState, useRef } from 'react';
-import { replaceNativeEmojisInElement } from '@/lib/fluentEmoji';
-import { useNavigate } from 'react-router-dom';
-import { CodeBlock, InlineCode } from './CodeBlock';
-import { LinkPreview } from './LinkPreview';
-import { InviteLinkPreview } from './InviteLinkPreview';
-import { ImageLightbox } from '@/components/modals/ImageLightbox';
-import { CustomEmojiPopover } from './CustomEmojiPopover';
-import { useUIStore } from '@/stores/uiStore';
-import { useServerStore } from '@/stores/serverStore';
-import { fetchServerEmojis } from '@/lib/serverEmojis';
-import { getOrFetchUser, getUserFromCache } from '@/lib/userCache';
+import { useMemo, useCallback, useEffect, useState, useRef } from "react";
+import { replaceNativeEmojisInElement } from "@/lib/fluentEmoji";
+import { useNavigate } from "react-router-dom";
+import { CodeBlock, InlineCode } from "./CodeBlock";
+import { LinkPreview } from "./LinkPreview";
+import { InviteLinkPreview } from "./InviteLinkPreview";
+import { ImageLightbox } from "@/components/modals/ImageLightbox";
+import { CustomEmojiPopover } from "./CustomEmojiPopover";
+import { useUIStore } from "@/stores/uiStore";
+import { useServerStore } from "@/stores/serverStore";
+import { fetchServerEmojis } from "@/lib/serverEmojis";
+import { getOrFetchUser, getUserFromCache } from "@/lib/userCache";
 import {
   getGlobalEmojiMap,
   getGlobalEmojiDuplicates,
@@ -17,7 +17,7 @@ import {
   resolveEmojisByNameFallback,
   resolveQualifiedEmojiByNameFallback,
   type ResolvedEmoji,
-} from '@/lib/globalEmojiResolver';
+} from "@/lib/globalEmojiResolver";
 
 interface UserInfo {
   id: string;
@@ -42,7 +42,7 @@ interface MessageContentProps {
 }
 
 interface ParsedSegment {
-  type: 'text' | 'code-block' | 'inline-code';
+  type: "text" | "code-block" | "inline-code";
   content: string;
   language?: string;
 }
@@ -52,7 +52,7 @@ const isImageUrl = (url: string): boolean => {
   // Check for common image extensions
   const imageExtensions = /\.(gif|jpe?g|png|webp|bmp|svg)(\?.*)?$/i;
   if (imageExtensions.test(url)) return true;
-  
+
   // Check for known image hosting services
   const imageHosts = [
     /media\d*\.giphy\.com/i,
@@ -64,15 +64,15 @@ const isImageUrl = (url: string): boolean => {
     /cdn\.discordapp\.com/i,
     /supabase\.co.*\/storage/i, // Supabase storage URLs
   ];
-  
-  return imageHosts.some(pattern => pattern.test(url));
+
+  return imageHosts.some((pattern) => pattern.test(url));
 };
 
 // Validate URL is safe (only http/https protocols)
 const isSafeUrl = (url: string): boolean => {
   try {
     const parsed = new URL(url);
-    return ['http:', 'https:'].includes(parsed.protocol);
+    return ["http:", "https:"].includes(parsed.protocol);
   } catch {
     return false;
   }
@@ -81,7 +81,7 @@ const isSafeUrl = (url: string): boolean => {
 const shouldWarnForExternalUrl = (url: string): boolean => {
   try {
     const parsed = new URL(url);
-    if (!['http:', 'https:'].includes(parsed.protocol)) return false;
+    if (!["http:", "https:"].includes(parsed.protocol)) return false;
     return parsed.origin !== window.location.origin;
   } catch {
     return false;
@@ -104,14 +104,14 @@ const SUPABASE_HOST = getSupabaseHost();
 const isTrustedInlineImageUrl = (url: string): boolean => {
   try {
     const parsed = new URL(url);
-    if (!['http:', 'https:'].includes(parsed.protocol)) return false;
+    if (!["http:", "https:"].includes(parsed.protocol)) return false;
 
-    const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+    const currentOrigin = typeof window !== "undefined" ? window.location.origin : "";
     if (currentOrigin && parsed.origin === currentOrigin) return true;
 
     if (SUPABASE_HOST && parsed.host.toLowerCase() === SUPABASE_HOST) {
-      if (parsed.pathname.includes('/storage/v1/object/')) return true;
-      if (parsed.pathname.endsWith('/functions/v1/fetch-link-preview-asset')) return true;
+      if (parsed.pathname.includes("/storage/v1/object/")) return true;
+      if (parsed.pathname.endsWith("/functions/v1/fetch-link-preview-asset")) return true;
     }
 
     return false;
@@ -132,71 +132,71 @@ const extractUrls = (content: string): string[] => {
 const parseMessageSegments = (content: string): ParsedSegment[] => {
   const segments: ParsedSegment[] = [];
   const remaining = content;
-  
+
   // Match code blocks first: ```language\ncode``` or ```code```
   const codeBlockRegex = /```(\w+)?\n?([\s\S]*?)```/g;
   let lastIndex = 0;
   let match;
-  
+
   while ((match = codeBlockRegex.exec(remaining)) !== null) {
     // Add text before this code block
     if (match.index > lastIndex) {
       segments.push({
-        type: 'text',
+        type: "text",
         content: remaining.slice(lastIndex, match.index),
       });
     }
-    
+
     // Add code block
     segments.push({
-      type: 'code-block',
+      type: "code-block",
       content: match[2].trim(),
       language: match[1] || undefined,
     });
-    
+
     lastIndex = match.index + match[0].length;
   }
-  
+
   // Add remaining text after last code block
   if (lastIndex < remaining.length) {
     segments.push({
-      type: 'text',
+      type: "text",
       content: remaining.slice(lastIndex),
     });
   }
-  
+
   // Now parse inline code within text segments
   const finalSegments: ParsedSegment[] = [];
-  
+
   for (const segment of segments) {
-    if (segment.type === 'text') {
+    if (segment.type === "text") {
       const inlineCodeRegex = /`([^`]+)`/g;
       const textRemaining = segment.content;
       let textLastIndex = 0;
       let inlineMatch;
-      
+
       while ((inlineMatch = inlineCodeRegex.exec(textRemaining)) !== null) {
         // Add text before inline code
         if (inlineMatch.index > textLastIndex) {
           finalSegments.push({
-            type: 'text',
+            type: "text",
             content: textRemaining.slice(textLastIndex, inlineMatch.index),
           });
         }
-        
+
         // Add inline code
         finalSegments.push({
-          type: 'inline-code',
+          type: "inline-code",
           content: inlineMatch[1],
         });
-        
+
         textLastIndex = inlineMatch.index + inlineMatch[0].length;
       }
-      
+
       // Add remaining text
       if (textLastIndex < textRemaining.length) {
         finalSegments.push({
-          type: 'text',
+          type: "text",
           content: textRemaining.slice(textLastIndex),
         });
       }
@@ -204,20 +204,20 @@ const parseMessageSegments = (content: string): ParsedSegment[] => {
       finalSegments.push(segment);
     }
   }
-  
+
   return finalSegments;
 };
 
 // Escape HTML entities
 const escapeHtml = (text: string): string => {
   const entities: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
   };
-  return text.replace(/[&<>"']/g, char => entities[char]);
+  return text.replace(/[&<>"']/g, (char) => entities[char]);
 };
 
 // Parse text content (markdown, URLs, mentions, channels, colors)
@@ -227,115 +227,106 @@ export const parseTextContent = (
   usersMap?: Map<string, UserInfo>,
   customEmojiMap?: Map<string, string>,
   channelsMap?: Map<string, ChannelInfo>,
-  globalEmojiMap?: Map<string, ResolvedEmoji>
+  globalEmojiMap?: Map<string, ResolvedEmoji>,
 ): string => {
   // Process separator - use a unique placeholder that won't be escaped
-  const SEPARATOR_PLACEHOLDER = '___SEPARATOR_DOTS_PLACEHOLDER___';
-  const lines = content.split('\n');
-  const processedLines = lines.map(line => {
+  const SEPARATOR_PLACEHOLDER = "___SEPARATOR_DOTS_PLACEHOLDER___";
+  const lines = content.split("\n");
+  const processedLines = lines.map((line) => {
     // Check if this line is a separator (--- with optional whitespace)
     if (/^\s*---\s*$/.test(line)) {
       return SEPARATOR_PLACEHOLDER;
     }
     return line;
   });
-  
+
   // Rejoin and escape HTML
-  let parsed = escapeHtml(processedLines.join('\n'));
-  
+  let parsed = escapeHtml(processedLines.join("\n"));
+
   // Replace placeholder with actual separator HTML (after escaping, so it won't be escaped again)
-  parsed = parsed.replace(new RegExp(escapeHtml(SEPARATOR_PLACEHOLDER), 'g'), '<div class="separator-dots my-4 text-center text-muted-foreground" style="font-size: 1.5rem; letter-spacing: 0.5rem;">•••</div>');
-  
+  parsed = parsed.replace(
+    new RegExp(escapeHtml(SEPARATOR_PLACEHOLDER), "g"),
+    '<div class="separator-dots my-4 text-center text-muted-foreground" style="font-size: 1.5rem; letter-spacing: 0.5rem;">•••</div>',
+  );
+
   // Headings - must be at start of line or after newline
   // Process in reverse order (h3, h2, h1) to avoid conflicts
   // ### Heading 3
-  parsed = parsed.replace(/^###\s+(.+?)$/gm, '<h3 class="text-lg font-semibold mt-2 mb-1">$1</h3>');
+  parsed = parsed.replace(/^###\s+(.+?)$/gm, '<h3 class="text-lg font-medium mt-2 mb-1">$1</h3>');
   // ## Heading 2
-  parsed = parsed.replace(/^##\s+(.+?)$/gm, '<h2 class="text-xl font-semibold mt-3 mb-1">$1</h2>');
+  parsed = parsed.replace(/^##\s+(.+?)$/gm, '<h2 class="text-xl font-medium mt-3 mb-1">$1</h2>');
   // # Heading 1
-  parsed = parsed.replace(/^#\s+(.+?)$/gm, '<h1 class="text-2xl font-bold mt-4 mb-2">$1</h1>');
-  
+  parsed = parsed.replace(/^#\s+(.+?)$/gm, '<h1 class="text-2xl font-medium mt-4 mb-2">$1</h1>');
+
   // Bold **text**
-  parsed = parsed.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  
+  parsed = parsed.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+
   // Italic *text* (but not inside URLs)
-  parsed = parsed.replace(/(?<![:/])\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
-  
+  parsed = parsed.replace(/(?<![:/])\*([^*]+)\*(?!\*)/g, "<em>$1</em>");
+
   // Strikethrough ~~text~~
-  parsed = parsed.replace(/~~([^~]+)~~/g, '<del>$1</del>');
-  
+  parsed = parsed.replace(/~~([^~]+)~~/g, "<del>$1</del>");
+
   // Underline __text__
-  parsed = parsed.replace(/__([^_]+)__/g, '<u>$1</u>');
-  
+  parsed = parsed.replace(/__([^_]+)__/g, "<u>$1</u>");
+
   // Spoiler ||text|| - interactive reveal on click
   parsed = parsed.replace(
     /\|\|([^|]+)\|\|/g,
-    '<span class="spoiler" data-spoiler="true" role="button" tabindex="0">$1</span>'
+    '<span class="spoiler" data-spoiler="true" role="button" tabindex="0">$1</span>',
   );
-  
+
   // Color syntax [color:text] - supports red, orange, yellow, green, blue, purple, pink
   parsed = parsed.replace(
     /\[(red|orange|yellow|green|blue|purple|pink):([^\]]+)\]/gi,
-    (_, color, text) => `<span class="text-color-${color.toLowerCase()}">${text}</span>`
+    (_, color, text) => `<span class="text-color-${color.toLowerCase()}">${text}</span>`,
   );
-  
+
   // Images with custom format [img:align:width:url]
   parsed = parsed.replace(/\[img:(\w+):([^:]+):([^\]]+)\]/g, (match, align, width, url) => {
     if (!isSafeUrl(url)) return escapeHtml(match);
-    const alignClass = align === 'center' ? 'mx-auto block' : align === 'right' ? 'ml-auto block' : 'mr-auto block';
+    const alignClass = align === "center" ? "mx-auto block" : align === "right" ? "ml-auto block" : "mr-auto block";
     if (isTrustedInlineImageUrl(url)) {
-      const widthStyle = width !== 'auto' ? `width="${escapeHtml(width)}"` : '';
+      const widthStyle = width !== "auto" ? `width="${escapeHtml(width)}"` : "";
       return `<img src="${escapeHtml(url)}" alt="Image" ${widthStyle} class="${alignClass} max-w-full rounded-lg my-2 cursor-pointer hover:opacity-90" loading="lazy" data-image-url="${escapeHtml(url)}" data-align="${align}" />`;
     }
     return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="${alignClass} message-link">View image</a>`;
   });
-  
+
   // URLs - render image URLs inline, others as links (only safe URLs)
   const urlPattern = /https?:\/\/[^\s<]+/g;
-  parsed = parsed.replace(
-    urlPattern,
-    (url) => {
-      // Validate URL is safe before linkifying
-      if (!isSafeUrl(url)) {
-        return escapeHtml(url); // Don't linkify unsafe URLs
-      }
-      if (isImageUrl(url)) {
-        if (isTrustedInlineImageUrl(url)) {
-          return `<img src="${escapeHtml(url)}" alt="Image" class="block mr-auto max-w-[320px] sm:max-w-[400px] max-h-80 rounded-lg my-2 cursor-pointer hover:opacity-90 object-contain" loading="lazy" data-image-url="${escapeHtml(url)}" />`;
-        }
-        return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="message-link">${escapeHtml(url)}</a>`;
+  parsed = parsed.replace(urlPattern, (url) => {
+    // Validate URL is safe before linkifying
+    if (!isSafeUrl(url)) {
+      return escapeHtml(url); // Don't linkify unsafe URLs
+    }
+    if (isImageUrl(url)) {
+      if (isTrustedInlineImageUrl(url)) {
+        return `<img src="${escapeHtml(url)}" alt="Image" class="block mr-auto max-w-[320px] sm:max-w-[400px] max-h-80 rounded-lg my-2 cursor-pointer hover:opacity-90 object-contain" loading="lazy" data-image-url="${escapeHtml(url)}" />`;
       }
       return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="message-link">${escapeHtml(url)}</a>`;
     }
-  );
-  
+    return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="message-link">${escapeHtml(url)}</a>`;
+  });
+
   // @everyone and @here
-  parsed = parsed.replace(
-    /@(everyone|here)\b/gi,
-    '<span class="mention mention-everyone">@$1</span>'
-  );
-  
+  parsed = parsed.replace(/@(everyone|here)\b/gi, '<span class="mention mention-everyone">@$1</span>');
+
   // User mentions <@userId> - make them clickable with cursor pointer
-  parsed = parsed.replace(
-    /&lt;@(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})&gt;/g,
-    (match, userId) => {
-      const isSelf = userId === currentUserId;
-      const userInfo = usersMap?.get(userId);
-      // Use nickname first, then display_name, then username, fallback to 'user'
-      const displayName = userInfo?.nickname || userInfo?.display_name || userInfo?.username || 'user';
-      return `<span class="mention mention-clickable${isSelf ? ' mention-self' : ''}" data-user-id="${userId}" role="button" tabindex="0">@${escapeHtml(displayName)}</span>`;
-    }
-  );
+  parsed = parsed.replace(/&lt;@(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})&gt;/g, (match, userId) => {
+    const isSelf = userId === currentUserId;
+    const userInfo = usersMap?.get(userId);
+    // Use nickname first, then display_name, then username, fallback to 'user'
+    const displayName = userInfo?.nickname || userInfo?.display_name || userInfo?.username || "user";
+    return `<span class="mention mention-clickable${isSelf ? " mention-self" : ""}" data-user-id="${userId}" role="button" tabindex="0">@${escapeHtml(displayName)}</span>`;
+  });
 
   // Channel tags <#channelId> - make them clickable with cursor pointer
-  parsed = parsed.replace(
-    /&lt;#(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})&gt;/g,
-    (match, channelId) => {
-      const channelInfo = channelsMap?.get(channelId);
-      const channelName = channelInfo?.name || 'channel';
-      return `<span class="channel-tag channel-tag-clickable" data-channel-id="${channelId}" role="button" tabindex="0">#${escapeHtml(channelName)}</span>`;
-    }
-  );
+  parsed = parsed.replace(/&lt;#(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})&gt;/g, (match, channelId) => {
+    const channelInfo = channelsMap?.get(channelId);
+    const channelName = channelInfo?.name || "channel";
+    return `<span class="channel-tag channel-tag-clickable" data-channel-id="${channelId}" role="button" tabindex="0">#${escapeHtml(channelName)}</span>`;
+  });
 
   // Custom emojis :name: or :name~ServerName: — check current server first, then global (cross-server)
   parsed = parsed.replace(/:([a-z0-9_]{2,12})(?:~([^:]{1,50}))?:/g, (full, name: string, qualifier?: string) => {
@@ -368,14 +359,21 @@ export const parseTextContent = (
     }
     return full;
   });
-  
+
   // Convert newlines to <br>
-  parsed = parsed.replace(/\n/g, '<br>');
-  
+  parsed = parsed.replace(/\n/g, "<br>");
+
   return parsed;
 };
 
-export const MessageContent = ({ content, currentUserId, messageId, users, messageUser, hideEmbeds = false }: MessageContentProps) => {
+export const MessageContent = ({
+  content,
+  currentUserId,
+  messageId,
+  users,
+  messageUser,
+  hideEmbeds = false,
+}: MessageContentProps) => {
   const navigate = useNavigate();
   const { linkPreviewsEnabled, openModal } = useUIStore();
   const { members, currentServer, channels, setCurrentChannel } = useServerStore();
@@ -416,7 +414,7 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
         emojis.forEach((e) => map.set(e.name, e.url));
         setCustomEmojiMap(map);
       } catch (e) {
-        console.error('Failed to load server emojis for message rendering:', e);
+        console.error("Failed to load server emojis for message rendering:", e);
         if (cancelled) return;
         setCustomEmojiMap(new Map());
 
@@ -440,10 +438,14 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
   // Load global cross-server emoji map
   useEffect(() => {
     let cancelled = false;
-    getGlobalEmojiMap().then((map) => {
-      if (!cancelled) setGlobalEmojiMap(map);
-    }).catch(() => {});
-    return () => { cancelled = true; };
+    getGlobalEmojiMap()
+      .then((map) => {
+        if (!cancelled) setGlobalEmojiMap(map);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [currentServer?.id]); // re-resolve when server changes
 
   // Note: we intentionally avoid per-message global event listeners here.
@@ -463,7 +465,7 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
 
     let node: Text | null;
     while ((node = walker.nextNode() as Text | null)) {
-      const text = node.textContent || '';
+      const text = node.textContent || "";
       let m: RegExpExecArray | null;
       emojiPattern.lastIndex = 0;
       while ((m = emojiPattern.exec(text)) !== null) {
@@ -489,7 +491,7 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
       const resolvedQualified = new Map<string, string | null>();
       await Promise.all(
         qualified.map(async (key) => {
-          const idx = key.indexOf('~');
+          const idx = key.indexOf("~");
           const name = key.slice(0, idx);
           const serverName = key.slice(idx + 1);
           const url = await resolveQualifiedEmojiByNameFallback(name, serverName);
@@ -501,7 +503,7 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
         if (cancelled) return;
         if (!textNode.parentNode) continue;
 
-        const text = textNode.textContent || '';
+        const text = textNode.textContent || "";
         emojiPattern.lastIndex = 0;
         let lastIndex = 0;
         let match: RegExpExecArray | null;
@@ -521,13 +523,13 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
           const url = qualifier ? resolvedQualified.get(`${name}~${qualifier}`) : resolvedSimple.get(name);
 
           if (url) {
-            const img = document.createElement('img');
+            const img = document.createElement("img");
             img.src = url;
             img.alt = full;
             img.title = full;
             img.className =
-              'inline-block w-8 h-8 align-middle object-contain cursor-pointer hover:scale-110 transition-transform';
-            img.loading = 'lazy';
+              "inline-block w-8 h-8 align-middle object-contain cursor-pointer hover:scale-110 transition-transform";
+            img.loading = "lazy";
             img.dataset.crossEmoji = name;
             if (qualifier) img.dataset.crossEmojiServer = qualifier;
             frag.appendChild(img);
@@ -546,7 +548,9 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [content, customEmojiMap, globalEmojiMap]);
 
   // Replace native emoji characters with Fluent Emoji 3D images
@@ -598,16 +602,16 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
       cancelled = true;
     };
   }, [mentionedUserIds]);
-  
+
   // Build a map of userId -> user info for quick lookup
   const usersMap = useMemo(() => {
     const map = new Map<string, UserInfo>();
-    
+
     // Add users from props (for DMs)
     if (users) {
-      users.forEach(u => map.set(u.id, u));
+      users.forEach((u) => map.set(u.id, u));
     }
-    
+
     // Add message user (important for system messages where user might not be a member)
     if (messageUser) {
       map.set(messageUser.id, {
@@ -617,9 +621,9 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
         nickname: undefined, // Message user doesn't have nickname context
       });
     }
-    
+
     // Add members from server store (for channel messages)
-    members.forEach(member => {
+    members.forEach((member) => {
       if (member.user) {
         map.set(member.user_id, {
           id: member.user_id,
@@ -636,14 +640,14 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
         map.set(userId, userInfo);
       }
     });
-    
+
     return map;
   }, [users, members, messageUser, mentionedUsersMap]);
 
   // Build a map of channelId -> channel info for quick lookup
   const channelsMap = useMemo(() => {
     const map = new Map<string, ChannelInfo>();
-    channels.forEach(channel => {
+    channels.forEach((channel) => {
       map.set(channel.id, {
         id: channel.id,
         name: channel.name,
@@ -652,20 +656,17 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
     });
     return map;
   }, [channels]);
-  
+
   // Extract URLs for link previews (only from text segments, not code blocks)
   const allUrls = useMemo(() => {
     const textContent = segments
-      .filter(s => s.type === 'text')
-      .map(s => s.content)
-      .join(' ');
+      .filter((s) => s.type === "text")
+      .map((s) => s.content)
+      .join(" ");
     return extractUrls(textContent);
   }, [segments]);
 
-  const imageUrls = useMemo(
-    () => allUrls.filter((url) => isImageUrl(url) && isTrustedInlineImageUrl(url)),
-    [allUrls],
-  );
+  const imageUrls = useMemo(() => allUrls.filter((url) => isImageUrl(url) && isTrustedInlineImageUrl(url)), [allUrls]);
 
   const inviteCodes = useMemo(() => {
     const codes = new Set<string>();
@@ -684,130 +685,143 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
       return true;
     });
   }, [allUrls]);
-  
+
   // Handle click on mentions and channel tags using event delegation
-  const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLElement;
-    
-    // Handle inline image clicks
-    if (target.tagName === 'IMG' && target.dataset.imageUrl) {
-      e.preventDefault();
-      e.stopPropagation();
-      setLightboxImage(target.dataset.imageUrl);
-      return;
-    }
-
-    // Handle cross-server emoji clicks
-    if (target.tagName === 'IMG' && target.dataset.crossEmoji) {
-      e.preventDefault();
-      e.stopPropagation();
-      const emojiName = target.dataset.crossEmoji;
-      const serverQualifier = target.dataset.crossEmojiServer;
-      let resolved: ResolvedEmoji | undefined;
-      if (serverQualifier) {
-        resolved = resolveQualifiedEmoji(`${emojiName}~${serverQualifier}`);
-      }
-      if (!resolved) {
-        resolved = globalEmojiMap.get(emojiName);
-      }
-      // Fallback: build a minimal ResolvedEmoji from the img element itself (for DB-fallback resolved emojis)
-      if (!resolved && target instanceof HTMLImageElement && target.src) {
-        resolved = {
-          name: emojiName,
-          url: target.src,
-          serverId: '',
-          serverName: '',
-          serverIcon: null,
-          isPublished: false,
-        };
-      }
-      if (resolved) {
-        setEmojiPopover({ emoji: resolved, rect: target.getBoundingClientRect() });
-      }
-      return;
-    }
-    
-    // Handle spoiler reveal toggle
-    if (target.dataset.spoiler === 'true') {
-      e.preventDefault();
-      e.stopPropagation();
-      target.classList.toggle('revealed');
-      return;
-    }
-
-    const anchor = target.closest('a[href]') as HTMLAnchorElement | null;
-    if (anchor && shouldWarnForExternalUrl(anchor.href)) {
-      e.preventDefault();
-      e.stopPropagation();
-      openModal('external-link-warning', { url: anchor.href });
-      return;
-    }
-
-    if (target.classList.contains('mention-clickable') && target.dataset.userId) {
-      e.preventDefault();
-      e.stopPropagation();
-      openModal('userProfile', { userId: target.dataset.userId });
-    }
-    if (target.classList.contains('channel-tag-clickable') && target.dataset.channelId) {
-      e.preventDefault();
-      e.stopPropagation();
-      const channelId = target.dataset.channelId;
-      const channel = channels.find(c => c.id === channelId);
-      if (channel && currentServer) {
-        setCurrentChannel(channel);
-        navigate(`/app/servers/${currentServer.id}/channels/${channelId}`);
-      }
-    }
-  }, [openModal, channels, currentServer, setCurrentChannel, navigate, setLightboxImage, globalEmojiMap]);
-
-  // Handle keyboard activation for accessibility
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Enter' || e.key === ' ') {
+  const handleClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
       const target = e.target as HTMLElement;
-      // Handle spoiler reveal toggle via keyboard
-      if (target.dataset.spoiler === 'true') {
+
+      // Handle inline image clicks
+      if (target.tagName === "IMG" && target.dataset.imageUrl) {
         e.preventDefault();
-        target.classList.toggle('revealed');
+        e.stopPropagation();
+        setLightboxImage(target.dataset.imageUrl);
         return;
       }
-      if (target.classList.contains('mention-clickable') && target.dataset.userId) {
+
+      // Handle cross-server emoji clicks
+      if (target.tagName === "IMG" && target.dataset.crossEmoji) {
         e.preventDefault();
-        openModal('userProfile', { userId: target.dataset.userId });
+        e.stopPropagation();
+        const emojiName = target.dataset.crossEmoji;
+        const serverQualifier = target.dataset.crossEmojiServer;
+        let resolved: ResolvedEmoji | undefined;
+        if (serverQualifier) {
+          resolved = resolveQualifiedEmoji(`${emojiName}~${serverQualifier}`);
+        }
+        if (!resolved) {
+          resolved = globalEmojiMap.get(emojiName);
+        }
+        // Fallback: build a minimal ResolvedEmoji from the img element itself (for DB-fallback resolved emojis)
+        if (!resolved && target instanceof HTMLImageElement && target.src) {
+          resolved = {
+            name: emojiName,
+            url: target.src,
+            serverId: "",
+            serverName: "",
+            serverIcon: null,
+            isPublished: false,
+          };
+        }
+        if (resolved) {
+          setEmojiPopover({ emoji: resolved, rect: target.getBoundingClientRect() });
+        }
+        return;
       }
-      if (target.classList.contains('channel-tag-clickable') && target.dataset.channelId) {
+
+      // Handle spoiler reveal toggle
+      if (target.dataset.spoiler === "true") {
         e.preventDefault();
+        e.stopPropagation();
+        target.classList.toggle("revealed");
+        return;
+      }
+
+      const anchor = target.closest("a[href]") as HTMLAnchorElement | null;
+      if (anchor && shouldWarnForExternalUrl(anchor.href)) {
+        e.preventDefault();
+        e.stopPropagation();
+        openModal("external-link-warning", { url: anchor.href });
+        return;
+      }
+
+      if (target.classList.contains("mention-clickable") && target.dataset.userId) {
+        e.preventDefault();
+        e.stopPropagation();
+        openModal("userProfile", { userId: target.dataset.userId });
+      }
+      if (target.classList.contains("channel-tag-clickable") && target.dataset.channelId) {
+        e.preventDefault();
+        e.stopPropagation();
         const channelId = target.dataset.channelId;
-        const channel = channels.find(c => c.id === channelId);
+        const channel = channels.find((c) => c.id === channelId);
         if (channel && currentServer) {
           setCurrentChannel(channel);
           navigate(`/app/servers/${currentServer.id}/channels/${channelId}`);
         }
       }
-    }
-  }, [openModal, channels, currentServer, setCurrentChannel, navigate]);
-  
+    },
+    [openModal, channels, currentServer, setCurrentChannel, navigate, setLightboxImage, globalEmojiMap],
+  );
+
+  // Handle keyboard activation for accessibility
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.key === "Enter" || e.key === " ") {
+        const target = e.target as HTMLElement;
+        // Handle spoiler reveal toggle via keyboard
+        if (target.dataset.spoiler === "true") {
+          e.preventDefault();
+          target.classList.toggle("revealed");
+          return;
+        }
+        if (target.classList.contains("mention-clickable") && target.dataset.userId) {
+          e.preventDefault();
+          openModal("userProfile", { userId: target.dataset.userId });
+        }
+        if (target.classList.contains("channel-tag-clickable") && target.dataset.channelId) {
+          e.preventDefault();
+          const channelId = target.dataset.channelId;
+          const channel = channels.find((c) => c.id === channelId);
+          if (channel && currentServer) {
+            setCurrentChannel(channel);
+            navigate(`/app/servers/${currentServer.id}/channels/${channelId}`);
+          }
+        }
+      }
+    },
+    [openModal, channels, currentServer, setCurrentChannel, navigate],
+  );
+
   return (
-    <div ref={contentRef} className="!block break-words overflow-hidden max-w-full" onClick={handleClick} onKeyDown={handleKeyDown} data-message-id={messageId}>
+    <div
+      ref={contentRef}
+      className="!block break-words overflow-hidden max-w-full"
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      data-message-id={messageId}
+    >
       {/* Message text content */}
       <span className="inline">
         {segments.map((segment, index) => {
           switch (segment.type) {
-            case 'code-block':
-              return (
-                <CodeBlock 
-                  key={index} 
-                  code={segment.content} 
-                  language={segment.language} 
-                />
-              );
-            case 'inline-code':
+            case "code-block":
+              return <CodeBlock key={index} code={segment.content} language={segment.language} />;
+            case "inline-code":
               return <InlineCode key={index}>{segment.content}</InlineCode>;
-            case 'text':
+            case "text":
               return (
                 <span
                   key={index}
                   dangerouslySetInnerHTML={{
-                    __html: parseTextContent(segment.content, currentUserId, usersMap, customEmojiMap, channelsMap, globalEmojiMap),
+                    __html: parseTextContent(
+                      segment.content,
+                      currentUserId,
+                      usersMap,
+                      customEmojiMap,
+                      channelsMap,
+                      globalEmojiMap,
+                    ),
                   }}
                 />
               );
@@ -830,22 +844,13 @@ export const MessageContent = ({ content, currentUserId, messageId, users, messa
       {linkPreviewsEnabled && !hideEmbeds && previewUrls.length > 0 && (
         <div className="flex flex-col gap-2 mt-2">
           {previewUrls.slice(0, 3).map((url, index) => (
-            <LinkPreview 
-              key={`${url}-${index}`} 
-              url={url} 
-              disabled={!linkPreviewsEnabled}
-              messageId={messageId}
-            />
+            <LinkPreview key={`${url}-${index}`} url={url} disabled={!linkPreviewsEnabled} messageId={messageId} />
           ))}
         </div>
       )}
 
       {/* Image lightbox with all images for thumbnail navigation */}
-      <ImageLightbox
-        imageUrl={lightboxImage}
-        imageUrls={imageUrls}
-        onClose={() => setLightboxImage(null)}
-      />
+      <ImageLightbox imageUrl={lightboxImage} imageUrls={imageUrls} onClose={() => setLightboxImage(null)} />
 
       {/* Cross-server emoji info popover */}
       {emojiPopover && (
@@ -873,9 +878,9 @@ export const ReplyPreview = ({ content, maxLength = 50, usersMap }: ReplyPreview
   // Build users map from members if not provided
   const resolvedUsersMap = useMemo(() => {
     if (usersMap && usersMap.size > 0) return usersMap;
-    
+
     const map = new Map<string, UserInfo>();
-    members.forEach(member => {
+    members.forEach((member) => {
       if (member.user) {
         map.set(member.user_id, {
           id: member.user_id,
@@ -905,7 +910,7 @@ export const ReplyPreview = ({ content, maxLength = 50, usersMap }: ReplyPreview
         emojis.forEach((e) => map.set(e.name, e.url));
         setCustomEmojiMap(map);
       } catch (e) {
-        console.error('Failed to load server emojis for reply preview:', e);
+        console.error("Failed to load server emojis for reply preview:", e);
         if (cancelled) return;
         setCustomEmojiMap(new Map());
       }
@@ -920,69 +925,70 @@ export const ReplyPreview = ({ content, maxLength = 50, usersMap }: ReplyPreview
   // Load global emoji map for cross-server rendering in replies
   useEffect(() => {
     let cancelled = false;
-    getGlobalEmojiMap().then((map) => {
-      if (!cancelled) setGlobalEmojis(map);
-    }).catch(() => {});
-    return () => { cancelled = true; };
+    getGlobalEmojiMap()
+      .then((map) => {
+        if (!cancelled) setGlobalEmojis(map);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [currentServer?.id]);
 
   // Strip markdown and prepare content
   const stripped = useMemo(() => {
     let result = content
-      .replace(/```[\s\S]*?```/g, '[code]')
-      .replace(/`[^`]+`/g, '[code]')
-      .replace(/\*\*([^*]+)\*\*/g, '$1')
-      .replace(/\*([^*]+)\*/g, '$1')
-      .replace(/~~([^~]+)~~/g, '$1')
-      .replace(/__([^_]+)__/g, '$1')
-      .replace(/\|\|([^|]+)\|\|/g, '[spoiler]')
-      .replace(/\n/g, ' ');
-    
+      .replace(/```[\s\S]*?```/g, "[code]")
+      .replace(/`[^`]+`/g, "[code]")
+      .replace(/\*\*([^*]+)\*\*/g, "$1")
+      .replace(/\*([^*]+)\*/g, "$1")
+      .replace(/~~([^~]+)~~/g, "$1")
+      .replace(/__([^_]+)__/g, "$1")
+      .replace(/\|\|([^|]+)\|\|/g, "[spoiler]")
+      .replace(/\n/g, " ");
+
     // Convert <@userId> mentions to display_name or username
-    result = result.replace(
-      /<@(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})>/g,
-      (match, userId) => {
-        const userInfo = resolvedUsersMap.get(userId);
-        if (userInfo) {
-          const displayName = userInfo.display_name || userInfo.username || 'user';
-          return `@${displayName}`;
-        }
-        // Fallback: check global user cache
-        const cached = getUserFromCache(userId);
-        if (cached) {
-          return `@${cached.display_name || cached.username || 'user'}`;
-        }
-        return match; // keep raw so re-render after cache populates can resolve it
+    result = result.replace(/<@(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})>/g, (match, userId) => {
+      const userInfo = resolvedUsersMap.get(userId);
+      if (userInfo) {
+        const displayName = userInfo.display_name || userInfo.username || "user";
+        return `@${displayName}`;
       }
-    );
+      // Fallback: check global user cache
+      const cached = getUserFromCache(userId);
+      if (cached) {
+        return `@${cached.display_name || cached.username || "user"}`;
+      }
+      return match; // keep raw so re-render after cache populates can resolve it
+    });
 
     // Convert <#channelId> to #channel
-    result = result.replace(/<#\w{8}-\w{4}-\w{4}-\w{4}-\w{12}>/g, '#channel');
-    
+    result = result.replace(/<#\w{8}-\w{4}-\w{4}-\w{4}-\w{12}>/g, "#channel");
+
     result = result.trim();
-    
+
     if (result.length > maxLength) {
-      result = result.slice(0, maxLength - 3) + '...';
+      result = result.slice(0, maxLength - 3) + "...";
     }
-    
+
     return result;
   }, [content, maxLength, resolvedUsersMap]);
 
   // Replace custom emojis
   const rendered = useMemo(() => {
     if (customEmojiMap.size === 0) return stripped;
-    
+
     const parts: (string | JSX.Element)[] = [];
     let lastIndex = 0;
     const emojiRegex = /:([a-z0-9_]{2,12}):/g;
     let match;
-    
+
     while ((match = emojiRegex.exec(stripped)) !== null) {
       // Add text before emoji
       if (match.index > lastIndex) {
         parts.push(stripped.slice(lastIndex, match.index));
       }
-      
+
       // Add emoji if found (check local first, then global)
       const emojiName = match[1];
       const emojiUrl = customEmojiMap.get(emojiName) || globalEmojis.get(emojiName)?.url;
@@ -995,20 +1001,20 @@ export const ReplyPreview = ({ content, maxLength = 50, usersMap }: ReplyPreview
             title={`:${emojiName}:`}
             className="inline-block w-4 h-4 align-text-bottom object-contain"
             loading="lazy"
-          />
+          />,
         );
       } else {
         parts.push(match[0]);
       }
-      
+
       lastIndex = match.index + match[0].length;
     }
-    
+
     // Add remaining text
     if (lastIndex < stripped.length) {
       parts.push(stripped.slice(lastIndex));
     }
-    
+
     return parts.length > 0 ? parts : stripped;
   }, [stripped, customEmojiMap, globalEmojis]);
 
