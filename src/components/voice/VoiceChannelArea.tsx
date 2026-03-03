@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useParams } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
@@ -33,6 +34,7 @@ import { MessageList } from "@/components/chat/MessageList";
 import { MessageInput } from "@/components/chat/MessageInput";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { useTyping } from "@/hooks/useTyping";
+import { useIsMobile } from "@/hooks/use-mobile";
 import type { Channel, ServerMember } from "@/types";
 
 // Video player for screen share
@@ -186,6 +188,8 @@ function ParticipantTile({
 }
 
 export function VoiceChannelArea({ channel }: { channel: Channel }) {
+  const isMobile = useIsMobile();
+  const { channelId: routeChannelId } = useParams();
   const { user } = useAuthStore();
   const { members, channels } = useServerStore();
   const setJoinedChannel = useVoiceStore((s) => s.setJoinedChannel);
@@ -294,8 +298,10 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
     );
   }, [channels, channel.id, channel.server_id]);
   const isLinkedTextGhostMode = linkedTextChannel?.ghost_mode ?? false;
+  const showTextPanel =
+    effectivelyJoined && isTextPanelOpen && (!isMobile || routeChannelId === channel.id);
   const { typingUsers, startTyping, stopTyping } = useTyping(
-    isTextPanelOpen && linkedTextChannel && !isLinkedTextGhostMode ? linkedTextChannel.id : null
+    showTextPanel && linkedTextChannel && !isLinkedTextGhostMode ? linkedTextChannel.id : null
   );
 
   // Filter out blocked users
@@ -361,8 +367,23 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
     setIsTextPanelOpen(false);
   }, [channel.id]);
 
+  // On mobile, never auto-open linked text when entering a voice route.
+  useEffect(() => {
+    if (!isMobile) return;
+    if (routeChannelId === channel.id) {
+      setIsTextPanelOpen(false);
+    }
+  }, [isMobile, routeChannelId, channel.id]);
+
+  // Keep the join screen visible when not connected.
+  useEffect(() => {
+    if (!effectivelyJoined) {
+      setIsTextPanelOpen(false);
+    }
+  }, [effectivelyJoined]);
+
   const handleOpenLinkedText = () => {
-    if (!linkedTextChannel) return;
+    if (!linkedTextChannel || !effectivelyJoined) return;
     setIsTextPanelOpen(true);
   };
 
@@ -400,11 +421,17 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
             size="icon"
             className={cn(
               "h-8 w-8 text-white/70 hover:text-white hover:bg-white/10",
-              isTextPanelOpen && "bg-white/10 text-white"
+              showTextPanel && "bg-white/10 text-white"
             )}
-            onClick={() => (isTextPanelOpen ? setIsTextPanelOpen(false) : handleOpenLinkedText())}
-            disabled={!linkedTextChannel}
-            title={linkedTextChannel ? "Open attached text chat" : "No attached text chat yet"}
+            onClick={() => (showTextPanel ? setIsTextPanelOpen(false) : handleOpenLinkedText())}
+            disabled={!linkedTextChannel || !effectivelyJoined}
+            title={
+              !linkedTextChannel
+                ? "No attached text chat yet"
+                : effectivelyJoined
+                  ? "Open attached text chat"
+                  : "Join voice to open attached text chat"
+            }
           >
             <MessageSquareText className="w-4 h-4" />
           </Button>
@@ -415,7 +442,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
       <div
         className={cn(
           "flex-1 min-h-0 flex relative overflow-hidden transition-[padding] duration-200",
-          isTextPanelOpen && "lg:pr-[420px]"
+          showTextPanel && "lg:pr-[420px]"
         )}
       >
         <div
@@ -431,15 +458,14 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
           )}
 
           {!effectivelyJoined ? (
-            <div className="relative w-full min-h-[460px] flex items-center justify-center overflow-hidden">
-              <div className="relative z-10 flex max-w-[560px] flex-col items-center text-center px-5">
-                <img
-                  src="/krill/krill-voice.svg"
-                  alt="Krill voice mascot"
-                  className="h-52 w-52 sm:h-56 sm:w-56 object-contain"
-                />
+            <div className="relative w-full h-full min-h-[460px] flex items-center justify-center">
+              <div className="pointer-events-none absolute inset-0">
+                <div className="absolute -inset-24 sm:-inset-28 bg-[radial-gradient(ellipse_at_center,rgba(56,189,248,0.18)_0%,rgba(59,130,246,0.14)_34%,rgba(99,102,241,0.1)_54%,rgba(0,0,0,0)_82%)]" />
+                <div className="absolute -inset-16 sm:-inset-20 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.09)_0%,rgba(255,255,255,0.03)_28%,rgba(0,0,0,0)_72%)]" />
+              </div>
 
-                <h2 className="mt-3 text-2xl sm:text-3xl font-semibold tracking-tight text-white">
+              <div className="relative z-10 flex max-w-[560px] flex-col items-center text-center px-5">
+                <h2 className="mt-1 text-2xl sm:text-3xl font-semibold tracking-tight text-white">
                   Join <span className="text-primary">#{channel.name}</span>
                 </h2>
 
@@ -534,13 +560,11 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
                 <div className="rounded-2xl border border-white/15 bg-gradient-to-br from-white/[0.07] via-white/[0.03] to-transparent p-6 sm:p-8">
                   <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
                     <div className="relative shrink-0">
-                      <div className="absolute inset-0 rounded-full bg-sky-400/20 blur-2xl" />
-                      <div className="relative h-28 w-28 sm:h-32 sm:w-32 rounded-full bg-black/30 border border-white/15 flex items-center justify-center">
-                        <img
-                          src="/krill/krill-voice.svg"
-                          alt="Krill voice"
-                          className="h-20 w-20 sm:h-24 sm:w-24 object-contain"
-                        />
+                      <div className="absolute inset-0 rounded-full bg-primary/20 blur-2xl" />
+                      <div className="absolute -left-3 -top-2 h-14 w-14 rounded-full bg-cyan-400/20 blur-xl" />
+                      <div className="absolute -right-2 -bottom-2 h-16 w-16 rounded-full bg-blue-500/20 blur-xl" />
+                      <div className="relative h-28 w-28 sm:h-32 sm:w-32 rounded-full bg-black/35 border border-white/15 flex items-center justify-center">
+                        <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-full bg-gradient-to-br from-primary/45 via-cyan-400/35 to-blue-500/30 blur-[1px]" />
                       </div>
                     </div>
 
@@ -611,7 +635,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
         <div
           className={cn(
             "h-20 border-t border-white/10 bg-black flex items-center justify-center px-3 relative transition-[padding] duration-200",
-            isTextPanelOpen && "lg:pr-[420px]"
+            showTextPanel && "lg:pr-[420px]"
           )}
         >
           <div className="hidden md:flex absolute left-4 items-center gap-2 text-xs text-white/60">
@@ -675,55 +699,52 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
       )}
 
       {/* Voice-attached text panel */}
-      <aside
-        className={cn(
-          "absolute right-0 top-11 bottom-0 overflow-hidden bg-background/95 backdrop-blur transition-[transform,width] duration-200 z-30",
-          "w-full sm:w-[420px]",
-          isTextPanelOpen
-            ? "translate-x-0 pointer-events-auto border-l border-white/15 lg:w-[420px]"
-            : "translate-x-full pointer-events-none border-l-0 lg:translate-x-0 lg:w-0"
-        )}
-        aria-hidden={!isTextPanelOpen}
-      >
-        <div className="h-full flex flex-col min-h-0">
-          <div className="h-11 px-3 border-b border-border/70 flex items-center justify-between bg-background/90">
-            <div className="min-w-0">
-              <div className="text-sm font-medium truncate">
-                {linkedTextChannel ? `#${linkedTextChannel.name}` : "Attached text"}
+      {showTextPanel && (
+        <aside className="absolute right-0 top-11 bottom-0 z-30 w-full sm:w-[420px] overflow-hidden border-l border-white/15 bg-background/95 backdrop-blur">
+          <div className="h-full flex flex-col min-h-0">
+            <div className="h-11 px-3 border-b border-border/70 flex items-center justify-between bg-background/90">
+              <div className="min-w-0">
+                <div className="text-sm font-medium truncate">
+                  {linkedTextChannel ? `#${linkedTextChannel.name}` : "Attached text"}
+                </div>
+                <div className="text-[11px] text-muted-foreground truncate">Voice channel text chat</div>
               </div>
-              <div className="text-[11px] text-muted-foreground truncate">Voice channel text chat</div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-8 h-8"
+                onClick={() => setIsTextPanelOpen(false)}
+                title="Close text panel"
+              >
+                <X className="w-4 h-4" />
+              </Button>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="w-8 h-8"
-              onClick={() => setIsTextPanelOpen(false)}
-              title="Close text panel"
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
 
-          {linkedTextChannel ? (
-            <>
-              <div className="flex-1 min-h-0">
-                <MessageList channelId={linkedTextChannel.id} channelName={linkedTextChannel.name} />
+            {linkedTextChannel ? (
+              <>
+                <div className="flex-1 min-h-0">
+                  <MessageList
+                    channelId={linkedTextChannel.id}
+                    channelName={linkedTextChannel.name}
+                    manageCurrentChannel={false}
+                  />
+                </div>
+                {!isLinkedTextGhostMode && <TypingIndicator typingUsers={typingUsers} />}
+                <MessageInput
+                  channelId={linkedTextChannel.id}
+                  channelName={linkedTextChannel.name}
+                  onTyping={startTyping}
+                  onStopTyping={stopTyping}
+                />
+              </>
+            ) : (
+              <div className="flex-1 flex items-center justify-center p-4 text-sm text-muted-foreground">
+                No attached text channel found.
               </div>
-              {!isLinkedTextGhostMode && <TypingIndicator typingUsers={typingUsers} />}
-              <MessageInput
-                channelId={linkedTextChannel.id}
-                channelName={linkedTextChannel.name}
-                onTyping={startTyping}
-                onStopTyping={stopTyping}
-              />
-            </>
-          ) : (
-            <div className="flex-1 flex items-center justify-center p-4 text-sm text-muted-foreground">
-              No attached text channel found.
-            </div>
-          )}
-        </div>
-      </aside>
+            )}
+          </div>
+        </aside>
+      )}
 
       <ScreenShareQualityModal
         open={showQualityModal}

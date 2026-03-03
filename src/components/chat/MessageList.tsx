@@ -20,6 +20,8 @@ import { format, isSameDay, isToday, isYesterday } from "date-fns";
 interface MessageListProps {
   channelId: string;
   channelName: string;
+  /** When false, don't mutate global currentChannel in server store */
+  manageCurrentChannel?: boolean;
 }
 
 const VIRTUALIZATION_THRESHOLD = 120;
@@ -87,7 +89,7 @@ const getDateDividerLabel = (date: Date): string => {
   return format(date, "EEEE, MMMM d, yyyy");
 };
 
-export const MessageList = ({ channelId, channelName }: MessageListProps) => {
+export const MessageList = ({ channelId, channelName, manageCurrentChannel = true }: MessageListProps) => {
   const { user } = useAuthStore();
   const { isLoading, fetchMessages, setCurrentChannel, messagesByChannel, fetchingChannels } = useMessageStore();
   const { isRealtimeConnected } = useConnectionStatus();
@@ -212,7 +214,9 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
 
   // Set current channel and fetch messages (with caching)
   useEffect(() => {
-    setCurrentChannel(channelId);
+    if (manageCurrentChannel) {
+      setCurrentChannel(channelId);
+    }
     prevMessagesLengthRef.current = 0;
     lastMarkedMessageIdRef.current = null; // Reset for new channel
     setShowJumpToPresent(false);
@@ -231,7 +235,7 @@ export const MessageList = ({ channelId, channelName }: MessageListProps) => {
       fetchMessages(channelId, 50, undefined, true, hasCached);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [channelId]);
+  }, [channelId, manageCurrentChannel]);
 
   // Fallback polling only when realtime is not healthy.
   useEffect(() => {
