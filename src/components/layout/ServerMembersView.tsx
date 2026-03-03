@@ -11,6 +11,7 @@ import { canModerateByRoles } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { BotTag } from "@/components/ui/bot-tag";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
@@ -240,7 +241,12 @@ export const ServerMembersView = () => {
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0">
-                          <div className="font-medium truncate">{name}</div>
+                          <div className="font-medium truncate inline-flex items-center gap-1.5">
+                            <span className="truncate">{name}</span>
+                            {member.user?.is_bot && (
+                              <BotTag />
+                            )}
+                          </div>
                           <div className="text-xs text-muted-foreground truncate">{member.user?.username || member.user_id}</div>
                         </div>
                       </button>

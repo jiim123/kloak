@@ -6,6 +6,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { UserBadges } from "@/components/ui/user-badges";
+import { BotTag } from "@/components/ui/bot-tag";
 import { useUIStore } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
@@ -236,6 +237,7 @@ export const UserProfilePopup = () => {
           custom_status: d.custom_status,
           created_at: d.created_at,
           last_seen: d.last_seen,
+          is_bot: d.is_bot ?? false,
         });
 
         // Find shared servers
@@ -525,6 +527,9 @@ export const UserProfilePopup = () => {
                         <h2 className="text-xl font-medium tracking-tight truncate">
                           {profileUser.display_name || profileUser.username}
                         </h2>
+                        {profileUser.is_bot && (
+                          <BotTag className="text-[11px] px-2 py-1 rounded-lg" />
+                        )}
                         {userBadges.length > 0 && <UserBadges badges={userBadges} />}
                         {profileUser.pronouns && (
                           <span className="text-sm text-[color:var(--profile-muted)] font-normal">
@@ -544,6 +549,9 @@ export const UserProfilePopup = () => {
                       <h2 className="text-xl font-medium tracking-tight">
                         {profileUser.display_name || profileUser.username}
                       </h2>
+                      {profileUser.is_bot && (
+                        <BotTag className="text-[11px] px-2 py-1 rounded-lg" />
+                      )}
                       {userBadges.length > 0 && <UserBadges badges={userBadges} />}
                       {profileUser.pronouns && (
                         <span className="text-sm text-[color:var(--profile-muted)] font-normal">

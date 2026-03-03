@@ -2455,6 +2455,7 @@ export type Database = {
           custom_status: string | null
           display_name: string | null
           id: string
+          is_bot: boolean
           last_seen: string | null
           profile_effect: string | null
           profile_theme_accent: string | null
@@ -2473,6 +2474,7 @@ export type Database = {
           custom_status?: string | null
           display_name?: string | null
           id?: string
+          is_bot?: boolean
           last_seen?: string | null
           profile_effect?: string | null
           profile_theme_accent?: string | null
@@ -2491,6 +2493,7 @@ export type Database = {
           custom_status?: string | null
           display_name?: string | null
           id?: string
+          is_bot?: boolean
           last_seen?: string | null
           profile_effect?: string | null
           profile_theme_accent?: string | null
@@ -2514,6 +2517,7 @@ export type Database = {
           custom_status: string | null
           display_name: string | null
           id: string | null
+          is_bot: boolean | null
           last_seen: string | null
           profile_effect: string | null
           profile_theme_accent: string | null
@@ -2532,6 +2536,7 @@ export type Database = {
           custom_status?: string | null
           display_name?: string | null
           id?: string | null
+          is_bot?: boolean | null
           last_seen?: never
           profile_effect?: string | null
           profile_theme_accent?: string | null
@@ -2550,6 +2555,7 @@ export type Database = {
           custom_status?: string | null
           display_name?: string | null
           id?: string | null
+          is_bot?: boolean | null
           last_seen?: never
           profile_effect?: string | null
           profile_theme_accent?: string | null

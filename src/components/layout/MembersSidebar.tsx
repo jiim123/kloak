@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/context-menu";
 import { MembersSidebarSkeleton } from "@/components/ui/skeletons";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
+import { BotTag } from "@/components/ui/bot-tag";
 import { supabase } from "@/integrations/supabase/client";
 import type { ServerMember, CustomServerRole, UserStatus } from "@/types";
 import { getEffectivePresence } from "@/lib/presence";
@@ -559,6 +560,9 @@ export const MembersSidebar = () => {
             >
               {displayName}
             </span>
+            {member.user?.is_bot && (
+              <BotTag className="flex-shrink-0" />
+            )}
             {member.is_muted && <VolumeX className="w-3 h-3 text-muted-foreground/50 flex-shrink-0" />}
           </div>
 

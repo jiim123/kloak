@@ -47,6 +47,7 @@ import { ReplyPreview } from "./MessageContent";
 import { formatMessageTimestamp } from "@/lib/format";
 import { DeleteMessageModal } from "@/components/modals/DeleteMessageModal";
 import { EmojiPicker } from "@/components/modals/EmojiPicker";
+import { BotTag } from "@/components/ui/bot-tag";
 import type { CustomServerRole, Message, ServerRole } from "@/types";
 import { format } from "date-fns";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
@@ -890,6 +891,7 @@ export const MessageItem = memo(function MessageItem({
   const displayName = showGhostIdentity
     ? "Anonymous"
     : messageMember?.nickname || authorStyleFallback?.nickname || messageUser?.display_name || messageUser?.username;
+  const isBotMessageAuthor = !showGhostIdentity && Boolean(messageUser?.is_bot);
 
   const handleUsernameClick = useCallback(
     (e: React.MouseEvent) => {
@@ -1074,6 +1076,9 @@ export const MessageItem = memo(function MessageItem({
                         >
                           {displayName}
                         </span>
+                        {isBotMessageAuthor && (
+                          <BotTag className="mr-1.5" />
+                        )}
                         {roleIconNode && priorityRoleWithIcon && (
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -1097,6 +1102,9 @@ export const MessageItem = memo(function MessageItem({
                           >
                             {displayName}
                           </span>
+                          {isBotMessageAuthor && (
+                            <BotTag />
+                          )}
                           {roleIconNode && priorityRoleWithIcon && (
                             <Tooltip>
                               <TooltipTrigger asChild>

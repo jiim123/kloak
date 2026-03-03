@@ -204,6 +204,7 @@ export const useAuthStore = create<AuthState>()(
             created_at: userData.created_at as string,
             last_seen: userData.last_seen as string | null,
             pronouns: (userData.pronouns as string | null) ?? null,
+            is_bot: (userData.is_bot as boolean | null) ?? false,
           };
 
           // New account starts with no manual status override.
@@ -281,6 +282,7 @@ export const useAuthStore = create<AuthState>()(
             created_at: userData.created_at as string,
             last_seen: new Date().toISOString(),
             pronouns: (userData.pronouns as string | null) ?? null,
+            is_bot: (userData.is_bot as boolean | null) ?? false,
           };
 
           set({ user, secretKey, isAuthenticated: true, isLoading: false });
@@ -389,6 +391,7 @@ export const useAuthStore = create<AuthState>()(
                 "pronouns" in normalizedUpdates
                   ? (normalizedUpdates.pronouns as string | null)
                   : ((userData.pronouns as string | null) ?? user.pronouns),
+              is_bot: (userData.is_bot as boolean | null) ?? user.is_bot ?? false,
             };
 
             set({ user: updatedUser });

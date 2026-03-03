@@ -70,7 +70,7 @@ export const useRealtimeMembers = (serverId: string | null, opts?: { full?: bool
           // Fetch user info for the new member (use users_public view to respect privacy)
           const { data: userData } = await supabase
             .from('users_public')
-            .select('id, username, display_name, avatar_url, avatar_decoration, banner_color, bio, status, custom_status, created_at, last_seen')
+            .select('id, username, display_name, avatar_url, avatar_decoration, banner_color, bio, status, custom_status, created_at, last_seen, is_bot')
             .eq('id', newMemberData.user_id)
             .single();
 
