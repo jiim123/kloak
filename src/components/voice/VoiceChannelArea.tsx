@@ -36,15 +36,29 @@ import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { useTyping } from "@/hooks/useTyping";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Channel, ServerMember } from "@/types";
+import type { VideoTrack } from "livekit-client";
 
 // Video player for screen share
-function VideoPlayer({ track, className }: { track: MediaStreamTrack; className?: string }) {
+function VideoPlayer({ track, className }: { track: VideoTrack; className?: string }) {
   const ref = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
-    if (!ref.current || !track) return;
-    const stream = new MediaStream([track]);
-    ref.current.srcObject = stream;
+    const el = ref.current;
+    if (!el || !track) return;
+
+    try {
+      track.attach(el);
+    } catch (error) {
+      console.warn("[VoiceChannelArea] Failed to attach video track:", error);
+    }
+
+    return () => {
+      try {
+        track.detach(el);
+      } catch {
+        // Track may already be cleaned up.
+      }
+    };
   }, [track]);
 
   return <video ref={ref} autoPlay playsInline className={className} />;

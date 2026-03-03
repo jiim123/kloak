@@ -12,6 +12,7 @@ import {
   RoomEvent,
   Track,
   RemoteAudioTrack,
+  type VideoTrack,
   setLogLevel,
 } from "livekit-client";
 import { getKeyHash, supabase } from "@/integrations/supabase/client";
@@ -19,7 +20,11 @@ import { useVoiceStore } from "@/stores/voiceStore";
 import { useVoiceSettingsStore } from "@/stores/voiceSettingsStore";
 import { pauseVoicePresenceWatch, resumeVoicePresenceWatch } from "@/hooks/useVoicePresenceWatchers";
 import { playJoinSound, playLeaveSound } from "@/lib/voiceSounds";
-import type { ScreenShareQuality } from "@/components/voice/ScreenShareQualityModal";
+import type {
+  ScreenShareFrameRate,
+  ScreenShareQuality,
+  ScreenShareResolution,
+} from "@/components/voice/ScreenShareQualityModal";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
 // ---------------------------------------------------------------------------
@@ -33,7 +38,7 @@ export type AgoraParticipant = {
   isMuted: boolean;
   isScreenSharing: boolean;
   audioTrack: RemoteAudioTrack | null;
-  screenTrack: MediaStreamTrack | null;
+  screenTrack: VideoTrack | null;
   joinedAt: number;
   hideVoiceActivity: boolean;
 };
@@ -48,9 +53,22 @@ type UseAgoraRoomOptions = {
 // Helpers
 // ---------------------------------------------------------------------------
 
-const QUALITY_PRESETS: Record<string, { width: number; height: number }> = {
+const QUALITY_PRESETS: Record<ScreenShareResolution, { width: number; height: number }> = {
   "720p": { width: 1280, height: 720 },
   "1080p": { width: 1920, height: 1080 },
+};
+
+const SCREEN_SHARE_BITRATES: Record<ScreenShareResolution, Record<ScreenShareFrameRate, number>> = {
+  "720p": {
+    15: 1_500_000,
+    30: 2_000_000,
+    60: 3_500_000,
+  },
+  "1080p": {
+    15: 2_500_000,
+    30: 5_000_000,
+    60: 8_000_000,
+  },
 };
 
 // Keep SDK logs quiet in production
@@ -102,9 +120,11 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
       const lp = room.localParticipant;
       const joinedAt = lp.joinedAt?.getTime?.() ?? Date.now();
       const screenPub = lp.getTrackPublication(Track.Source.ScreenShare);
-      const screenTrackCandidate = (screenPub?.track as any)?.mediaStreamTrack ?? null;
+      const screenTrackCandidate = screenPub?.videoTrack ?? null;
       const screenTrack =
-        isScreenSharing && screenTrackCandidate && screenTrackCandidate.readyState === "live"
+        isScreenSharing &&
+        screenTrackCandidate &&
+        screenTrackCandidate.mediaStreamTrack.readyState === "live"
           ? screenTrackCandidate
           : null;
       all.push({
@@ -128,7 +148,7 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
       const micPub = rp.getTrackPublication(Track.Source.Microphone);
       const audioTrack = (micPub?.track as RemoteAudioTrack) ?? null;
       const screenPub = rp.getTrackPublication(Track.Source.ScreenShare);
-      const screenTrack = (screenPub?.track as any)?.mediaStreamTrack ?? null;
+      const screenTrack = screenPub?.videoTrack ?? null;
 
       all.push({
         identity,
@@ -405,11 +425,25 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
 
     try {
       const preset = QUALITY_PRESETS[quality.resolution];
-      await room.localParticipant.setScreenShareEnabled(true, {
-        resolution: { width: preset.width, height: preset.height },
-        frameRate: quality.frameRate,
-        audio: true,
-      } as any);
+      await room.localParticipant.setScreenShareEnabled(
+        true,
+        {
+          audio: true,
+          contentHint: "detail",
+          resolution: {
+            width: preset.width,
+            height: preset.height,
+            frameRate: quality.frameRate,
+          },
+        },
+        {
+          screenShareEncoding: {
+            maxBitrate: SCREEN_SHARE_BITRATES[quality.resolution][quality.frameRate],
+            maxFramerate: quality.frameRate,
+            priority: "medium",
+          },
+        }
+      );
 
       setIsScreenSharing(true);
       setScreenShareQuality(quality);
