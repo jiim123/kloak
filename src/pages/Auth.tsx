@@ -29,9 +29,10 @@ import { cn } from "@/lib/utils";
 import { OnboardingModal } from "@/components/modals/OnboardingModal";
 import { NavigationMenu } from "@/components/layout/NavigationMenu";
 import { Footer } from "@/components/ui/footer-section";
-import { isTauriWindow, resizeWindowForApp } from "@/lib/tauriRuntime";
+import { resizeWindowForApp } from "@/lib/tauriRuntime";
 import { SEO } from "@/components/seo";
 import { SEO_CONFIG } from "@/lib/seo";
+import kloakLogo from "@/assets/kloak-logo.svg";
 import {
   validateUsernameComprehensive,
   generateUsernameSuggestions,
@@ -57,7 +58,11 @@ const tabContentVariants = {
   }),
 };
 
-const Auth = () => {
+type AuthProps = {
+  formOnly?: boolean;
+};
+
+const Auth = ({ formOnly = false }: AuthProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isLoading, error, createAccount, login, setError, setLoading } = useAuthStore();
@@ -390,8 +395,8 @@ const Auth = () => {
     return null;
   };
 
-  // Tauri window uses compact "form-only" layout
-  const isTauriApp = isTauriWindow();
+  // Compact auth-only layout (used by DesktopAuth route)
+  const useFormOnlyLayout = formOnly;
 
   const maintenanceBanner = MAINTENANCE_MODE ? (
     <div className="w-full py-2.5 px-4 bg-amber-500/20 border-b border-amber-500/30 flex items-center justify-center gap-2 text-amber-700 dark:text-amber-400 text-sm font-medium shrink-0">
@@ -400,7 +405,7 @@ const Auth = () => {
     </div>
   ) : null;
 
-  if (isTauriApp) {
+  if (useFormOnlyLayout) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         {maintenanceBanner}
@@ -408,6 +413,9 @@ const Auth = () => {
         <div className="w-full max-w-md">
           {/* Auth card */}
           <div className="bg-card border border-border rounded-xl p-6 shadow-xl">
+            <div className="flex items-center justify-center mb-6">
+              <img src={kloakLogo} alt="Kloak" className="h-7" />
+            </div>
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "create" | "login")}>
               <TabsList className="w-full grid grid-cols-2 mb-6 h-auto p-1.5 bg-muted/50 rounded-2xl border border-border/50">
                 <TabsTrigger

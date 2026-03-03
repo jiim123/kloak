@@ -11,6 +11,7 @@ const LazyTooltipProvider = lazy(() => import("@/components/ui/tooltip").then(m 
 
 // Lazy-load all non-landing routes for code splitting
 const Auth = lazy(() => import("./pages/Auth"));
+const DesktopAuth = lazy(() => import("./pages/DesktopAuth"));
 const Invite = lazy(() => import("./pages/Invite"));
 const AppLayout = lazy(() => import("./pages/AppLayout"));
 const ServerAuthGuard = lazy(() => import("./components/auth/ServerAuthGuard").then(m => ({ default: m.ServerAuthGuard })));
@@ -34,6 +35,7 @@ const AppContent = () => {
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/desktop-auth" element={<DesktopAuth />} />
           <Route path="/invite/:inviteCode" element={<Invite />} />
           {/* Keep AppLayout mounted across /app navigation to avoid full remount/reconnect storms */}
           <Route path="/app" element={<AppLayout />}>
