@@ -3,11 +3,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { useServerStore } from '@/stores/serverStore';
 import { useFriendStore } from '@/stores/friendStore';
 import { useDMStore } from '@/stores/dmStore';
+import { useMessageStore } from '@/stores/messageStore';
 import { useAuthStore } from '@/stores/authStore';
 import type { User, UserStatus } from '@/types';
 
 /**
- * Patches user data across all relevant stores (server members, friends, DMs).
+ * Patches user data across all relevant stores (members, friends, conversations, cached messages).
  * Exported so other components can use it for manual updates.
  */
 export const patchUserAcrossStores = (updatedUser: Partial<User> & { id: string }) => {
@@ -62,19 +63,183 @@ export const patchUserAcrossStores = (updatedUser: Partial<User> & { id: string 
 
     let changed = false;
     const conversations = state.conversations.map((c) => {
-      if (c.other_user?.id !== updatedUser.id) return c;
-      changed = true;
-      return { ...c, other_user: { ...c.other_user, ...updatedUser } };
+      let conversationChanged = false;
+      let nextConversation = c;
+
+      if (c.other_user?.id === updatedUser.id) {
+        conversationChanged = true;
+        nextConversation = { ...nextConversation, other_user: { ...c.other_user, ...updatedUser } };
+      }
+
+      if (Array.isArray(c.participants) && c.participants.length > 0) {
+        let participantsChanged = false;
+        const participants = c.participants.map((participant) => {
+          if (participant.user_id !== updatedUser.id || !participant.user) return participant;
+          participantsChanged = true;
+          return { ...participant, user: { ...participant.user, ...updatedUser } };
+        });
+        if (participantsChanged) {
+          conversationChanged = true;
+          nextConversation = { ...nextConversation, participants };
+        }
+      }
+
+      if (c.last_message?.sender_id === updatedUser.id) {
+        conversationChanged = true;
+        nextConversation = {
+          ...nextConversation,
+          last_message: {
+            ...c.last_message,
+            sender: c.last_message.sender
+              ? { ...c.last_message.sender, ...updatedUser }
+              : (updatedUser as User),
+          },
+        };
+      }
+
+      if (conversationChanged) {
+        changed = true;
+      }
+
+      return nextConversation;
     });
 
-    const currentConversation =
-      state.currentConversation?.other_user?.id === updatedUser.id
-        ? { ...state.currentConversation, other_user: { ...state.currentConversation.other_user, ...updatedUser } }
-        : state.currentConversation;
+    let currentConversation = state.currentConversation;
+    if (state.currentConversation) {
+      let currentChanged = false;
+      let nextCurrent = state.currentConversation;
+
+      if (state.currentConversation.other_user?.id === updatedUser.id) {
+        currentChanged = true;
+        nextCurrent = {
+          ...nextCurrent,
+          other_user: { ...state.currentConversation.other_user, ...updatedUser },
+        };
+      }
+
+      if (Array.isArray(state.currentConversation.participants) && state.currentConversation.participants.length > 0) {
+        let participantsChanged = false;
+        const participants = state.currentConversation.participants.map((participant) => {
+          if (participant.user_id !== updatedUser.id || !participant.user) return participant;
+          participantsChanged = true;
+          return { ...participant, user: { ...participant.user, ...updatedUser } };
+        });
+        if (participantsChanged) {
+          currentChanged = true;
+          nextCurrent = { ...nextCurrent, participants };
+        }
+      }
+
+      if (state.currentConversation.last_message?.sender_id === updatedUser.id) {
+        currentChanged = true;
+        nextCurrent = {
+          ...nextCurrent,
+          last_message: {
+            ...state.currentConversation.last_message,
+            sender: state.currentConversation.last_message.sender
+              ? { ...state.currentConversation.last_message.sender, ...updatedUser }
+              : (updatedUser as User),
+          },
+        };
+      }
+
+      if (currentChanged) {
+        changed = true;
+        currentConversation = nextCurrent;
+      }
+    }
 
     return changed || currentConversation !== state.currentConversation
       ? { conversations, currentConversation }
       : {};
+  });
+
+  // Patch cached server channel messages (ChatArea/MessageList render from this cache).
+  useMessageStore.setState((state) => {
+    const channelEntries = Object.entries(state.messagesByChannel);
+    if (channelEntries.length === 0) return {};
+
+    let changed = false;
+    const nextByChannel = { ...state.messagesByChannel };
+
+    for (const [channelId, cache] of channelEntries) {
+      let channelChanged = false;
+      const messages = cache.messages.map((message) => {
+        let nextMessage = message;
+
+        if (message.user_id === updatedUser.id) {
+          nextMessage = {
+            ...nextMessage,
+            user: message.user ? { ...message.user, ...updatedUser } : (updatedUser as User),
+          };
+          channelChanged = true;
+        }
+
+        if (nextMessage.reply_to?.user?.id === updatedUser.id) {
+          nextMessage = {
+            ...nextMessage,
+            reply_to: {
+              ...nextMessage.reply_to,
+              user: { ...nextMessage.reply_to.user, ...updatedUser },
+            },
+          };
+          channelChanged = true;
+        }
+
+        return nextMessage;
+      });
+
+      if (!channelChanged) continue;
+      changed = true;
+      nextByChannel[channelId] = { ...cache, messages };
+    }
+
+    return changed ? { messagesByChannel: nextByChannel } : {};
+  });
+
+  // Patch cached DM messages so sender avatar/deco updates without refetch.
+  useDMStore.setState((state) => {
+    const conversationEntries = Object.entries(state.messagesByConversation);
+    if (conversationEntries.length === 0) return {};
+
+    let changed = false;
+    const nextByConversation = { ...state.messagesByConversation };
+
+    for (const [conversationId, messages] of conversationEntries) {
+      let conversationChanged = false;
+      const patchedMessages = messages.map((message) => {
+        let nextMessage = message;
+
+        if (message.sender_id === updatedUser.id) {
+          nextMessage = {
+            ...nextMessage,
+            sender: message.sender ? { ...message.sender, ...updatedUser } : (updatedUser as User),
+          };
+          conversationChanged = true;
+        }
+
+        if (nextMessage.reply_to?.sender?.id === updatedUser.id) {
+          nextMessage = {
+            ...nextMessage,
+            reply_to: {
+              ...nextMessage.reply_to,
+              sender: nextMessage.reply_to.sender
+                ? { ...nextMessage.reply_to.sender, ...updatedUser }
+                : (updatedUser as User),
+            },
+          };
+          conversationChanged = true;
+        }
+
+        return nextMessage;
+      });
+
+      if (!conversationChanged) continue;
+      changed = true;
+      nextByConversation[conversationId] = patchedMessages;
+    }
+
+    return changed ? { messagesByConversation: nextByConversation } : {};
   });
 };
 

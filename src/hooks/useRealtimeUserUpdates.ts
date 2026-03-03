@@ -8,6 +8,7 @@ import type { User } from '@/types';
  * Maximum number of user IDs to fetch in one targeted poll.
  */
 const MAX_USER_IDS_FOR_SUBSCRIPTION = 100;
+const TARGETED_USER_POLL_INTERVAL_MS = 15_000;
 
 /**
  * Hook for targeted user updates.
@@ -58,7 +59,7 @@ export const useRealtimeUserUpdates = (
     const intervalId = setInterval(() => {
       if (document.visibilityState !== 'visible') return;
       void fetchUsers();
-    }, 60000);
+    }, TARGETED_USER_POLL_INTERVAL_MS);
 
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {

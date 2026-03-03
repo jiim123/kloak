@@ -13,6 +13,7 @@ import { useUnreadChannelsContext } from "@/hooks/useUnreadChannelsContext";
 import { useScrollToMessage } from "@/hooks/useScrollToMessage";
 import { useRealtimePolls } from "@/hooks/useRealtimePolls";
 import { useConnectionStatus } from "@/hooks/useConnectionStatus";
+import { useRealtimeUserUpdates } from "@/hooks/useRealtimeUserUpdates";
 import { supabase } from "@/integrations/supabase/client";
 import type { CustomServerRole, Message, ServerRole } from "@/types";
 import { format, isSameDay, isToday, isYesterday } from "date-fns";
@@ -152,6 +153,17 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       return timeA - timeB;
     });
   }, [messages]);
+
+  const visibleAuthorUserIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const msg of deduplicatedMessages) {
+      if (msg.user_id) ids.add(msg.user_id);
+    }
+    return Array.from(ids);
+  }, [deduplicatedMessages]);
+
+  // Keep author profile fields (avatar/deco/display name) fresh for currently rendered messages.
+  useRealtimeUserUpdates(visibleAuthorUserIds, `channel-authors:${channelId}`);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
