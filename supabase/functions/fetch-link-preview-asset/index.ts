@@ -515,7 +515,7 @@ serve(async (req) => {
     const imageBytes = concatChunks(chunks, bytesRead);
     responseHeaders["Content-Length"] = String(imageBytes.byteLength);
 
-    return new Response(imageBytes, {
+    return new Response(imageBytes.buffer as ArrayBuffer, {
       status: 200,
       headers: responseHeaders,
     });

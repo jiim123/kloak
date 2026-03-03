@@ -557,6 +557,7 @@ export type Database = {
           is_nsfw: boolean | null
           is_private: boolean
           is_read_only: boolean | null
+          linked_voice_channel_id: string | null
           name: string
           position: number | null
           server_id: string
@@ -575,6 +576,7 @@ export type Database = {
           is_nsfw?: boolean | null
           is_private?: boolean
           is_read_only?: boolean | null
+          linked_voice_channel_id?: string | null
           name: string
           position?: number | null
           server_id: string
@@ -593,6 +595,7 @@ export type Database = {
           is_nsfw?: boolean | null
           is_private?: boolean
           is_read_only?: boolean | null
+          linked_voice_channel_id?: string | null
           name?: string
           position?: number | null
           server_id?: string
@@ -606,6 +609,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "channel_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "channels_linked_voice_channel_id_fkey"
+            columns: ["linked_voice_channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
             referencedColumns: ["id"]
           },
           {
