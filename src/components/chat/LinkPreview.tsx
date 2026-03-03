@@ -29,7 +29,13 @@ interface LinkPreviewData {
   facebookVideoId?: string;
   facebookType?: string;
   twitterId?: string;
-  // New fields
+  twitterText?: string;
+  twitterMediaType?: string;
+  twitterMediaUrls?: string[];
+  twitterVideoUrl?: string;
+  twitterLikes?: string;
+  twitterRetweets?: string;
+  twitterReplies?: string;
   redditSubreddit?: string;
   redditPostId?: string;
   redditAuthor?: string;
@@ -38,7 +44,6 @@ interface LinkPreviewData {
   linkedinType?: string;
   author?: string;
   authorAvatar?: string;
-  // Steam enriched
   steamPrice?: string;
   steamOriginalPrice?: string;
   steamDiscount?: string;
@@ -464,38 +469,108 @@ export const LinkPreview = ({ url, disabled, messageId }: LinkPreviewProps) => {
     );
   }
 
-  // ── X/Twitter embed (enhanced) ──
+  // ── X/Twitter embed (rich with tweet text, media, stats) ──
   if (preview.type === "twitter") {
+    const tweetText = preview.twitterText || preview.description;
+    const hasVideo = preview.twitterMediaType === 'video' || preview.twitterMediaType === 'gif';
+    const mediaUrls = preview.twitterMediaUrls || (preview.image ? [preview.image] : []);
+    const isMultiPhoto = mediaUrls.length > 1;
+
     return (
       <a
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-2 block rounded-lg border-l-4 border-l-foreground/80 border border-border bg-secondary/50 overflow-hidden max-w-[400px] hover:bg-secondary/70 transition-colors"
+        className="mt-2 block rounded-lg border-l-4 border-l-foreground/80 border border-border bg-secondary/50 overflow-hidden max-w-full sm:max-w-[400px] hover:bg-secondary/70 transition-colors"
       >
-        {preview.image && (
-          <img
-            src={preview.image}
-            alt={preview.title || ""}
-            className="w-full h-40 object-cover"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-          />
-        )}
         <div className="p-3">
-          <div className="flex items-center gap-2 mb-1.5">
-            {preview.favicon && <img src={preview.favicon} alt="" className="w-4 h-4" />}
-            <span className="text-xs font-medium text-foreground/80">{preview.siteName || "X (Twitter)"}</span>
-            {preview.author && (
-              <span className="text-xs text-muted-foreground">{preview.author}</span>
+          {/* Author row */}
+          <div className="flex items-center gap-2 mb-2">
+            {preview.authorAvatar && (
+              <img src={preview.authorAvatar} alt="" className="w-8 h-8 rounded-full" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
             )}
-            <ExternalLink className="w-3 h-3 text-muted-foreground ml-auto" />
+            <div className="flex flex-col min-w-0">
+              {preview.title && (
+                <span className="text-sm font-semibold text-foreground truncate">{preview.title}</span>
+              )}
+              {preview.author && (
+                <span className="text-xs text-muted-foreground truncate">{preview.author}</span>
+              )}
+            </div>
+            <div className="ml-auto flex items-center gap-1.5 flex-shrink-0">
+              {preview.favicon && <img src={preview.favicon} alt="" className="w-4 h-4" />}
+            </div>
           </div>
-          {preview.title && <p className="font-medium text-sm text-primary line-clamp-3">{preview.title}</p>}
-          {preview.description && (
-            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{preview.description}</p>
+
+          {/* Tweet text */}
+          {tweetText && (
+            <p className="text-sm text-foreground leading-relaxed whitespace-pre-line line-clamp-6 mb-2">
+              {tweetText}
+            </p>
           )}
-          <p className="text-xs text-primary mt-2">View post on X →</p>
         </div>
+
+        {/* Media section */}
+        {mediaUrls.length > 0 && (
+          <div className={cn(
+            "relative",
+            isMultiPhoto ? "grid grid-cols-2 gap-0.5" : ""
+          )}>
+            {mediaUrls.slice(0, 4).map((mediaUrl, i) => (
+              <div key={i} className={cn(
+                "relative overflow-hidden",
+                isMultiPhoto ? "aspect-square" : "aspect-video",
+                !isMultiPhoto && "w-full"
+              )}>
+                <img
+                  src={mediaUrl}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                />
+                {/* Video play overlay on first image */}
+                {hasVideo && i === 0 && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                    <div className="w-12 h-12 rounded-full bg-foreground/90 flex items-center justify-center">
+                      <Play className="w-5 h-5 text-background fill-background ml-0.5" />
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+            {isMultiPhoto && mediaUrls.length > 4 && (
+              <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/60 text-white text-[10px] font-medium">
+                +{mediaUrls.length - 4}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Stats row */}
+        {(preview.twitterLikes || preview.twitterRetweets || preview.twitterReplies) && (
+          <div className="flex items-center gap-4 px-3 py-2 border-t border-border text-xs text-muted-foreground">
+            {preview.twitterReplies && (
+              <span className="flex items-center gap-1">
+                <MessageSquare className="w-3.5 h-3.5" />
+                {Number(preview.twitterReplies).toLocaleString()}
+              </span>
+            )}
+            {preview.twitterRetweets && (
+              <span className="flex items-center gap-1">
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 1l4 4-4 4" /><path d="M3 11V9a4 4 0 014-4h14" /><path d="M7 23l-4-4 4-4" /><path d="M21 13v2a4 4 0 01-4 4H3" />
+                </svg>
+                {Number(preview.twitterRetweets).toLocaleString()}
+              </span>
+            )}
+            {preview.twitterLikes && (
+              <span className="flex items-center gap-1">
+                <Heart className="w-3.5 h-3.5" />
+                {Number(preview.twitterLikes).toLocaleString()}
+              </span>
+            )}
+          </div>
+        )}
       </a>
     );
   }
