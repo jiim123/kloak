@@ -13,6 +13,7 @@ import {
   Eye,
   EyeOff,
   Paperclip,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
@@ -115,19 +116,47 @@ const getStableAnimationKey = (message: Message): string => {
 const AttachmentItem = ({
   attachment,
 }: {
-  attachment: { id: string; file_url: string; file_name: string; file_type?: string; file_size?: number };
+  attachment: { id: string; file_url: string; file_name: string; file_type?: string; file_size?: number; width?: number | null; height?: number | null };
 }) => {
   const signedUrl = useSignedUrl(attachment.file_url);
+  const isImage = attachment.file_type?.startsWith("image/");
+
+  // Compute constrained dimensions to reserve space and prevent layout shift
+  const reservedStyle = useMemo(() => {
+    if (!isImage || !attachment.width || !attachment.height) {
+      // Fallback: reserve a fixed placeholder size for images without dimensions
+      return isImage ? { width: 300, height: 200 } : undefined;
+    }
+    const maxW = 400;
+    const maxH = 300;
+    let w = attachment.width;
+    let h = attachment.height;
+    // Scale down preserving aspect ratio
+    if (w > maxW) { h = Math.round(h * (maxW / w)); w = maxW; }
+    if (h > maxH) { w = Math.round(w * (maxH / h)); h = maxH; }
+    return { width: w, height: h };
+  }, [isImage, attachment.width, attachment.height]);
 
   return (
     <div className="relative">
-      {attachment.file_type?.startsWith("image/") ? (
-        <img
-          src={signedUrl ?? undefined}
-          alt={attachment.file_name}
-          className="max-w-full sm:max-w-[400px] max-h-[300px] rounded-lg cursor-pointer hover:opacity-90"
-          loading="lazy"
-        />
+      {isImage ? (
+        <div
+          className="rounded-lg overflow-hidden bg-muted/30"
+          style={reservedStyle ? { width: reservedStyle.width, height: reservedStyle.height } : undefined}
+        >
+          {signedUrl ? (
+            <img
+              src={signedUrl}
+              alt={attachment.file_name}
+              className="w-full h-full object-contain rounded-lg cursor-pointer hover:opacity-90"
+              loading="lazy"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            </div>
+          )}
+        </div>
       ) : (
         <a
           href={signedUrl ?? attachment.file_url}

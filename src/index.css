@@ -103,7 +103,6 @@
 @tailwind components;
 @tailwind utilities;
 
-
 @layer base {
   /* ========================================
      DEFAULT THEME (Orange/Amber brand)
@@ -845,6 +844,12 @@
   /* Message link styling */
   .message-link {
     @apply text-cyan-400 hover:underline;
+  }
+
+  /* Reserve space for inline images to prevent layout shift during loading */
+  [data-message-id] img[data-image-url] {
+    min-height: 100px;
+    background-color: hsl(var(--muted) / 0.3);
   }
 
   /* Hide inline image placeholders (images are rendered separately) */
