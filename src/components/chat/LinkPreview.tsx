@@ -305,11 +305,10 @@ export const LinkPreview = ({ url, disabled, messageId }: LinkPreviewProps) => {
     }
   }
 
-  // ── Steam embed – enriched with price, tags, action button + widget shown by default ──
+  // ── Steam embed – just the widget, clean and airy ──
   if (preview.type === "steam" && preview.steamId) {
     return (
-      <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[400px] bg-[#1b2838]">
-        {/* Steam widget iframe – loaded immediately */}
+      <div className="mt-2 rounded-xl overflow-hidden border border-border max-w-full sm:max-w-[400px] bg-[#1b2838]">
         <iframe
           src={`https://store.steampowered.com/widget/${preview.steamId}/`}
           width="400" height="190"
@@ -317,86 +316,6 @@ export const LinkPreview = ({ url, disabled, messageId }: LinkPreviewProps) => {
           title={preview.title || "Steam game"}
           loading="lazy"
         />
-
-        <div className="p-3 space-y-2.5 border-t border-[#2a475e]">
-          {/* Site badge */}
-          <div className="flex items-center gap-2">
-            <span className="inline-flex h-4 w-4 items-center justify-center rounded bg-[#2a475e] text-[10px] font-bold text-[#66c0f4]">S</span>
-            <span className="text-xs text-[#66c0f4]">Steam Store</span>
-            <a href={url} target="_blank" rel="noopener noreferrer" className="ml-auto text-xs text-[#66c0f4] hover:text-white transition-colors flex items-center gap-1">
-              View <ExternalLink className="w-3 h-3" />
-            </a>
-          </div>
-
-          {/* Title */}
-          {preview.title && (
-            <a href={url} target="_blank" rel="noopener noreferrer" className="block font-semibold text-sm text-white hover:text-[#66c0f4] transition-colors line-clamp-1">
-              {preview.title}
-            </a>
-          )}
-
-          {/* Description */}
-          {preview.description && (
-            <p className="text-xs text-[#8f98a0] line-clamp-2">{preview.description}</p>
-          )}
-
-          {/* Tags */}
-          {preview.steamTags && preview.steamTags.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {preview.steamTags.map((tag, i) => (
-                <span key={i} className="px-1.5 py-0.5 text-[10px] rounded bg-[#2a475e] text-[#67c1f5]">{tag}</span>
-              ))}
-            </div>
-          )}
-
-          {/* Developer & Release */}
-          <div className="flex items-center gap-3 text-[11px] text-[#8f98a0]">
-            {preview.steamDeveloper && <span>By {preview.steamDeveloper}</span>}
-            {preview.steamReleaseDate && <span>{preview.steamReleaseDate}</span>}
-          </div>
-
-          {/* Reviews */}
-          {preview.steamReviewSummary && (
-            <p className="text-[11px] text-[#66c0f4]">{preview.steamReviewSummary}</p>
-          )}
-
-          {/* Price & Action row */}
-          <div className="flex items-center gap-2 pt-1 border-t border-[#2a475e]">
-            {preview.steamDiscount && (
-              <span className="px-1.5 py-0.5 text-xs font-bold bg-[#4c6b22] text-[#a4d007] rounded">
-                {preview.steamDiscount}
-              </span>
-            )}
-            <div className="flex flex-col">
-              {preview.steamOriginalPrice && (
-                <span className="text-[10px] text-[#8f98a0] line-through">{preview.steamOriginalPrice}</span>
-              )}
-              {preview.steamPrice && (
-                <span className="text-sm font-bold text-white">{preview.steamPrice}</span>
-              )}
-            </div>
-            <div className="ml-auto flex gap-1.5">
-              <a
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-medium rounded bg-[#5c7e10] hover:bg-[#6d9015] text-white transition-colors"
-              >
-                <ShoppingCart className="w-3 h-3" />
-                {preview.steamActionText || 'View Store'}
-              </a>
-              <a
-                href={`https://store.steampowered.com/app/${preview.steamId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 px-2 py-1.5 text-[11px] font-medium rounded bg-[#2a475e] hover:bg-[#3d6484] text-[#67c1f5] transition-colors"
-                title="Add to Wishlist"
-              >
-                <Heart className="w-3 h-3" />
-              </a>
-            </div>
-          </div>
-        </div>
       </div>
     );
   }
