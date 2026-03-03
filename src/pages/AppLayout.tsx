@@ -73,7 +73,7 @@ import { usePreferencesSync } from "@/hooks/usePreferencesSync";
 import type { User } from "@/types";
 import { PresenceDebugOverlay } from "@/components/debug/PresenceDebugOverlay";
 import { SEO } from "@/components/seo";
-import { resizeWindowForApp } from "@/lib/tauriRuntime";
+import { getAuthEntryPath, resizeWindowForApp } from "@/lib/tauriRuntime";
 import { MAINTENANCE_MODE } from "@/lib/maintenance";
 import { AlphaNoticeBanner } from "@/components/layout/AlphaNoticeBanner";
 
@@ -100,6 +100,7 @@ const AppLayout = () => {
   const { fetchFriends } = useFriendStore();
   const isMobileRaw = useIsMobile();
   const joinedVoiceChannelId = useVoiceStore((s) => s.joinedChannelId);
+  const authEntryPath = getAuthEntryPath();
   const [lockedLayoutIsMobile, setLockedLayoutIsMobile] = useState<boolean | null>(null);
   const { hasPermission } = useMemberPermissions();
 
@@ -372,14 +373,14 @@ const AppLayout = () => {
       // Force a re-render after auth init completes
       const state = useAuthStore.getState();
       if (!state.isLoading && !state.user) {
-        navigate("/auth?mode=login");
+        navigate(`${authEntryPath}?mode=login`);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [navigate]);
+  }, [navigate, authEntryPath]);
 
   // Only redirect if we've finished loading and still no user
   useEffect(() => {
@@ -388,12 +389,12 @@ const AppLayout = () => {
       const timer = setTimeout(() => {
         const state = useAuthStore.getState();
         if (!state.user && !state.isLoading) {
-          navigate("/auth?mode=login");
+          navigate(`${authEntryPath}?mode=login`);
         }
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [user, isLoading, navigate]);
+  }, [user, isLoading, navigate, authEntryPath]);
 
   // Maximize window once when user is authenticated (for Tauri)
   // Use a ref to ensure it only runs once

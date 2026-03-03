@@ -22,6 +22,54 @@ export function isTauri(): boolean {
   return false;
 }
 
+export function isElectron(): boolean {
+  if (typeof window === "undefined") return false;
+
+  const w = window as unknown as {
+    __ELECTRON__?: boolean;
+    electron?: {
+      isElectron?: boolean;
+    };
+    electronAPI?: {
+      isElectron?: boolean | (() => boolean);
+    };
+    process?: {
+      versions?: Record<string, string>;
+    };
+  };
+
+  // Preferred explicit signal from Electron preload.
+  // Example preload contract:
+  // - window.__ELECTRON__ = true
+  // - window.electronAPI.isElectron = true
+  if (w.__ELECTRON__ === true) return true;
+  if (w.electron?.isElectron === true) return true;
+  if (w.electronAPI?.isElectron === true) return true;
+  if (typeof w.electronAPI?.isElectron === "function") {
+    try {
+      if (w.electronAPI.isElectron()) return true;
+    } catch {
+      // ignore and continue with fallback checks
+    }
+  }
+
+  if (w.process?.versions?.electron) return true;
+
+  const uaData = (navigator as Navigator & {
+    userAgentData?: {
+      brands?: Array<{ brand: string }>;
+    };
+  }).userAgentData;
+  if (uaData?.brands?.some(({ brand }) => /\belectron\b/i.test(brand))) return true;
+
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  return /\belectron\b/i.test(ua);
+}
+
+export function getAuthEntryPath(): "/auth" | "/desktop-auth" {
+  return isElectron() ? "/desktop-auth" : "/auth";
+}
+
 /**
  * Maximizes the Tauri window after login
  */

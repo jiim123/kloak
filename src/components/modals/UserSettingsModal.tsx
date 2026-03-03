@@ -63,7 +63,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { isTauri } from "@/lib/tauriRuntime";
+import { getAuthEntryPath, isTauri } from "@/lib/tauriRuntime";
 import { VoiceSettingsPanel } from "@/components/voice/VoiceSettingsPanel";
 import type { User as UserType } from "@/types";
 import { useAppUpdater } from "@/hooks/useAppUpdater";
@@ -83,6 +83,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const isTauriApp = isTauri();
+  const authEntryPath = getAuthEntryPath();
   const { updateInfo, isChecking, isInstalling, checkUpdate, installUpdate } = useAppUpdater();
   const {
     activeModal,
@@ -429,7 +430,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const handleLogout = () => {
     logout();
     closeModal();
-    navigate("/auth?mode=login");
+    navigate(`${authEntryPath}?mode=login`);
   };
 
   const handleLogoutClick = () => {
@@ -451,7 +452,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       if (error) throw error;
       logout();
       closeModal();
-      navigate("/auth?mode=signup");
+      navigate(`${authEntryPath}?mode=signup`);
       toast.success("Account deleted");
     } catch (error) {
       console.error("Failed to delete account:", error);

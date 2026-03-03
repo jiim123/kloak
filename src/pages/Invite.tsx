@@ -12,6 +12,7 @@ import { useServerStore } from "@/stores/serverStore";
 import { toast } from "sonner";
 import { SEO } from "@/components/seo";
 import { SEO_CONFIG } from "@/lib/seo";
+import { getAuthEntryPath } from "@/lib/tauriRuntime";
 
 type InviteServer = {
   id: string;
@@ -31,6 +32,7 @@ const Invite = () => {
 
   const inviteCode = useMemo(() => (params.inviteCode || "").trim().toUpperCase(), [params.inviteCode]);
   const autoJoin = useMemo(() => new URLSearchParams(location.search).get("autojoin") === "1", [location.search]);
+  const authEntryPath = getAuthEntryPath();
   const didAutoJoin = useRef(false);
   const didInitAuth = useRef(false);
 
@@ -117,7 +119,7 @@ const Invite = () => {
 
     if (!activeUser) {
       const returnTo = `/invite/${inviteCode}?autojoin=1`;
-      navigate(`/auth?redirect=${encodeURIComponent(returnTo)}`);
+      navigate(`${authEntryPath}?redirect=${encodeURIComponent(returnTo)}`);
       return;
     }
     if (server && isAlreadyMember) {
