@@ -1,11 +1,14 @@
 import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 import type { TypingUser } from "@/types";
 
 interface TypingIndicatorProps {
   typingUsers: TypingUser[];
+  overlay?: boolean;
+  className?: string;
 }
 
-export const TypingIndicator = ({ typingUsers }: TypingIndicatorProps) => {
+export const TypingIndicator = ({ typingUsers, overlay = false, className }: TypingIndicatorProps) => {
   const clampName = (value: string | null | undefined): string => {
     const normalized = (value ?? "").trim();
     if (!normalized) return "Unknown";
@@ -23,6 +26,44 @@ export const TypingIndicator = ({ typingUsers }: TypingIndicatorProps) => {
       return `${names[0]} and ${names.length - 1} others are typing`;
     }
   };
+
+  const typingText = `${formatTypingText()}...`;
+
+  const dots = (
+    <span className="inline-flex items-center gap-1">
+      {[0, 0.18, 0.36].map((delay) => (
+        <motion.span
+          key={delay}
+          className="h-1.5 w-1.5 rounded-full bg-muted-foreground/80"
+          animate={{ opacity: [0.25, 1, 0.25] }}
+          transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut", delay }}
+        />
+      ))}
+    </span>
+  );
+
+  if (overlay) {
+    return (
+      <AnimatePresence initial={false}>
+        {typingUsers.length > 0 && (
+          <motion.div
+            key="typing-overlay"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 4 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className={cn("pointer-events-none absolute bottom-full left-4 right-4 z-20", className)}
+          >
+            <div className="h-8 rounded-t-xl bg-gradient-to-t from-background via-background/90 to-transparent" />
+            <div className="absolute bottom-1 left-2 inline-flex max-w-[calc(100%-1rem)] items-center gap-2 text-xs text-muted-foreground">
+              {dots}
+              <span className="truncate">{typingText}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    );
+  }
 
   return (
     <AnimatePresence initial={false}>
@@ -47,26 +88,8 @@ export const TypingIndicator = ({ typingUsers }: TypingIndicatorProps) => {
               color: "#666666",
             }}
           >
-            <div
-              className="relative w-8 h-1.5 rounded-full overflow-hidden"
-              style={{ backgroundColor: "rgba(102, 102, 102, 0.25)" }}
-            >
-              <motion.div
-                className="absolute inset-y-0 w-5 rounded-full"
-                style={{
-                  background: "linear-gradient(90deg, transparent, #666666, transparent)",
-                }}
-                animate={{
-                  x: [-20, 32],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-              />
-            </div>
-            <span className="text-xs font-medium truncate">{formatTypingText()}</span>
+            {dots}
+            <span className="text-xs font-medium truncate">{typingText}</span>
           </motion.div>
         </motion.div>
       )}

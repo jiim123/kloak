@@ -270,16 +270,16 @@ export const ChatArea = () => {
       {/* Messages */}
       <MessageList channelId={currentChannel.id} channelName={channelName} />
 
-      {/* Typing indicator — only shown when active to avoid empty spacer */}
-      {!isGhostMode && <TypingIndicator typingUsers={typingUsers} />}
-
-      {/* Message input */}
-      <MessageInput
-        channelId={currentChannel.id}
-        channelName={channelName}
-        onTyping={startTyping}
-        onStopTyping={stopTyping}
-      />
+      {/* Composer area */}
+      <div className="relative">
+        {!isGhostMode && <TypingIndicator typingUsers={typingUsers} overlay />}
+        <MessageInput
+          channelId={currentChannel.id}
+          channelName={channelName}
+          onTyping={startTyping}
+          onStopTyping={stopTyping}
+        />
+      </div>
     </div>
   );
 };
