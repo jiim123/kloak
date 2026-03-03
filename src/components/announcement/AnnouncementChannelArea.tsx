@@ -876,6 +876,7 @@ export const AnnouncementChannelArea = () => {
                   const isOwnAnnouncement = user?.id === announcement.user_id;
                   const isHovered = hoveredAnnouncementId === announcement.id;
                   const isAdmin = canManageMessages;
+                  const hasAnnouncementDecoration = Boolean(announcement.user?.avatar_decoration);
                   
                   return (
                     <div
@@ -890,7 +891,10 @@ export const AnnouncementChannelArea = () => {
                         <div className="flex items-start gap-3 flex-1 min-w-0">
                           <AvatarWithDecoration
                             user={announcement.user}
-                            className="w-10 h-10 flex-shrink-0"
+                            className={cn(
+                              hasAnnouncementDecoration ? "w-9 h-9" : "w-10 h-10",
+                              "flex-shrink-0",
+                            )}
                           />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">

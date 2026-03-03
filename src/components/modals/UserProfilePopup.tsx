@@ -416,6 +416,7 @@ export const UserProfilePopup = () => {
             const divider = light ? "rgba(11, 11, 15, 0.12)" : "rgba(248, 250, 252, 0.12)";
             const cardBg = light ? "rgba(255, 255, 255, 0.3)" : "rgba(0, 0, 0, 0.2)";
             const bannerUrl = profileUser.banner_url;
+            const hasProfileDecoration = Boolean(profileUser.avatar_decoration);
 
             return (
               <div
@@ -505,14 +506,20 @@ export const UserProfilePopup = () => {
                     style={{ zIndex: 10 }}
                   >
                     <div className="relative flex-shrink-0">
-                      <AvatarWithDecoration user={profileUser} className="w-20 h-20 sm:w-24 sm:h-24" active={true} />
+                      <AvatarWithDecoration
+                        user={profileUser}
+                        className={hasProfileDecoration ? "w-[72px] h-[72px] sm:w-[88px] sm:h-[88px]" : "w-20 h-20 sm:w-24 sm:h-24"}
+                        active={true}
+                      />
                       {/* Status indicator */}
                       {(() => {
                         const presence = getEffectivePresence(profileUser.status || "offline", profileUser.last_seen);
                         return (
                           <div
                             className={cn(
-                              "absolute bottom-1 right-1 w-5 h-5 rounded-full border-[3px] shadow-lg z-10 border-background",
+                              hasProfileDecoration
+                                ? "absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 shadow-lg z-10 border-background"
+                                : "absolute bottom-1 right-1 w-5 h-5 rounded-full border-[3px] shadow-lg z-10 border-background",
                               statusColors[presence.status],
                             )}
                             title={statusLabels[presence.status]}

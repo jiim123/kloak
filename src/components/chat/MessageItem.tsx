@@ -249,6 +249,8 @@ export const MessageItem = memo(function MessageItem({
   );
 
   const messageUser = message.user;
+  const hasMessageDecoration = Boolean(messageUser?.avatar_decoration);
+  const messageAvatarSizeClass = hasMessageDecoration ? "w-9 h-9" : "w-10 h-10";
 
   // Memoize member lookups
   const channels = useServerStore((state) => state.channels);
@@ -1002,7 +1004,7 @@ export const MessageItem = memo(function MessageItem({
                         ) : (
                           <AvatarWithDecoration
                             user={messageUser}
-                            className="w-10 h-10 cursor-pointer"
+                            className={cn(messageAvatarSizeClass, "cursor-pointer")}
                             active={isRowHovered}
                             onClick={handleUsernameClick}
                           />

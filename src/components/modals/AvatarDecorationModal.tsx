@@ -1,12 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/authStore";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
-import { AVATAR_DECORATIONS } from "@/lib/avatarDecorations";
-import { X, Sparkles, Trash2 } from "lucide-react";
+import {
+  AVATAR_DECORATIONS,
+  DEFAULT_AVATAR_DECORATION_TRANSFORM,
+  type AvatarDecorationTransform,
+} from "@/lib/avatarDecorations";
+import { Slider } from "@/components/ui/slider";
+import { Copy, RotateCcw, X, Sparkles, Trash2 } from "lucide-react";
 
 interface AvatarDecorationModalProps {
   open: boolean;
@@ -14,11 +19,71 @@ interface AvatarDecorationModalProps {
   onSelect: (decorationId: string | null) => void;
 }
 
+const SCALE_MIN = 0.6;
+const SCALE_MAX = 1.6;
+const OFFSET_MIN = -30;
+const OFFSET_MAX = 30;
+
+const buildTransformMap = (): Record<string, AvatarDecorationTransform> =>
+  Object.fromEntries(
+    AVATAR_DECORATIONS.map((decoration) => [
+      decoration.id,
+      {
+        scale: decoration.transform.scale,
+        offsetXPercent: decoration.transform.offsetXPercent,
+        offsetYPercent: decoration.transform.offsetYPercent,
+      },
+    ]),
+  );
+
+const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+const roundTo = (value: number, decimals = 2) => Number(value.toFixed(decimals));
+const formatNumber = (value: number) => Number(value.toFixed(2)).toString();
+
+const normalizeTransform = (transform: AvatarDecorationTransform): AvatarDecorationTransform => ({
+  scale: roundTo(clamp(transform.scale, SCALE_MIN, SCALE_MAX)),
+  offsetXPercent: roundTo(clamp(transform.offsetXPercent, OFFSET_MIN, OFFSET_MAX)),
+  offsetYPercent: roundTo(clamp(transform.offsetYPercent, OFFSET_MIN, OFFSET_MAX)),
+});
+
+const areTransformsEqual = (a: AvatarDecorationTransform, b: AvatarDecorationTransform) =>
+  a.scale === b.scale && a.offsetXPercent === b.offsetXPercent && a.offsetYPercent === b.offsetYPercent;
+
+const formatTransformSnippet = (id: string, transform: AvatarDecorationTransform) =>
+  `  "${id}": { scale: ${formatNumber(transform.scale)}, offsetXPercent: ${formatNumber(transform.offsetXPercent)}, offsetYPercent: ${formatNumber(transform.offsetYPercent)} },`;
+
+const copyTextToClipboard = async (text: string) => {
+  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  if (typeof document !== "undefined") {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    document.execCommand("copy");
+    document.body.removeChild(textarea);
+    return;
+  }
+  throw new Error("Clipboard API unavailable");
+};
+
 export const AvatarDecorationModal = ({ open, onOpenChange, onSelect }: AvatarDecorationModalProps) => {
   const { user, updateUser } = useAuthStore();
   const [selectedDecoration, setSelectedDecoration] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isPreviewHovered, setIsPreviewHovered] = useState(false);
+  const [draftTransforms, setDraftTransforms] = useState<Record<string, AvatarDecorationTransform>>(() =>
+    buildTransformMap(),
+  );
+  // Re-enable debug tuner UI when needed:
+  // const isDev = import.meta.env.DEV;
+  const isDev = false;
+  const baseTransformsById = useMemo(() => buildTransformMap(), []);
 
   // Sync state when modal opens or user changes
   useEffect(() => {
@@ -27,6 +92,11 @@ export const AvatarDecorationModal = ({ open, onOpenChange, onSelect }: AvatarDe
       setSelectedDecoration(user.avatar_decoration ?? null);
     }
   }, [open, user?.avatar_decoration]);
+
+  useEffect(() => {
+    if (!open) return;
+    setDraftTransforms(buildTransformMap());
+  }, [open]);
 
   // Check if there are unsaved changes
   const hasChanges = selectedDecoration !== (user?.avatar_decoration ?? null);
@@ -80,6 +150,74 @@ export const AvatarDecorationModal = ({ open, onOpenChange, onSelect }: AvatarDe
     setSelectedDecoration(null);
   };
 
+  const selectedTransform = useMemo(() => {
+    if (!selectedDecoration) return null;
+    return (
+      draftTransforms[selectedDecoration] ??
+      baseTransformsById[selectedDecoration] ??
+      DEFAULT_AVATAR_DECORATION_TRANSFORM
+    );
+  }, [selectedDecoration, draftTransforms, baseTransformsById]);
+
+  const changedTransformEntries = useMemo(() => {
+    return AVATAR_DECORATIONS.map((decoration) => {
+      const base = baseTransformsById[decoration.id] ?? DEFAULT_AVATAR_DECORATION_TRANSFORM;
+      const current = draftTransforms[decoration.id] ?? base;
+      return { id: decoration.id, base, current };
+    }).filter((entry) => !areTransformsEqual(entry.base, entry.current));
+  }, [draftTransforms, baseTransformsById]);
+
+  const updateSelectedTransform = (patch: Partial<AvatarDecorationTransform>) => {
+    if (!selectedDecoration) return;
+    setDraftTransforms((prev) => {
+      const current =
+        prev[selectedDecoration] ?? baseTransformsById[selectedDecoration] ?? DEFAULT_AVATAR_DECORATION_TRANSFORM;
+      return {
+        ...prev,
+        [selectedDecoration]: normalizeTransform({ ...current, ...patch }),
+      };
+    });
+  };
+
+  const resetSelectedTransform = () => {
+    if (!selectedDecoration) return;
+    setDraftTransforms((prev) => ({
+      ...prev,
+      [selectedDecoration]: baseTransformsById[selectedDecoration] ?? DEFAULT_AVATAR_DECORATION_TRANSFORM,
+    }));
+  };
+
+  const handleCopySelectedTransform = async () => {
+    if (!selectedDecoration || !selectedTransform) return;
+    try {
+      await copyTextToClipboard(formatTransformSnippet(selectedDecoration, selectedTransform).trim());
+      toast.success("Selected transform copied");
+    } catch (error) {
+      console.error("Failed to copy selected transform:", error);
+      toast.error("Could not copy selected transform");
+    }
+  };
+
+  const handleCopyAllTransforms = async () => {
+    if (changedTransformEntries.length === 0) {
+      toast.info("No transform changes to copy");
+      return;
+    }
+    const snippet = [
+      "export const AVATAR_DECORATION_TRANSFORMS: Record<string, Partial<AvatarDecorationTransform>> = {",
+      ...changedTransformEntries.map((entry) => formatTransformSnippet(entry.id, entry.current)),
+      "};",
+    ].join("\n");
+
+    try {
+      await copyTextToClipboard(snippet);
+      toast.success(`Copied ${changedTransformEntries.length} transform override(s)`);
+    } catch (error) {
+      console.error("Failed to copy transform overrides:", error);
+      toast.error("Could not copy transform overrides");
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-hidden bg-background/95 backdrop-blur-xl border-border/50 rounded-2xl p-0 flex flex-col">
@@ -109,6 +247,7 @@ export const AvatarDecorationModal = ({ open, onOpenChange, onSelect }: AvatarDe
               <AvatarWithDecoration
                 user={user ? { ...user, avatar_decoration: selectedDecoration } : null}
                 className="w-20 h-20 sm:w-24 sm:h-24"
+                decorationTransformOverride={selectedDecoration ? draftTransforms[selectedDecoration] : undefined}
                 active={isPreviewHovered}
               />
             </div>
@@ -116,6 +255,94 @@ export const AvatarDecorationModal = ({ open, onOpenChange, onSelect }: AvatarDe
               {selectedDecoration ? "Hover to preview animation" : "No decoration selected"}
             </p>
           </div>
+
+          {isDev && selectedDecoration && selectedTransform && (
+            <div className="space-y-4 p-4 sm:p-5 rounded-xl border border-border/30 bg-secondary/20">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h4 className="text-sm font-medium">Decoration Tuner (Dev)</h4>
+                  <p className="text-xs text-muted-foreground">
+                    Tune live and copy values into `src/lib/avatarDecorations.ts`.
+                  </p>
+                </div>
+                <Button variant="outline" size="sm" className="rounded-lg" onClick={resetSelectedTransform}>
+                  <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+                  Reset
+                </Button>
+              </div>
+
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span>Scale</span>
+                    <span className="font-mono">{selectedTransform.scale.toFixed(2)}</span>
+                  </div>
+                  <Slider
+                    min={SCALE_MIN}
+                    max={SCALE_MAX}
+                    step={0.01}
+                    value={[selectedTransform.scale]}
+                    onValueChange={(value) =>
+                      updateSelectedTransform({ scale: value[0] ?? selectedTransform.scale })
+                    }
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span>Offset X (%)</span>
+                    <span className="font-mono">{selectedTransform.offsetXPercent.toFixed(2)}</span>
+                  </div>
+                  <Slider
+                    min={OFFSET_MIN}
+                    max={OFFSET_MAX}
+                    step={0.25}
+                    value={[selectedTransform.offsetXPercent]}
+                    onValueChange={(value) =>
+                      updateSelectedTransform({ offsetXPercent: value[0] ?? selectedTransform.offsetXPercent })
+                    }
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span>Offset Y (%)</span>
+                    <span className="font-mono">{selectedTransform.offsetYPercent.toFixed(2)}</span>
+                  </div>
+                  <Slider
+                    min={OFFSET_MIN}
+                    max={OFFSET_MAX}
+                    step={0.25}
+                    value={[selectedTransform.offsetYPercent]}
+                    onValueChange={(value) =>
+                      updateSelectedTransform({ offsetYPercent: value[0] ?? selectedTransform.offsetYPercent })
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-lg"
+                  onClick={handleCopySelectedTransform}
+                >
+                  <Copy className="w-3.5 h-3.5 mr-1.5" />
+                  Copy Selected
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-lg"
+                  onClick={handleCopyAllTransforms}
+                >
+                  <Copy className="w-3.5 h-3.5 mr-1.5" />
+                  Copy All Overrides ({changedTransformEntries.length})
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Decoration Grid */}
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-3">
@@ -136,30 +363,42 @@ export const AvatarDecorationModal = ({ open, onOpenChange, onSelect }: AvatarDe
             </button>
 
             {/* Available decorations */}
-            {AVATAR_DECORATIONS.map((decoration) => (
-              <button
-                key={decoration.id}
-                onClick={() => setSelectedDecoration(decoration.id)}
-                className={cn(
-                  "flex flex-col items-center gap-2 p-3 sm:p-4 rounded-xl border-2 transition-all duration-200",
-                  selectedDecoration === decoration.id
-                    ? "border-primary bg-primary/10 shadow-lg shadow-primary/10"
-                    : "border-border/50 hover:border-primary/50 hover:bg-secondary/50",
-                )}
-              >
-                <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-muted/50 overflow-hidden border border-border/30">
-                  <img
-                    src={decoration.src}
-                    alt={decoration.name}
-                    className="w-full h-full object-contain"
-                    style={{ imageRendering: "pixelated" }}
-                  />
-                </div>
-                <span className="text-[10px] sm:text-xs font-medium text-center leading-tight line-clamp-2">
-                  {decoration.name}
-                </span>
-              </button>
-            ))}
+            {AVATAR_DECORATIONS.map((decoration) => {
+              const previewTransform = draftTransforms[decoration.id] ?? decoration.transform;
+              const baseTransform = baseTransformsById[decoration.id] ?? DEFAULT_AVATAR_DECORATION_TRANSFORM;
+              const isTweaked = !areTransformsEqual(previewTransform, baseTransform);
+              return (
+                <button
+                  key={decoration.id}
+                  onClick={() => setSelectedDecoration(decoration.id)}
+                  className={cn(
+                    "flex flex-col items-center gap-2 p-3 sm:p-4 rounded-xl border-2 transition-all duration-200",
+                    selectedDecoration === decoration.id
+                      ? "border-primary bg-primary/10 shadow-lg shadow-primary/10"
+                      : "border-border/50 hover:border-primary/50 hover:bg-secondary/50",
+                  )}
+                >
+                  <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-muted/50 overflow-hidden border border-border/30">
+                    <img
+                      src={decoration.src}
+                      alt={decoration.name}
+                      className="w-full h-full object-contain"
+                      style={{
+                        imageRendering: "pixelated",
+                        transform: `translate(${previewTransform.offsetXPercent}%, ${previewTransform.offsetYPercent}%) scale(${previewTransform.scale})`,
+                        transformOrigin: "center center",
+                      }}
+                    />
+                    {isDev && isTweaked && (
+                      <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary" />
+                    )}
+                  </div>
+                  <span className="text-[10px] sm:text-xs font-medium text-center leading-tight line-clamp-2">
+                    {decoration.name}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 

@@ -93,6 +93,8 @@ export const DMMessageItem = memo(function DMMessageItem({
   }, [animationKey]);
 
   const isOwnMessage = user?.id === message.sender_id;
+  const hasSenderDecoration = Boolean(message.sender?.avatar_decoration);
+  const senderAvatarSizeClass = hasSenderDecoration ? "w-9 h-9" : "w-10 h-10";
 
   // Check if current user is mentioned in this message
   const isMentioned =
@@ -261,7 +263,7 @@ export const DMMessageItem = memo(function DMMessageItem({
                       openModal("userProfile", { userId: message.sender_id });
                     }}
                   >
-                    <AvatarWithDecoration user={message.sender} className="w-10 h-10" active={isRowHovered} />
+                    <AvatarWithDecoration user={message.sender} className={senderAvatarSizeClass} active={isRowHovered} />
                   </div>
                 ) : (
                   <div className="h-full flex items-center justify-center">

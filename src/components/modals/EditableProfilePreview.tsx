@@ -202,6 +202,7 @@ export const EditableProfilePreview = ({
   };
 
   const profileEffectSrc = getProfileEffectSrc(previewUser?.profile_effect);
+  const hasPreviewDecoration = Boolean(previewUser?.avatar_decoration);
 
   if (!user || !previewUser) return null;
 
@@ -285,14 +286,14 @@ export const EditableProfilePreview = ({
                 <button className="relative cursor-pointer focus:outline-none">
                   <AvatarWithDecoration
                     user={previewUser}
-                    className="w-20 h-20"
+                    className={hasPreviewDecoration ? "w-[72px] h-[72px]" : "w-20 h-20"}
                   />
                   <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
-                    <Camera className="w-6 h-6 text-white" />
+                    <Camera className={hasPreviewDecoration ? "w-5 h-5 text-white" : "w-6 h-6 text-white"} />
                   </div>
                   {isLoading && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
-                      <Loader2 className="w-6 h-6 text-white animate-spin" />
+                      <Loader2 className={hasPreviewDecoration ? "w-5 h-5 text-white animate-spin" : "w-6 h-6 text-white animate-spin"} />
                     </div>
                   )}
                 </button>

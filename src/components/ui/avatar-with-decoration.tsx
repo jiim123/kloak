@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import type { User } from '@/types';
-import { getAvatarDecorationSrc } from '@/lib/avatarDecorations';
+import { getAvatarDecoration, DEFAULT_AVATAR_DECORATION_TRANSFORM } from '@/lib/avatarDecorations';
+import type { AvatarDecorationTransform } from '@/lib/avatarDecorations';
 
 // Cache still frames per decoration URL to avoid re-capturing and to prevent "animated before still ready"
 const stillFrameCache = new Map<string, string>();
@@ -73,6 +74,7 @@ interface AvatarWithDecorationProps {
   className?: string;
   size?: number;
   showDecoration?: boolean;
+  decorationTransformOverride?: Partial<AvatarDecorationTransform>;
   /**
    * When true, show the animated decoration asset (if it is animated).
    * When false, show a captured still frame so animations do not play.
@@ -86,12 +88,20 @@ export const AvatarWithDecoration = ({
   className,
   size,
   showDecoration = true,
+  decorationTransformOverride,
   active = false,
   onClick,
 }: AvatarWithDecorationProps) => {
-  const decorationImage = useMemo(() => {
-    return getAvatarDecorationSrc(user?.avatar_decoration);
+  const decoration = useMemo(() => {
+    return getAvatarDecoration(user?.avatar_decoration);
   }, [user?.avatar_decoration]);
+  const decorationImage = decoration?.src ?? null;
+  const baseTransform = decoration?.transform ?? DEFAULT_AVATAR_DECORATION_TRANSFORM;
+  const decorationTransform = {
+    scale: decorationTransformOverride?.scale ?? baseTransform.scale,
+    offsetXPercent: decorationTransformOverride?.offsetXPercent ?? baseTransform.offsetXPercent,
+    offsetYPercent: decorationTransformOverride?.offsetYPercent ?? baseTransform.offsetYPercent,
+  };
 
   const [isAnimated, setIsAnimated] = useState<boolean | null>(null);
   useEffect(() => {
@@ -193,7 +203,9 @@ export const AvatarWithDecoration = ({
             'transition-opacity duration-200'
           )}
           style={{ 
-            imageRendering: 'pixelated'
+            imageRendering: 'pixelated',
+            transform: `translate(${decorationTransform.offsetXPercent}%, ${decorationTransform.offsetYPercent}%) scale(${decorationTransform.scale})`,
+            transformOrigin: 'center center',
           }}
         />
       )}
