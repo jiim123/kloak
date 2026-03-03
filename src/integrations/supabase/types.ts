@@ -3133,6 +3133,10 @@ export type Database = {
         Args: { _message_id: string }
         Returns: number
       }
+      get_thread_message_thread_id: {
+        Args: { _message_id: string }
+        Returns: string
+      }
       get_thread_messages: {
         Args: { _before?: string; _limit?: number; _thread_id: string }
         Returns: Json
