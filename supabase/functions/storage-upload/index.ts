@@ -245,7 +245,7 @@ Deno.serve(async (req) => {
       const body = await req.json();
       const bucket = typeof body.bucket === "string" ? body.bucket : "";
       const rawPaths = Array.isArray(body.paths) ? body.paths : typeof body.path === "string" ? [body.path] : [];
-      const paths = rawPaths.filter((p): p is string => typeof p === "string");
+      const paths = rawPaths.filter((p: unknown): p is string => typeof p === "string");
 
       if (!bucket || paths.length === 0 || paths.length !== rawPaths.length) {
         return jsonResponse({ error: "Missing bucket or path(s)" }, 400);
