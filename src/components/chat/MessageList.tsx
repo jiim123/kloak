@@ -16,8 +16,8 @@ import { useScrollToMessage } from "@/hooks/useScrollToMessage";
 import { useRealtimePolls } from "@/hooks/useRealtimePolls";
 import { useConnectionStatus } from "@/hooks/useConnectionStatus";
 import { useRealtimeUserUpdates } from "@/hooks/useRealtimeUserUpdates";
-import { supabase } from "@/integrations/supabase/client";
-import type { CustomServerRole, Message, ServerRole } from "@/types";
+import { useAuthorStyles } from "@/hooks/useAuthorStyles";
+import type { Message } from "@/types";
 import { isSameDay, isToday, isYesterday, format } from "date-fns";
 
 interface MessageListProps {
@@ -27,23 +27,6 @@ interface MessageListProps {
 }
 
 const CHANNEL_ENTRY_FORCE_REFETCH_MAX_AGE_MS = 12_000;
-const AUTHOR_STYLE_FETCH_CHUNK = 100;
-
-interface MessageAuthorStyle {
-  user_id: string;
-  role?: ServerRole | null;
-  nickname?: string | null;
-  roles?: CustomServerRole[];
-}
-
-const parseAuthorStyleRows = (payload: unknown): MessageAuthorStyle[] => {
-  let rows: unknown = payload;
-  if (typeof rows === "string") {
-    try { rows = JSON.parse(rows); } catch { return []; }
-  }
-  if (!Array.isArray(rows)) return [];
-  return rows.filter((row): row is MessageAuthorStyle => !!row && typeof row === "object" && "user_id" in row);
-};
 
 // Group messages from same user within 1 minute
 const shouldGroupMessages = (current: Message, previous: Message | null): boolean => {
@@ -121,16 +104,17 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
 
   useRealtimeUserUpdates(visibleAuthorUserIds, `channel-authors:${channelId}`);
 
+  // Author styles via shared hook (uses the correct _secure RPC)
+  const authorStyleMap = useAuthorStyles(currentServerId, visibleAuthorUserIds);
+
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [showJumpToPresent, setShowJumpToPresent] = useState(false);
   const [newMessageCount, setNewMessageCount] = useState(0);
-  const [authorStyleMap, setAuthorStyleMap] = useState<Record<string, MessageAuthorStyle>>({});
   const isNearBottomRef = useRef(true);
   const lastMarkedMessageIdRef = useRef<string | null>(null);
   const prevMessagesLengthRef = useRef(0);
   const prevChannelIdRef = useRef<string>(channelId);
-  const authorStyleServerIdRef = useRef<string | null>(null);
 
   // -- Stable refs for effects that should NOT cause re-registration --
   const messagesRef = useRef(messages);
@@ -146,12 +130,6 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   if (prevChannelIdRef.current !== channelId) {
     prevChannelIdRef.current = channelId;
   }
-
-  useEffect(() => {
-    if (authorStyleServerIdRef.current === currentServerId) return;
-    authorStyleServerIdRef.current = currentServerId;
-    setAuthorStyleMap({});
-  }, [currentServerId]);
 
   // Unread tracking
   const { getChannelUnread, markAsRead } = useUnreadChannelsContext();
@@ -282,42 +260,6 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     return -1;
   }, [deduplicatedMessages, lastReadAt, firstUnreadMessageId]);
 
-  // Author style IDs — only non-ghost, non-anonymous
-  const missingAuthorStyleIds = useMemo(() => {
-    const missing: string[] = [];
-    const seen = new Set<string>();
-    for (const msg of deduplicatedMessages) {
-      const id = msg.user_id;
-      if (!id || id === "anonymous" || id.startsWith("ghost_") || seen.has(id) || authorStyleMap[id]) continue;
-      seen.add(id);
-      missing.push(id);
-    }
-    return missing;
-  }, [deduplicatedMessages, authorStyleMap]);
-
-  useEffect(() => {
-    if (!currentServerId || !user?.id || missingAuthorStyleIds.length === 0) return;
-    let cancelled = false;
-
-    const fetchAuthorStyles = async () => {
-      const batchIds = missingAuthorStyleIds.slice(0, AUTHOR_STYLE_FETCH_CHUNK);
-      const { data, error } = await supabase.rpc("get_message_author_styles" as any, {
-        _server_id: currentServerId, _user_ids: batchIds, _requesting_user_id: user.id,
-      });
-      if (error || !data || cancelled) return;
-      const rows = parseAuthorStyleRows(data);
-      const next: Record<string, MessageAuthorStyle> = {};
-      for (const row of rows) {
-        if (row.user_id) {
-          next[row.user_id] = { user_id: row.user_id, role: row.role ?? null, nickname: row.nickname ?? null, roles: Array.isArray(row.roles) ? row.roles : [] };
-        }
-      }
-      if (!cancelled && Object.keys(next).length > 0) setAuthorStyleMap((prev) => ({ ...prev, ...next }));
-    };
-
-    void fetchAuthorStyles().catch(() => {});
-    return () => { cancelled = true; };
-  }, [currentServerId, user?.id, missingAuthorStyleIds]);
 
   const scrollToBottom = useCallback(() => {
     const msgs = deduplicatedMessagesRef.current;
