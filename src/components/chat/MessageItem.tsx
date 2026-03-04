@@ -113,25 +113,23 @@ const getStableAnimationKey = (message: Message): string => {
 };
 
 // Renders a single attachment, using a signed URL for private bucket images
-const AttachmentItem = ({
+const AttachmentItem = memo(function AttachmentItem({
   attachment,
 }: {
   attachment: { id: string; file_url: string; file_name: string; file_type?: string; file_size?: number; width?: number | null; height?: number | null };
-}) => {
+}) {
   const signedUrl = useSignedUrl(attachment.file_url);
   const isImage = attachment.file_type?.startsWith("image/");
 
   // Compute constrained dimensions to reserve space and prevent layout shift
   const reservedStyle = useMemo(() => {
     if (!isImage || !attachment.width || !attachment.height) {
-      // Fallback: reserve a fixed placeholder size for images without dimensions
       return isImage ? { width: 300, height: 200 } : undefined;
     }
     const maxW = 400;
     const maxH = 300;
     let w = attachment.width;
     let h = attachment.height;
-    // Scale down preserving aspect ratio
     if (w > maxW) { h = Math.round(h * (maxW / w)); w = maxW; }
     if (h > maxH) { w = Math.round(w * (maxH / h)); h = maxH; }
     return { width: w, height: h };
@@ -150,6 +148,7 @@ const AttachmentItem = ({
               alt={attachment.file_name}
               className="w-full h-full object-contain rounded-lg cursor-pointer hover:opacity-90"
               loading="lazy"
+              decoding="async"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
@@ -172,7 +171,7 @@ const AttachmentItem = ({
       )}
     </div>
   );
-};
+});
 
 export const MessageItem = memo(function MessageItem({
   message,

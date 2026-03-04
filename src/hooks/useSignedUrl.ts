@@ -52,6 +52,9 @@ function isSupabaseAttachmentUrl(url: string): boolean {
   return url.includes(".supabase.co/storage/v1/object") && url.includes("/attachments/");
 }
 
+// In-flight deduplication: avoid multiple concurrent requests for the same URL
+const inflightRequests = new Map<string, Promise<string | null>>();
+
 export function useSignedUrl(fileUrl: string | null | undefined): string | null {
   const [signedUrl, setSignedUrl] = useState<string | null>(() => {
     if (!fileUrl || !isSupabaseAttachmentUrl(fileUrl)) return fileUrl ?? null;
@@ -63,6 +66,8 @@ export function useSignedUrl(fileUrl: string | null | undefined): string | null 
   });
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Track whether initializer already resolved from cache to skip redundant effect work
+  const resolvedFromCacheRef = useRef(false);
 
   useEffect(() => {
     if (!fileUrl || !isSupabaseAttachmentUrl(fileUrl)) {
@@ -77,8 +82,11 @@ export function useSignedUrl(fileUrl: string | null | undefined): string | null 
       const now = Date.now();
 
       if (cached && cached.expiresAt - now > REFRESH_BUFFER * 1000) {
-        setSignedUrl(cached.signedUrl);
-        // Schedule refresh before expiry
+        // Skip setState if this is the initial mount and we already resolved from cache
+        if (!resolvedFromCacheRef.current) {
+          setSignedUrl(cached.signedUrl);
+        }
+        resolvedFromCacheRef.current = false;
         const refreshIn = cached.expiresAt - now - REFRESH_BUFFER * 1000;
         timerRef.current = setTimeout(getSignedUrl, refreshIn);
         return;
@@ -86,39 +94,58 @@ export function useSignedUrl(fileUrl: string | null | undefined): string | null 
 
       const path = extractPathFromUrl(fileUrl, "attachments");
       if (!path) {
-        // Can't extract path, fall back to original URL
         setSignedUrl(fileUrl);
         return;
       }
 
-      const { data, error } = await supabase.storage
-        .from("attachments")
-        .createSignedUrl(path, EXPIRY_SECONDS);
-
-      if (cancelled) return;
-
-      if (error || !data?.signedUrl) {
-        console.warn("[useSignedUrl] Failed to sign URL:", error?.message);
-        setSignedUrl(fileUrl); // Fall back to original
-        return;
+      // Deduplicate concurrent requests for the same URL
+      let requestPromise = inflightRequests.get(fileUrl);
+      if (!requestPromise) {
+        requestPromise = supabase.storage
+          .from("attachments")
+          .createSignedUrl(path, EXPIRY_SECONDS)
+          .then(({ data, error }) => {
+            if (error || !data?.signedUrl) {
+              console.warn("[useSignedUrl] Failed to sign URL:", error?.message);
+              return null;
+            }
+            const entry: CacheEntry = {
+              signedUrl: data.signedUrl,
+              expiresAt: Date.now() + EXPIRY_SECONDS * 1000,
+            };
+            cache.set(fileUrl, entry);
+            evictSignedUrlCache();
+            return data.signedUrl;
+          })
+          .finally(() => {
+            inflightRequests.delete(fileUrl);
+          });
+        inflightRequests.set(fileUrl, requestPromise);
       }
 
-      const entry: CacheEntry = {
-        signedUrl: data.signedUrl,
-        expiresAt: now + EXPIRY_SECONDS * 1000,
-      };
-      cache.set(fileUrl, entry);
-      evictSignedUrlCache();
-      setSignedUrl(data.signedUrl);
+      const result = await requestPromise;
+      if (cancelled) return;
 
-      // Schedule refresh before expiry
-      timerRef.current = setTimeout(getSignedUrl, (EXPIRY_SECONDS - REFRESH_BUFFER) * 1000);
+      setSignedUrl(result ?? fileUrl);
+
+      if (result) {
+        timerRef.current = setTimeout(getSignedUrl, (EXPIRY_SECONDS - REFRESH_BUFFER) * 1000);
+      }
     };
 
-    getSignedUrl();
+    // If initial state already resolved from cache, just schedule refresh
+    const cachedEntry = cache.get(fileUrl);
+    if (cachedEntry && cachedEntry.expiresAt - Date.now() > REFRESH_BUFFER * 1000) {
+      resolvedFromCacheRef.current = true;
+      const refreshIn = cachedEntry.expiresAt - Date.now() - REFRESH_BUFFER * 1000;
+      timerRef.current = setTimeout(() => { resolvedFromCacheRef.current = false; getSignedUrl(); }, refreshIn);
+    } else {
+      getSignedUrl();
+    }
 
     return () => {
       cancelled = true;
+      resolvedFromCacheRef.current = false;
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [fileUrl]);
