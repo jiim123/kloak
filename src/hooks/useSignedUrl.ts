@@ -15,7 +15,26 @@ interface CacheEntry {
 }
 
 // Module-level cache so signed URLs survive re-renders across message list
+const MAX_SIGNED_URL_CACHE = 200;
 const cache = new Map<string, CacheEntry>();
+
+function evictSignedUrlCache() {
+  if (cache.size <= MAX_SIGNED_URL_CACHE) return;
+  const now = Date.now();
+  // First pass: remove expired entries
+  for (const [key, entry] of cache) {
+    if (entry.expiresAt <= now) cache.delete(key);
+  }
+  if (cache.size <= MAX_SIGNED_URL_CACHE) return;
+  // Second pass: remove oldest
+  const toDelete = cache.size - MAX_SIGNED_URL_CACHE;
+  let count = 0;
+  for (const key of cache.keys()) {
+    if (count >= toDelete) break;
+    cache.delete(key);
+    count++;
+  }
+}
 
 function extractPathFromUrl(url: string, bucket: string): string | null {
   try {
@@ -89,6 +108,7 @@ export function useSignedUrl(fileUrl: string | null | undefined): string | null 
         expiresAt: now + EXPIRY_SECONDS * 1000,
       };
       cache.set(fileUrl, entry);
+      evictSignedUrlCache();
       setSignedUrl(data.signedUrl);
 
       // Schedule refresh before expiry

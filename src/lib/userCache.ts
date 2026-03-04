@@ -13,8 +13,21 @@ interface CachedUser {
 }
 
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const MAX_CACHE_SIZE = 500;
 
 const userCache = new Map<string, CachedUser>();
+
+/** Evict oldest entries when cache exceeds max size */
+function evictIfNeeded() {
+  if (userCache.size <= MAX_CACHE_SIZE) return;
+  const toDelete = userCache.size - MAX_CACHE_SIZE;
+  let count = 0;
+  for (const key of userCache.keys()) {
+    if (count >= toDelete) break;
+    userCache.delete(key);
+    count++;
+  }
+}
 
 /** In-flight request deduplication */
 const inflightRequests = new Map<string, Promise<User | null>>();
@@ -31,6 +44,7 @@ export function getUserFromCache(userId: string): User | null {
 
 export function setUserInCache(userId: string, user: User): void {
   userCache.set(userId, { user, cached_at: Date.now() });
+  evictIfNeeded();
 }
 
 export function bulkSetUsersInCache(users: User[]): void {
@@ -38,6 +52,7 @@ export function bulkSetUsersInCache(users: User[]): void {
   users.forEach((user) => {
     userCache.set(user.id, { user, cached_at: now });
   });
+  evictIfNeeded();
 }
 
 export function invalidateUser(userId: string): void {

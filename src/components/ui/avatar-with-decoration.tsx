@@ -6,8 +6,22 @@ import { getAvatarDecoration, DEFAULT_AVATAR_DECORATION_TRANSFORM } from '@/lib/
 import type { AvatarDecorationTransform } from '@/lib/avatarDecorations';
 
 // Cache still frames per decoration URL to avoid re-capturing and to prevent "animated before still ready"
+// Bounded to prevent memory leaks from data URL accumulation
+const MAX_STILL_FRAME_CACHE = 50;
+const MAX_ANIMATED_CACHE = 200;
 const stillFrameCache = new Map<string, string>();
 const animatedCache = new Map<string, boolean>();
+
+function evictMap<V>(map: Map<string, V>, max: number) {
+  if (map.size <= max) return;
+  const toDelete = map.size - max;
+  let count = 0;
+  for (const key of map.keys()) {
+    if (count >= toDelete) break;
+    map.delete(key);
+    count++;
+  }
+}
 
 const toAscii = (bytes: Uint8Array, start: number, len: number) => {
   let out = '';
@@ -38,6 +52,7 @@ const detectAnimated = async (url: string, signal?: AbortSignal): Promise<boolea
   // Fast path: .gif is treated as animated (even single-frame gifs are rare, and this keeps behavior consistent)
   if (/\.(gif)(\?|#|$)/i.test(url)) {
     animatedCache.set(url, true);
+    evictMap(animatedCache, MAX_ANIMATED_CACHE);
     return true;
   }
 
@@ -50,6 +65,7 @@ const detectAnimated = async (url: string, signal?: AbortSignal): Promise<boolea
   if (isPng) {
     const animated = includesAscii(bytes, 'acTL');
     animatedCache.set(url, animated);
+    evictMap(animatedCache, MAX_ANIMATED_CACHE);
     return animated;
   }
 
@@ -61,11 +77,13 @@ const detectAnimated = async (url: string, signal?: AbortSignal): Promise<boolea
   if (isWebp) {
     const animated = includesAscii(bytes, 'ANIM') || includesAscii(bytes, 'ANMF');
     animatedCache.set(url, animated);
+    evictMap(animatedCache, MAX_ANIMATED_CACHE);
     return animated;
   }
 
   // Unknown formats treated as static
   animatedCache.set(url, false);
+  evictMap(animatedCache, MAX_ANIMATED_CACHE);
   return false;
 };
 
@@ -158,6 +176,7 @@ export const AvatarWithDecoration = ({
       try {
         const dataUrl = canvas.toDataURL('image/png');
         stillFrameCache.set(decorationImage, dataUrl);
+        evictMap(stillFrameCache, MAX_STILL_FRAME_CACHE);
         if (!cancelled) setStillDecorationSrc(dataUrl);
       } catch {
         // If data URL fails for any reason, we keep stillDecorationSrc as null.

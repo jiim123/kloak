@@ -70,6 +70,34 @@ const groupReactions = (reactions: any[], currentUserId?: string): ReactionGroup
   return Object.values(groups);
 };
 
+const MAX_CACHED_DM_CONVERSATIONS = 10;
+const MAX_DM_MESSAGES_PER_CONVERSATION = 200;
+
+const pruneDMMessageCache = (
+  input: Record<string, DirectMessage[]>,
+  keepConversationId?: string | null,
+): Record<string, DirectMessage[]> => {
+  const result: Record<string, DirectMessage[]> = {};
+  for (const [id, msgs] of Object.entries(input)) {
+    result[id] = msgs.length > MAX_DM_MESSAGES_PER_CONVERSATION
+      ? msgs.slice(msgs.length - MAX_DM_MESSAGES_PER_CONVERSATION)
+      : msgs;
+  }
+  const keys = Object.keys(result);
+  if (keys.length <= MAX_CACHED_DM_CONVERSATIONS) return result;
+  const keep = new Set<string>();
+  if (keepConversationId && result[keepConversationId]) keep.add(keepConversationId);
+  // Keep most recently accessed
+  for (const key of keys.reverse()) {
+    if (keep.size >= MAX_CACHED_DM_CONVERSATIONS) break;
+    keep.add(key);
+  }
+  for (const key of keys) {
+    if (!keep.has(key)) delete result[key];
+  }
+  return result;
+};
+
 export const useDMStore = create<DMState>((set, get) => ({
   conversations: [],
   currentConversation: null,
@@ -560,11 +588,13 @@ export const useDMStore = create<DMState>((set, get) => ({
         return state;
       }
 
+      const updated = {
+        ...state.messagesByConversation,
+        [conversationId]: [...currentMessages, message],
+      };
+
       return {
-        messagesByConversation: {
-          ...state.messagesByConversation,
-          [conversationId]: [...currentMessages, message],
-        },
+        messagesByConversation: pruneDMMessageCache(updated, state.currentConversation?.id),
       };
     });
   },
