@@ -299,7 +299,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }
   }, [messages, channelId, markAsRead]);
 
-  // New message count tracking
+  // New message count tracking + bottom nudge
   useEffect(() => {
     const currentLength = messages.length;
     const prevLength = prevMessagesLengthRef.current;
@@ -307,6 +307,12 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     if (currentLength > prevLength && prevLength > 0) {
       if (!isNearBottomRef.current) {
         setNewMessageCount((prev) => prev + (currentLength - prevLength));
+      } else {
+        // User is at bottom — Virtuoso's followOutput scrolls to the new item,
+        // but may only reveal its top edge. Nudge to absolute bottom after render.
+        requestAnimationFrame(() => {
+          virtuosoRef.current?.scrollTo({ top: Number.MAX_SAFE_INTEGER });
+        });
       }
     }
 
