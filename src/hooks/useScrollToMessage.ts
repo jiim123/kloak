@@ -15,7 +15,6 @@ interface UseScrollToMessageOptions {
 export const useScrollToMessage = ({ messages, isLoading, virtuosoRef, containerRef }: UseScrollToMessageOptions) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const urlTargetId = searchParams.get('message');
-  // Support both URL params and custom events (custom events avoid useSearchParams re-render cascade in MessageItem)
   const [eventTargetId, setEventTargetId] = useState<string | null>(null);
   const targetMessageId = eventTargetId || urlTargetId;
   const hasScrolledRef = useRef(false);
@@ -24,21 +23,38 @@ export const useScrollToMessage = ({ messages, isLoading, virtuosoRef, container
   const fetchAttemptsRef = useRef(0);
   const isFetchingRef = useRef(false);
 
-  // Visual highlight — only set AFTER the scroll animation finishes
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
 
   const { fetchMessages, currentChannelId } = useMessageStore();
 
+  // Stable ref for clearMessageParam so the scroll effect doesn't re-run when searchParams changes
+  const clearMessageParamRef = useRef(() => {});
+  clearMessageParamRef.current = () => {
+    setEventTargetId(null);
+    if (urlTargetId) {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('message');
+      setSearchParams(newParams, { replace: true });
+    }
+  };
+
   // Listen for custom scrollToMessage events (from MessageItem reply clicks)
   useEffect(() => {
     const handler = (e: CustomEvent<{ messageId: string }>) => {
+      // Always reset so clicking the same reply target twice works
+      hasScrolledRef.current = false;
+      setHighlightedMessageId(null);
+      if (highlightTimeoutRef.current) {
+        clearTimeout(highlightTimeoutRef.current);
+        highlightTimeoutRef.current = null;
+      }
       setEventTargetId(e.detail.messageId);
     };
     window.addEventListener("scrollToMessage" as keyof WindowEventMap, handler as EventListener);
     return () => window.removeEventListener("scrollToMessage" as keyof WindowEventMap, handler as EventListener);
   }, []);
 
-  // Reset when the target message changes
+  // Reset when the target message changes (for URL-based navigation)
   useEffect(() => {
     if (targetMessageId !== prevMessageIdRef.current) {
       hasScrolledRef.current = false;
@@ -48,16 +64,6 @@ export const useScrollToMessage = ({ messages, isLoading, virtuosoRef, container
       setHighlightedMessageId(null);
     }
   }, [targetMessageId]);
-
-  // Clear the message param from URL
-  const clearMessageParam = useCallback(() => {
-    setEventTargetId(null);
-    if (urlTargetId) {
-      const newParams = new URLSearchParams(searchParams);
-      newParams.delete('message');
-      setSearchParams(newParams, { replace: true });
-    }
-  }, [urlTargetId, searchParams, setSearchParams]);
 
   // If the target message isn't loaded, fetch older messages to find it
   useEffect(() => {
@@ -88,7 +94,6 @@ export const useScrollToMessage = ({ messages, isLoading, virtuosoRef, container
     if (targetIndex === -1) return;
 
     const scrollTimeout = setTimeout(() => {
-      // Prefer Virtuoso scrollToIndex for virtualized lists
       if (virtuosoRef?.current) {
         virtuosoRef.current.scrollToIndex({
           index: targetIndex,
@@ -96,7 +101,6 @@ export const useScrollToMessage = ({ messages, isLoading, virtuosoRef, container
           align: 'center',
         });
       } else if (containerRef?.current) {
-        // Fallback: raw DOM scroll for non-virtualized lists (e.g. DMs)
         const messageElement = document.getElementById(`message-${targetMessageId}`);
         if (!messageElement) return;
 
@@ -115,23 +119,23 @@ export const useScrollToMessage = ({ messages, isLoading, virtuosoRef, container
 
       hasScrolledRef.current = true;
 
-      // Activate the highlight AFTER the smooth scroll finishes (~400ms)
       setTimeout(() => {
         setHighlightedMessageId(targetMessageId);
       }, 400);
 
-      // Clear everything after highlight animation finishes
       if (highlightTimeoutRef.current) {
         clearTimeout(highlightTimeoutRef.current);
       }
       highlightTimeoutRef.current = setTimeout(() => {
         setHighlightedMessageId(null);
-        clearMessageParam();
-      }, 2900); // 400ms scroll + 2500ms highlight
-    }, 200);
+        clearMessageParamRef.current();
+      }, 2900);
+    }, 150);
 
     return () => clearTimeout(scrollTimeout);
-  }, [targetMessageId, messages, isLoading, clearMessageParam, virtuosoRef, containerRef]);
+    // clearMessageParamRef is stable — no need to include it
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetMessageId, messages, isLoading, virtuosoRef, containerRef]);
 
   // Cleanup on unmount
   useEffect(() => {
