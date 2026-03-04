@@ -1134,7 +1134,7 @@ export const ChannelSidebar = () => {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
-              className="w-56 p-1.5 rounded-xl border-border/50 bg-popover/95 backdrop-blur-xl shadow-xl"
+              className="w-56 p-1.5 rounded-xl border-border/50 bg-popover shadow-xl"
               align="start"
               sideOffset={4}
             >
