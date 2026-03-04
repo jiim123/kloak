@@ -1,6 +1,6 @@
 import { useMemo, useEffect, memo, useState, useRef } from "react";
 import { cn } from "@/lib/utils";
-import { Crown, MessageSquare, Edit3, UserX, Ban, VolumeX, Shield, Users } from "lucide-react";
+import { Crown, MessageSquare, Edit3, UserX, Ban, VolumeX, Shield, Users, ChevronDown, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -31,8 +31,42 @@ import type { ServerMember, CustomServerRole, UserStatus } from "@/types";
 import { getEffectivePresence } from "@/lib/presence";
 import { hasRecentRealtimePresence } from "@/hooks/useRealtimeUsers";
 
+const OFFLINE_PAGE_SIZE = 50;
 
+type OfflineMembersPageResponse = {
+  members?: unknown;
+  has_more?: boolean;
+  next_cursor_joined_at?: string | null;
+  next_cursor_member_id?: string | null;
+  offline_count?: number | null;
+};
 
+type OfflineMemberRow = {
+  id: string;
+  server_id: string;
+  user_id: string;
+  role: ServerMember["role"];
+  nickname: string | null;
+  is_banned: boolean;
+  is_muted: boolean;
+  joined_at: string;
+  join_source?: ServerMember["join_source"];
+  join_invite_code?: string | null;
+  user?: ServerMember["user"];
+  roles?: ServerMember["roles"];
+};
+
+const parseJson = <T,>(value: unknown, fallback: T): T => {
+  if (value == null) return fallback;
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value) as T;
+    } catch {
+      return fallback;
+    }
+  }
+  return value as T;
+};
 const getMemberPresence = (member: ServerMember) => {
   const status = (member.user?.status as UserStatus | undefined) ?? "offline";
   if (status !== "offline" && hasRecentRealtimePresence(member.user_id)) {
@@ -134,6 +168,15 @@ export const MembersSidebar = () => {
   const { openConversation } = useDMStore();
   const blockedUserIds = useFriendStore((s) => s.visibilityBlockedUserIds);
   const [totalMemberCount, setTotalMemberCount] = useState<number | null>(null);
+  const [isOfflineExpanded, setIsOfflineExpanded] = useState(false);
+  const [offlineMembers, setOfflineMembers] = useState<ServerMember[]>([]);
+  const [offlineHasMore, setOfflineHasMore] = useState(false);
+  const [offlineIsLoading, setOfflineIsLoading] = useState(false);
+  const [offlineLoadedOnce, setOfflineLoadedOnce] = useState(false);
+  const [offlineCount, setOfflineCount] = useState<number | null>(null);
+  const [offlineCursorJoinedAt, setOfflineCursorJoinedAt] = useState<string | null>(null);
+  const [offlineCursorMemberId, setOfflineCursorMemberId] = useState<string | null>(null);
+  const offlineLoadingRef = useRef(false);
 
   // Subscribe to realtime member updates
   useRealtimeMembers(currentServer?.id || null);
@@ -183,6 +226,112 @@ export const MembersSidebar = () => {
     };
   }, [currentServer?.id, isMemberSidebarOpen, isMobile, user?.id]);
 
+  // Filter out offline/invisible members
+  const onlineMembers = useMemo(() => {
+    return members.filter((m) => !getMemberPresence(m).isOffline);
+  }, [members]);
+  const onlineMemberUserIdSet = useMemo(() => new Set(onlineMembers.map((m) => m.user_id)), [onlineMembers]);
+
+  // Reset paginated offline section when changing servers.
+  useEffect(() => {
+    setIsOfflineExpanded(false);
+    setOfflineMembers([]);
+    setOfflineHasMore(false);
+    setOfflineIsLoading(false);
+    setOfflineLoadedOnce(false);
+    setOfflineCount(null);
+    setOfflineCursorJoinedAt(null);
+    setOfflineCursorMemberId(null);
+    offlineLoadingRef.current = false;
+  }, [currentServer?.id]);
+
+  // Keep offline section and online section mutually exclusive as presence updates stream in.
+  useEffect(() => {
+    if (offlineMembers.length === 0 || onlineMemberUserIdSet.size === 0) return;
+    setOfflineMembers((prev) => {
+      const filtered = prev.filter((m) => !onlineMemberUserIdSet.has(m.user_id));
+      return filtered.length === prev.length ? prev : filtered;
+    });
+  }, [offlineMembers.length, onlineMemberUserIdSet]);
+
+  const loadOfflineMembers = async (opts?: { reset?: boolean }) => {
+    const reset = opts?.reset === true;
+    if (!currentServer?.id || !user?.id) return;
+    if (offlineLoadingRef.current) return;
+    if (!reset && offlineLoadedOnce && !offlineHasMore) return;
+
+    offlineLoadingRef.current = true;
+    setOfflineIsLoading(true);
+    try {
+      const rpc = supabase.rpc.bind(supabase) as (
+        fn: string,
+        args: Record<string, unknown>,
+      ) => Promise<{ data: unknown; error: unknown }>;
+
+      const { data, error } = await rpc("get_server_members_offline_page_secure", {
+        _server_id: currentServer.id,
+        _user_id: user.id,
+        _limit: OFFLINE_PAGE_SIZE,
+        _cursor_joined_at: reset ? null : offlineCursorJoinedAt,
+        _cursor_member_id: reset ? null : offlineCursorMemberId,
+        _include_count: reset || !offlineLoadedOnce,
+      });
+
+      if (error) throw error;
+
+      const payload = parseJson<OfflineMembersPageResponse>(data, {});
+      const rawMembers = parseJson<OfflineMemberRow[]>(payload.members, []);
+      const blockedSet = new Set(blockedUserIds);
+
+      const mapped: ServerMember[] = rawMembers
+        .filter((item) => !item.is_banned)
+        .filter((item) => !blockedSet.has(item.user_id))
+        .filter((item) => !onlineMemberUserIdSet.has(item.user_id))
+        .map((item) => ({
+          id: item.id,
+          server_id: item.server_id,
+          user_id: item.user_id,
+          role: item.role,
+          nickname: item.nickname,
+          is_banned: item.is_banned,
+          is_muted: item.is_muted,
+          joined_at: item.joined_at,
+          join_source: item.join_source,
+          join_invite_code: item.join_invite_code ?? null,
+          user: item.user,
+          roles: item.roles,
+        }));
+
+      setOfflineMembers((prev) => {
+        if (reset) return mapped;
+        const seen = new Set(prev.map((m) => m.id));
+        const next = mapped.filter((m) => !seen.has(m.id));
+        return next.length > 0 ? [...prev, ...next] : prev;
+      });
+
+      const hasMore = Boolean(payload.has_more);
+      setOfflineHasMore(hasMore);
+      setOfflineCursorJoinedAt(hasMore ? (payload.next_cursor_joined_at ?? null) : null);
+      setOfflineCursorMemberId(hasMore ? (payload.next_cursor_member_id ?? null) : null);
+      if (typeof payload.offline_count === "number") {
+        setOfflineCount(payload.offline_count);
+      }
+      setOfflineLoadedOnce(true);
+    } catch (error) {
+      console.error("Failed to load offline members:", error);
+    } finally {
+      offlineLoadingRef.current = false;
+      setOfflineIsLoading(false);
+    }
+  };
+
+  const handleToggleOfflineSection = () => {
+    const nextExpanded = !isOfflineExpanded;
+    setIsOfflineExpanded(nextExpanded);
+    if (nextExpanded && !offlineLoadedOnce) {
+      void loadOfflineMembers({ reset: true });
+    }
+  };
 
   // Use database-backed permission checking
   const { hasPermission: checkPermission, isOwner: currentUserIsOwner } = useMemberPermissions();
@@ -190,13 +339,9 @@ export const MembersSidebar = () => {
   // Get current user's member for role comparison
   const currentUserMember = members.find((m) => m.user_id === user?.id);
 
-  // Filter out offline/invisible members
-  const onlineMembers = useMemo(() => {
-    return members.filter((m) => !getMemberPresence(m).isOffline);
-  }, [members]);
-
   const onlineCount = onlineMembers.length;
-  const visibleCount = onlineMembers.length;
+  const visibleCount = onlineMembers.length + offlineMembers.length;
+  const offlineDisplayCount = offlineCount ?? (offlineLoadedOnce ? offlineMembers.length : null);
 
   // Group members: roles first (all members with roles), then all no-role members.
   const { roleGroups, noRoleMembers } = useMemo(() => {
@@ -582,8 +727,57 @@ export const MembersSidebar = () => {
           </div>
         )}
 
+        {/* Offline members (lazy loaded, paginated) */}
+        <div className="mb-3">
+          <button
+            type="button"
+            className="w-full flex items-center gap-2 px-3 py-2 hover:bg-secondary/40 transition-colors"
+            onClick={handleToggleOfflineSection}
+          >
+            <ChevronDown
+              className={cn(
+                "w-3.5 h-3.5 text-muted-foreground transition-transform",
+                isOfflineExpanded && "rotate-180",
+              )}
+            />
+            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Offline</span>
+            {offlineDisplayCount != null && (
+              <span className="text-[11px] font-medium text-muted-foreground/70">{offlineDisplayCount}</span>
+            )}
+          </button>
+
+          {isOfflineExpanded && (
+            <div className="space-y-0.5">
+              {offlineMembers.map((member) => renderMemberItem(member))}
+
+              {offlineIsLoading && (
+                <div className="px-3 py-2 text-[11px] text-muted-foreground flex items-center gap-2">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Loading offline members...
+                </div>
+              )}
+
+              {!offlineIsLoading && offlineLoadedOnce && offlineMembers.length === 0 && (
+                <p className="px-3 py-2 text-[11px] text-muted-foreground/80">No offline members</p>
+              )}
+
+              {!offlineIsLoading && offlineHasMore && (
+                <div className="px-3 pt-1">
+                  <button
+                    type="button"
+                    className="text-[11px] text-primary hover:text-primary/80 transition-colors"
+                    onClick={() => void loadOfflineMembers()}
+                  >
+                    Load more
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Empty state */}
-        {visibleCount === 0 && (
+        {totalMemberCount === 0 && visibleCount === 0 && (
           <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
             <div className="w-12 h-12 rounded-xl bg-secondary/50 flex items-center justify-center mb-3">
               <Users className="w-6 h-6 text-muted-foreground/50" />

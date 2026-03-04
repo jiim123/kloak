@@ -90,74 +90,75 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
   };
 
   return (
-    <div className="h-full flex flex-col bg-layout-sidebar-secondary">
-      {/* Header */}
-      <div className="h-12 px-4 flex items-center border-b border-border shadow-sm">
-        <h2 className="font-medium text-lg text-foreground">
-          {showFriends ? "Friends" : showExplore ? "Explore" : "Home"}
-        </h2>
-      </div>
-
-      {/* Friends Button */}
-      <div className="px-2 mb-2">
-        <Button
-          variant="ghost"
-          className={cn("w-full justify-start gap-3 h-11", showFriends && "bg-secondary")}
-          onClick={() => {
-            setCurrentConversation(null);
-            onShowFriendsChange(true);
-          }}
-        >
-          <Users className="w-5 h-5" />
-          <span>Friends</span>
-        </Button>
-      </div>
-
-      {/* Explore Button */}
-      <div className="px-2 mb-2">
-        <Button
-          variant="ghost"
-          className={cn("w-full justify-start gap-3 h-11", showExplore && "bg-secondary")}
-          onClick={() => {
-            setCurrentConversation(null);
-            onShowExploreChange(true);
-          }}
-        >
-          <Compass className="w-5 h-5" />
-          <span>Explore</span>
-        </Button>
-      </div>
-
-      {/* Search */}
-      <div className="p-2">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Find or start a conversation"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
+    <div className="h-full flex flex-col p-2 bg-layout-sidebar">
+      <div className="flex-1 flex flex-col bg-card/50 rounded-2xl border border-border/50 overflow-hidden">
+        {/* Header */}
+        <div className="h-12 px-4 flex items-center border-b border-border/50">
+          <h2 className="font-medium text-lg text-foreground">
+            {showFriends ? "Friends" : showExplore ? "Explore" : "Home"}
+          </h2>
         </div>
-      </div>
 
-      {/* Section header with Create Group */}
-      <div className="px-4 py-2 flex items-center justify-between">
-        <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Direct Messages</h3>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="h-6 w-6"
-          onClick={() => setShowCreateGroup(true)}
-          title="Create Group"
-        >
-          <UserRoundPlus className="w-4 h-4" />
-        </Button>
-      </div>
+        {/* Friends Button */}
+        <div className="px-2 pt-2 mb-1">
+          <Button
+            variant="ghost"
+            className={cn("w-full justify-start gap-3 h-10 rounded-md", showFriends && "bg-secondary")}
+            onClick={() => {
+              setCurrentConversation(null);
+              onShowFriendsChange(true);
+            }}
+          >
+            <Users className="w-5 h-5" />
+            <span>Friends</span>
+          </Button>
+        </div>
 
-      {/* Conversations list */}
-      <div className="flex-1 overflow-y-auto scrollbar-overlay px-2 space-y-0.5">
+        {/* Explore Button */}
+        <div className="px-2 mb-2">
+          <Button
+            variant="ghost"
+            className={cn("w-full justify-start gap-3 h-10 rounded-md", showExplore && "bg-secondary")}
+            onClick={() => {
+              setCurrentConversation(null);
+              onShowExploreChange(true);
+            }}
+          >
+            <Compass className="w-5 h-5" />
+            <span>Explore</span>
+          </Button>
+        </div>
+
+        {/* Search */}
+        <div className="px-2 pb-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Find or start a conversation"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+        </div>
+
+        {/* Section header with Create Group */}
+        <div className="px-4 py-2 flex items-center justify-between">
+          <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Direct Messages</h3>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="h-6 w-6"
+            onClick={() => setShowCreateGroup(true)}
+            title="Create Group"
+          >
+            <UserRoundPlus className="w-4 h-4" />
+          </Button>
+        </div>
+
+        {/* Conversations list */}
+        <div className="flex-1 overflow-y-auto scrollbar-overlay px-2 space-y-0.5">
         {/* Loading state */}
         {isLoading && conversations.length === 0 && (
           <>
@@ -181,10 +182,10 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
         )}
 
         {/* Conversations */}
-        {filteredConversations.map((conversation) => {
-          const unreadCount = getUnreadCount(conversation.id);
-          const hasUnread = unreadCount > 0;
-          const isGroup = conversation.is_group || false;
+          {filteredConversations.map((conversation) => {
+            const unreadCount = getUnreadCount(conversation.id);
+            const hasUnread = unreadCount > 0;
+            const isGroup = conversation.is_group || false;
 
           // Get display name for groups
           const getGroupDisplayName = () => {
@@ -201,15 +202,17 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
             return names.join(", ");
           };
 
-          return (
-            <div
-              key={conversation.id}
-              className={cn(
-                "group flex items-center gap-3 px-2 py-2 rounded cursor-pointer transition-smooth",
-                currentConversation?.id === conversation.id && !showFriends ? "bg-secondary" : "hover:bg-secondary/50",
-              )}
-              onClick={() => handleSelectConversation(conversation)}
-            >
+            return (
+              <div
+                key={conversation.id}
+                className={cn(
+                  "group flex items-center gap-3 px-2 py-2 rounded-md cursor-pointer transition-smooth",
+                  currentConversation?.id === conversation.id && !showFriends
+                    ? "bg-secondary"
+                    : "hover:bg-secondary/50",
+                )}
+                onClick={() => handleSelectConversation(conversation)}
+              >
               {/* Avatar with status (or stacked avatars for group) */}
               <div className="relative flex-shrink-0">
                 {isGroup ? (
@@ -284,13 +287,14 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
                   <X className="w-4 h-4 text-muted-foreground" />
                 </button>
               )}
-            </div>
-          );
-        })}
-      </div>
+              </div>
+            );
+          })}
+        </div>
 
-      <VoiceConnectedBanner />
-      <LoggedInUserPanel />
+        <VoiceConnectedBanner />
+        <LoggedInUserPanel />
+      </div>
 
       {/* Create Group Modal */}
       <CreateGroupModal open={showCreateGroup} onOpenChange={setShowCreateGroup} />

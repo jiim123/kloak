@@ -833,7 +833,7 @@ export const ServerSidebar = () => {
   );
 
   return (
-    <div className="h-full flex flex-col items-center py-3 gap-2 bg-layout-sidebar">
+    <div className="h-full flex flex-col items-center bg-layout-sidebar relative overflow-hidden">
       {/* Server list */}
       <DndContext
         sensors={sensors}
@@ -846,7 +846,7 @@ export const ServerSidebar = () => {
             <div
               ref={setRootDroppableRef}
               className={cn(
-                "flex-1 flex flex-col items-center gap-2 overflow-y-auto scrollbar-overlay scrollbar-hide w-full px-3",
+                "flex-1 flex flex-col items-center gap-2 overflow-y-auto scrollbar-overlay scrollbar-hide w-full pl-3 pr-2 pt-3 pb-24",
                 isOverRoot && "outline outline-2 outline-primary/30 outline-offset-[-2px] rounded-md",
               )}
             >
@@ -1062,72 +1062,6 @@ export const ServerSidebar = () => {
                 })}
               </AnimatePresence>
 
-              {/* Add Server button */}
-              <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
-                <TooltipTrigger asChild>
-                  <MotionButton
-                    whileTap={{ scale: 0.95 }}
-                    whileHover="hover"
-                    initial="default"
-                    onClick={() => openModal("create-server")}
-                    className="relative w-12 h-12 rounded-[6px] text-muted-foreground hover:text-foreground transition-colors duration-200 flex items-center justify-center overflow-hidden"
-                  >
-                    {/* Animated dashed border */}
-                    <motion.svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 48 48">
-                      <motion.rect
-                        x="1"
-                        y="1"
-                        width="46"
-                        height="46"
-                        rx="5"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeDasharray="6 4"
-                        variants={{
-                          default: {
-                            strokeDashoffset: 0,
-                            opacity: 0.5,
-                          },
-                          hover: {
-                            strokeDashoffset: -10,
-                            opacity: 0,
-                            transition: {
-                              strokeDashoffset: {
-                                duration: 0.6,
-                                ease: "linear",
-                              },
-                              opacity: {
-                                duration: 0.2,
-                                delay: 0.4,
-                              },
-                            },
-                          },
-                        }}
-                      />
-                    </motion.svg>
-
-                    {/* Solid border on hover */}
-                    <motion.div
-                      className="absolute inset-0 rounded-[6px] border border-muted-foreground/50 pointer-events-none"
-                      variants={{
-                        default: {
-                          opacity: 0,
-                        },
-                        hover: {
-                          opacity: 1,
-                        },
-                      }}
-                      transition={{ duration: 0.2 }}
-                    />
-
-                    <Plus className="w-5 h-5 relative z-10" />
-                  </MotionButton>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="font-medium">
-                  Add or Join a Server
-                </TooltipContent>
-              </Tooltip>
             </div>
           </ContextMenuTrigger>
           <ContextMenuContent>
@@ -1158,9 +1092,76 @@ export const ServerSidebar = () => {
         </DragOverlay>
       </DndContext>
 
-      {/* Bottom spacer */}
-      <div className="w-full px-3">
-        <div className="w-8 h-0.5 bg-border rounded-full shrink-0 mx-auto" />
+      {/* Sticky Add Server button at bottom */}
+      <div className="absolute bottom-0 left-0 right-0 pl-3 pr-2 pb-3 pt-2 bg-layout-sidebar z-10">
+        <div className="w-8 h-0.5 bg-border rounded-full shrink-0 mx-auto mb-2" />
+        <div className="flex justify-center">
+          <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
+            <TooltipTrigger asChild>
+              <MotionButton
+                whileTap={{ scale: 0.95 }}
+                whileHover="hover"
+                initial="default"
+                onClick={() => openModal("create-server")}
+                className="relative w-12 h-12 rounded-[6px] text-muted-foreground hover:text-foreground transition-colors duration-200 flex items-center justify-center overflow-hidden"
+              >
+                {/* Animated dashed border */}
+                <motion.svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 48 48">
+                  <motion.rect
+                    x="1"
+                    y="1"
+                    width="46"
+                    height="46"
+                    rx="5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeDasharray="6 4"
+                    variants={{
+                      default: {
+                        strokeDashoffset: 0,
+                        opacity: 0.5,
+                      },
+                      hover: {
+                        strokeDashoffset: -10,
+                        opacity: 0,
+                        transition: {
+                          strokeDashoffset: {
+                            duration: 0.6,
+                            ease: "linear",
+                          },
+                          opacity: {
+                            duration: 0.2,
+                            delay: 0.4,
+                          },
+                        },
+                      },
+                    }}
+                  />
+                </motion.svg>
+
+                {/* Solid border on hover */}
+                <motion.div
+                  className="absolute inset-0 rounded-[6px] border border-muted-foreground/50 pointer-events-none"
+                  variants={{
+                    default: {
+                      opacity: 0,
+                    },
+                    hover: {
+                      opacity: 1,
+                    },
+                  }}
+                  transition={{ duration: 0.2 }}
+                />
+
+                <Plus className="w-5 h-5 relative z-10" />
+              </MotionButton>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="font-medium">
+              Add or Join a Server
+            </TooltipContent>
+          </Tooltip>
+        </div>
       </div>
 
       <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
