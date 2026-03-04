@@ -69,8 +69,8 @@ export const PinnedMessagesPanel = () => {
           ) : pinnedMessages.length > 0 ? (
             <div className="space-y-3">
               {pinnedMessages.map((message) => {
-                // Phase 1: Look up user from cache instead of message.user
-                const msgUser = useUserCacheStore.getState().getUser(message.user_id) ?? message.user;
+                // Phase 1: Look up user from cache
+                const msgUser = useUserCacheStore.getState().getUser(message.user_id);
                 return (
                 <div 
                   key={message.id}

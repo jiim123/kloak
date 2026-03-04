@@ -29,7 +29,7 @@ import type { Message, User, ServerMember, CustomServerRole } from "@/types";
 import { TiptapEditor } from "./TiptapEditor";
 import { AnnouncementView } from "./AnnouncementView";
 import { cn } from "@/lib/utils";
-import { getOrFetchUser, getUserFromCache } from "@/lib/userCache";
+import { getUserFromCache, getOrFetchUser } from "@/stores/userCacheStore";
 
 const ROLE_COLORS: Record<string, string> = {
   owner: "text-yellow-400",

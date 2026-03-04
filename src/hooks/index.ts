@@ -21,7 +21,7 @@ export { useOnlineStatus } from './useOnlineStatus';
 export { useOfflineSync } from './useOfflineSync';
 
 export { useBackgroundSync } from './useBackgroundSync';
-export { useVirtualizedMessages } from './useVirtualizedMessages';
+
 export { useConnectionStatus } from './useConnectionStatus';
 export { usePreferencesSync } from './usePreferencesSync';
 export { useNotificationSound, playNotificationSound } from './useNotificationSound';

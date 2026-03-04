@@ -3,8 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { useServerStore } from "@/stores/serverStore";
-import { bulkSetUsersInCache } from "@/lib/userCache";
-import { useUserCacheStore } from "@/stores/userCacheStore";
+import { useUserCacheStore, bulkSetUsersInCache } from "@/stores/userCacheStore";
 import type { Message, MessageReply, ReactionGroup, User } from "@/types";
 
 interface ChannelMessages {

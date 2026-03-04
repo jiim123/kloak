@@ -4,7 +4,7 @@ import { useDMStore } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
 import type { DirectMessage, ReactionGroup } from '@/types';
 import { useRealtimeUserUpdates } from './useRealtimeUserUpdates';
-import { getOrFetchUser } from '@/lib/userCache';
+import { getOrFetchUser } from '@/stores/userCacheStore';
 
 interface UseRealtimeDMsOptions {
   userId: string | null;

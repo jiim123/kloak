@@ -9,7 +9,7 @@ import { CustomEmojiPopover } from "./CustomEmojiPopover";
 import { useUIStore } from "@/stores/uiStore";
 import { useServerStore } from "@/stores/serverStore";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
-import { getOrFetchUser, getUserFromCache } from "@/lib/userCache";
+import { getUserFromCache, getOrFetchUser } from "@/stores/userCacheStore";
 import {
   getGlobalEmojiMap,
   getGlobalEmojiDuplicates,

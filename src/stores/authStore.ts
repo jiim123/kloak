@@ -3,7 +3,7 @@ import { persist } from "zustand/middleware";
 import { getKeyHash, supabase, setKeyHashHeader } from "@/integrations/supabase/client";
 import { generateSecretKey, hashSecretKey, isValidSecretKey } from "@/lib/crypto";
 import { authRateLimiter, accountCreationRateLimiter, validateUsername } from "@/lib/security";
-import { setUserInCache, invalidateUser } from "@/lib/userCache";
+import { useUserCacheStore } from "@/stores/userCacheStore";
 import type { User, UserStatus } from "@/types";
 let lastSeenTimestamp = 0;
 // Presence/status is not critical to be realtime; debounce + coalesce AUTO status updates
@@ -220,7 +220,7 @@ export const useAuthStore = create<AuthState>()(
             manualStatus: null,
           });
           // Seed user cache to avoid immediate redundant get_user_by_id calls (realtime / DMs).
-          setUserInCache(user.id, user);
+          useUserCacheStore.getState().upsertUser(user);
 
           return { secretKey, user };
         } catch (error) {
@@ -287,7 +287,7 @@ export const useAuthStore = create<AuthState>()(
 
           set({ user, secretKey, isAuthenticated: true, isLoading: false });
           // Seed user cache to avoid redundant get_user_by_id calls (realtime / DMs).
-          setUserInCache(user.id, user);
+          useUserCacheStore.getState().upsertUser(user);
 
           // Re-apply a persisted manual status (e.g. Invisible/DND) on login.
           const { manualStatus } = get();
@@ -312,7 +312,7 @@ export const useAuthStore = create<AuthState>()(
               _status: "offline",
             })
             .then(() => {});
-          invalidateUser(user.id);
+          useUserCacheStore.getState().invalidate(user.id);
         }
         setKeyHashHeader(null);
         set({ user: null, secretKey: null, keyHash: null, isAuthenticated: false, error: null });
@@ -395,11 +395,11 @@ export const useAuthStore = create<AuthState>()(
             };
 
             set({ user: updatedUser });
-            setUserInCache(updatedUser.id, updatedUser as any);
+            useUserCacheStore.getState().upsertUser(updatedUser as any);
           } else {
             const updatedUser = { ...user, ...normalizedUpdates };
             set({ user: updatedUser });
-            setUserInCache(updatedUser.id, updatedUser as any);
+            useUserCacheStore.getState().upsertUser(updatedUser as any);
           }
         } catch (error) {
           console.error("Failed to update user:", error);

@@ -6,7 +6,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useServerStore } from '@/stores/serverStore';
 import { useUserCacheStore } from '@/stores/userCacheStore';
 import type { Message } from '@/types';
-import { getOrFetchUser, getUserFromCache } from '@/lib/userCache';
+import { fetchAndCacheUser, getUserFromCache, getOrFetchUser } from '@/stores/userCacheStore';
 import type { User } from '@/types';
 import { canRevealGhostIdentityForUser, getGhostPseudonymousUserId } from '@/lib/ghostIdentity';
 

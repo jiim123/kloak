@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo, Fragment } from "react";
-import { Virtuoso, VirtuosoHandle } from "react-virtuoso";
+
 import { Ghost } from "lucide-react";
 import { ChevronDown, Loader2, Hash, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";

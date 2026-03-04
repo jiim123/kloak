@@ -58,7 +58,7 @@ import { isImageOnlyMessage } from "@/lib/message";
 import { isPollMessageContent } from "@/lib/poll";
 import { MessageContent, ReplyPreview } from "@/components/chat/MessageContent";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
-import { getOrFetchUser, getUserFromCache } from "@/lib/userCache";
+import { getUserFromCache, getOrFetchUser } from "@/stores/userCacheStore";
 import type { Message, User, ReactionGroup, CustomServerRole, ServerMember, ServerRole } from "@/types";
 
 interface Thread {
