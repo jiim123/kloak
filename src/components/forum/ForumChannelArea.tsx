@@ -10,6 +10,7 @@ import { useTyping } from "@/hooks/useTyping";
 import { useSwipeGestureRef } from "@/hooks/useSwipeGesture";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthorStyles } from "@/hooks/useAuthorStyles";
+import { useUnreadChannelsContext } from "@/hooks/useUnreadChannelsContext";
 import {
   MessageSquare,
   Hash,
@@ -112,6 +113,7 @@ export const ForumChannelArea = () => {
   const { user } = useAuthStore();
   const { sendMessage } = useMessageStore();
   const { setMobileSidebarOpen, setMemberSidebarOpen, openModal } = useUIStore();
+  const { markAsRead } = useUnreadChannelsContext();
   const { typingUsers, startTyping, stopTyping } = useTyping(currentChannel?.id || null);
   const isMobile = useIsMobile();
   const { hasPermission } = useMemberPermissions(currentChannel?.id);
@@ -1245,6 +1247,9 @@ export const ForumChannelArea = () => {
             return thread;
           }),
         );
+        if (currentChannel?.id) {
+          void markAsRead(currentChannel.id);
+        }
         clearPendingAttachments("reply");
       } catch (error) {
         // Restore reply content on error
@@ -1254,15 +1259,7 @@ export const ForumChannelArea = () => {
         setIsSendingReply(false);
       }
     },
-    [
-      user,
-      replyContent,
-      currentChannel,
-      replyingToThread,
-      replyPendingAttachments,
-      uploadPendingAttachments,
-      clearPendingAttachments,
-    ],
+    [user, replyContent, currentChannel, replyingToThread, replyPendingAttachments, uploadPendingAttachments, clearPendingAttachments, markAsRead],
   );
 
   const handleThreadClick = useCallback(
@@ -1273,6 +1270,9 @@ export const ForumChannelArea = () => {
       }
 
       setSelectedThreadId(threadId);
+      if (currentChannel?.id) {
+        void markAsRead(currentChannel.id, messageId);
+      }
 
       // Fetch thread messages if not already loaded
       if (!threadMessages[threadId]) {
@@ -1283,7 +1283,7 @@ export const ForumChannelArea = () => {
         }
       }
     },
-    [selectedThreadId, threadMessages, fetchThreadMessagesById],
+    [selectedThreadId, threadMessages, fetchThreadMessagesById, currentChannel?.id, markAsRead],
   );
 
   if (!currentChannel) {

@@ -529,8 +529,10 @@ const AppLayout = () => {
         : currentChannel
           ? `# ${currentChannel.name}`
           : currentServer
-            ? currentServer.name
+          ? currentServer.name
             : "Kloak";
+  const isFullscreenSettingsOverlayOpen =
+    !isMobile && (isServerSettingsOpen || activeModal === "user-settings" || activeModal === "edit-channel");
 
   return (
     <UnreadDMsContext.Provider value={unreadDMsContextValue}>
@@ -600,13 +602,11 @@ const AppLayout = () => {
               /* Desktop layout */
               <div className="flex flex-col flex-1 overflow-hidden">
                 {/* Alpha notice banner */}
-                {!isServerSettingsOpen && activeModal !== "user-settings" && activeModal !== "edit-channel" && (
-                  <AlphaNoticeBanner />
-                )}
+                {!isFullscreenSettingsOverlayOpen && <AlphaNoticeBanner />}
 
                 <div className="flex flex-1 overflow-hidden relative">
                   {/* Server list on left - hidden during full-screen settings */}
-                  {!isServerSettingsOpen && activeModal !== "user-settings" && activeModal !== "edit-channel" && (
+                  {!isFullscreenSettingsOverlayOpen && (
                     <div className="w-[68px] shrink-0 bg-layout-sidebar">
                       <ServerSidebar />
                     </div>
@@ -614,23 +614,23 @@ const AppLayout = () => {
 
                   {/* Full-screen settings overlays - rendered on top, main layout stays mounted */}
                   {isServerSettingsOpen && (
-                    <div className="absolute inset-0 z-20 bg-background">
+                    <div className="absolute inset-0 z-50 bg-background">
                       <ServerSettingsPage />
                     </div>
                   )}
                   {activeModal === "user-settings" && (
-                    <div className="absolute inset-0 z-20 bg-background">
+                    <div className="absolute inset-0 z-50 bg-background">
                       <UserSettingsPage />
                     </div>
                   )}
                   {activeModal === "edit-channel" && (
-                    <div className="absolute inset-0 z-20 bg-background">
+                    <div className="absolute inset-0 z-50 bg-background">
                       <ChannelSettingsPage />
                     </div>
                   )}
 
                   {/* Main layout - ALWAYS mounted so VoicePersistentHost never unmounts */}
-                  <div className="flex-1 overflow-hidden">
+                  <div className={cn("flex-1 overflow-hidden", isFullscreenSettingsOverlayOpen && "invisible")}>
                     <ResizablePanelGroup direction="horizontal" className="flex-1">
                       {/* Secondary sidebar - resizable */}
                       <ResizablePanel defaultSize={20} minSize={10} maxSize={30} className="bg-layout-sidebar-secondary">
