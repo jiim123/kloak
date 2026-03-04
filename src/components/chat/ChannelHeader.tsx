@@ -1,38 +1,16 @@
 import { useState } from "react";
 import { Hash, Volume2, MessageSquare, Pin, Search, Users, Lock, Megaphone, Film } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useServerStore } from "@/stores/serverStore";
 import { useUIStore } from "@/stores/uiStore";
-import { cn } from "@/lib/utils";
 import type { Channel } from "@/types";
 
 interface ChannelHeaderProps {
   channel: Channel;
 }
-
-const buttonVariants = {
-  initial: {
-    gap: 0,
-    paddingLeft: ".5rem",
-    paddingRight: ".5rem",
-  },
-  animate: (isExpanded: boolean) => ({
-    gap: isExpanded ? ".5rem" : 0,
-    paddingLeft: isExpanded ? ".75rem" : ".5rem",
-    paddingRight: isExpanded ? ".75rem" : ".5rem",
-  }),
-};
-
-const spanVariants = {
-  initial: { width: 0, opacity: 0 },
-  animate: { width: "auto", opacity: 1 },
-  exit: { width: 0, opacity: 0 },
-};
-
-const transition = { delay: 0.1, type: "spring" as const, bounce: 0, duration: 0.6 };
 
 interface HeaderButtonProps {
   icon: React.ElementType;
@@ -47,36 +25,22 @@ const HeaderButton = ({ icon: Icon, label, onClick, isHovered, onMouseEnter, onM
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <motion.button
-          variants={buttonVariants}
-          initial={false}
-          animate="animate"
-          custom={isHovered}
-          transition={transition}
+        <button
           onClick={onClick}
           onMouseEnter={onMouseEnter}
           onMouseLeave={onMouseLeave}
           className={cn(
-            "relative flex items-center rounded-xl py-2 text-sm font-medium transition-colors duration-300",
-            isHovered ? "bg-muted/70 text-foreground" : "text-muted-foreground hover:text-foreground",
+            "relative flex items-center rounded-xl py-2 text-sm font-medium transition-all duration-200",
+            isHovered ? "bg-muted/70 text-foreground gap-2 px-3" : "text-muted-foreground hover:text-foreground gap-0 px-2",
           )}
         >
           <Icon className="w-4 h-4 flex-shrink-0" />
-          <AnimatePresence initial={false}>
-            {isHovered && (
-              <motion.span
-                variants={spanVariants}
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                transition={transition}
-                className="overflow-hidden whitespace-nowrap text-sm"
-              >
-                {label}
-              </motion.span>
-            )}
-          </AnimatePresence>
-        </motion.button>
+          {isHovered && (
+            <span className="whitespace-nowrap text-sm">
+              {label}
+            </span>
+          )}
+        </button>
       </TooltipTrigger>
       <TooltipContent>{label}</TooltipContent>
     </Tooltip>
@@ -111,7 +75,7 @@ export const ChannelHeader = ({ channel }: ChannelHeaderProps) => {
   ];
 
   return (
-    <div className="h-12 px-4 hidden md:flex items-center justify-between border-b border-border/50 flex-shrink-0 bg-background/50 backdrop-blur-sm">
+    <div className="h-12 px-4 hidden md:flex items-center justify-between border-b border-border/50 flex-shrink-0 bg-background">
       {/* Left side - Channel info */}
       <div className="flex items-center gap-2 min-w-0 flex-1">
         <div className="w-8 h-8 rounded-lg bg-secondary/50 flex items-center justify-center flex-shrink-0">
@@ -152,7 +116,7 @@ export const ChannelHeader = ({ channel }: ChannelHeaderProps) => {
       </div>
 
       {/* Right side - Actions */}
-      <div className="flex items-center gap-1 flex-shrink-0 rounded-xl border border-border/50 bg-background/70 backdrop-blur-xl p-1">
+      <div className="flex items-center gap-1 flex-shrink-0 rounded-xl border border-border/50 bg-secondary/50 p-1">
         {buttons.map((button) => (
           <HeaderButton
             key={button.id}

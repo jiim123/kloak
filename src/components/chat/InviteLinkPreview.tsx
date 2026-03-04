@@ -97,7 +97,7 @@ export const InviteLinkPreview = ({ inviteCode }: { inviteCode: string }) => {
 
   if (isLoading) {
     return (
-      <div className="mt-2 w-full max-w-sm rounded-2xl border border-border/60 bg-card/60 p-4 shadow-sm backdrop-blur">
+      <div className="mt-2 w-full max-w-sm rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="h-12 w-12 rounded-xl bg-muted/50" />
           <div className="flex-1">
@@ -112,7 +112,7 @@ export const InviteLinkPreview = ({ inviteCode }: { inviteCode: string }) => {
 
   if (!invite) {
     return (
-      <div className="mt-2 w-full max-w-sm overflow-hidden rounded-2xl border border-border/60 bg-card/60 shadow-sm backdrop-blur">
+      <div className="mt-2 w-full max-w-sm overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
         <div className="p-4">
           <div className="font-medium leading-tight">Invalid invite</div>
           <div className="mt-1 text-xs text-muted-foreground">This invite may be invalid or revoked.</div>
@@ -125,7 +125,7 @@ export const InviteLinkPreview = ({ inviteCode }: { inviteCode: string }) => {
   }
 
   return (
-    <div className="mt-2 w-full max-w-sm overflow-hidden rounded-2xl border border-border/60 bg-card/60 shadow-sm backdrop-blur">
+    <div className="mt-2 w-full max-w-sm overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
       <div className="p-4">
         <div className="flex items-center gap-3">
           <Avatar className="h-12 w-12 rounded-xl">
