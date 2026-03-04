@@ -200,7 +200,7 @@ export const MentionAutocomplete = ({
   return (
     <div
       ref={containerRef}
-      className="absolute z-50 w-72 bg-card/95 backdrop-blur-sm border border-border/50 rounded-xl shadow-xl overflow-hidden"
+      className="absolute z-50 w-72 bg-card border border-border/50 rounded-xl shadow-xl overflow-hidden"
       style={{
         bottom: position.top,
         left: position.left,

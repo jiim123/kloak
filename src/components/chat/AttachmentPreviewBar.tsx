@@ -50,7 +50,7 @@ export const AttachmentPreviewBar = memo(({ attachments, onRemove, onAddMore, di
 
               {/* Upload spinner overlay */}
               {att.uploading && (
-                <div className="absolute inset-0 bg-background/60 backdrop-blur-sm flex items-center justify-center">
+                <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
                   <Loader2 className="w-5 h-5 text-primary animate-spin" />
                 </div>
               )}
@@ -60,7 +60,7 @@ export const AttachmentPreviewBar = memo(({ attachments, onRemove, onAddMore, di
             {!disabled && !att.uploading && (
               <button
                 onClick={() => onRemove(index)}
-                className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-background border border-border/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 <X className="w-3 h-3 text-foreground" />
               </button>
