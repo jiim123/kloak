@@ -584,7 +584,20 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
           >
             <button
               onClick={scrollToBottom}
-              className="flex items-center gap-2 px-4 py-2 rounded-full border border-primary/40 bg-primary text-primary-foreground shadow-md transition-colors duration-150 hover:bg-primary/90 hover:border-primary/60"
+              className="flex items-center gap-2 px-4 py-2 rounded-full border backdrop-blur-sm transition-colors duration-150"
+              style={{
+                backgroundColor: "rgba(252, 98, 43, 0.08)",
+                borderColor: "rgba(252, 98, 43, 0.35)",
+                color: "#fc622b",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "rgba(252, 98, 43, 0.15)";
+                e.currentTarget.style.borderColor = "rgba(252, 98, 43, 0.6)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "rgba(252, 98, 43, 0.08)";
+                e.currentTarget.style.borderColor = "rgba(252, 98, 43, 0.35)";
+              }}
             >
               <ChevronDown className="w-4 h-4" />
               <span className="text-sm font-medium">
