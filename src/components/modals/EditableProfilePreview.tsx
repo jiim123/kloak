@@ -312,25 +312,7 @@ export const EditableProfilePreview = ({
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Decoration button - always visible with text */}
-            <Button
-              variant="secondary"
-              size="sm"
-              className="rounded-lg bg-background/60 hover:bg-background/80 h-8 px-3"
-              onClick={onOpenAvatarDecoration}
-            >
-              {user.avatar_decoration ? (
-                <>
-                  <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-                  Change Decoration
-                </>
-              ) : (
-                <>
-                  <Plus className="w-3.5 h-3.5 mr-1.5" />
-                  Add Decoration
-                </>
-              )}
-            </Button>
+            {/* Avatar decorations are currently disabled */}
           </div>
 
           {/* Display Name - Inline Editable */}
