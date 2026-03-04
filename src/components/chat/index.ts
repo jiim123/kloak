@@ -9,3 +9,4 @@ export * from './TypingIndicator';
 export * from './MentionAutocomplete';
 export * from './ChannelAutocomplete';
 export * from './FormatToolbar';
+export * from './JumpToPresent';
