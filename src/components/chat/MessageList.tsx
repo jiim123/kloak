@@ -409,8 +409,10 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     if (atBottom) {
       setShowJumpToPresent(false);
       setNewMessageCount(0);
+    } else if (deduplicatedMessages.length > 10) {
+      setShowJumpToPresent(true);
     }
-  }, []);
+  }, [deduplicatedMessages.length]);
 
   const handleStartReached = useCallback(() => {
     if (hasMore && !isLoading && !isFetchingOlder) {
@@ -421,23 +423,9 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }
   }, [hasMore, isLoading, isFetchingOlder, deduplicatedMessages, channelData?.oldestLoadedAt, fetchMessages, channelId]);
 
-  const handleRangeChanged = useCallback(
-    (range: { startIndex: number; endIndex: number }) => {
-      if (deduplicatedMessages.length === 0) return;
-      // Only show "jump to present" if user has scrolled far enough up.
-      // Don't interfere when near the bottom — followOutput handles that.
-      const isNearEnd = range.endIndex >= deduplicatedMessages.length - 3;
-      if (!isNearEnd && deduplicatedMessages.length > 10 && !isNearBottomRef.current) {
-        setShowJumpToPresent(true);
-      }
-    },
-    [deduplicatedMessages.length],
-  );
-
   // Render a single message row with date dividers and unread dividers
   const itemContent = useCallback(
-    (index: number) => {
-      const message = deduplicatedMessages[index];
+    (index: number, message: Message) => {
       if (!message) return null;
 
       const previousMessage = index > 0 ? deduplicatedMessages[index - 1] : null;
@@ -552,14 +540,12 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
           <Virtuoso
             ref={virtuosoRef}
             data={deduplicatedMessages}
-            totalCount={deduplicatedMessages.length}
             initialTopMostItemIndex={deduplicatedMessages.length - 1}
             followOutput={(isAtBottom) => isAtBottom ? "auto" : false}
             alignToBottom
             atBottomThreshold={150}
             atBottomStateChange={handleAtBottomStateChange}
             startReached={handleStartReached}
-            rangeChanged={handleRangeChanged}
             overscan={600}
             increaseViewportBy={{ top: 400, bottom: 200 }}
             computeItemKey={computeItemKey}
