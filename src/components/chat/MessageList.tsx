@@ -1,9 +1,9 @@
-import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo, Fragment } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo, Fragment } from "react";
+import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 
 import { Ghost } from "lucide-react";
 import { ChevronDown, Loader2, Hash, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "@/components/ui/button";
 import { MessageItem } from "./MessageItem";
 import { MessageListSkeleton } from "@/components/ui/skeletons";
 import { useMessageStore } from "@/stores/messageStore";
@@ -26,12 +26,8 @@ interface MessageListProps {
   manageCurrentChannel?: boolean;
 }
 
-// Virtualization constants
 const CHANNEL_ENTRY_FORCE_REFETCH_MAX_AGE_MS = 12_000;
 const AUTHOR_STYLE_FETCH_CHUNK = 100;
-const VIRTUALIZATION_THRESHOLD = 80; // Only virtualize when more than this many messages
-const ESTIMATED_MESSAGE_HEIGHT = 72; // Average px height of a message row
-const VIRTUAL_OVERSCAN = 15; // Extra rows rendered above/below viewport
 
 interface MessageAuthorStyle {
   user_id: string;
@@ -59,28 +55,19 @@ const parseAuthorStyleRows = (payload: unknown): MessageAuthorStyle[] => {
 const shouldGroupMessages = (current: Message, previous: Message | null): boolean => {
   if (!previous) return false;
   if (current.user_id !== previous.user_id) return false;
-  if (current.reply_to_id) return false; // Don't group replies
+  if (current.reply_to_id) return false;
 
   const currentTime = new Date(current.created_at).getTime();
   const previousTime = new Date(previous.created_at).getTime();
-
-  // Changed from 5 minutes to 1 minute
   const oneMinute = 1 * 60 * 1000;
 
   return currentTime - previousTime < oneMinute;
 };
 
-/**
- * Generate a stable key for a message that survives optimistic→real ID changes.
- * Uses timestamp (rounded to second) + user_id + content prefix.
- * This ensures React doesn't unmount/remount when temp-xxx becomes a real UUID.
- */
 const getStableMessageKey = (message: Message): string => {
-  // For non-temp messages, just use the ID (it's stable)
   if (!message.id.startsWith("temp-")) {
     return message.id;
   }
-  // For temp messages, use content-based key that will match the real message
   const timestamp = Math.floor(new Date(message.created_at).getTime() / 1000);
   const contentPrefix = message.content.substring(0, 30).replace(/\s+/g, "_");
   return `pending-${timestamp}-${message.user_id}-${contentPrefix}`;
@@ -120,11 +107,9 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   const hasMore = channelData?.hasMore ?? true;
 
   // Deduplicate messages - prefer real messages over temp ones
-  // This must be defined early so it can be used in useLayoutEffect for scroll positioning
   const deduplicatedMessages = useMemo(() => {
     const seen = new Map<string, Message>();
 
-    // First pass: collect all messages by their stable key
     for (const msg of messages) {
       const stableKey = getStableMessageKey(msg);
       const existing = seen.get(stableKey);
@@ -132,20 +117,14 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       if (!existing) {
         seen.set(stableKey, msg);
       } else {
-        // Prefer real message over temp message
         if (msg.id.startsWith("temp-") && !existing.id.startsWith("temp-")) {
           // Keep existing (real message)
         } else if (!msg.id.startsWith("temp-") && existing.id.startsWith("temp-")) {
-          // Replace with real message
           seen.set(stableKey, msg);
         }
-        // If both are same type, keep first one
       }
     }
 
-    // Convert back to array and sort by created_at
-    // For announcement channels, sort newest first (descending)
-    // For other channels, sort oldest first (ascending)
     return Array.from(seen.values()).sort((a, b) => {
       const timeA = new Date(a.created_at).getTime();
       const timeB = new Date(b.created_at).getTime();
@@ -161,34 +140,26 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     return Array.from(ids);
   }, [deduplicatedMessages]);
 
-  // Keep author profile fields (avatar/deco/display name) fresh for currently rendered messages.
+  // Keep author profile fields fresh for currently rendered messages.
   useRealtimeUserUpdates(visibleAuthorUserIds, `channel-authors:${channelId}`);
 
+  const virtuosoRef = useRef<VirtuosoHandle>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
   const [showJumpToPresent, setShowJumpToPresent] = useState(false);
   const [newMessageCount, setNewMessageCount] = useState(0);
-  const [containerHeight, setContainerHeight] = useState(0);
-  const scrollTopRef = useRef(0);
-  const lastScrollTopRef = useRef(0);
-  const prependAnchorRef = useRef<{ prevScrollHeight: number; prevScrollTop: number } | null>(null);
   const [authorStyleMap, setAuthorStyleMap] = useState<Record<string, MessageAuthorStyle>>({});
   const isNearBottomRef = useRef(true);
-  const lastMarkedMessageIdRef = useRef<string | null>(null); // Track last marked message ID instead of boolean
+  const lastMarkedMessageIdRef = useRef<string | null>(null);
   const prevMessagesLengthRef = useRef(0);
-  const needsScrollRef = useRef(true); // true on initial mount
   const prevChannelIdRef = useRef<string>(channelId);
-  const scrollRAFRef = useRef<number | null>(null); // For requestAnimationFrame
-  const refetchTimeoutRef = useRef<NodeJS.Timeout | null>(null); // For refetch timeout
+  const refetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const authorStyleServerIdRef = useRef<string | null>(null);
+  const initialScrollDoneRef = useRef(false);
 
-  // Detect channel switch during RENDER PHASE (synchronous).
-  // This must happen before useLayoutEffect so the flag is already
-  // set when the layout effect reads it — fixing the stale-cache bug
-  // where switching back to a cached channel kept the scroll at the top.
+  // Detect channel switch
   if (prevChannelIdRef.current !== channelId) {
     prevChannelIdRef.current = channelId;
-    needsScrollRef.current = true;
+    initialScrollDoneRef.current = false;
   }
 
   useEffect(() => {
@@ -209,11 +180,9 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   useEffect(() => {
     const handleEditLastMessage = (e: CustomEvent<{ userId: string; channelId: string }>) => {
       if (e.detail.channelId !== channelId || !e.detail.userId) return;
-      // Find the last message by this user in this channel
       const userMessages = messages.filter((m) => m.user_id === e.detail.userId);
       if (userMessages.length > 0) {
         const lastOwnMessage = userMessages[userMessages.length - 1];
-        // Dispatch event to trigger edit on that specific message
         window.dispatchEvent(
           new CustomEvent("startEditMessage", {
             detail: { messageId: lastOwnMessage.id },
@@ -232,7 +201,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       setCurrentChannel(channelId);
     }
     prevMessagesLengthRef.current = 0;
-    lastMarkedMessageIdRef.current = null; // Reset for new channel
+    lastMarkedMessageIdRef.current = null;
     setShowJumpToPresent(false);
     setNewMessageCount(0);
 
@@ -242,8 +211,6 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     const unreadSnapshot = getChannelUnread(channelId);
     const hasUnreadBacklog = (unreadSnapshot.unreadCount ?? 0) > 0;
 
-    // Avoid forcing a network fetch on every channel switch.
-    // Force when unread exists so switching back reconciles missed realtime updates.
     const shouldForceRefetch = !hasCached || !isRealtimeConnected || !isFreshEnough || hasUnreadBacklog;
     if (shouldForceRefetch) {
       fetchMessages(channelId, 50, undefined, true, hasCached);
@@ -263,76 +230,29 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     return () => clearInterval(interval);
   }, [channelId, fetchMessages, isRealtimeConnected]);
 
-  // Scroll to bottom AFTER messages render on channel switch.
-  // useLayoutEffect fires synchronously after DOM mutations but before paint,
-  // so the user never sees the mid-conversation position.
-  // `channelId` is in the deps so this re-fires even when switching back to a
-  // cached channel whose `messages` reference hasn't changed.
-  // We use deduplicatedMessages.length to ensure we scroll after the actual
-  // rendered content is ready, not just when the raw messages are available.
-  useLayoutEffect(() => {
-    if (needsScrollRef.current && deduplicatedMessages.length > 0) {
-      // Use scrollIntoView for more reliable scrolling
-      bottomRef.current?.scrollIntoView({ behavior: "instant" });
-      isNearBottomRef.current = true;
-      needsScrollRef.current = false;
-    }
-  }, [deduplicatedMessages.length, channelId]);
-
-  // Preserve viewport position after prepending older messages.
-  // Without this, top-pagination can "pull" the list upward and feel jittery.
-  useLayoutEffect(() => {
-    const anchor = prependAnchorRef.current;
-    const container = containerRef.current;
-    if (!anchor || !container) return;
-
-    const delta = container.scrollHeight - anchor.prevScrollHeight;
-    if (delta !== 0) {
-      container.scrollTop = anchor.prevScrollTop + delta;
-      scrollTopRef.current = container.scrollTop;
-    }
-    prependAnchorRef.current = null;
-  }, [deduplicatedMessages.length]);
-
-  // Reconcile after sleep/background: refetch latest when app regains focus/visibility.
-  // This ensures we catch any messages that realtime subscriptions might have missed
-  // when the tab was hidden (browsers throttle/pause WebSocket connections in hidden tabs).
-  // We always refetch, but silently (no loading indicator) if we already have messages.
+  // Reconcile after sleep/background
   const hiddenTimeRef = useRef<number | null>(null);
   const isRefetchingRef = useRef(false);
 
   useEffect(() => {
-    const MIN_HIDDEN_MS_FOR_REFETCH = 15_000; // skip refetch for quick tab switches
+    const MIN_HIDDEN_MS_FOR_REFETCH = 15_000;
 
-    // Consolidated refetch handler with error recovery
     const performRefetch = (reason: "visibility" | "focus") => {
       if (isRefetchingRef.current) return;
+      if (reason === "focus" && document.visibilityState === "visible") return;
 
-      // Avoid refetching on window focus if the tab is visible; visibilitychange already covers it.
-      if (reason === "focus" && document.visibilityState === "visible") {
-        return;
-      }
-
-      // If the tab was only hidden briefly, don't refetch.
       if (hiddenTimeRef.current) {
         const hiddenFor = Date.now() - hiddenTimeRef.current;
-        if (hiddenFor > 0 && hiddenFor < MIN_HIDDEN_MS_FOR_REFETCH) {
-          return;
-        }
+        if (hiddenFor > 0 && hiddenFor < MIN_HIDDEN_MS_FOR_REFETCH) return;
       }
 
       isRefetchingRef.current = true;
-
-      // Safety timeout: force-reset refetch flag after 5 seconds
-      if (refetchTimeoutRef.current) {
-        clearTimeout(refetchTimeoutRef.current);
-      }
+      if (refetchTimeoutRef.current) clearTimeout(refetchTimeoutRef.current);
       refetchTimeoutRef.current = setTimeout(() => {
         isRefetchingRef.current = false;
         refetchTimeoutRef.current = null;
       }, 5000);
 
-      // Silent refetch if we already have messages (no loading indicator)
       const hasMessages = messages.length > 0;
       fetchMessages(channelId, 50, undefined, true, hasMessages)
         .catch((error) => {
@@ -349,10 +269,8 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
 
     const handleVisibility = () => {
       if (document.visibilityState === "hidden") {
-        // Track when tab becomes hidden
         hiddenTimeRef.current = Date.now();
       } else if (document.visibilityState === "visible") {
-        // Refetch when tab becomes visible
         performRefetch("visibility");
         hiddenTimeRef.current = null;
       }
@@ -362,37 +280,11 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
 
     return () => {
       document.removeEventListener("visibilitychange", handleVisibility);
-      // Cleanup timeout on unmount
-      if (refetchTimeoutRef.current) {
-        clearTimeout(refetchTimeoutRef.current);
-      }
-      // Cleanup RAF on unmount
-      if (scrollRAFRef.current !== null) {
-        cancelAnimationFrame(scrollRAFRef.current);
-      }
+      if (refetchTimeoutRef.current) clearTimeout(refetchTimeoutRef.current);
     };
   }, [channelId, fetchMessages, messages.length]);
 
-  // Auto-scroll when new messages arrive
-  useEffect(() => {
-    const currentLength = messages.length;
-    const prevLength = prevMessagesLengthRef.current;
-
-    // Only react to actual new messages (not initial load or temp→real replacement)
-    if (currentLength > prevLength && prevLength > 0) {
-      if (isNearBottomRef.current && bottomRef.current) {
-        bottomRef.current.scrollIntoView({ behavior: "smooth" });
-        setNewMessageCount(0);
-      } else {
-        setNewMessageCount((prev) => prev + (currentLength - prevLength));
-      }
-    }
-
-    prevMessagesLengthRef.current = currentLength;
-  }, [messages.length]);
-
   // Mark as read when viewing channel (automatic)
-  // Only mark as read if we're at the bottom and haven't already marked this message
   useEffect(() => {
     if (messages.length > 0 && isNearBottomRef.current) {
       const latestMessage = messages[messages.length - 1];
@@ -407,127 +299,32 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }
   }, [messages, channelId, markAsRead]);
 
-  // Declared here so handleScroll can reference them without forward-declaration errors
-  const shouldVirtualize = deduplicatedMessages.length >= VIRTUALIZATION_THRESHOLD && !highlightedMessageId;
-  const [virtualRange, setVirtualRange] = useState({
-    startIndex: 0,
-    endIndex: Math.max(0, deduplicatedMessages.length - 1),
-  });
-
-  // Keep a ref to deduplicatedMessages so handleScroll doesn't recreate on every message/reaction change
-  const deduplicatedMessagesRef = useRef(deduplicatedMessages);
-  deduplicatedMessagesRef.current = deduplicatedMessages;
-
-  // Handle scroll events with RAF for better performance
-  const handleScroll = useCallback(() => {
-    // Cancel any pending RAF to debounce scroll updates
-    if (scrollRAFRef.current !== null) {
-      cancelAnimationFrame(scrollRAFRef.current);
-    }
-
-    scrollRAFRef.current = requestAnimationFrame(() => {
-      const container = containerRef.current;
-      if (!container) return;
-
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      scrollTopRef.current = scrollTop;
-      const isScrollingUp = scrollTop < lastScrollTopRef.current;
-      const msgs = deduplicatedMessagesRef.current;
-      if (shouldVirtualize && containerHeight > 0) {
-        const rawStart = Math.floor(scrollTop / ESTIMATED_MESSAGE_HEIGHT);
-        const visibleCount = Math.ceil(containerHeight / ESTIMATED_MESSAGE_HEIGHT);
-        const nextStart = Math.max(0, rawStart - VIRTUAL_OVERSCAN);
-        const nextEnd = Math.min(msgs.length - 1, rawStart + visibleCount + VIRTUAL_OVERSCAN);
-        setVirtualRange((prev) =>
-          prev.startIndex === nextStart && prev.endIndex === nextEnd
-            ? prev
-            : { startIndex: nextStart, endIndex: nextEnd },
-        );
-      }
-      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-
-      const wasNearBottom = isNearBottomRef.current;
-      const isNearBottom = distanceFromBottom < 100;
-
-      isNearBottomRef.current = isNearBottom;
-
-      // Only update state if the near-bottom status changed
-      if (wasNearBottom !== isNearBottom) {
-        setShowJumpToPresent(!isNearBottom && msgs.length > 0);
-      }
-
-      // Load more when scrolling to top
-      if (isScrollingUp && scrollTop < 100 && hasMore && !isLoading && !isFetchingOlder) {
-        const beforeCursor = msgs[0]?.created_at || channelData?.oldestLoadedAt || undefined;
-        if (beforeCursor) {
-          prependAnchorRef.current = { prevScrollHeight: scrollHeight, prevScrollTop: scrollTop };
-          fetchMessages(channelId, 50, beforeCursor);
-        }
-      }
-
-      lastScrollTopRef.current = scrollTop;
-      scrollRAFRef.current = null;
-    });
-  }, [
-    channelId,
-    hasMore,
-    isLoading,
-    isFetchingOlder,
-    channelData?.oldestLoadedAt,
-    fetchMessages,
-    shouldVirtualize,
-    containerHeight,
-  ]);
-
+  // New message count tracking
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    const currentLength = messages.length;
+    const prevLength = prevMessagesLengthRef.current;
 
-    const updateDimensions = () => {
-      setContainerHeight(container.clientHeight);
-    };
-
-    updateDimensions();
-
-    if (typeof ResizeObserver === "undefined") {
-      return;
-    }
-
-    const resizeObserver = new ResizeObserver(updateDimensions);
-    resizeObserver.observe(container);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [channelId]);
-
-  const scrollToBottom = () => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    setShowJumpToPresent(false);
-    setNewMessageCount(0);
-
-    // Mark as read, but only if different from last marked message
-    if (messages.length > 0) {
-      const latestMessage = messages[messages.length - 1];
-      if (!latestMessage.id.startsWith("temp-") && lastMarkedMessageIdRef.current !== latestMessage.id) {
-        markAsRead(channelId, latestMessage.id);
-        lastMarkedMessageIdRef.current = latestMessage.id;
+    if (currentLength > prevLength && prevLength > 0) {
+      if (!isNearBottomRef.current) {
+        setNewMessageCount((prev) => prev + (currentLength - prevLength));
       }
     }
-  };
+
+    prevMessagesLengthRef.current = currentLength;
+  }, [messages.length]);
 
   // Find the index where the NEW divider should appear
   const newMessagesDividerIndex = useMemo(() => {
     if (!lastReadAt || !firstUnreadMessageId) return -1;
     const lastReadTime = new Date(lastReadAt).getTime();
-    for (let i = 0; i < messages.length; i++) {
-      const msgTime = new Date(messages[i].created_at).getTime();
+    for (let i = 0; i < deduplicatedMessages.length; i++) {
+      const msgTime = new Date(deduplicatedMessages[i].created_at).getTime();
       if (msgTime > lastReadTime) {
         return i;
       }
     }
     return -1;
-  }, [messages, lastReadAt, firstUnreadMessageId]);
+  }, [deduplicatedMessages, lastReadAt, firstUnreadMessageId]);
 
   const messageAuthorIds = useMemo(() => {
     const unique = new Set<string>();
@@ -552,29 +349,20 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     let cancelled = false;
 
     const fetchAuthorStyles = async () => {
+      const batchIds = missingAuthorStyleIds.slice(0, AUTHOR_STYLE_FETCH_CHUNK);
+      const { data, error } = await supabase.rpc("get_message_author_styles" as any, {
+        _server_id: currentServerId,
+        _user_ids: batchIds,
+        _requesting_user_id: user.id,
+      });
+
+      if (error || !data || cancelled) return;
+
+      const rows = parseAuthorStyleRows(data);
       const next: Record<string, MessageAuthorStyle> = {};
 
-      for (let i = 0; i < missingAuthorStyleIds.length; i += AUTHOR_STYLE_FETCH_CHUNK) {
-        const chunk = missingAuthorStyleIds.slice(i, i + AUTHOR_STYLE_FETCH_CHUNK);
-        const { data, error } = await (
-          supabase.rpc as unknown as (
-            fn: string,
-            args: Record<string, unknown>,
-          ) => Promise<{ data: unknown; error: unknown }>
-        )("get_message_author_styles_secure", {
-          _server_id: currentServerId,
-          _user_id: user.id,
-          _target_user_ids: chunk,
-        });
-
-        if (error) {
-          console.error("Failed to fetch message author styles:", error);
-          return;
-        }
-
-        const rows = parseAuthorStyleRows(data);
-        for (const row of rows) {
-          if (!row.user_id) continue;
+      for (const row of rows) {
+        if (row.user_id) {
           next[row.user_id] = {
             user_id: row.user_id,
             role: row.role ?? null,
@@ -597,137 +385,192 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     };
   }, [currentServerId, user?.id, missingAuthorStyleIds]);
 
-  const estimatedTotalHeight = deduplicatedMessages.length * ESTIMATED_MESSAGE_HEIGHT;
-  // Recompute virtual range when layout changes (not on every scroll pixel)
-  useEffect(() => {
-    if (!shouldVirtualize || containerHeight <= 0) {
-      setVirtualRange({ startIndex: 0, endIndex: Math.max(0, deduplicatedMessages.length - 1) });
-      return;
+  const scrollToBottom = useCallback(() => {
+    virtuosoRef.current?.scrollToIndex({
+      index: deduplicatedMessages.length - 1,
+      behavior: "smooth",
+      align: "end",
+    });
+    setShowJumpToPresent(false);
+    setNewMessageCount(0);
+
+    if (messages.length > 0) {
+      const latestMessage = messages[messages.length - 1];
+      if (!latestMessage.id.startsWith("temp-") && lastMarkedMessageIdRef.current !== latestMessage.id) {
+        markAsRead(channelId, latestMessage.id);
+        lastMarkedMessageIdRef.current = latestMessage.id;
+      }
     }
-    const rawStart = Math.floor(scrollTopRef.current / ESTIMATED_MESSAGE_HEIGHT);
-    const visibleCount = Math.ceil(containerHeight / ESTIMATED_MESSAGE_HEIGHT);
-    const startIndex = Math.max(0, rawStart - VIRTUAL_OVERSCAN);
-    const endIndex = Math.min(deduplicatedMessages.length - 1, rawStart + visibleCount + VIRTUAL_OVERSCAN);
-    setVirtualRange((prev) =>
-      prev.startIndex === startIndex && prev.endIndex === endIndex ? prev : { startIndex, endIndex },
-    );
-  }, [shouldVirtualize, containerHeight, deduplicatedMessages.length]);
+  }, [deduplicatedMessages.length, messages, channelId, markAsRead]);
 
-  const visibleMessages = useMemo(() => {
-    if (!shouldVirtualize) return deduplicatedMessages;
-    if (virtualRange.endIndex < virtualRange.startIndex) return [];
-    return deduplicatedMessages.slice(virtualRange.startIndex, virtualRange.endIndex + 1);
-  }, [shouldVirtualize, deduplicatedMessages, virtualRange.startIndex, virtualRange.endIndex]);
+  // Virtuoso callbacks
+  const handleAtBottomStateChange = useCallback((atBottom: boolean) => {
+    isNearBottomRef.current = atBottom;
+    if (atBottom) {
+      setShowJumpToPresent(false);
+      setNewMessageCount(0);
+    }
+  }, []);
 
-  const topSpacerHeight = shouldVirtualize ? Math.max(0, virtualRange.startIndex * ESTIMATED_MESSAGE_HEIGHT) : 0;
-  const renderedHeight = shouldVirtualize ? visibleMessages.length * ESTIMATED_MESSAGE_HEIGHT : 0;
-  const bottomSpacerHeight = shouldVirtualize
-    ? Math.max(0, estimatedTotalHeight - topSpacerHeight - renderedHeight)
-    : 0;
+  const handleStartReached = useCallback(() => {
+    if (hasMore && !isLoading && !isFetchingOlder) {
+      const beforeCursor = deduplicatedMessages[0]?.created_at || channelData?.oldestLoadedAt || undefined;
+      if (beforeCursor) {
+        fetchMessages(channelId, 50, beforeCursor);
+      }
+    }
+  }, [hasMore, isLoading, isFetchingOlder, deduplicatedMessages, channelData?.oldestLoadedAt, fetchMessages, channelId]);
+
+  const handleRangeChanged = useCallback(
+    (range: { startIndex: number; endIndex: number }) => {
+      if (deduplicatedMessages.length === 0) return;
+      const isAtBottom = range.endIndex >= deduplicatedMessages.length - 2;
+      if (!isAtBottom && deduplicatedMessages.length > 10) {
+        setShowJumpToPresent(true);
+      }
+    },
+    [deduplicatedMessages.length],
+  );
+
+  // Render a single message row with date dividers and unread dividers
+  const itemContent = useCallback(
+    (index: number) => {
+      const message = deduplicatedMessages[index];
+      if (!message) return null;
+
+      const previousMessage = index > 0 ? deduplicatedMessages[index - 1] : null;
+      const isGrouped = shouldGroupMessages(message, previousMessage);
+      const showNewDivider = index === newMessagesDividerIndex && lastMarkedMessageIdRef.current === null;
+      const messageDate = new Date(message.created_at);
+      const previousMessageDate = previousMessage ? new Date(previousMessage.created_at) : null;
+      const showDateDivider = !previousMessageDate || !isSameDay(messageDate, previousMessageDate);
+      const dateDividerLabel = getDateDividerLabel(messageDate);
+
+      return (
+        <Fragment>
+          {showDateDivider && (
+            <div className="flex items-center gap-3 px-4 my-4">
+              <div className="h-px flex-1 bg-border/70" />
+              <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
+                {dateDividerLabel}
+              </span>
+              <div className="h-px flex-1 bg-border/70" />
+            </div>
+          )}
+          <MessageItem
+            message={message}
+            isGrouped={isGrouped}
+            showNewDivider={showNewDivider}
+            isHighlighted={message.id === highlightedMessageId}
+            authorStyleFallback={authorStyleMap[message.user_id]}
+          />
+        </Fragment>
+      );
+    },
+    [deduplicatedMessages, newMessagesDividerIndex, highlightedMessageId, authorStyleMap],
+  );
+
+  // Compute key for each item
+  const computeItemKey = useCallback(
+    (index: number) => {
+      const message = deduplicatedMessages[index];
+      return message ? getStableMessageKey(message) : `idx-${index}`;
+    },
+    [deduplicatedMessages],
+  );
+
+  // Header component (shown at top of list)
+  const headerContent = useMemo(() => {
+    if (isLoading && messages.length > 0) {
+      return (
+        <div className="flex justify-center py-4">
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        </div>
+      );
+    }
+    return null;
+  }, [isLoading, messages.length]);
 
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
-      <div ref={containerRef} className="flex-1 overflow-y-auto overflow-x-hidden" style={{ overflowAnchor: 'auto' }} onScroll={handleScroll}>
-        {/* Loading skeleton for initial load */}
-        {isLoading && messages.length === 0 && <MessageListSkeleton />}
+      {/* Loading skeleton for initial load */}
+      {isLoading && messages.length === 0 && <MessageListSkeleton />}
 
-        {/* Loading indicator for pagination */}
-        {isLoading && messages.length > 0 && (
-          <div className="flex justify-center py-4">
-            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-          </div>
-        )}
-
-        {/* Channel welcome message - enhanced empty state */}
-        {!isLoading && messages.length === 0 && (
-          <div
-            className={`flex flex-col px-4 pt-16 pb-8 ${currentChannel?.ghost_mode ? "items-center text-center" : "items-start"}`}
-          >
-            {currentChannel?.ghost_mode ? (
-              <>
-                <div className="relative mb-6">
-                  <div className="absolute inset-0 rounded-full bg-muted/30 blur-xl scale-150" />
-                  <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-muted/80 to-muted/40 border border-border/50 flex items-center justify-center">
-                    <Ghost className="w-12 h-12 text-muted-foreground" />
-                  </div>
+      {/* Channel welcome message - enhanced empty state */}
+      {!isLoading && messages.length === 0 && (
+        <div
+          className={`flex flex-col px-4 pt-16 pb-8 ${currentChannel?.ghost_mode ? "items-center text-center" : "items-start"}`}
+        >
+          {currentChannel?.ghost_mode ? (
+            <>
+              <div className="relative mb-6">
+                <div className="absolute inset-0 rounded-full bg-muted/30 blur-xl scale-150" />
+                <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-muted/80 to-muted/40 border border-border/50 flex items-center justify-center">
+                  <Ghost className="w-12 h-12 text-muted-foreground" />
                 </div>
-                <h2 className="text-2xl font-medium text-foreground mb-3">Anonymous Channel</h2>
-                <p className="text-muted-foreground max-w-sm leading-relaxed">
-                  Messages in <span className="font-medium text-foreground">#{channelName}</span> are anonymous. Your
-                  identity stays hidden from other members.
-                </p>
-              </>
-            ) : (
-              <>
-                <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-                  <Hash className="w-10 h-10 text-primary" />
-                </div>
-                {isVoiceAttachedTextChannel ? (
-                  <>
-                    <h2 className="text-2xl font-medium text-foreground mb-2">No messages yet</h2>
-                    <p className="text-muted-foreground">
-                      Use <span className="font-medium">#{channelName}</span> to chat while in voice.
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <h2 className="text-3xl font-medium text-foreground mb-2">Welcome to #{channelName}!</h2>
-                    <p className="text-muted-foreground mb-4">
-                      This is the start of the <span className="font-medium">#{channelName}</span> channel.
-                    </p>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Sparkles className="w-4 h-4 text-yellow-500" />
-                      <span>Be the first to send a message!</span>
-                    </div>
-                  </>
-                )}
-              </>
-            )}
-          </div>
-        )}
-
-        {/* Messages */}
-        <div className="py-4">
-          {shouldVirtualize && topSpacerHeight > 0 && <div style={{ height: topSpacerHeight }} />}
-          {visibleMessages.map((message, localIndex) => {
-            const index = shouldVirtualize ? virtualRange.startIndex + localIndex : localIndex;
-            const previousMessage = index > 0 ? deduplicatedMessages[index - 1] : null;
-            const isGrouped = shouldGroupMessages(message, previousMessage);
-            const showNewDivider = index === newMessagesDividerIndex && lastMarkedMessageIdRef.current === null;
-            const messageDate = new Date(message.created_at);
-            const previousMessageDate = previousMessage ? new Date(previousMessage.created_at) : null;
-            const showDateDivider = !previousMessageDate || !isSameDay(messageDate, previousMessageDate);
-            const dateDividerLabel = getDateDividerLabel(messageDate);
-
-            return (
-              <Fragment key={getStableMessageKey(message)}>
-                {showDateDivider && (
-                  <div className="flex items-center gap-3 px-4 my-4">
-                    <div className="h-px flex-1 bg-border/70" />
-                    <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
-                      {dateDividerLabel}
-                    </span>
-                    <div className="h-px flex-1 bg-border/70" />
+              </div>
+              <h2 className="text-2xl font-medium text-foreground mb-3">Anonymous Channel</h2>
+              <p className="text-muted-foreground max-w-sm leading-relaxed">
+                Messages in <span className="font-medium text-foreground">#{channelName}</span> are anonymous. Your
+                identity stays hidden from other members.
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+                <Hash className="w-10 h-10 text-primary" />
+              </div>
+              {isVoiceAttachedTextChannel ? (
+                <>
+                  <h2 className="text-2xl font-medium text-foreground mb-2">No messages yet</h2>
+                  <p className="text-muted-foreground">
+                    Use <span className="font-medium">#{channelName}</span> to chat while in voice.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-3xl font-medium text-foreground mb-2">Welcome to #{channelName}!</h2>
+                  <p className="text-muted-foreground mb-4">
+                    This is the start of the <span className="font-medium">#{channelName}</span> channel.
+                  </p>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Sparkles className="w-4 h-4 text-yellow-500" />
+                    <span>Be the first to send a message!</span>
                   </div>
-                )}
-                <MessageItem
-                  message={message}
-                  isGrouped={isGrouped}
-                  showNewDivider={showNewDivider}
-                  isHighlighted={message.id === highlightedMessageId}
-                  authorStyleFallback={authorStyleMap[message.user_id]}
-                />
-              </Fragment>
-            );
-          })}
-          {shouldVirtualize && bottomSpacerHeight > 0 && <div style={{ height: bottomSpacerHeight }} />}
+                </>
+              )}
+            </>
+          )}
         </div>
+      )}
 
-        {/* Scroll anchor */}
-        <div ref={bottomRef} />
-      </div>
+      {/* Virtuoso message list */}
+      {deduplicatedMessages.length > 0 && (
+        <div ref={containerRef} className="flex-1 min-h-0">
+          <Virtuoso
+            ref={virtuosoRef}
+            data={deduplicatedMessages}
+            totalCount={deduplicatedMessages.length}
+            initialTopMostItemIndex={deduplicatedMessages.length - 1}
+            followOutput="smooth"
+            alignToBottom
+            atBottomThreshold={100}
+            atBottomStateChange={handleAtBottomStateChange}
+            startReached={handleStartReached}
+            rangeChanged={handleRangeChanged}
+            overscan={600}
+            increaseViewportBy={{ top: 400, bottom: 200 }}
+            computeItemKey={computeItemKey}
+            itemContent={itemContent}
+            components={{
+              Header: () => headerContent,
+            }}
+            style={{ height: '100%' }}
+            className="overflow-x-hidden"
+          />
+        </div>
+      )}
 
-      {/* Jump to present button */}
       {/* Jump to present button */}
       <AnimatePresence>
         {showJumpToPresent && (

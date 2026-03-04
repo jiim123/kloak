@@ -58,7 +58,7 @@ import { isImageOnlyMessage } from "@/lib/message";
 import { isPollMessageContent } from "@/lib/poll";
 import { MessageContent, ReplyPreview } from "@/components/chat/MessageContent";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
-import { getUserFromCache, getOrFetchUser } from "@/stores/userCacheStore";
+import { getUserFromCache, getOrFetchUser, useMessageUser, bulkSetUsersInCache } from "@/stores/userCacheStore";
 import type { Message, User, ReactionGroup, CustomServerRole, ServerMember, ServerRole } from "@/types";
 
 interface Thread {
@@ -228,13 +228,13 @@ export const ForumChannelArea = () => {
     for (const thread of threads) {
       if (thread.created_by) ids.add(thread.created_by);
       if (thread.message?.user_id) ids.add(thread.message.user_id);
-      if (thread.message?.user?.id) ids.add(thread.message.user.id);
+      // user objects no longer on messages — user_id is sufficient
       if (thread.last_message_author?.id) ids.add(thread.last_message_author.id);
     }
     Object.values(threadMessages).forEach((messages) => {
       messages.forEach((msg) => {
         if (msg.user_id) ids.add(msg.user_id);
-        if (msg.user?.id) ids.add(msg.user.id);
+        // user objects no longer on messages
       });
     });
     return Array.from(ids);
@@ -243,15 +243,18 @@ export const ForumChannelArea = () => {
   const authorStyles = useAuthorStyles(currentChannel?.server_id ?? currentServer?.id, authorStyleTargetIds);
 
   const getDisplayName = useCallback(
-    (userId?: string | null, messageUser?: User | null) => {
-      if (!userId && !messageUser) return "Unknown";
-      const member = userId ? membersByUserId.get(userId) : undefined;
-      const fallback = userId ? authorStyles[userId] : undefined;
+    (userId?: string | null, _messageUser?: User | null) => {
+      if (!userId) return "Unknown";
+      const member = membersByUserId.get(userId);
+      const fallback = authorStyles[userId];
+      const cached = getUserFromCache(userId);
       return (
         member?.nickname ||
         fallback?.nickname ||
-        messageUser?.display_name ||
-        messageUser?.username ||
+        cached?.display_name ||
+        cached?.username ||
+        _messageUser?.display_name ||
+        _messageUser?.username ||
         "Unknown"
       );
     },
@@ -372,12 +375,7 @@ export const ForumChannelArea = () => {
       const cached = getUserFromCache(reactorId);
       if (cached) return cached.display_name ?? cached.username ?? reactorId;
 
-      for (const messages of Object.values(threadMessages)) {
-        const reactingMsg = messages.find((m) => m.user_id === reactorId || m.user?.id === reactorId);
-        if (reactingMsg?.user) {
-          return reactingMsg.user.display_name || reactingMsg.user.username || reactorId;
-        }
-      }
+      // User data no longer on messages — cache lookup above covers it
 
       return reactorId;
     },
@@ -678,6 +676,17 @@ export const ForumChannelArea = () => {
         return Object.values(groups);
       };
 
+      // Extract users into cache, then strip from messages
+      const uniqueUsers = new Map<string, User>();
+      for (const msg of (messages || [])) {
+        if (msg.user && typeof msg.user === 'object' && msg.user.id) {
+          uniqueUsers.set(msg.user.id, msg.user as User);
+        }
+      }
+      if (uniqueUsers.size > 0) {
+        bulkSetUsersInCache(Array.from(uniqueUsers.values()));
+      }
+
       const messagesWithUsers = (messages || []).map(
         (msg: any) =>
           ({
@@ -686,10 +695,9 @@ export const ForumChannelArea = () => {
             user_id: msg.user_id,
             content: msg.content,
             reply_to_id: msg.reply_to_id,
-            reply_to: msg.reply_to || null,
+            reply_to: msg.reply_to ? { id: msg.reply_to.id, content: msg.reply_to.content, user_id: msg.reply_to.user_id || msg.reply_to.user?.id } : null,
             edited_at: msg.edited_at,
             created_at: msg.created_at,
-            user: msg.user,
             channel_id: currentChannel?.id || "",
             is_pinned: false,
             reactions: groupReactions(reactionsMap[msg.id] || [], user?.id),
@@ -1203,8 +1211,6 @@ export const ForumChannelArea = () => {
                 id: replyToMsg.id,
                 user_id: replyToMsg.user_id,
                 content: replyToMsg.content,
-                created_at: replyToMsg.created_at,
-                user: replyToMsg.user,
               };
             }
           }
@@ -1219,7 +1225,7 @@ export const ForumChannelArea = () => {
             created_at: messageData.created_at || new Date().toISOString(),
             channel_id: currentChannel?.id || "",
             is_pinned: false,
-            user: user,
+            // user data lives in cache, not on message
           };
 
           setThreadMessages((prev) => {
@@ -1555,7 +1561,7 @@ export const ForumChannelArea = () => {
             <CornerUpLeft className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             <span className="text-muted-foreground">Replying to</span>
             <span className="font-medium text-primary">
-              @{replyToMsg.user?.username || "unknown"}
+              @{getUserFromCache(replyToMsg.user_id)?.username || "unknown"}
             </span>
             <span className="truncate text-muted-foreground opacity-75 max-w-[120px]">
               {replyToMsg.content?.slice(0, 30)}
@@ -2094,7 +2100,8 @@ export const ForumChannelArea = () => {
                           const isHovered = hoveredMessageId === msg.id;
                           const isEditing = editingMessageId === msg.id;
                           const canDeleteMessage = isOwnMessage || canManageMessages;
-                          const msgUsernameColor = getUsernameColor(msg.user_id || msg.user?.id);
+                          const msgUsernameColor = getUsernameColor(msg.user_id);
+                          const msgCachedUser = getUserFromCache(msg.user_id);
 
                           return (
                             <div
@@ -2104,7 +2111,8 @@ export const ForumChannelArea = () => {
                               onMouseLeave={() => setHoveredMessageId(null)}
                             >
                               <Avatar className="w-8 h-8 flex-shrink-0">
-                                <AvatarImage src={msg.user?.avatar_url} />
+                                <AvatarImage src={msgCachedUser?.avatar_url} />
+                                <AvatarFallback>{msgCachedUser?.username?.[0]?.toUpperCase() || "?"}</AvatarFallback>
                                 <AvatarFallback>{msg.user?.username?.[0]?.toUpperCase() || "?"}</AvatarFallback>
                               </Avatar>
                               <div className="flex-1 min-w-0">
@@ -2114,7 +2122,7 @@ export const ForumChannelArea = () => {
                                     style={msgUsernameColor.style}
                                     onClick={() => msg.user_id && openModal("userProfile", { userId: msg.user_id })}
                                   >
-                                    {getDisplayName(msg.user_id || msg.user?.id, msg.user)}
+                                    {getDisplayName(msg.user_id)}
                                   </span>
                                   <span className="text-xs text-muted-foreground">
                                     {formatMessageTimestamp(msg.created_at)}
@@ -2128,7 +2136,7 @@ export const ForumChannelArea = () => {
                                     <CornerUpLeft className="w-3 h-3 flex-shrink-0" />
                                     <span>Replying to</span>
                                     <span className="font-medium text-primary">
-                                      @{msg.reply_to.user?.username || "unknown"}
+                                      @{getUserFromCache(msg.reply_to.user_id)?.username || "unknown"}
                                     </span>
                                     {isPollMessageContent(msg.reply_to.content) ? (
                                       <span className="italic">poll</span>
@@ -2188,11 +2196,11 @@ export const ForumChannelArea = () => {
                                         currentUserId={user?.id}
                                         messageId={msg.id}
                                         messageUser={
-                                          msg.user
+                                          msgCachedUser
                                             ? {
-                                                id: msg.user.id,
-                                                username: msg.user.username,
-                                                display_name: msg.user.display_name,
+                                                id: msgCachedUser.id,
+                                                username: msgCachedUser.username,
+                                                display_name: msgCachedUser.display_name,
                                               }
                                             : null
                                         }

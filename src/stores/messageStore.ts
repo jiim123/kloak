@@ -379,9 +379,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
           }
         }
         if (uniqueUsers.size > 0) {
-          const usersArray = Array.from(uniqueUsers.values());
-          bulkSetUsersInCache(usersArray);
-          useUserCacheStore.getState().upsertUsers(usersArray);
+          bulkSetUsersInCache(Array.from(uniqueUsers.values()));
         }
 
         const messages: Message[] = messageRows.reverse().map((msg: any) => ({
