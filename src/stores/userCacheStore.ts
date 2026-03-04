@@ -189,19 +189,33 @@ export const useUserCacheStore = create<UserCacheState>((set, get) => ({
 }));
 
 /**
+ * Set of user IDs currently being fetched by useMessageUser to avoid duplicate requests.
+ */
+const autoFetchingIds = new Set<string>();
+
+/**
  * Hook to subscribe to a specific user from the cache.
  * Uses per-user versioning so status-only updates to OTHER users
  * don't cause this component to re-render.
+ * 
+ * If the user is not in cache, triggers a background fetch automatically.
  */
 export function useMessageUser(userId: string | undefined | null): User | undefined {
-  return useUserCacheStore((state) => {
+  const user = useUserCacheStore((state) => {
     if (!userId) return undefined;
-    // Access _version to subscribe to store changes, but the selector
-    // returns the same User reference unless that user's visual fields changed.
-    // Zustand uses Object.is equality — same User object = no re-render.
     void state._version; // subscribe to version changes
     return state._cache.get(userId)?.user;
   });
+
+  // Auto-fetch missing users so avatars/names appear after server switch
+  if (userId && !user && !autoFetchingIds.has(userId)) {
+    autoFetchingIds.add(userId);
+    fetchAndCacheUser(userId).finally(() => {
+      autoFetchingIds.delete(userId);
+    });
+  }
+
+  return user;
 }
 
 /**
