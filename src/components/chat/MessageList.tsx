@@ -348,11 +348,21 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }
   }, []);
 
+  // Debounce ref to prevent startReached from firing on every scroll frame
+  const startReachedCooldownRef = useRef(false);
+
   const handleStartReached = useCallback(() => {
-    if (!hasMore || isLoading || isFetchingOlder) return;
+    if (!hasMore || isLoading || isFetchingOlder || startReachedCooldownRef.current) return;
     const msgs = deduplicatedMessagesRef.current;
     const beforeCursor = msgs[0]?.created_at || channelData?.oldestLoadedAt;
-    if (beforeCursor) fetchMessagesRef.current(channelIdRef.current, 50, beforeCursor);
+    if (!beforeCursor) return;
+
+    // Set cooldown to prevent repeated calls while scrolling near top
+    startReachedCooldownRef.current = true;
+    fetchMessagesRef.current(channelIdRef.current, 50, beforeCursor).finally(() => {
+      // Release cooldown after fetch completes (with small buffer)
+      setTimeout(() => { startReachedCooldownRef.current = false; }, 500);
+    });
   }, [hasMore, isLoading, isFetchingOlder, channelData?.oldestLoadedAt]);
 
   // Render a single message row — uses refs to avoid depending on deduplicatedMessages array
