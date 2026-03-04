@@ -15,6 +15,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { MessageSquare, Hash, Pin } from "lucide-react";
 import { parseTextContent } from "@/components/chat/MessageContent";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
+import { useUserCacheStore } from "@/stores/userCacheStore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
@@ -94,6 +95,8 @@ const PinnedMessageBar = React.memo(function PinnedMessageBar({
   if (pinnedMessages.length === 0) return null;
 
   const latest = pinnedMessages[0];
+  // Phase 1: look up user from centralized cache
+  const latestUser = useUserCacheStore.getState().getUser(latest.user_id) ?? latest.user;
 
   const rawContent = (latest.content || "")
     .replace(/```[\s\S]*?```/g, "[code]")
@@ -114,9 +117,9 @@ const PinnedMessageBar = React.memo(function PinnedMessageBar({
     <div className="flex items-center gap-2 px-4 py-2 bg-muted/50 border-b border-border/50 flex-shrink-0 min-w-0 overflow-hidden">
       <Pin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
       <Avatar className="w-5 h-5 flex-shrink-0">
-        <AvatarImage src={latest.user?.avatar_url} />
-        <AvatarFallback style={{ backgroundColor: latest.user?.banner_color || "#5865F2" }} className="text-[10px]">
-          {latest.user?.username?.[0]?.toUpperCase() || "?"}
+        <AvatarImage src={latestUser?.avatar_url} />
+        <AvatarFallback style={{ backgroundColor: latestUser?.banner_color || "#5865F2" }} className="text-[10px]">
+          {latestUser?.username?.[0]?.toUpperCase() || "?"}
         </AvatarFallback>
       </Avatar>
       {isNew && (

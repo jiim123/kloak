@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo, Fragment } from "react";
+import { Virtuoso, VirtuosoHandle } from "react-virtuoso";
 import { Ghost } from "lucide-react";
 import { ChevronDown, Loader2, Hash, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -25,12 +26,7 @@ interface MessageListProps {
   manageCurrentChannel?: boolean;
 }
 
-// Fixed-height virtualization caused visible scroll jitter with mixed-height rows
-// (images/GIFs/embeds/date dividers). Keep virtualization disabled until the
-// list uses measured row heights.
-const VIRTUALIZATION_THRESHOLD = Number.POSITIVE_INFINITY;
-const VIRTUAL_OVERSCAN = 20;
-const ESTIMATED_MESSAGE_HEIGHT = 72;
+// Phase 2: Using react-virtuoso for proper virtualization with dynamic heights
 const CHANNEL_ENTRY_FORCE_REFETCH_MAX_AGE_MS = 12_000;
 const AUTHOR_STYLE_FETCH_CHUNK = 100;
 

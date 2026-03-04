@@ -4,6 +4,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { useServerStore } from "@/stores/serverStore";
 import { bulkSetUsersInCache } from "@/lib/userCache";
+import { useUserCacheStore } from "@/stores/userCacheStore";
 import type { Message, MessageReply, ReactionGroup, User } from "@/types";
 
 interface ChannelMessages {
@@ -362,9 +363,28 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         }
 
         const currentUserId = useAuthStore.getState().user?.id;
+
+        // Phase 1: Extract user objects into the centralized cache, then strip from messages
+        const uniqueUsers = new Map<string, User>();
+        for (const msg of messageRows) {
+          if (msg.user && typeof msg.user === 'object' && msg.user.id) {
+            uniqueUsers.set(msg.user.id, msg.user as User);
+          }
+          // Also extract reply user data
+          if (msg.reply_to?.user && typeof msg.reply_to.user === 'object' && msg.reply_to.user.id) {
+            uniqueUsers.set(msg.reply_to.user.id, msg.reply_to.user as User);
+          }
+        }
+        if (uniqueUsers.size > 0) {
+          const usersArray = Array.from(uniqueUsers.values());
+          bulkSetUsersInCache(usersArray);
+          useUserCacheStore.getState().upsertUsers(usersArray);
+        }
+
         const messages: Message[] = messageRows.reverse().map((msg: any) => ({
           ...msg,
-          user: msg.user,
+          // Strip the user object — components look up from useUserCacheStore instead
+          user: undefined,
           reply_to: msg.reply_to_id ? toMessageReply(msg.reply_to) || replyMap[msg.reply_to_id] : undefined,
           attachments: msg.attachments || [],
           reactions: groupReactions(
@@ -374,13 +394,6 @@ export const useMessageStore = create<MessageState>((set, get) => ({
             currentUserId,
           ),
         }));
-
-        // Populate user cache with message authors
-        const uniqueUsers = new Map<string, User>();
-        messages.forEach((m) => {
-          if (m.user) uniqueUsers.set(m.user.id, m.user);
-        });
-        if (uniqueUsers.size > 0) bulkSetUsersInCache(Array.from(uniqueUsers.values()));
 
         const hasMore = messages.length === limit;
         const oldestFetchedAt = messages[0]?.created_at ?? null;
@@ -537,11 +550,16 @@ export const useMessageStore = create<MessageState>((set, get) => ({
 
       const currentUser = useAuthStore.getState().user;
 
-      // 3. Map RPC response to Message type
+      // Cache the user but don't embed on the message
+      if (currentUser) {
+        useUserCacheStore.getState().upsertUser(currentUser as unknown as User);
+      }
+
+      // 3. Map RPC response to Message type (user stripped — looked up from cache)
       const message: Message = {
         ...data,
         is_own: true,
-        user: currentUser && currentUser.id === userId ? currentUser : undefined,
+        user: undefined,
         reply_to: replyData,
         attachments: [],
         reactions: [], // New messages always start with 0 reactions
@@ -612,6 +630,12 @@ export const useMessageStore = create<MessageState>((set, get) => ({
           ? { data: localUser }
           : await supabase.rpc("get_user_by_id" as any, { _user_id: userId });
 
+      // Cache the user data
+      const userDataParsed = userData as unknown as User;
+      if (userDataParsed) {
+        useUserCacheStore.getState().upsertUser(userDataParsed);
+      }
+
       let replyData: MessageReply | undefined;
       if (replyToId) {
         const messages = get().getMessages();
@@ -626,7 +650,6 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       }
 
       const msgData = data as any;
-      const userDataParsed = userData as unknown as User;
       const message: Message = {
         id: msgData.id,
         channel_id: msgData.channel_id,
@@ -637,7 +660,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         is_pinned: msgData.is_pinned || false,
         edited_at: msgData.edited_at,
         created_at: msgData.created_at,
-        user: userDataParsed,
+        user: undefined,
         reply_to: replyData,
         attachments: [],
         reactions: [],

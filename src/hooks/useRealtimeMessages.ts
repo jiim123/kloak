@@ -4,6 +4,7 @@ import { useMessageStore } from '@/stores/messageStore';
 import { useFriendStore } from '@/stores/friendStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useServerStore } from '@/stores/serverStore';
+import { useUserCacheStore } from '@/stores/userCacheStore';
 import type { Message } from '@/types';
 import { getOrFetchUser, getUserFromCache } from '@/lib/userCache';
 import type { User } from '@/types';
@@ -156,52 +157,18 @@ export const useRealtimeMessages = (channelId: string | null) => {
                 });
                 const ghostUserId = getGhostPseudonymousUserId(newMsg.user_id, channelId);
                 const cachedUser = getUserFromCache(newMsg.user_id);
-                let user: User | null = null;
+                let userForCache: User | null = null;
 
                 if (!revealIdentity) {
-                  const nowIso = new Date().toISOString();
-                  user = {
-                    id: 'anonymous',
-                    username: 'anonymous',
-                    display_name: 'Anonymous',
-                    avatar_url: null,
-                    banner_url: null,
-                    avatar_decoration: null,
-                    profile_effect: null,
-                    banner_color: '#111111',
-                    profile_theme_primary: null,
-                    profile_theme_accent: null,
-                    bio: null,
-                    status: 'offline',
-                    custom_status: null,
-                    created_at: nowIso,
-                    last_seen: null,
-                  } satisfies User;
+                  // Ghost mode: no user data to cache
                 } else {
-                  user = localUser?.id === newMsg.user_id ? (localUser as unknown as User) : cachedUser;
-                  if (!user) {
-                    const nowIso = new Date().toISOString();
-                    user = {
-                      id: newMsg.user_id,
-                      username: 'unknown',
-                      display_name: null,
-                      avatar_url: null,
-                      banner_url: null,
-                      avatar_decoration: null,
-                      profile_effect: null,
-                      banner_color: '#111111',
-                      profile_theme_primary: null,
-                      profile_theme_accent: null,
-                      bio: null,
-                      status: 'offline',
-                      custom_status: null,
-                      created_at: nowIso,
-                      last_seen: null,
-                    } satisfies User;
+                  userForCache = localUser?.id === newMsg.user_id ? (localUser as unknown as User) : cachedUser;
+                  if (userForCache) {
+                    useUserCacheStore.getState().upsertUser(userForCache);
                   }
                 }
                 
-                // Build message with minimal data
+                // Build message WITHOUT user object — components look up from cache
                 const message: Message = {
                   id: newMsg.id,
                   channel_id: newMsg.channel_id,
@@ -213,7 +180,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
                   is_system_message: newMsg.is_system_message || false,
                   edited_at: newMsg.edited_at,
                   created_at: newMsg.created_at,
-                  user,
+                  user: undefined,
                   reply_to: undefined,
                   attachments: [],
                   reactions: [],
@@ -235,12 +202,12 @@ export const useRealtimeMessages = (channelId: string | null) => {
                 
                 useMessageStore.getState().addMessage(message);
 
-                // Hydrate author info asynchronously (no UI delay).
+                // Hydrate author info into cache asynchronously (no UI delay).
                 if (revealIdentity && !cachedUser && localUser?.id !== newMsg.user_id) {
                   void getOrFetchUser(newMsg.user_id)
                     .then((u) => {
                       if (!u) return;
-                      useMessageStore.getState().updateMessage(newMsg.id, { user: u } as Partial<Message>);
+                      useUserCacheStore.getState().upsertUser(u);
                     })
                     .catch(() => undefined);
                 }

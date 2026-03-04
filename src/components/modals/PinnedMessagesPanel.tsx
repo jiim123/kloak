@@ -14,6 +14,7 @@ import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
 import { useMessageStore } from '@/stores/messageStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useUserCacheStore } from '@/stores/userCacheStore';
 import { useRealtimePinnedMessages } from '@/hooks/useRealtimePinnedMessages';
 import { useMemberPermissions } from '@/hooks/useMemberPermissions';
 import { toast } from 'sonner';
@@ -67,22 +68,25 @@ export const PinnedMessagesPanel = () => {
             </div>
           ) : pinnedMessages.length > 0 ? (
             <div className="space-y-3">
-              {pinnedMessages.map((message) => (
+              {pinnedMessages.map((message) => {
+                // Phase 1: Look up user from cache instead of message.user
+                const msgUser = useUserCacheStore.getState().getUser(message.user_id) ?? message.user;
+                return (
                 <div 
                   key={message.id}
                   className="group bg-secondary/50 rounded-lg p-3 hover:bg-secondary transition-colors"
                 >
                   <div className="flex items-start gap-3">
                     <Avatar className="w-8 h-8 flex-shrink-0">
-                      <AvatarImage src={message.user?.avatar_url || undefined} />
-                      <AvatarFallback style={{ backgroundColor: message.user?.banner_color || '#5865F2' }}>
-                        {message.user?.username?.[0]?.toUpperCase() || '?'}
+                      <AvatarImage src={msgUser?.avatar_url || undefined} />
+                      <AvatarFallback style={{ backgroundColor: msgUser?.banner_color || '#5865F2' }}>
+                        {msgUser?.username?.[0]?.toUpperCase() || '?'}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-medium text-sm">
-                          {message.user?.display_name || message.user?.username}
+                          {msgUser?.display_name || msgUser?.username}
                         </span>
                         <span className="text-xs text-muted-foreground">
                           {message.created_at && format(new Date(message.created_at), 'MMM d, h:mm a')}
@@ -99,10 +103,10 @@ export const PinnedMessagesPanel = () => {
                               content={message.content} 
                               currentUserId={user?.id} 
                               messageId={message.id}
-                              messageUser={message.user ? {
-                                id: message.user.id,
-                                username: message.user.username,
-                                display_name: message.user.display_name,
+                              messageUser={msgUser ? {
+                                id: msgUser.id,
+                                username: msgUser.username,
+                                display_name: msgUser.display_name,
                               } : undefined}
                             />
                           </div>
@@ -121,7 +125,8 @@ export const PinnedMessagesPanel = () => {
                     )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-center">
