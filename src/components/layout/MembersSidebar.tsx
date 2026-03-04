@@ -25,6 +25,7 @@ import {
 import { MembersSidebarSkeleton } from "@/components/ui/skeletons";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { BotTag } from "@/components/ui/bot-tag";
+import { FluentEmoji } from "@/components/ui/FluentEmoji";
 import { supabase } from "@/integrations/supabase/client";
 import type { ServerMember, CustomServerRole, UserStatus } from "@/types";
 import { getEffectivePresence } from "@/lib/presence";
@@ -131,14 +132,16 @@ StatusIndicator.displayName = "StatusIndicator";
 
 // Section header component
 const SectionHeader = memo(
-  ({ label, count, color, colorDot }: { label: string; count: number; color?: string; colorDot?: string }) => (
+  ({ label, count, color, colorDot, icon }: { label: string; count: number; color?: string; colorDot?: string; icon?: string | null }) => (
     <div className="flex items-center gap-2 px-3 py-2">
-      {colorDot && (
+      {icon ? (
+        <FluentEmoji emoji={icon} size={14} className="flex-shrink-0" />
+      ) : colorDot ? (
         <div
           className="w-2.5 h-2.5 rounded-full flex-shrink-0"
           style={colorDot.startsWith("linear-gradient") ? { background: colorDot } : { backgroundColor: colorDot }}
         />
-      )}
+      ) : null}
       <span className="text-[11px] font-medium uppercase tracking-wider" style={color ? { color } : undefined}>
         {label}
       </span>
@@ -716,7 +719,7 @@ export const MembersSidebar = () => {
 
             return (
               <div key={role.id} className="mb-3">
-                <SectionHeader label={role.name} count={roleMembers.length} color={textColor} colorDot={role.color} />
+                <SectionHeader label={role.name} count={roleMembers.length} color={textColor} colorDot={role.color} icon={role.icon} />
                 <div className="space-y-0.5">{roleMembers.map((member) => renderMemberItem(member))}</div>
               </div>
             );
