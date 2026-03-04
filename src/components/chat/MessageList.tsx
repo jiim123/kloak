@@ -552,7 +552,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
             data={deduplicatedMessages}
             totalCount={deduplicatedMessages.length}
             initialTopMostItemIndex={deduplicatedMessages.length - 1}
-            followOutput="smooth"
+            followOutput={(isAtBottom) => isAtBottom ? "smooth" : false}
             alignToBottom
             atBottomThreshold={100}
             atBottomStateChange={handleAtBottomStateChange}
