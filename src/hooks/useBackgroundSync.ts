@@ -7,7 +7,6 @@ import { useServerStore } from '@/stores/serverStore';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
-const SYNC_INTERVAL = 30000; // 30 seconds
 const RECONNECT_DELAYS = [1000, 2000, 5000, 10000, 30000]; // Exponential backoff
 
 /**
@@ -30,7 +29,6 @@ export function useBackgroundSync() {
   const { sendMessage } = useMessageStore();
   const { currentChannel } = useServerStore();
   
-  const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isSyncingRef = useRef(false);
 
@@ -85,13 +83,9 @@ export function useBackgroundSync() {
     updateLastSync();
   }, [queuedMessages, sendMessage, removeFromQueue, setSyncStatus, updateLastSync]);
 
-  // Refresh current data (non-blocking) - DISABLED to prevent message clearing
-  // Real-time subscriptions handle new messages, so periodic refresh is not needed
-  const refreshData = useCallback(async () => {
-    // Don't do periodic fetches - it causes the chat to flash/clear
-    // Real-time updates via useRealtimeMessages handle new messages
-    return;
-  }, []);
+  // refreshData is intentionally a no-op — realtime handles sync.
+  // Kept as a stable reference for the forceSync return value.
+  const refreshData = useCallback(async () => {}, []);
 
   // Handle reconnection with exponential backoff
   const attemptReconnect = useCallback(async () => {
@@ -140,7 +134,7 @@ export function useBackgroundSync() {
       // Retry while the device is online; don't rely on a potentially stale closure value.
       if (navigator.onLine) attemptReconnect();
     }, delay);
-  }, [connection.reconnectAttempts, isOnline, setConnectionStatus, incrementReconnectAttempts, resetReconnectAttempts, processQueue, refreshData]);
+  }, [connection.reconnectAttempts, isOnline, setConnectionStatus, incrementReconnectAttempts, resetReconnectAttempts, processQueue]);
 
   // Handle online/offline transitions
   useEffect(() => {
@@ -159,36 +153,12 @@ export function useBackgroundSync() {
     }
   }, [isOnline, wasOffline, setConnectionStatus, attemptReconnect]);
 
-  // Periodic background sync (when online)
-  useEffect(() => {
-    if (isOnline) {
-      // Initial sync
-      const initialSync = setTimeout(() => {
-        refreshData();
-      }, 2000);
-      
-      // Periodic sync
-      syncIntervalRef.current = setInterval(() => {
-        if (document.visibilityState === 'visible') {
-          refreshData();
-        }
-      }, SYNC_INTERVAL);
-      
-      return () => {
-        clearTimeout(initialSync);
-        if (syncIntervalRef.current) {
-          clearInterval(syncIntervalRef.current);
-        }
-      };
-    }
-  }, [isOnline, refreshData]);
+  // Periodic background sync removed — refreshData is a no-op and realtime handles everything.
+  // The 30s setInterval was waking the event loop for nothing.
 
-  // Cleanup
+  // Cleanup reconnect timer
   useEffect(() => {
     return () => {
-      if (syncIntervalRef.current) {
-        clearInterval(syncIntervalRef.current);
-      }
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
