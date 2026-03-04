@@ -205,7 +205,7 @@ export const CodeBlock = ({ code, language }: CodeBlockProps) => {
       </div>
       
       {/* Code content */}
-      <pre className="p-4 overflow-x-auto text-sm leading-relaxed m-0">
+      <pre className="p-4 overflow-x-auto leading-relaxed m-0" style={{ fontSize: '0.625em', fontWeight: 300 }}>
         <code 
           ref={codeRef} 
           className={`language-${finalLang} font-mono`}
