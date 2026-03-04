@@ -1,15 +1,18 @@
 import { useEffect, useRef, useState, useCallback, type RefObject } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMessageStore } from '@/stores/messageStore';
+import type { VirtuosoHandle } from 'react-virtuoso';
 
 interface UseScrollToMessageOptions {
   messages: { id: string; created_at: string }[];
   isLoading: boolean;
-  /** The scroll container ref — avoids unreliable DOM traversal on mobile. */
-  containerRef: RefObject<HTMLElement | null>;
+  /** Optional: Virtuoso ref for scrolling in virtualized lists. */
+  virtuosoRef?: RefObject<VirtuosoHandle | null>;
+  /** Fallback: plain scroll container ref (used when virtuosoRef is not provided, e.g. DMs). */
+  containerRef?: RefObject<HTMLElement | null>;
 }
 
-export const useScrollToMessage = ({ messages, isLoading, containerRef }: UseScrollToMessageOptions) => {
+export const useScrollToMessage = ({ messages, isLoading, virtuosoRef, containerRef }: UseScrollToMessageOptions) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const urlTargetId = searchParams.get('message');
   // Support both URL params and custom events (custom events avoid useSearchParams re-render cascade in MessageItem)
@@ -81,16 +84,23 @@ export const useScrollToMessage = ({ messages, isLoading, containerRef }: UseScr
   useEffect(() => {
     if (!targetMessageId || isLoading || hasScrolledRef.current) return;
 
-    const messageExists = messages.some(m => m.id === targetMessageId);
-    if (!messageExists) return;
+    const targetIndex = messages.findIndex(m => m.id === targetMessageId);
+    if (targetIndex === -1) return;
 
     const scrollTimeout = setTimeout(() => {
-      const messageElement = document.getElementById(`message-${targetMessageId}`);
-      if (!messageElement) return;
+      // Prefer Virtuoso scrollToIndex for virtualized lists
+      if (virtuosoRef?.current) {
+        virtuosoRef.current.scrollToIndex({
+          index: targetIndex,
+          behavior: 'smooth',
+          align: 'center',
+        });
+      } else if (containerRef?.current) {
+        // Fallback: raw DOM scroll for non-virtualized lists (e.g. DMs)
+        const messageElement = document.getElementById(`message-${targetMessageId}`);
+        if (!messageElement) return;
 
-      const scrollContainer = containerRef.current;
-
-      if (scrollContainer) {
+        const scrollContainer = containerRef.current;
         const containerRect = scrollContainer.getBoundingClientRect();
         const messageRect = messageElement.getBoundingClientRect();
         const currentScrollTop = scrollContainer.scrollTop;
@@ -121,7 +131,7 @@ export const useScrollToMessage = ({ messages, isLoading, containerRef }: UseScr
     }, 200);
 
     return () => clearTimeout(scrollTimeout);
-  }, [targetMessageId, messages, isLoading, clearMessageParam]);
+  }, [targetMessageId, messages, isLoading, clearMessageParam, virtuosoRef, containerRef]);
 
   // Cleanup on unmount
   useEffect(() => {
