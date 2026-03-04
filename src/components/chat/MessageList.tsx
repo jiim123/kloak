@@ -2,9 +2,10 @@ import { useEffect, useRef, useState, useCallback, useMemo, Fragment } from "rea
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 
 import { Ghost } from "lucide-react";
-import { ChevronDown, Loader2, Hash, Sparkles } from "lucide-react";
+import { Loader2, Hash, Sparkles } from "lucide-react";
 
 import { MessageItem } from "./MessageItem";
+import { JumpToPresent } from "./JumpToPresent";
 import { MessageListSkeleton } from "@/components/ui/skeletons";
 import { useMessageStore } from "@/stores/messageStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -474,17 +475,11 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
         </div>
       )}
 
-      {showJumpToPresent && (
-        <div className="absolute bottom-4 right-4 z-10">
-          <button
-            onClick={scrollToBottom}
-            className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-medium shadow-md hover:opacity-90 transition-opacity duration-150"
-          >
-            <ChevronDown className="w-4 h-4" />
-            {newMessageCount > 0 ? `${newMessageCount} new` : "Jump to present"}
-          </button>
-        </div>
-      )}
+      <JumpToPresent
+        visible={showJumpToPresent}
+        newMessageCount={newMessageCount}
+        onClick={scrollToBottom}
+      />
     </div>
   );
 };
