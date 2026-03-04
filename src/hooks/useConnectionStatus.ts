@@ -51,8 +51,12 @@ export function useConnectionStatus() {
   const heartbeatFailuresRef = useRef(0);
 
   // Combined heartbeat and latency check - single query instead of two
+  // Use ref for values that change frequently to avoid recreating the callback
+  const connectionStatusRef = useRef(connection.status);
+  connectionStatusRef.current = connection.status;
+
   const checkConnectionHealth = useCallback(async () => {
-    if (!isOnline) return;
+    if (!navigator.onLine) return;
 
     const now = Date.now();
     if (sharedHealthCheckInFlight) {
@@ -74,7 +78,7 @@ export function useConnectionStatus() {
         updateLatency(latency);
         heartbeatFailuresRef.current = 0;
 
-        if (connection.status !== 'connected') {
+        if (connectionStatusRef.current !== 'connected') {
           setConnectionStatus('connected');
           resetReconnectAttempts();
         }
@@ -84,7 +88,7 @@ export function useConnectionStatus() {
         heartbeatFailuresRef.current += 1;
 
         if (heartbeatFailuresRef.current >= HEARTBEAT_FAILURES_BEFORE_RECONNECT) {
-          if (connection.status === 'connected') {
+          if (connectionStatusRef.current === 'connected') {
             setConnectionStatus('reconnecting');
             incrementReconnectAttempts();
           }
@@ -99,7 +103,7 @@ export function useConnectionStatus() {
     sharedLastHealthCheckAt = now;
     sharedHealthCheckInFlight = p;
     await p;
-  }, [isOnline, connection.status, setConnectionStatus, updateLatency, resetReconnectAttempts, incrementReconnectAttempts]);
+  }, [setConnectionStatus, updateLatency, resetReconnectAttempts, incrementReconnectAttempts]);
 
   // Monitor Supabase realtime connection
   useEffect(() => {
