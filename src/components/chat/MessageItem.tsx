@@ -103,14 +103,6 @@ interface MessageItemProps {
   };
 }
 
-// Track animations by a STABLE key that survives optimistic→real message replacement
-const animatedMessages = new Set<string>();
-
-const getStableAnimationKey = (message: Message): string => {
-  const timestamp = Math.floor(new Date(message.created_at).getTime() / 1000);
-  const contentPrefix = message.content.substring(0, 50);
-  return `${timestamp}-${message.user_id}-${contentPrefix}`;
-};
 
 // Renders a single attachment, using a signed URL for private bucket images
 const AttachmentItem = memo(function AttachmentItem({
@@ -212,30 +204,13 @@ export const MessageItem = memo(function MessageItem({
   const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
   const [globalEmojiMap, setGlobalEmojiMap] = useState<Map<string, ResolvedEmoji>>(new Map());
   const [hoveredRoleIcon, setHoveredRoleIcon] = useState(false);
-  const [isRowHovered, setIsRowHovered] = useState(false);
+  
   const [reactionDetailsEmoji, setReactionDetailsEmoji] = useState<string | null>(null);
   const [reactionUserNameOverrides, setReactionUserNameOverrides] = useState<Map<string, string>>(new Map());
 
   // Refs
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Stable animation key
-  const animationKey = useMemo(
-    () => getStableAnimationKey(message),
-    [message.created_at, message.user_id, message.content],
-  );
-
-  // Check animation status ONCE on mount
-  const shouldAnimate = useMemo(() => {
-    if (animatedMessages.has(animationKey)) return false;
-    animatedMessages.add(animationKey);
-    if (animatedMessages.size > 500) {
-      const entries = Array.from(animatedMessages);
-      entries.slice(0, 250).forEach((key) => animatedMessages.delete(key));
-    }
-    return true;
-  }, [animationKey]);
 
   // Check if pending optimistic message
   const isPending = useMemo(() => {
@@ -867,15 +842,14 @@ export const MessageItem = memo(function MessageItem({
   const outerClassName = useMemo(() => {
     const base = "px-2";
     const padding = compactMode ? "py-0" : isGrouped ? "py-px" : "py-1";
-    const animation = shouldAnimate ? "animate-message-slide-in" : "";
-    return `${base} ${padding} ${animation}`.trim();
-  }, [compactMode, isGrouped, shouldAnimate]);
+    return `${base} ${padding}`.trim();
+  }, [compactMode, isGrouped]);
 
   const isAnnouncementChannel = currentChannel?.type === "announcement";
 
   const innerClassName = useMemo(() => {
     const classes = [
-      "group relative flex px-3 rounded-lg transition-colors duration-200 hover:bg-muted/40",
+      "group relative flex px-3 rounded-lg hover:bg-muted/40",
       compactMode ? "gap-2 py-0.5" : isGrouped ? "gap-3 py-0.5" : "gap-3 py-1.5",
     ];
     if (isAnnouncementChannel && !isGrouped) {
@@ -966,15 +940,13 @@ export const MessageItem = memo(function MessageItem({
       <div
         id={`message-${message.id}`}
         className={outerClassName}
-        style={shouldAnimate ? { animationFillMode: "both" } : undefined}
+        style={undefined}
       >
         {/* ContextMenu is disabled on mobile (use Drawer instead) */}
         <ContextMenu>
           <ContextMenuTrigger asChild disabled={isMobile}>
             <div
               className={innerClassName}
-              onMouseEnter={() => setIsRowHovered(true)}
-              onMouseLeave={() => setIsRowHovered(false)}
               onTouchStart={handleTouchStart}
               onTouchEnd={clearLongPress}
               onTouchMove={clearLongPress}
@@ -1007,7 +979,7 @@ export const MessageItem = memo(function MessageItem({
                           <AvatarWithDecoration
                             user={messageUser}
                             className={cn(messageAvatarSizeClass, "cursor-pointer")}
-                            active={isRowHovered}
+                            active={false}
                             onClick={handleUsernameClick}
                           />
                         )
@@ -1051,7 +1023,7 @@ export const MessageItem = memo(function MessageItem({
                           <AvatarWithDecoration
                             user={messageUser}
                             className="w-5 h-5 cursor-pointer flex-shrink-0"
-                            active={isRowHovered}
+                            active={false}
                             onClick={handleUsernameClick}
                           />
                         )}
@@ -1402,7 +1374,7 @@ export const MessageItem = memo(function MessageItem({
 
               {/* Hover actions - Desktop only - skip for system messages */}
               {!isEditing && !message.is_system_message && (
-                <div className="absolute right-2 -top-4 hidden md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 md:flex items-center gap-1 bg-background/95 backdrop-blur-sm border border-border rounded-xl shadow-xl p-1 transition-opacity duration-200">
+                <div className="absolute right-2 -top-4 hidden md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 md:flex items-center gap-1 bg-background border border-border rounded-xl shadow-md p-1 transition-opacity duration-100">
                   {/* Quick reactions - top 3 most used */}
                   {canAddReactions && topEmojis.map((emoji) => (
                     <button
