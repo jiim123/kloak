@@ -119,8 +119,8 @@ const isMissingRpcError = (error: any) => {
 // Cache expiry time - 5 minutes
 const CACHE_EXPIRY_MS = 5 * 60 * 1000;
 const REPLY_CACHE_EXPIRY_MS = 5 * 60 * 1000;
-const MAX_CACHED_CHANNELS = 12;
-const MAX_MESSAGES_PER_CHANNEL = 300;
+const MAX_CACHED_CHANNELS = 5;
+const MAX_MESSAGES_PER_CHANNEL = 150;
 const MAX_REPLY_CACHE_ITEMS = 800;
 
 // In-flight request coalescing (prevents duplicate message fetches during rapid switching)
