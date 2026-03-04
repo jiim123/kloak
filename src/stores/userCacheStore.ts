@@ -110,14 +110,17 @@ export const useUserCacheStore = create<UserCacheState>((set, get) => ({
     
     const isVisualChange = hasVisualChanges(user, existing?.user);
     
-    // Mutate the existing Map in place — no new Map allocation
-    state._cache.set(user.id, { user, cachedAt: Date.now() });
-    evictOldest(state._cache);
-    
-    // Only trigger React re-renders if visual fields actually changed values
-    if (isVisualChange) {
+    if (isVisualChange || !existing) {
+      // New user or visual change: store the new object reference
+      state._cache.set(user.id, { user, cachedAt: Date.now() });
+      evictOldest(state._cache);
       bumpUserVersion(user.id);
       set({ _version: state._version + 1 });
+    } else {
+      // Existing user, no visual change: mutate in place to preserve
+      // the same object reference for stable useMessageUser selectors
+      Object.assign(existing.user, user);
+      existing.cachedAt = Date.now();
     }
   },
 
@@ -131,10 +134,14 @@ export const useUserCacheStore = create<UserCacheState>((set, get) => ({
       const existing = state._cache.get(user.id);
       if (existing?.user === user) continue;
       const isVisual = hasVisualChanges(user, existing?.user);
-      state._cache.set(user.id, { user, cachedAt: now });
-      if (isVisual) {
+      if (isVisual || !existing) {
+        state._cache.set(user.id, { user, cachedAt: now });
         bumpUserVersion(user.id);
         anyVisualChange = true;
+      } else {
+        // Non-visual: mutate in place to preserve object reference
+        Object.assign(existing.user, user);
+        existing.cachedAt = now;
       }
     }
     
@@ -150,15 +157,20 @@ export const useUserCacheStore = create<UserCacheState>((set, get) => ({
     const existing = state._cache.get(id);
     if (!existing) return;
     
-    const patchedUser = { ...existing.user, ...patch };
-    state._cache.set(id, { user: patchedUser, cachedAt: Date.now() });
+    const isVisual = hasVisualChanges(patch, existing.user);
     
-    // Only trigger React re-renders for visual field changes.
-    // Status/last_seen updates mutate in place without new Map reference,
-    // preventing all useMessageUser selectors from re-evaluating.
-    if (hasVisualChanges(patch, existing.user)) {
+    if (isVisual) {
+      // Visual change: create new object reference so selectors pick it up
+      const patchedUser = { ...existing.user, ...patch };
+      state._cache.set(id, { user: patchedUser, cachedAt: Date.now() });
       bumpUserVersion(id);
       set({ _version: state._version + 1 });
+    } else {
+      // Non-visual change (status/last_seen): mutate in place to preserve
+      // the same object reference. This prevents useMessageUser selectors
+      // from returning a "new" object when _version bumps for OTHER users.
+      Object.assign(existing.user, patch);
+      existing.cachedAt = Date.now();
     }
   },
 
