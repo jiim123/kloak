@@ -644,15 +644,17 @@ export const MessageItem = memo(function MessageItem({
   );
   const showGhostIdentity = isGhostMode && !showMessageAuthorIdentity;
 
+  const replyUser = useMessageUser(message.reply_to?.user_id);
+
   const showReplyAuthorIdentity = useMemo(
     () =>
       canRevealGhostIdentityForUser({
         isGhostMode,
-        authorUserId: message.reply_to?.user?.id,
+        authorUserId: message.reply_to?.user_id,
         members,
         ownerId: currentServer?.owner_id,
       }),
-    [isGhostMode, message.reply_to?.user?.id, members, currentServer?.owner_id],
+    [isGhostMode, message.reply_to?.user_id, members, currentServer?.owner_id],
   );
 
   // Memoize formatted timestamps
@@ -1174,7 +1176,7 @@ export const MessageItem = memo(function MessageItem({
                         <span className="flex-shrink-0">Replying to</span>
                         {showReplyAuthorIdentity ? (
                           <span className="font-medium text-primary flex-shrink-0">
-                            @{message.reply_to.user?.display_name || message.reply_to.user?.username || "unknown"}
+                            @{replyUser?.display_name || replyUser?.username || "unknown"}
                           </span>
                         ) : (
                           <span className="font-medium text-primary italic flex-shrink-0">Anonymous</span>

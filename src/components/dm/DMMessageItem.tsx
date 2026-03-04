@@ -27,6 +27,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatMessageTimestamp } from "@/lib/format";
 import type { DirectMessage } from "@/types";
+import { useMessageUser } from "@/stores/userCacheStore";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { MessageContent, ReplyPreview } from "@/components/chat/MessageContent";
 import { isImageOnlyMessage } from "@/lib/message";
@@ -93,7 +94,9 @@ export const DMMessageItem = memo(function DMMessageItem({
   }, [animationKey]);
 
   const isOwnMessage = user?.id === message.sender_id;
-  const hasSenderDecoration = Boolean(message.sender?.avatar_decoration);
+  const senderUser = useMessageUser(message.sender_id);
+  const replyToSenderUser = useMessageUser(message.reply_to?.sender_id);
+  const hasSenderDecoration = Boolean(senderUser?.avatar_decoration);
   const senderAvatarSizeClass = hasSenderDecoration ? "w-9 h-9" : "w-10 h-10";
 
   // Check if current user is mentioned in this message
@@ -255,7 +258,7 @@ export const DMMessageItem = memo(function DMMessageItem({
             >
               {/* Avatar / Timestamp column */}
               <div className="w-10 flex-shrink-0">
-                {isFirst && message.sender ? (
+                {isFirst && senderUser ? (
                   <div
                     className="dm-avatar-click cursor-pointer"
                     onClick={(e) => {
@@ -263,7 +266,7 @@ export const DMMessageItem = memo(function DMMessageItem({
                       openModal("userProfile", { userId: message.sender_id });
                     }}
                   >
-                    <AvatarWithDecoration user={message.sender} className={senderAvatarSizeClass} active={isRowHovered} />
+                    <AvatarWithDecoration user={senderUser} className={senderAvatarSizeClass} active={isRowHovered} />
                   </div>
                 ) : (
                   <div className="h-full flex items-center justify-center">
@@ -285,7 +288,7 @@ export const DMMessageItem = memo(function DMMessageItem({
                         openModal("userProfile", { userId: message.sender_id });
                       }}
                     >
-                      {message.sender?.display_name || message.sender?.username}
+                      {senderUser?.display_name || senderUser?.username}
                     </span>
                     <span className="text-[11px] sm:text-[12px] text-muted-foreground leading-none">
                       {formattedTimestamp}
@@ -310,7 +313,7 @@ export const DMMessageItem = memo(function DMMessageItem({
                     <CornerUpLeft className="w-3 h-3 flex-shrink-0" />
                     <span className="flex-shrink-0">Replying to</span>
                     <span className="font-medium text-primary flex-shrink-0">
-                      @{message.reply_to.sender?.display_name || message.reply_to.sender?.username || "unknown"}
+                      @{replyToSenderUser?.display_name || replyToSenderUser?.username || "unknown"}
                     </span>
                     {(() => {
                       const replyContent = message.reply_to.content;

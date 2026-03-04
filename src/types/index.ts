@@ -249,6 +249,8 @@ export interface Poll {
 export interface MessageReply {
   id: string;
   content: string;
+  user_id?: string;
+  /** @deprecated Use user_id + userCacheStore instead */
   user?: User;
 }
 
@@ -264,6 +266,7 @@ export interface Message {
   embed_hidden?: boolean;
   edited_at: string | null;
   created_at: string;
+  /** @deprecated Use user_id + userCacheStore instead. Only populated in forum/announcement local state. */
   user?: User;
   attachments?: MessageAttachment[];
   reactions?: ReactionGroup[];

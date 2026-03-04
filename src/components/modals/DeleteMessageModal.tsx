@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useMessageStore } from "@/stores/messageStore";
 import { useAuthStore } from "@/stores/authStore";
+import { useMessageUser } from "@/stores/userCacheStore";
 import { getMessagePreview } from "@/lib/message";
 import type { Message } from "@/types";
 
@@ -82,7 +83,7 @@ export const DeleteMessageModal = ({
   };
 
   const displayContent = messageContent || (message ? message.content : "");
-  const displayUser = message?.user;
+  const displayUser = useMessageUser(message?.user_id);
   const { images, caption } = parseContentImages(displayContent);
   const hasImages = images.length > 0;
 

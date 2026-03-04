@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
+import { useMessageUser } from "@/stores/userCacheStore";
 import { Paperclip, Smile, Send, X, Loader2, WifiOff, Lock, SquareChartGantt, MoreHorizontal } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
@@ -234,15 +235,16 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const canSendMessagesPermission = hasPermission("send_messages");
   const canSendInReadOnly = isReadOnlyChannel ? hasPermission("manage_messages") : true;
   const canSendMessage = !isMuted && canSendMessagesPermission && canSendInReadOnly;
+  const replyingToUser = useMessageUser(replyingTo?.user_id);
   const showReplyAuthorIdentity = useMemo(
     () =>
       canRevealGhostIdentityForUser({
         isGhostMode,
-        authorUserId: replyingTo?.user?.id,
+        authorUserId: replyingTo?.user_id,
         members,
         ownerId: currentServer?.owner_id,
       }),
-    [isGhostMode, replyingTo?.user?.id, members, currentServer?.owner_id],
+    [isGhostMode, replyingTo?.user_id, members, currentServer?.owner_id],
   );
 
   const resizeTextarea = useCallback(() => {
@@ -492,7 +494,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
             Replying to{" "}
             {showReplyAuthorIdentity ? (
               <span className="text-primary">
-                @{replyingTo.user?.display_name || replyingTo.user?.username || "unknown"}
+                @{replyingToUser?.display_name || replyingToUser?.username || "unknown"}
               </span>
             ) : (
               <span className="text-primary italic">Anonymous</span>

@@ -97,11 +97,15 @@ const groupReactions = (reactions: any[], currentUserId?: string): ReactionGroup
 
 const toMessageReply = (raw: any): MessageReply | null => {
   if (!raw || typeof raw !== "object") return null;
-  if (!("id" in raw) || !("content" in raw) || !raw.user) return null;
+  if (!("id" in raw) || !("content" in raw)) return null;
+  // Extract user into cache if present, but don't store on reply
+  if (raw.user?.id) {
+    useUserCacheStore.getState().upsertUser(raw.user as User);
+  }
   return {
     id: raw.id as string,
     content: raw.content as string,
-    user: raw.user as User,
+    user_id: raw.user_id || raw.user?.id,
   };
 };
 
@@ -381,10 +385,20 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         }
 
         const messages: Message[] = messageRows.reverse().map((msg: any) => ({
-          ...msg,
-          // Strip the user object — components look up from useUserCacheStore instead
-          user: undefined,
-          reply_to: msg.reply_to_id ? toMessageReply(msg.reply_to) || replyMap[msg.reply_to_id] : undefined,
+          id: msg.id,
+          channel_id: msg.channel_id,
+          user_id: msg.user_id,
+          is_own: msg.is_own ?? (msg.user_id === currentUserId),
+          reply_to_id: msg.reply_to_id ?? null,
+          content: msg.content,
+          is_pinned: msg.is_pinned ?? false,
+          is_system_message: msg.is_system_message ?? false,
+          embed_hidden: msg.embed_hidden ?? false,
+          edited_at: msg.edited_at ?? null,
+          created_at: msg.created_at,
+          reply_to: msg.reply_to_id
+            ? replyMap[msg.reply_to_id] ?? toMessageReply(msg.reply_to)
+            : undefined,
           attachments: msg.attachments || [],
           reactions: groupReactions(
             blockedUserIds.length > 0
@@ -542,7 +556,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
           replyData = {
             id: replyMsg.id,
             content: replyMsg.content,
-            user: replyMsg.user,
+            user_id: replyMsg.user_id,
           };
         }
       }
@@ -556,12 +570,20 @@ export const useMessageStore = create<MessageState>((set, get) => ({
 
       // 3. Map RPC response to Message type (user stripped — looked up from cache)
       const message: Message = {
-        ...data,
+        id: (data as any).id,
+        channel_id: (data as any).channel_id,
+        user_id: (data as any).user_id,
         is_own: true,
-        user: undefined,
+        reply_to_id: (data as any).reply_to_id ?? null,
+        content: (data as any).content,
+        is_pinned: (data as any).is_pinned ?? false,
+        is_system_message: (data as any).is_system_message ?? false,
+        embed_hidden: (data as any).embed_hidden ?? false,
+        edited_at: (data as any).edited_at ?? null,
+        created_at: (data as any).created_at,
         reply_to: replyData,
         attachments: [],
-        reactions: [], // New messages always start with 0 reactions
+        reactions: [],
       };
 
       // 4. Update the local state
@@ -643,7 +665,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
           replyData = {
             id: replyMsg.id,
             content: replyMsg.content,
-            user: replyMsg.user,
+            user_id: replyMsg.user_id,
           };
         }
       }
@@ -659,7 +681,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         is_pinned: msgData.is_pinned || false,
         edited_at: msgData.edited_at,
         created_at: msgData.created_at,
-        user: undefined,
+        // user data lives in cache, not on message
         reply_to: replyData,
         attachments: [],
         reactions: [],

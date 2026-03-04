@@ -4,7 +4,7 @@ import { useDMStore } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
 import type { DirectMessage, ReactionGroup } from '@/types';
 import { useRealtimeUserUpdates } from './useRealtimeUserUpdates';
-import { getOrFetchUser } from '@/stores/userCacheStore';
+import { getOrFetchUser, useUserCacheStore } from '@/stores/userCacheStore';
 
 interface UseRealtimeDMsOptions {
   userId: string | null;
@@ -107,28 +107,12 @@ export const useRealtimeDMs = ({
         return;
       }
 
-      // Avoid redundant self lookups on messages we just sent.
+      // Cache the sender in the user cache store (don't embed on message)
       const localUser = useAuthStore.getState().user;
       const sender = localUser?.id === newMsg.sender_id ? localUser : await getOrFetchUser(newMsg.sender_id);
-      const senderFallback = {
-        id: newMsg.sender_id,
-        username: 'unknown',
-        display_name: null,
-        avatar_url: null,
-        banner_url: null,
-        avatar_decoration: null,
-        profile_effect: null,
-        banner_color: '#5865F2',
-        profile_theme_primary: null,
-        profile_theme_accent: null,
-        bio: null,
-        status: 'offline',
-        custom_status: null,
-        created_at: new Date().toISOString(),
-        last_seen: null,
-        pronouns: null,
-      } as any;
-      const senderData = sender ?? senderFallback;
+      if (sender) {
+        useUserCacheStore.getState().upsertUser(sender as any);
+      }
 
       // Check local cache for reply-to.
       let reply_to: DirectMessage | null = null;
@@ -148,7 +132,6 @@ export const useRealtimeDMs = ({
               id: replyData.id,
               content: replyData.content,
               sender_id: replyData.sender_id,
-              sender: replyData.sender ? ({ username: replyData.sender.username } as any) : undefined,
             } as DirectMessage;
           }
         }
@@ -163,24 +146,6 @@ export const useRealtimeDMs = ({
         edited_at: newMsg.edited_at ?? null,
         reply_to_id: newMsg.reply_to_id ?? null,
         reply_to,
-        sender: {
-          id: senderData.id,
-          username: senderData.username,
-          display_name: senderData.display_name,
-          avatar_url: senderData.avatar_url,
-          banner_url: (senderData as any).banner_url ?? null,
-          avatar_decoration: (senderData as any).avatar_decoration,
-          profile_effect: (senderData as any).profile_effect ?? null,
-          banner_color: (senderData as any).banner_color || '#5865F2',
-          profile_theme_primary: (senderData as any).profile_theme_primary ?? null,
-          profile_theme_accent: (senderData as any).profile_theme_accent ?? null,
-          bio: (senderData as any).bio,
-          status: senderData.status as any,
-          custom_status: (senderData as any).custom_status,
-          created_at: senderData.created_at,
-          last_seen: (senderData as any).last_seen,
-          pronouns: (senderData as any).pronouns ?? null,
-        } as any,
         attachments: [],
         reactions: [],
       };
