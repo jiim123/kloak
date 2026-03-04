@@ -424,8 +424,10 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   const handleRangeChanged = useCallback(
     (range: { startIndex: number; endIndex: number }) => {
       if (deduplicatedMessages.length === 0) return;
-      const isAtBottom = range.endIndex >= deduplicatedMessages.length - 2;
-      if (!isAtBottom && deduplicatedMessages.length > 10) {
+      // Only show "jump to present" if user has scrolled far enough up.
+      // Don't interfere when near the bottom — followOutput handles that.
+      const isNearEnd = range.endIndex >= deduplicatedMessages.length - 3;
+      if (!isNearEnd && deduplicatedMessages.length > 10 && !isNearBottomRef.current) {
         setShowJumpToPresent(true);
       }
     },
@@ -552,9 +554,9 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
             data={deduplicatedMessages}
             totalCount={deduplicatedMessages.length}
             initialTopMostItemIndex={deduplicatedMessages.length - 1}
-            followOutput={(isAtBottom) => isAtBottom ? "smooth" : false}
+            followOutput={(isAtBottom) => isAtBottom ? "auto" : false}
             alignToBottom
-            atBottomThreshold={100}
+            atBottomThreshold={150}
             atBottomStateChange={handleAtBottomStateChange}
             startReached={handleStartReached}
             rangeChanged={handleRangeChanged}
