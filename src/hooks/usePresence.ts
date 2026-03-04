@@ -5,23 +5,27 @@ const LAST_SEEN_INTERVAL_MS = 90000; // 90 seconds
 const IDLE_TIMEOUT_MS = 300000; // 5 minutes
 
 export const usePresence = () => {
-  const { user, isAuthenticated, updateStatus, updateLastSeen, manualStatus } = useAuthStore();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const manualStatus = useAuthStore((s) => s.manualStatus);
   const idleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSeenIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isIdleRef = useRef(false);
 
+  // Use refs for values that change frequently but shouldn't trigger effect re-runs
+  const manualStatusRef = useRef(manualStatus);
+  manualStatusRef.current = manualStatus;
+
   const resetIdleTimer = useCallback(() => {
-    if (!isAuthenticated || !user) return;
+    const { user, isAuthenticated: authed, manualStatus: ms } = useAuthStore.getState();
+    if (!authed || !user) return;
 
     // Don't override manual DND or Invisible
-    if (manualStatus === 'dnd' || manualStatus === 'offline') {
-      return;
-    }
+    if (ms === 'dnd' || ms === 'offline') return;
 
     // If was idle, set back to online
     if (isIdleRef.current && user.status !== 'dnd') {
       isIdleRef.current = false;
-      updateStatus('online', { source: 'auto' });
+      useAuthStore.getState().updateStatus('online', { source: 'auto' });
     }
 
     // Clear existing timeout
@@ -32,15 +36,16 @@ export const usePresence = () => {
     // Set new idle timeout (only if not DND or invisible)
     if (user.status !== 'dnd' && user.status !== 'offline') {
       idleTimeoutRef.current = setTimeout(() => {
-        if ((manualStatus as string) !== 'dnd' && (manualStatus as string) !== 'offline') {
+        const currentMs = useAuthStore.getState().manualStatus;
+        if (currentMs !== 'dnd' && currentMs !== 'offline') {
           isIdleRef.current = true;
-          updateStatus('idle', { source: 'auto' });
+          useAuthStore.getState().updateStatus('idle', { source: 'auto' });
         }
       }, IDLE_TIMEOUT_MS);
     }
-  }, [isAuthenticated, manualStatus, user, updateStatus]);
+  }, []); // Stable — reads from getState()
 
-  // Set up activity listeners
+  // Set up activity listeners — registers ONCE when authenticated
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -100,16 +105,15 @@ export const usePresence = () => {
     if (!isAuthenticated) return;
 
     const handleVisibilityChange = () => {
+      const ms = useAuthStore.getState().manualStatus;
       if (document.visibilityState === 'hidden') {
-        // Tab is hidden, could set to idle
-        if (manualStatus !== 'dnd' && manualStatus !== 'offline') {
-          updateStatus('idle', { source: 'auto' });
+        if (ms !== 'dnd' && ms !== 'offline') {
+          useAuthStore.getState().updateStatus('idle', { source: 'auto' });
         }
       } else if (document.visibilityState === 'visible') {
-        // Tab is visible again, set back to online if not manually set
-        if (manualStatus !== 'dnd' && manualStatus !== 'offline') {
+        if (ms !== 'dnd' && ms !== 'offline') {
           isIdleRef.current = false;
-          updateStatus('online', { source: 'auto' });
+          useAuthStore.getState().updateStatus('online', { source: 'auto' });
         }
       }
     };
@@ -119,5 +123,5 @@ export const usePresence = () => {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [isAuthenticated, manualStatus, updateStatus]);
+  }, [isAuthenticated]);
 };

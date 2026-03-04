@@ -11,7 +11,17 @@ import type { User, UserStatus } from '@/types';
  * Patches user data across all relevant stores (members, friends, conversations, cached messages).
  * Exported so other components can use it for manual updates.
  */
+/**
+ * Determines if an update is status/presence-only (no visual identity changes).
+ * Status-only updates don't need to patch cached messages since messages don't render status.
+ */
+const isStatusOnlyUpdate = (updatedUser: Partial<User> & { id: string }): boolean => {
+  const keys = Object.keys(updatedUser).filter((k) => k !== 'id');
+  return keys.length > 0 && keys.every((k) => k === 'status' || k === 'last_seen' || k === 'custom_status');
+};
+
 export const patchUserAcrossStores = (updatedUser: Partial<User> & { id: string }) => {
+  const skipMessages = isStatusOnlyUpdate(updatedUser);
   // Patch current server members in-place
   useServerStore.setState((state) => {
     if (!state.currentServer || state.members.length === 0) return {};
@@ -155,6 +165,9 @@ export const patchUserAcrossStores = (updatedUser: Partial<User> & { id: string 
   });
 
   // Patch cached server channel messages (ChatArea/MessageList render from this cache).
+  // Skip for status-only updates since messages don't render user status.
+  if (skipMessages) return;
+
   useMessageStore.setState((state) => {
     const channelEntries = Object.entries(state.messagesByChannel);
     if (channelEntries.length === 0) return {};
@@ -198,6 +211,7 @@ export const patchUserAcrossStores = (updatedUser: Partial<User> & { id: string 
   });
 
   // Patch cached DM messages so sender avatar/deco updates without refetch.
+  // (already returned early above for status-only updates)
   useDMStore.setState((state) => {
     const conversationEntries = Object.entries(state.messagesByConversation);
     if (conversationEntries.length === 0) return {};
@@ -441,8 +455,19 @@ export const useRealtimeUsers = () => {
     };
 
     applyPresenceRef.current = applyPresenceSnapshot;
-    const unsubFriends = useFriendStore.subscribe(() => applyPresenceSnapshot());
-    const unsubDMs = useDMStore.subscribe(() => applyPresenceSnapshot());
+
+    // Throttle store-subscription-driven presence snapshots to avoid hot-path re-runs
+    // on every friend/DM store mutation (status updates, message caching, etc.)
+    let storeSubTimer: ReturnType<typeof setTimeout> | null = null;
+    const throttledApply = () => {
+      if (storeSubTimer) return;
+      storeSubTimer = setTimeout(() => {
+        storeSubTimer = null;
+        applyPresenceSnapshot();
+      }, 2000);
+    };
+    const unsubFriends = useFriendStore.subscribe(throttledApply);
+    const unsubDMs = useDMStore.subscribe(throttledApply);
 
     channel
       .on('presence', { event: 'sync' }, applyPresenceSnapshot)
@@ -467,6 +492,7 @@ export const useRealtimeUsers = () => {
     return () => {
       unsubFriends();
       unsubDMs();
+      if (storeSubTimer) clearTimeout(storeSubTimer);
       if (presenceChannelRef.current === channel) {
         presenceChannelRef.current = null;
       }

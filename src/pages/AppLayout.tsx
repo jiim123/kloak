@@ -149,6 +149,9 @@ const AppLayout = () => {
   }, []);
 
   // Handle conversation query parameter for DM notification redirects
+  const conversationsRef = useRef(conversations);
+  conversationsRef.current = conversations;
+
   useEffect(() => {
     const conversationId = searchParams.get("conversation");
     if (conversationId && user) {
@@ -158,8 +161,8 @@ const AppLayout = () => {
       // Clear current server to switch to DM view
       setCurrentServer(null);
 
-      // Find the conversation in the list or fetch it
-      const existingConversation = conversations.find((c) => c.id === conversationId);
+      // Find the conversation in the current list (via ref to avoid dep)
+      const existingConversation = conversationsRef.current.find((c) => c.id === conversationId);
 
       if (existingConversation) {
         setCurrentConversation(existingConversation);
@@ -204,7 +207,6 @@ const AppLayout = () => {
   }, [
     searchParams,
     user,
-    conversations,
     setSearchParams,
     setCurrentServer,
     setCurrentConversation,
