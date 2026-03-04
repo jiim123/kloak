@@ -90,6 +90,16 @@ function getParticipantTileColor(identity: string): string {
   return PARTICIPANT_TILE_COLORS[hash % PARTICIPANT_TILE_COLORS.length];
 }
 
+function hasActiveScreenShare(participant: Pick<AgoraParticipant, "isScreenSharing" | "screenTrack">): boolean {
+  const track = participant.screenTrack;
+  return (
+    !!participant.isScreenSharing &&
+    !!track &&
+    track.mediaStreamTrack.readyState === "live" &&
+    !track.isMuted
+  );
+}
+
 type TileProps = {
   participant: AgoraParticipant;
   member: ServerMember | undefined;
@@ -113,7 +123,7 @@ function ParticipantTile({
   const visualVoiceIndicators = useVoiceSettingsStore((s) => s.settings.visualVoiceIndicators);
   const speaking = participant.isSpeaking && !participant.hideVoiceActivity && visualVoiceIndicators;
   const [volumeOpen, setVolumeOpen] = useState(false);
-  const isSharing = !!participant.isScreenSharing && !!participant.screenTrack;
+  const isSharing = hasActiveScreenShare(participant);
 
   const tileContent = (
     <div
@@ -124,22 +134,13 @@ function ParticipantTile({
       )}
     >
       <div className="absolute inset-0" style={{ backgroundColor }} />
-      {isSharing ? (
-        <>
-          <VideoPlayer track={participant.screenTrack!} className="absolute inset-0 h-full w-full object-cover" />
-          <div className="absolute inset-0 bg-black/30" />
-        </>
-      ) : (
-        <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/20" />
-      )}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/20" />
 
-      {!isSharing ? (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="rounded-full bg-black/10 p-1.5 backdrop-blur-[1px]">
-            <AvatarWithDecoration user={member?.user} size={78} />
-          </div>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className={cn("rounded-full bg-black/10 p-1.5 backdrop-blur-[1px]", isSharing && "ring-2 ring-white/25")}>
+          <AvatarWithDecoration user={member?.user} size={78} />
         </div>
-      ) : null}
+      </div>
 
       {!isYou && isSharing && onWatchShare ? (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -169,7 +170,7 @@ function ParticipantTile({
           {!isYou && <VolumeIndicator userId={participant.identity} />}
           {isDeafened && isYou ? <VolumeX className="w-3.5 h-3.5" /> : null}
           {participant.isMuted ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
-          {participant.isScreenSharing ? <MonitorUp className="w-3.5 h-3.5" /> : null}
+          {isSharing ? <MonitorUp className="w-3.5 h-3.5" /> : null}
         </div>
       </div>
 
@@ -327,7 +328,12 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
   // Find screen sharers (not the local user)
   const remoteScreenSharers = useMemo(() => {
     return filteredParticipants
-      .filter((p) => p.isScreenSharing && p.identity !== user?.id && p.screenTrack)
+      .filter(
+        (p) =>
+          hasActiveScreenShare(p) &&
+          p.identity !== user?.id &&
+          p.screenTrack
+      )
       .map((p) => ({
         identity: p.identity,
         track: p.screenTrack!,
@@ -340,10 +346,10 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
     const localP = filteredParticipants.find((p) => p.identity === user?.id);
     // Use local state as the source of truth so the stage disappears immediately
     // when the user stops sharing (avoids a stale black stage).
-    if (voice.localState.sharing && localP?.screenTrack) {
+    if (voice.localState.sharing && localP && hasActiveScreenShare(localP)) {
       return {
         identity: localP.identity,
-        track: localP.screenTrack,
+        track: localP.screenTrack!,
         name: getMemberDisplayName(memberByUserId.get(localP.identity), localP),
         isLocal: true as const,
       };
@@ -603,7 +609,9 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
                 <div
                   className={cn(
                     "grid gap-2.5 sm:gap-3",
-                    filteredParticipants.length <= 1 ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"
+                    filteredParticipants.length <= 1
+                      ? "grid-cols-1 max-w-[460px] mx-auto w-full"
+                      : "grid-cols-1 sm:grid-cols-2"
                   )}
                 >
                   {filteredParticipants.map((p) => (
@@ -616,7 +624,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
                       backgroundColor={getParticipantTileColor(p.identity)}
                       isWatchingShare={watchingShareIdentity === p.identity}
                       onWatchShare={
-                        p.identity !== user?.id && p.isScreenSharing && p.screenTrack
+                        p.identity !== user?.id && hasActiveScreenShare(p)
                           ? () =>
                               setWatchingShareIdentity((current) =>
                                 current === p.identity ? null : p.identity
@@ -736,13 +744,11 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
 
             {linkedTextChannel ? (
               <>
-                <div className="flex-1 min-h-0">
-                  <MessageList
-                    channelId={linkedTextChannel.id}
-                    channelName={linkedTextChannel.name}
-                    manageCurrentChannel={false}
-                  />
-                </div>
+                <MessageList
+                  channelId={linkedTextChannel.id}
+                  channelName={linkedTextChannel.name}
+                  manageCurrentChannel={false}
+                />
                 <div className="relative">
                   {!isLinkedTextGhostMode && <TypingIndicator typingUsers={typingUsers} overlay />}
                   <MessageInput

@@ -148,14 +148,24 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
       const micPub = rp.getTrackPublication(Track.Source.Microphone);
       const audioTrack = (micPub?.track as RemoteAudioTrack) ?? null;
       const screenPub = rp.getTrackPublication(Track.Source.ScreenShare);
-      const screenTrack = screenPub?.videoTrack ?? null;
+      const screenTrackCandidate = screenPub?.videoTrack ?? null;
+      const isTrackLive = !!screenTrackCandidate && screenTrackCandidate.mediaStreamTrack.readyState === "live";
+      const isTrackUsable =
+        isTrackLive &&
+        !screenPub?.isMuted &&
+        !!screenPub?.isSubscribed &&
+        !screenTrackCandidate.isMuted;
+      const screenTrack =
+        isTrackUsable
+          ? screenTrackCandidate
+          : null;
 
       all.push({
         identity,
         name: identity.length > 8 ? identity.slice(0, 8) : identity,
         isSpeaking: !!rp.isSpeaking,
         isMuted: !rp.isMicrophoneEnabled,
-        isScreenSharing: !!rp.isScreenShareEnabled,
+        isScreenSharing: !!rp.isScreenShareEnabled && isTrackUsable,
         audioTrack,
         screenTrack,
         joinedAt,
@@ -241,6 +251,8 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
             if (s.joinLeaveSound && !s.visualOnlyMode) playLeaveSound();
           }
         })
+        .on(RoomEvent.TrackPublished, () => updateParticipants())
+        .on(RoomEvent.TrackUnpublished, () => updateParticipants())
         .on(RoomEvent.TrackSubscribed, () => updateParticipants())
         .on(RoomEvent.TrackUnsubscribed, () => updateParticipants())
         .on(RoomEvent.TrackMuted, () => updateParticipants())
@@ -270,18 +282,78 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
       // Determine initial mute state
       const isPTTMode = voiceSettings.voiceMode === "push_to_talk";
       const shouldStartMuted = isPTTMode || voiceSettings.muteOnJoin;
-      await room.localParticipant.setMicrophoneEnabled(!shouldStartMuted, {
+      let joinedMuted = shouldStartMuted;
+      let micWarning: string | null = null;
+      const micOptions = {
         deviceId: voiceSettings.inputDeviceId || undefined,
         echoCancellation: voiceSettings.echoCancellation,
         noiseSuppression: voiceSettings.noiseSuppression,
         autoGainControl: voiceSettings.autoGainControl,
-      });
+      };
+
+      const toMicWarningMessage = (micErr: unknown) => {
+        if (micErr instanceof DOMException) {
+          if (micErr.name === "NotAllowedError") {
+            return "Connected, but microphone permission is blocked. Enable mic access in your browser/OS settings.";
+          }
+          if (micErr.name === "NotFoundError") {
+            return "Connected, but no microphone was found. Plug one in or choose another input device.";
+          }
+          if (micErr.name === "NotReadableError") {
+            return "Connected, but microphone is busy or unavailable. Close other apps using it and try again.";
+          }
+        }
+        return "Connected, but failed to start microphone. You joined muted.";
+      };
+
+      if (shouldStartMuted) {
+        try {
+          await room.localParticipant.setMicrophoneEnabled(false);
+        } catch {
+          // Ignore muted-start failures; user is still joined and can retry unmuting later.
+        }
+      } else {
+        try {
+          await room.localParticipant.setMicrophoneEnabled(true, micOptions);
+        } catch (micErr) {
+          let fallbackErr: unknown = micErr;
+
+          // Common failure path: stale saved device ID after unplugging/changing devices.
+          if (voiceSettings.inputDeviceId) {
+            try {
+              await room.localParticipant.setMicrophoneEnabled(true, {
+                ...micOptions,
+                deviceId: undefined,
+              });
+              fallbackErr = null;
+              useVoiceSettingsStore.getState().updateSetting("inputDeviceId", null);
+              console.warn("[LiveKit] Selected input device failed; fell back to default microphone");
+            } catch (retryErr) {
+              fallbackErr = retryErr;
+            }
+          }
+
+          if (fallbackErr) {
+            console.warn("[LiveKit] Failed to start microphone; staying connected and muted", fallbackErr);
+            joinedMuted = true;
+            micWarning = toMicWarningMessage(fallbackErr);
+            try {
+              await room.localParticipant.setMicrophoneEnabled(false);
+            } catch {
+              // Ignore cleanup failure.
+            }
+          }
+        }
+      }
 
       setStatus("joined");
       setConnection({ channelId, status: "joined", error: null });
       setJoinedChannelId(channelId);
-      setIsMuted(shouldStartMuted);
-      setControls({ muted: shouldStartMuted, deafened: false });
+      setIsMuted(joinedMuted);
+      setControls({ muted: joinedMuted, deafened: false });
+      if (micWarning) {
+        setError(micWarning);
+      }
       updateParticipants();
 
       // Enable join/leave sounds after settling
@@ -472,14 +544,18 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
     return () => {
       readyForSoundsRef.current = false;
       const bc = broadcastChannelRef.current;
-      if (bc) { try { supabase.removeChannel(bc); } catch {} }
+      if (bc) {
+        try { supabase.removeChannel(bc); } catch { /* ignore */ }
+      }
       broadcastChannelRef.current = null;
       const pc = presenceChannelRef.current;
-      if (pc) { try { pc.untrack(); supabase.removeChannel(pc); } catch {} }
+      if (pc) {
+        try { pc.untrack(); supabase.removeChannel(pc); } catch { /* ignore */ }
+      }
       presenceChannelRef.current = null;
       const r = roomRef.current;
       if (r) {
-        try { r.disconnect(); } catch {}
+        try { r.disconnect(); } catch { /* ignore */ }
       }
       roomRef.current = null;
     };
