@@ -105,9 +105,30 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
     enableFriendRequestNotifications,
     enableServerInviteNotifications,
   } = useUIStore();
-  const { pendingRequests, acceptRequest, declineRequest } = useFriendStore();
+  const { pendingRequests, acceptRequest, declineRequest, fetchFriends } = useFriendStore();
   const [isOpen, setIsOpen] = useState(false);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
+
+  // When notifications contain friend requests but pendingRequests hasn't loaded yet,
+  // force-refresh to ensure Accept/Decline buttons appear
+  useEffect(() => {
+    if (!user) return;
+    const hasFriendRequestNotifications = notifications.some((n) => n.type === 'friend_request');
+    if (!hasFriendRequestNotifications) return;
+
+    // Check if any friend_request notification is missing its matching pending request
+    const hasMissingPending = notifications
+      .filter((n) => n.type === 'friend_request')
+      .some((n) => {
+        const username = extractUsernameFromBody(n.body);
+        if (!username) return false;
+        return !pendingRequests.some((r) => r.username?.toLowerCase() === username.toLowerCase());
+      });
+
+    if (hasMissingPending) {
+      fetchFriends(user.id, { force: true });
+    }
+  }, [notifications, pendingRequests, user, fetchFriends]);
 
   // Filter notifications based on user preferences
   const filteredNotifications = notifications.filter((n) => {
