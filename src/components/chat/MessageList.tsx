@@ -3,7 +3,7 @@ import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 
 import { Ghost } from "lucide-react";
 import { ChevronDown, Loader2, Hash, Sparkles } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+
 import { MessageItem } from "./MessageItem";
 import { MessageListSkeleton } from "@/components/ui/skeletons";
 import { useMessageStore } from "@/stores/messageStore";
@@ -474,34 +474,17 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
         </div>
       )}
 
-      <AnimatePresence>
-        {showJumpToPresent && (
-          <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="absolute bottom-4 right-4 z-10"
+      {showJumpToPresent && (
+        <div className="absolute bottom-4 right-4 z-10">
+          <button
+            onClick={scrollToBottom}
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-medium shadow-md hover:opacity-90 transition-opacity duration-150"
           >
-            <button
-              onClick={scrollToBottom}
-              className="flex items-center gap-2 px-4 py-2 rounded-full border backdrop-blur-sm transition-colors duration-150"
-              style={{
-                backgroundColor: "rgba(252, 98, 43, 0.08)",
-                borderColor: "rgba(252, 98, 43, 0.35)",
-                color: "#fc622b",
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "rgba(252, 98, 43, 0.15)"; e.currentTarget.style.borderColor = "rgba(252, 98, 43, 0.6)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "rgba(252, 98, 43, 0.08)"; e.currentTarget.style.borderColor = "rgba(252, 98, 43, 0.35)"; }}
-            >
-              <ChevronDown className="w-4 h-4" />
-              <span className="text-sm font-medium">
-                {newMessageCount > 0 ? `${newMessageCount} new` : "Jump to present"}
-              </span>
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <ChevronDown className="w-4 h-4" />
+            {newMessageCount > 0 ? `${newMessageCount} new` : "Jump to present"}
+          </button>
+        </div>
+      )}
     </div>
   );
 };
