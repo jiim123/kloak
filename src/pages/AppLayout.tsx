@@ -506,6 +506,11 @@ const AppLayout = () => {
     ],
   );
 
+  const unreadChannelsContextValue = useMemo(
+    () => ({ ...unreadChannels, serverChannels, allChannelIds }),
+    [unreadChannels, serverChannels, allChannelIds],
+  );
+
   // Show loading state - AFTER all hooks
   // Only full-screen block when we truly don't have a user yet.
   if (isLoading && !user) {
@@ -538,7 +543,7 @@ const AppLayout = () => {
 
   return (
     <UnreadDMsContext.Provider value={unreadDMsContextValue}>
-      <UnreadChannelsContext.Provider value={{ ...unreadChannels, serverChannels, allChannelIds }}>
+      <UnreadChannelsContext.Provider value={unreadChannelsContextValue}>
         <SEO title={desktopTitle} noIndex />
         <div className="h-screen flex flex-col overflow-hidden app-layout-font">
           <DesktopTitleBar title={desktopTitle} />

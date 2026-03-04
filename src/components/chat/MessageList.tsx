@@ -26,9 +26,12 @@ interface MessageListProps {
   manageCurrentChannel?: boolean;
 }
 
-// Phase 2: Using react-virtuoso for proper virtualization with dynamic heights
+// Virtualization constants
 const CHANNEL_ENTRY_FORCE_REFETCH_MAX_AGE_MS = 12_000;
 const AUTHOR_STYLE_FETCH_CHUNK = 100;
+const VIRTUALIZATION_THRESHOLD = 80; // Only virtualize when more than this many messages
+const ESTIMATED_MESSAGE_HEIGHT = 72; // Average px height of a message row
+const VIRTUAL_OVERSCAN = 15; // Extra rows rendered above/below viewport
 
 interface MessageAuthorStyle {
   user_id: string;
