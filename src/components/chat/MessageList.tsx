@@ -386,11 +386,18 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   }, [currentServerId, user?.id, missingAuthorStyleIds]);
 
   const scrollToBottom = useCallback(() => {
+    // Use scrollToIndex with 'end' align and then nudge to absolute bottom
+    // to ensure the last message is fully visible including its padding
     virtuosoRef.current?.scrollToIndex({
       index: deduplicatedMessages.length - 1,
       behavior: "smooth",
       align: "end",
     });
+    // After the smooth scroll lands, nudge to the absolute bottom to ensure
+    // the full last item (including any padding/margins) is visible
+    setTimeout(() => {
+      virtuosoRef.current?.scrollTo({ top: Number.MAX_SAFE_INTEGER, behavior: "auto" });
+    }, 350);
     setShowJumpToPresent(false);
     setNewMessageCount(0);
 
