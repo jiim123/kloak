@@ -36,7 +36,7 @@ export const FluentEmoji = memo(function FluentEmoji({ emoji, size = 20, classNa
       width={size}
       height={size}
       className={cn('inline-block object-contain', className)}
-      loading="lazy"
+      decoding="async"
       draggable={false}
       onError={() => setFailCount(c => c + 1)}
     />

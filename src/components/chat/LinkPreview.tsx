@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ExternalLink, Play, X, AlertTriangle, ArrowUp, MessageSquare, ShoppingCart, Heart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -77,12 +77,31 @@ export const LinkPreview = ({ url, disabled, messageId }: LinkPreviewProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showEmbed, setShowEmbed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   
   const { activeEmbeds, addEmbed, removeEmbed } = useEmbedStore();
   const { currentChannel } = useServerStore();
 
+  // Only start fetching when the component scrolls into view
   useEffect(() => {
-    if (disabled) return;
+    const el = containerRef.current;
+    if (!el || disabled) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '200px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [disabled]);
+
+  useEffect(() => {
+    if (disabled || !isVisible) return;
 
     const cached = previewCache.get(url);
     if (cached) {
@@ -144,12 +163,12 @@ export const LinkPreview = ({ url, disabled, messageId }: LinkPreviewProps) => {
       cancelled = true;
       controller.abort();
     };
-  }, [url, disabled]);
+  }, [url, disabled, isVisible]);
 
   if (disabled) return null;
-  if (isLoading) {
+  if (!isVisible || isLoading) {
     return (
-      <div className="mt-2 p-3 bg-secondary/50 rounded-lg border border-border animate-pulse">
+      <div ref={containerRef} className="mt-2 p-3 bg-secondary/50 rounded-lg border border-border animate-pulse">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 bg-muted rounded" />
           <div className="h-4 w-32 bg-muted rounded" />

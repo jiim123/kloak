@@ -416,14 +416,14 @@ export const MessageItem = memo(function MessageItem({
     (emoji: string) => {
       const url = resolveCustomEmojiUrl(emoji);
       if (url) {
-        return <img src={url} alt={emoji} className="w-6 h-6 object-contain" loading="lazy" />;
+        return <img src={url} alt={emoji} className="w-6 h-6 object-contain" decoding="async" />;
       }
       // Check if it looks like a custom emoji that we can't resolve locally
       if (/^:[a-z0-9_]{2,12}:$/i.test(emoji)) {
         const m = emoji.match(/^:([a-z0-9_]{2,12}):$/i);
         const fallbackUrl = m ? fallbackEmojiUrls.get(m[1]) : null;
         if (fallbackUrl) {
-          return <img src={fallbackUrl} alt={emoji} className="w-6 h-6 object-contain" loading="lazy" />;
+          return <img src={fallbackUrl} alt={emoji} className="w-6 h-6 object-contain" decoding="async" />;
         }
         return <span className="text-sm leading-none text-muted-foreground">{emoji}</span>;
       }
@@ -436,13 +436,13 @@ export const MessageItem = memo(function MessageItem({
     (emoji: string) => {
       const url = resolveCustomEmojiUrl(emoji);
       if (url) {
-        return <img src={url} alt={emoji} className="w-8 h-8 object-contain" loading="lazy" />;
+        return <img src={url} alt={emoji} className="w-8 h-8 object-contain" decoding="async" />;
       }
       if (/^:[a-z0-9_]{2,12}:$/i.test(emoji)) {
         const m = emoji.match(/^:([a-z0-9_]{2,12}):$/i);
         const fallbackUrl = m ? fallbackEmojiUrls.get(m[1]) : null;
         if (fallbackUrl) {
-          return <img src={fallbackUrl} alt={emoji} className="w-8 h-8 object-contain" loading="lazy" />;
+          return <img src={fallbackUrl} alt={emoji} className="w-8 h-8 object-contain" decoding="async" />;
         }
         return <span className="text-sm leading-none text-muted-foreground">{emoji}</span>;
       }
@@ -1307,7 +1307,7 @@ export const MessageItem = memo(function MessageItem({
                                     canAddReactions && handleReactionClick(reaction.emoji, reaction.hasReacted)
                                   }
                                   disabled={!canAddReactions}
-                                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-colors duration-200 ${
+                                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full border ${
                                     reaction.hasReacted
                                       ? "bg-primary/20 border-primary text-primary"
                                       : "bg-secondary/80 border-transparent hover:border-border hover:bg-secondary"

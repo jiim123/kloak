@@ -519,8 +519,8 @@ export const MessageContent = ({
             img.alt = full;
             img.title = full;
             img.className =
-              "inline-block w-8 h-8 align-middle object-contain cursor-pointer hover:scale-110 transition-transform";
-            img.loading = "lazy";
+              "inline-block w-8 h-8 align-middle object-contain cursor-pointer";
+            img.decoding = "async";
             img.dataset.crossEmoji = name;
             if (qualifier) img.dataset.crossEmojiServer = qualifier;
             frag.appendChild(img);
