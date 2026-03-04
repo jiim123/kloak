@@ -796,18 +796,6 @@ export const MembersSidebar = () => {
                 </div>
               )}
 
-              {/* Fetch next page from server */}
-              {!offlineIsLoading && offlineHasMore && offlineMembers.length <= offlineRenderLimit && (
-                <div className="px-3 pt-1">
-                  <button
-                    type="button"
-                    className="text-[11px] text-primary hover:text-primary/80 transition-colors"
-                    onClick={() => void loadOfflineMembers()}
-                  >
-                    Load more
-                  </button>
-                </div>
-              )}
             </div>
           )}
         </div>
