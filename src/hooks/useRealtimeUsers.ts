@@ -100,18 +100,7 @@ export const patchUserAcrossStores = (updatedUser: Partial<User> & { id: string 
         }
       }
 
-      if (c.last_message?.sender_id === updatedUser.id) {
-        conversationChanged = true;
-        nextConversation = {
-          ...nextConversation,
-          last_message: {
-            ...c.last_message,
-            sender: c.last_message.sender
-              ? { ...c.last_message.sender, ...updatedUser }
-              : (updatedUser as User),
-          },
-        };
-      }
+      // last_message sender data lives in userCacheStore — no need to patch here
 
       if (conversationChanged) {
         changed = true;
@@ -146,18 +135,7 @@ export const patchUserAcrossStores = (updatedUser: Partial<User> & { id: string 
         }
       }
 
-      if (state.currentConversation.last_message?.sender_id === updatedUser.id) {
-        currentChanged = true;
-        nextCurrent = {
-          ...nextCurrent,
-          last_message: {
-            ...state.currentConversation.last_message,
-            sender: state.currentConversation.last_message.sender
-              ? { ...state.currentConversation.last_message.sender, ...updatedUser }
-              : (updatedUser as User),
-          },
-        };
-      }
+      // last_message sender data lives in userCacheStore — no need to patch here
 
       if (currentChanged) {
         changed = true;
@@ -174,51 +152,8 @@ export const patchUserAcrossStores = (updatedUser: Partial<User> & { id: string 
   // The expensive O(N) message iteration is no longer needed.
   // Components read user data reactively via useMessageUser(userId).
 
-  // Patch cached DM messages so sender avatar/deco updates without refetch.
-  // (already returned early above for status-only updates)
-  useDMStore.setState((state) => {
-    const conversationEntries = Object.entries(state.messagesByConversation);
-    if (conversationEntries.length === 0) return {};
-
-    let changed = false;
-    const nextByConversation = { ...state.messagesByConversation };
-
-    for (const [conversationId, messages] of conversationEntries) {
-      let conversationChanged = false;
-      const patchedMessages = messages.map((message) => {
-        let nextMessage = message;
-
-        if (message.sender_id === updatedUser.id) {
-          nextMessage = {
-            ...nextMessage,
-            sender: message.sender ? { ...message.sender, ...updatedUser } : (updatedUser as User),
-          };
-          conversationChanged = true;
-        }
-
-        if (nextMessage.reply_to?.sender?.id === updatedUser.id) {
-          nextMessage = {
-            ...nextMessage,
-            reply_to: {
-              ...nextMessage.reply_to,
-              sender: nextMessage.reply_to.sender
-                ? { ...nextMessage.reply_to.sender, ...updatedUser }
-                : (updatedUser as User),
-            },
-          };
-          conversationChanged = true;
-        }
-
-        return nextMessage;
-      });
-
-      if (!conversationChanged) continue;
-      changed = true;
-      nextByConversation[conversationId] = patchedMessages;
-    }
-
-    return changed ? { messagesByConversation: nextByConversation } : {};
-  });
+  // Phase 2: DM message sender data now lives in useUserCacheStore.
+  // No need to iterate O(N) DM messages — components use useMessageUser(sender_id).
 };
 
 type PresenceRow = {

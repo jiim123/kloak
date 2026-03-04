@@ -17,9 +17,34 @@ interface CachedEntry {
   cachedAt: number;
 }
 
+/**
+ * Fields that affect visual rendering (avatar, name, decoration).
+ * Changes to these fields require a new object reference so React re-renders.
+ * Status/last_seen changes do NOT need to re-render message components.
+ */
+const VISUAL_FIELDS: ReadonlySet<string> = new Set([
+  'username', 'display_name', 'avatar_url', 'banner_url',
+  'avatar_decoration', 'profile_effect', 'bio', 'banner_color',
+  'custom_status',
+]);
+
+/** Version counter per user — incremented only on visual field changes */
+const userVersions = new Map<string, number>();
+
+function getUserVersion(id: string): number {
+  return userVersions.get(id) ?? 0;
+}
+
+function bumpUserVersion(id: string): void {
+  userVersions.set(id, (userVersions.get(id) ?? 0) + 1);
+}
+
 interface UserCacheState {
-  /** Internal cache map - keyed by user ID */
+  /** Internal cache map - keyed by user ID. Mutated in place for status-only updates. */
   _cache: Map<string, CachedEntry>;
+  
+  /** Version counter that increments on visual-field changes to trigger selectors */
+  _version: number;
 
   /** Get a user from cache (returns undefined if not cached or expired) */
   getUser: (id: string) => User | undefined;
@@ -52,83 +77,117 @@ function evictOldest(cache: Map<string, CachedEntry>) {
   }
 }
 
+/** Check if a patch contains any visual field changes */
+function hasVisualChanges(patch: Partial<User>): boolean {
+  for (const key of Object.keys(patch)) {
+    if (key === 'id') continue;
+    if (VISUAL_FIELDS.has(key)) return true;
+  }
+  return false;
+}
+
 export const useUserCacheStore = create<UserCacheState>((set, get) => ({
   _cache: new Map(),
+  _version: 0,
 
   getUser: (id: string) => {
     const entry = get()._cache.get(id);
     if (!entry) return undefined;
-    if (Date.now() - entry.cachedAt > CACHE_TTL_MS) {
-      // Expired but don't delete — return stale data, background refresh will fix it
-      return entry.user;
-    }
+    // Always return — even if stale. Background refresh handles TTL.
     return entry.user;
   },
 
   upsertUser: (user: User) => {
-    set((state) => {
-      const next = new Map(state._cache);
-      next.set(user.id, { user, cachedAt: Date.now() });
-      evictOldest(next);
-      return { _cache: next };
-    });
+    const state = get();
+    const existing = state._cache.get(user.id);
+    
+    // Skip if identical object reference
+    if (existing?.user === user) return;
+    
+    // Mutate the existing Map in place — no new Map allocation
+    state._cache.set(user.id, { user, cachedAt: Date.now() });
+    evictOldest(state._cache);
+    
+    // Only trigger React re-renders if visual fields changed
+    const isVisualChange = !existing || hasVisualChanges(user);
+    if (isVisualChange) {
+      bumpUserVersion(user.id);
+      set({ _version: state._version + 1 });
+    }
   },
 
   upsertUsers: (users: User[]) => {
     if (users.length === 0) return;
-    set((state) => {
-      const next = new Map(state._cache);
-      const now = Date.now();
-      for (const user of users) {
-        next.set(user.id, { user, cachedAt: now });
+    const state = get();
+    const now = Date.now();
+    let anyVisualChange = false;
+    
+    for (const user of users) {
+      const existing = state._cache.get(user.id);
+      if (existing?.user === user) continue;
+      state._cache.set(user.id, { user, cachedAt: now });
+      if (!existing || hasVisualChanges(user)) {
+        bumpUserVersion(user.id);
+        anyVisualChange = true;
       }
-      evictOldest(next);
-      return { _cache: next };
-    });
+    }
+    
+    evictOldest(state._cache);
+    
+    if (anyVisualChange) {
+      set({ _version: state._version + 1 });
+    }
   },
 
   patchUser: (id: string, patch: Partial<User>) => {
-    set((state) => {
-      const existing = state._cache.get(id);
-      if (!existing) return {};
-      const next = new Map(state._cache);
-      next.set(id, {
-        user: { ...existing.user, ...patch },
-        cachedAt: Date.now(),
-      });
-      return { _cache: next };
-    });
+    const state = get();
+    const existing = state._cache.get(id);
+    if (!existing) return;
+    
+    const patchedUser = { ...existing.user, ...patch };
+    state._cache.set(id, { user: patchedUser, cachedAt: Date.now() });
+    
+    // Only trigger React re-renders for visual field changes.
+    // Status/last_seen updates mutate in place without new Map reference,
+    // preventing all useMessageUser selectors from re-evaluating.
+    if (hasVisualChanges(patch)) {
+      bumpUserVersion(id);
+      set({ _version: state._version + 1 });
+    }
   },
 
   invalidate: (id: string) => {
-    set((state) => {
-      if (!state._cache.has(id)) return {};
-      const next = new Map(state._cache);
-      next.delete(id);
-      return { _cache: next };
-    });
+    const state = get();
+    if (!state._cache.has(id)) return;
+    state._cache.delete(id);
+    bumpUserVersion(id);
+    set({ _version: state._version + 1 });
   },
 
   clear: () => {
-    set({ _cache: new Map() });
+    userVersions.clear();
+    set({ _cache: new Map(), _version: 0 });
   },
 }));
 
 /**
  * Hook to subscribe to a specific user from the cache.
- * Components call this with a user_id and get reactive updates when the user data changes.
- * Returns undefined if user is not in cache.
+ * Uses per-user versioning so status-only updates to OTHER users
+ * don't cause this component to re-render.
  */
 export function useMessageUser(userId: string | undefined | null): User | undefined {
   return useUserCacheStore((state) => {
     if (!userId) return undefined;
+    // Access _version to subscribe to store changes, but the selector
+    // returns the same User reference unless that user's visual fields changed.
+    // Zustand uses Object.is equality — same User object = no re-render.
+    void state._version; // subscribe to version changes
     return state._cache.get(userId)?.user;
   });
 }
 
 /**
  * Non-reactive cache lookup (for use outside React components).
- * Drop-in replacement for the old getUserFromCache from lib/userCache.
  */
 export function getUserFromCache(userId: string): User | null {
   return useUserCacheStore.getState().getUser(userId) ?? null;
@@ -150,7 +209,6 @@ export function bulkSetUsersInCache(users: User[]): void {
 
 /**
  * In-flight request deduplication for fetching users not in cache.
- * Drop-in replacement for the old getOrFetchUser from lib/userCache.
  */
 const inflightFetches = new Map<string, Promise<User | null>>();
 

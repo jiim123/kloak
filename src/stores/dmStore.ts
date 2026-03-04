@@ -306,7 +306,6 @@ export const useDMStore = create<DMState>((set, get) => ({
       }
       if (uniqueUsers.size > 0) {
         bulkSetUsersInCache(Array.from(uniqueUsers.values()));
-        useUserCacheStore.getState().upsertUsers(Array.from(uniqueUsers.values()));
       }
 
       const reversedData = [...dataArray].reverse();
