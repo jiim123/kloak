@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { formatDistanceToNow } from "date-fns";
-import { ArrowUpDown, MessageSquare, MoreVertical, Plus, Search, Users } from "lucide-react";
+import { ArrowUpDown, ChevronLeft, ChevronRight, MessageSquare, MoreVertical, Plus, Search, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import { useDMStore } from "@/stores/dmStore";
@@ -67,6 +67,8 @@ export const ServerMembersView = () => {
 
   const [query, setQuery] = useState("");
   const [sortMode, setSortMode] = useState<SortMode>("joined_desc");
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 50;
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -86,6 +88,16 @@ export const ServerMembersView = () => {
 
     return sorted;
   }, [members, query, sortMode]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+  const paginatedMembers = filtered.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
+
+  // Reset page when query changes
+  const handleQueryChange = useCallback((value: string) => {
+    setQuery(value);
+    setPage(0);
+  }, []);
 
   const handleOpenProfile = (member: ServerMember) => {
     openModal("userProfile", { userId: member.user_id, user: member.user });
@@ -182,7 +194,7 @@ export const ServerMembersView = () => {
               <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
               <Input
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => handleQueryChange(e.target.value)}
                 placeholder="Search by username or id"
                 className="pl-9 w-64"
               />
@@ -213,7 +225,7 @@ export const ServerMembersView = () => {
             </TableHeader>
 
             <TableBody>
-              {filtered.map((member) => {
+              {paginatedMembers.map((member) => {
                 const name = getDisplayName(member);
                 const memberSince = member.joined_at ? new Date(member.joined_at) : null;
                 const joinedKloak = member.user?.created_at ? new Date(member.user.created_at) : null;
@@ -402,7 +414,7 @@ export const ServerMembersView = () => {
                 );
               })}
 
-              {filtered.length === 0 && (
+              {paginatedMembers.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
                     No members found.
@@ -412,6 +424,36 @@ export const ServerMembersView = () => {
             </TableBody>
           </Table>
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-4 px-1">
+            <span className="text-sm text-muted-foreground">
+              Showing {safePage * PAGE_SIZE + 1}–{Math.min((safePage + 1) * PAGE_SIZE, filtered.length)} of {filtered.length}
+            </span>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={safePage === 0}
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <span className="text-sm text-muted-foreground px-2">
+                Page {safePage + 1} of {totalPages}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={safePage >= totalPages - 1}
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
