@@ -100,7 +100,7 @@ export function replaceNativeEmojisInElement(element: HTMLElement, sizePx = 20):
       img.width = sizePx;
       img.height = sizePx;
       img.className = 'inline-block align-text-bottom object-contain fluent-emoji';
-      img.loading = 'lazy';
+      img.decoding = 'async';
       img.draggable = false;
       // On error, try without variation selector; if that also fails, show native text
       img.onerror = () => {

@@ -51,8 +51,8 @@ export function RoleIconPreview({ icon, serverId, className = '' }: RoleIconPrev
         <img 
           src={url} 
           alt={icon} 
-          className={`inline-block w-5 h-5 object-contain ${className}`}
-          loading="lazy" 
+         className={`inline-block w-5 h-5 object-contain ${className}`}
+          decoding="async"
         />
       );
     }
