@@ -55,7 +55,7 @@ export const TypingIndicator = ({ typingUsers, overlay = false, className }: Typ
             className={cn("pointer-events-none absolute bottom-full left-4 right-4 z-20", className)}
           >
             <div className="h-8 rounded-t-xl bg-gradient-to-t from-background via-background/90 to-transparent" />
-            <div className="absolute bottom-3 left-2 inline-flex max-w-[calc(100%-1rem)] items-center gap-2 text-xs text-muted-foreground">
+            <div className="absolute bottom-1 left-2 inline-flex max-w-[calc(100%-1rem)] items-center gap-2 text-xs text-muted-foreground">
               {dots}
               <span className="truncate">{typingText}</span>
             </div>
