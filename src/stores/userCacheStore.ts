@@ -77,11 +77,15 @@ function evictOldest(cache: Map<string, CachedEntry>) {
   }
 }
 
-/** Check if a patch contains any visual field changes */
-function hasVisualChanges(patch: Partial<User>): boolean {
-  for (const key of Object.keys(patch)) {
+/** Check if a patch contains any visual field changes compared to existing user */
+function hasVisualChanges(incoming: Partial<User>, existing?: User): boolean {
+  for (const key of Object.keys(incoming)) {
     if (key === 'id') continue;
-    if (VISUAL_FIELDS.has(key)) return true;
+    if (!VISUAL_FIELDS.has(key)) continue;
+    // If no existing user, any visual field is a change
+    if (!existing) return true;
+    // Compare actual values
+    if ((incoming as any)[key] !== (existing as any)[key]) return true;
   }
   return false;
 }
@@ -104,12 +108,13 @@ export const useUserCacheStore = create<UserCacheState>((set, get) => ({
     // Skip if identical object reference
     if (existing?.user === user) return;
     
+    const isVisualChange = hasVisualChanges(user, existing?.user);
+    
     // Mutate the existing Map in place — no new Map allocation
     state._cache.set(user.id, { user, cachedAt: Date.now() });
     evictOldest(state._cache);
     
-    // Only trigger React re-renders if visual fields changed
-    const isVisualChange = !existing || hasVisualChanges(user);
+    // Only trigger React re-renders if visual fields actually changed values
     if (isVisualChange) {
       bumpUserVersion(user.id);
       set({ _version: state._version + 1 });
@@ -125,8 +130,9 @@ export const useUserCacheStore = create<UserCacheState>((set, get) => ({
     for (const user of users) {
       const existing = state._cache.get(user.id);
       if (existing?.user === user) continue;
+      const isVisual = hasVisualChanges(user, existing?.user);
       state._cache.set(user.id, { user, cachedAt: now });
-      if (!existing || hasVisualChanges(user)) {
+      if (isVisual) {
         bumpUserVersion(user.id);
         anyVisualChange = true;
       }
@@ -150,7 +156,7 @@ export const useUserCacheStore = create<UserCacheState>((set, get) => ({
     // Only trigger React re-renders for visual field changes.
     // Status/last_seen updates mutate in place without new Map reference,
     // preventing all useMessageUser selectors from re-evaluating.
-    if (hasVisualChanges(patch)) {
+    if (hasVisualChanges(patch, existing.user)) {
       bumpUserVersion(id);
       set({ _version: state._version + 1 });
     }
