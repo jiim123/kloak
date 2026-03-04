@@ -180,7 +180,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
                   is_system_message: newMsg.is_system_message || false,
                   edited_at: newMsg.edited_at,
                   created_at: newMsg.created_at,
-                  user: undefined,
+                  // user data lives in cache, not on message
                   reply_to: undefined,
                   attachments: [],
                   reactions: [],
@@ -195,7 +195,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
                     message.reply_to = {
                       id: replyMsg.id,
                       content: replyMsg.content,
-                      user: replyMsg.user,
+                      user_id: replyMsg.user_id,
                     };
                   }
                 }

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
+import { useUserCacheStore, bulkSetUsersInCache } from "@/stores/userCacheStore";
 import type { DMConversation, DirectMessage, User, ReactionGroup } from "@/types";
 
 interface DMState {
@@ -296,6 +297,18 @@ export const useDMStore = create<DMState>((set, get) => ({
         reactions = reactionData || [];
       }
 
+      // Extract sender data into user cache, then strip from messages
+      const uniqueUsers = new Map<string, User>();
+      for (const msg of dataArray) {
+        if ((msg as any).sender && typeof (msg as any).sender === 'object' && (msg as any).sender.id) {
+          uniqueUsers.set((msg as any).sender.id, (msg as any).sender as User);
+        }
+      }
+      if (uniqueUsers.size > 0) {
+        bulkSetUsersInCache(Array.from(uniqueUsers.values()));
+        useUserCacheStore.getState().upsertUsers(Array.from(uniqueUsers.values()));
+      }
+
       const reversedData = [...dataArray].reverse();
 
       // Collect reply_to_ids that need fetching
@@ -319,7 +332,6 @@ export const useDMStore = create<DMState>((set, get) => ({
               id: found.id,
               content: found.content,
               sender_id: found.sender_id,
-              sender: found.sender ? ({ username: found.sender.username } as any) : undefined,
             };
           }
         }
@@ -336,7 +348,6 @@ export const useDMStore = create<DMState>((set, get) => ({
                 id: r.id,
                 content: r.content,
                 sender_id: r.sender_id,
-                sender: r.sender ? ({ username: r.sender.username } as any) : undefined,
               };
             }
           }
@@ -346,7 +357,13 @@ export const useDMStore = create<DMState>((set, get) => ({
       const messages: DirectMessage[] = reversedData.map((msg: any) => {
         const msgReactions = reactions.filter((r) => r.message_id === msg.id);
         return {
-          ...msg,
+          id: msg.id,
+          conversation_id: msg.conversation_id,
+          sender_id: msg.sender_id,
+          content: msg.content,
+          reply_to_id: msg.reply_to_id ?? null,
+          edited_at: msg.edited_at ?? null,
+          created_at: msg.created_at,
           reply_to: msg.reply_to_id ? (replyToMap[msg.reply_to_id] as DirectMessage) || null : null,
           attachments: [],
           reactions: groupReactions(msgReactions, userId),
@@ -404,10 +421,13 @@ export const useDMStore = create<DMState>((set, get) => ({
         created_at: string;
       };
 
-      // Fetch sender details
+      // Cache sender data instead of embedding on message
       const localUser = useAuthStore.getState().user;
-      const { data: userData } =
-        localUser?.id === senderId ? { data: localUser } : await supabase.rpc("get_user_by_id", { _user_id: senderId });
+      const senderData =
+        localUser?.id === senderId ? localUser : (await supabase.rpc("get_user_by_id", { _user_id: senderId })).data;
+      if (senderData) {
+        useUserCacheStore.getState().upsertUser(senderData as unknown as User);
+      }
 
       // Look up reply_to from local cache if replyToId is provided
       let reply_to: DirectMessage | null = null;
@@ -420,9 +440,14 @@ export const useDMStore = create<DMState>((set, get) => ({
       }
 
       const message: DirectMessage = {
-        ...msgData,
+        id: msgData.id,
+        conversation_id: msgData.conversation_id,
+        sender_id: msgData.sender_id,
+        content: msgData.content,
+        reply_to_id: msgData.reply_to_id,
+        edited_at: msgData.edited_at,
+        created_at: msgData.created_at,
         reply_to,
-        sender: userData as unknown as User,
         attachments: [],
         reactions: [],
       };

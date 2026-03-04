@@ -2,7 +2,8 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import { useFriendStore } from '@/stores/friendStore';
-import type { Message } from '@/types';
+import { useUserCacheStore, bulkSetUsersInCache } from '@/stores/userCacheStore';
+import type { Message, User } from '@/types';
 
 type PinnedCacheEntry = {
   fetchedAt: number;
@@ -85,10 +86,31 @@ export const useRealtimePinnedMessages = (channelId: string | null) => {
 
       if (error) throw error;
       const messageRows = Array.isArray(data) ? (data as unknown as PinnedMessageRow[]) : [];
+      // Extract user data into cache, then strip from messages
+      const uniqueUsers = new Map<string, User>();
+      for (const msg of messageRows) {
+        if (msg.user && typeof msg.user === 'object' && (msg.user as any).id) {
+          uniqueUsers.set((msg.user as any).id, msg.user as unknown as User);
+        }
+      }
+      if (uniqueUsers.size > 0) {
+        bulkSetUsersInCache(Array.from(uniqueUsers.values()));
+        useUserCacheStore.getState().upsertUsers(Array.from(uniqueUsers.values()));
+      }
+
       return messageRows.map((msg) => ({
-        ...msg,
-        user: msg.user,
+        id: msg.id,
+        channel_id: msg.channel_id,
+        user_id: msg.user_id,
+        reply_to_id: msg.reply_to_id,
+        content: msg.content,
+        is_pinned: msg.is_pinned,
+        is_system_message: msg.is_system_message,
+        embed_hidden: msg.embed_hidden,
+        edited_at: msg.edited_at,
+        created_at: msg.created_at,
         attachments: msg.attachments || [],
+        reactions: msg.reactions,
       }));
     })();
 
