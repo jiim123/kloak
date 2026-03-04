@@ -5,6 +5,7 @@ import { useFriendStore } from '@/stores/friendStore';
 import { useDMStore } from '@/stores/dmStore';
 import { useMessageStore } from '@/stores/messageStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useUserCacheStore } from '@/stores/userCacheStore';
 import type { User, UserStatus } from '@/types';
 
 /**
@@ -22,6 +23,11 @@ const isStatusOnlyUpdate = (updatedUser: Partial<User> & { id: string }): boolea
 
 export const patchUserAcrossStores = (updatedUser: Partial<User> & { id: string }) => {
   const skipMessages = isStatusOnlyUpdate(updatedUser);
+
+  // Phase 1: Always update the centralized user cache
+  useUserCacheStore.getState().patchUser(updatedUser.id, updatedUser);
+
+  // Patch current server members in-place
   // Patch current server members in-place
   useServerStore.setState((state) => {
     if (!state.currentServer || state.members.length === 0) return {};
@@ -164,51 +170,9 @@ export const patchUserAcrossStores = (updatedUser: Partial<User> & { id: string 
       : {};
   });
 
-  // Patch cached server channel messages (ChatArea/MessageList render from this cache).
-  // Skip for status-only updates since messages don't render user status.
-  if (skipMessages) return;
-
-  useMessageStore.setState((state) => {
-    const channelEntries = Object.entries(state.messagesByChannel);
-    if (channelEntries.length === 0) return {};
-
-    let changed = false;
-    const nextByChannel = { ...state.messagesByChannel };
-
-    for (const [channelId, cache] of channelEntries) {
-      let channelChanged = false;
-      const messages = cache.messages.map((message) => {
-        let nextMessage = message;
-
-        if (message.user_id === updatedUser.id) {
-          nextMessage = {
-            ...nextMessage,
-            user: message.user ? { ...message.user, ...updatedUser } : (updatedUser as User),
-          };
-          channelChanged = true;
-        }
-
-        if (nextMessage.reply_to?.user?.id === updatedUser.id) {
-          nextMessage = {
-            ...nextMessage,
-            reply_to: {
-              ...nextMessage.reply_to,
-              user: { ...nextMessage.reply_to.user, ...updatedUser },
-            },
-          };
-          channelChanged = true;
-        }
-
-        return nextMessage;
-      });
-
-      if (!channelChanged) continue;
-      changed = true;
-      nextByChannel[channelId] = { ...cache, messages };
-    }
-
-    return changed ? { messagesByChannel: nextByChannel } : {};
-  });
+  // Phase 1: User data is no longer embedded on messages — it lives in useUserCacheStore.
+  // The expensive O(N) message iteration is no longer needed.
+  // Components read user data reactively via useMessageUser(userId).
 
   // Patch cached DM messages so sender avatar/deco updates without refetch.
   // (already returned early above for status-only updates)
