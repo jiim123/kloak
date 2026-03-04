@@ -58,8 +58,7 @@ import {
   resolveQualifiedEmoji,
   type ResolvedEmoji,
 } from "@/lib/globalEmojiResolver";
-import { getOrFetchUser, getUserFromCache } from "@/lib/userCache";
-import { useMessageUser, fetchAndCacheUser } from "@/hooks/useMessageUser";
+import { useMessageUser, fetchAndCacheUser, getUserFromCache, getOrFetchUser } from "@/stores/userCacheStore";
 import { cn } from "@/lib/utils";
 import { useSignedUrl } from "@/hooks/useSignedUrl";
 import { getPollIdFromContent, isPollMessageContent } from "@/lib/poll";
@@ -249,8 +248,8 @@ export const MessageItem = memo(function MessageItem({
     [message.is_own, user?.id, message.user_id],
   );
 
-  // Phase 1: Look up user from centralized cache instead of message.user
-  const messageUser = useMessageUser(message.user_id) ?? message.user;
+  // Phase 1: Look up user from centralized cache (no fallback to message.user)
+  const messageUser = useMessageUser(message.user_id);
   const hasMessageDecoration = Boolean(messageUser?.avatar_decoration);
   const messageAvatarSizeClass = hasMessageDecoration ? "w-9 h-9" : "w-10 h-10";
 

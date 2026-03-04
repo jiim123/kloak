@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { getKeyHash, supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import { useServerStore } from '@/stores/serverStore';
-import { getOrFetchUser, getUserFromCache } from '@/lib/userCache';
+import { getUserFromCache, getOrFetchUser } from '@/stores/userCacheStore';
 import type { TypingUser } from '@/types';
 
 const TYPING_DEBOUNCE_MS = 4500;

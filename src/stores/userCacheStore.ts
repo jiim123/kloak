@@ -127,16 +127,37 @@ export function useMessageUser(userId: string | undefined | null): User | undefi
 }
 
 /**
+ * Non-reactive cache lookup (for use outside React components).
+ * Drop-in replacement for the old getUserFromCache from lib/userCache.
+ */
+export function getUserFromCache(userId: string): User | null {
+  return useUserCacheStore.getState().getUser(userId) ?? null;
+}
+
+/**
+ * Upsert a single user (non-reactive helper for use outside components).
+ */
+export function setUserInCache(userId: string, user: User): void {
+  useUserCacheStore.getState().upsertUser(user);
+}
+
+/**
+ * Bulk upsert users (non-reactive helper for use outside components).
+ */
+export function bulkSetUsersInCache(users: User[]): void {
+  useUserCacheStore.getState().upsertUsers(users);
+}
+
+/**
  * In-flight request deduplication for fetching users not in cache.
+ * Drop-in replacement for the old getOrFetchUser from lib/userCache.
  */
 const inflightFetches = new Map<string, Promise<User | null>>();
 
 export async function fetchAndCacheUser(userId: string): Promise<User | null> {
-  // Check cache first
   const cached = useUserCacheStore.getState().getUser(userId);
   if (cached) return cached;
 
-  // Deduplicate
   const inflight = inflightFetches.get(userId);
   if (inflight) return inflight;
 
@@ -157,3 +178,6 @@ export async function fetchAndCacheUser(userId: string): Promise<User | null> {
   inflightFetches.set(userId, promise);
   return promise;
 }
+
+/** Alias for backward compatibility */
+export const getOrFetchUser = fetchAndCacheUser;

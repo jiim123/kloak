@@ -9,7 +9,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import type { Message, User } from "@/types";
-import { getOrFetchUser, getUserFromCache } from "@/lib/userCache";
+import { getUserFromCache, getOrFetchUser } from "@/stores/userCacheStore";
 
 interface AnnouncementCard {
   id: string;
@@ -259,7 +259,7 @@ export const ServerOverviewView = () => {
               <div className="min-w-0">
                 <div className="text-sm font-medium truncate">{ownerName}</div>
                 <div className="text-xs text-muted-foreground truncate">
-                  {ownerUser?.username ? `@${ownerUser.username}` : "—"}
+                  {ownerUser?.username ? `@${ownerUser.username}` : "\u2014"}
                 </div>
               </div>
             </div>
@@ -313,5 +313,3 @@ export const ServerOverviewView = () => {
     </div>
   );
 };
-
-

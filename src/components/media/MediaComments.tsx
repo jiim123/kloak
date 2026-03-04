@@ -26,7 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { handleError } from "@/lib/errorHandler";
 import { formatMessageTimestamp } from "@/lib/format";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
-import { getOrFetchUser, getUserFromCache } from "@/lib/userCache";
+import { getUserFromCache, getOrFetchUser } from "@/stores/userCacheStore";
 import type { User, ReactionGroup, CustomServerRole, ServerRole } from "@/types";
 
 interface MediaComment {
