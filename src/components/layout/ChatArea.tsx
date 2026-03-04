@@ -274,7 +274,7 @@ export const ChatArea = () => {
       <MessageList channelId={currentChannel.id} channelName={channelName} />
 
       {/* Composer area */}
-      <div className="relative">
+      <div className="relative pt-7">
         {!isGhostMode && <TypingIndicator typingUsers={typingUsers} overlay />}
         <MessageInput
           channelId={currentChannel.id}
