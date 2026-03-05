@@ -176,16 +176,24 @@ export const ServerOverviewView = () => {
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl sm:text-2xl font-medium truncate">{currentServer.name}</h1>
               </div>
-              <div className="mt-1 flex items-center gap-4 flex-wrap text-sm text-muted-foreground">
-                <span className="inline-flex items-center gap-1.5">
-                  <Users className="w-4 h-4" />
-                  {totalMemberCount ?? members.length} member{(totalMemberCount ?? members.length) === 1 ? "" : "s"}
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <Hash className="w-4 h-4" />
-                  {channels.length} channel{channels.length === 1 ? "" : "s"}
-                </span>
-              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Members & Channels stats ── */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="rounded-2xl border border-border/50 bg-background/40 p-5 flex items-center gap-3">
+            <Users className="w-5 h-5 text-muted-foreground" />
+            <div>
+              <div className="text-lg font-medium">{totalMemberCount ?? members.length}</div>
+              <div className="text-xs text-muted-foreground">Member{(totalMemberCount ?? members.length) === 1 ? "" : "s"}</div>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-border/50 bg-background/40 p-5 flex items-center gap-3">
+            <Hash className="w-5 h-5 text-muted-foreground" />
+            <div>
+              <div className="text-lg font-medium">{channels.length}</div>
+              <div className="text-xs text-muted-foreground">Channel{channels.length === 1 ? "" : "s"}</div>
             </div>
           </div>
         </div>
