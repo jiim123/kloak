@@ -185,14 +185,14 @@ export const ServerOverviewView = () => {
           <div className="rounded-2xl border border-border/50 bg-background/40 p-5 flex items-center gap-3">
             <Users className="w-5 h-5 text-muted-foreground" />
             <div>
-              <div className="text-lg font-medium">{totalMemberCount ?? members.length}</div>
+              <div className="text-3xl font-medium">{totalMemberCount ?? members.length}</div>
               <div className="text-xs text-muted-foreground">Member{(totalMemberCount ?? members.length) === 1 ? "" : "s"}</div>
             </div>
           </div>
           <div className="rounded-2xl border border-border/50 bg-background/40 p-5 flex items-center gap-3">
             <Hash className="w-5 h-5 text-muted-foreground" />
             <div>
-              <div className="text-lg font-medium">{channels.length}</div>
+              <div className="text-3xl font-medium">{channels.length}</div>
               <div className="text-xs text-muted-foreground">Channel{channels.length === 1 ? "" : "s"}</div>
             </div>
           </div>
