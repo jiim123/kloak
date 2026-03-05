@@ -7,7 +7,6 @@ import { Loader2, Hash, Sparkles } from "lucide-react";
 import { MessageItem } from "./MessageItem";
 import { JumpToPresent } from "./JumpToPresent";
 import { MessageListSkeleton } from "@/components/ui/skeletons";
-import { Button } from "@/components/ui/button";
 import { useMessageStore } from "@/stores/messageStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useFriendStore } from "@/stores/friendStore";
@@ -174,6 +173,8 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     requestId: number;
     prevTop: number;
     prevHeight: number;
+    anchorMessageId: string | null;
+    anchorOffset: number | null;
   } | null>(null);
   const prependRequestIdRef = useRef(0);
 
@@ -381,12 +382,30 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     const scroller = containerRef.current;
     const prevTop = scroller?.scrollTop ?? 0;
     const prevHeight = scroller?.scrollHeight ?? 0;
+    let anchorMessageId: string | null = null;
+    let anchorOffset: number | null = null;
+    if (scroller) {
+      const containerTop = scroller.getBoundingClientRect().top;
+      for (const msg of msgs) {
+        const el = document.getElementById(`message-${msg.id}`);
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        // First message touching or below the top viewport edge.
+        if (rect.bottom >= containerTop + 1) {
+          anchorMessageId = msg.id;
+          anchorOffset = rect.top - containerTop;
+          break;
+        }
+      }
+    }
     const requestId = ++prependRequestIdRef.current;
 
     pendingPrependAnchorRef.current = {
       requestId,
       prevTop,
       prevHeight,
+      anchorMessageId,
+      anchorOffset,
     };
 
     fetchMessagesRef.current(channelIdRef.current, 50, beforeCursor).finally(() => {
@@ -410,6 +429,18 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     const node = containerRef.current;
     if (!node) return;
 
+    if (anchor.anchorMessageId && anchor.anchorOffset !== null) {
+      const anchorEl = document.getElementById(`message-${anchor.anchorMessageId}`);
+      if (anchorEl) {
+        const containerTop = node.getBoundingClientRect().top;
+        const nextOffset = anchorEl.getBoundingClientRect().top - containerTop;
+        const offsetDelta = nextOffset - anchor.anchorOffset;
+        if (offsetDelta !== 0) node.scrollTop += offsetDelta;
+        pendingPrependAnchorRef.current = null;
+        return;
+      }
+    }
+
     const heightDelta = node.scrollHeight - anchor.prevHeight;
     if (heightDelta !== 0) node.scrollTop = anchor.prevTop + heightDelta;
     pendingPrependAnchorRef.current = null;
@@ -419,13 +450,17 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     const node = containerRef.current;
     if (!node) return;
 
+    if (node.scrollTop <= 96) {
+      handleLoadOlder();
+    }
+
     const distanceFromBottom = node.scrollHeight - node.scrollTop - node.clientHeight;
     const atBottom = distanceFromBottom <= 150;
     if (atBottom !== isNearBottomRef.current) {
       handleAtBottomStateChange(atBottom);
     }
 
-  }, [handleAtBottomStateChange]);
+  }, [handleLoadOlder, handleAtBottomStateChange]);
 
   useEffect(() => {
     if (isLoading || msgCount === 0 || didInitialBottomScrollRef.current) return;
@@ -552,30 +587,16 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       {msgCount > 0 && (
         <div
           ref={containerRef}
-          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
+          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative"
           style={{ overflowAnchor: "none" }}
           onScroll={handleScroll}
         >
           {headerContent}
-          {hasMore && (
-            <div className="flex justify-center pt-3 pb-1">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleLoadOlder}
-                disabled={isFetchingOlder || isLoading}
-                className="min-w-[168px]"
-              >
-                {isFetchingOlder ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Loading older...
-                  </>
-                ) : (
-                  "Load older messages"
-                )}
-              </Button>
+          {isFetchingOlder && (
+            <div className="pointer-events-none absolute top-2 left-1/2 -translate-x-1/2 z-20">
+              <div className="rounded-full border border-border/70 bg-background/90 p-1.5 shadow-sm backdrop-blur-sm">
+                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+              </div>
             </div>
           )}
           <ViewportList
