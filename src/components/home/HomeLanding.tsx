@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { Plus, Users, Compass, Heart } from "lucide-react";
 import { useUIStore, useAuthStore } from "@/stores";
 import { SupportUsButton } from "@/components/support/SupportUsButton";
-import kloakLogo from "@/assets/kloak-logo.svg";
 
 const SupportUsBox = () => (
   <div className="p-4 sm:p-6 md:p-8 rounded-xl sm:rounded-2xl bg-card/50 border border-border/50 hover:bg-card hover:border-emerald-500/50 hover:shadow-lg hover:shadow-emerald-500/5 transition-all duration-200 text-left group w-full h-full relative">
@@ -16,7 +15,6 @@ const SupportUsBox = () => (
         <p className="text-xs sm:text-sm text-muted-foreground px-1">Help keep Kloak running</p>
       </div>
     </div>
-    {/* Invisible SupportUsButton overlay that handles click + dropdown/sheet */}
     <div className="absolute inset-0 flex items-center justify-center">
       <SupportUsButton variant="overlay" />
     </div>
@@ -57,78 +55,25 @@ export const HomeLanding = () => {
 
   return (
     <div className="flex-1 h-full bg-layout-chat overflow-y-auto w-full flex items-center justify-center relative min-h-0 py-3 sm:py-0">
-      {/* Gradient Circle Background Effects */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <motion.div
-          className="absolute top-1/4 left-1/4 w-64 h-64 sm:w-96 sm:h-96 rounded-full bg-gradient-to-br from-primary/20 via-primary/10 to-transparent blur-3xl"
-          animate={{
-            scale: [1, 1.2, 1],
-            x: [0, 30, 0],
-            y: [0, -20, 0],
-          }}
-          transition={{
-            duration: 8,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-        />
-        <motion.div
-          className="absolute bottom-1/4 right-1/4 w-56 h-56 sm:w-80 sm:h-80 rounded-full bg-gradient-to-tl from-primary/15 via-primary/5 to-transparent blur-3xl"
-          animate={{
-            scale: [1, 1.3, 1],
-            x: [0, -25, 0],
-            y: [0, 25, 0],
-          }}
-          transition={{
-            duration: 10,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-        />
-        <motion.div
-          className="absolute top-1/2 right-1/3 w-48 h-48 sm:w-72 sm:h-72 rounded-full bg-gradient-to-r from-primary/10 via-primary/5 to-transparent blur-3xl"
-          animate={{
-            scale: [1, 1.15, 1],
-            x: [0, 20, 0],
-            y: [0, 15, 0],
-          }}
-          transition={{
-            duration: 12,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-        />
-      </div>
-
       <div className="max-w-4xl mx-auto px-3 sm:px-4 md:px-6 py-3 sm:py-5 md:py-8 relative z-10 w-full">
         <motion.div
           variants={container}
           initial="hidden"
           animate="show"
-          className="space-y-4 sm:space-y-8 md:space-y-10"
+          className="space-y-6 sm:space-y-8 md:space-y-10"
         >
-          {/* Hero Section */}
+          {/* Greeting Section */}
           <motion.div
             variants={item}
-            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 md:gap-3"
+            className="text-center space-y-1 sm:space-y-1.5"
           >
-            <div className="flex items-center relative">
-              <img
-                src="/krill/krill-welcome.svg"
-                alt="Happy krill"
-                className="h-52 w-52 sm:h-56 sm:w-56 md:h-44 md:w-44 object-contain"
-                fetchPriority="high"
-              />
-            </div>
-            <div className="text-center sm:text-left space-y-1 sm:space-y-1.5">
-              <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-medium tracking-tight text-foreground break-words">
-                {greeting.text}, <span className="text-primary break-words">{displayName}</span>{" "}
-                <span aria-hidden="true">{greeting.emoji}</span>
-              </h1>
-              <p className="text-sm sm:text-base md:text-lg text-muted-foreground leading-relaxed max-w-xl">
-                Chat with friends, build communities, and connect — all without giving up your privacy.
-              </p>
-            </div>
+            <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-medium tracking-tight text-foreground break-words">
+              {greeting.text}, <span className="text-primary break-words">{displayName}</span>{" "}
+              <span aria-hidden="true">{greeting.emoji}</span>
+            </h1>
+            <p className="text-sm sm:text-base md:text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto">
+              Chat with friends, build communities, and connect — all without giving up your privacy.
+            </p>
           </motion.div>
 
           {/* Action Boxes */}
@@ -181,7 +126,7 @@ export const HomeLanding = () => {
               </div>
             </button>
 
-            {/* Support Us - mobile only (hidden on sm+ where sidebar button is visible) */}
+            {/* Support Us - mobile only */}
             <div className="sm:hidden">
               <SupportUsBox />
             </div>
@@ -191,4 +136,3 @@ export const HomeLanding = () => {
     </div>
   );
 };
-
