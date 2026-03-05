@@ -68,7 +68,7 @@ export const HomeLanding = () => {
               <p className="text-base sm:text-lg md:text-xl text-muted-foreground font-medium">
                 {greeting.text} <span aria-hidden="true">{greeting.emoji}</span>
               </p>
-              <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold tracking-tight text-primary break-words">
+              <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-medium tracking-tight text-primary break-words">
                 @{user?.username || "there"}
               </h1>
             </div>

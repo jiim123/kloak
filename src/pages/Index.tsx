@@ -25,9 +25,7 @@ import { SEO } from "@/components/seo";
 import { SEO_CONFIG } from "@/lib/seo";
 
 // Lazy-load the heavy WebGL shader component (only visible at bottom of page)
-const LazyDithering = lazy(() =>
-  import("@paper-design/shaders-react").then(m => ({ default: m.Dithering }))
-);
+const LazyDithering = lazy(() => import("@paper-design/shaders-react").then((m) => ({ default: m.Dithering })));
 
 /** CTA section – only mounts the heavy WebGL shader when scrolled into view */
 function CtaSection() {
@@ -38,8 +36,13 @@ function CtaSection() {
     const el = ref.current;
     if (!el) return;
     const io = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { setVisible(true); io.disconnect(); } },
-      { rootMargin: "200px" }
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: "200px" },
     );
     io.observe(el);
     return () => io.disconnect();
