@@ -1,43 +1,24 @@
-import { useRef, useEffect } from "react";
+import { lazy, Suspense, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import promoVideo from "@/assets/kloak-promo.mp4";
+
+const LazyHalftoneScene = lazy(() =>
+  import("./HalftoneScene").then((m) => ({ default: m.HalftoneScene }))
+);
 
 export const HeroImage = () => {
   const sectionRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
 
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ["start start", "end start"],
   });
 
-  // Video frame: scale up and fade in as user scrolls down
   const videoScale = useTransform(scrollYProgress, [0.15, 0.45], [0.85, 1]);
   const videoOpacity = useTransform(scrollYProgress, [0.1, 0.35], [0, 1]);
   const videoY = useTransform(scrollYProgress, [0.15, 0.45], [60, 0]);
-
-  // Autoplay when video scrolls into view
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          video.play().catch(() => {});
-        } else {
-          video.pause();
-        }
-      },
-      { threshold: 0.3 },
-    );
-
-    observer.observe(video);
-    return () => observer.disconnect();
-  }, []);
 
   return (
     <section ref={sectionRef} className="relative overflow-hidden bg-[hsl(var(--neutral-0))]">
@@ -107,6 +88,22 @@ export const HeroImage = () => {
           </motion.div>
         </div>
       </div>
+
+      {/* Halftone 3D visual below hero text */}
+      <motion.div
+        style={{ scale: videoScale, opacity: videoOpacity, y: videoY }}
+        className="relative w-full max-w-5xl mx-auto px-4 sm:px-8 pb-16"
+      >
+        <div className="rounded-2xl overflow-hidden border border-border/20 shadow-2xl">
+          <Suspense
+            fallback={
+              <div className="w-full aspect-video bg-[#dbd6cc]" />
+            }
+          >
+            <LazyHalftoneScene className="w-full aspect-video" />
+          </Suspense>
+        </div>
+      </motion.div>
     </section>
   );
 };
