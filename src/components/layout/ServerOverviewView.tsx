@@ -182,19 +182,19 @@ export const ServerOverviewView = () => {
 
         {/* ── Members & Channels stats ── */}
         <div className="grid grid-cols-2 gap-4">
-          <div className="rounded-2xl border border-border/50 bg-background/40 p-5 flex flex-col gap-3">
-            <Users className="w-5 h-5 text-muted-foreground" />
-            <div>
-              <div className="text-3xl font-medium">{totalMemberCount ?? members.length}</div>
-              <div className="text-xs text-muted-foreground">Member{(totalMemberCount ?? members.length) === 1 ? "" : "s"}</div>
+          <div className="rounded-2xl border border-border/50 bg-background/40 p-5 flex flex-col gap-2">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Users className="w-4 h-4 text-muted-foreground" />
+              Members
             </div>
+            <div className="mt-1 text-3xl font-medium">{totalMemberCount ?? members.length}</div>
           </div>
-          <div className="rounded-2xl border border-border/50 bg-background/40 p-5 flex flex-col gap-3">
-            <Hash className="w-5 h-5 text-muted-foreground" />
-            <div>
-              <div className="text-3xl font-medium">{channels.length}</div>
-              <div className="text-xs text-muted-foreground">Channel{channels.length === 1 ? "" : "s"}</div>
+          <div className="rounded-2xl border border-border/50 bg-background/40 p-5 flex flex-col gap-2">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Hash className="w-4 h-4 text-muted-foreground" />
+              Channels
             </div>
+            <div className="mt-1 text-3xl font-medium">{channels.length}</div>
           </div>
         </div>
 
