@@ -63,16 +63,13 @@ export const HomeLanding = () => {
           className="space-y-6 sm:space-y-8 md:space-y-10"
         >
           {/* Greeting Section */}
-          <motion.div
-            variants={item}
-            className="text-center space-y-1 sm:space-y-1.5"
-          >
+          <motion.div variants={item} className="text-center space-y-1 sm:space-y-1.5">
             <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-medium tracking-tight text-foreground break-words">
               {greeting.text}, <span className="text-primary break-words">{displayName}</span>{" "}
               <span aria-hidden="true">{greeting.emoji}</span>
             </h1>
             <p className="text-sm sm:text-base md:text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto">
-              Chat with friends, build communities, and connect — all without giving up your privacy.
+              Create your own community, join one with an invite, or explore what's out there.
             </p>
           </motion.div>
 
