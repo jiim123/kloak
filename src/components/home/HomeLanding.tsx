@@ -64,10 +64,14 @@ export const HomeLanding = () => {
         >
           {/* Greeting Section */}
           <motion.div variants={item} className="text-center space-y-1 sm:space-y-1.5">
-            <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-medium tracking-tight text-foreground break-words">
-              {greeting.text}, <span className="text-primary break-words">{displayName}</span>{" "}
-              <span aria-hidden="true">{greeting.emoji}</span>
-            </h1>
+            <div className="space-y-0.5 sm:space-y-1">
+              <p className="text-base sm:text-lg md:text-xl text-muted-foreground font-medium">
+                {greeting.text} <span aria-hidden="true">{greeting.emoji}</span>
+              </p>
+              <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold tracking-tight text-primary break-words">
+                @{user?.username || "there"}
+              </h1>
+            </div>
             <p className="text-sm sm:text-base md:text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto">
               Create your own community, join one with an invite, or explore what's out there.
             </p>
