@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, forwardRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Folder, Plus, Settings, Home, ChevronDown, ChevronRight, Trash2, Edit2, Palette, LogOut, CheckCheck, BellOff, Bell } from "lucide-react";
+import { Folder, Plus, Settings, Home, Mail, Columns3, ChevronDown, ChevronRight, Trash2, Edit2, Palette, LogOut, CheckCheck, BellOff, Bell } from "lucide-react";
 import { evaluatePermission } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -904,7 +904,29 @@ export const ServerSidebar = () => {
                           : "bg-secondary hover:bg-primary/20 hover:text-neutral-200",
                       )}
                     >
-                      <Home className="w-5 h-5" />
+                      <AnimatePresence mode="wait" initial={false}>
+                        {currentServer === null ? (
+                          <motion.span
+                            key="active-icon"
+                            initial={{ rotate: -90, opacity: 0 }}
+                            animate={{ rotate: 0, opacity: 1 }}
+                            exit={{ rotate: 90, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <Columns3 className="w-5 h-5" />
+                          </motion.span>
+                        ) : (
+                          <motion.span
+                            key="inactive-icon"
+                            initial={{ rotate: 90, opacity: 0 }}
+                            animate={{ rotate: 0, opacity: 1 }}
+                            exit={{ rotate: -90, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <Mail className="w-5 h-5" />
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
                     </motion.div>
 
                     {/* Unread DM badge */}
