@@ -100,7 +100,7 @@ export const HomeLanding = () => {
               </div>
             </button>
 
-            {/* Secondary - Join Server */}
+            {/* Join Server */}
             <button
               onClick={() => openModal("join-server")}
               className="p-4 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl bg-card/50 border border-border/50 hover:bg-card hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200 text-left group w-full"
