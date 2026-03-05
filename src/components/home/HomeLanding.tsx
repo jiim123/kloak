@@ -82,7 +82,7 @@ export const HomeLanding = () => {
             variants={item}
             className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 md:gap-4 px-1 sm:px-2 md:px-0"
           >
-            {/* Primary CTA - Create Server */}
+            {/* Create Server */}
             <button
               onClick={() => openModal("create-server")}
               className="sm:col-span-2 p-5 sm:p-6 md:p-8 rounded-xl sm:rounded-2xl bg-primary/5 border border-primary/20 hover:bg-primary/10 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 transition-all duration-200 text-left group w-full"
@@ -92,8 +92,10 @@ export const HomeLanding = () => {
                   <Plus className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-primary" />
                 </div>
                 <div className="space-y-0.5 sm:space-y-1">
-                  <h3 className="font-semibold text-base sm:text-lg md:text-xl text-foreground">Create a Server</h3>
-                  <p className="text-xs sm:text-sm md:text-base text-muted-foreground">Start your own private community and invite friends</p>
+                  <h3 className="font-medium text-base sm:text-lg md:text-xl text-foreground">Create a Server</h3>
+                  <p className="text-xs sm:text-sm md:text-base text-muted-foreground">
+                    Start your own private community and invite friends
+                  </p>
                 </div>
               </div>
             </button>
@@ -114,7 +116,7 @@ export const HomeLanding = () => {
               </div>
             </button>
 
-            {/* Secondary - Discover */}
+            {/* Explore */}
             <button
               onClick={() => navigate("/app/explore")}
               className="p-4 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl bg-card/50 border border-border/50 hover:bg-card hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200 text-left group w-full"
@@ -124,8 +126,8 @@ export const HomeLanding = () => {
                   <Compass className="w-4 h-4 sm:w-5 sm:h-5 md:w-5.5 md:h-5.5 text-primary" />
                 </div>
                 <div className="space-y-0.5">
-                  <h3 className="font-medium text-sm sm:text-base text-foreground">Discover</h3>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Explore public communities</p>
+                  <h3 className="font-medium text-sm sm:text-base text-foreground">Explore</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Find public communities</p>
                 </div>
               </div>
             </button>
