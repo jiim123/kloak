@@ -24,13 +24,18 @@ export const useRealtimeUserUpdates = (
   const onUpdateRef = useRef(onUpdate);
   onUpdateRef.current = onUpdate;
   const viewerId = useAuthStore((s) => s.user?.id ?? null);
-  const userIdsKey = userIds.join(',');
+  const shouldSkipTargetedPolling = userIds.length > MAX_USER_IDS_FOR_SUBSCRIPTION;
+  const userIdsKey = shouldSkipTargetedPolling ? `skip:${userIds.length}` : userIds.join(',');
 
   useEffect(() => {
+    if (shouldSkipTargetedPolling) {
+      return;
+    }
+
     const targetUserIds = userIdsKey ? userIdsKey.split(',') : [];
 
     // Skip if no user IDs or too many (fall back to polling for large sets)
-    if (!viewerId || targetUserIds.length === 0 || targetUserIds.length > MAX_USER_IDS_FOR_SUBSCRIPTION) {
+    if (!viewerId || targetUserIds.length === 0) {
       return;
     }
  
@@ -73,5 +78,5 @@ export const useRealtimeUserUpdates = (
       clearInterval(intervalId);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [userIdsKey, channelName, viewerId]); // Re-fetch when user IDs change
+  }, [userIdsKey, channelName, viewerId, shouldSkipTargetedPolling]); // Re-fetch when user IDs change
 };

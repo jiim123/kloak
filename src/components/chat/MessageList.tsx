@@ -579,10 +579,10 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
             </div>
           )}
           <ViewportList
+            key={channelId}
             ref={listRef}
             viewportRef={containerRef}
             items={deduplicatedMessages}
-            itemSize={88}
             overscan={8}
             overflowAnchor="none"
           >

@@ -1,4 +1,5 @@
 import { useMemo, useEffect, memo, useState, useRef } from "react";
+import { ViewportList } from "react-viewport-list";
 import { cn } from "@/lib/utils";
 import { Crown, MessageSquare, Edit3, UserX, Ban, VolumeX, Shield, Users, ChevronDown, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -32,6 +33,43 @@ import { getEffectivePresence } from "@/lib/presence";
 import { hasRecentRealtimePresence } from "@/hooks/useRealtimeUsers";
 
 const OFFLINE_PAGE_SIZE = 50;
+
+type MemberListRow =
+  | {
+      kind: "section";
+      key: string;
+      label: string;
+      count: number;
+      color?: string;
+      colorDot?: string;
+      icon?: string | null;
+      withTopSpacing?: boolean;
+    }
+  | {
+      kind: "member";
+      key: string;
+      member: ServerMember;
+    }
+  | {
+      kind: "offline-toggle";
+      key: "offline-toggle";
+    }
+  | {
+      kind: "offline-loading";
+      key: "offline-loading";
+    }
+  | {
+      kind: "offline-empty";
+      key: "offline-empty";
+    }
+  | {
+      kind: "offline-load-more";
+      key: "offline-load-more";
+    }
+  | {
+      kind: "empty-state";
+      key: "empty-state";
+    };
 
 type OfflineMembersPageResponse = {
   members?: unknown;
@@ -177,6 +215,7 @@ export const MembersSidebar = () => {
   const [offlineCursorJoinedAt, setOfflineCursorJoinedAt] = useState<string | null>(null);
   const [offlineCursorMemberId, setOfflineCursorMemberId] = useState<string | null>(null);
   const offlineLoadingRef = useRef(false);
+  const listViewportRef = useRef<HTMLDivElement | null>(null);
 
   // Subscribe to realtime member updates
   useRealtimeMembers(currentServer?.id || null);
@@ -397,11 +436,6 @@ export const MembersSidebar = () => {
     };
   }, [onlineMembers, roles]);
 
-  // Show skeleton only while members are actually loading (not global isLoading)
-  if (isMembersLoading && members.length === 0) {
-    return <MembersSidebarSkeleton />;
-  }
-
   const handleMemberClick = (member: ServerMember) => {
     openModal("userProfile", { userId: member.user_id, user: member.user });
   };
@@ -506,7 +540,6 @@ export const MembersSidebar = () => {
 
     const content = (
       <div
-        key={member.id}
         className={cn(
           "group flex items-center gap-2.5 mx-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors",
           "hover:bg-secondary/60 active:bg-secondary/80",
@@ -584,7 +617,7 @@ export const MembersSidebar = () => {
     }
 
     return (
-      <ContextMenu key={member.id}>
+      <ContextMenu>
         <ContextMenuTrigger asChild>{content}</ContextMenuTrigger>
         <ContextMenuContent className="w-52 rounded-xl border-border/50 p-1.5">
           {/* Basic actions */}
@@ -687,6 +720,159 @@ export const MembersSidebar = () => {
     );
   };
 
+  const memberListRows = useMemo<MemberListRow[]>(() => {
+    const rows: MemberListRow[] = [];
+
+    [...roles]
+      .sort((a, b) => a.position - b.position)
+      .forEach((role) => {
+        const roleMembers = roleGroups.get(role.id) || [];
+        if (roleMembers.length === 0) return;
+        const isGradient = role.color.startsWith("linear-gradient");
+        const textColor = isGradient ? (role.color.match(/#[0-9a-fA-F]{6}/) || ["#5865F2"])[0] : role.color;
+        rows.push({
+          kind: "section",
+          key: `section-role-${role.id}`,
+          label: role.name,
+          count: roleMembers.length,
+          color: textColor,
+          colorDot: role.color,
+          icon: role.icon,
+          withTopSpacing: rows.length > 0,
+        });
+        roleMembers.forEach((member) => {
+          rows.push({ kind: "member", key: `member-online-${member.id}`, member });
+        });
+      });
+
+    if (noRoleMembers.length > 0) {
+      rows.push({
+        kind: "section",
+        key: "section-no-role",
+        label: "Members",
+        count: noRoleMembers.length,
+        withTopSpacing: rows.length > 0,
+      });
+      noRoleMembers.forEach((member) => {
+        rows.push({ kind: "member", key: `member-online-${member.id}`, member });
+      });
+    }
+
+    rows.push({ kind: "offline-toggle", key: "offline-toggle" });
+
+    if (isOfflineExpanded) {
+      offlineMembers.forEach((member) => {
+        rows.push({ kind: "member", key: `member-offline-${member.id}`, member });
+      });
+
+      if (offlineIsLoading) {
+        rows.push({ kind: "offline-loading", key: "offline-loading" });
+      }
+
+      if (!offlineIsLoading && offlineLoadedOnce && offlineMembers.length === 0) {
+        rows.push({ kind: "offline-empty", key: "offline-empty" });
+      }
+
+      if (!offlineIsLoading && offlineHasMore) {
+        rows.push({ kind: "offline-load-more", key: "offline-load-more" });
+      }
+    }
+
+    if (totalMemberCount === 0 && visibleCount === 0) {
+      rows.push({ kind: "empty-state", key: "empty-state" });
+    }
+
+    return rows;
+  }, [
+    roles,
+    roleGroups,
+    noRoleMembers,
+    isOfflineExpanded,
+    offlineMembers,
+    offlineIsLoading,
+    offlineLoadedOnce,
+    offlineHasMore,
+    totalMemberCount,
+    visibleCount,
+  ]);
+
+  const renderMemberListRow = (row: MemberListRow) => {
+    if (row.kind === "section") {
+      return (
+        <div className={cn(row.withTopSpacing && "mt-2")}>
+          <SectionHeader label={row.label} count={row.count} color={row.color} colorDot={row.colorDot} icon={row.icon} />
+        </div>
+      );
+    }
+
+    if (row.kind === "member") {
+      return renderMemberItem(row.member);
+    }
+
+    if (row.kind === "offline-toggle") {
+      return (
+        <button
+          type="button"
+          className="w-full flex items-center gap-2 px-3 py-2 hover:bg-secondary/40 transition-colors mt-2"
+          onClick={handleToggleOfflineSection}
+        >
+          <ChevronDown
+            className={cn(
+              "w-3.5 h-3.5 text-muted-foreground transition-transform",
+              isOfflineExpanded && "rotate-180",
+            )}
+          />
+          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Offline</span>
+          {offlineDisplayCount != null && (
+            <span className="text-[11px] font-medium text-muted-foreground/70">{offlineDisplayCount}</span>
+          )}
+        </button>
+      );
+    }
+
+    if (row.kind === "offline-loading") {
+      return (
+        <div className="px-3 py-2 text-[11px] text-muted-foreground flex items-center gap-2">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          Loading offline members...
+        </div>
+      );
+    }
+
+    if (row.kind === "offline-empty") {
+      return <p className="px-3 py-2 text-[11px] text-muted-foreground/80">No offline members</p>;
+    }
+
+    if (row.kind === "offline-load-more") {
+      return (
+        <div className="px-3 pt-1">
+          <button
+            type="button"
+            className="text-[11px] text-primary hover:text-primary/80 transition-colors"
+            onClick={() => void loadOfflineMembers()}
+          >
+            Load more
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+        <div className="w-12 h-12 rounded-xl bg-secondary/50 flex items-center justify-center mb-3">
+          <Users className="w-6 h-6 text-muted-foreground/50" />
+        </div>
+        <p className="text-sm font-medium text-muted-foreground">No members</p>
+        <p className="text-xs text-muted-foreground/70 mt-1">Members will appear here</p>
+      </div>
+    );
+  };
+
+  // Show skeleton only while members are actually loading (not global isLoading)
+  if (isMembersLoading && members.length === 0) {
+    return <MembersSidebarSkeleton />;
+  }
+
   const sidebarContent = (
     <div className="h-full flex flex-col bg-background/50 border-l border-border/50 w-full">
       {/* Header */}
@@ -700,92 +886,15 @@ export const MembersSidebar = () => {
       </div>
 
       {/* Members List */}
-      <div className="flex-1 overflow-y-auto py-2">
-        {/* Roles section */}
-        {[...roles]
-          .sort((a, b) => a.position - b.position)
-          .map((role) => {
-            const roleMembers = roleGroups.get(role.id) || [];
-            if (roleMembers.length === 0) return null;
-
-            const isGradient = role.color.startsWith("linear-gradient");
-            const textColor = isGradient ? (role.color.match(/#[0-9a-fA-F]{6}/) || ["#5865F2"])[0] : role.color;
-
-            return (
-              <div key={role.id} className="mb-3">
-                <SectionHeader label={role.name} count={roleMembers.length} color={textColor} colorDot={role.color} icon={role.icon} />
-                <div className="space-y-0.5">{roleMembers.map((member) => renderMemberItem(member))}</div>
-              </div>
-            );
-          })}
-
-        {/* Members with no custom roles */}
-        {noRoleMembers.length > 0 && (
-          <div className="mb-3">
-            <SectionHeader label="Members" count={noRoleMembers.length} />
-            <div className="space-y-0.5">{noRoleMembers.map((member) => renderMemberItem(member))}</div>
-          </div>
-        )}
-
-        {/* Offline members (lazy loaded, paginated) */}
-        <div className="mb-3">
-          <button
-            type="button"
-            className="w-full flex items-center gap-2 px-3 py-2 hover:bg-secondary/40 transition-colors"
-            onClick={handleToggleOfflineSection}
-          >
-            <ChevronDown
-              className={cn(
-                "w-3.5 h-3.5 text-muted-foreground transition-transform",
-                isOfflineExpanded && "rotate-180",
-              )}
-            />
-            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Offline</span>
-            {offlineDisplayCount != null && (
-              <span className="text-[11px] font-medium text-muted-foreground/70">{offlineDisplayCount}</span>
-            )}
-          </button>
-
-          {isOfflineExpanded && (
-            <div className="space-y-0.5">
-              {offlineMembers.map((member) => renderMemberItem(member))}
-
-              {offlineIsLoading && (
-                <div className="px-3 py-2 text-[11px] text-muted-foreground flex items-center gap-2">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  Loading offline members...
-                </div>
-              )}
-
-              {!offlineIsLoading && offlineLoadedOnce && offlineMembers.length === 0 && (
-                <p className="px-3 py-2 text-[11px] text-muted-foreground/80">No offline members</p>
-              )}
-
-              {!offlineIsLoading && offlineHasMore && (
-                <div className="px-3 pt-1">
-                  <button
-                    type="button"
-                    className="text-[11px] text-primary hover:text-primary/80 transition-colors"
-                    onClick={() => void loadOfflineMembers()}
-                  >
-                    Load more
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Empty state */}
-        {totalMemberCount === 0 && visibleCount === 0 && (
-          <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-            <div className="w-12 h-12 rounded-xl bg-secondary/50 flex items-center justify-center mb-3">
-              <Users className="w-6 h-6 text-muted-foreground/50" />
-            </div>
-            <p className="text-sm font-medium text-muted-foreground">No members</p>
-            <p className="text-xs text-muted-foreground/70 mt-1">Members will appear here</p>
-          </div>
-        )}
+      <div ref={listViewportRef} className="flex-1 overflow-y-auto py-2">
+        <ViewportList
+          viewportRef={listViewportRef}
+          items={memberListRows}
+          itemSize={44}
+          overscan={14}
+        >
+          {(row) => <div key={row.key}>{renderMemberListRow(row)}</div>}
+        </ViewportList>
       </div>
     </div>
   );
