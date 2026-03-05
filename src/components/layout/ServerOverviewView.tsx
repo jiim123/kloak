@@ -192,49 +192,16 @@ export const ServerOverviewView = () => {
 
         {/* ── Bento grid ── */}
         <div className="grid grid-cols-3 gap-4 auto-rows-auto">
-          {/* About — spans 2 cols when present alongside created/owner, else full width */}
+          {/* About */}
           {hasAbout && (
-            <div
-              className={cn(
-                "rounded-2xl border border-border/50 bg-background/40 p-5 flex flex-col",
-                hasAnnouncements ? "col-span-3 md:col-span-2" : "col-span-3 md:col-span-2",
-              )}
-            >
+            <div className="rounded-2xl border border-border/50 bg-background/40 p-5 flex flex-col col-span-3 md:col-span-1">
               <div className="text-sm font-medium mb-2">About</div>
               <p className="text-sm text-muted-foreground whitespace-pre-wrap flex-1">{currentServer.about}</p>
             </div>
           )}
 
-          {/* Created — 1 col, stacks with Owner when About is present */}
-          <div
-            className={cn(
-              "rounded-2xl border border-border/50 bg-background/40 p-5 flex flex-col gap-2",
-              hasAbout ? "col-span-3 md:col-span-1" : "col-span-3 md:col-span-1",
-            )}
-          >
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <CalendarDays className="w-4 h-4 text-muted-foreground" />
-              Created
-            </div>
-            <div className="mt-1 text-sm text-muted-foreground">
-              {createdAt ? (
-                <>
-                  <div className="text-foreground font-medium">{format(createdAt, "PPP")}</div>
-                  <div className="text-xs mt-0.5">{formatDistanceToNow(createdAt, { addSuffix: true })}</div>
-                </>
-              ) : (
-                <div className="text-xs">—</div>
-              )}
-            </div>
-          </div>
-
-          {/* Owner — 1 col */}
-          <div
-            className={cn(
-              "rounded-2xl border border-border/50 bg-background/40 p-5 flex flex-col gap-2",
-              hasAnnouncements ? "col-span-3 md:col-span-1" : "col-span-3 md:col-span-1",
-            )}
-          >
+          {/* Owner */}
+          <div className="rounded-2xl border border-border/50 bg-background/40 p-5 flex flex-col gap-2 col-span-3 md:col-span-1">
             <div className="flex items-center gap-2 text-sm font-medium">
               <Crown className="w-4 h-4 text-yellow-500" />
               Owner
@@ -255,14 +222,27 @@ export const ServerOverviewView = () => {
             </div>
           </div>
 
-          {/* Announcements — spans remaining 2 cols on the second row, or full width if no about */}
-          {hasAnnouncements && (
-            <div
-              className={cn(
-                "rounded-2xl border border-border/50 bg-background/40 p-5 flex flex-col",
-                "col-span-3 md:col-span-2",
+          {/* Created */}
+          <div className="rounded-2xl border border-border/50 bg-background/40 p-5 flex flex-col gap-2 col-span-3 md:col-span-1">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <CalendarDays className="w-4 h-4 text-muted-foreground" />
+              Created
+            </div>
+            <div className="mt-1 text-sm text-muted-foreground">
+              {createdAt ? (
+                <>
+                  <div className="text-foreground font-medium">{format(createdAt, "PPP")}</div>
+                  <div className="text-xs mt-0.5">{formatDistanceToNow(createdAt, { addSuffix: true })}</div>
+                </>
+              ) : (
+                <div className="text-xs">—</div>
               )}
-            >
+            </div>
+          </div>
+
+          {/* Recent Announcements — full width */}
+          {hasAnnouncements && (
+            <div className="rounded-2xl border border-border/50 bg-background/40 p-5 flex flex-col col-span-3">
               <div className="flex items-center gap-2 text-sm font-medium mb-4">
                 <Megaphone className="w-4 h-4 text-muted-foreground" />
                 Recent Announcements
