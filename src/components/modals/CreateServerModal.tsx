@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Upload, Plus, Users, X, Sparkles, Compass } from "lucide-react";
+import { Loader2, Upload, Plus, Users, X, Compass } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -159,26 +159,19 @@ export const CreateServerModal = () => {
         {view === "choose" && (
           <div className="p-4 sm:p-6">
             <DialogHeader className="pb-4">
-              <div className="flex flex-col items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <Sparkles className="w-6 h-6 text-primary" />
-                </div>
-                <div className="text-center">
-                  <DialogTitle className="text-xl font-medium">Add a Server</DialogTitle>
-                  <DialogDescription className="text-sm text-muted-foreground mt-1">
-                    Create your own server or join an existing one
-                  </DialogDescription>
-                </div>
-              </div>
+              <DialogTitle className="text-xl font-medium">Add a Server</DialogTitle>
+              <DialogDescription className="text-sm text-muted-foreground mt-1">
+                Create your own server or join an existing one
+              </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-3 py-2">
               <button
                 onClick={() => setView("create")}
-                className="w-full p-4 rounded-xl border-2 border-border/50 bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-all duration-200 flex items-center gap-4 group"
+                className="w-full p-4 rounded-xl border border-border/50 bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-all duration-200 flex items-center gap-4 group"
               >
-                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[hsl(var(--kloak-success))]/15 flex items-center justify-center group-hover:bg-[hsl(var(--kloak-success))]/25 transition-colors flex-shrink-0">
-                  <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-[hsl(var(--kloak-success))]" />
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-secondary flex items-center justify-center group-hover:bg-secondary/80 transition-colors flex-shrink-0">
+                  <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground" />
                 </div>
                 <div className="text-left flex-1 min-w-0">
                   <p className="font-medium tracking-tight">Create My Own</p>
@@ -188,10 +181,10 @@ export const CreateServerModal = () => {
 
               <button
                 onClick={handleJoinClick}
-                className="w-full p-4 rounded-xl border-2 border-border/50 bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-all duration-200 flex items-center gap-4 group"
+                className="w-full p-4 rounded-xl border border-border/50 bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-all duration-200 flex items-center gap-4 group"
               >
-                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-primary/15 flex items-center justify-center group-hover:bg-primary/25 transition-colors flex-shrink-0">
-                  <Users className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-secondary flex items-center justify-center group-hover:bg-secondary/80 transition-colors flex-shrink-0">
+                  <Users className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground" />
                 </div>
                 <div className="text-left flex-1 min-w-0">
                   <p className="font-medium tracking-tight">Join a Server</p>
@@ -201,10 +194,10 @@ export const CreateServerModal = () => {
 
               <button
                 onClick={handleExploreClick}
-                className="w-full p-4 rounded-xl border-2 border-border/50 bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-all duration-200 flex items-center gap-4 group"
+                className="w-full p-4 rounded-xl border border-border/50 bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-all duration-200 flex items-center gap-4 group"
               >
-                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[hsl(var(--kloak-warning))]/15 flex items-center justify-center group-hover:bg-[hsl(var(--kloak-warning))]/25 transition-colors flex-shrink-0">
-                  <Compass className="w-5 h-5 sm:w-6 sm:h-6 text-[hsl(var(--kloak-warning))]" />
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-secondary flex items-center justify-center group-hover:bg-secondary/80 transition-colors flex-shrink-0">
+                  <Compass className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground" />
                 </div>
                 <div className="text-left flex-1 min-w-0">
                   <p className="font-medium tracking-tight">Explore Servers</p>
