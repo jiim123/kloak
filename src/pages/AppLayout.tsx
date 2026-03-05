@@ -14,7 +14,7 @@ import { ChannelSidebar } from "@/components/layout/ChannelSidebar";
 import { ChatArea } from "@/components/layout/ChatArea";
 import { MembersSidebar } from "@/components/layout/MembersSidebar";
 import { ServerOverviewView } from "@/components/layout/ServerOverviewView";
-import { ServerMembersView } from "@/components/layout/ServerMembersView";
+
 import { MobileHeader } from "@/components/layout/MobileHeader";
 import { MobileSidebar } from "@/components/layout/MobileSidebar";
 import { ConnectionStatus } from "@/components/ui/ConnectionStatus";
@@ -121,7 +121,7 @@ const AppLayout = () => {
   const showFriends = currentPath === "/friends";
   const showExplore = currentPath === "/explore";
   const isServerOverviewView = !!params.serverId && currentPath === `/servers/${params.serverId}/overview`;
-  const isServerMembersView = !!params.serverId && currentPath === `/servers/${params.serverId}/members`;
+  
 
   const currentMembership = useMemo(() => {
     if (!currentServer) return null;
@@ -129,9 +129,7 @@ const AppLayout = () => {
   }, [servers, currentServer]);
 
   const isOwner = !!user && !!currentServer && currentServer.owner_id === user.id;
-  const canViewMembersPage = isOwner || hasPermission("manage_server");
-  const isServerMembersViewAllowed = isServerMembersView && canViewMembersPage;
-  const isServerSpecialView = isServerOverviewView || isServerMembersViewAllowed;
+  const isServerSpecialView = isServerOverviewView;
 
   // Extract serverId and channelId from URL params
   const urlServerId = params.serverId;
@@ -354,9 +352,9 @@ const AppLayout = () => {
   // Members can be large; only fetch when members UI is actually needed.
   useEffect(() => {
     if (!currentServer?.id) return;
-    if (!isMemberSidebarOpen && !isServerMembersViewAllowed) return;
-    fetchMembers(currentServer.id, { full: isServerMembersViewAllowed });
-  }, [currentServer?.id, isMemberSidebarOpen, isServerMembersViewAllowed, fetchMembers]);
+    if (!isMemberSidebarOpen) return;
+    fetchMembers(currentServer.id, { full: false });
+  }, [currentServer?.id, isMemberSidebarOpen, fetchMembers]);
 
   // Clear DM conversation when switching to a server
   useEffect(() => {
@@ -532,9 +530,7 @@ const AppLayout = () => {
       : "Direct Messages"
     : isServerOverviewView
       ? `${currentServer?.name || "Server"} • Overview`
-      : isServerMembersViewAllowed
-        ? `${currentServer?.name || "Server"} • Members`
-        : currentChannel
+      : currentChannel
           ? `# ${currentChannel.name}`
           : currentServer
           ? currentServer.name
@@ -595,10 +591,9 @@ const AppLayout = () => {
                   {currentServer && (
                     <>
                       {isServerOverviewView && <ServerOverviewView />}
-                      {isServerMembersViewAllowed && <ServerMembersView />}
                       <div
                         className={
-                          !isServerOverviewView && !isServerMembersViewAllowed && !isDMView ? "block h-full" : "hidden"
+                          !isServerOverviewView && !isDMView ? "block h-full" : "hidden"
                         }
                       >
                         <ChatArea />
@@ -685,10 +680,9 @@ const AppLayout = () => {
                           {currentServer && (
                             <>
                               {isServerOverviewView && <ServerOverviewView />}
-                              {isServerMembersViewAllowed && <ServerMembersView />}
                               <div
                                 className={
-                                  !isServerOverviewView && !isServerMembersViewAllowed && !isDMView
+                                  !isServerOverviewView && !isDMView
                                     ? "block h-full"
                                     : "hidden"
                                 }
