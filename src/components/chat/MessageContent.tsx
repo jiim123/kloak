@@ -39,6 +39,8 @@ interface MessageContentProps {
   users?: UserInfo[];
   messageUser?: UserInfo | null;
   hideEmbeds?: boolean;
+  customEmojiMap?: Map<string, string>;
+  globalEmojiMap?: Map<string, ResolvedEmoji>;
 }
 
 interface ParsedSegment {
@@ -364,17 +366,21 @@ export const MessageContent = ({
   users,
   messageUser,
   hideEmbeds = false,
+  customEmojiMap: providedCustomEmojiMap,
+  globalEmojiMap: providedGlobalEmojiMap,
 }: MessageContentProps) => {
   const navigate = useNavigate();
   const { linkPreviewsEnabled, openModal } = useUIStore();
   const { members, currentServer, channels, setCurrentChannel } = useServerStore();
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
-  const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
-  const [globalEmojiMap, setGlobalEmojiMap] = useState<Map<string, ResolvedEmoji>>(new Map());
+  const [localCustomEmojiMap, setLocalCustomEmojiMap] = useState<Map<string, string>>(new Map());
+  const [localGlobalEmojiMap, setLocalGlobalEmojiMap] = useState<Map<string, ResolvedEmoji>>(new Map());
   const [emojiPopover, setEmojiPopover] = useState<{ emoji: ResolvedEmoji; rect: DOMRect } | null>(null);
   const [mentionedUsersMap, setMentionedUsersMap] = useState<Map<string, UserInfo>>(new Map());
   const contentRef = useRef<HTMLDivElement>(null);
   const segments = useMemo(() => parseMessageSegments(content), [content]);
+  const effectiveCustomEmojiMap = providedCustomEmojiMap ?? localCustomEmojiMap;
+  const effectiveGlobalEmojiMap = providedGlobalEmojiMap ?? localGlobalEmojiMap;
 
   const mentionedUserIds = useMemo(() => {
     const ids = new Set<string>();
@@ -388,9 +394,10 @@ export const MessageContent = ({
 
   // Load server emoji map for :name: rendering (server context only)
   useEffect(() => {
+    if (providedCustomEmojiMap) return;
     const serverId = currentServer?.id;
     if (!serverId) {
-      setCustomEmojiMap(new Map());
+      setLocalCustomEmojiMap(new Map());
       return;
     }
 
@@ -403,11 +410,11 @@ export const MessageContent = ({
         if (cancelled) return;
         const map = new Map<string, string>();
         emojis.forEach((e) => map.set(e.name, e.url));
-        setCustomEmojiMap(map);
+        setLocalCustomEmojiMap(map);
       } catch (e) {
         console.error("Failed to load server emojis for message rendering:", e);
         if (cancelled) return;
-        setCustomEmojiMap(new Map());
+        setLocalCustomEmojiMap(new Map());
 
         // Retry a few times on refresh/load: otherwise messages can remain as :name:
         // even if the failure was transient (network timing, offline->online, etc).
@@ -424,20 +431,21 @@ export const MessageContent = ({
       cancelled = true;
       if (retryTimer) clearTimeout(retryTimer);
     };
-  }, [currentServer?.id]);
+  }, [currentServer?.id, providedCustomEmojiMap]);
 
   // Load global cross-server emoji map
   useEffect(() => {
+    if (providedGlobalEmojiMap) return;
     let cancelled = false;
     getGlobalEmojiMap()
       .then((map) => {
-        if (!cancelled) setGlobalEmojiMap(map);
+        if (!cancelled) setLocalGlobalEmojiMap(map);
       })
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [currentServer?.id]); // re-resolve when server changes
+  }, [currentServer?.id, providedGlobalEmojiMap]); // re-resolve when server changes
 
   // Note: we intentionally avoid per-message global event listeners here.
   // Emoji changes are handled via cache invalidation + in-flight request coalescing.
@@ -542,7 +550,7 @@ export const MessageContent = ({
     return () => {
       cancelled = true;
     };
-  }, [content, customEmojiMap, globalEmojiMap]);
+  }, [content, effectiveCustomEmojiMap, effectiveGlobalEmojiMap]);
 
   // Replace native emoji characters with Fluent Emoji 3D images
   useEffect(() => {
@@ -555,7 +563,7 @@ export const MessageContent = ({
       replaceNativeEmojisInElement(el);
     }, 50);
     return () => clearTimeout(timer);
-  }, [content, customEmojiMap, globalEmojiMap]);
+  }, [content, effectiveCustomEmojiMap, effectiveGlobalEmojiMap]);
 
   // Ensure mention display names resolve even when members list is online-filtered.
   useEffect(() => {
@@ -701,7 +709,7 @@ export const MessageContent = ({
           resolved = resolveQualifiedEmoji(`${emojiName}~${serverQualifier}`);
         }
         if (!resolved) {
-          resolved = globalEmojiMap.get(emojiName);
+          resolved = effectiveGlobalEmojiMap.get(emojiName);
         }
         // Fallback: build a minimal ResolvedEmoji from the img element itself (for DB-fallback resolved emojis)
         if (!resolved && target instanceof HTMLImageElement && target.src) {
@@ -752,7 +760,7 @@ export const MessageContent = ({
         }
       }
     },
-    [openModal, channels, currentServer, setCurrentChannel, navigate, setLightboxImage, globalEmojiMap],
+    [openModal, channels, currentServer, setCurrentChannel, navigate, setLightboxImage, effectiveGlobalEmojiMap],
   );
 
   // Handle keyboard activation for accessibility
@@ -809,9 +817,9 @@ export const MessageContent = ({
                       segment.content,
                       currentUserId,
                       usersMap,
-                      customEmojiMap,
+                      effectiveCustomEmojiMap,
                       channelsMap,
-                      globalEmojiMap,
+                      effectiveGlobalEmojiMap,
                     ),
                   }}
                 />
@@ -859,12 +867,22 @@ interface ReplyPreviewProps {
   content: string;
   maxLength?: number;
   usersMap?: Map<string, UserInfo>;
+  customEmojiMap?: Map<string, string>;
+  globalEmojiMap?: Map<string, ResolvedEmoji>;
 }
 
-export const ReplyPreview = ({ content, maxLength = 50, usersMap }: ReplyPreviewProps) => {
+export const ReplyPreview = ({
+  content,
+  maxLength = 50,
+  usersMap,
+  customEmojiMap: providedCustomEmojiMap,
+  globalEmojiMap: providedGlobalEmojiMap,
+}: ReplyPreviewProps) => {
   const { currentServer, members } = useServerStore();
-  const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
-  const [globalEmojis, setGlobalEmojis] = useState<Map<string, ResolvedEmoji>>(new Map());
+  const [localCustomEmojiMap, setLocalCustomEmojiMap] = useState<Map<string, string>>(new Map());
+  const [localGlobalEmojis, setLocalGlobalEmojis] = useState<Map<string, ResolvedEmoji>>(new Map());
+  const customEmojiMap = providedCustomEmojiMap ?? localCustomEmojiMap;
+  const globalEmojis = providedGlobalEmojiMap ?? localGlobalEmojis;
 
   // Build users map from members if not provided
   const resolvedUsersMap = useMemo(() => {
@@ -886,9 +904,10 @@ export const ReplyPreview = ({ content, maxLength = 50, usersMap }: ReplyPreview
 
   // Load server emoji map for :name: rendering
   useEffect(() => {
+    if (providedCustomEmojiMap) return;
     const serverId = currentServer?.id;
     if (!serverId) {
-      setCustomEmojiMap(new Map());
+      setLocalCustomEmojiMap(new Map());
       return;
     }
 
@@ -899,11 +918,11 @@ export const ReplyPreview = ({ content, maxLength = 50, usersMap }: ReplyPreview
         if (cancelled) return;
         const map = new Map<string, string>();
         emojis.forEach((e) => map.set(e.name, e.url));
-        setCustomEmojiMap(map);
+        setLocalCustomEmojiMap(map);
       } catch (e) {
         console.error("Failed to load server emojis for reply preview:", e);
         if (cancelled) return;
-        setCustomEmojiMap(new Map());
+        setLocalCustomEmojiMap(new Map());
       }
     };
 
@@ -911,20 +930,21 @@ export const ReplyPreview = ({ content, maxLength = 50, usersMap }: ReplyPreview
     return () => {
       cancelled = true;
     };
-  }, [currentServer?.id]);
+  }, [currentServer?.id, providedCustomEmojiMap]);
 
   // Load global emoji map for cross-server rendering in replies
   useEffect(() => {
+    if (providedGlobalEmojiMap) return;
     let cancelled = false;
     getGlobalEmojiMap()
       .then((map) => {
-        if (!cancelled) setGlobalEmojis(map);
+        if (!cancelled) setLocalGlobalEmojis(map);
       })
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [currentServer?.id]);
+  }, [currentServer?.id, providedGlobalEmojiMap]);
 
   // Strip markdown and prepare content
   const stripped = useMemo(() => {

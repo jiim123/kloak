@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams, useLocation, useParams, Outlet } from "react-router-dom";
+import { MotionConfig } from "framer-motion";
 import { useAuthStore, initializeAuth } from "@/stores/authStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useServerStore } from "@/stores/serverStore";
@@ -542,10 +543,11 @@ const AppLayout = () => {
     !isMobile && (isServerSettingsOpen || activeModal === "user-settings" || activeModal === "edit-channel");
 
   return (
-    <UnreadDMsContext.Provider value={unreadDMsContextValue}>
-      <UnreadChannelsContext.Provider value={unreadChannelsContextValue}>
+    <MotionConfig reducedMotion="always">
+      <UnreadDMsContext.Provider value={unreadDMsContextValue}>
+        <UnreadChannelsContext.Provider value={unreadChannelsContextValue}>
         <SEO title={desktopTitle} noIndex />
-        <div className="h-screen flex flex-col overflow-hidden app-layout-font">
+        <div className="h-screen flex flex-col overflow-hidden app-layout-font app-no-motion">
           <DesktopTitleBar title={desktopTitle} />
 
           {MAINTENANCE_MODE && (
@@ -756,8 +758,9 @@ const AppLayout = () => {
 
         {/* Nested route placeholder (AppLayout is the /app layout route) */}
         <Outlet />
-      </UnreadChannelsContext.Provider>
-    </UnreadDMsContext.Provider>
+        </UnreadChannelsContext.Provider>
+      </UnreadDMsContext.Provider>
+    </MotionConfig>
   );
 };
 

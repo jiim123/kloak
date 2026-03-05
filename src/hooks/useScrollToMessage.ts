@@ -1,13 +1,22 @@
-import { useEffect, useRef, useState, useCallback, type RefObject } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMessageStore } from '@/stores/messageStore';
-import type { VirtuosoHandle } from 'react-virtuoso';
+
+interface VirtualListHandle {
+  scrollToIndex: (options: {
+    index?: number;
+    alignToTop?: boolean;
+    offset?: number;
+    delay?: number;
+    prerender?: number;
+  }) => void;
+}
 
 interface UseScrollToMessageOptions {
   messages: { id: string; created_at: string }[];
   isLoading: boolean;
-  /** Optional: Virtuoso ref for scrolling in virtualized lists. */
-  virtuosoRef?: RefObject<VirtuosoHandle | null>;
+  /** Optional: virtual list ref for index-based scrolling. */
+  virtuosoRef?: RefObject<VirtualListHandle | null>;
   /** Fallback: plain scroll container ref (used when virtuosoRef is not provided, e.g. DMs). */
   containerRef?: RefObject<HTMLElement | null>;
 }
@@ -97,8 +106,7 @@ export const useScrollToMessage = ({ messages, isLoading, virtuosoRef, container
       if (virtuosoRef?.current) {
         virtuosoRef.current.scrollToIndex({
           index: targetIndex,
-          behavior: 'smooth',
-          align: 'center',
+          alignToTop: false,
         });
       } else if (containerRef?.current) {
         const messageElement = document.getElementById(`message-${targetMessageId}`);
@@ -133,8 +141,6 @@ export const useScrollToMessage = ({ messages, isLoading, virtuosoRef, container
     }, 150);
 
     return () => clearTimeout(scrollTimeout);
-    // clearMessageParamRef is stable — no need to include it
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetMessageId, messages, isLoading, virtuosoRef, containerRef]);
 
   // Cleanup on unmount

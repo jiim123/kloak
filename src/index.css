@@ -1083,3 +1083,33 @@ body {
 .app-layout-font {
   font-family: "General Sans", system-ui, sans-serif;
 }
+
+/* Disable CSS-driven motion inside /app to reduce long-session UI jank. */
+.app-no-motion,
+.app-no-motion *,
+.app-no-motion *::before,
+.app-no-motion *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+
+/* Reduce expensive compositing/paint effects inside /app. */
+.app-no-motion [class*="backdrop-blur"],
+.app-no-motion [class*="backdrop-filter"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.app-no-motion [class*="blur-"],
+.app-no-motion [class~="blur"],
+.app-no-motion [class*="drop-shadow"] {
+  filter: none !important;
+}
+
+.app-no-motion [class*="shadow-lg"],
+.app-no-motion [class*="shadow-xl"],
+.app-no-motion [class*="shadow-2xl"],
+.app-no-motion [class*="shadow-overlay"] {
+  box-shadow: none !important;
+}

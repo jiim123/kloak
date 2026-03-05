@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, useCallback, useMemo, Fragment } from "react";
-import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
+import { useEffect, useRef, useState, useCallback, useMemo, Fragment, useLayoutEffect } from "react";
+import { ViewportList, type ViewportListRef } from "react-viewport-list";
 
 import { Ghost } from "lucide-react";
 import { Loader2, Hash, Sparkles } from "lucide-react";
@@ -7,6 +7,7 @@ import { Loader2, Hash, Sparkles } from "lucide-react";
 import { MessageItem } from "./MessageItem";
 import { JumpToPresent } from "./JumpToPresent";
 import { MessageListSkeleton } from "@/components/ui/skeletons";
+import { Button } from "@/components/ui/button";
 import { useMessageStore } from "@/stores/messageStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useFriendStore } from "@/stores/friendStore";
@@ -18,6 +19,8 @@ import { useConnectionStatus } from "@/hooks/useConnectionStatus";
 import { useRealtimeUserUpdates } from "@/hooks/useRealtimeUserUpdates";
 import { useAuthorStyles } from "@/hooks/useAuthorStyles";
 import type { Message } from "@/types";
+import { fetchServerEmojis } from "@/lib/serverEmojis";
+import { getGlobalEmojiMap, type ResolvedEmoji } from "@/lib/globalEmojiResolver";
 import { isSameDay, isToday, isYesterday, format } from "date-fns";
 
 interface MessageListProps {
@@ -66,7 +69,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
 
   const channelData = messagesByChannel[channelId];
   const isFetchingOlder = !!fetchingChannels[channelId];
-  const rawMessages = channelData?.messages || [];
+  const rawMessages = useMemo(() => channelData?.messages || [], [channelData?.messages]);
 
   // Filter blocked users — stable blocked set ref to avoid re-creating on every render
   const messages = useMemo(() => {
@@ -101,20 +104,78 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }
     return Array.from(ids);
   }, [deduplicatedMessages]);
+  const msgCount = deduplicatedMessages.length;
 
   useRealtimeUserUpdates(visibleAuthorUserIds, `channel-authors:${channelId}`);
 
   // Author styles via shared hook (uses the correct _secure RPC)
   const authorStyleMap = useAuthorStyles(currentServerId, visibleAuthorUserIds);
 
-  const virtuosoRef = useRef<VirtuosoHandle>(null);
+  // Load emoji maps once per message list instead of once per message row.
+  useEffect(() => {
+    if (!currentServerId) {
+      setCustomEmojiMap(new Map());
+      return;
+    }
+
+    let cancelled = false;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const load = async (attempt: number) => {
+      try {
+        const emojis = await fetchServerEmojis(currentServerId, { force: attempt > 0 });
+        if (cancelled) return;
+        const next = new Map<string, string>();
+        emojis.forEach((e) => next.set(e.name, e.url));
+        setCustomEmojiMap(next);
+      } catch {
+        if (cancelled) return;
+        setCustomEmojiMap(new Map());
+        if (attempt < 2) {
+          retryTimer = setTimeout(() => load(attempt + 1), 700 * Math.pow(2, attempt));
+        }
+      }
+    };
+
+    load(0);
+
+    return () => {
+      cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
+    };
+  }, [currentServerId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getGlobalEmojiMap()
+      .then((map) => {
+        if (!cancelled) setGlobalEmojiMap(map);
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentServerId]);
+
   const containerRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<ViewportListRef>(null);
+  const [externalEditTargetId, setExternalEditTargetId] = useState<string | null>(null);
+  const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
+  const [globalEmojiMap, setGlobalEmojiMap] = useState<Map<string, ResolvedEmoji>>(new Map());
   const [showJumpToPresent, setShowJumpToPresent] = useState(false);
   const [newMessageCount, setNewMessageCount] = useState(0);
   const isNearBottomRef = useRef(true);
   const lastMarkedMessageIdRef = useRef<string | null>(null);
   const prevMessagesLengthRef = useRef(0);
   const prevChannelIdRef = useRef<string>(channelId);
+  const didInitialBottomScrollRef = useRef(false);
+  const pendingPrependAnchorRef = useRef<{
+    requestId: number;
+    prevTop: number;
+    prevHeight: number;
+  } | null>(null);
+  const prependRequestIdRef = useRef(0);
 
   // -- Stable refs for effects that should NOT cause re-registration --
   const messagesRef = useRef(messages);
@@ -129,6 +190,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   // Reset on channel switch
   if (prevChannelIdRef.current !== channelId) {
     prevChannelIdRef.current = channelId;
+    didInitialBottomScrollRef.current = false;
   }
 
   // Unread tracking
@@ -137,7 +199,12 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   const { lastReadAt, firstUnreadMessageId } = channelUnread;
 
   // Scroll to message from notification / reply clicks
-  const { highlightedMessageId } = useScrollToMessage({ messages: deduplicatedMessages, isLoading, virtuosoRef });
+  const { highlightedMessageId } = useScrollToMessage({
+    messages: deduplicatedMessages,
+    isLoading,
+    virtuosoRef: listRef,
+    containerRef,
+  });
 
   // Listen for Up arrow edit event — stable listener, uses ref
   useEffect(() => {
@@ -146,7 +213,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       const userMessages = messagesRef.current.filter((m) => m.user_id === e.detail.userId);
       if (userMessages.length > 0) {
         const lastOwnMessage = userMessages[userMessages.length - 1];
-        window.dispatchEvent(new CustomEvent("startEditMessage", { detail: { messageId: lastOwnMessage.id } }));
+        setExternalEditTargetId(lastOwnMessage.id);
       }
     };
     const listener = handleEditLastMessage as unknown as EventListener;
@@ -243,7 +310,9 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
         setNewMessageCount((prev) => prev + (currentLength - prevLength));
       } else {
         requestAnimationFrame(() => {
-          virtuosoRef.current?.scrollTo({ top: Number.MAX_SAFE_INTEGER });
+          const node = containerRef.current;
+          if (!node) return;
+          node.scrollTop = node.scrollHeight;
         });
       }
     }
@@ -263,8 +332,12 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
 
   const scrollToBottom = useCallback(() => {
     const msgs = deduplicatedMessagesRef.current;
-    virtuosoRef.current?.scrollToIndex({ index: msgs.length - 1, behavior: "smooth", align: "end" });
-    setTimeout(() => { virtuosoRef.current?.scrollTo({ top: Number.MAX_SAFE_INTEGER, behavior: "auto" }); }, 350);
+    listRef.current?.scrollToIndex({ index: msgs.length - 1, alignToTop: false });
+    setTimeout(() => {
+      const node = containerRef.current;
+      if (!node) return;
+      node.scrollTop = node.scrollHeight;
+    }, 150);
     setShowJumpToPresent(false);
     setNewMessageCount(0);
 
@@ -277,6 +350,10 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       }
     }
   }, [markAsRead]);
+
+  const handleExternalEditHandled = useCallback((messageId: string) => {
+    setExternalEditTargetId((current) => (current === messageId ? null : current));
+  }, []);
 
   // Stable — no dependency on deduplicatedMessages.length
   const handleAtBottomStateChange = useCallback((atBottom: boolean) => {
@@ -293,19 +370,76 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   // Debounce ref to prevent startReached from firing on every scroll frame
   const startReachedCooldownRef = useRef(false);
 
-  const handleStartReached = useCallback(() => {
+  const handleLoadOlder = useCallback(() => {
     if (!hasMore || isLoading || isFetchingOlder || startReachedCooldownRef.current) return;
     const msgs = deduplicatedMessagesRef.current;
-    const beforeCursor = msgs[0]?.created_at || channelData?.oldestLoadedAt;
+    const beforeCursor = channelData?.oldestLoadedAt || msgs[0]?.created_at;
     if (!beforeCursor) return;
 
     // Set cooldown to prevent repeated calls while scrolling near top
     startReachedCooldownRef.current = true;
+    const scroller = containerRef.current;
+    const prevTop = scroller?.scrollTop ?? 0;
+    const prevHeight = scroller?.scrollHeight ?? 0;
+    const requestId = ++prependRequestIdRef.current;
+
+    pendingPrependAnchorRef.current = {
+      requestId,
+      prevTop,
+      prevHeight,
+    };
+
     fetchMessagesRef.current(channelIdRef.current, 50, beforeCursor).finally(() => {
-      // Release cooldown after fetch completes (with small buffer)
-      setTimeout(() => { startReachedCooldownRef.current = false; }, 500);
+      // If no prepend happened (or restore didn't run), clear stale anchor.
+      requestAnimationFrame(() => {
+        if (pendingPrependAnchorRef.current?.requestId === requestId) {
+          pendingPrependAnchorRef.current = null;
+        }
+      });
+      // Small cooldown to avoid accidental double-fire from rapid clicks.
+      setTimeout(() => {
+        startReachedCooldownRef.current = false;
+      }, 220);
     });
   }, [hasMore, isLoading, isFetchingOlder, channelData?.oldestLoadedAt]);
+
+  // Apply prepend anchor restoration before paint to avoid visible jump.
+  useLayoutEffect(() => {
+    const anchor = pendingPrependAnchorRef.current;
+    if (!anchor) return;
+    const node = containerRef.current;
+    if (!node) return;
+
+    const heightDelta = node.scrollHeight - anchor.prevHeight;
+    if (heightDelta !== 0) node.scrollTop = anchor.prevTop + heightDelta;
+    pendingPrependAnchorRef.current = null;
+  }, [deduplicatedMessages.length, channelId]);
+
+  const handleScroll = useCallback(() => {
+    const node = containerRef.current;
+    if (!node) return;
+
+    const distanceFromBottom = node.scrollHeight - node.scrollTop - node.clientHeight;
+    const atBottom = distanceFromBottom <= 150;
+    if (atBottom !== isNearBottomRef.current) {
+      handleAtBottomStateChange(atBottom);
+    }
+
+  }, [handleAtBottomStateChange]);
+
+  useEffect(() => {
+    if (isLoading || msgCount === 0 || didInitialBottomScrollRef.current) return;
+    didInitialBottomScrollRef.current = true;
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToIndex({ index: msgCount - 1, alignToTop: false });
+      setTimeout(() => {
+        const node = containerRef.current;
+        if (!node) return;
+        node.scrollTop = node.scrollHeight;
+        handleAtBottomStateChange(true);
+      }, 120);
+    });
+  }, [isLoading, msgCount, handleAtBottomStateChange]);
 
   // Render a single message row — uses refs to avoid depending on deduplicatedMessages array
   const itemContent = useCallback(
@@ -336,11 +470,23 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
             showNewDivider={showNewDivider}
             isHighlighted={message.id === highlightedMessageId}
             authorStyleFallback={authorStyleMap[message.user_id]}
+            externalEditTargetId={externalEditTargetId}
+            onExternalEditHandled={handleExternalEditHandled}
+            customEmojiMap={customEmojiMap}
+            globalEmojiMap={globalEmojiMap}
           />
         </Fragment>
       );
     },
-    [newMessagesDividerIndex, highlightedMessageId, authorStyleMap],
+    [
+      newMessagesDividerIndex,
+      highlightedMessageId,
+      authorStyleMap,
+      externalEditTargetId,
+      handleExternalEditHandled,
+      customEmojiMap,
+      globalEmojiMap,
+    ],
   );
 
   const computeItemKey = useCallback(
@@ -358,8 +504,6 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }
     return null;
   }, [isLoading, messages.length]);
-
-  const msgCount = deduplicatedMessages.length;
 
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
@@ -406,24 +550,48 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       )}
 
       {msgCount > 0 && (
-        <div ref={containerRef} className="flex-1 min-h-0">
-          <Virtuoso
-            ref={virtuosoRef}
-            data={deduplicatedMessages}
-            initialTopMostItemIndex={msgCount - 1}
-            followOutput={(isAtBottom) => isAtBottom ? "auto" : false}
-            alignToBottom
-            atBottomThreshold={150}
-            atBottomStateChange={handleAtBottomStateChange}
-            startReached={handleStartReached}
-            overscan={400}
-            increaseViewportBy={{ top: 300, bottom: 150 }}
-            computeItemKey={computeItemKey}
-            itemContent={itemContent}
-            components={{ Header: () => headerContent }}
-            style={{ height: '100%' }}
-            className="overflow-x-hidden"
-          />
+        <div
+          ref={containerRef}
+          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
+          style={{ overflowAnchor: "none" }}
+          onScroll={handleScroll}
+        >
+          {headerContent}
+          {hasMore && (
+            <div className="flex justify-center pt-3 pb-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleLoadOlder}
+                disabled={isFetchingOlder || isLoading}
+                className="min-w-[168px]"
+              >
+                {isFetchingOlder ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Loading older...
+                  </>
+                ) : (
+                  "Load older messages"
+                )}
+              </Button>
+            </div>
+          )}
+          <ViewportList
+            ref={listRef}
+            viewportRef={containerRef}
+            items={deduplicatedMessages}
+            itemSize={88}
+            overscan={8}
+            overflowAnchor="none"
+          >
+            {(message, index) => (
+              <Fragment key={computeItemKey(index, message)}>
+                {itemContent(index, message)}
+              </Fragment>
+            )}
+          </ViewportList>
         </div>
       )}
 

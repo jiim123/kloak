@@ -150,10 +150,14 @@ const pruneMessagesByChannel = (
 ) => {
   const normalized: Record<string, ChannelMessages> = {};
   for (const [channelId, data] of Object.entries(input)) {
-    const trimMode = keepChannelId && channelId === keepChannelId ? keepChannelTrimMode : "newest";
+    const isKeptChannel = !!keepChannelId && channelId === keepChannelId;
+    const shouldBypassTrim = isKeptChannel && keepChannelTrimMode === "oldest";
+    const trimMode = isKeptChannel ? keepChannelTrimMode : "newest";
     normalized[channelId] = {
       ...data,
-      messages: trimMessages(data.messages || [], trimMode),
+      // Keep the actively paginated channel growing so top-reached loading
+      // can continue firing while loading older history.
+      messages: shouldBypassTrim ? (data.messages || []) : trimMessages(data.messages || [], trimMode),
     };
   }
 
@@ -302,6 +306,30 @@ export const useMessageStore = create<MessageState>((set, get) => ({
           });
           if (error) throw error;
           messageRows = Array.isArray(data) ? data : [];
+
+          // Fallback for timestamp cursor ties:
+          // if a page boundary has many rows with the exact same created_at,
+          // strict `< _before` can return zero and stall pagination at 50.
+          // Nudge the cursor back by 1ms and retry once.
+          if (normalizedBefore && messageRows.length === 0) {
+            const beforeMs = Date.parse(normalizedBefore);
+            if (Number.isFinite(beforeMs)) {
+              const nudgedBefore = new Date(beforeMs - 1).toISOString();
+              const { data: fallbackData, error: fallbackError } = await supabase.rpc(
+                "get_channel_messages_secure",
+                {
+                  _channel_id: channelId,
+                  _user_id: requestUserId,
+                  _limit: limit,
+                  _before: nudgedBefore,
+                  _blocked_user_ids: blockedUserIds,
+                },
+              );
+              if (!fallbackError) {
+                messageRows = Array.isArray(fallbackData) ? fallbackData : [];
+              }
+            }
+          }
 
           // Bootstrap RPC may be unavailable while migrations roll out.
           // Ensure channel overrides are still loaded via legacy path.

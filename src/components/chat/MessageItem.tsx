@@ -51,9 +51,7 @@ import { EmojiPicker } from "@/components/modals/EmojiPicker";
 import { BotTag } from "@/components/ui/bot-tag";
 import type { CustomServerRole, Message, ServerRole } from "@/types";
 import { format } from "date-fns";
-import { fetchServerEmojis } from "@/lib/serverEmojis";
 import {
-  getGlobalEmojiMap,
   resolveEmojisByNameFallback,
   resolveQualifiedEmoji,
   type ResolvedEmoji,
@@ -96,12 +94,19 @@ interface MessageItemProps {
   showNewDivider?: boolean;
   isHighlighted?: boolean;
   onStartEdit?: () => void;
+  externalEditTargetId?: string | null;
+  onExternalEditHandled?: (messageId: string) => void;
+  customEmojiMap?: Map<string, string>;
+  globalEmojiMap?: Map<string, ResolvedEmoji>;
   authorStyleFallback?: {
     role?: ServerRole | null;
     nickname?: string | null;
     roles?: CustomServerRole[];
   };
 }
+
+const EMPTY_CUSTOM_EMOJI_MAP = new Map<string, string>();
+const EMPTY_GLOBAL_EMOJI_MAP = new Map<string, ResolvedEmoji>();
 
 
 // Renders a single attachment, using a signed URL for private bucket images
@@ -171,6 +176,10 @@ export const MessageItem = memo(function MessageItem({
   showNewDivider,
   isHighlighted,
   onStartEdit,
+  externalEditTargetId,
+  onExternalEditHandled,
+  customEmojiMap: sharedCustomEmojiMap,
+  globalEmojiMap: sharedGlobalEmojiMap,
   authorStyleFallback,
 }: MessageItemProps) {
   // Selectors - granular to prevent unnecessary re-renders
@@ -201,8 +210,8 @@ export const MessageItem = memo(function MessageItem({
   const [showDesktopEmojiPicker, setShowDesktopEmojiPicker] = useState(false);
   const [showMobileEmojiPicker, setShowMobileEmojiPicker] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
-  const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
-  const [globalEmojiMap, setGlobalEmojiMap] = useState<Map<string, ResolvedEmoji>>(new Map());
+  const customEmojiMap = sharedCustomEmojiMap ?? EMPTY_CUSTOM_EMOJI_MAP;
+  const globalEmojiMap = sharedGlobalEmojiMap ?? EMPTY_GLOBAL_EMOJI_MAP;
   const [hoveredRoleIcon, setHoveredRoleIcon] = useState(false);
   
   const [reactionDetailsEmoji, setReactionDetailsEmoji] = useState<string | null>(null);
@@ -261,57 +270,7 @@ export const MessageItem = memo(function MessageItem({
   );
   const messageBaseRole = messageMember?.role ?? authorStyleFallback?.role;
 
-  // Load server emoji map
-  useEffect(() => {
-    const serverId = currentServer?.id;
-    if (!serverId) {
-      setCustomEmojiMap(new Map());
-      return;
-    }
-
-    let cancelled = false;
-    let retryTimer: ReturnType<typeof setTimeout> | null = null;
-
-    const load = async (attempt: number) => {
-      try {
-        const emojis = await fetchServerEmojis(serverId, { force: attempt > 0 });
-        if (cancelled) return;
-        const map = new Map<string, string>();
-        emojis.forEach((e) => map.set(e.name, e.url));
-        setCustomEmojiMap(map);
-      } catch (e) {
-        console.error("Failed to load server emojis:", e);
-        if (cancelled) return;
-        setCustomEmojiMap(new Map());
-        if (attempt < 3) {
-          const backoffMs = 750 * Math.pow(2, attempt);
-          retryTimer = setTimeout(() => load(attempt + 1), backoffMs);
-        }
-      }
-    };
-
-    load(0);
-
-    return () => {
-      cancelled = true;
-      if (retryTimer) clearTimeout(retryTimer);
-    };
-  }, [currentServer?.id]);
-
-  // Load global emoji map for cross-server reaction rendering
-  useEffect(() => {
-    let cancelled = false;
-    getGlobalEmojiMap()
-      .then((map) => {
-        if (!cancelled) setGlobalEmojiMap(map);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [currentServer?.id]);
-
-  // Note: avoid per-message global event listeners; cache invalidation handles freshness.
+  // Note: avoid per-message global listeners/effects in message rows.
 
   const priorityRoleWithIcon = useMemo<Pick<CustomServerRole, "name" | "icon"> | null>(() => {
     const memberRoles = messageRoles;
@@ -681,19 +640,23 @@ export const MessageItem = memo(function MessageItem({
     }
   }, [editContent, isEditing, resizeEditTextarea]);
 
-  // Custom event handler for external edit trigger
   useEffect(() => {
-    const handler = (e: CustomEvent<{ messageId: string }>) => {
-      if (e.detail.messageId === message.id && isOwnMessage) {
-        const readableContent = convertMentionsToReadable(message.content, usersMap, channelsMap);
-        setEditContent(readableContent);
-        setIsEditing(true);
-        onStartEdit?.();
-      }
-    };
-    window.addEventListener("startEditMessage" as keyof WindowEventMap, handler as EventListener);
-    return () => window.removeEventListener("startEditMessage" as keyof WindowEventMap, handler as EventListener);
-  }, [message.id, message.content, isOwnMessage, onStartEdit, usersMap, channelsMap]);
+    if (externalEditTargetId !== message.id || !isOwnMessage) return;
+    const readableContent = convertMentionsToReadable(message.content, usersMap, channelsMap);
+    setEditContent(readableContent);
+    setIsEditing(true);
+    onStartEdit?.();
+    onExternalEditHandled?.(message.id);
+  }, [
+    externalEditTargetId,
+    message.id,
+    message.content,
+    isOwnMessage,
+    onStartEdit,
+    onExternalEditHandled,
+    usersMap,
+    channelsMap,
+  ]);
 
   // Callbacks
   const handleEdit = useCallback(async () => {
@@ -1034,6 +997,8 @@ export const MessageItem = memo(function MessageItem({
                             currentUserId={user?.id}
                             messageId={message.id}
                             hideEmbeds={isEmbedHidden}
+                            customEmojiMap={customEmojiMap}
+                            globalEmojiMap={globalEmojiMap}
                             messageUser={
                               messageUser
                                 ? {
@@ -1183,7 +1148,12 @@ export const MessageItem = memo(function MessageItem({
                           }
                           return (
                             <span className="truncate max-w-[120px] sm:max-w-[200px]">
-                              <ReplyPreview content={textOnly} maxLength={30} />
+                              <ReplyPreview
+                                content={textOnly}
+                                maxLength={30}
+                                customEmojiMap={customEmojiMap}
+                                globalEmojiMap={globalEmojiMap}
+                              />
                             </span>
                           );
                         })()}
@@ -1242,6 +1212,8 @@ export const MessageItem = memo(function MessageItem({
                                     currentUserId={user?.id}
                                     messageId={message.id}
                                     hideEmbeds={isEmbedHidden}
+                                    customEmojiMap={customEmojiMap}
+                                    globalEmojiMap={globalEmojiMap}
                                     messageUser={
                                       messageUser
                                         ? {
@@ -1262,6 +1234,8 @@ export const MessageItem = memo(function MessageItem({
                             currentUserId={user?.id}
                             messageId={message.id}
                             hideEmbeds={isEmbedHidden}
+                            customEmojiMap={customEmojiMap}
+                            globalEmojiMap={globalEmojiMap}
                             messageUser={
                               messageUser
                                 ? {
