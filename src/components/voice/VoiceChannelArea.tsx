@@ -749,13 +749,15 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
                   channelName={linkedTextChannel.name}
                   manageCurrentChannel={false}
                 />
-                {!isLinkedTextGhostMode && <TypingIndicator typingUsers={typingUsers} />}
-                <MessageInput
-                  channelId={linkedTextChannel.id}
-                  channelName={linkedTextChannel.name}
-                  onTyping={startTyping}
-                  onStopTyping={stopTyping}
-                />
+                <div className="shrink-0">
+                  {!isLinkedTextGhostMode && <TypingIndicator typingUsers={typingUsers} reserveSpace />}
+                  <MessageInput
+                    channelId={linkedTextChannel.id}
+                    channelName={linkedTextChannel.name}
+                    onTyping={startTyping}
+                    onStopTyping={stopTyping}
+                  />
+                </div>
               </>
             ) : (
               <div className="flex-1 flex items-center justify-center p-4 text-sm text-muted-foreground">

@@ -4,10 +4,16 @@ import type { TypingUser } from "@/types";
 interface TypingIndicatorProps {
   typingUsers: TypingUser[];
   overlay?: boolean;
+  reserveSpace?: boolean;
   className?: string;
 }
 
-export const TypingIndicator = ({ typingUsers, overlay = false, className }: TypingIndicatorProps) => {
+export const TypingIndicator = ({
+  typingUsers,
+  overlay = false,
+  reserveSpace = false,
+  className,
+}: TypingIndicatorProps) => {
   const clampName = (value: string | null | undefined): string => {
     const normalized = (value ?? "").trim();
     if (!normalized) return "Unknown";
@@ -26,7 +32,10 @@ export const TypingIndicator = ({ typingUsers, overlay = false, className }: Typ
     }
   };
 
-  if (typingUsers.length === 0) return null;
+  if (typingUsers.length === 0) {
+    if (!reserveSpace || overlay) return null;
+    return <div className={cn("min-w-0 px-4 flex items-center shrink-0 overflow-hidden h-6", className)} />;
+  }
 
   const typingText = `${formatTypingText()}...`;
 
@@ -55,11 +64,10 @@ export const TypingIndicator = ({ typingUsers, overlay = false, className }: Typ
   }
 
   return (
-    <div className="min-w-0 px-4 flex items-center shrink-0 overflow-hidden h-8">
+    <div className="min-w-0 px-4 flex items-center shrink-0 overflow-hidden h-6">
       <div
-        className="inline-flex items-center gap-2 px-3 py-1 rounded-full border"
+        className="inline-flex items-center gap-2 px-3 py-1 rounded-full"
         style={{
-          borderColor: "#666666",
           color: "#666666",
         }}
       >

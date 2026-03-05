@@ -274,13 +274,15 @@ export const ChatArea = () => {
       <MessageList channelId={currentChannel.id} channelName={channelName} />
 
       {/* Composer area */}
-      {!isGhostMode && <TypingIndicator typingUsers={typingUsers} />}
-      <MessageInput
-        channelId={currentChannel.id}
-        channelName={channelName}
-        onTyping={startTyping}
-        onStopTyping={stopTyping}
-      />
+      <div className="shrink-0">
+        {!isGhostMode && <TypingIndicator typingUsers={typingUsers} reserveSpace />}
+        <MessageInput
+          channelId={currentChannel.id}
+          channelName={channelName}
+          onTyping={startTyping}
+          onStopTyping={stopTyping}
+        />
+      </div>
     </div>
   );
 };
