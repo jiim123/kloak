@@ -149,17 +149,10 @@ export const JoinServerModal = () => {
         <DialogContent className={modalContentClass}>
           <div className="p-4 sm:p-6">
             <DialogHeader className="pb-4">
-              <div className="flex flex-col items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <Users className="w-6 h-6 text-primary" />
-                </div>
-                <div className="text-center">
-                  <DialogTitle className="text-xl font-medium">Join a Server</DialogTitle>
-                  <DialogDescription className="text-sm text-muted-foreground mt-1">
-                    Enter an invite code to join an existing server
-                  </DialogDescription>
-                </div>
-              </div>
+              <DialogTitle className="text-xl font-medium">Join a Server</DialogTitle>
+              <DialogDescription className="text-sm text-muted-foreground mt-1">
+                Enter an invite code to join an existing server
+              </DialogDescription>
             </DialogHeader>
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
