@@ -31,11 +31,7 @@ export const ServerOverviewView = () => {
 
   const ownerMember = useMemo(() => {
     if (!currentServer) return null;
-    return (
-      members.find((m) => m.user_id === currentServer.owner_id) ||
-      members.find((m) => m.role === "owner") ||
-      null
-    );
+    return members.find((m) => m.user_id === currentServer.owner_id) || members.find((m) => m.role === "owner") || null;
   }, [currentServer, members]);
 
   useEffect(() => {
@@ -79,14 +75,14 @@ export const ServerOverviewView = () => {
       setIsLoadingAnnouncements(true);
       try {
         // Get all announcement channels for this server
-        const announcementChannels = channels.filter(c => c.type === 'announcement');
+        const announcementChannels = channels.filter((c) => c.type === "announcement");
         if (announcementChannels.length === 0) {
           setRecentAnnouncements([]);
           setIsLoadingAnnouncements(false);
           return;
         }
 
-        const { data: messagesData, error } = await supabase.rpc('get_server_recent_announcements_secure', {
+        const { data: messagesData, error } = await supabase.rpc("get_server_recent_announcements_secure", {
           _server_id: currentServer.id,
           _user_id: userId,
           _limit: 5,
@@ -98,24 +94,22 @@ export const ServerOverviewView = () => {
         const announcements: AnnouncementCard[] = (Array.isArray(messagesData) ? messagesData : []).map((msg: any) => {
           // Extract title from content (first line before double newline, or first line)
           const content = msg.content || "";
-          const parts = content.split('\n\n');
-          const title = parts.length > 1 
-            ? parts[0].trim() 
-            : content.split('\n')[0].trim() || "Announcement";
-          
+          const parts = content.split("\n\n");
+          const title = parts.length > 1 ? parts[0].trim() : content.split("\n")[0].trim() || "Announcement";
+
           return {
             id: msg.id,
             content: title,
             created_at: msg.created_at,
             user: msg.user,
             channel_id: msg.channel_id,
-            channel_name: msg.channel_name || 'Announcements',
+            channel_name: msg.channel_name || "Announcements",
           };
         });
 
         setRecentAnnouncements(announcements);
       } catch (error) {
-        console.error('Failed to fetch announcements:', error);
+        console.error("Failed to fetch announcements:", error);
       } finally {
         setIsLoadingAnnouncements(false);
       }
@@ -166,11 +160,7 @@ export const ServerOverviewView = () => {
 
   const createdAt = currentServer.created_at ? new Date(currentServer.created_at) : null;
   const ownerUser = (ownerMember?.user as User | undefined) ?? ownerFallbackUser;
-  const ownerName =
-    ownerMember?.nickname ||
-    ownerUser?.display_name ||
-    ownerUser?.username ||
-    "Unknown";
+  const ownerName = ownerMember?.nickname || ownerUser?.display_name || ownerUser?.username || "Unknown";
 
   return (
     <div className="h-full overflow-y-auto">
@@ -189,7 +179,12 @@ export const ServerOverviewView = () => {
             <div className="h-24 sm:h-28 bg-secondary/30" />
           )}
 
-          <div className={cn("p-5 sm:p-6 flex items-center gap-4", currentServer.banner_url && "-mt-10 sm:-mt-12 relative")}>
+          <div
+            className={cn(
+              "p-5 sm:p-6 flex items-center gap-4",
+              currentServer.banner_url && "-mt-10 sm:-mt-12 relative",
+            )}
+          >
             <Avatar className="w-16 h-16 rounded-2xl ring-2 ring-background/80 shadow-lg">
               <AvatarImage src={currentServer.icon_url || undefined} />
               <AvatarFallback className="rounded-2xl" style={{ backgroundColor: "#5865F2" }}>
@@ -198,15 +193,12 @@ export const ServerOverviewView = () => {
             </Avatar>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl sm:text-2xl font-semibold truncate">{currentServer.name}</h1>
-                <Badge variant="secondary" className="text-xs">
-                  Overview
-                </Badge>
+                <h1 className="text-xl sm:text-2xl font-medium truncate">{currentServer.name}</h1>
               </div>
               <div className="mt-1 flex items-center gap-4 flex-wrap text-sm text-muted-foreground">
                 <span className="inline-flex items-center gap-1.5">
                   <Users className="w-4 h-4" />
-                  {(totalMemberCount ?? members.length)} member{(totalMemberCount ?? members.length) === 1 ? "" : "s"}
+                  {totalMemberCount ?? members.length} member{(totalMemberCount ?? members.length) === 1 ? "" : "s"}
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <Hash className="w-4 h-4" />
@@ -234,9 +226,7 @@ export const ServerOverviewView = () => {
               {createdAt ? (
                 <>
                   <div className="text-foreground font-medium">{format(createdAt, "PPP")}</div>
-                  <div className="text-xs">
-                    {formatDistanceToNow(createdAt, { addSuffix: true })}
-                  </div>
+                  <div className="text-xs">{formatDistanceToNow(createdAt, { addSuffix: true })}</div>
                 </>
               ) : (
                 <div className="text-xs">—</div>
@@ -292,13 +282,9 @@ export const ServerOverviewView = () => {
                         <span className="text-sm font-medium truncate">
                           {announcement.user?.display_name || announcement.user?.username || "Unknown"}
                         </span>
-                        <span className="text-xs text-muted-foreground">
-                          in #{announcement.channel_name}
-                        </span>
+                        <span className="text-xs text-muted-foreground">in #{announcement.channel_name}</span>
                       </div>
-                      <p className="text-sm text-foreground line-clamp-2 mb-1">
-                        {announcement.content}
-                      </p>
+                      <p className="text-sm text-foreground line-clamp-2 mb-1">{announcement.content}</p>
                       <span className="text-xs text-muted-foreground">
                         {formatDistanceToNow(new Date(announcement.created_at), { addSuffix: true })}
                       </span>
