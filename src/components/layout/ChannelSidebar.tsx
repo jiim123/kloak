@@ -13,7 +13,7 @@ import {
   UserPlus,
   FolderPlus,
   Info,
-  Users,
+  
   Edit2,
   Trash2,
   Copy,
@@ -848,22 +848,11 @@ export const ChannelSidebar = () => {
   );
 
   const isOverviewActive = !!currentServer && location.pathname === `/app/servers/${currentServer.id}/overview`;
-  const isMembersActive = !!currentServer && location.pathname === `/app/servers/${currentServer.id}/members`;
 
   const handleSelectOverview = () => {
     if (!currentServer) return;
     setCurrentChannel(null);
     navigate(`/app/servers/${currentServer.id}/overview`);
-  };
-
-  const handleSelectMembers = () => {
-    if (!currentServer) return;
-    if (!isOwner && !canManageServer) {
-      toast.error("You don't have permission to view server members");
-      return;
-    }
-    setCurrentChannel(null);
-    navigate(`/app/servers/${currentServer.id}/members`);
   };
 
   const handleLeaveServer = async () => {
@@ -1278,34 +1267,6 @@ export const ChannelSidebar = () => {
                     <span className="truncate flex-1 text-left">Overview</span>
                   </button>
 
-                  {(isOwner || canManageServer) && (
-                    <button
-                      onClick={handleSelectMembers}
-                      className={cn(
-                        "group relative w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-all duration-150 select-none",
-                        "hover:bg-secondary/80",
-                        isMembersActive && "bg-secondary text-foreground",
-                        !isMembersActive && "text-muted-foreground hover:text-foreground",
-                      )}
-                    >
-                      {/* Active indicator */}
-                      <div
-                        className={cn(
-                          "absolute -left-2 top-0 bottom-0 w-1 bg-primary rounded-full transition-opacity duration-150",
-                          isMembersActive ? "opacity-100" : "opacity-0",
-                        )}
-                      />
-                      <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
-                        <Users
-                          className={cn(
-                            "w-4 h-4 flex-shrink-0 transition-colors translate-y-[0.5px]",
-                            isMembersActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground",
-                          )}
-                        />
-                      </div>
-                      <span className="truncate flex-1 text-left">Members</span>
-                    </button>
-                  )}
                 </div>
 
                 {/* Uncategorized channels */}
