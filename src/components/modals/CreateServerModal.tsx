@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useContext, useMemo } from "react";
+import React, { useState, useRef, useContext, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
