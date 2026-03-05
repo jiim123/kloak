@@ -77,52 +77,55 @@ export const HomeLanding = () => {
             </p>
           </motion.div>
 
-          {/* Action Boxes */}
+          {/* Action Boxes - Hierarchical layout */}
           <motion.div
             variants={item}
-            className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 md:gap-4 px-1 sm:px-2 md:px-0"
+            className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 md:gap-4 px-1 sm:px-2 md:px-0"
           >
+            {/* Primary CTA - Create Server */}
             <button
               onClick={() => openModal("create-server")}
-              className="p-3 sm:p-4 md:p-6 rounded-xl sm:rounded-2xl bg-card/50 border border-border/50 hover:bg-card hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200 text-left group w-full"
+              className="sm:col-span-2 p-5 sm:p-6 md:p-8 rounded-xl sm:rounded-2xl bg-primary/5 border border-primary/20 hover:bg-primary/10 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 transition-all duration-200 text-left group w-full"
             >
-              <div className="flex flex-col items-center text-center gap-2 sm:gap-3 md:gap-4">
-                <div className="w-9 h-9 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-lg sm:rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                  <Plus className="w-4.5 h-4.5 sm:w-5 sm:h-5 md:w-6 md:h-6 text-primary" />
+              <div className="flex items-center gap-4 sm:gap-5 md:gap-6">
+                <div className="w-11 h-11 sm:w-13 sm:h-13 md:w-14 md:h-14 shrink-0 rounded-xl sm:rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                  <Plus className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-primary" />
                 </div>
-                <div className="space-y-0.5 sm:space-y-1 md:space-y-2">
-                  <h3 className="font-medium text-sm sm:text-base md:text-lg">Create Server</h3>
-                  <p className="text-xs sm:text-sm text-muted-foreground px-1">Start your own private community</p>
+                <div className="space-y-0.5 sm:space-y-1">
+                  <h3 className="font-semibold text-base sm:text-lg md:text-xl text-foreground">Create a Server</h3>
+                  <p className="text-xs sm:text-sm md:text-base text-muted-foreground">Start your own private community and invite friends</p>
                 </div>
               </div>
             </button>
 
+            {/* Secondary - Join Server */}
             <button
               onClick={() => openModal("join-server")}
-              className="p-3 sm:p-4 md:p-6 rounded-xl sm:rounded-2xl bg-card/50 border border-border/50 hover:bg-card hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200 text-left group w-full"
+              className="p-4 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl bg-card/50 border border-border/50 hover:bg-card hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200 text-left group w-full"
             >
-              <div className="flex flex-col items-center text-center gap-2 sm:gap-3 md:gap-4">
-                <div className="w-9 h-9 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-lg sm:rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                  <Users className="w-4.5 h-4.5 sm:w-5 sm:h-5 md:w-6 md:h-6 text-primary" />
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="w-9 h-9 sm:w-11 sm:h-11 md:w-12 md:h-12 shrink-0 rounded-lg sm:rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 md:w-5.5 md:h-5.5 text-primary" />
                 </div>
-                <div className="space-y-0.5 sm:space-y-1 md:space-y-2">
-                  <h3 className="font-medium text-sm sm:text-base md:text-lg">Join Server</h3>
-                  <p className="text-xs sm:text-sm text-muted-foreground px-1">Enter an invite code to join</p>
+                <div className="space-y-0.5">
+                  <h3 className="font-medium text-sm sm:text-base text-foreground">Join Server</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Enter an invite code</p>
                 </div>
               </div>
             </button>
 
+            {/* Secondary - Discover */}
             <button
               onClick={() => navigate("/app/explore")}
-              className="p-3 sm:p-4 md:p-6 rounded-xl sm:rounded-2xl bg-card/50 border border-border/50 hover:bg-card hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200 text-left group w-full"
+              className="p-4 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl bg-card/50 border border-border/50 hover:bg-card hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200 text-left group w-full"
             >
-              <div className="flex flex-col items-center text-center gap-2 sm:gap-3 md:gap-4">
-                <div className="w-9 h-9 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-lg sm:rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                  <Compass className="w-4.5 h-4.5 sm:w-5 sm:h-5 md:w-6 md:h-6 text-primary" />
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="w-9 h-9 sm:w-11 sm:h-11 md:w-12 md:h-12 shrink-0 rounded-lg sm:rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                  <Compass className="w-4 h-4 sm:w-5 sm:h-5 md:w-5.5 md:h-5.5 text-primary" />
                 </div>
-                <div className="space-y-0.5 sm:space-y-1 md:space-y-2">
-                  <h3 className="font-medium text-sm sm:text-base md:text-lg">Discover</h3>
-                  <p className="text-xs sm:text-sm text-muted-foreground px-1">Explore public communities</p>
+                <div className="space-y-0.5">
+                  <h3 className="font-medium text-sm sm:text-base text-foreground">Discover</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Explore public communities</p>
                 </div>
               </div>
             </button>
