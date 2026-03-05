@@ -178,9 +178,7 @@ export const JoinServerModal = () => {
               </div>
 
               <div className="p-4 bg-secondary/30 rounded-xl border border-border/30">
-                <p className="font-normal text-xs text-muted-foreground">
-                  <strong>Invites should look like:</strong>
-                </p>
+                <p className="font-normal text-xs text-muted-foreground">Invites should look like:</p>
                 <p className="text-sm font-mono text-foreground mt-1">ABC12XYZ</p>
               </div>
 
