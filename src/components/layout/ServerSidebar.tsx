@@ -908,20 +908,20 @@ export const ServerSidebar = () => {
                         {currentServer === null ? (
                           <motion.span
                             key="active-icon"
-                            initial={{ rotate: -90, opacity: 0 }}
-                            animate={{ rotate: 0, opacity: 1 }}
-                            exit={{ rotate: 90, opacity: 0 }}
-                            transition={{ duration: 0.2 }}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.15 }}
                           >
                             <Columns3 className="w-5 h-5" />
                           </motion.span>
                         ) : (
                           <motion.span
                             key="inactive-icon"
-                            initial={{ rotate: 90, opacity: 0 }}
-                            animate={{ rotate: 0, opacity: 1 }}
-                            exit={{ rotate: -90, opacity: 0 }}
-                            transition={{ duration: 0.2 }}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.15 }}
                           >
                             <Mail className="w-5 h-5" />
                           </motion.span>
