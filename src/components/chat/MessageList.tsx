@@ -177,6 +177,10 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     anchorOffset: number | null;
   } | null>(null);
   const prependRequestIdRef = useRef(0);
+  // FIX 1: Dedicated trigger for prepend completion — NOT messages.length
+  const [prependComplete, setPrependComplete] = useState(0);
+  // FIX 4: Guard to prevent handleLoadOlder during programmatic scrolls
+  const isProgrammaticScrollRef = useRef(false);
 
   // -- Stable refs for effects that should NOT cause re-registration --
   const messagesRef = useRef(messages);
@@ -302,12 +306,9 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }
   }, [messages, channelId, markAsRead]);
 
-  // Ref to track whether we're in a "sticky bottom" period after a new message arrives.
-  // During this window, any content height changes (emoji replacement, mention resolution,
-  // link previews) will automatically re-scroll to the bottom.
-  const stickyBottomUntilRef = useRef<number>(0);
-
-  // New message count tracking + bottom nudge
+  // FIX 2: Single scroll-to-bottom mechanism with stabilization loop.
+  // Replaces the old triple-nudge (rAF + 80ms + 300ms) AND the ResizeObserver.
+  // Only ONE thing writes scrollTop after a new message arrives.
   useEffect(() => {
     const currentLength = messages.length;
     const prevLength = prevMessagesLengthRef.current;
@@ -315,55 +316,26 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       if (!isNearBottomRef.current) {
         setNewMessageCount((prev) => prev + (currentLength - prevLength));
       } else {
-        // Mark a sticky-bottom window (500ms) so any subsequent height changes
-        // from async DOM updates (fluent emoji, mention resolution, link previews)
-        // will keep the scroll pinned to the bottom.
-        stickyBottomUntilRef.current = Date.now() + 500;
+        // Single rAF stabilization loop — keeps scrolling until scrollHeight settles
+        let attempts = 0;
+        let lastScrollHeight = 0;
 
-        const nudge = () => {
+        const scrollToEnd = () => {
           const node = containerRef.current;
-          if (!node) return;
+          if (!node || attempts > 10) return;
+          attempts++;
           node.scrollTop = node.scrollHeight;
+          if (node.scrollHeight !== lastScrollHeight) {
+            lastScrollHeight = node.scrollHeight;
+            requestAnimationFrame(scrollToEnd);
+          }
         };
-        // Immediate nudge after React commit
-        requestAnimationFrame(nudge);
-        // Catch fluent emoji replacement (runs at ~50ms delay)
-        setTimeout(nudge, 80);
-        // Catch mention user resolution & custom emoji async fetches
-        setTimeout(nudge, 300);
+
+        requestAnimationFrame(scrollToEnd);
       }
     }
     prevMessagesLengthRef.current = currentLength;
   }, [messages.length]);
-
-  // ResizeObserver on the scroll content — when content height grows while
-  // we're in the sticky-bottom window, re-pin to the bottom. This catches
-  // async height changes (emoji images loading, link preview embeds, etc.)
-  // without the jank caused by a MutationObserver firing on every DOM recycling.
-  useEffect(() => {
-    const node = containerRef.current;
-    if (!node) return;
-
-    let prevScrollHeight = node.scrollHeight;
-
-    const observer = new ResizeObserver(() => {
-      const newHeight = node.scrollHeight;
-      if (newHeight !== prevScrollHeight && Date.now() < stickyBottomUntilRef.current) {
-        node.scrollTop = node.scrollHeight;
-      }
-      prevScrollHeight = newHeight;
-    });
-
-    // Observe the first child (content wrapper) — the container itself doesn't
-    // resize, only its scrollHeight changes via child size changes.
-    if (node.firstElementChild) {
-      observer.observe(node.firstElementChild);
-    }
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [channelId]);
 
   // NEW divider index
   const newMessagesDividerIndex = useMemo(() => {
@@ -376,16 +348,26 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   }, [deduplicatedMessages, lastReadAt, firstUnreadMessageId]);
 
 
+  // FIX 3: scrollToBottom uses only manual scrollTop — no scrollToIndex conflict.
   const scrollToBottom = useCallback(() => {
-    const msgs = deduplicatedMessagesRef.current;
-    listRef.current?.scrollToIndex({ index: msgs.length - 1, alignToTop: false });
-    setTimeout(() => {
-      const node = containerRef.current;
-      if (!node) return;
-      node.scrollTop = node.scrollHeight;
-    }, 150);
+    const node = containerRef.current;
+    if (!node) return;
+
+    isProgrammaticScrollRef.current = true;
+    node.scrollTop = node.scrollHeight;
+
+    // One rAF confirmation to let ViewportList settle
+    requestAnimationFrame(() => {
+      if (node) node.scrollTop = node.scrollHeight;
+      // Clear programmatic flag after next frame
+      requestAnimationFrame(() => {
+        isProgrammaticScrollRef.current = false;
+      });
+    });
+
     setShowJumpToPresent(false);
     setNewMessageCount(0);
+    isNearBottomRef.current = true;
 
     const allMsgs = messagesRef.current;
     if (allMsgs.length > 0) {
@@ -454,13 +436,10 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       anchorOffset,
     };
 
-    fetchMessagesRef.current(channelIdRef.current, 50, beforeCursor).finally(() => {
-      // If no prepend happened (or restore didn't run), clear stale anchor.
-      requestAnimationFrame(() => {
-        if (pendingPrependAnchorRef.current?.requestId === requestId) {
-          pendingPrependAnchorRef.current = null;
-        }
-      });
+    fetchMessagesRef.current(channelIdRef.current, 50, beforeCursor).then(() => {
+      // FIX 1: Signal prepend completion so the layout effect fires
+      setPrependComplete((prev) => prev + 1);
+    }).finally(() => {
       // Small cooldown to avoid accidental double-fire from rapid clicks.
       setTimeout(() => {
         startReachedCooldownRef.current = false;
@@ -468,7 +447,9 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     });
   }, [hasMore, isLoading, isFetchingOlder, channelData?.oldestLoadedAt]);
 
-  // Apply prepend anchor restoration before paint to avoid visible jump.
+  // FIX 1: Apply prepend anchor restoration ONLY when a prepend actually completed.
+  // Uses [prependComplete] as trigger instead of [deduplicatedMessages.length],
+  // so new messages arriving at the bottom never trigger this.
   useLayoutEffect(() => {
     const anchor = pendingPrependAnchorRef.current;
     if (!anchor) return;
@@ -490,25 +471,20 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     const heightDelta = node.scrollHeight - anchor.prevHeight;
     if (heightDelta !== 0) node.scrollTop = anchor.prevTop + heightDelta;
     pendingPrependAnchorRef.current = null;
-  }, [deduplicatedMessages.length, channelId]);
+  }, [prependComplete]);
 
+  // FIX 4: Guard handleScroll — don't trigger loadOlder during programmatic scrolls
+  // or when near bottom (impossible to be at scrollTop 0 AND near bottom in real use).
   const handleScroll = useCallback(() => {
     const node = containerRef.current;
     if (!node) return;
 
-    if (node.scrollTop <= 96) {
+    if (node.scrollTop <= 96 && !isProgrammaticScrollRef.current && !isNearBottomRef.current) {
       handleLoadOlder();
     }
 
     const distanceFromBottom = node.scrollHeight - node.scrollTop - node.clientHeight;
     const atBottom = distanceFromBottom <= 150;
-
-    // During the sticky-bottom window (after a new message arrives), don't flip
-    // isNearBottom to false — async DOM changes (emoji replacement, mention
-    // resolution) temporarily increase scrollHeight before our nudge catches up.
-    if (!atBottom && Date.now() < stickyBottomUntilRef.current) {
-      return;
-    }
 
     if (atBottom !== isNearBottomRef.current || !atBottom) {
       handleAtBottomStateChange(atBottom, distanceFromBottom);
@@ -516,17 +492,21 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
 
   }, [handleLoadOlder, handleAtBottomStateChange]);
 
+  // FIX 3: Initial bottom scroll — single scrollTop write + rAF confirmation.
+  // No scrollToIndex + setTimeout conflict.
   useEffect(() => {
     if (isLoading || msgCount === 0 || didInitialBottomScrollRef.current) return;
     didInitialBottomScrollRef.current = true;
+    isProgrammaticScrollRef.current = true;
     requestAnimationFrame(() => {
-      listRef.current?.scrollToIndex({ index: msgCount - 1, alignToTop: false });
-      setTimeout(() => {
-        const node = containerRef.current;
-        if (!node) return;
-        node.scrollTop = node.scrollHeight;
+      const node = containerRef.current;
+      if (!node) return;
+      node.scrollTop = node.scrollHeight;
+      requestAnimationFrame(() => {
+        if (node) node.scrollTop = node.scrollHeight;
         handleAtBottomStateChange(true);
-      }, 120);
+        isProgrammaticScrollRef.current = false;
+      });
     });
   }, [isLoading, msgCount, handleAtBottomStateChange]);
 
