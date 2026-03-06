@@ -302,6 +302,11 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }
   }, [messages, channelId, markAsRead]);
 
+  // Ref to track whether we're in a "sticky bottom" period after a new message arrives.
+  // During this window, any content height changes (emoji replacement, mention resolution,
+  // link previews) will automatically re-scroll to the bottom.
+  const stickyBottomUntilRef = useRef<number>(0);
+
   // New message count tracking + bottom nudge
   useEffect(() => {
     const currentLength = messages.length;
@@ -310,15 +315,56 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       if (!isNearBottomRef.current) {
         setNewMessageCount((prev) => prev + (currentLength - prevLength));
       } else {
-        requestAnimationFrame(() => {
+        // Mark a sticky-bottom window (500ms) so any subsequent height changes
+        // from async DOM updates (fluent emoji, mention resolution, link previews)
+        // will keep the scroll pinned to the bottom.
+        stickyBottomUntilRef.current = Date.now() + 500;
+
+        const nudge = () => {
           const node = containerRef.current;
           if (!node) return;
           node.scrollTop = node.scrollHeight;
-        });
+        };
+        // Immediate nudge after React commit
+        requestAnimationFrame(nudge);
+        // Catch fluent emoji replacement (runs at ~50ms delay)
+        setTimeout(nudge, 80);
+        // Catch mention user resolution & custom emoji async fetches
+        setTimeout(nudge, 300);
       }
     }
     prevMessagesLengthRef.current = currentLength;
   }, [messages.length]);
+
+  // ResizeObserver on the scroll container — when content height changes while
+  // we're in the sticky-bottom window, re-pin to the bottom. This catches any
+  // async DOM mutations (emoji images loading, link preview embeds, etc.)
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+
+    const observer = new ResizeObserver(() => {
+      if (Date.now() < stickyBottomUntilRef.current) {
+        node.scrollTop = node.scrollHeight;
+      }
+    });
+
+    // Observe the scroll container's first child (the content wrapper) for size changes
+    // because the container itself doesn't resize — its scrollHeight changes.
+    // We observe mutations on the container's children instead.
+    const mutationObserver = new MutationObserver(() => {
+      if (Date.now() < stickyBottomUntilRef.current) {
+        node.scrollTop = node.scrollHeight;
+      }
+    });
+
+    mutationObserver.observe(node, { childList: true, subtree: true, attributes: false });
+
+    return () => {
+      observer.disconnect();
+      mutationObserver.disconnect();
+    };
+  }, [channelId]);
 
   // NEW divider index
   const newMessagesDividerIndex = useMemo(() => {
@@ -456,6 +502,14 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
 
     const distanceFromBottom = node.scrollHeight - node.scrollTop - node.clientHeight;
     const atBottom = distanceFromBottom <= 150;
+
+    // During the sticky-bottom window (after a new message arrives), don't flip
+    // isNearBottom to false — async DOM changes (emoji replacement, mention
+    // resolution) temporarily increase scrollHeight before our nudge catches up.
+    if (!atBottom && Date.now() < stickyBottomUntilRef.current) {
+      return;
+    }
+
     if (atBottom !== isNearBottomRef.current) {
       handleAtBottomStateChange(atBottom);
     }
