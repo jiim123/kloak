@@ -336,33 +336,32 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     prevMessagesLengthRef.current = currentLength;
   }, [messages.length]);
 
-  // ResizeObserver on the scroll container — when content height changes while
-  // we're in the sticky-bottom window, re-pin to the bottom. This catches any
-  // async DOM mutations (emoji images loading, link preview embeds, etc.)
+  // ResizeObserver on the scroll content — when content height grows while
+  // we're in the sticky-bottom window, re-pin to the bottom. This catches
+  // async height changes (emoji images loading, link preview embeds, etc.)
+  // without the jank caused by a MutationObserver firing on every DOM recycling.
   useEffect(() => {
     const node = containerRef.current;
     if (!node) return;
 
+    let prevScrollHeight = node.scrollHeight;
+
     const observer = new ResizeObserver(() => {
-      if (Date.now() < stickyBottomUntilRef.current) {
+      const newHeight = node.scrollHeight;
+      if (newHeight !== prevScrollHeight && Date.now() < stickyBottomUntilRef.current) {
         node.scrollTop = node.scrollHeight;
       }
+      prevScrollHeight = newHeight;
     });
 
-    // Observe the scroll container's first child (the content wrapper) for size changes
-    // because the container itself doesn't resize — its scrollHeight changes.
-    // We observe mutations on the container's children instead.
-    const mutationObserver = new MutationObserver(() => {
-      if (Date.now() < stickyBottomUntilRef.current) {
-        node.scrollTop = node.scrollHeight;
-      }
-    });
-
-    mutationObserver.observe(node, { childList: true, subtree: true, attributes: false });
+    // Observe the first child (content wrapper) — the container itself doesn't
+    // resize, only its scrollHeight changes via child size changes.
+    if (node.firstElementChild) {
+      observer.observe(node.firstElementChild);
+    }
 
     return () => {
       observer.disconnect();
-      mutationObserver.disconnect();
     };
   }, [channelId]);
 
