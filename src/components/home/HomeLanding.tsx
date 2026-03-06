@@ -63,18 +63,21 @@ export const HomeLanding = () => {
           className="space-y-6 sm:space-y-8 md:space-y-10"
         >
           {/* Greeting Section */}
-          <motion.div variants={item} className="text-center space-y-1 sm:space-y-1.5">
-            <div className="space-y-0.5 sm:space-y-1">
+          <motion.div variants={item} className="flex items-center justify-between gap-6 sm:gap-8 md:gap-12">
+            <div className="space-y-1 sm:space-y-2 text-left min-w-0 flex-1">
               <p className="text-base sm:text-lg md:text-xl text-muted-foreground font-medium">
-                {greeting.text} <span aria-hidden="true">{greeting.emoji}</span>
+                {greeting.text}
               </p>
-              <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-medium tracking-tight text-primary break-words">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-medium tracking-tight text-primary break-words">
                 @{user?.username || "there"}
               </h1>
+              <p className="text-sm sm:text-base md:text-lg text-muted-foreground leading-relaxed max-w-xl">
+                Create your own community, join one with an invite, or explore what's out there.
+              </p>
             </div>
-            <p className="text-sm sm:text-base md:text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto">
-              Create your own community, join one with an invite, or explore what's out there.
-            </p>
+            <div className="shrink-0 text-6xl sm:text-7xl md:text-8xl lg:text-9xl select-none" aria-hidden="true">
+              {greeting.emoji}
+            </div>
           </motion.div>
 
           {/* Action Boxes - Hierarchical layout */}
