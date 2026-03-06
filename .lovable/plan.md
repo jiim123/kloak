@@ -1,151 +1,96 @@
 
 
-## Step 1: Trace Findings (Audit Report)
+## Audit: Role Permission System — Issues Found
 
-### Root Cause #1: `...msg` spread copies ALL RPC data onto message objects (CRITICAL)
+### Summary of Issues
 
-**File:** `src/stores/messageStore.ts`, line 383-384
-
-```js
-const messages: Message[] = messageRows.reverse().map((msg: any) => ({
-  ...msg,  // <-- THIS IS THE PROBLEM
-  user: undefined,
-  reply_to: msg.reply_to_id ? toMessageReply(msg.reply_to) || replyMap[msg.reply_to_id] : undefined,
-  ...
-}));
-```
-
-The RPC `get_channel_messages_secure` returns per message row:
-- `"user"`: full `row_to_json(u)` with all 14+ user fields (username, display_name, avatar_url, banner_url, avatar_decoration, profile_effect, etc.)
-- `"reply_to"`: contains another full user object
-- `"reactions"`: array of objects (already stripped to user_id in RPC, this is fine)
-- `"attachments"`: array of attachment objects
-
-`...msg` copies the ENTIRE server response including the `user` object. Setting `user: undefined` after the spread creates the property but the garbage collector may or may not collect the original object since the spread already allocated memory for the full shape. More critically, this creates objects with `{id, username, display_name, ...}` property shapes that V8 tracks — explaining the 1.9M instances.
-
-Additionally, `toMessageReply` (line 98-106) explicitly stores `user: raw.user as User` on every reply, so reply_to objects also carry full user data.
-
-### Root Cause #2: No true virtualization — fixed-height spacer hack
-
-**File:** `src/components/chat/MessageList.tsx`
-
-The "virtualization" is a manual spacer-based approach using `ESTIMATED_MESSAGE_HEIGHT = 72px`. It only activates above 80 messages and uses `.map()` over a sliced array. This is NOT react-virtuoso despite the package being installed. Problems:
-- Fixed 72px height estimation causes scroll jumping
-- `deduplicatedMessages` array is recomputed on every render via `useMemo`
-- Below 80 messages, ALL messages are rendered (threshold too high for memory, though not the main issue)
-
-### Root Cause #3: Message type still allows `user?: User`
-
-**File:** `src/types/index.ts`, line 267: `user?: User;` on the `Message` interface
-**File:** `src/types/index.ts`, line 252: `user?: User;` on `MessageReply` interface  
-**File:** `src/types/index.ts`, line 340: `sender?: User;` on `DirectMessage` interface
-
-These types allow user data to be carried on messages, and nothing enforces stripping it.
-
-### Root Cause #4: DM store also spreads full response
-
-**File:** `src/stores/dmStore.ts`, line 348-349: `...msg` spread on DM messages. The `get_dm_messages` RPC likely also returns sender data (the `sender` field on `DirectMessage` type exists).
+After a thorough audit of the DB functions (`check_user_permission`, `check_user_server_permission`), the frontend evaluation (`evaluatePermission` in `src/lib/permissions.ts`), and how permissions are consumed across the app, here are the problems identified:
 
 ---
 
-## Plan
+### Issue 1: `check_user_server_permission` Has No Base Role Defaults (Critical)
 
-### Fix 1: Stop spreading raw RPC data — explicitly pick message fields (BIGGEST WIN)
+The `check_user_server_permission` function (used for server-level actions like `manage_channels`, `manage_roles`, `kick_members`, `ban_members`, etc.) falls through to `RETURN false` when no explicit `role_permissions` rows exist. This means:
 
-**File:** `src/stores/messageStore.ts`
+- An **admin** with no custom roles and no explicit `role_permissions` rows will be **denied** `manage_channels`, `manage_roles`, etc.
+- A **moderator** will be denied `kick_members`, `mute_members`, `manage_messages`, etc.
 
-Replace line 383-395's `...msg` with explicit field picking:
+**`check_user_permission`** (channel-scoped) has proper CASE defaults (lines 1810-1842), but **`check_user_server_permission`** does not — it just returns `false`.
 
-```ts
-const messages: Message[] = messageRows.reverse().map((msg: any) => {
-  return {
-    id: msg.id,
-    channel_id: msg.channel_id,
-    user_id: msg.user_id,
-    is_own: msg.is_own ?? (msg.user_id === currentUserId),
-    reply_to_id: msg.reply_to_id ?? null,
-    content: msg.content,
-    is_pinned: msg.is_pinned ?? false,
-    is_system_message: msg.is_system_message ?? false,
-    embed_hidden: msg.embed_hidden ?? false,
-    edited_at: msg.edited_at ?? null,
-    created_at: msg.created_at,
-    user: undefined,
-    reply_to: msg.reply_to_id
-      ? replyMap[msg.reply_to_id] ?? stripReplyUser(msg.reply_to)
-      : undefined,
-    attachments: msg.attachments || [],
-    reactions: groupReactions(
-      blockedUserIds.length > 0
-        ? (msg.reactions || []).filter((r: any) => !blockedUserIds.includes(r.user_id))
-        : msg.reactions || [],
-      currentUserId,
-    ),
-  };
-});
-```
+**Fix:** Add the same CASE fallback defaults from `check_user_permission` to `check_user_server_permission` before the final `RETURN false`.
 
-This ensures the raw `msg.user` object (from `row_to_json(u)`) is never copied onto the stored message.
+---
 
-### Fix 2: Strip user from `toMessageReply` 
+### Issue 2: `check_user_server_permission` Doesn't Check `@everyone` Role via `server_member_roles` (Minor)
 
-**File:** `src/stores/messageStore.ts`
+The function looks up `@everyone` role separately (correct), but the main query joins `role_permissions` with `server_member_roles` — members are not automatically assigned the `@everyone` role in `server_member_roles`, so this join would miss the `@everyone` role. The separate fallback check for `_everyone_role_id` handles this, so this is working correctly.
 
-Change `toMessageReply` to not store user data. Reply display only needs `id`, `content`, and `user_id` for cache lookup:
+---
 
-```ts
-const toMessageReply = (raw: any): MessageReply | null => {
-  if (!raw || typeof raw !== "object") return null;
-  if (!("id" in raw) || !("content" in raw)) return null;
-  // Extract user into cache if present, but don't store on reply
-  if (raw.user?.id) {
-    useUserCacheStore.getState().upsertUser(raw.user as User);
-  }
-  return {
-    id: raw.id as string,
-    content: raw.content as string,
-    user_id: raw.user_id || raw.user?.id,
-  };
-};
-```
+### Issue 3: `view_channels` Not Enforced in `get_server_channels` (Previously Identified)
 
-Update the `MessageReply` type in `src/types/index.ts` to use `user_id` instead of `user`:
-```ts
-export interface MessageReply {
-  id: string;
-  content: string;
-  user_id?: string;
-  user?: User; // Keep optional for backward compat, but never populated
-}
-```
+`get_server_channels` only checks `is_private` + `channel_members`. It never calls `check_user_permission` for `view_channels`. Setting `view_channels` to deny on a role or channel override has no effect.
 
-### Fix 3: Apply same fix to DM store
+**Fix:** Add `check_user_permission(_user_id, c.id, 'view_channels')` filter to the channel query in `get_server_channels`.
 
-**File:** `src/stores/dmStore.ts`
+---
 
-Replace `...msg` spread at line 348-349 with explicit field picking, same pattern as Fix 1.
+### Issue 4: `read_message_history` Not Enforced at DB Level
 
-### Fix 4: Update reply rendering in MessageItem
+No RPC or RLS policy checks `read_message_history`. The messages SELECT RLS uses `can_access_channel` which checks membership/private but not the `read_message_history` permission.
 
-**File:** `src/components/chat/MessageItem.tsx`
+**Fix:** This is lower priority since it's uncommon, but should be added to the messages SELECT policy or the message-fetching RPCs.
 
-Where reply sender info is displayed, look up user from cache using `message.reply_to?.user_id` instead of `message.reply_to?.user`.
+---
 
-### Fix 5: Remove `user?: User` from Message type (cleanup)
+### Issue 5: Frontend `Permission` Type Missing Task Permissions
 
-**File:** `src/types/index.ts`
+The DB enum includes `view_tasks`, `create_tasks`, `edit_own_tasks`, `edit_all_tasks`, `assign_tasks`, `change_task_status`, `delete_tasks` but the frontend `Permission` type in `src/types/index.ts` doesn't include them. This means task permissions can't be configured via the role permission UI.
 
-Remove `user?: User` from `Message` interface (line 267). This prevents future regressions. Any component still referencing `message.user` will get a compile error, which is the desired enforcement.
+**Fix:** Add task permissions to the frontend `Permission` type and the permission meta/groups.
 
-### Fix 6: Keep current spacer virtualization (no react-virtuoso swap)
+---
 
-The spacer-based virtualization is functional and already reduces DOM nodes above 80 messages. Swapping to react-virtuoso is a large refactor that risks breaking scroll-to-message, reply jumping, unread dividers, date dividers, and the prepend-anchor pattern. The critical memory win is in Fixes 1-5 (eliminating 1.9M duplicate user objects). Virtualization can be addressed separately.
+### Issue 6: Frontend Base Role Defaults Don't Include All Permissions
 
-### Files to modify:
-1. `src/stores/messageStore.ts` — explicit field picking, fix toMessageReply
-2. `src/stores/dmStore.ts` — explicit field picking for DM messages  
-3. `src/types/index.ts` — update MessageReply type, remove user from Message
-4. `src/components/chat/MessageItem.tsx` — update reply user lookup
-5. `src/components/modals/PinnedMessagesPanel.tsx` — update reply user lookup if needed
-6. `src/hooks/useRealtimeDMs.ts` — ensure DM realtime handler doesn't spread user data
+The frontend `evaluatePermission` defaults for `moderator` and `member` are mostly correct but should be cross-checked against the DB. Comparison:
+
+| Permission | DB (check_user_permission) | Frontend (moderator) | Frontend (member) |
+|---|---|---|---|
+| `manage_emojis` | admin | Not in list (correct) | Not in list (correct) |
+| `manage_webhooks` | admin | Not in list (correct) | Not in list (correct) |
+| `manage_threads` | moderator | Not in list (**MISSING**) | Not in list (correct) |
+
+Wait — `manage_threads` IS in the moderator list. Let me re-check... No, it is NOT in the frontend moderator defaults. The DB says moderators get `manage_threads`, but the frontend moderator list doesn't include it.
+
+Actually checking again: the frontend moderator list does NOT include `manage_threads`. But the DB defaults DO include it (`WHEN 'manage_threads' THEN RETURN user_base_role IN ('owner', 'admin', 'moderator')`). This is a **mismatch**.
+
+Additionally, the frontend moderator defaults don't include `manage_emojis` or `manage_webhooks`, matching the DB. Good.
+
+---
+
+### Plan
+
+#### 1. SQL Migration: Add base role defaults to `check_user_server_permission`
+
+Add the same CASE fallback that `check_user_permission` has, so server-level permission checks work for admins/moderators without explicit `role_permissions` rows.
+
+#### 2. SQL Migration: Add `view_channels` enforcement to `get_server_channels`
+
+Filter channels through `check_user_permission(_user_id, c.id, 'view_channels')`, with owner/admin bypass.
+
+#### 3. Frontend: Fix `evaluatePermission` moderator defaults
+
+Add `manage_threads` to the moderator allowed list to match DB defaults.
+
+#### 4. Frontend: Add task permissions to `Permission` type (optional, lower priority)
+
+Add the 7 task permissions to `src/types/index.ts` and `permissionMeta.ts`.
+
+#### Files to Change
+
+- **New SQL migration**: Update `check_user_server_permission` with base role defaults; update `get_server_channels` with `view_channels` filter
+- **`src/lib/permissions.ts`**: Add `manage_threads` to moderator defaults
+- **`src/types/index.ts`**: Add task permission types (optional)
+- **`src/lib/permissionMeta.ts`**: Add task permission metadata (optional)
 
