@@ -402,14 +402,15 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   }, []);
 
   // Stable — no dependency on deduplicatedMessages.length
-  const handleAtBottomStateChange = useCallback((atBottom: boolean) => {
+  const handleAtBottomStateChange = useCallback((atBottom: boolean, distanceFromBottom?: number) => {
     isNearBottomRef.current = atBottom;
     if (atBottom) {
       setShowJumpToPresent(false);
       setNewMessageCount(0);
-    } else {
-      // Only show jump button if we have enough messages
-      if (deduplicatedMessagesRef.current.length > 10) setShowJumpToPresent(true);
+    }
+    // Show jump button only after scrolling far enough (600px+)
+    if (!atBottom && (distanceFromBottom ?? 0) >= 600 && deduplicatedMessagesRef.current.length > 10) {
+      setShowJumpToPresent(true);
     }
   }, []);
 
@@ -509,8 +510,8 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       return;
     }
 
-    if (atBottom !== isNearBottomRef.current) {
-      handleAtBottomStateChange(atBottom);
+    if (atBottom !== isNearBottomRef.current || !atBottom) {
+      handleAtBottomStateChange(atBottom, distanceFromBottom);
     }
 
   }, [handleLoadOlder, handleAtBottomStateChange]);
