@@ -479,12 +479,15 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     const node = containerRef.current;
     if (!node) return;
 
-    if (node.scrollTop <= 96 && !isProgrammaticScrollRef.current && !isNearBottomRef.current) {
-      handleLoadOlder();
-    }
-
     const distanceFromBottom = node.scrollHeight - node.scrollTop - node.clientHeight;
     const atBottom = distanceFromBottom <= 150;
+
+    // FIX 4: Only trigger loadOlder when genuinely scrolled near the top.
+    // Guard against transient scrollTop values during programmatic scrolls
+    // or ViewportList recycling by also checking we're far from the bottom.
+    if (node.scrollTop <= 96 && !isProgrammaticScrollRef.current && !atBottom && distanceFromBottom > 300) {
+      handleLoadOlder();
+    }
 
     if (atBottom !== isNearBottomRef.current || !atBottom) {
       handleAtBottomStateChange(atBottom, distanceFromBottom);
