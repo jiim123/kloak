@@ -550,7 +550,7 @@ export const MessageContent = ({
     return () => {
       cancelled = true;
     };
-  }, [content, effectiveCustomEmojiMap, effectiveGlobalEmojiMap]);
+  }, [content, effectiveCustomEmojiMap, effectiveGlobalEmojiMap, mentionedUsersMap]);
 
   // Replace native emoji characters with Fluent Emoji 3D images.
   // Must also depend on usersMap so it re-runs after mention display names resolve
