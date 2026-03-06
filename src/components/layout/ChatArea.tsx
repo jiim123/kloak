@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { ChannelHeader } from "@/components/chat/ChannelHeader";
 import { MessageList } from "@/components/chat/MessageList";
 import { MessageInput } from "@/components/chat/MessageInput";
@@ -15,7 +15,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { MessageSquare, Hash, Pin } from "lucide-react";
 import { parseTextContent } from "@/components/chat/MessageContent";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
-import { useUserCacheStore } from "@/stores/userCacheStore";
+import { useUserCacheStore, useMessageUser } from "@/stores/userCacheStore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
@@ -92,11 +92,20 @@ const PinnedMessageBar = React.memo(function PinnedMessageBar({
   channelId,
   openModal,
 }: PinnedBarProps) {
-  if (pinnedMessages.length === 0) return null;
+  // Reactive user cache read — hooks must be called unconditionally
+  const latestUserId = pinnedMessages[0]?.user_id;
+  const latestUser = useMessageUser(latestUserId);
+
+  const emojiMap = useMemo(() => new Map(Object.entries(customEmojiMap)), [customEmojiMap]);
+
+  const handleSeeAll = useCallback(() => openModal("pinned-messages", { channelId }), [openModal, channelId]);
+
+  // No pins → render a zero-height placeholder to avoid layout shift
+  if (pinnedMessages.length === 0) {
+    return <div className="flex-shrink-0 h-0 overflow-hidden" />;
+  }
 
   const latest = pinnedMessages[0];
-  // Phase 1: look up user from centralized cache
-  const latestUser = useUserCacheStore.getState().getUser(latest.user_id) ?? latest.user;
 
   const rawContent = (latest.content || "")
     .replace(/```[\s\S]*?```/g, "[code]")
@@ -105,19 +114,15 @@ const PinnedMessageBar = React.memo(function PinnedMessageBar({
     .trim();
 
   const truncatedContent = rawContent.slice(0, 100);
-  // Convert plain object → Map for the parser (keeps the rest of the app untouched)
-  const emojiMap = useMemo(() => new Map(Object.entries(customEmojiMap)), [customEmojiMap]);
   const parsedSnippet = parseTextContent(truncatedContent, userId, undefined, emojiMap);
   const hasAttachments = (latest.attachments?.length ?? 0) > 0;
   const isNew = latest.created_at && Date.now() - new Date(latest.created_at).getTime() < 24 * 60 * 60 * 1000;
 
-  const handleSeeAll = useCallback(() => openModal("pinned-messages", { channelId }), [openModal, channelId]);
-
   return (
-    <div className="flex items-center gap-2 px-4 py-2 bg-muted/50 border-b border-border/50 flex-shrink-0 min-w-0 overflow-hidden">
+    <div className="flex items-center gap-2 px-4 h-10 bg-muted/50 border-b border-border/50 flex-shrink-0 min-w-0 overflow-hidden">
       <Pin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
       <Avatar className="w-5 h-5 flex-shrink-0">
-        <AvatarImage src={latestUser?.avatar_url} />
+        <AvatarImage src={latestUser?.avatar_url || undefined} />
         <AvatarFallback style={{ backgroundColor: latestUser?.banner_color || "#5865F2" }} className="text-[10px]">
           {latestUser?.username?.[0]?.toUpperCase() || "?"}
         </AvatarFallback>
@@ -165,7 +170,7 @@ export const ChatArea = () => {
   const channelName = currentChannel?.name ?? "";
   const serverId = currentServer?.id ?? null;
   const isGhostMode = currentChannel?.ghost_mode ?? false;
-  const channelMessages = useMessageStore((s) => {
+  const channelMessages = useMessageStore((s): Message[] => {
     if (!channelId) return EMPTY_MESSAGES;
     return s.messagesByChannel[channelId]?.messages ?? EMPTY_MESSAGES;
   });
@@ -181,13 +186,24 @@ export const ChatArea = () => {
   }, [serverId, membersServerId, fetchMembers]);
 
   const { typingUsers, startTyping, stopTyping } = useTyping(isGhostMode ? null : channelId);
+
+  // Stabilize pinnedMessages: only produce a new array when the set of pinned IDs changes
+  const pinnedKey = useMemo(() => {
+    return channelMessages
+      .filter((m) => m.is_pinned)
+      .map((m) => m.id)
+      .sort()
+      .join(",");
+  }, [channelMessages]);
+
   const pinnedMessages = useMemo(() => {
-    if (channelMessages.length === 0) return EMPTY_MESSAGES;
+    if (!pinnedKey) return EMPTY_MESSAGES;
     return channelMessages
       .filter((m) => m.is_pinned)
       .slice()
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  }, [channelMessages]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pinnedKey]);
   const isMobile = useIsMobile();
 
   // Store emojis as a plain object so reference equality checks work with useMemo
@@ -273,9 +289,13 @@ export const ChatArea = () => {
       {/* Messages */}
       <MessageList channelId={currentChannel.id} channelName={channelName} />
 
-      {/* Composer area */}
-      <div className="shrink-0">
-        {!isGhostMode && <TypingIndicator typingUsers={typingUsers} reserveSpace />}
+      {/* Composer area — typing indicator is positioned absolutely to avoid layout shifts */}
+      <div className="shrink-0 relative">
+        {!isGhostMode && (
+          <div className="absolute bottom-full left-0 right-0 z-10 pointer-events-none">
+            <TypingIndicator typingUsers={typingUsers} />
+          </div>
+        )}
         <MessageInput
           channelId={currentChannel.id}
           channelName={channelName}
