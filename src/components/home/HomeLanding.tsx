@@ -64,7 +64,7 @@ export const HomeLanding = () => {
         >
           {/* Greeting Section */}
           <motion.div variants={item} className="flex items-center justify-between gap-6 sm:gap-8 md:gap-12">
-            <div className="space-y-1 sm:space-y-2 text-left min-w-0 flex-1">
+            <div className="space-y-3 sm:space-y-4 text-left min-w-0 flex-1">
               <p className="text-base sm:text-lg md:text-xl text-muted-foreground font-medium">
                 {greeting.text}
               </p>
