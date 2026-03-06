@@ -552,18 +552,26 @@ export const MessageContent = ({
     };
   }, [content, effectiveCustomEmojiMap, effectiveGlobalEmojiMap]);
 
-  // Replace native emoji characters with Fluent Emoji 3D images
+  // Replace native emoji characters with Fluent Emoji 3D images.
+  // Must also depend on usersMap so it re-runs after mention display names resolve
+  // (React's dangerouslySetInnerHTML re-writes the DOM, undoing previous replacements).
+  // Use requestAnimationFrame instead of setTimeout to avoid scheduling dozens of
+  // competing 50ms timers when scrolling through many messages.
   useEffect(() => {
     const el = contentRef.current;
     if (!el) return;
-    // Run after a microtask to let the custom emoji pass complete first
-    const timer = setTimeout(() => {
-      // Reset processed flag so we can re-process after custom emoji pass
-      delete el.dataset.fluentProcessed;
-      replaceNativeEmojisInElement(el);
-    }, 50);
-    return () => clearTimeout(timer);
-  }, [content, effectiveCustomEmojiMap, effectiveGlobalEmojiMap]);
+    let rafId: number;
+    const run = () => {
+      rafId = requestAnimationFrame(() => {
+        if (!el) return;
+        delete el.dataset.fluentProcessed;
+        replaceNativeEmojisInElement(el);
+      });
+    };
+    // Delay slightly to let the custom emoji fallback pass run first
+    const timer = setTimeout(run, 30);
+    return () => { clearTimeout(timer); cancelAnimationFrame(rafId); };
+  }, [content, effectiveCustomEmojiMap, effectiveGlobalEmojiMap, usersMap]);
 
   // Ensure mention display names resolve even when members list is online-filtered.
   useEffect(() => {
