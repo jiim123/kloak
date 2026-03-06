@@ -91,7 +91,6 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
         seen.set(stableKey, msg);
       }
     }
-    // Messages are already sorted chronologically from the store — only filter, don't re-sort
     if (seen.size === messages.length) return messages;
     return messages.filter((m) => seen.get(getStableMessageKey(m)) === m);
   }, [messages]);
@@ -107,7 +106,6 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
 
   useRealtimeUserUpdates(visibleAuthorUserIds, `channel-authors:${channelId}`);
 
-  // Author styles via shared hook (uses the correct _secure RPC)
   const authorStyleMap = useAuthorStyles(currentServerId, visibleAuthorUserIds);
 
   // Load emoji maps once per message list instead of once per message row.
@@ -177,10 +175,12 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     anchorOffset: number | null;
   } | null>(null);
   const prependRequestIdRef = useRef(0);
-  // FIX 1: Dedicated trigger for prepend completion — NOT messages.length
   const [prependComplete, setPrependComplete] = useState(0);
-  // FIX 4: Guard to prevent handleLoadOlder during programmatic scrolls
   const isProgrammaticScrollRef = useRef(false);
+  // rAF throttle for scroll handler — prevents firing on every scroll event
+  const scrollRafRef = useRef<number | null>(null);
+  // Deferred state update timer — batches state changes after scrolling settles
+  const scrollStateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // -- Stable refs for effects that should NOT cause re-registration --
   const messagesRef = useRef(messages);
@@ -224,7 +224,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     const listener = handleEditLastMessage as unknown as EventListener;
     window.addEventListener("editLastMessage", listener);
     return () => window.removeEventListener("editLastMessage", listener);
-  }, []); // stable — uses refs
+  }, []);
 
   // Set current channel and fetch messages
   useEffect(() => {
@@ -246,7 +246,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelId, manageCurrentChannel]);
 
-  // Fallback polling when realtime is down — stable, uses refs
+  // Fallback polling when realtime is down
   useEffect(() => {
     if (isRealtimeConnected) return;
     const interval = setInterval(() => {
@@ -256,7 +256,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     return () => clearInterval(interval);
   }, [isRealtimeConnected]);
 
-  // Reconcile after sleep/background — STABLE listener, no deps on messages.length
+  // Reconcile after sleep/background
   useEffect(() => {
     const MIN_HIDDEN_MS = 15_000;
     let hiddenTime: number | null = null;
@@ -268,7 +268,6 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
         hiddenTime = Date.now();
         return;
       }
-      // visible
       if (isRefetching) return;
       if (hiddenTime && Date.now() - hiddenTime < MIN_HIDDEN_MS) {
         hiddenTime = null;
@@ -293,7 +292,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       document.removeEventListener("visibilitychange", handleVisibility);
       if (refetchTimeout) clearTimeout(refetchTimeout);
     };
-  }, []); // stable — uses refs
+  }, []);
 
   // Mark as read when viewing channel
   useEffect(() => {
@@ -306,9 +305,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }
   }, [messages, channelId, markAsRead]);
 
-  // FIX 2: Single scroll-to-bottom mechanism with stabilization loop.
-  // Replaces the old triple-nudge (rAF + 80ms + 300ms) AND the ResizeObserver.
-  // Only ONE thing writes scrollTop after a new message arrives.
+  // New message handling — single rAF stabilization loop, no competing writers
   useEffect(() => {
     const currentLength = messages.length;
     const prevLength = prevMessagesLengthRef.current;
@@ -316,7 +313,6 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       if (!isNearBottomRef.current) {
         setNewMessageCount((prev) => prev + (currentLength - prevLength));
       } else {
-        // Single rAF stabilization loop — keeps scrolling until scrollHeight settles
         let attempts = 0;
         let lastScrollHeight = 0;
 
@@ -348,26 +344,30 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   }, [deduplicatedMessages, lastReadAt, firstUnreadMessageId]);
 
 
-  // FIX 3: scrollToBottom uses only manual scrollTop — no scrollToIndex conflict.
+  // scrollToBottom — single scrollTop write + rAF confirmation
   const scrollToBottom = useCallback(() => {
     const node = containerRef.current;
     if (!node) return;
 
     isProgrammaticScrollRef.current = true;
+    isNearBottomRef.current = true;
     node.scrollTop = node.scrollHeight;
 
-    // One rAF confirmation to let ViewportList settle
-    requestAnimationFrame(() => {
-      if (node) node.scrollTop = node.scrollHeight;
-      // Clear programmatic flag after next frame
-      requestAnimationFrame(() => {
+    // Stabilize over a few frames
+    let frames = 0;
+    const settle = () => {
+      if (!node || frames > 5) {
         isProgrammaticScrollRef.current = false;
-      });
-    });
+        return;
+      }
+      frames++;
+      node.scrollTop = node.scrollHeight;
+      requestAnimationFrame(settle);
+    };
+    requestAnimationFrame(settle);
 
     setShowJumpToPresent(false);
     setNewMessageCount(0);
-    isNearBottomRef.current = true;
 
     const allMsgs = messagesRef.current;
     if (allMsgs.length > 0) {
@@ -383,29 +383,16 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     setExternalEditTargetId((current) => (current === messageId ? null : current));
   }, []);
 
-  // Stable — no dependency on deduplicatedMessages.length
-  const handleAtBottomStateChange = useCallback((atBottom: boolean, distanceFromBottom?: number) => {
-    isNearBottomRef.current = atBottom;
-    if (atBottom) {
-      setShowJumpToPresent(false);
-      setNewMessageCount(0);
-    }
-    // Show jump button only after scrolling far enough (600px+)
-    if (!atBottom && (distanceFromBottom ?? 0) >= 600 && deduplicatedMessagesRef.current.length > 10) {
-      setShowJumpToPresent(true);
-    }
-  }, []);
-
   // Debounce ref to prevent startReached from firing on every scroll frame
   const startReachedCooldownRef = useRef(false);
 
-  const handleLoadOlder = useCallback(() => {
+  const handleLoadOlderRef = useRef<() => void>();
+  handleLoadOlderRef.current = useCallback(() => {
     if (!hasMore || isLoading || isFetchingOlder || startReachedCooldownRef.current) return;
     const msgs = deduplicatedMessagesRef.current;
     const beforeCursor = channelData?.oldestLoadedAt || msgs[0]?.created_at;
     if (!beforeCursor) return;
 
-    // Set cooldown to prevent repeated calls while scrolling near top
     startReachedCooldownRef.current = true;
     const scroller = containerRef.current;
     const prevTop = scroller?.scrollTop ?? 0;
@@ -418,7 +405,6 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
         const el = document.getElementById(`message-${msg.id}`);
         if (!el) continue;
         const rect = el.getBoundingClientRect();
-        // First message touching or below the top viewport edge.
         if (rect.bottom >= containerTop + 1) {
           anchorMessageId = msg.id;
           anchorOffset = rect.top - containerTop;
@@ -437,19 +423,15 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     };
 
     fetchMessagesRef.current(channelIdRef.current, 50, beforeCursor).then(() => {
-      // FIX 1: Signal prepend completion so the layout effect fires
       setPrependComplete((prev) => prev + 1);
     }).finally(() => {
-      // Small cooldown to avoid accidental double-fire from rapid clicks.
       setTimeout(() => {
         startReachedCooldownRef.current = false;
       }, 220);
     });
   }, [hasMore, isLoading, isFetchingOlder, channelData?.oldestLoadedAt]);
 
-  // FIX 1: Apply prepend anchor restoration ONLY when a prepend actually completed.
-  // Uses [prependComplete] as trigger instead of [deduplicatedMessages.length],
-  // so new messages arriving at the bottom never trigger this.
+  // Prepend anchor restoration — only fires on actual prepend completion
   useLayoutEffect(() => {
     const anchor = pendingPrependAnchorRef.current;
     if (!anchor) return;
@@ -473,30 +455,74 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     pendingPrependAnchorRef.current = null;
   }, [prependComplete]);
 
-  // FIX 4: Guard handleScroll — don't trigger loadOlder during programmatic scrolls
-  // or when near bottom (impossible to be at scrollTop 0 AND near bottom in real use).
-  const handleScroll = useCallback(() => {
+  // ─── SCROLL HANDLER ───
+  // Uses a native passive event listener with rAF throttling to avoid
+  // blocking the main thread. State updates (showJumpToPresent, newMessageCount)
+  // are DEFERRED by 150ms after scrolling stops to prevent re-renders mid-scroll
+  // which cause ViewportList to recalculate and shift the scroll position.
+  useEffect(() => {
     const node = containerRef.current;
     if (!node) return;
 
-    const distanceFromBottom = node.scrollHeight - node.scrollTop - node.clientHeight;
-    const atBottom = distanceFromBottom <= 150;
+    const onScroll = () => {
+      // Cancel any pending rAF to throttle to one per frame
+      if (scrollRafRef.current !== null) return;
 
-    // FIX 4: Only trigger loadOlder when genuinely scrolled near the top.
-    // Guard against transient scrollTop values during programmatic scrolls
-    // or ViewportList recycling by also checking we're far from the bottom.
-    if (node.scrollTop <= 96 && !isProgrammaticScrollRef.current && !atBottom && distanceFromBottom > 300) {
-      handleLoadOlder();
-    }
+      scrollRafRef.current = requestAnimationFrame(() => {
+        scrollRafRef.current = null;
+        if (!containerRef.current) return;
+        const el = containerRef.current;
 
-    if (atBottom !== isNearBottomRef.current || !atBottom) {
-      handleAtBottomStateChange(atBottom, distanceFromBottom);
-    }
+        const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+        const atBottom = distFromBottom <= 150;
 
-  }, [handleLoadOlder, handleAtBottomStateChange]);
+        // Update the ref immediately (no re-render) so other logic
+        // (new message handler, mark-as-read) sees the correct value.
+        isNearBottomRef.current = atBottom;
 
-  // FIX 3: Initial bottom scroll — single scrollTop write + rAF confirmation.
-  // No scrollToIndex + setTimeout conflict.
+        // Load older messages — only when genuinely at the top
+        if (el.scrollTop <= 96 && !isProgrammaticScrollRef.current && !atBottom && distFromBottom > 300) {
+          handleLoadOlderRef.current?.();
+        }
+
+        // DEFER state updates until scrolling stops to prevent re-renders mid-scroll.
+        // Clear any pending deferred update and schedule a new one.
+        if (scrollStateTimerRef.current) clearTimeout(scrollStateTimerRef.current);
+        scrollStateTimerRef.current = setTimeout(() => {
+          scrollStateTimerRef.current = null;
+          if (isNearBottomRef.current) {
+            setShowJumpToPresent(false);
+            setNewMessageCount(0);
+          } else {
+            const el2 = containerRef.current;
+            if (el2) {
+              const dist = el2.scrollHeight - el2.scrollTop - el2.clientHeight;
+              if (dist >= 600 && deduplicatedMessagesRef.current.length > 10) {
+                setShowJumpToPresent(true);
+              }
+            }
+          }
+        }, 150);
+      });
+    };
+
+    // Use passive listener — doesn't block scroll on the main thread
+    node.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => {
+      node.removeEventListener("scroll", onScroll);
+      if (scrollRafRef.current !== null) {
+        cancelAnimationFrame(scrollRafRef.current);
+        scrollRafRef.current = null;
+      }
+      if (scrollStateTimerRef.current) {
+        clearTimeout(scrollStateTimerRef.current);
+        scrollStateTimerRef.current = null;
+      }
+    };
+  }, [channelId]); // Re-attach when channel changes (container may remount via key)
+
+  // Initial bottom scroll — single scrollTop write + rAF confirmation
   useEffect(() => {
     if (isLoading || msgCount === 0 || didInitialBottomScrollRef.current) return;
     didInitialBottomScrollRef.current = true;
@@ -505,15 +531,22 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       const node = containerRef.current;
       if (!node) return;
       node.scrollTop = node.scrollHeight;
-      requestAnimationFrame(() => {
-        if (node) node.scrollTop = node.scrollHeight;
-        handleAtBottomStateChange(true);
-        isProgrammaticScrollRef.current = false;
-      });
+      let frames = 0;
+      const settle = () => {
+        if (!node || frames > 4) {
+          isNearBottomRef.current = true;
+          isProgrammaticScrollRef.current = false;
+          return;
+        }
+        frames++;
+        node.scrollTop = node.scrollHeight;
+        requestAnimationFrame(settle);
+      };
+      requestAnimationFrame(settle);
     });
-  }, [isLoading, msgCount, handleAtBottomStateChange]);
+  }, [isLoading, msgCount]);
 
-  // Render a single message row — uses refs to avoid depending on deduplicatedMessages array
+  // Render a single message row
   const itemContent = useCallback(
     (index: number, message: Message) => {
       if (!message) return null;
@@ -625,8 +658,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
         <div
           ref={containerRef}
           className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative"
-          style={{ overflowAnchor: "none" }}
-          onScroll={handleScroll}
+          style={{ overflowAnchor: "auto" }}
         >
           {headerContent}
           {isFetchingOlder && (
@@ -642,7 +674,6 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
             viewportRef={containerRef}
             items={deduplicatedMessages}
             overscan={8}
-            overflowAnchor="none"
           >
             {(message, index) => (
               <Fragment key={computeItemKey(index, message)}>
