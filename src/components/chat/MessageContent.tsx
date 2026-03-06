@@ -571,7 +571,7 @@ export const MessageContent = ({
     // Delay slightly to let the custom emoji fallback pass run first
     const timer = setTimeout(run, 30);
     return () => { clearTimeout(timer); cancelAnimationFrame(rafId); };
-  }, [content, effectiveCustomEmojiMap, effectiveGlobalEmojiMap, usersMap]);
+  }, [content, effectiveCustomEmojiMap, effectiveGlobalEmojiMap, mentionedUsersMap]);
 
   // Ensure mention display names resolve even when members list is online-filtered.
   useEffect(() => {
