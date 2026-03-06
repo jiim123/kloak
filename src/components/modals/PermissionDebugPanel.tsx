@@ -82,6 +82,13 @@ const PERMISSION_LABELS: Record<Permission, string> = {
     speak: 'Speak (Voice)',
     use_voice_activation: 'Use Voice Activation',
     use_application_commands: 'Use Application Commands',
+    view_tasks: 'View Tasks',
+    create_tasks: 'Create Tasks',
+    edit_own_tasks: 'Edit Own Tasks',
+    edit_all_tasks: 'Edit All Tasks',
+    assign_tasks: 'Assign Tasks',
+    change_task_status: 'Change Task Status',
+    delete_tasks: 'Delete Tasks',
 };
 
 export function PermissionDebugPanel() {

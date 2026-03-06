@@ -159,6 +159,13 @@ export const evaluatePermission = (
       "deafen_members",
       "move_members",
       "manage_nicknames",
+      "view_tasks",
+      "create_tasks",
+      "edit_own_tasks",
+      "edit_all_tasks",
+      "assign_tasks",
+      "change_task_status",
+      "delete_tasks",
     ];
     return modAllowed.includes(permission);
   }
@@ -178,6 +185,10 @@ export const evaluatePermission = (
       "speak",
       "use_voice_activation",
       "use_application_commands",
+      "view_tasks",
+      "create_tasks",
+      "edit_own_tasks",
+      "change_task_status",
     ];
     return memberAllowed.includes(permission);
   }
@@ -276,6 +287,13 @@ export const getMemberPermissions = (
     "speak",
     "use_voice_activation",
     "use_application_commands",
+    "view_tasks",
+    "create_tasks",
+    "edit_own_tasks",
+    "edit_all_tasks",
+    "assign_tasks",
+    "change_task_status",
+    "delete_tasks",
   ];
 
   for (const permission of allPermissions) {
