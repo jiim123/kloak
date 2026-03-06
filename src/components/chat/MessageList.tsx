@@ -30,7 +30,6 @@ interface MessageListProps {
 
 const CHANNEL_ENTRY_FORCE_REFETCH_MAX_AGE_MS = 12_000;
 
-// Group messages from same user within 1 minute
 const shouldGroupMessages = (current: Message, previous: Message | null): boolean => {
   if (!previous) return false;
   if (current.user_id !== previous.user_id) return false;
@@ -70,7 +69,6 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   const isFetchingOlder = !!fetchingChannels[channelId];
   const rawMessages = useMemo(() => channelData?.messages || [], [channelData?.messages]);
 
-  // Filter blocked users — stable blocked set ref to avoid re-creating on every render
   const messages = useMemo(() => {
     if (!visibilityBlockedUserIds || visibilityBlockedUserIds.length === 0) return rawMessages;
     const blocked = new Set(visibilityBlockedUserIds);
@@ -79,7 +77,6 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
 
   const hasMore = channelData?.hasMore ?? true;
 
-  // Deduplicate messages — skip sort since store already maintains order
   const deduplicatedMessages = useMemo(() => {
     const seen = new Map<string, Message>();
     for (const msg of messages) {
@@ -105,19 +102,15 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   const msgCount = deduplicatedMessages.length;
 
   useRealtimeUserUpdates(visibleAuthorUserIds, `channel-authors:${channelId}`);
-
   const authorStyleMap = useAuthorStyles(currentServerId, visibleAuthorUserIds);
 
-  // Load emoji maps once per message list instead of once per message row.
   useEffect(() => {
     if (!currentServerId) {
       setCustomEmojiMap(new Map());
       return;
     }
-
     let cancelled = false;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
-
     const load = async (attempt: number) => {
       try {
         const emojis = await fetchServerEmojis(currentServerId, { force: attempt > 0 });
@@ -133,26 +126,14 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
         }
       }
     };
-
     load(0);
-
-    return () => {
-      cancelled = true;
-      if (retryTimer) clearTimeout(retryTimer);
-    };
+    return () => { cancelled = true; if (retryTimer) clearTimeout(retryTimer); };
   }, [currentServerId]);
 
   useEffect(() => {
     let cancelled = false;
-    getGlobalEmojiMap()
-      .then((map) => {
-        if (!cancelled) setGlobalEmojiMap(map);
-      })
-      .catch(() => undefined);
-
-    return () => {
-      cancelled = true;
-    };
+    getGlobalEmojiMap().then((map) => { if (!cancelled) setGlobalEmojiMap(map); }).catch(() => undefined);
+    return () => { cancelled = true; };
   }, [currentServerId]);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -176,13 +157,9 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   } | null>(null);
   const prependRequestIdRef = useRef(0);
   const [prependComplete, setPrependComplete] = useState(0);
+  // Guard: prevents handleLoadOlder from firing during programmatic scroll-to-bottom
   const isProgrammaticScrollRef = useRef(false);
-  // rAF throttle for scroll handler — prevents firing on every scroll event
-  const scrollRafRef = useRef<number | null>(null);
-  // Deferred state update timer — batches state changes after scrolling settles
-  const scrollStateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // -- Stable refs for effects that should NOT cause re-registration --
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
   const channelIdRef = useRef(channelId);
@@ -192,18 +169,15 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   const deduplicatedMessagesRef = useRef(deduplicatedMessages);
   deduplicatedMessagesRef.current = deduplicatedMessages;
 
-  // Reset on channel switch
   if (prevChannelIdRef.current !== channelId) {
     prevChannelIdRef.current = channelId;
     didInitialBottomScrollRef.current = false;
   }
 
-  // Unread tracking
   const { getChannelUnread, markAsRead } = useUnreadChannelsContext();
   const channelUnread = getChannelUnread(channelId);
   const { lastReadAt, firstUnreadMessageId } = channelUnread;
 
-  // Scroll to message from notification / reply clicks
   const { highlightedMessageId } = useScrollToMessage({
     messages: deduplicatedMessages,
     isLoading,
@@ -211,22 +185,17 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     containerRef,
   });
 
-  // Listen for Up arrow edit event — stable listener, uses ref
   useEffect(() => {
     const handleEditLastMessage = (e: CustomEvent<{ userId: string; channelId: string }>) => {
       if (e.detail.channelId !== channelIdRef.current || !e.detail.userId) return;
       const userMessages = messagesRef.current.filter((m) => m.user_id === e.detail.userId);
-      if (userMessages.length > 0) {
-        const lastOwnMessage = userMessages[userMessages.length - 1];
-        setExternalEditTargetId(lastOwnMessage.id);
-      }
+      if (userMessages.length > 0) setExternalEditTargetId(userMessages[userMessages.length - 1].id);
     };
     const listener = handleEditLastMessage as unknown as EventListener;
     window.addEventListener("editLastMessage", listener);
     return () => window.removeEventListener("editLastMessage", listener);
   }, []);
 
-  // Set current channel and fetch messages
   useEffect(() => {
     if (manageCurrentChannel) setCurrentChannel(channelId);
     prevMessagesLengthRef.current = 0;
@@ -246,7 +215,6 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelId, manageCurrentChannel]);
 
-  // Fallback polling when realtime is down
   useEffect(() => {
     if (isRealtimeConnected) return;
     const interval = setInterval(() => {
@@ -256,45 +224,28 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     return () => clearInterval(interval);
   }, [isRealtimeConnected]);
 
-  // Reconcile after sleep/background
   useEffect(() => {
     const MIN_HIDDEN_MS = 15_000;
     let hiddenTime: number | null = null;
     let isRefetching = false;
     let refetchTimeout: ReturnType<typeof setTimeout> | null = null;
-
     const handleVisibility = () => {
-      if (document.visibilityState === "hidden") {
-        hiddenTime = Date.now();
-        return;
-      }
+      if (document.visibilityState === "hidden") { hiddenTime = Date.now(); return; }
       if (isRefetching) return;
-      if (hiddenTime && Date.now() - hiddenTime < MIN_HIDDEN_MS) {
-        hiddenTime = null;
-        return;
-      }
+      if (hiddenTime && Date.now() - hiddenTime < MIN_HIDDEN_MS) { hiddenTime = null; return; }
       hiddenTime = null;
       isRefetching = true;
       if (refetchTimeout) clearTimeout(refetchTimeout);
       refetchTimeout = setTimeout(() => { isRefetching = false; }, 5000);
-
       const hasMessages = messagesRef.current.length > 0;
       fetchMessagesRef.current(channelIdRef.current, 50, undefined, true, hasMessages)
         .catch(() => {})
-        .finally(() => {
-          isRefetching = false;
-          if (refetchTimeout) { clearTimeout(refetchTimeout); refetchTimeout = null; }
-        });
+        .finally(() => { isRefetching = false; if (refetchTimeout) { clearTimeout(refetchTimeout); refetchTimeout = null; } });
     };
-
     document.addEventListener("visibilitychange", handleVisibility);
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibility);
-      if (refetchTimeout) clearTimeout(refetchTimeout);
-    };
+    return () => { document.removeEventListener("visibilitychange", handleVisibility); if (refetchTimeout) clearTimeout(refetchTimeout); };
   }, []);
 
-  // Mark as read when viewing channel
   useEffect(() => {
     if (messages.length > 0 && isNearBottomRef.current) {
       const latestMessage = messages[messages.length - 1];
@@ -305,7 +256,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }
   }, [messages, channelId, markAsRead]);
 
-  // New message handling — single rAF stabilization loop, no competing writers
+  // New message: single nudge to bottom (one rAF + one delayed catch-up)
   useEffect(() => {
     const currentLength = messages.length;
     const prevLength = prevMessagesLengthRef.current;
@@ -313,27 +264,18 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       if (!isNearBottomRef.current) {
         setNewMessageCount((prev) => prev + (currentLength - prevLength));
       } else {
-        let attempts = 0;
-        let lastScrollHeight = 0;
-
-        const scrollToEnd = () => {
+        const nudge = () => {
           const node = containerRef.current;
-          if (!node || attempts > 10) return;
-          attempts++;
-          node.scrollTop = node.scrollHeight;
-          if (node.scrollHeight !== lastScrollHeight) {
-            lastScrollHeight = node.scrollHeight;
-            requestAnimationFrame(scrollToEnd);
-          }
+          if (node) node.scrollTop = node.scrollHeight;
         };
-
-        requestAnimationFrame(scrollToEnd);
+        requestAnimationFrame(nudge);
+        // One delayed catch-up for async content (emoji images, etc.)
+        setTimeout(nudge, 200);
       }
     }
     prevMessagesLengthRef.current = currentLength;
   }, [messages.length]);
 
-  // NEW divider index
   const newMessagesDividerIndex = useMemo(() => {
     if (!lastReadAt || !firstUnreadMessageId) return -1;
     const lastReadTime = new Date(lastReadAt).getTime();
@@ -343,31 +285,22 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     return -1;
   }, [deduplicatedMessages, lastReadAt, firstUnreadMessageId]);
 
-
-  // scrollToBottom — single scrollTop write + rAF confirmation
   const scrollToBottom = useCallback(() => {
     const node = containerRef.current;
     if (!node) return;
 
     isProgrammaticScrollRef.current = true;
-    isNearBottomRef.current = true;
     node.scrollTop = node.scrollHeight;
 
-    // Stabilize over a few frames
-    let frames = 0;
-    const settle = () => {
-      if (!node || frames > 5) {
-        isProgrammaticScrollRef.current = false;
-        return;
-      }
-      frames++;
-      node.scrollTop = node.scrollHeight;
-      requestAnimationFrame(settle);
-    };
-    requestAnimationFrame(settle);
+    // Single delayed confirmation after ViewportList settles
+    setTimeout(() => {
+      if (node) node.scrollTop = node.scrollHeight;
+      isProgrammaticScrollRef.current = false;
+    }, 100);
 
     setShowJumpToPresent(false);
     setNewMessageCount(0);
+    isNearBottomRef.current = true;
 
     const allMsgs = messagesRef.current;
     if (allMsgs.length > 0) {
@@ -383,11 +316,20 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     setExternalEditTargetId((current) => (current === messageId ? null : current));
   }, []);
 
-  // Debounce ref to prevent startReached from firing on every scroll frame
+  const handleAtBottomStateChange = useCallback((atBottom: boolean, distanceFromBottom?: number) => {
+    isNearBottomRef.current = atBottom;
+    if (atBottom) {
+      setShowJumpToPresent(false);
+      setNewMessageCount(0);
+    }
+    if (!atBottom && (distanceFromBottom ?? 0) >= 600 && deduplicatedMessagesRef.current.length > 10) {
+      setShowJumpToPresent(true);
+    }
+  }, []);
+
   const startReachedCooldownRef = useRef(false);
 
-  const handleLoadOlderRef = useRef<() => void>();
-  handleLoadOlderRef.current = useCallback(() => {
+  const handleLoadOlder = useCallback(() => {
     if (!hasMore || isLoading || isFetchingOlder || startReachedCooldownRef.current) return;
     const msgs = deduplicatedMessagesRef.current;
     const beforeCursor = channelData?.oldestLoadedAt || msgs[0]?.created_at;
@@ -414,24 +356,16 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }
     const requestId = ++prependRequestIdRef.current;
 
-    pendingPrependAnchorRef.current = {
-      requestId,
-      prevTop,
-      prevHeight,
-      anchorMessageId,
-      anchorOffset,
-    };
+    pendingPrependAnchorRef.current = { requestId, prevTop, prevHeight, anchorMessageId, anchorOffset };
 
     fetchMessagesRef.current(channelIdRef.current, 50, beforeCursor).then(() => {
       setPrependComplete((prev) => prev + 1);
     }).finally(() => {
-      setTimeout(() => {
-        startReachedCooldownRef.current = false;
-      }, 220);
+      setTimeout(() => { startReachedCooldownRef.current = false; }, 220);
     });
   }, [hasMore, isLoading, isFetchingOlder, channelData?.oldestLoadedAt]);
 
-  // Prepend anchor restoration — only fires on actual prepend completion
+  // Prepend anchor restoration — ONLY fires on actual prepend completion
   useLayoutEffect(() => {
     const anchor = pendingPrependAnchorRef.current;
     if (!anchor) return;
@@ -455,74 +389,39 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     pendingPrependAnchorRef.current = null;
   }, [prependComplete]);
 
-  // ─── SCROLL HANDLER ───
-  // Uses a native passive event listener with rAF throttling to avoid
-  // blocking the main thread. State updates (showJumpToPresent, newMessageCount)
-  // are DEFERRED by 150ms after scrolling stops to prevent re-renders mid-scroll
-  // which cause ViewportList to recalculate and shift the scroll position.
-  useEffect(() => {
+  // Scroll handler — uses React onScroll (synchronous, no rAF cascading).
+  // Only updates refs during scroll; state updates are on transitions only.
+  const handleScroll = useCallback(() => {
     const node = containerRef.current;
     if (!node) return;
 
-    const onScroll = () => {
-      // Cancel any pending rAF to throttle to one per frame
-      if (scrollRafRef.current !== null) return;
+    const distanceFromBottom = node.scrollHeight - node.scrollTop - node.clientHeight;
+    const atBottom = distanceFromBottom <= 150;
 
-      scrollRafRef.current = requestAnimationFrame(() => {
-        scrollRafRef.current = null;
-        if (!containerRef.current) return;
-        const el = containerRef.current;
+    // Load older — only when genuinely near top and not during programmatic scroll
+    if (node.scrollTop <= 96 && !isProgrammaticScrollRef.current && !atBottom && distanceFromBottom > 300) {
+      handleLoadOlder();
+    }
 
-        const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-        const atBottom = distFromBottom <= 150;
-
-        // Update the ref immediately (no re-render) so other logic
-        // (new message handler, mark-as-read) sees the correct value.
-        isNearBottomRef.current = atBottom;
-
-        // Load older messages — only when genuinely at the top
-        if (el.scrollTop <= 96 && !isProgrammaticScrollRef.current && !atBottom && distFromBottom > 300) {
-          handleLoadOlderRef.current?.();
-        }
-
-        // DEFER state updates until scrolling stops to prevent re-renders mid-scroll.
-        // Clear any pending deferred update and schedule a new one.
-        if (scrollStateTimerRef.current) clearTimeout(scrollStateTimerRef.current);
-        scrollStateTimerRef.current = setTimeout(() => {
-          scrollStateTimerRef.current = null;
-          if (isNearBottomRef.current) {
-            setShowJumpToPresent(false);
-            setNewMessageCount(0);
-          } else {
-            const el2 = containerRef.current;
-            if (el2) {
-              const dist = el2.scrollHeight - el2.scrollTop - el2.clientHeight;
-              if (dist >= 600 && deduplicatedMessagesRef.current.length > 10) {
-                setShowJumpToPresent(true);
-              }
-            }
-          }
-        }, 150);
-      });
-    };
-
-    // Use passive listener — doesn't block scroll on the main thread
-    node.addEventListener("scroll", onScroll, { passive: true });
-
-    return () => {
-      node.removeEventListener("scroll", onScroll);
-      if (scrollRafRef.current !== null) {
-        cancelAnimationFrame(scrollRafRef.current);
-        scrollRafRef.current = null;
+    // Only call handleAtBottomStateChange on actual transitions to avoid
+    // unnecessary state updates (re-renders) during continuous scrolling.
+    const wasAtBottom = isNearBottomRef.current;
+    if (atBottom && !wasAtBottom) {
+      // Transition: scrolled TO bottom
+      handleAtBottomStateChange(true, distanceFromBottom);
+    } else if (!atBottom && wasAtBottom) {
+      // Transition: scrolled AWAY from bottom — just update the ref, defer jump button
+      isNearBottomRef.current = false;
+    } else if (!atBottom && !wasAtBottom && distanceFromBottom >= 600) {
+      // Already scrolled up, check if we should show jump button
+      // Use ref check to avoid calling setState if already showing
+      if (!showJumpToPresent && deduplicatedMessagesRef.current.length > 10) {
+        setShowJumpToPresent(true);
       }
-      if (scrollStateTimerRef.current) {
-        clearTimeout(scrollStateTimerRef.current);
-        scrollStateTimerRef.current = null;
-      }
-    };
-  }, [channelId]); // Re-attach when channel changes (container may remount via key)
+    }
+  }, [handleLoadOlder, handleAtBottomStateChange, showJumpToPresent]);
 
-  // Initial bottom scroll — single scrollTop write + rAF confirmation
+  // Initial bottom scroll
   useEffect(() => {
     if (isLoading || msgCount === 0 || didInitialBottomScrollRef.current) return;
     didInitialBottomScrollRef.current = true;
@@ -531,22 +430,14 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       const node = containerRef.current;
       if (!node) return;
       node.scrollTop = node.scrollHeight;
-      let frames = 0;
-      const settle = () => {
-        if (!node || frames > 4) {
-          isNearBottomRef.current = true;
-          isProgrammaticScrollRef.current = false;
-          return;
-        }
-        frames++;
-        node.scrollTop = node.scrollHeight;
-        requestAnimationFrame(settle);
-      };
-      requestAnimationFrame(settle);
+      setTimeout(() => {
+        if (node) node.scrollTop = node.scrollHeight;
+        isNearBottomRef.current = true;
+        isProgrammaticScrollRef.current = false;
+      }, 100);
     });
   }, [isLoading, msgCount]);
 
-  // Render a single message row
   const itemContent = useCallback(
     (index: number, message: Message) => {
       if (!message) return null;
@@ -659,6 +550,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
           ref={containerRef}
           className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative"
           style={{ overflowAnchor: "none" }}
+          onScroll={handleScroll}
         >
           {headerContent}
           {isFetchingOlder && (
@@ -674,6 +566,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
             viewportRef={containerRef}
             items={deduplicatedMessages}
             overscan={8}
+            overflowAnchor="none"
           >
             {(message, index) => (
               <Fragment key={computeItemKey(index, message)}>
