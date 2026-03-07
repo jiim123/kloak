@@ -39,6 +39,7 @@ import { useMessageStore } from "@/stores/messageStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useSyncStore } from "@/stores/syncStore";
+import { useFriendStore } from "@/stores/friendStore";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MessageContent } from "./MessageContent";
@@ -229,6 +230,11 @@ export const MessageItem = memo(function MessageItem({
   const isOwnMessage = useMemo(
     () => message.is_own ?? user?.id === message.user_id,
     [message.is_own, user?.id, message.user_id],
+  );
+
+  // Check if this message author is blocked (either direction)
+  const isBlockedUser = useFriendStore(
+    useCallback((s) => s.visibilityBlockedUserIds.includes(message.user_id), [message.user_id]),
   );
 
   // Phase 1: Look up user from centralized cache (no fallback to message.user)
@@ -1350,7 +1356,7 @@ export const MessageItem = memo(function MessageItem({
               {!isEditing && !message.is_system_message && (
                 <div className="absolute right-2 -top-4 hidden md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 md:flex items-center gap-1 bg-background border border-border rounded-xl shadow-md p-1 transition-opacity duration-100">
                   {/* Quick reactions - top 3 most used */}
-                  {canAddReactions && topEmojis.map((emoji) => (
+                  {canAddReactions && !isBlockedUser && topEmojis.map((emoji) => (
                     <button
                       key={`quick-${emoji}`}
                       className="p-1.5 rounded-lg bg-transparent hover:bg-muted transition-colors"
@@ -1362,7 +1368,7 @@ export const MessageItem = memo(function MessageItem({
                     </button>
                   ))}
                   {/* Reactions - Desktop */}
-                  {canAddReactions && (
+                  {canAddReactions && !isBlockedUser && (
                     <EmojiPicker
                       open={showDesktopEmojiPicker}
                       onOpenChange={setShowDesktopEmojiPicker}
@@ -1379,8 +1385,8 @@ export const MessageItem = memo(function MessageItem({
                     </EmojiPicker>
                   )}
 
-                  {/* Reply - Hide for announcement channels */}
-                  {
+                  {/* Reply - Hide for blocked users */}
+                  {!isBlockedUser && (
                     <button
                       className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
                       onClick={() => setReplyingTo(message)}
@@ -1389,7 +1395,7 @@ export const MessageItem = memo(function MessageItem({
                     >
                       <Reply className="w-4 h-4" />
                     </button>
-                  }
+                  )}
 
                   {/* Edit (own messages) */}
                   {isOwnMessage && (
@@ -1469,10 +1475,12 @@ export const MessageItem = memo(function MessageItem({
           </ContextMenuTrigger>
 
           <ContextMenuContent>
-            <ContextMenuItem onClick={() => setReplyingTo(message)}>
-              <Reply className="w-4 h-4 mr-2" />
-              Reply
-            </ContextMenuItem>
+            {!isBlockedUser && (
+              <ContextMenuItem onClick={() => setReplyingTo(message)}>
+                <Reply className="w-4 h-4 mr-2" />
+                Reply
+              </ContextMenuItem>
+            )}
             <ContextMenuItem onClick={handleCopyText}>
               <Copy className="w-4 h-4 mr-2" />
               Copy Text
@@ -1528,7 +1536,7 @@ export const MessageItem = memo(function MessageItem({
           </DrawerHeader>
           <div className="px-4 pb-8">
             {/* Quick reactions row - horizontally scrollable */}
-            {canAddReactions && (
+            {canAddReactions && !isBlockedUser && (
               <div className="mb-4 rounded-xl bg-muted/50 overflow-hidden">
                 <div className="flex items-center gap-1.5 p-2 overflow-x-auto scrollbar-hide">
                   {QUICK_REACTIONS.map((emoji) => (
@@ -1563,17 +1571,18 @@ export const MessageItem = memo(function MessageItem({
             {/* Action buttons list */}
             <div className="space-y-1">
               {/* Reply */}
-              <button
-                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-accent active:bg-accent text-left transition-colors"
-                onClick={() => {
-                  setReplyingTo(message);
-                  setShowMobileActions(false);
-                }}
-              >
-                <Reply className="w-5 h-5 text-muted-foreground" />
-                <span className="font-medium">Reply</span>
-              </button>
-
+              {!isBlockedUser && (
+                <button
+                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-accent active:bg-accent text-left transition-colors"
+                  onClick={() => {
+                    setReplyingTo(message);
+                    setShowMobileActions(false);
+                  }}
+                >
+                  <Reply className="w-5 h-5 text-muted-foreground" />
+                  <span className="font-medium">Reply</span>
+                </button>
+              )}
               {/* Edit (own messages) */}
               {isOwnMessage && (
                 <button
