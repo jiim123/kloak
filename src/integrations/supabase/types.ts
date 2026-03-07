@@ -2596,6 +2596,10 @@ export type Database = {
         Args: { _emoji: string; _message_id: string; _user_id: string }
         Returns: Json
       }
+      are_users_blocked: {
+        Args: { _user_a: string; _user_b: string }
+        Returns: boolean
+      }
       assert_function_execute_surface_strict: {
         Args: never
         Returns: undefined
