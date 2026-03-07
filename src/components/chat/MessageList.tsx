@@ -18,7 +18,6 @@ import { useConnectionStatus } from "@/hooks/useConnectionStatus";
 import { useRealtimeUserUpdates } from "@/hooks/useRealtimeUserUpdates";
 import { useAuthorStyles } from "@/hooks/useAuthorStyles";
 import type { Message } from "@/types";
-import { useRef as useRefAlias } from "react";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
 import { getGlobalEmojiMap, type ResolvedEmoji } from "@/lib/globalEmojiResolver";
 import { isSameDay, isToday, isYesterday, format } from "date-fns";
