@@ -70,9 +70,9 @@ export const UserSearchResults = ({ query }: UserSearchResultsProps) => {
   if (!query || query.length < 2) return null;
 
   const getFriendshipStatus = (userId: string) => {
-    if (friends.some(f => f.user?.id === userId)) return "friends";
-    if (outgoingRequests.some(f => f.user?.id === userId)) return "pending_outgoing";
-    if (pendingRequests.some(f => f.user?.id === userId)) return "pending_incoming";
+    if (friends.some(f => f.id === userId)) return "friends";
+    if (outgoingRequests.some(f => f.id === userId)) return "pending_outgoing";
+    if (pendingRequests.some(f => f.id === userId)) return "pending_incoming";
     if (sentTo.has(userId)) return "just_sent";
     return null;
   };
