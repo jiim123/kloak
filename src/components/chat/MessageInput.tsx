@@ -338,7 +338,6 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       const sentMessage = await sendMessage(channelId, user.id, finalContent, replyingTo?.id);
 
       // Insert attachment records into message_attachments table
-      console.log('[MessageInput] sentMessage:', sentMessage, 'uploadedUrls:', uploadedUrls.length);
       if (sentMessage && uploadedUrls.length > 0) {
         const attachmentRows = uploadedUrls.map((url, i) => ({
           message_id: sentMessage.id,
@@ -347,9 +346,10 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
           file_type: savedAttachmentMeta[i]?.type || null,
           file_size: savedAttachmentMeta[i]?.size || null,
         }));
-        console.log('[MessageInput] Inserting attachmentRows:', attachmentRows);
         const { data: insertedAttachments, error: attachError } = await supabase.from("message_attachments").insert(attachmentRows).select();
-        console.log('[MessageInput] insertedAttachments:', insertedAttachments, 'error:', attachError);
+        if (attachError) {
+          console.error('[MessageInput] Attachment insert error:', attachError);
+        }
         if (insertedAttachments && insertedAttachments.length > 0) {
           const { updateMessage } = useMessageStore.getState();
           updateMessage(sentMessage.id, {
