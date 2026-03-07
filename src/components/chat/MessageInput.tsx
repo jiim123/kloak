@@ -328,10 +328,10 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
           const res = await secureUpload("attachments", fileName, att.file, { contentType: att.file.type });
           uploadedUrls.push(res.publicUrl);
         }
-        // Only use URLs as content if there's no text; otherwise attachments are stored separately
-        if (!finalContent) {
-          finalContent = uploadedUrls.join("\n");
-        }
+        // Always append attachment URLs to content so images render via content parsing
+        // even if the message_attachments insert fails
+        const urlBlock = uploadedUrls.join("\n");
+        finalContent = finalContent ? `${finalContent}\n${urlBlock}` : urlBlock;
       }
 
       // 🚀 Optimization: The DB Trigger now handles all mention processing automatically.
