@@ -1780,37 +1780,36 @@ export const ServerSettingsModal = () => {
                                   </AvatarFallback>
                                 </Avatar>
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                  <div className="flex items-center gap-1 truncate">
                                     <span className="text-sm font-medium truncate">
-                                      {member.nickname || member.user?.display_name || member.user?.username}
+                                      {member.user?.display_name || member.user?.username}
                                     </span>
                                     {server && getOwnerIcon(member.user_id, server.owner_id)}
-                                    {hasRoles && (
-                                      <div className="flex items-center gap-1 flex-wrap">
-                                        {memberRoles.map((role) => {
-                                          const isGradient = role.color.startsWith("linear-gradient");
-                                          return (
-                                            <Badge
-                                              key={role.id}
-                                              variant="outline"
-                                              className="text-[10px] px-1.5 py-0 h-4 font-medium border-0 rounded-md"
-                                              style={
-                                                isGradient
-                                                  ? { background: role.color, color: "#fff" }
-                                                  : { backgroundColor: role.color + "20", color: role.color }
-                                              }
-                                            >
-                                              {role.name}
-                                            </Badge>
-                                          );
-                                        })}
-                                      </div>
-                                    )}
+                                    <span className="text-xs text-muted-foreground truncate">
+                                      @{member.user?.username}
+                                    </span>
                                   </div>
-                                  <p className="text-xs text-muted-foreground truncate">
-                                    {member.user?.username}
-                                    {server && member.user_id === server.owner_id ? " • Owner" : ""}
-                                  </p>
+                                  {hasRoles && (
+                                    <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                                      {memberRoles.map((role) => {
+                                        const isGradient = role.color.startsWith("linear-gradient");
+                                        return (
+                                          <Badge
+                                            key={role.id}
+                                            variant="outline"
+                                            className="text-[10px] px-1.5 py-0 h-4 font-medium border-0 rounded-md"
+                                            style={
+                                              isGradient
+                                                ? { background: role.color, color: "#fff" }
+                                                : { backgroundColor: role.color + "20", color: role.color }
+                                            }
+                                          >
+                                            {role.name}
+                                          </Badge>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
                                 </div>
                                 {canManageRoles && (member.user_id !== user?.id || isOwner) && (
                                   <div className="flex items-center gap-1 flex-shrink-0">
