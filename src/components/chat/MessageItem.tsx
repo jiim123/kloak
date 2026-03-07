@@ -1064,7 +1064,7 @@ export const MessageItem = memo(function MessageItem({
                         {roleIconNode && priorityRoleWithIcon && (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <RoleIconWrapper>
+                              <RoleIconWrapper isHovered={hoveredRoleIcon} onHoverChange={setHoveredRoleIcon}>
                                 <span className="inline-flex items-center mr-1.5 cursor-help">{roleIconNode}</span>
                               </RoleIconWrapper>
                             </TooltipTrigger>
