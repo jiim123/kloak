@@ -280,7 +280,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }
   }, [messages, channelId, markAsRead]);
 
-  // New message: single nudge to bottom (one rAF + one delayed catch-up)
+  // FIX 4: New message nudge with isNearBottom guard at execution time
   useEffect(() => {
     const currentLength = messages.length;
     const prevLength = prevMessagesLengthRef.current;
@@ -290,10 +290,11 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       } else {
         const nudge = () => {
           const node = containerRef.current;
-          if (node) node.scrollTop = node.scrollHeight;
+          if (node && isNearBottomRef.current) {
+            node.scrollTop = node.scrollHeight;
+          }
         };
         requestAnimationFrame(nudge);
-        // One delayed catch-up for async content (emoji images, etc.)
         setTimeout(nudge, 200);
       }
     }
