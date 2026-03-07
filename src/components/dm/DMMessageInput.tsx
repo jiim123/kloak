@@ -296,6 +296,13 @@ export const DMMessageInput = ({ conversationId, otherUsername, replyingTo, onCa
       let finalContent = messageContent;
       let uploadedUrls: string[] = [];
 
+      // Save attachment metadata before clearing
+      const savedAttachmentMeta = pendingAttachments.map((a) => ({
+        name: a.file.name,
+        type: a.file.type,
+        size: a.file.size,
+      }));
+
       if (hasAttachments) {
         uploadedUrls = await uploadAttachments();
         // Only use URLs as content if there's no text; otherwise attachments are stored separately
@@ -312,9 +319,9 @@ export const DMMessageInput = ({ conversationId, otherUsername, replyingTo, onCa
         const attachmentRows = uploadedUrls.map((url, i) => ({
           message_id: sent.id,
           file_url: url,
-          file_name: pendingAttachments[i]?.file.name || "attachment",
-          file_type: pendingAttachments[i]?.file.type || null,
-          file_size: pendingAttachments[i]?.file.size || null,
+          file_name: savedAttachmentMeta[i]?.name || "attachment",
+          file_type: savedAttachmentMeta[i]?.type || null,
+          file_size: savedAttachmentMeta[i]?.size || null,
         }));
         const { data: insertedAttachments } = await supabase.from("dm_attachments").insert(attachmentRows).select();
         if (insertedAttachments && insertedAttachments.length > 0) {

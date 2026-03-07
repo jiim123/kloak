@@ -316,6 +316,12 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     try {
       let finalContent = contentToSend;
       const uploadedUrls: string[] = [];
+      // Save metadata before any state changes
+      const savedAttachmentMeta = pendingAttachments.map((a) => ({
+        name: a.file.name,
+        type: a.file.type,
+        size: a.file.size,
+      }));
       if (pendingAttachments.length > 0) {
         for (const att of pendingAttachments) {
           const fileName = `${user.id}/${Date.now()}-${crypto.randomUUID()}.${att.file.name.split(".").pop()}`;
@@ -336,9 +342,9 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
         const attachmentRows = uploadedUrls.map((url, i) => ({
           message_id: sentMessage.id,
           file_url: url,
-          file_name: pendingAttachments[i]?.file.name || "attachment",
-          file_type: pendingAttachments[i]?.file.type || null,
-          file_size: pendingAttachments[i]?.file.size || null,
+          file_name: savedAttachmentMeta[i]?.name || "attachment",
+          file_type: savedAttachmentMeta[i]?.type || null,
+          file_size: savedAttachmentMeta[i]?.size || null,
         }));
         const { data: insertedAttachments } = await supabase.from("message_attachments").insert(attachmentRows).select();
         if (insertedAttachments && insertedAttachments.length > 0) {
