@@ -193,6 +193,8 @@ export const ServerSettingsModal = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeTab, setActiveTab] = useState<SettingsTabId>("overview");
+  const [memberSearch, setMemberSearch] = useState("");
+  const [memberDisplayCount, setMemberDisplayCount] = useState(50);
   const [editingRole, setEditingRole] = useState<CustomServerRole | null>(null);
   const [editingRolePermissions, setEditingRolePermissions] = useState<CustomServerRole | null>(null);
   const [roleTab, setRoleTab] = useState<"details" | "permissions">("details");
