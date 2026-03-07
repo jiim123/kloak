@@ -1581,8 +1581,8 @@ export const MessageItem = memo(function MessageItem({
                 >
                   <Reply className="w-5 h-5 text-muted-foreground" />
                   <span className="font-medium">Reply</span>
-              </button>
-
+                </button>
+              )}
               {/* Edit (own messages) */}
               {isOwnMessage && (
                 <button
