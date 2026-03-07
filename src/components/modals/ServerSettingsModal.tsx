@@ -1728,13 +1728,13 @@ export const ServerSettingsModal = () => {
                 ))}
 
               {activeTab === "members" && (
-                <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3">
-                  <p className="text-sm text-muted-foreground mb-3">
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
                     {members.length} member{members.length !== 1 ? "s" : ""}
                   </p>
 
                   {/* Search */}
-                  <div className="relative mb-3">
+                  <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       placeholder="Search members..."
@@ -1764,7 +1764,7 @@ export const ServerSettingsModal = () => {
                             {filtered.length} matching member{filtered.length !== 1 ? "s" : ""}
                           </p>
                         )}
-                        <div className="max-h-[400px] overflow-y-auto overscroll-contain touch-pan-y space-y-2">
+                        <div className="space-y-2">
                           {visible.map((member) => {
                             const memberRoles = member.roles || [];
                             const hasRoles = memberRoles.length > 0;
