@@ -9,6 +9,7 @@ import { StackedAvatars } from "@/components/ui/stacked-avatars";
 import { LoggedInUserPanel } from "@/components/layout/LoggedInUserPanel";
 import { VoiceConnectedBanner } from "@/components/layout/VoiceConnectedBanner";
 import { CreateGroupModal } from "@/components/dm/CreateGroupModal";
+import { UserSearchResults } from "@/components/dm/UserSearchResults";
 import { useDMStore } from "@/stores/dmStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useUnreadDMsContext } from "@/hooks/useUnreadDMsContext";
@@ -142,6 +143,9 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
             />
           </div>
         </div>
+
+        {/* User search results (when searching) */}
+        {searchQuery.length >= 2 && <UserSearchResults query={searchQuery} />}
 
         {/* Section header with Create Group */}
         <div className="px-4 py-2 flex items-center justify-between">

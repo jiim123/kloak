@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type RefObject } from 'react';
+import { useEffect, useRef, useState, useCallback, type RefObject } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMessageStore } from '@/stores/messageStore';
 
@@ -95,22 +95,26 @@ export const useScrollToMessage = ({ messages, isLoading, virtuosoRef, container
     });
   }, [targetMessageId, messages, isLoading, currentChannelId, fetchMessages]);
 
-  // Scroll to message when it's available, then highlight after scroll finishes
-  useEffect(() => {
-    if (!targetMessageId || isLoading || hasScrolledRef.current) return;
+  // Perform the actual scroll with retry logic
+  const performScroll = useCallback((targetIndex: number, targetId: string, attempt = 0) => {
+    const maxAttempts = 4;
+    const delay = attempt === 0 ? 80 : 200;
 
-    const targetIndex = messages.findIndex(m => m.id === targetMessageId);
-    if (targetIndex === -1) return;
-
-    const scrollTimeout = setTimeout(() => {
+    const tryScroll = () => {
       if (virtuosoRef?.current) {
         virtuosoRef.current.scrollToIndex({
           index: targetIndex,
           alignToTop: false,
         });
       } else if (containerRef?.current) {
-        const messageElement = document.getElementById(`message-${targetMessageId}`);
-        if (!messageElement) return;
+        const messageElement = document.getElementById(`message-${targetId}`);
+        if (!messageElement) {
+          // Element not in DOM yet, retry
+          if (attempt < maxAttempts) {
+            setTimeout(() => performScroll(targetIndex, targetId, attempt + 1), 200);
+          }
+          return;
+        }
 
         const scrollContainer = containerRef.current;
         const containerRect = scrollContainer.getBoundingClientRect();
@@ -128,7 +132,7 @@ export const useScrollToMessage = ({ messages, isLoading, virtuosoRef, container
       hasScrolledRef.current = true;
 
       setTimeout(() => {
-        setHighlightedMessageId(targetMessageId);
+        setHighlightedMessageId(targetId);
       }, 400);
 
       if (highlightTimeoutRef.current) {
@@ -138,10 +142,20 @@ export const useScrollToMessage = ({ messages, isLoading, virtuosoRef, container
         setHighlightedMessageId(null);
         clearMessageParamRef.current();
       }, 2900);
-    }, 150);
+    };
 
-    return () => clearTimeout(scrollTimeout);
-  }, [targetMessageId, messages, isLoading, virtuosoRef, containerRef]);
+    setTimeout(tryScroll, delay);
+  }, [virtuosoRef, containerRef]);
+
+  // Scroll to message when it's available
+  useEffect(() => {
+    if (!targetMessageId || isLoading || hasScrolledRef.current) return;
+
+    const targetIndex = messages.findIndex(m => m.id === targetMessageId);
+    if (targetIndex === -1) return;
+
+    performScroll(targetIndex, targetMessageId);
+  }, [targetMessageId, messages, isLoading, performScroll]);
 
   // Cleanup on unmount
   useEffect(() => {
