@@ -372,7 +372,7 @@ export const useDMStore = create<DMState>((set, get) => ({
           edited_at: msg.edited_at ?? null,
           created_at: msg.created_at,
           reply_to: msg.reply_to_id ? (replyToMap[msg.reply_to_id] as DirectMessage) || null : null,
-          attachments: [],
+          attachments: attachments.filter((a: any) => a.message_id === msg.id),
           reactions: groupReactions(msgReactions, userId),
         };
       });
