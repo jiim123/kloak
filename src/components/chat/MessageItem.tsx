@@ -39,6 +39,7 @@ import { useMessageStore } from "@/stores/messageStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useSyncStore } from "@/stores/syncStore";
+import { useFriendStore } from "@/stores/friendStore";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MessageContent } from "./MessageContent";
