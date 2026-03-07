@@ -92,6 +92,30 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     return messages.filter((m) => seen.get(getStableMessageKey(m)) === m);
   }, [messages]);
 
+  // FIX 3: Flat array of messages + date dividers for ViewportList
+  type ListItem =
+    | { type: "message"; message: Message }
+    | { type: "dateDivider"; label: string; date: Date };
+
+  const flatItems = useMemo(() => {
+    const items: ListItem[] = [];
+    for (let i = 0; i < deduplicatedMessages.length; i++) {
+      const msg = deduplicatedMessages[i];
+      const msgDate = new Date(msg.created_at);
+      const prevMsg = i > 0 ? deduplicatedMessages[i - 1] : null;
+      const prevDate = prevMsg ? new Date(prevMsg.created_at) : null;
+      if (!prevDate || !isSameDay(msgDate, prevDate)) {
+        items.push({
+          type: "dateDivider",
+          label: getDateDividerLabel(msgDate),
+          date: msgDate,
+        });
+      }
+      items.push({ type: "message", message: msg });
+    }
+    return items;
+  }, [deduplicatedMessages]);
+
   const visibleAuthorUserIds = useMemo(() => {
     const ids = new Set<string>();
     for (const msg of deduplicatedMessages) {
@@ -256,7 +280,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }
   }, [messages, channelId, markAsRead]);
 
-  // New message: single nudge to bottom (one rAF + one delayed catch-up)
+  // FIX 4: New message nudge with isNearBottom guard at execution time
   useEffect(() => {
     const currentLength = messages.length;
     const prevLength = prevMessagesLengthRef.current;
@@ -266,10 +290,11 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       } else {
         const nudge = () => {
           const node = containerRef.current;
-          if (node) node.scrollTop = node.scrollHeight;
+          if (node && isNearBottomRef.current) {
+            node.scrollTop = node.scrollHeight;
+          }
         };
         requestAnimationFrame(nudge);
-        // One delayed catch-up for async content (emoji images, etc.)
         setTimeout(nudge, 200);
       }
     }
@@ -421,7 +446,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }
   }, [handleLoadOlder, handleAtBottomStateChange, showJumpToPresent]);
 
-  // Initial bottom scroll
+  // FIX 4: Initial bottom scroll with null guards
   useEffect(() => {
     if (isLoading || msgCount === 0 || didInitialBottomScrollRef.current) return;
     didInitialBottomScrollRef.current = true;
@@ -431,69 +456,82 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       if (!node) return;
       node.scrollTop = node.scrollHeight;
       setTimeout(() => {
-        if (node) node.scrollTop = node.scrollHeight;
+        const n = containerRef.current;
+        if (!n) return;
+        n.scrollTop = n.scrollHeight;
         isNearBottomRef.current = true;
         isProgrammaticScrollRef.current = false;
       }, 100);
     });
   }, [isLoading, msgCount]);
 
+  // FIX 6: Store frequently-changing values in refs to stabilize itemContent
+  const authorStyleMapRef = useRef(authorStyleMap);
+  authorStyleMapRef.current = authorStyleMap;
+  const customEmojiMapRef = useRef(customEmojiMap);
+  customEmojiMapRef.current = customEmojiMap;
+  const globalEmojiMapRef = useRef(globalEmojiMap);
+  globalEmojiMapRef.current = globalEmojiMap;
+  const highlightedMessageIdRef = useRef(highlightedMessageId);
+  highlightedMessageIdRef.current = highlightedMessageId;
+  const externalEditTargetIdRef = useRef(externalEditTargetId);
+  externalEditTargetIdRef.current = externalEditTargetId;
+
+  // FIX 3: itemContent now handles both message and dateDivider items
   const itemContent = useCallback(
-    (index: number, message: Message) => {
-      if (!message) return null;
+    (item: ListItem, index: number) => {
+      if (item.type === "dateDivider") {
+        return (
+          <div key={`date-divider-${item.date.toISOString().slice(0, 10)}`} className="flex items-center gap-3 px-4 my-4" style={{ overflowAnchor: "none" }}>
+            <div className="h-px flex-1 bg-border/70" />
+            <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
+              {item.label}
+            </span>
+            <div className="h-px flex-1 bg-border/70" />
+          </div>
+        );
+      }
+
+      const message = item.message;
+      // Find previous message in deduplicatedMessages for grouping
       const msgs = deduplicatedMessagesRef.current;
-      const previousMessage = index > 0 ? msgs[index - 1] : null;
+      const msgIdx = msgs.indexOf(message);
+      const previousMessage = msgIdx > 0 ? msgs[msgIdx - 1] : null;
       const isGrouped = shouldGroupMessages(message, previousMessage);
-      const showNewDivider = index === newMessagesDividerIndex && lastMarkedMessageIdRef.current === null;
-      const messageDate = new Date(message.created_at);
-      const previousMessageDate = previousMessage ? new Date(previousMessage.created_at) : null;
-      const showDateDivider = !previousMessageDate || !isSameDay(messageDate, previousMessageDate);
+      const showNewDivider = msgIdx === newMessagesDividerIndex && lastMarkedMessageIdRef.current === null;
 
       return (
-        <Fragment>
-          {showDateDivider && (
-            <div className="flex items-center gap-3 px-4 my-4">
-              <div className="h-px flex-1 bg-border/70" />
-              <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
-                {getDateDividerLabel(messageDate)}
-              </span>
-              <div className="h-px flex-1 bg-border/70" />
-            </div>
-          )}
-          <MessageItem
-            message={message}
-            isGrouped={isGrouped}
-            showNewDivider={showNewDivider}
-            isHighlighted={message.id === highlightedMessageId}
-            authorStyleFallback={authorStyleMap[message.user_id]}
-            externalEditTargetId={externalEditTargetId}
-            onExternalEditHandled={handleExternalEditHandled}
-            customEmojiMap={customEmojiMap}
-            globalEmojiMap={globalEmojiMap}
-          />
-        </Fragment>
+        <MessageItem
+          key={message.id}
+          message={message}
+          isGrouped={isGrouped}
+          showNewDivider={showNewDivider}
+          isHighlighted={message.id === highlightedMessageIdRef.current}
+          authorStyleFallback={authorStyleMapRef.current[message.user_id]}
+          externalEditTargetId={externalEditTargetIdRef.current}
+          onExternalEditHandled={handleExternalEditHandled}
+          customEmojiMap={customEmojiMapRef.current}
+          globalEmojiMap={globalEmojiMapRef.current}
+        />
       );
     },
-    [
-      newMessagesDividerIndex,
-      highlightedMessageId,
-      authorStyleMap,
-      externalEditTargetId,
-      handleExternalEditHandled,
-      customEmojiMap,
-      globalEmojiMap,
-    ],
+    [newMessagesDividerIndex, handleExternalEditHandled],
   );
 
   const computeItemKey = useCallback(
-    (_index: number, message: Message) => getStableMessageKey(message),
-    [],
+    (index: number) => {
+      const item = flatItems[index];
+      if (!item) return `item-${index}`;
+      if (item.type === "dateDivider") return `date-divider-${item.date.toISOString().slice(0, 10)}`;
+      return getStableMessageKey(item.message);
+    },
+    [flatItems],
   );
 
   const headerContent = useMemo(() => {
     if (isLoading && messages.length > 0) {
       return (
-        <div className="flex justify-center py-4">
+        <div className="flex justify-center py-4" style={{ overflowAnchor: "none" }}>
           <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
         </div>
       );
@@ -549,12 +587,11 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
         <div
           ref={containerRef}
           className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative"
-          style={{ overflowAnchor: "none" }}
           onScroll={handleScroll}
         >
-          {headerContent}
+          <div style={{ overflowAnchor: "none" }}>{headerContent}</div>
           {isFetchingOlder && (
-            <div className="pointer-events-none absolute top-2 left-1/2 -translate-x-1/2 z-20">
+            <div className="pointer-events-none absolute top-2 left-1/2 -translate-x-1/2 z-20" style={{ overflowAnchor: "none" }}>
               <div className="rounded-full border border-border/70 bg-background/90 p-1.5 shadow-sm backdrop-blur-sm">
                 <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
               </div>
@@ -564,13 +601,12 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
             key={channelId}
             ref={listRef}
             viewportRef={containerRef}
-            items={deduplicatedMessages}
+            items={flatItems}
             overscan={8}
-            overflowAnchor="none"
           >
-            {(message, index) => (
-              <Fragment key={computeItemKey(index, message)}>
-                {itemContent(index, message)}
+            {(item, index) => (
+              <Fragment key={computeItemKey(index)}>
+                {itemContent(item, index)}
               </Fragment>
             )}
           </ViewportList>

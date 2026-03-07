@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, memo, forwardRef } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo, memo, forwardRef } from "react";
 import { getTopEmojis } from "@/lib/emojiRecents";
 import { FluentEmoji } from "@/components/ui/FluentEmoji";
 import {
@@ -109,6 +109,33 @@ interface MessageItemProps {
 const EMPTY_CUSTOM_EMOJI_MAP = new Map<string, string>();
 const EMPTY_GLOBAL_EMOJI_MAP = new Map<string, ResolvedEmoji>();
 
+// FIX 5: RoleIconWrapper defined outside MessageItem to avoid remount on every render
+interface RoleIconWrapperProps extends React.HTMLAttributes<HTMLSpanElement> {
+  children: React.ReactNode;
+  isHovered: boolean;
+  onHoverChange: (hovered: boolean) => void;
+}
+
+const RoleIconWrapper = forwardRef<HTMLSpanElement, RoleIconWrapperProps>(
+  ({ children, className, isHovered, onHoverChange, onMouseEnter, onMouseLeave, ...props }, ref) => (
+    <span
+      ref={ref}
+      className={cn("inline-flex items-center", isHovered && "animate-pulse", className)}
+      onMouseEnter={(e) => {
+        onMouseEnter?.(e);
+        onHoverChange(true);
+      }}
+      onMouseLeave={(e) => {
+        onMouseLeave?.(e);
+        onHoverChange(false);
+      }}
+      {...props}
+    >
+      {children}
+    </span>
+  )
+);
+RoleIconWrapper.displayName = "RoleIconWrapper";
 
 // Renders a single attachment, using a signed URL for private bucket images
 const AttachmentItem = memo(function AttachmentItem({
@@ -145,8 +172,7 @@ const AttachmentItem = memo(function AttachmentItem({
               src={signedUrl}
               alt={attachment.file_name}
               className="w-full h-full object-contain rounded-lg cursor-pointer hover:opacity-90"
-              loading="lazy"
-              decoding="async"
+               decoding="async"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
@@ -508,27 +534,7 @@ export const MessageItem = memo(function MessageItem({
     return getReactionUserNames(selectedReaction.users);
   }, [selectedReaction, getReactionUserNames]);
 
-  const RoleIconWrapper = forwardRef<
-    HTMLSpanElement,
-    React.HTMLAttributes<HTMLSpanElement> & { children: React.ReactNode }
-  >(({ children, className, onMouseEnter, onMouseLeave, ...props }, ref) => (
-    <span
-      ref={ref}
-      className={cn("inline-flex items-center", hoveredRoleIcon && "animate-pulse", className)}
-      onMouseEnter={(e) => {
-        onMouseEnter?.(e);
-        setHoveredRoleIcon(true);
-      }}
-      onMouseLeave={(e) => {
-        onMouseLeave?.(e);
-        setHoveredRoleIcon(false);
-      }}
-      {...props}
-    >
-      {children}
-    </span>
-  ));
-  RoleIconWrapper.displayName = "RoleIconWrapper";
+  // RoleIconWrapper moved outside component body (FIX 5)
 
   // Permissions
   const { hasPermission } = useMemberPermissions(message.channel_id);
@@ -909,7 +915,7 @@ export const MessageItem = memo(function MessageItem({
       <div
         id={`message-${message.id}`}
         className={outerClassName}
-        style={undefined}
+        style={{ contain: "layout style" }}
       >
         {/* ContextMenu is disabled on mobile (use Drawer instead) */}
         <ContextMenu>
@@ -1058,7 +1064,7 @@ export const MessageItem = memo(function MessageItem({
                         {roleIconNode && priorityRoleWithIcon && (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <RoleIconWrapper>
+                              <RoleIconWrapper isHovered={hoveredRoleIcon} onHoverChange={setHoveredRoleIcon}>
                                 <span className="inline-flex items-center mr-1.5 cursor-help">{roleIconNode}</span>
                               </RoleIconWrapper>
                             </TooltipTrigger>
@@ -1084,7 +1090,7 @@ export const MessageItem = memo(function MessageItem({
                           {roleIconNode && priorityRoleWithIcon && (
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <RoleIconWrapper>
+                                <RoleIconWrapper isHovered={hoveredRoleIcon} onHoverChange={setHoveredRoleIcon}>
                                   <span className="inline-flex items-center cursor-help">{roleIconNode}</span>
                                 </RoleIconWrapper>
                               </TooltipTrigger>
