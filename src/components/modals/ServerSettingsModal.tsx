@@ -24,6 +24,7 @@ import {
   Link2,
   Check,
   Pencil,
+  Search,
   type LucideIcon,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -193,6 +194,8 @@ export const ServerSettingsModal = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeTab, setActiveTab] = useState<SettingsTabId>("overview");
+  const [memberSearch, setMemberSearch] = useState("");
+  const [memberDisplayCount, setMemberDisplayCount] = useState(50);
   const [editingRole, setEditingRole] = useState<CustomServerRole | null>(null);
   const [editingRolePermissions, setEditingRolePermissions] = useState<CustomServerRole | null>(null);
   const [roleTab, setRoleTab] = useState<"details" | "permissions">("details");
@@ -1729,118 +1732,163 @@ export const ServerSettingsModal = () => {
                   <p className="text-sm text-muted-foreground mb-3">
                     {members.length} member{members.length !== 1 ? "s" : ""}
                   </p>
-                  <div className="max-h-[400px] overflow-y-auto overscroll-contain touch-pan-y space-y-2">
-                    {members.map((member) => {
-                      const memberRoles = member.roles || [];
-                      const hasRoles = memberRoles.length > 0;
-                      return (
-                        <div
-                          key={member.id}
-                          className="flex items-center gap-2 p-2 rounded-xl bg-background/50 border border-border/30"
-                        >
-                          <Avatar className="w-8 h-8 flex-shrink-0">
-                            <AvatarImage src={member.user?.avatar_url || undefined} />
-                            <AvatarFallback style={{ backgroundColor: member.user?.banner_color || "#5865F2" }}>
-                              {member.user?.username?.[0]?.toUpperCase() || "?"}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="text-sm font-medium truncate">
-                                {member.nickname || member.user?.display_name || member.user?.username}
-                              </span>
-                              {server && getOwnerIcon(member.user_id, server.owner_id)}
-                              {hasRoles && (
-                                <div className="flex items-center gap-1 flex-wrap">
-                                  {memberRoles.map((role) => {
-                                    const isGradient = role.color.startsWith("linear-gradient");
-                                    return (
-                                      <Badge
-                                        key={role.id}
-                                        variant="outline"
-                                        className="text-[10px] px-1.5 py-0 h-4 font-medium border-0 rounded-md"
-                                        style={
-                                          isGradient
-                                            ? { background: role.color, color: "#fff" }
-                                            : { backgroundColor: role.color + "20", color: role.color }
-                                        }
-                                      >
-                                        {role.name}
-                                      </Badge>
-                                    );
-                                  })}
+
+                  {/* Search */}
+                  <div className="relative mb-3">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search members..."
+                      value={memberSearch}
+                      onChange={(e) => { setMemberSearch(e.target.value); setMemberDisplayCount(50); }}
+                      className="pl-10 h-9 rounded-xl border-border/50 bg-secondary/30 text-sm"
+                    />
+                  </div>
+
+                  {(() => {
+                    const searchLower = memberSearch.toLowerCase();
+                    const filtered = memberSearch
+                      ? members.filter((m) => {
+                          const username = m.user?.username?.toLowerCase() || "";
+                          const display = m.user?.display_name?.toLowerCase() || "";
+                          const nick = m.nickname?.toLowerCase() || "";
+                          return username.includes(searchLower) || display.includes(searchLower) || nick.includes(searchLower);
+                        })
+                      : members;
+                    const visible = filtered.slice(0, memberDisplayCount);
+                    const hasMore = filtered.length > memberDisplayCount;
+
+                    return (
+                      <>
+                        {memberSearch && (
+                          <p className="text-xs text-muted-foreground mb-2">
+                            {filtered.length} matching member{filtered.length !== 1 ? "s" : ""}
+                          </p>
+                        )}
+                        <div className="max-h-[400px] overflow-y-auto overscroll-contain touch-pan-y space-y-2">
+                          {visible.map((member) => {
+                            const memberRoles = member.roles || [];
+                            const hasRoles = memberRoles.length > 0;
+                            return (
+                              <div
+                                key={member.id}
+                                className="flex items-center gap-2 p-2 rounded-xl bg-background/50 border border-border/30"
+                              >
+                                <Avatar className="w-8 h-8 flex-shrink-0">
+                                  <AvatarImage src={member.user?.avatar_url || undefined} />
+                                  <AvatarFallback style={{ backgroundColor: member.user?.banner_color || "#5865F2" }}>
+                                    {member.user?.username?.[0]?.toUpperCase() || "?"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-sm font-medium truncate">
+                                      {member.nickname || member.user?.display_name || member.user?.username}
+                                    </span>
+                                    {server && getOwnerIcon(member.user_id, server.owner_id)}
+                                    {hasRoles && (
+                                      <div className="flex items-center gap-1 flex-wrap">
+                                        {memberRoles.map((role) => {
+                                          const isGradient = role.color.startsWith("linear-gradient");
+                                          return (
+                                            <Badge
+                                              key={role.id}
+                                              variant="outline"
+                                              className="text-[10px] px-1.5 py-0 h-4 font-medium border-0 rounded-md"
+                                              style={
+                                                isGradient
+                                                  ? { background: role.color, color: "#fff" }
+                                                  : { backgroundColor: role.color + "20", color: role.color }
+                                              }
+                                            >
+                                              {role.name}
+                                            </Badge>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    {member.user?.username}
+                                    {server && member.user_id === server.owner_id ? " • Owner" : ""}
+                                  </p>
                                 </div>
-                              )}
-                            </div>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {member.user?.username}
-                              {server && member.user_id === server.owner_id ? " • Owner" : ""}
-                            </p>
-                          </div>
-                          {canManageRoles && (member.user_id !== user?.id || isOwner) && (
-                            <div className="flex items-center gap-1 flex-shrink-0">
-                              {roles.length > 0 && (
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
+                                {canManageRoles && (member.user_id !== user?.id || isOwner) && (
+                                  <div className="flex items-center gap-1 flex-shrink-0">
+                                    {roles.length > 0 && (
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-muted-foreground hover:text-foreground text-xs h-7 px-2 rounded-lg"
+                                          >
+                                            Roles
+                                          </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="w-48 rounded-xl">
+                                          {roles.map((role) => {
+                                            const hasRole = memberRoles.some((r) => r.id === role.id);
+                                            return (
+                                              <DropdownMenuItem
+                                                key={role.id}
+                                                onClick={() =>
+                                                  hasRole ? handleRemoveRole(member, role) : handleAssignRole(member, role)
+                                                }
+                                                className="rounded-lg"
+                                              >
+                                                <div className="flex items-center gap-2 w-full">
+                                                  <div
+                                                    className="w-3 h-3 rounded-full flex-shrink-0"
+                                                    style={
+                                                      role.color.startsWith("linear-gradient")
+                                                        ? { background: role.color }
+                                                        : { backgroundColor: role.color }
+                                                    }
+                                                  />
+                                                  <span className="flex-1">{role.name}</span>
+                                                  {hasRole && <span className="text-xs text-muted-foreground">✓</span>}
+                                                </div>
+                                              </DropdownMenuItem>
+                                            );
+                                          })}
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
+                                    )}
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-muted-foreground hover:text-foreground text-xs h-7 px-2 rounded-lg"
+                                      onClick={() => handleKickMember(member)}
+                                      className="text-muted-foreground hover:text-destructive text-xs h-7 px-2 rounded-lg"
                                     >
-                                      Roles
+                                      Kick
                                     </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" className="w-48 rounded-xl">
-                                    {roles.map((role) => {
-                                      const hasRole = memberRoles.some((r) => r.id === role.id);
-                                      return (
-                                        <DropdownMenuItem
-                                          key={role.id}
-                                          onClick={() =>
-                                            hasRole ? handleRemoveRole(member, role) : handleAssignRole(member, role)
-                                          }
-                                          className="rounded-lg"
-                                        >
-                                          <div className="flex items-center gap-2 w-full">
-                                            <div
-                                              className="w-3 h-3 rounded-full flex-shrink-0"
-                                              style={
-                                                role.color.startsWith("linear-gradient")
-                                                  ? { background: role.color }
-                                                  : { backgroundColor: role.color }
-                                              }
-                                            />
-                                            <span className="flex-1">{role.name}</span>
-                                            {hasRole && <span className="text-xs text-muted-foreground">✓</span>}
-                                          </div>
-                                        </DropdownMenuItem>
-                                      );
-                                    })}
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleKickMember(member)}
-                                className="text-muted-foreground hover:text-destructive text-xs h-7 px-2 rounded-lg"
-                              >
-                                Kick
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleBanMember(member)}
-                                className="text-muted-foreground hover:text-destructive text-xs h-7 px-2 rounded-lg"
-                              >
-                                Ban
-                              </Button>
-                            </div>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleBanMember(member)}
+                                      className="text-muted-foreground hover:text-destructive text-xs h-7 px-2 rounded-lg"
+                                    >
+                                      Ban
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+
+                          {hasMore && (
+                            <Button
+                              variant="outline"
+                              className="w-full mt-2 rounded-xl"
+                              onClick={() => setMemberDisplayCount((c) => c + 50)}
+                            >
+                              Show more ({filtered.length - memberDisplayCount} remaining)
+                            </Button>
                           )}
                         </div>
-                      );
-                    })}
-                  </div>
+                      </>
+                    );
+                  })()}
                 </div>
               )}
 
