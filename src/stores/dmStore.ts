@@ -284,17 +284,25 @@ export const useDMStore = create<DMState>((set, get) => ({
 
       const dataArray = Array.isArray(data) ? data : [];
 
-      // Fetch reactions separately for each message
+      // Fetch reactions and attachments separately for each message
       const messageIds = dataArray.map((msg: any) => msg.id);
 
       let reactions: any[] = [];
+      let attachments: any[] = [];
       if (messageIds.length > 0) {
-        // Only fetch columns we need (optimized query)
-        const { data: reactionData } = await supabase
-          .from("dm_reactions")
-          .select("id, message_id, user_id, emoji")
-          .in("message_id", messageIds);
-        reactions = reactionData || [];
+        // Fetch reactions and attachments in parallel
+        const [reactionResult, attachmentResult] = await Promise.all([
+          supabase
+            .from("dm_reactions")
+            .select("id, message_id, user_id, emoji")
+            .in("message_id", messageIds),
+          supabase
+            .from("dm_attachments")
+            .select("id, message_id, file_url, file_name, file_type, file_size, width, height")
+            .in("message_id", messageIds),
+        ]);
+        reactions = reactionResult.data || [];
+        attachments = attachmentResult.data || [];
       }
 
       // Extract sender data into user cache, then strip from messages

@@ -340,7 +340,23 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
           file_type: pendingAttachments[i]?.file.type || null,
           file_size: pendingAttachments[i]?.file.size || null,
         }));
-        await supabase.from("message_attachments").insert(attachmentRows);
+        const { data: insertedAttachments } = await supabase.from("message_attachments").insert(attachmentRows).select();
+        if (insertedAttachments && insertedAttachments.length > 0) {
+          const { updateMessage } = useMessageStore.getState();
+          updateMessage(sentMessage.id, {
+            channel_id: channelId,
+            attachments: insertedAttachments.map((a: any) => ({
+              id: a.id,
+              message_id: a.message_id,
+              file_url: a.file_url,
+              file_name: a.file_name,
+              file_type: a.file_type,
+              file_size: a.file_size,
+              width: a.width,
+              height: a.height,
+            })),
+          } as any);
+        }
       }
 
       setContent("");
