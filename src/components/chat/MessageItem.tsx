@@ -145,8 +145,7 @@ const AttachmentItem = memo(function AttachmentItem({
               src={signedUrl}
               alt={attachment.file_name}
               className="w-full h-full object-contain rounded-lg cursor-pointer hover:opacity-90"
-              loading="lazy"
-              decoding="async"
+               decoding="async"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
