@@ -507,27 +507,7 @@ export const MessageItem = memo(function MessageItem({
     return getReactionUserNames(selectedReaction.users);
   }, [selectedReaction, getReactionUserNames]);
 
-  const RoleIconWrapper = forwardRef<
-    HTMLSpanElement,
-    React.HTMLAttributes<HTMLSpanElement> & { children: React.ReactNode }
-  >(({ children, className, onMouseEnter, onMouseLeave, ...props }, ref) => (
-    <span
-      ref={ref}
-      className={cn("inline-flex items-center", hoveredRoleIcon && "animate-pulse", className)}
-      onMouseEnter={(e) => {
-        onMouseEnter?.(e);
-        setHoveredRoleIcon(true);
-      }}
-      onMouseLeave={(e) => {
-        onMouseLeave?.(e);
-        setHoveredRoleIcon(false);
-      }}
-      {...props}
-    >
-      {children}
-    </span>
-  ));
-  RoleIconWrapper.displayName = "RoleIconWrapper";
+  // RoleIconWrapper moved outside component body (FIX 5)
 
   // Permissions
   const { hasPermission } = useMemberPermissions(message.channel_id);
