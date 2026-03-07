@@ -305,10 +305,9 @@ export const DMMessageInput = ({ conversationId, otherUsername, replyingTo, onCa
 
       if (hasAttachments) {
         uploadedUrls = await uploadAttachments();
-        // Only use URLs as content if there's no text; otherwise attachments are stored separately
-        if (!finalContent) {
-          finalContent = uploadedUrls.join("\n");
-        }
+        // Always append attachment URLs to content so images render via content parsing
+        const urlBlock = uploadedUrls.join("\n");
+        finalContent = finalContent ? `${finalContent}\n${urlBlock}` : urlBlock;
         clearAttachments();
       }
 
