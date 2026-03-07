@@ -144,6 +144,9 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
           </div>
         </div>
 
+        {/* User search results (when searching) */}
+        {searchQuery.length >= 2 && <UserSearchResults query={searchQuery} />}
+
         {/* Section header with Create Group */}
         <div className="px-4 py-2 flex items-center justify-between">
           <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Direct Messages</h3>
