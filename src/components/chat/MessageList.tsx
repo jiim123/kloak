@@ -446,7 +446,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }
   }, [handleLoadOlder, handleAtBottomStateChange, showJumpToPresent]);
 
-  // Initial bottom scroll
+  // FIX 4: Initial bottom scroll with null guards
   useEffect(() => {
     if (isLoading || msgCount === 0 || didInitialBottomScrollRef.current) return;
     didInitialBottomScrollRef.current = true;
@@ -456,7 +456,9 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       if (!node) return;
       node.scrollTop = node.scrollHeight;
       setTimeout(() => {
-        if (node) node.scrollTop = node.scrollHeight;
+        const n = containerRef.current;
+        if (!n) return;
+        n.scrollTop = n.scrollHeight;
         isNearBottomRef.current = true;
         isProgrammaticScrollRef.current = false;
       }, 100);
