@@ -26,6 +26,7 @@ import {
   Download,
   Plug,
   Pencil,
+  Search,
 } from "lucide-react";
 
 import {
