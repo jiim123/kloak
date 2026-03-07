@@ -92,6 +92,30 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     return messages.filter((m) => seen.get(getStableMessageKey(m)) === m);
   }, [messages]);
 
+  // FIX 3: Flat array of messages + date dividers for ViewportList
+  type ListItem =
+    | { type: "message"; message: Message }
+    | { type: "dateDivider"; label: string; date: Date };
+
+  const flatItems = useMemo(() => {
+    const items: ListItem[] = [];
+    for (let i = 0; i < deduplicatedMessages.length; i++) {
+      const msg = deduplicatedMessages[i];
+      const msgDate = new Date(msg.created_at);
+      const prevMsg = i > 0 ? deduplicatedMessages[i - 1] : null;
+      const prevDate = prevMsg ? new Date(prevMsg.created_at) : null;
+      if (!prevDate || !isSameDay(msgDate, prevDate)) {
+        items.push({
+          type: "dateDivider",
+          label: getDateDividerLabel(msgDate),
+          date: msgDate,
+        });
+      }
+      items.push({ type: "message", message: msg });
+    }
+    return items;
+  }, [deduplicatedMessages]);
+
   const visibleAuthorUserIds = useMemo(() => {
     const ids = new Set<string>();
     for (const msg of deduplicatedMessages) {
