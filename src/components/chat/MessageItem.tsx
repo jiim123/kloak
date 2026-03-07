@@ -109,6 +109,33 @@ interface MessageItemProps {
 const EMPTY_CUSTOM_EMOJI_MAP = new Map<string, string>();
 const EMPTY_GLOBAL_EMOJI_MAP = new Map<string, ResolvedEmoji>();
 
+// FIX 5: RoleIconWrapper defined outside MessageItem to avoid remount on every render
+interface RoleIconWrapperProps extends React.HTMLAttributes<HTMLSpanElement> {
+  children: React.ReactNode;
+  isHovered: boolean;
+  onHoverChange: (hovered: boolean) => void;
+}
+
+const RoleIconWrapper = forwardRef<HTMLSpanElement, RoleIconWrapperProps>(
+  ({ children, className, isHovered, onHoverChange, onMouseEnter, onMouseLeave, ...props }, ref) => (
+    <span
+      ref={ref}
+      className={cn("inline-flex items-center", isHovered && "animate-pulse", className)}
+      onMouseEnter={(e) => {
+        onMouseEnter?.(e);
+        onHoverChange(true);
+      }}
+      onMouseLeave={(e) => {
+        onMouseLeave?.(e);
+        onHoverChange(false);
+      }}
+      {...props}
+    >
+      {children}
+    </span>
+  )
+);
+RoleIconWrapper.displayName = "RoleIconWrapper";
 
 // Renders a single attachment, using a signed URL for private bucket images
 const AttachmentItem = memo(function AttachmentItem({
