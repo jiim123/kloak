@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, memo, forwardRef } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo, memo, forwardRef } from "react";
 import { getTopEmojis } from "@/lib/emojiRecents";
 import { FluentEmoji } from "@/components/ui/FluentEmoji";
 import {
