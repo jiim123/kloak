@@ -628,6 +628,8 @@ export const ServerSettingsPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  const [memberSearch, setMemberSearch] = useState("");
+  const [memberDisplayCount, setMemberDisplayCount] = useState(50);
   const [systemChannelJoinId, setSystemChannelJoinId] = useState<string>("");
   const [systemChannelLeaveId, setSystemChannelLeaveId] = useState<string>("");
   const [invites, setInvites] = useState<
