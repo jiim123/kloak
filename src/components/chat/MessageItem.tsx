@@ -1356,7 +1356,7 @@ export const MessageItem = memo(function MessageItem({
               {!isEditing && !message.is_system_message && (
                 <div className="absolute right-2 -top-4 hidden md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 md:flex items-center gap-1 bg-background border border-border rounded-xl shadow-md p-1 transition-opacity duration-100">
                   {/* Quick reactions - top 3 most used */}
-                  {canAddReactions && topEmojis.map((emoji) => (
+                  {canAddReactions && !isBlockedUser && topEmojis.map((emoji) => (
                     <button
                       key={`quick-${emoji}`}
                       className="p-1.5 rounded-lg bg-transparent hover:bg-muted transition-colors"
@@ -1368,7 +1368,7 @@ export const MessageItem = memo(function MessageItem({
                     </button>
                   ))}
                   {/* Reactions - Desktop */}
-                  {canAddReactions && (
+                  {canAddReactions && !isBlockedUser && (
                     <EmojiPicker
                       open={showDesktopEmojiPicker}
                       onOpenChange={setShowDesktopEmojiPicker}
@@ -1385,8 +1385,8 @@ export const MessageItem = memo(function MessageItem({
                     </EmojiPicker>
                   )}
 
-                  {/* Reply - Hide for announcement channels */}
-                  {
+                  {/* Reply - Hide for blocked users */}
+                  {!isBlockedUser && (
                     <button
                       className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
                       onClick={() => setReplyingTo(message)}
@@ -1395,7 +1395,7 @@ export const MessageItem = memo(function MessageItem({
                     >
                       <Reply className="w-4 h-4" />
                     </button>
-                  }
+                  )}
 
                   {/* Edit (own messages) */}
                   {isOwnMessage && (
