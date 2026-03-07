@@ -1475,10 +1475,12 @@ export const MessageItem = memo(function MessageItem({
           </ContextMenuTrigger>
 
           <ContextMenuContent>
-            <ContextMenuItem onClick={() => setReplyingTo(message)}>
-              <Reply className="w-4 h-4 mr-2" />
-              Reply
-            </ContextMenuItem>
+            {!isBlockedUser && (
+              <ContextMenuItem onClick={() => setReplyingTo(message)}>
+                <Reply className="w-4 h-4 mr-2" />
+                Reply
+              </ContextMenuItem>
+            )}
             <ContextMenuItem onClick={handleCopyText}>
               <Copy className="w-4 h-4 mr-2" />
               Copy Text
