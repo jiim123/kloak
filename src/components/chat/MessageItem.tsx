@@ -232,6 +232,11 @@ export const MessageItem = memo(function MessageItem({
     [message.is_own, user?.id, message.user_id],
   );
 
+  // Check if this message author is blocked (either direction)
+  const isBlockedUser = useFriendStore(
+    useCallback((s) => s.visibilityBlockedUserIds.includes(message.user_id), [message.user_id]),
+  );
+
   // Phase 1: Look up user from centralized cache (no fallback to message.user)
   const messageUser = useMessageUser(message.user_id);
   const hasMessageDecoration = Boolean(messageUser?.avatar_decoration);

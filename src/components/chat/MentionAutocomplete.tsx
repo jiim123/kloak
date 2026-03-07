@@ -88,9 +88,12 @@ export const MentionAutocomplete = ({
     };
   }, [currentServer?.id, userId, query, members]);
 
+  const blockedUserIds = useFriendStore((s) => s.visibilityBlockedUserIds);
+
   const options: MentionOption[] = useMemo(() => {
     const result: MentionOption[] = [];
     const seen = new Set<string>();
+    const blockedSet = new Set(blockedUserIds);
 
     if (isAdmin) {
       if ("everyone".includes(query.toLowerCase())) {
@@ -105,8 +108,9 @@ export const MentionAutocomplete = ({
     candidateUsers
       .filter(
         (u) =>
-          u.username?.toLowerCase().includes(searchQuery) ||
-          u.display_name?.toLowerCase().includes(searchQuery),
+          !blockedSet.has(u.id) &&
+          (u.username?.toLowerCase().includes(searchQuery) ||
+          u.display_name?.toLowerCase().includes(searchQuery)),
       )
       .forEach((user) => {
         if (!user.id || seen.has(user.id)) return;
@@ -120,7 +124,7 @@ export const MentionAutocomplete = ({
       });
 
     return result;
-  }, [candidateUsers, isAdmin, query]);
+  }, [candidateUsers, isAdmin, query, blockedUserIds]);
 
   // Keep selected option visible while navigating with keyboard.
   useEffect(() => {
