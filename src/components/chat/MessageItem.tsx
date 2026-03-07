@@ -1536,7 +1536,7 @@ export const MessageItem = memo(function MessageItem({
           </DrawerHeader>
           <div className="px-4 pb-8">
             {/* Quick reactions row - horizontally scrollable */}
-            {canAddReactions && (
+            {canAddReactions && !isBlockedUser && (
               <div className="mb-4 rounded-xl bg-muted/50 overflow-hidden">
                 <div className="flex items-center gap-1.5 p-2 overflow-x-auto scrollbar-hide">
                   {QUICK_REACTIONS.map((emoji) => (
@@ -1571,15 +1571,16 @@ export const MessageItem = memo(function MessageItem({
             {/* Action buttons list */}
             <div className="space-y-1">
               {/* Reply */}
-              <button
-                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-accent active:bg-accent text-left transition-colors"
-                onClick={() => {
-                  setReplyingTo(message);
-                  setShowMobileActions(false);
-                }}
-              >
-                <Reply className="w-5 h-5 text-muted-foreground" />
-                <span className="font-medium">Reply</span>
+              {!isBlockedUser && (
+                <button
+                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-accent active:bg-accent text-left transition-colors"
+                  onClick={() => {
+                    setReplyingTo(message);
+                    setShowMobileActions(false);
+                  }}
+                >
+                  <Reply className="w-5 h-5 text-muted-foreground" />
+                  <span className="font-medium">Reply</span>
               </button>
 
               {/* Edit (own messages) */}
