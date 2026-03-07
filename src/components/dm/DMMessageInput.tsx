@@ -294,17 +294,30 @@ export const DMMessageInput = ({ conversationId, otherUsername, replyingTo, onCa
     setIsSending(true);
     try {
       let finalContent = messageContent;
+      let uploadedUrls: string[] = [];
 
       if (hasAttachments) {
-        const urls = await uploadAttachments();
+        uploadedUrls = await uploadAttachments();
         // Only use URLs as content if there's no text; otherwise attachments are stored separately
         if (!finalContent) {
-          finalContent = urls.join("\n");
+          finalContent = uploadedUrls.join("\n");
         }
         clearAttachments();
       }
 
       const sent = await sendMessage(conversationId, user.id, finalContent, currentReplyTo?.id);
+
+      // Insert attachment records into dm_attachments table
+      if (sent && uploadedUrls.length > 0) {
+        const attachmentRows = uploadedUrls.map((url, i) => ({
+          message_id: sent.id,
+          file_url: url,
+          file_name: pendingAttachments[i]?.file.name || "attachment",
+          file_type: pendingAttachments[i]?.file.type || null,
+          file_size: pendingAttachments[i]?.file.size || null,
+        }));
+        await supabase.from("dm_attachments").insert(attachmentRows);
+      }
 
       if (sent) {
         const auth = useAuthStore.getState();

@@ -23,6 +23,7 @@ import { CreatePollModal } from "@/components/modals/CreatePollModal";
 import { SelectionFormatToolbar, FORMAT_SYNTAX, getCodeBlockSyntax } from "./FormatToolbar";
 import { AttachmentPreviewBar, PendingAttachment } from "./AttachmentPreviewBar";
 import { secureUpload } from "@/lib/storageUpload";
+import { supabase } from "@/integrations/supabase/client";
 import { showWarning, handleError } from "@/lib/errorHandler";
 import { messageRateLimiter, validateMessageContent } from "@/lib/security";
 import { canRevealGhostIdentityForUser } from "@/lib/ghostIdentity";
@@ -328,7 +329,19 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       }
 
       // 🚀 Optimization: The DB Trigger now handles all mention processing automatically.
-      await sendMessage(channelId, user.id, finalContent, replyingTo?.id);
+      const sentMessage = await sendMessage(channelId, user.id, finalContent, replyingTo?.id);
+
+      // Insert attachment records into message_attachments table
+      if (sentMessage && uploadedUrls.length > 0) {
+        const attachmentRows = uploadedUrls.map((url, i) => ({
+          message_id: sentMessage.id,
+          file_url: url,
+          file_name: pendingAttachments[i]?.file.name || "attachment",
+          file_type: pendingAttachments[i]?.file.type || null,
+          file_size: pendingAttachments[i]?.file.size || null,
+        }));
+        await supabase.from("message_attachments").insert(attachmentRows);
+      }
 
       setContent("");
       setPendingAttachments([]);
