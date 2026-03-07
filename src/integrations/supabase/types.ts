@@ -3496,6 +3496,18 @@ export type Database = {
           user_id: string
         }[]
       }
+      search_users_by_username: {
+        Args: { _limit?: number; _query: string; _requesting_user_id: string }
+        Returns: {
+          avatar_decoration: string
+          avatar_url: string
+          display_name: string
+          id: string
+          last_seen: string
+          status: string
+          username: string
+        }[]
+      }
       send_dm: {
         Args: {
           _content: string
