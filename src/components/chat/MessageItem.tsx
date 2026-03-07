@@ -888,7 +888,7 @@ export const MessageItem = memo(function MessageItem({
       <div
         id={`message-${message.id}`}
         className={outerClassName}
-        style={undefined}
+        style={{ contain: "layout style" }}
       >
         {/* ContextMenu is disabled on mobile (use Drawer instead) */}
         <ContextMenu>
