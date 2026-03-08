@@ -59,9 +59,11 @@ export const GifPicker = ({ children, onSelect, open, onOpenChange }: GifPickerP
   useEffect(() => {
     if (!open) return;
 
+    console.log("[GifPicker] useEffect fired, open:", open, "user:", user?.id);
     setLoading(true);
     fetchTrendingGifs(24, user?.id)
       .then((result) => {
+        console.log("[GifPicker] Got trending result, count:", result.length);
         setGifs(result);
       })
       .catch((err) => {
