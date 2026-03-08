@@ -337,6 +337,21 @@ Deno.serve(async (req) => {
         return jsonResponse({ error: uploadError.message }, 500);
       }
 
+      // For private buckets (attachments), return a signed URL instead of public URL
+      if (bucket === "attachments") {
+        const { data: signedData, error: signError } = await supabase.storage
+          .from(bucket)
+          .createSignedUrl(normalizedPath, EXPIRY_SECONDS);
+        if (signError || !signedData?.signedUrl) {
+          return jsonResponse({ error: "Upload succeeded but failed to generate signed URL" }, 500);
+        }
+        return jsonResponse({
+          success: true,
+          path: data?.path || normalizedPath,
+          publicUrl: signedData.signedUrl,
+        });
+      }
+
       const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(normalizedPath);
       const shouldCacheBust = bucket === "server-icons" && upsert;
 
