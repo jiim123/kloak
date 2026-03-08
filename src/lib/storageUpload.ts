@@ -1,4 +1,5 @@
 import { getKeyHashAsync } from "@/integrations/supabase/client";
+import { getSignedAttachmentUrl } from "@/lib/signedUrl";
 
 const STORAGE_FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/storage-upload`;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
