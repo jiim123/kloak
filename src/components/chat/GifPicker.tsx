@@ -33,7 +33,7 @@ function getOriginalUrl(gif: KlipyGif): string {
   return gif.file?.hd?.gif?.url || gif.file?.md?.gif?.url || getThumbnailUrl(gif);
 }
 
-export const GifPicker = memo(({ children, onSelect, open, onOpenChange }: GifPickerProps) => {
+export const GifPicker = ({ children, onSelect, open, onOpenChange }: GifPickerProps) => {
   const { user } = useAuthStore();
   const [tab, setTab] = useState<Tab>("trending");
   const [query, setQuery] = useState("");
