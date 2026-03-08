@@ -600,7 +600,10 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
           }
         }}
         handleGifSelect={(url: string) => {
-          setContent((prev) => (prev ? prev + "\n" + url : url));
+          setPendingAttachments((prev) => [
+            ...prev,
+            { file: new File([], "gif"), preview: url, gifUrl: url },
+          ]);
         }}
         currentServer={currentServer}
         onAttachClick={() => fileInputRef.current?.click()}
