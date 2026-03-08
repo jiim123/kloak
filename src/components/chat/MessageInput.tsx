@@ -208,7 +208,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     }
     return () => {
       setPendingAttachments((prev) => {
-        prev.forEach((a) => URL.revokeObjectURL(a.preview));
+        prev.forEach((a) => { if (!a.gifUrl) URL.revokeObjectURL(a.preview); });
         return [];
       });
     };
@@ -318,7 +318,8 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   }, []);
 
   const handleSubmit = useCallback(async () => {
-    if ((!content.trim() && pendingAttachments.length === 0) || !user || isSending || !canSendMessage) return;
+    const hasGifOrAttachments = pendingAttachments.length > 0;
+    if ((!content.trim() && !hasGifOrAttachments) || !user || isSending || !canSendMessage) return;
 
     if (!messageRateLimiter.isAllowed(user.id)) {
       showWarning("Slow down!", `Try again in ${messageRateLimiter.getRemainingTime(user.id)}s`);
@@ -331,18 +332,33 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     try {
       let finalContent = contentToSend;
       const uploadedUrls: string[] = [];
+
+      // Separate GIF URLs from file attachments
+      const gifAttachments = pendingAttachments.filter((a) => a.gifUrl);
+      const fileAttachments = pendingAttachments.filter((a) => !a.gifUrl);
+
       // Save metadata before any state changes
-      const savedAttachmentMeta = pendingAttachments.map((a) => ({
+      const savedAttachmentMeta = fileAttachments.map((a) => ({
         name: a.file.name,
         type: a.file.type,
         size: a.file.size,
       }));
-      if (pendingAttachments.length > 0) {
-        for (const att of pendingAttachments) {
+
+      // Upload file attachments to storage
+      if (fileAttachments.length > 0) {
+        for (const att of fileAttachments) {
           const fileName = `${user.id}/${Date.now()}-${crypto.randomUUID()}.${att.file.name.split(".").pop()}`;
           const res = await secureUpload("attachments", fileName, att.file, { contentType: att.file.type });
           uploadedUrls.push(res.publicUrl);
         }
+      }
+
+      // Append GIF URLs directly (no upload needed)
+      for (const gif of gifAttachments) {
+        uploadedUrls.push(gif.gifUrl!);
+      }
+
+      if (uploadedUrls.length > 0) {
         // Always append attachment URLs to content so images render via content parsing
         // even if the message_attachments insert fails
         const urlBlock = uploadedUrls.join("\n");
@@ -352,9 +368,10 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       // 🚀 Optimization: The DB Trigger now handles all mention processing automatically.
       const sentMessage = await sendMessage(channelId, user.id, finalContent, replyingTo?.id);
 
-      // Insert attachment records into message_attachments table
-      if (sentMessage && uploadedUrls.length > 0) {
-        const attachmentRows = uploadedUrls.map((url, i) => ({
+      // Insert attachment records into message_attachments table (file uploads only, not GIF URLs)
+      const fileUploadedUrls = uploadedUrls.slice(0, fileAttachments.length);
+      if (sentMessage && fileUploadedUrls.length > 0) {
+        const attachmentRows = fileUploadedUrls.map((url, i) => ({
           message_id: sentMessage.id,
           file_url: url,
           file_name: savedAttachmentMeta[i]?.name || "attachment",
@@ -600,7 +617,10 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
           }
         }}
         handleGifSelect={(url: string) => {
-          setContent((prev) => (prev ? prev + "\n" + url : url));
+          setPendingAttachments((prev) => [
+            ...prev,
+            { file: new File([], "gif"), preview: url, gifUrl: url },
+          ]);
         }}
         currentServer={currentServer}
         onAttachClick={() => fileInputRef.current?.click()}

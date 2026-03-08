@@ -66,6 +66,7 @@ const isImageUrl = (url: string): boolean => {
     /media\.discordapp\.net/i,
     /cdn\.discordapp\.com/i,
     /supabase\.co.*\/storage/i, // Supabase storage URLs
+    /klipy/i, // Klipy GIF CDN
   ];
 
   return imageHosts.some((pattern) => pattern.test(url));
@@ -116,6 +117,9 @@ const isTrustedInlineImageUrl = (url: string): boolean => {
       if (parsed.pathname.includes("/storage/v1/object/")) return true;
       if (parsed.pathname.endsWith("/functions/v1/fetch-link-preview-asset")) return true;
     }
+
+    // Trust Klipy GIF CDN URLs
+    if (/klipy/i.test(parsed.host)) return true;
 
     return false;
   } catch {
