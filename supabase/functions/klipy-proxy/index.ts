@@ -2,12 +2,13 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders });
   }
 
   const API_KEY = Deno.env.get("VITE_KLIPY_API_KEY");
@@ -22,26 +23,44 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { action, query, limit = 24, userId, gifId } = body;
+    const { action, query, perPage = 24, page = 1, userId, slug, locale = "en-US" } = body;
 
     let url: string;
     let method = "GET";
-    let fetchBody: string | undefined;
 
     switch (action) {
       case "trending":
-        url = `${BASE}/gifs/trending?limit=${limit}&locale=en-US`;
+        url = `${BASE}/gifs/trending?page=${page}&per_page=${perPage}&locale=${encodeURIComponent(locale)}`;
+        if (userId) url += `&customer_id=${encodeURIComponent(userId)}`;
         break;
       case "search":
-        url = `${BASE}/gifs/search?q=${encodeURIComponent(query || "")}&limit=${limit}&locale=en-US`;
+        if (!query || typeof query !== "string" || query.length > 200) {
+          return new Response(JSON.stringify({ error: "Invalid query" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        url = `${BASE}/gifs/search?q=${encodeURIComponent(query)}&page=${page}&per_page=${perPage}&locale=${encodeURIComponent(locale)}`;
+        if (userId) url += `&customer_id=${encodeURIComponent(userId)}`;
         break;
       case "recent":
-        url = `${BASE}/gifs/recent/${encodeURIComponent(userId || "")}?limit=${limit}`;
+        if (!userId) {
+          return new Response(JSON.stringify({ error: "userId required" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        url = `${BASE}/gifs/recent/${encodeURIComponent(userId)}?page=${page}&per_page=${perPage}`;
         break;
       case "share":
-        url = `${BASE}/gifs/share`;
+        if (!slug) {
+          return new Response(JSON.stringify({ error: "slug required" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        url = `${BASE}/gifs/share/${encodeURIComponent(slug)}`;
         method = "POST";
-        fetchBody = JSON.stringify({ gif_id: gifId, customer_id: userId });
         break;
       default:
         return new Response(JSON.stringify({ error: "Unknown action" }), {
@@ -52,8 +71,7 @@ serve(async (req) => {
 
     const res = await fetch(url, {
       method,
-      headers: method === "POST" ? { "Content-Type": "application/json" } : undefined,
-      body: fetchBody,
+      headers: { "Content-Type": "application/json" },
     });
 
     const data = await res.json();

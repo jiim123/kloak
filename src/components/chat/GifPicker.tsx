@@ -24,6 +24,15 @@ type Tab = "trending" | "recent";
 
 const GIF_GRID_SKELETON = Array.from({ length: 9 });
 
+/** Pick the best URL for grid thumbnails (small webp) and for sending (hd gif). */
+function getThumbnailUrl(gif: KlipyGif): string {
+  return gif.file?.sm?.webp?.url || gif.file?.sm?.gif?.url || gif.file?.md?.gif?.url || "";
+}
+
+function getOriginalUrl(gif: KlipyGif): string {
+  return gif.file?.hd?.gif?.url || gif.file?.md?.gif?.url || getThumbnailUrl(gif);
+}
+
 export const GifPicker = memo(({ children, onSelect, open, onOpenChange }: GifPickerProps) => {
   const { user } = useAuthStore();
   const [tab, setTab] = useState<Tab>("trending");
@@ -47,11 +56,11 @@ export const GifPicker = memo(({ children, onSelect, open, onOpenChange }: GifPi
     if (hasFetchedTrending.current) return;
     hasFetchedTrending.current = true;
     setLoading(true);
-    fetchTrendingGifs()
+    fetchTrendingGifs(24, user?.id)
       .then(setGifs)
       .catch(() => setGifs([]))
       .finally(() => setLoading(false));
-  }, [open]);
+  }, [open, user?.id]);
 
   // Fetch recent when tab switches
   useEffect(() => {
@@ -70,9 +79,8 @@ export const GifPicker = memo(({ children, onSelect, open, onOpenChange }: GifPi
       setQuery(value);
       if (debounceRef.current) clearTimeout(debounceRef.current);
       if (!value.trim()) {
-        // Show trending when query cleared
         setLoading(true);
-        fetchTrendingGifs()
+        fetchTrendingGifs(24, user?.id)
           .then(setGifs)
           .catch(() => setGifs([]))
           .finally(() => setLoading(false));
@@ -80,24 +88,24 @@ export const GifPicker = memo(({ children, onSelect, open, onOpenChange }: GifPi
       }
       debounceRef.current = setTimeout(() => {
         setLoading(true);
-        searchGifs(value.trim())
+        searchGifs(value.trim(), 24, user?.id)
           .then(setGifs)
           .catch(() => setGifs([]))
           .finally(() => setLoading(false));
       }, 300);
     },
-    [],
+    [user?.id],
   );
 
   const handleGifClick = useCallback(
     (gif: KlipyGif) => {
-      const url = gif.files?.original?.url || gif.files?.gif?.url;
+      const url = getOriginalUrl(gif);
       if (!url) return;
       onSelect(url);
       onOpenChange?.(false);
       // Fire-and-forget share trigger
-      if (user?.id) {
-        shareGif(gif.id, user.id);
+      if (gif.slug) {
+        shareGif(gif.slug, user?.id);
       }
     },
     [onSelect, onOpenChange, user?.id],
@@ -131,7 +139,7 @@ export const GifPicker = memo(({ children, onSelect, open, onOpenChange }: GifPi
             className={cn(
               "flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors border-b-2",
               tab === "trending"
-                ? "border-emerald-500 text-emerald-500"
+                ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground",
             )}
             onClick={() => setTab("trending")}
@@ -144,7 +152,7 @@ export const GifPicker = memo(({ children, onSelect, open, onOpenChange }: GifPi
             className={cn(
               "flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors border-b-2",
               tab === "recent"
-                ? "border-emerald-500 text-emerald-500"
+                ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground",
             )}
             onClick={() => setTab("recent")}
@@ -195,12 +203,12 @@ export const GifPicker = memo(({ children, onSelect, open, onOpenChange }: GifPi
                   <button
                     key={gif.id}
                     type="button"
-                    className="aspect-square rounded-lg overflow-hidden hover:ring-2 ring-emerald-500/60 transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500/60"
+                    className="aspect-square rounded-lg overflow-hidden hover:ring-2 ring-primary/60 transition-all focus:outline-none focus:ring-2 focus:ring-primary/60"
                     onClick={() => handleGifClick(gif)}
                     onMouseDown={(e) => e.preventDefault()}
                   >
                     <img
-                      src={gif.files?.gif?.url}
+                      src={getThumbnailUrl(gif)}
                       alt={gif.title || "GIF"}
                       className="w-full h-full object-cover"
                       loading="lazy"
