@@ -438,6 +438,15 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         const hasMore = messages.length === limit;
         const oldestFetchedAt = messages[0]?.created_at ?? null;
 
+        // Pre-warm signed URL cache for all attachments in this batch (fire-and-forget).
+        // Individual useSignedUrl hooks will then resolve from cache instantly.
+        const attachmentUrls = messages
+          .flatMap((m) => (m.attachments || []).map((a: any) => a.file_url as string))
+          .filter((url): url is string => !!url && isSupabaseAttachmentUrl(url));
+        if (attachmentUrls.length > 0) {
+          resolveSignedUrls(attachmentUrls).catch(() => {});
+        }
+
         set((state) => {
           const existingCache = state.messagesByChannel[channelId];
 
