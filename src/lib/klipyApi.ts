@@ -10,11 +10,11 @@ export interface KlipyFileVariant {
 }
 
 export interface KlipySizeGroup {
-  gif: KlipyFileVariant;
-  webp: KlipyFileVariant;
-  jpg: KlipyFileVariant;
-  mp4: KlipyFileVariant;
-  webm: KlipyFileVariant;
+  gif?: KlipyFileVariant;
+  webp?: KlipyFileVariant;
+  jpg?: KlipyFileVariant;
+  mp4?: KlipyFileVariant;
+  webm?: KlipyFileVariant;
 }
 
 export interface KlipyGif {
@@ -22,45 +22,53 @@ export interface KlipyGif {
   slug: string;
   title: string;
   file: {
-    hd: KlipySizeGroup;
-    md: KlipySizeGroup;
-    sm: KlipySizeGroup;
-    xs: KlipySizeGroup;
+    hd?: KlipySizeGroup;
+    md?: KlipySizeGroup;
+    sm?: KlipySizeGroup;
+    xs?: KlipySizeGroup;
   };
 }
 
 // ── Internal helper ────────────────────────────────────────────────────
 
-async function callProxy(body: Record<string, unknown>): Promise<unknown> {
-  console.log('[klipyApi] calling proxy with:', body.action);
+async function callProxy(body: Record<string, unknown>): Promise<KlipyGif[]> {
   const { data, error } = await supabase.functions.invoke("klipy-proxy", { body });
+
   if (error) {
-    console.error('[klipyApi] invoke error:', error);
-    throw error;
+    console.error("[klipyApi] Edge function error:", error);
+    return [];
   }
-  console.log('[klipyApi] response:', JSON.stringify(data)?.substring(0, 200));
-  return data;
+
+  // The edge function returns the raw Klipy response: { result: true, data: { data: [...], ... } }
+  // supabase.functions.invoke parses the JSON, so `data` here is the full Klipy response object.
+  const gifs = data?.data?.data ?? data?.data ?? [];
+
+  if (!Array.isArray(gifs)) {
+    console.warn("[klipyApi] Unexpected response shape:", JSON.stringify(data)?.substring(0, 300));
+    return [];
+  }
+
+  return gifs;
 }
 
 // ── API Functions ──────────────────────────────────────────────────────
 
 export async function fetchTrendingGifs(perPage = 24, userId?: string): Promise<KlipyGif[]> {
-  const res = await callProxy({ action: "trending", perPage, userId }) as any;
-  return res?.data?.data ?? [];
+  return callProxy({ action: "trending", perPage, userId: userId || "anonymous" });
 }
 
 export async function searchGifs(query: string, perPage = 24, userId?: string): Promise<KlipyGif[]> {
-  const res = await callProxy({ action: "search", query, perPage, userId }) as any;
-  return res?.data?.data ?? [];
+  return callProxy({ action: "search", query, perPage, userId: userId || "anonymous" });
 }
 
 export async function fetchRecentGifs(userId: string, perPage = 24): Promise<KlipyGif[]> {
-  const res = await callProxy({ action: "recent", userId, perPage }) as any;
-  return res?.data?.data ?? [];
+  return callProxy({ action: "recent", userId, perPage });
 }
 
 export async function shareGif(slug: string, userId?: string): Promise<void> {
-  callProxy({ action: "share", slug, userId }).catch(() => {
+  supabase.functions.invoke("klipy-proxy", {
+    body: { action: "share", slug, userId: userId || "anonymous" },
+  }).catch(() => {
     // Fire-and-forget
   });
 }
