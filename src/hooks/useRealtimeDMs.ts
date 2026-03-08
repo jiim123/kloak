@@ -2,6 +2,7 @@ import { useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useDMStore } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
+import { resolveSignedUrls, isSupabaseAttachmentUrl } from '@/lib/signedUrl';
 import type { DirectMessage, ReactionGroup } from '@/types';
 import { useRealtimeUserUpdates } from './useRealtimeUserUpdates';
 import { getOrFetchUser, useUserCacheStore } from '@/stores/userCacheStore';
