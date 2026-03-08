@@ -47,6 +47,15 @@ const getRoleLabel = (role?: string): string => {
 };
 
 const isGradientColor = (value?: string | null) => !!value && value.startsWith("linear-gradient");
+const getGradientTextStyle = (gradient: string): React.CSSProperties =>
+  ({
+    background: gradient,
+    WebkitBackgroundClip: "text",
+    backgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+    color: "transparent",
+    display: "inline-block",
+  }) as React.CSSProperties;
 
 export const AnnouncementChannelArea = () => {
   const { currentChannel, currentServer, members, roles } = useServerStore();
@@ -870,7 +879,7 @@ export const AnnouncementChannelArea = () => {
                     : getRoleColor(announcementMember?.role);
                   
                   const roleColorStyle = topCustomRole && isGradientColor(topCustomRole.color)
-                    ? { background: topCustomRole.color, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" } as React.CSSProperties
+                    ? getGradientTextStyle(topCustomRole.color)
                     : undefined;
                   
                   const isOwnAnnouncement = user?.id === announcement.user_id;

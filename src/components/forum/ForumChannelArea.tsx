@@ -60,7 +60,7 @@ import { isPollMessageContent } from "@/lib/poll";
 import { MessageContent, ReplyPreview } from "@/components/chat/MessageContent";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
 import { getUserFromCache, getOrFetchUser, useMessageUser, bulkSetUsersInCache } from "@/stores/userCacheStore";
-import { pickFirstNonBlank } from "@/lib/utils";
+import { cn, pickFirstNonBlank } from "@/lib/utils";
 import type { Message, User, ReactionGroup, CustomServerRole, ServerMember, ServerRole } from "@/types";
 
 interface Thread {
@@ -105,6 +105,15 @@ const getRoleColorClass = (role?: ServerRole | null): string => {
 };
 
 const isGradientColor = (value?: string | null) => !!value && value.startsWith("linear-gradient");
+const getGradientTextStyle = (gradient: string): CSSProperties =>
+  ({
+    background: gradient,
+    WebkitBackgroundClip: "text",
+    backgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+    color: "transparent",
+    display: "inline-block",
+  }) as CSSProperties;
 const forumMetaChipClass =
   "inline-flex items-center gap-1.5 border border-border bg-background px-2 py-0.5 text-[11px] text-muted-foreground";
 
@@ -282,8 +291,8 @@ export const ForumChannelArea = () => {
   );
 
   const getUsernameColor = useCallback(
-    (userId?: string | null): { className: string; style?: CSSProperties } => {
-      if (!userId) return { className: "text-foreground" };
+    (userId?: string | null): { className: string; style?: CSSProperties; isGradient?: boolean } => {
+      if (!userId) return { className: "text-foreground", isGradient: false };
 
       const member = membersByUserId.get(userId);
       const fallback = authorStyles[userId];
@@ -306,22 +315,19 @@ export const ForumChannelArea = () => {
         if (isGradientColor(topCustomRole.color)) {
           return {
             className: "text-transparent",
-            style: {
-              background: topCustomRole.color,
-              WebkitBackgroundClip: "text",
-              backgroundClip: "text",
-              color: "transparent",
-            },
+            style: getGradientTextStyle(topCustomRole.color),
+            isGradient: true,
           };
         }
 
         return {
           className: "text-foreground",
           style: { color: topCustomRole.color },
+          isGradient: false,
         };
       }
 
-      return { className: getRoleColorClass(member?.role ?? fallback?.role) };
+      return { className: getRoleColorClass(member?.role ?? fallback?.role), isGradient: false };
     },
     [membersByUserId, rolesById, authorStyles],
   );
@@ -2071,7 +2077,7 @@ export const ForumChannelArea = () => {
 
                     {/* Thread Description */}
                     {threadDescription && (
-                      <div className="mb-4 border-b border-border pb-4">
+                      <div key={selectedThreadId} className="mb-4 border-b border-border pb-4">
                         <div className="flex gap-3">
                           <Avatar
                             className="w-8 h-8 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
@@ -2085,16 +2091,21 @@ export const ForumChannelArea = () => {
                           </Avatar>
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
-                              <span
-                                className={`font-medium text-sm cursor-pointer hover:opacity-80 transition-opacity ${opUsernameColor.className}`}
-                                style={opUsernameColor.style}
+                              <button
+                                type="button"
+                                className={cn(
+                                  "font-medium text-sm cursor-pointer text-left",
+                                  opUsernameColor.isGradient ? "transition-none" : "hover:opacity-80 transition-opacity",
+                                )}
                                 onClick={() =>
                                   selectedThread?.created_by &&
                                   openModal("userProfile", { userId: selectedThread.created_by })
                                 }
                               >
-                                {getDisplayName(selectedThread?.created_by || opUser?.id, opUser)}
-                              </span>
+                                <span className={opUsernameColor.className} style={opUsernameColor.style}>
+                                  {getDisplayName(selectedThread?.created_by || opUser?.id, opUser)}
+                                </span>
+                              </button>
                               <span className="text-xs text-muted-foreground">
                                 {selectedThread?.created_at &&
                                   formatDistanceToNow(new Date(selectedThread.created_at), { addSuffix: true })}
@@ -2153,7 +2164,11 @@ export const ForumChannelArea = () => {
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
                                   <span
-                                    className={`font-medium text-sm cursor-pointer hover:opacity-80 transition-opacity ${msgUsernameColor.className}`}
+                                    className={cn(
+                                      "font-medium text-sm cursor-pointer",
+                                      msgUsernameColor.isGradient ? "transition-none" : "hover:opacity-80 transition-opacity",
+                                      msgUsernameColor.className,
+                                    )}
                                     style={msgUsernameColor.style}
                                     onClick={() => msg.user_id && openModal("userProfile", { userId: msg.user_id })}
                                   >
@@ -2457,7 +2472,7 @@ export const ForumChannelArea = () => {
                     <div className="flex-1 overflow-y-auto p-4">
                       {/* Thread Description */}
                       {threadDescription && (
-                        <div className="mb-6 pb-6 border-b border-border">
+                        <div key={selectedThreadId} className="mb-6 pb-6 border-b border-border">
                           <div className="flex gap-3">
                             <Avatar
                               className="w-8 h-8 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
@@ -2471,16 +2486,21 @@ export const ForumChannelArea = () => {
                             </Avatar>
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-2">
-                              <span
-                                  className={`font-medium text-sm cursor-pointer hover:opacity-80 transition-opacity ${opUsernameColor.className}`}
-                                  style={opUsernameColor.style}
+                                <button
+                                  type="button"
+                                  className={cn(
+                                    "font-medium text-sm cursor-pointer text-left",
+                                    opUsernameColor.isGradient ? "transition-none" : "hover:opacity-80 transition-opacity",
+                                  )}
                                   onClick={() =>
                                     selectedThread?.created_by &&
                                     openModal("userProfile", { userId: selectedThread.created_by })
                                   }
                                 >
-                                  {getDisplayName(selectedThread?.created_by || opUser?.id, opUser)}
-                                </span>
+                                  <span className={opUsernameColor.className} style={opUsernameColor.style}>
+                                    {getDisplayName(selectedThread?.created_by || opUser?.id, opUser)}
+                                  </span>
+                                </button>
                                 <span className="text-xs text-muted-foreground">
                                   {selectedThread?.created_at &&
                                     formatDistanceToNow(new Date(selectedThread.created_at), { addSuffix: true })}
@@ -2540,7 +2560,11 @@ export const ForumChannelArea = () => {
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2 mb-1">
                                     <span
-                                      className={`font-medium text-sm cursor-pointer hover:opacity-80 transition-opacity ${msgUsernameColor.className}`}
+                                      className={cn(
+                                        "font-medium text-sm cursor-pointer",
+                                        msgUsernameColor.isGradient ? "transition-none" : "hover:opacity-80 transition-opacity",
+                                        msgUsernameColor.className,
+                                      )}
                                       style={msgUsernameColor.style}
                                       onClick={() => msg.user_id && openModal("userProfile", { userId: msg.user_id })}
                                     >

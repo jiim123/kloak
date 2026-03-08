@@ -87,7 +87,9 @@ const getGradientTextStyle = (gradient: string): React.CSSProperties =>
     background: gradient,
     WebkitBackgroundClip: "text",
     backgroundClip: "text",
+    WebkitTextFillColor: "transparent",
     color: "transparent",
+    display: "inline-block",
   }) as React.CSSProperties;
 
 interface MessageItemProps {
