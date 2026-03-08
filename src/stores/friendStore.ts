@@ -171,8 +171,7 @@ export const useFriendStore = create<FriendState>((set, get) => ({
       });
 
       if (error) {
-        // Log full error details for debugging
-        console.error('[sendRequest] RPC error:', JSON.stringify({ code: error.code, message: error.message, details: error.details, hint: error.hint }));
+        // Parse the error message
         const errorMsg = error.message || 'Failed to send friend request';
         set({ error: errorMsg });
         return false;
