@@ -187,6 +187,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const [channelStartIndex, setChannelStartIndex] = useState(-1);
   const [hasChannelOptions, setHasChannelOptions] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showGifPicker, setShowGifPicker] = useState(false);
   const [showCreatePoll, setShowCreatePoll] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
 
