@@ -32,8 +32,13 @@ export interface KlipyGif {
 // ── Internal helper ────────────────────────────────────────────────────
 
 async function callProxy(body: Record<string, unknown>): Promise<unknown> {
+  console.log('[klipyApi] calling proxy with:', body.action);
   const { data, error } = await supabase.functions.invoke("klipy-proxy", { body });
-  if (error) throw error;
+  if (error) {
+    console.error('[klipyApi] invoke error:', error);
+    throw error;
+  }
+  console.log('[klipyApi] response:', JSON.stringify(data)?.substring(0, 200));
   return data;
 }
 
