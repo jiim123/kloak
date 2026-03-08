@@ -31,7 +31,13 @@ export const AttachmentPreviewBar = memo(({ attachments, onRemove, onAddMore, di
           <div key={index} className="relative group flex-shrink-0">
             {/* Thumbnail */}
             <div className="w-[68px] h-[68px] rounded-lg border border-border/50 overflow-hidden bg-muted/30 relative">
-              {att.file.type.startsWith("image/") ? (
+              {att.gifUrl ? (
+                <img
+                  src={att.preview}
+                  alt="GIF"
+                  className="w-full h-full object-cover"
+                />
+              ) : att.file.type.startsWith("image/") ? (
                 <img
                   src={att.preview}
                   alt={att.file.name}
