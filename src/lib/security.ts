@@ -178,8 +178,8 @@ export const validateServerName = (name: string): { valid: boolean; error?: stri
     return { valid: false, error: "Server name is required" };
   }
 
-  if (trimmed.length > 100) {
-    return { valid: false, error: "Server name must be 100 characters or less" };
+  if (trimmed.length > 50) {
+    return { valid: false, error: "Server name must be 50 characters or less" };
   }
 
   return { valid: true };

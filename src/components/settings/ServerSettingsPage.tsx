@@ -105,7 +105,7 @@ const EMOJI_NAME_REGEX = /^[a-z0-9_]{2,12}$/;
 const MAX_SERVER_EMOJIS = 1000;
 
 const serverSettingsSchema = z.object({
-  name: z.string().trim().min(1, "Server name is required").max(100, "Server name must be less than 100 characters"),
+  name: z.string().trim().min(1, "Server name is required").max(50, "Server name must be less than 50 characters"),
   about: z.string().trim().max(500, "About server must be less than 500 characters").optional().nullable(),
 });
 
