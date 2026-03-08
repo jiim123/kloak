@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
 import { useUserCacheStore, bulkSetUsersInCache } from "@/stores/userCacheStore";
+import { resolveSignedUrls, isSupabaseAttachmentUrl } from "@/lib/signedUrl";
 import type { DMConversation, DirectMessage, User, ReactionGroup } from "@/types";
 
 interface DMState {
