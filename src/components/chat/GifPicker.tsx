@@ -246,5 +246,4 @@ export const GifPicker = ({ children, onSelect, open, onOpenChange }: GifPickerP
       </PopoverContent>
     </Popover>
   );
-});
-GifPicker.displayName = "GifPicker";
+};
