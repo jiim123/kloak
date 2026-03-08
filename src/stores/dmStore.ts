@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
 import { useUserCacheStore, bulkSetUsersInCache } from "@/stores/userCacheStore";
+import { resolveSignedUrls, isSupabaseAttachmentUrl } from "@/lib/signedUrl";
 import type { DMConversation, DirectMessage, User, ReactionGroup } from "@/types";
 
 interface DMState {
@@ -376,6 +377,14 @@ export const useDMStore = create<DMState>((set, get) => ({
           reactions: groupReactions(msgReactions, userId),
         };
       });
+
+      // Pre-warm signed URL cache for DM attachments (fire-and-forget)
+      const dmAttachmentUrls = messages
+        .flatMap((m) => (m.attachments || []).map((a: any) => a.file_url as string))
+        .filter((url): url is string => !!url && isSupabaseAttachmentUrl(url));
+      if (dmAttachmentUrls.length > 0) {
+        resolveSignedUrls(dmAttachmentUrls).catch(() => {});
+      }
 
       set((state) => {
         const currentMessages = state.messagesByConversation[conversationId] || [];
