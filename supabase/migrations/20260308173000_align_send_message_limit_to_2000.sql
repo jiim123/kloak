@@ -1,0 +1,146 @@
+-- Align send_message backend validation with the frontend composer limit.
+-- Canonical rule:
+-- - message content is required after trim
+-- - trimmed length must be 1-2000 characters
+
+CREATE OR REPLACE FUNCTION public.send_message(_user_id uuid, _channel_id uuid, _content text, _reply_to_id uuid DEFAULT NULL::uuid)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $function$
+DECLARE
+  channel_server_id uuid;
+  channel_is_read_only boolean;
+  is_muted boolean;
+  user_role server_role;
+  new_message_id uuid;
+  result json;
+  sender_created_at timestamptz;
+  recent_count_10s integer;
+  recent_count_1m integer;
+  normalized_content text;
+BEGIN
+  IF NOT public.verify_request_identity(_user_id) THEN
+    RAISE EXCEPTION 'Unauthorized: identity mismatch';
+  END IF;
+
+  normalized_content := trim(_content);
+
+  IF normalized_content IS NULL OR length(normalized_content) = 0 THEN
+    RAISE EXCEPTION 'Message content cannot be empty.';
+  END IF;
+
+  IF length(normalized_content) > 2000 THEN
+    RAISE EXCEPTION 'Message content cannot exceed 2000 characters.';
+  END IF;
+
+  SELECT u.created_at INTO sender_created_at
+  FROM public.users u
+  WHERE u.id = _user_id;
+
+  IF sender_created_at IS NULL THEN
+    RAISE EXCEPTION 'User not found';
+  END IF;
+
+  IF sender_created_at > now() - interval '2 minutes' THEN
+    RAISE EXCEPTION 'Messaging is temporarily restricted for new accounts';
+  END IF;
+
+  -- Existing global burst limiter.
+  IF NOT public.check_rate_limit(_user_id::text, 'send_message', 10, 5) THEN
+    RAISE EXCEPTION 'You are sending messages too fast. Please slow down.';
+  END IF;
+
+  -- Additional anti-flood guards.
+  SELECT count(*) INTO recent_count_10s
+  FROM public.messages m
+  WHERE m.user_id = _user_id
+    AND m.channel_id = _channel_id
+    AND m.created_at > now() - interval '10 seconds';
+
+  IF recent_count_10s >= 6 THEN
+    RAISE EXCEPTION 'Rate limited: too many messages in this channel';
+  END IF;
+
+  SELECT count(*) INTO recent_count_1m
+  FROM public.messages m
+  WHERE m.user_id = _user_id
+    AND m.created_at > now() - interval '1 minute';
+
+  IF recent_count_1m >= 30 THEN
+    RAISE EXCEPTION 'Rate limited: minute message quota reached';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.messages m
+    WHERE m.user_id = _user_id
+      AND m.channel_id = _channel_id
+      AND m.content = normalized_content
+      AND m.created_at > now() - interval '15 seconds'
+  ) THEN
+    RAISE EXCEPTION 'Duplicate message blocked';
+  END IF;
+
+  SELECT server_id, is_read_only INTO channel_server_id, channel_is_read_only
+  FROM public.channels WHERE id = _channel_id;
+
+  IF channel_server_id IS NULL THEN
+    RAISE EXCEPTION 'Channel not found';
+  END IF;
+
+  SELECT sm.is_muted, sm.role INTO is_muted, user_role
+  FROM public.server_members sm
+  WHERE sm.server_id = channel_server_id
+    AND sm.user_id = _user_id
+    AND sm.is_banned = false;
+
+  IF is_muted IS NULL THEN
+    RAISE EXCEPTION 'Not a member of this server';
+  END IF;
+
+  IF is_muted THEN
+    RAISE EXCEPTION 'You are muted in this server';
+  END IF;
+
+  IF NOT public.check_user_permission(_user_id, _channel_id, 'send_messages') THEN
+    RAISE EXCEPTION 'You do not have permission to send messages in this channel';
+  END IF;
+
+  IF channel_is_read_only = true THEN
+    IF NOT public.check_user_permission(_user_id, _channel_id, 'manage_messages') THEN
+      RAISE EXCEPTION 'This channel is read-only';
+    END IF;
+  END IF;
+
+  IF _reply_to_id IS NOT NULL THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM public.messages
+      WHERE id = _reply_to_id
+        AND channel_id = _channel_id
+    ) THEN
+      RAISE EXCEPTION 'Invalid reply reference.';
+    END IF;
+  END IF;
+
+  INSERT INTO public.messages (channel_id, user_id, content, reply_to_id)
+  VALUES (_channel_id, _user_id, normalized_content, _reply_to_id)
+  RETURNING id INTO new_message_id;
+
+  SELECT json_build_object(
+    'id', m.id,
+    'channel_id', m.channel_id,
+    'user_id', m.user_id,
+    'content', m.content,
+    'reply_to_id', m.reply_to_id,
+    'is_pinned', m.is_pinned,
+    'edited_at', m.edited_at,
+    'created_at', m.created_at
+  ) INTO result
+  FROM public.messages m
+  WHERE m.id = new_message_id;
+
+  RETURN result;
+END;
+$function$;

@@ -9514,7 +9514,7 @@ $$;
 -- Name: send_message(uuid, uuid, text, uuid); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.send_message(_channel_id uuid, _user_id uuid, _content text, _reply_to_id uuid DEFAULT NULL::uuid) RETURNS json
+CREATE FUNCTION public.send_message(_user_id uuid, _channel_id uuid, _content text, _reply_to_id uuid DEFAULT NULL::uuid) RETURNS json
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public', 'pg_temp'
     AS $$
@@ -9540,8 +9540,8 @@ BEGIN
     RAISE EXCEPTION 'Message content cannot be empty.';
   END IF;
 
-  IF length(normalized_content) > 4000 THEN
-    RAISE EXCEPTION 'Message content cannot exceed 4000 characters.';
+  IF length(normalized_content) > 2000 THEN
+    RAISE EXCEPTION 'Message content cannot exceed 2000 characters.';
   END IF;
 
   SELECT u.created_at INTO sender_created_at
