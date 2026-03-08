@@ -61,10 +61,173 @@ interface MediaItem {
 
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime", "video/x-msvideo"];
-const MAX_IMAGE_SIZE = 3 * 1024 * 1024; // 3MB for images
-const MAX_VIDEO_SIZE = 10 * 1024 * 1024; // 10MB for videos
+const MAX_IMAGE_SIZE = 3 * 1024 * 1024;
+const MAX_VIDEO_SIZE = 10 * 1024 * 1024;
 
-// Extract YouTube video ID from URL
+// ─── Security: extension blocklists ──────────────────────────────────────────
+
+/**
+ * Extensions that must never be accepted — neither as uploaded files nor as
+ * URL targets. Covers server-side execution formats, shell scripts, config
+ * files that could expose credentials, and archive types that may contain any
+ * of the above.
+ */
+const BLOCKED_EXTENSIONS = new Set([
+  // Server-side execution
+  "php",
+  "php3",
+  "php4",
+  "php5",
+  "php7",
+  "phtml",
+  "phar",
+  "asp",
+  "aspx",
+  "ascx",
+  "ashx",
+  "asmx",
+  "jsp",
+  "jspx",
+  "jsw",
+  "jsv",
+  "jspf",
+  "cfm",
+  "cfml",
+  "cfc",
+  "pl",
+  "pm",
+  "cgi",
+  "rb",
+  "py",
+  "pyc",
+  "pyo",
+  // Shell / scripting
+  "sh",
+  "bash",
+  "zsh",
+  "fish",
+  "ksh",
+  "csh",
+  "bat",
+  "cmd",
+  "ps1",
+  "psm1",
+  "psd1",
+  "vbs",
+  "vbe",
+  "wsf",
+  "wsh",
+  // Config / credential files
+  "ini",
+  "env",
+  "cfg",
+  "conf",
+  "config",
+  "htaccess",
+  "htpasswd",
+  // Compiled / executable
+  "exe",
+  "dll",
+  "so",
+  "dylib",
+  "bin",
+  "elf",
+  "com",
+  "scr",
+  "pif",
+  // Archives (may contain executables)
+  "zip",
+  "tar",
+  "gz",
+  "tgz",
+  "bz2",
+  "rar",
+  "7z",
+  "xz",
+  // Other risky types
+  "svg", // SVG can carry embedded JS
+  "xml",
+  "html",
+  "htm",
+  "xhtml",
+  "js",
+  "mjs",
+  "ts",
+  "jar",
+  "war",
+  "ear",
+  "swf",
+]);
+
+/** Extensions that are explicitly allowed for direct-URL image/gif embedding. */
+const ALLOWED_IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png", "gif", "webp"]);
+
+/**
+ * Extract the lowercase file extension from a URL path, stripping query
+ * strings and fragments before inspection.
+ */
+const getExtension = (url: string): string => {
+  try {
+    const { pathname } = new URL(url);
+    const lastDot = pathname.lastIndexOf(".");
+    if (lastDot === -1) return "";
+    return pathname.slice(lastDot + 1).toLowerCase();
+  } catch {
+    // Fall back to simple string parsing for non-absolute URLs
+    const noQuery = url.split("?")[0].split("#")[0];
+    const lastDot = noQuery.lastIndexOf(".");
+    if (lastDot === -1) return "";
+    return noQuery.slice(lastDot + 1).toLowerCase();
+  }
+};
+
+/**
+ * Returns true only when the URL ends with an explicitly allowed image
+ * extension AND does NOT carry a blocked extension anywhere in its path.
+ * Double extensions like "shell.php.jpg" are caught by checking every
+ * dot-separated segment in the pathname.
+ */
+const isDirectMediaUrl = (url: string): boolean => {
+  try {
+    const { pathname } = new URL(url);
+    const segments = pathname.toLowerCase().split(".");
+
+    // Reject if any segment matches a blocked extension (catches double-ext tricks)
+    for (const seg of segments) {
+      if (BLOCKED_EXTENSIONS.has(seg)) return false;
+    }
+
+    // Only accept explicitly allowed terminal extensions
+    const ext = segments[segments.length - 1];
+    return ALLOWED_IMAGE_EXTENSIONS.has(ext);
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Validates that a file's extension is consistent with its MIME type and is
+ * not in the blocked list. Returns an error string or null if the file is safe.
+ */
+const validateFileExtension = (file: File): string | null => {
+  const ext = getExtension(file.name);
+
+  if (BLOCKED_EXTENSIONS.has(ext)) {
+    return `File type ".${ext}" is not allowed.`;
+  }
+
+  // Cross-check: MIME must still be an allowed media type
+  const isImage = ALLOWED_IMAGE_TYPES.includes(file.type);
+  const isVideo = ALLOWED_VIDEO_TYPES.includes(file.type);
+  if (!isImage && !isVideo) {
+    return "Only images (JPEG, PNG, GIF, WebP) and videos (MP4, WebM, MOV, AVI) are allowed.";
+  }
+
+  return null;
+};
+
+// ─── YouTube helpers ──────────────────────────────────────────────────────────
+
 const extractYouTubeId = (url: string): string | null => {
   const patterns = [
     /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
@@ -77,10 +240,7 @@ const extractYouTubeId = (url: string): string | null => {
   return null;
 };
 
-// Check if URL is a direct image/gif
-const isDirectMediaUrl = (url: string): boolean => {
-  return /\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(url);
-};
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export const MediaChannelArea = () => {
   const { currentChannel } = useServerStore();
@@ -96,7 +256,6 @@ export const MediaChannelArea = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
 
-  // Upload form state
   const [uploadType, setUploadType] = useState<"file" | "url">("file");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
@@ -107,91 +266,73 @@ export const MediaChannelArea = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch media items
-  const fetchMediaItems = useCallback(async (options?: { silent?: boolean }) => {
-    if (!currentChannel) return;
-    const silent = options?.silent ?? false;
-
-    if (!silent) setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("media_items" as any)
-        .select(
-          `
-          *,
-          user:users(id, username, avatar_url, banner_color)
-        `,
-        )
-        .eq("channel_id", currentChannel.id)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setMediaItems((data as unknown as MediaItem[]) || []);
-    } catch (err) {
-      console.error("Failed to fetch media items:", err);
-    } finally {
-      if (!silent) setIsLoading(false);
-    }
-  }, [currentChannel]);
+  const fetchMediaItems = useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (!currentChannel) return;
+      const silent = options?.silent ?? false;
+      if (!silent) setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("media_items" as any)
+          .select(`*, user:users(id, username, avatar_url, banner_color)`)
+          .eq("channel_id", currentChannel.id)
+          .order("created_at", { ascending: false });
+        if (error) throw error;
+        setMediaItems((data as unknown as MediaItem[]) || []);
+      } catch (err) {
+        console.error("Failed to fetch media items:", err);
+      } finally {
+        if (!silent) setIsLoading(false);
+      }
+    },
+    [currentChannel],
+  );
 
   useEffect(() => {
     fetchMediaItems();
   }, [fetchMediaItems]);
 
-  // Realtime subscription
   useEffect(() => {
     if (!currentChannel) return;
-
     const channel = supabase
-      .channel(`media_items:${currentChannel.id}`, {
-        config: {
-          broadcast: { self: false },
-        },
+      .channel(`media_items:${currentChannel.id}`, { config: { broadcast: { self: false } } })
+      .on("broadcast", { event: "media_items" }, () => {
+        void fetchMediaItems({ silent: true });
       })
       .on(
-        "broadcast",
-        { event: "media_items" },
-        () => {
-          void fetchMediaItems({ silent: true });
-        },
-      )
-      .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "media_items",
-          filter: `channel_id=eq.${currentChannel.id}`,
-        },
+        { event: "*", schema: "public", table: "media_items", filter: `channel_id=eq.${currentChannel.id}` },
         () => {
           void fetchMediaItems({ silent: true });
         },
       )
       .subscribe();
-
     return () => {
       supabase.removeChannel(channel);
     };
   }, [currentChannel, fetchMediaItems]);
 
-  // Handle file selection
+  // ── File selection ──────────────────────────────────────────────────────────
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const isImage = ALLOWED_IMAGE_TYPES.includes(file.type);
-    const isVideo = ALLOWED_VIDEO_TYPES.includes(file.type);
-
-    if (!isImage && !isVideo) {
-      toast.error("Only images (JPEG, PNG, GIF, WebP) and videos (MP4, WebM, MOV, AVI) are allowed");
+    // Extension check first (catches disguised files before MIME inspection)
+    const extError = validateFileExtension(file);
+    if (extError) {
+      toast.error(extError);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
+
+    const isImage = ALLOWED_IMAGE_TYPES.includes(file.type);
+    const isVideo = ALLOWED_VIDEO_TYPES.includes(file.type);
 
     if (isImage && file.size > MAX_IMAGE_SIZE) {
       toast.error("Image size must be less than 3MB");
       return;
     }
-
     if (isVideo && file.size > MAX_VIDEO_SIZE) {
       toast.error("Video size must be less than 10MB");
       return;
@@ -202,16 +343,15 @@ export const MediaChannelArea = () => {
     setFilePreview(URL.createObjectURL(file));
   };
 
-  // Handle URL input
+  // ── URL input ───────────────────────────────────────────────────────────────
+
   const handleUrlChange = (url: string) => {
     setUrlInput(url);
-    // Auto-detect YouTube
-    if (extractYouTubeId(url)) {
-      setUploadType("url");
-    }
+    if (extractYouTubeId(url)) setUploadType("url");
   };
 
-  // Reset upload form
+  // ── Reset ───────────────────────────────────────────────────────────────────
+
   const resetUploadForm = () => {
     setSelectedFile(null);
     if (filePreview) URL.revokeObjectURL(filePreview);
@@ -223,7 +363,8 @@ export const MediaChannelArea = () => {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // Handle upload submission
+  // ── Upload submission ───────────────────────────────────────────────────────
+
   const handleUpload = async () => {
     if (!currentChannel || !user) return;
 
@@ -237,11 +378,18 @@ export const MediaChannelArea = () => {
       let height: number | null = null;
 
       if (uploadType === "file" && selectedFile) {
-        // Upload file to storage (userId first segment for path-traversal-safe policy)
         if (!user?.id || !currentChannel?.id) {
           toast.error("Cannot upload: missing user or channel");
           return;
         }
+
+        // Final server-path extension guard before storage write
+        const extError = validateFileExtension(selectedFile);
+        if (extError) {
+          toast.error(extError);
+          return;
+        }
+
         const fileExt = selectedFile.name.split(".").pop();
         const fileName = `${Date.now()}-${crypto.randomUUID()}.${fileExt}`;
         const filePath = `${user.id}/media/${currentChannel.id}/${fileName}`;
@@ -253,7 +401,6 @@ export const MediaChannelArea = () => {
 
         mediaUrl = publicUrl;
 
-        // Determine media type based on file type
         if (ALLOWED_VIDEO_TYPES.includes(selectedFile.type)) {
           mediaType = "video";
         } else if (selectedFile.type === "image/gif") {
@@ -262,7 +409,6 @@ export const MediaChannelArea = () => {
           mediaType = "image";
         }
 
-        // Get image dimensions
         if (filePreview) {
           const img = new Image();
           img.src = filePreview;
@@ -277,16 +423,18 @@ export const MediaChannelArea = () => {
         }
       } else if (urlInput) {
         const ytId = extractYouTubeId(urlInput);
+
         if (ytId) {
           mediaType = "youtube";
           youtubeVideoId = ytId;
           mediaUrl = urlInput;
           thumbnailUrl = `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
         } else if (isDirectMediaUrl(urlInput)) {
+          // isDirectMediaUrl already enforces allowlist + blocklist
           mediaUrl = urlInput;
-          mediaType = urlInput.toLowerCase().includes(".gif") ? "gif" : "image";
+          mediaType = urlInput.toLowerCase().endsWith(".gif") ? "gif" : "image";
         } else {
-          toast.error("Please enter a valid YouTube URL or direct image link");
+          toast.error("Only YouTube links or direct image URLs (jpg, jpeg, png, gif, webp) are accepted.");
           return;
         }
       } else {
@@ -294,7 +442,6 @@ export const MediaChannelArea = () => {
         return;
       }
 
-      // Insert media item via RPC
       const { error: insertError } = await (supabase.rpc as any)("insert_media_item", {
         _channel_id: currentChannel.id,
         _user_id: user.id,
@@ -323,14 +470,14 @@ export const MediaChannelArea = () => {
     }
   };
 
-  // Handle delete
+  // ── Delete ──────────────────────────────────────────────────────────────────
+
   const handleDelete = async (itemId: string) => {
     try {
       const { error } = await (supabase.rpc as any)("delete_media_item", {
         _item_id: itemId,
         _user_id: user?.id,
       });
-
       if (error) throw error;
       toast.success("Media deleted");
       await fetchMediaItems({ silent: true });
@@ -340,19 +487,16 @@ export const MediaChannelArea = () => {
     }
   };
 
-  // Drag and drop handlers
+  // ── Drag and drop ───────────────────────────────────────────────────────────
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    if (e.dataTransfer.types.includes("Files")) {
-      setIsDragging(true);
-    }
+    if (e.dataTransfer.types.includes("Files")) setIsDragging(true);
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
-    if (e.currentTarget === e.target) {
-      setIsDragging(false);
-    }
+    if (e.currentTarget === e.target) setIsDragging(false);
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -363,9 +507,15 @@ export const MediaChannelArea = () => {
     const mediaFile = files.find((f) => ALLOWED_IMAGE_TYPES.includes(f.type) || ALLOWED_VIDEO_TYPES.includes(f.type));
 
     if (mediaFile) {
+      // Extension check on dropped files too
+      const extError = validateFileExtension(mediaFile);
+      if (extError) {
+        toast.error(extError);
+        return;
+      }
+
       const isImage = ALLOWED_IMAGE_TYPES.includes(mediaFile.type);
       const isVideo = ALLOWED_VIDEO_TYPES.includes(mediaFile.type);
-
       if (isImage && mediaFile.size > MAX_IMAGE_SIZE) {
         toast.error("Image size must be less than 3MB");
         return;
@@ -394,10 +544,8 @@ export const MediaChannelArea = () => {
     >
       <ChannelHeader channel={currentChannel} />
 
-      {/* Media Grid */}
       <ScrollArea className="flex-1">
         <div className="p-4">
-          {/* Upload button for users with permission */}
           {canSendMessages && (
             <Button onClick={() => setIsUploadModalOpen(true)} className="mb-4 gap-2" variant="secondary">
               <ImagePlus className="w-4 h-4" />
@@ -458,9 +606,7 @@ export const MediaChannelArea = () => {
           <DialogHeader>
             <DialogTitle>Add Media</DialogTitle>
           </DialogHeader>
-
           <div className="space-y-4">
-            {/* Upload type tabs */}
             <div className="flex gap-2">
               <Button
                 variant={uploadType === "file" ? "secondary" : "ghost"}
@@ -508,7 +654,10 @@ export const MediaChannelArea = () => {
                   >
                     <ImageIcon className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
                     <p className="text-sm text-muted-foreground">Click to select or drag and drop</p>
-                    <p className="text-xs text-muted-foreground/70 mt-1">Images up to 3MB • Videos up to 10MB</p>
+                    <p className="text-xs text-muted-foreground/70 mt-1">Images up to 3MB · Videos up to 10MB</p>
+                    <p className="text-xs text-muted-foreground/50 mt-1">
+                      Allowed: jpg, jpeg, png, gif, webp, mp4, webm, mov, avi
+                    </p>
                   </div>
                 )}
                 <input
@@ -527,6 +676,7 @@ export const MediaChannelArea = () => {
                   value={urlInput}
                   onChange={(e) => handleUrlChange(e.target.value)}
                 />
+                <p className="text-xs text-muted-foreground/60">Accepted image types: jpg, jpeg, png, gif, webp</p>
                 {extractYouTubeId(urlInput) && (
                   <div className="rounded-xl overflow-hidden bg-muted">
                     <AspectRatio ratio={16 / 9}>
@@ -546,7 +696,6 @@ export const MediaChannelArea = () => {
               </div>
             )}
 
-            {/* Title and Description */}
             <div className="space-y-2">
               <Label>Title (optional)</Label>
               <Input
@@ -556,7 +705,6 @@ export const MediaChannelArea = () => {
                 maxLength={100}
               />
             </div>
-
             <div className="space-y-2">
               <Label>Description (optional)</Label>
               <Textarea
@@ -580,12 +728,10 @@ export const MediaChannelArea = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Media Lightbox */}
       <AnimatePresence>
         {selectedMedia && <MediaLightbox item={selectedMedia} onClose={() => setSelectedMedia(null)} />}
       </AnimatePresence>
 
-      {/* Drag Overlay */}
       <AnimatePresence>
         {isDragging && (
           <motion.div
@@ -600,7 +746,7 @@ export const MediaChannelArea = () => {
               </div>
               <div>
                 <p className="text-lg font-medium text-foreground">Drop media to upload</p>
-                <p className="text-sm text-muted-foreground">Images and GIFs</p>
+                <p className="text-sm text-muted-foreground">Images and videos only</p>
               </div>
             </div>
           </motion.div>
@@ -610,14 +756,10 @@ export const MediaChannelArea = () => {
   );
 };
 
+// ─── Helpers ─────────
+
 const escapeHtml = (text: string): string => {
-  const entities: Record<string, string> = {
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;",
-  };
+  const entities: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
   return text.replace(/[&<>"']/g, (char) => entities[char] ?? char);
 };
 
@@ -631,32 +773,20 @@ const isSafeHttpUrl = (url: string): boolean => {
 };
 
 const renderMediaDescriptionHtml = (content: string): string => {
-  // Minimal markdown subset: bold, italic, strikethrough, links. No images/mentions/spoilers/etc.
   let html = escapeHtml(content);
-
-  // Strikethrough ~~text~~
   html = html.replace(/~~([^~]+)~~/g, "<del>$1</del>");
-
-  // Bold **text**
   html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-
-  // Italic *text* (avoid matching inside URLs)
   html = html.replace(/(?<![:/])\*([^*]+)\*(?!\*)/g, "<em>$1</em>");
-
-  // Linkify safe URLs (http/https only)
   const urlPattern = /https?:\/\/[^\s<]+/g;
   html = html.replace(urlPattern, (rawUrl) => {
     if (!isSafeHttpUrl(rawUrl)) return rawUrl;
     const safeUrl = escapeHtml(rawUrl);
     return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 hover:opacity-90">${safeUrl}</a>`;
   });
-
-  // Preserve line breaks
   html = html.replace(/\n/g, "<br>");
   return html;
 };
 
-// Media Card Component
 const MediaCard = ({
   item,
   onClick,
@@ -686,8 +816,6 @@ const MediaCard = ({
           className="object-cover w-full h-full transition-transform group-hover:scale-105"
           loading="lazy"
         />
-
-        {/* Play button for videos */}
         {isYouTube && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/20">
             <div className="w-12 h-12 rounded-full bg-destructive flex items-center justify-center shadow-lg">
@@ -695,18 +823,12 @@ const MediaCard = ({
             </div>
           </div>
         )}
-
-        {/* GIF badge */}
         {item.media_type === "gif" && (
           <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-secondary/80 text-foreground text-xs font-medium">
             GIF
           </div>
         )}
-
-        {/* Hover overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-
-        {/* Bottom info overlay - user and title together to avoid overlap */}
         <div className="absolute bottom-0 left-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity">
           <div className="flex items-center gap-2 mb-1">
             <Avatar className="w-5 h-5 border border-border flex-shrink-0">
@@ -722,8 +844,6 @@ const MediaCard = ({
           </div>
           {item.title && <p className="text-foreground text-sm font-medium line-clamp-2">{item.title}</p>}
         </div>
-
-        {/* Actions */}
         {canDelete && (
           <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <DropdownMenu>
@@ -752,7 +872,8 @@ const MediaCard = ({
   );
 };
 
-// Media Lightbox Component
+// ─── MediaLightbox (unchanged) ────────────────────────────────────────────────
+
 const MediaLightbox = ({ item, onClose }: { item: MediaItem; onClose: () => void }) => {
   const isYouTube = item.media_type === "youtube";
   const [showComments, setShowComments] = useState(true);
@@ -765,9 +886,7 @@ const MediaLightbox = ({ item, onClose }: { item: MediaItem; onClose: () => void
       className="fixed inset-0 z-50 flex bg-black/95 backdrop-blur-md"
       onClick={onClose}
     >
-      {/* Main content area */}
       <div className="flex-1 flex flex-col">
-        {/* Top controls bar */}
         <div className="flex items-center justify-between p-4 bg-gradient-to-b from-black/50 to-transparent">
           <div className="flex items-center gap-3">
             <Avatar className="w-8 h-8">
@@ -790,11 +909,8 @@ const MediaLightbox = ({ item, onClose }: { item: MediaItem; onClose: () => void
                 e.stopPropagation();
                 setShowComments(!showComments);
               }}
-              className={`p-2.5 rounded-lg transition-colors text-white ${
-                showComments ? "bg-white/20" : "bg-white/10 hover:bg-white/20"
-              }`}
+              className={`p-2.5 rounded-lg transition-colors text-white ${showComments ? "bg-white/20" : "bg-white/10 hover:bg-white/20"}`}
               aria-label={showComments ? "Hide comments" : "Show comments"}
-              title={showComments ? "Hide comments" : "Show comments"}
             >
               <MessageSquare className="w-5 h-5" />
             </button>
@@ -802,14 +918,12 @@ const MediaLightbox = ({ item, onClose }: { item: MediaItem; onClose: () => void
               onClick={onClose}
               className="p-2.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-white"
               aria-label="Close"
-              title="Close"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* Media content */}
         <div className="flex-1 flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
           <div className="max-w-4xl max-h-full w-full">
             {isYouTube ? (
@@ -829,8 +943,6 @@ const MediaLightbox = ({ item, onClose }: { item: MediaItem; onClose: () => void
                 className="max-h-[75vh] w-auto mx-auto object-contain rounded-xl"
               />
             )}
-
-            {/* Title and description below media */}
             {(item.title || item.description) && (
               <div className="mt-4 text-center">
                 {item.title && <h3 className="text-lg font-medium text-white mb-1">{item.title}</h3>}
@@ -846,7 +958,6 @@ const MediaLightbox = ({ item, onClose }: { item: MediaItem; onClose: () => void
         </div>
       </div>
 
-      {/* Comments sidebar */}
       <AnimatePresence>
         {showComments && (
           <motion.div
