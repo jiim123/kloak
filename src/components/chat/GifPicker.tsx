@@ -58,7 +58,7 @@ export const GifPicker = memo(({ children, onSelect, open, onOpenChange }: GifPi
     setLoading(true);
     fetchTrendingGifs(24, user?.id)
       .then(setGifs)
-      .catch(() => setGifs([]))
+      .catch((err) => { console.error('[GifPicker] trending fetch failed:', err); setGifs([]); })
       .finally(() => setLoading(false));
   }, [open, user?.id]);
 
