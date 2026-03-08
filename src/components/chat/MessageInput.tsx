@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
 import { useMessageUser } from "@/stores/userCacheStore";
-import { Paperclip, Smile, Send, X, Loader2, WifiOff, Lock, SquareChartGantt, MoreHorizontal } from "lucide-react";
+import { Paperclip, Smile, Send, X, Loader2, WifiOff, Lock, SquareChartGantt, MoreHorizontal, Image as ImageIcon } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   DropdownMenu,
@@ -19,6 +19,7 @@ import { ReplyPreview } from "./MessageContent";
 import { MentionAutocomplete } from "./MentionAutocomplete";
 import { ChannelAutocomplete } from "./ChannelAutocomplete";
 import { EmojiPicker } from "@/components/modals/EmojiPicker";
+import { GifPicker } from "@/components/chat/GifPicker";
 import { CreatePollModal } from "@/components/modals/CreatePollModal";
 import { SelectionFormatToolbar, FORMAT_SYNTAX, getCodeBlockSyntax } from "./FormatToolbar";
 import { AttachmentPreviewBar, PendingAttachment } from "./AttachmentPreviewBar";
@@ -62,12 +63,15 @@ const ActionButtons = memo(
     setShowCreatePoll,
     showEmojiPicker,
     setShowEmojiPicker,
+    showGifPicker,
+    setShowGifPicker,
     canSendMessage,
     content,
     isSending,
     hasAttachments,
     onSubmit,
     onEmojiSelect,
+    onGifSelect,
     currentServer,
     showAttachButton,
     onAttachClick,
@@ -118,6 +122,11 @@ const ActionButtons = memo(
                 <Smile className="w-5 h-5" />
               </button>
             </EmojiPicker>
+            <GifPicker open={showGifPicker} onOpenChange={setShowGifPicker} onSelect={onGifSelect}>
+              <button type="button" className="p-2 rounded-xl text-muted-foreground hover:bg-muted/50">
+                <ImageIcon className="w-5 h-5" />
+              </button>
+            </GifPicker>
           </>
         ) : (
           <>
@@ -139,6 +148,11 @@ const ActionButtons = memo(
                 <Smile className="w-5 h-5" />
               </button>
             </EmojiPicker>
+            <GifPicker open={showGifPicker} onOpenChange={setShowGifPicker} onSelect={onGifSelect}>
+              <button type="button" className="p-2 rounded-xl text-muted-foreground hover:bg-muted/50">
+                <ImageIcon className="w-5 h-5" />
+              </button>
+            </GifPicker>
           </>
         )}
         <button
@@ -173,6 +187,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const [channelStartIndex, setChannelStartIndex] = useState(-1);
   const [hasChannelOptions, setHasChannelOptions] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showGifPicker, setShowGifPicker] = useState(false);
   const [showCreatePoll, setShowCreatePoll] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
 
@@ -564,6 +579,8 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
         setShowCreatePoll={setShowCreatePoll}
         showEmojiPicker={showEmojiPicker}
         setShowEmojiPicker={setShowEmojiPicker}
+        showGifPicker={showGifPicker}
+        setShowGifPicker={setShowGifPicker}
         isSending={isSending}
         handleSubmit={handleSubmit}
         handleEmojiSelect={(emoji: string) => {
@@ -581,6 +598,9 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
           } else {
             setContent((prev) => prev + emoji);
           }
+        }}
+        handleGifSelect={(url: string) => {
+          setContent((prev) => (prev ? prev + "\n" + url : url));
         }}
         currentServer={currentServer}
         onAttachClick={() => fileInputRef.current?.click()}
@@ -609,9 +629,12 @@ const MobileOptimizedInput = memo(
     setShowCreatePoll,
     showEmojiPicker,
     setShowEmojiPicker,
+    showGifPicker,
+    setShowGifPicker,
     isSending,
     handleSubmit,
     handleEmojiSelect,
+    handleGifSelect,
     currentServer,
     onAttachClick,
     pendingAttachments,
@@ -662,12 +685,15 @@ const MobileOptimizedInput = memo(
             setShowCreatePoll={setShowCreatePoll}
             showEmojiPicker={showEmojiPicker}
             setShowEmojiPicker={setShowEmojiPicker}
+            showGifPicker={showGifPicker}
+            setShowGifPicker={setShowGifPicker}
             canSendMessage={canSendMessage}
             content={content}
             isSending={isSending}
             hasAttachments={hasAttachments}
             onSubmit={handleSubmit}
             onEmojiSelect={handleEmojiSelect}
+            onGifSelect={handleGifSelect}
             currentServer={currentServer}
             showAttachButton={shouldCollapse}
             onAttachClick={onAttachClick}
