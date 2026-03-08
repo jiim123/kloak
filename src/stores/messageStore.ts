@@ -4,6 +4,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useUserCacheStore, bulkSetUsersInCache } from "@/stores/userCacheStore";
+import { resolveSignedUrls, isSupabaseAttachmentUrl } from "@/lib/signedUrl";
 import type { Message, MessageReply, ReactionGroup, User } from "@/types";
 
 interface ChannelMessages {
