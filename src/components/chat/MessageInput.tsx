@@ -599,6 +599,9 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
             setContent((prev) => prev + emoji);
           }
         }}
+        handleGifSelect={(url: string) => {
+          setContent((prev) => (prev ? prev + "\n" + url : url));
+        }}
         currentServer={currentServer}
         onAttachClick={() => fileInputRef.current?.click()}
         pendingAttachments={pendingAttachments}
