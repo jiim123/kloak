@@ -26,7 +26,7 @@ import {
 import { MembersSidebarSkeleton } from "@/components/ui/skeletons";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { BotTag } from "@/components/ui/bot-tag";
-import { FluentEmoji } from "@/components/ui/FluentEmoji";
+import { RoleIconPreview } from "@/components/ui/role-icon-preview";
 import { supabase } from "@/integrations/supabase/client";
 import type { ServerMember, CustomServerRole, UserStatus } from "@/types";
 import { getEffectivePresence } from "@/lib/presence";
@@ -169,10 +169,24 @@ StatusIndicator.displayName = "StatusIndicator";
 
 // Section header component
 const SectionHeader = memo(
-  ({ label, count, color, colorDot, icon }: { label: string; count: number; color?: string; colorDot?: string; icon?: string | null }) => (
+  ({
+    label,
+    count,
+    color,
+    colorDot,
+    icon,
+    serverId,
+  }: {
+    label: string;
+    count: number;
+    color?: string;
+    colorDot?: string;
+    icon?: string | null;
+    serverId?: string;
+  }) => (
     <div className="flex items-center gap-2 px-3 py-2">
-      {icon ? (
-        <FluentEmoji emoji={icon} size={14} className="flex-shrink-0" />
+      {icon && serverId ? (
+        <RoleIconPreview icon={icon} serverId={serverId} className="flex-shrink-0" />
       ) : colorDot ? (
         <div
           className="w-2.5 h-2.5 rounded-full flex-shrink-0"
@@ -800,7 +814,14 @@ export const MembersSidebar = () => {
     if (row.kind === "section") {
       return (
         <div className={cn(row.withTopSpacing && "mt-2")}>
-          <SectionHeader label={row.label} count={row.count} color={row.color} colorDot={row.colorDot} icon={row.icon} />
+          <SectionHeader
+            label={row.label}
+            count={row.count}
+            color={row.color}
+            colorDot={row.colorDot}
+            icon={row.icon}
+            serverId={currentServer?.id}
+          />
         </div>
       );
     }
