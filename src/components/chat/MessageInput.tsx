@@ -318,7 +318,8 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   }, []);
 
   const handleSubmit = useCallback(async () => {
-    if ((!content.trim() && pendingAttachments.length === 0) || !user || isSending || !canSendMessage) return;
+    const hasGifOrAttachments = pendingAttachments.length > 0;
+    if ((!content.trim() && !hasGifOrAttachments) || !user || isSending || !canSendMessage) return;
 
     if (!messageRateLimiter.isAllowed(user.id)) {
       showWarning("Slow down!", `Try again in ${messageRateLimiter.getRemainingTime(user.id)}s`);
