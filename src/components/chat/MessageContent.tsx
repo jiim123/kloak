@@ -1,4 +1,5 @@
 import { useMemo, useCallback, useEffect, useState, useRef } from "react";
+import { isSupabaseAttachmentUrl, resolveSignedUrl } from "@/lib/signedUrl";
 import { replaceNativeEmojisInElement } from "@/lib/fluentEmoji";
 import { useNavigate } from "react-router-dom";
 import { CodeBlock, InlineCode } from "./CodeBlock";
@@ -572,6 +573,34 @@ export const MessageContent = ({
     const timer = setTimeout(run, 30);
     return () => { clearTimeout(timer); cancelAnimationFrame(rafId); };
   }, [content, effectiveCustomEmojiMap, effectiveGlobalEmojiMap, mentionedUsersMap]);
+
+  // Resolve signed URLs for inline Supabase attachment images.
+  // After dangerouslySetInnerHTML renders <img> tags with public URLs (which now 403),
+  // this effect swaps their src to freshly signed URLs.
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    let cancelled = false;
+
+    const imgs = el.querySelectorAll<HTMLImageElement>("img[data-image-url]");
+    imgs.forEach((img) => {
+      const originalUrl = img.dataset.imageUrl;
+      if (!originalUrl || !isSupabaseAttachmentUrl(originalUrl)) return;
+
+      // Hide the broken image while we resolve
+      img.style.opacity = "0";
+      img.style.transition = "opacity 0.15s ease-in";
+
+      resolveSignedUrl(originalUrl).then((signedUrl) => {
+        if (cancelled || !signedUrl) return;
+        img.src = signedUrl;
+        img.dataset.imageUrl = signedUrl;
+        img.style.opacity = "1";
+      });
+    });
+
+    return () => { cancelled = true; };
+  }, [content]);
 
   // Ensure mention display names resolve even when members list is online-filtered.
   useEffect(() => {
