@@ -66,7 +66,15 @@ export async function secureUpload(
     const err = await res.json().catch(() => ({ error: "Upload failed" }));
     throw new Error(err.error || "Upload failed");
   }
-  return res.json();
+  const result: { publicUrl: string; path: string } = await res.json();
+
+  // Pre-warm the signed URL cache for attachment uploads so the sender sees
+  // their own image instantly without waiting for the hook to resolve.
+  if (bucket === "attachments" && result.path) {
+    getSignedAttachmentUrl(result.path).catch(() => {});
+  }
+
+  return result;
 }
 
 /**
