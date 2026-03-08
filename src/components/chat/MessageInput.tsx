@@ -368,9 +368,10 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       // 🚀 Optimization: The DB Trigger now handles all mention processing automatically.
       const sentMessage = await sendMessage(channelId, user.id, finalContent, replyingTo?.id);
 
-      // Insert attachment records into message_attachments table
-      if (sentMessage && uploadedUrls.length > 0) {
-        const attachmentRows = uploadedUrls.map((url, i) => ({
+      // Insert attachment records into message_attachments table (file uploads only, not GIF URLs)
+      const fileUploadedUrls = uploadedUrls.slice(0, fileAttachments.length);
+      if (sentMessage && fileUploadedUrls.length > 0) {
+        const attachmentRows = fileUploadedUrls.map((url, i) => ({
           message_id: sentMessage.id,
           file_url: url,
           file_name: savedAttachmentMeta[i]?.name || "attachment",
