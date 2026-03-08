@@ -579,6 +579,8 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
         setShowCreatePoll={setShowCreatePoll}
         showEmojiPicker={showEmojiPicker}
         setShowEmojiPicker={setShowEmojiPicker}
+        showGifPicker={showGifPicker}
+        setShowGifPicker={setShowGifPicker}
         isSending={isSending}
         handleSubmit={handleSubmit}
         handleEmojiSelect={(emoji: string) => {
