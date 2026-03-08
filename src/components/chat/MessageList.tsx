@@ -332,6 +332,18 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }
   }, [markAsRead]);
 
+  useEffect(() => {
+    const handleChannelMessageSent = (e: CustomEvent<{ channelId: string }>) => {
+      if (e.detail.channelId !== channelIdRef.current) return;
+      requestAnimationFrame(() => {
+        scrollToBottom();
+      });
+    };
+    const listener = handleChannelMessageSent as unknown as EventListener;
+    window.addEventListener("channelMessageSent", listener);
+    return () => window.removeEventListener("channelMessageSent", listener);
+  }, [scrollToBottom]);
+
   const handleExternalEditHandled = useCallback((messageId: string) => {
     setExternalEditTargetId((current) => (current === messageId ? null : current));
   }, []);

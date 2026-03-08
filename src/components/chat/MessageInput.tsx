@@ -375,6 +375,11 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       mentionMappingsRef.current = [];
       channelMappingsRef.current = [];
       if (textareaRef.current) textareaRef.current.style.height = `${MIN_TEXTAREA_HEIGHT}px`;
+      window.dispatchEvent(
+        new CustomEvent("channelMessageSent", {
+          detail: { channelId },
+        }),
+      );
     } catch (error) {
       handleError(error, "Failed to send");
     } finally {
