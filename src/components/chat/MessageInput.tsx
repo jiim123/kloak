@@ -153,6 +153,7 @@ const ActionButtons = memo(
                 <ImageIcon className="w-5 h-5" />
               </button>
             </GifPicker>
+          </>
         )}
         <button
           onClick={onSubmit}
