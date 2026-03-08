@@ -2,6 +2,7 @@ import { useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useDMStore } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
+import { resolveSignedUrls, isSupabaseAttachmentUrl } from '@/lib/signedUrl';
 import type { DirectMessage, ReactionGroup } from '@/types';
 import { useRealtimeUserUpdates } from './useRealtimeUserUpdates';
 import { getOrFetchUser, useUserCacheStore } from '@/stores/userCacheStore';
@@ -152,6 +153,15 @@ export const useRealtimeDMs = ({
 
       addMessage(newMsg.conversation_id, message);
       updateConversation(newMsg.conversation_id, { last_message: message });
+
+      // Pre-warm signed URL cache for attachment URLs in content
+      const urlMatches = (newMsg.content || '').match(/https?:\/\/[^\s<>"]+/g);
+      if (urlMatches) {
+        const attachmentUrls = urlMatches.filter(isSupabaseAttachmentUrl);
+        if (attachmentUrls.length > 0) {
+          resolveSignedUrls(attachmentUrls).catch(() => {});
+        }
+      }
 
       if (onNewMessageRef.current && newMsg.sender_id !== userId) {
         onNewMessageRef.current(message, newMsg.conversation_id);
