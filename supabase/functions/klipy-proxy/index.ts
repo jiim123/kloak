@@ -61,6 +61,12 @@ serve(async (req) => {
         }
         url = `${BASE}/gifs/share/${encodeURIComponent(slug)}`;
         method = "POST";
+        // Pass customer_id in body for Klipy to track per-user recent GIFs
+        fetchOptions = {
+          method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ customer_id: userId || "anonymous" }),
+        };
         break;
       case "categories":
         url = `${BASE}/gifs/categories?locale=${encodeURIComponent(locale)}`;
