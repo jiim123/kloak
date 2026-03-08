@@ -5,6 +5,15 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export function pickFirstNonBlank(...values: Array<string | null | undefined>): string | undefined {
+  for (const value of values) {
+    if (typeof value !== "string") continue;
+    if (value.trim().length === 0) continue;
+    return value;
+  }
+  return undefined;
+}
+
 /**
  * Converts a database asset key into a full URL.
  * @param key - The short key stored in the DB (e.g., 'sparkle')

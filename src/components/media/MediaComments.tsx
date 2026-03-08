@@ -27,6 +27,7 @@ import { handleError } from "@/lib/errorHandler";
 import { formatMessageTimestamp } from "@/lib/format";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
 import { getUserFromCache, getOrFetchUser } from "@/stores/userCacheStore";
+import { pickFirstNonBlank } from "@/lib/utils";
 import type { User, ReactionGroup, CustomServerRole, ServerRole } from "@/types";
 
 interface MediaComment {
@@ -121,13 +122,12 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
     (comment: MediaComment) => {
       const member = membersByUserId.get(comment.user_id);
       const fallback = authorStyles[comment.user_id];
-      return (
-        member?.nickname ||
-        fallback?.nickname ||
-        comment.user?.display_name ||
-        comment.user?.username ||
-        "Unknown"
-      );
+      return pickFirstNonBlank(
+        member?.nickname,
+        fallback?.nickname,
+        comment.user?.display_name,
+        comment.user?.username,
+      ) ?? "Unknown";
     },
     [membersByUserId, authorStyles],
   );

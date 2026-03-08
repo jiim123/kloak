@@ -1,6 +1,6 @@
 import { useMemo, useEffect, memo, useState, useRef } from "react";
 import { ViewportList } from "react-viewport-list";
-import { cn } from "@/lib/utils";
+import { cn, pickFirstNonBlank } from "@/lib/utils";
 import { Crown, MessageSquare, Edit3, UserX, Ban, VolumeX, Shield, Users, ChevronDown, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useServerStore } from "@/stores/serverStore";
@@ -514,7 +514,8 @@ export const MembersSidebar = () => {
   };
 
   const renderMemberItem = (member: ServerMember) => {
-    const displayName = member.nickname || member.user?.display_name || member.user?.username || "Unknown";
+    const displayName =
+      pickFirstNonBlank(member.nickname, member.user?.display_name, member.user?.username) ?? "Unknown";
     const presence = getMemberPresence(member);
     const memberIsOffline = presence.isOffline;
     const isSelf = member.user_id === user?.id;

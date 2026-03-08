@@ -40,6 +40,7 @@ export const useRealtimeMembers = (serverId: string | null, opts?: { full?: bool
       const now = Date.now();
       if (now - lastRefresh < 120_000) return;
       lastRefresh = now;
+      fetchRolesRef.current(serverId);
       fetchMembersRef.current(serverId, { force: true, full: useFull });
     };
 

@@ -35,6 +35,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { FormatToolbar, FORMAT_SYNTAX } from "@/components/chat/FormatToolbar";
 import { AttachmentPreviewBar, type PendingAttachment } from "@/components/chat/AttachmentPreviewBar";
 import { EmojiGifPicker } from "@/components/modals/EmojiGifPicker";
@@ -59,6 +60,7 @@ import { isPollMessageContent } from "@/lib/poll";
 import { MessageContent, ReplyPreview } from "@/components/chat/MessageContent";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
 import { getUserFromCache, getOrFetchUser, useMessageUser, bulkSetUsersInCache } from "@/stores/userCacheStore";
+import { pickFirstNonBlank } from "@/lib/utils";
 import type { Message, User, ReactionGroup, CustomServerRole, ServerMember, ServerRole } from "@/types";
 
 interface Thread {
@@ -103,10 +105,29 @@ const getRoleColorClass = (role?: ServerRole | null): string => {
 };
 
 const isGradientColor = (value?: string | null) => !!value && value.startsWith("linear-gradient");
+const forumMetaChipClass =
+  "inline-flex items-center gap-1.5 border border-border bg-background px-2 py-0.5 text-[11px] text-muted-foreground";
 
 const revokeAttachmentPreviews = (attachments: PendingAttachment[]) => {
   attachments.forEach((attachment) => URL.revokeObjectURL(attachment.preview));
 };
+
+const ForumThreadsSkeleton = () => (
+  <div className="divide-y divide-border">
+    {Array.from({ length: 6 }).map((_, index) => (
+      <div key={index} className="p-3 md:p-4">
+        <Skeleton className="mb-2 h-5 w-2/3 md:w-1/3" />
+        <Skeleton className="mb-1 h-4 w-full" />
+        <Skeleton className="mb-3 h-4 w-5/6" />
+        <div className="flex flex-wrap gap-2">
+          <Skeleton className="h-6 w-28 rounded-sm" />
+          <Skeleton className="h-6 w-24 rounded-sm" />
+          <Skeleton className="h-6 w-32 rounded-sm" />
+        </div>
+      </div>
+    ))}
+  </div>
+);
 
 export const ForumChannelArea = () => {
   const { currentChannel, currentServer, members, roles } = useServerStore();
@@ -248,15 +269,14 @@ export const ForumChannelArea = () => {
       const member = membersByUserId.get(userId);
       const fallback = authorStyles[userId];
       const cached = getUserFromCache(userId);
-      return (
+      return pickFirstNonBlank(
         member?.nickname ||
-        fallback?.nickname ||
-        cached?.display_name ||
-        cached?.username ||
-        _messageUser?.display_name ||
-        _messageUser?.username ||
-        "Unknown"
-      );
+        fallback?.nickname,
+        cached?.display_name,
+        cached?.username,
+        _messageUser?.display_name,
+        _messageUser?.username,
+      ) ?? "Unknown";
     },
     [membersByUserId, authorStyles],
   );
@@ -1555,9 +1575,9 @@ export const ForumChannelArea = () => {
     const replyToMsg = replyingToThread ? threadMessages[threadId]?.find((m) => m.id === replyingToThread) : null;
 
     return (
-      <div className="border-t border-border p-4">
+      <div className="border-t border-border bg-background p-3">
         {replyToMsg && (
-          <div className="flex items-center gap-2 mb-2 px-3 py-2 bg-muted/50 border-l-2 border-primary rounded text-sm">
+          <div className="mb-2 flex items-center gap-2 border border-border bg-muted/20 px-3 py-2 text-sm">
             <CornerUpLeft className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             <span className="text-muted-foreground">Replying to</span>
             <span className="font-medium text-primary">
@@ -1579,8 +1599,8 @@ export const ForumChannelArea = () => {
         )}
 
         <div
-          className={`rounded-2xl bg-card/80 border transition-all ${
-            threadComposerFocused ? "border-primary/30 shadow-lg" : "border-border/50"
+          className={`border bg-background transition-all ${
+            threadComposerFocused ? "border-primary/40" : "border-border"
           }`}
         >
           {replyPendingAttachments.length > 0 && (
@@ -1678,17 +1698,18 @@ export const ForumChannelArea = () => {
   };
 
   return (
-    <div ref={swipeRef} className="h-full flex flex-col min-w-0 bg-background">
+    <div ref={swipeRef} className="h-full min-w-0 bg-background">
       <ChannelHeader channel={currentChannel} />
 
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className="relative flex h-[calc(100%-57px)] overflow-hidden">
         {/* Threads List */}
         <div
-          className={`${selectedThreadId ? "w-full md:w-1/2 border-r border-border" : "w-full"} ${selectedThreadId && isMobile ? "hidden" : ""} overflow-y-auto transition-all`}
+          className={`${selectedThreadId ? "w-full md:w-[42%] border-r border-border" : "w-full"} ${selectedThreadId && isMobile ? "hidden" : ""} overflow-y-auto transition-all`}
         >
+          <div className="min-h-full bg-background">
           {/* Create Topic Editor */}
           {isCreateTopicFocused ? (
-            <div className="p-4 border-b border-border bg-card/50">
+            <div className="border-b border-border p-3 md:p-4">
               {/* Title Input with Avatar */}
               <div className="flex items-center gap-3 mb-3">
                 <Avatar className="w-8 h-8 flex-shrink-0">
@@ -1745,7 +1766,7 @@ export const ForumChannelArea = () => {
                   }, 200);
                 }}
                 placeholder="What do you want to post?"
-                className="min-h-[200px] resize-none bg-transparent border-0 focus-visible:ring-0"
+                className="min-h-[160px] resize-none border border-border bg-background px-3 py-2 focus-visible:ring-0"
               />
 
               {createPendingAttachments.length > 0 && (
@@ -1802,9 +1823,9 @@ export const ForumChannelArea = () => {
               </div>
             </div>
           ) : (
-            <div className="p-4 border-b border-border">
+            <div className="border-b border-border p-3 md:p-4">
               <div
-                className="flex items-center gap-3 px-4 py-3 rounded-lg border border-border bg-muted/30 hover:bg-muted/50 cursor-text transition-all"
+                className="flex cursor-text items-center gap-3 border border-dashed border-border bg-background px-3 py-3 transition-colors hover:bg-muted/20"
                 onClick={() => {
                   setIsCreateTopicFocused(true);
                   setTimeout(() => {
@@ -1822,7 +1843,7 @@ export const ForumChannelArea = () => {
           )}
 
           {isLoading ? (
-            <div className="p-4 text-center text-muted-foreground">Loading threads...</div>
+            <ForumThreadsSkeleton />
           ) : threads.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center px-4">
               <div className="relative mb-6">
@@ -1846,6 +1867,11 @@ export const ForumChannelArea = () => {
                 const parts = messageContent.split("\n\n");
                 const threadTitle =
                   parts.length > 1 ? parts[0].trim() : messageContent.split("\n")[0].trim() || "No content";
+                const threadPreview =
+                  parts.length > 1
+                    ? parts.slice(1).join("\n\n").trim()
+                    : messageContent.split("\n").slice(1).join("\n").trim();
+                const replyCount = Math.max(0, Number(thread.message_count ?? 0));
                 const opUser = thread.message?.user;
                 const lastAuthor = thread.last_message_author || opUser;
                 const opUsernameColor = getUsernameColor(opUser?.id || thread.message?.user_id);
@@ -1855,121 +1881,123 @@ export const ForumChannelArea = () => {
                   <div
                     key={thread.id}
                     onClick={() => handleThreadClick(thread.id, thread.message_id)}
-                    className={`w-full relative text-left hover:bg-muted/30 transition-colors cursor-pointer group/thread ${
-                      isSelected ? "bg-muted/50" : ""
+                    className={`group/thread relative w-full cursor-pointer text-left transition-colors ${
+                      isSelected
+                        ? "bg-muted/35"
+                        : "bg-background hover:bg-muted/20"
                     }`}
                   >
-                    {/* Colored bar indicator for selected thread */}
-                    {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-full" />}
+                    {isSelected && <div className="absolute inset-y-0 left-0 w-0.5 bg-foreground/70" />}
 
-                    <div className="p-4 pl-6">
+                    <div className="p-3 md:p-4">
                       {/* Desktop: Single line layout */}
-                      <div className="hidden md:flex items-center gap-8 text-sm">
-                        {/* Title */}
-                        <span className="font-medium text-foreground flex-1 min-w-0 truncate">{threadTitle}</span>
+                      <div className="hidden md:flex md:flex-col md:gap-2">
+                        <div className="flex items-start gap-3">
+                          <div className="min-w-0 flex-1">
+                            <span className="block truncate text-base font-medium text-foreground">{threadTitle}</span>
+                            {threadPreview && (
+                              <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                                {threadPreview}
+                              </p>
+                            )}
+                          </div>
+                        </div>
 
-                        {/* Original Poster */}
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground flex-shrink-0">
-                          <Avatar className="w-4 h-4">
-                            <AvatarImage src={opUser?.avatar_url} />
-                            <AvatarFallback className="text-[8px]">
-                              {opUser?.username?.[0]?.toUpperCase() || "?"}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="hidden sm:inline">
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                          <div className={forumMetaChipClass}>
+                            <Avatar className="h-4 w-4">
+                              <AvatarImage src={opUser?.avatar_url} />
+                              <AvatarFallback className="text-[8px]">
+                                {opUser?.username?.[0]?.toUpperCase() || "?"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span>Started by</span>
                             <span className={opUsernameColor.className} style={opUsernameColor.style}>
                               {getDisplayName(opUser?.id || thread.message?.user_id, opUser)}
                             </span>
-                          </span>
-                        </div>
-
-                        {/* Reply Count */}
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
-                          <MessageSquare
-                            className={`w-3.5 h-3.5 ${(thread.message_count || 0) > 0 ? "text-primary" : ""}`}
-                          />
-                          <span>{thread.message_count || 0}</span>
-                        </div>
-
-                        {/* Last Post Time and User - Stacked on right */}
-                        {thread.last_activity && (
-                          <div className="flex flex-col items-end gap-0.5 text-xs text-muted-foreground flex-shrink-0 ml-auto">
-                            <div className="flex items-center gap-1">
-                              <Clock className="w-3.5 h-3.5" />
-                              <span>{formatDistanceToNow(new Date(thread.last_activity), { addSuffix: true })}</span>
-                            </div>
-                            {/* Last Post User */}
-                            {lastAuthor && thread.message_count && thread.message_count > 0 && (
-                              <div className="flex items-center gap-1.5">
-                                <Avatar className="w-4 h-4">
-                                  <AvatarImage src={lastAuthor.avatar_url} />
-                                  <AvatarFallback className="text-[8px]">
-                                    {lastAuthor.username?.[0]?.toUpperCase() || "?"}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="hidden sm:inline">
-                                  <span className={lastAuthorUsernameColor.className} style={lastAuthorUsernameColor.style}>
-                                    {lastAuthor.display_name || lastAuthor.username || "Unknown"}
-                                  </span>
-                                </span>
-                              </div>
-                            )}
                           </div>
-                        )}
+                          <div className={forumMetaChipClass}>
+                            <MessageSquare
+                              className={`h-3.5 w-3.5 ${replyCount > 0 ? "text-primary" : ""}`}
+                            />
+                            <span>{replyCount > 0 ? `${replyCount} replies` : "No replies"}</span>
+                          </div>
+                          <div className={forumMetaChipClass}>
+                            <Clock className="h-3.5 w-3.5" />
+                            <span>
+                              Posted {formatDistanceToNow(new Date(thread.created_at), { addSuffix: true })}
+                            </span>
+                          </div>
+                          {lastAuthor && replyCount > 0 && (
+                            <div className={forumMetaChipClass}>
+                              <Avatar className="h-4 w-4">
+                                <AvatarImage src={lastAuthor.avatar_url} />
+                                <AvatarFallback className="text-[8px]">
+                                  {lastAuthor.username?.[0]?.toUpperCase() || "?"}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span>Latest by</span>
+                              <span className={lastAuthorUsernameColor.className} style={lastAuthorUsernameColor.style}>
+                                {getDisplayName(lastAuthor.id, lastAuthor)}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       {/* Mobile: Stacked layout */}
-                      <div className="md:hidden space-y-2">
+                      <div className="space-y-2 md:hidden">
                         {/* Title */}
-                        <div className="font-medium text-foreground text-sm">{threadTitle}</div>
+                        <div>
+                          <div className="text-sm font-medium text-foreground">{threadTitle}</div>
+                          {threadPreview && (
+                            <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                              {threadPreview}
+                            </p>
+                          )}
+                        </div>
 
                         {/* Metadata row */}
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                          {/* Original Poster */}
-                          <div className="flex items-center gap-1.5">
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                          <div className={forumMetaChipClass}>
                             <Avatar className="w-4 h-4">
                               <AvatarImage src={opUser?.avatar_url} />
                               <AvatarFallback className="text-[8px]">
                                 {opUser?.username?.[0]?.toUpperCase() || "?"}
                               </AvatarFallback>
                             </Avatar>
+                            <span>Started by</span>
                             <span className={opUsernameColor.className} style={opUsernameColor.style}>
                               {getDisplayName(opUser?.id || thread.message?.user_id, opUser)}
                             </span>
                           </div>
-
-                          {/* Reply Count */}
-                          <div className="flex items-center gap-1">
+                          <div className={forumMetaChipClass}>
                             <MessageSquare
-                              className={`w-3.5 h-3.5 ${(thread.message_count || 0) > 0 ? "text-primary" : ""}`}
+                              className={`w-3.5 h-3.5 ${replyCount > 0 ? "text-primary" : ""}`}
                             />
-                            <span>{thread.message_count || 0}</span>
+                            <span>{replyCount > 0 ? `${replyCount} replies` : "No replies"}</span>
                           </div>
-
-                          {/* Last Post Time */}
-                          {thread.last_activity && (
-                            <div className="flex items-center gap-1 ml-auto">
-                              <Clock className="w-3.5 h-3.5" />
-                              <span>{formatDistanceToNow(new Date(thread.last_activity), { addSuffix: true })}</span>
+                          <div className={forumMetaChipClass}>
+                            <Clock className="w-3.5 h-3.5" />
+                            <span>
+                              Posted {formatDistanceToNow(new Date(thread.created_at), { addSuffix: true })}
+                            </span>
+                          </div>
+                          {lastAuthor && replyCount > 0 && (
+                            <div className={forumMetaChipClass}>
+                              <Avatar className="w-4 h-4">
+                                <AvatarImage src={lastAuthor.avatar_url} />
+                                <AvatarFallback className="text-[8px]">
+                                  {lastAuthor.username?.[0]?.toUpperCase() || "?"}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span>Last reply by</span>
+                              <span className={lastAuthorUsernameColor.className} style={lastAuthorUsernameColor.style}>
+                                {getDisplayName(lastAuthor.id, lastAuthor)}
+                              </span>
                             </div>
                           )}
                         </div>
-
-                        {/* Last Post User on mobile */}
-                        {lastAuthor && thread.message_count && thread.message_count > 0 && (
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <span>Last reply by</span>
-                            <Avatar className="w-4 h-4">
-                              <AvatarImage src={lastAuthor.avatar_url} />
-                              <AvatarFallback className="text-[8px]">
-                                {lastAuthor.username?.[0]?.toUpperCase() || "?"}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className={lastAuthorUsernameColor.className} style={lastAuthorUsernameColor.style}>
-                              {lastAuthor.display_name || lastAuthor.username || "Unknown"}
-                            </span>
-                          </div>
-                        )}
                       </div>
                     </div>
                     {/* Delete thread button removed from list - only available when thread is opened */}
@@ -1978,6 +2006,7 @@ export const ForumChannelArea = () => {
               })}
             </div>
           )}
+          </div>
         </div>
 
         {/* Thread View - Only shown when a thread is selected */}
@@ -1998,9 +2027,15 @@ export const ForumChannelArea = () => {
             return (
               <>
                 {/* Desktop: Side-by-side view */}
-                {!isMobile && <div className="hidden md:flex md:w-1/2 flex-col border-l border-border">
-                  <div className="z-30 flex items-center justify-between border-b border-border bg-background px-4 py-3 shadow-sm">
-                    <h3 className="text-lg font-medium">{threadTitle}</h3>
+                {!isMobile && <div className="hidden md:flex md:w-[58%] md:min-w-0 md:flex-col">
+                  <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
+                  <div className="z-30 flex items-center justify-between border-b border-border bg-background px-4 py-3">
+                    <div className="min-w-0">
+                      <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                        Open thread
+                      </p>
+                      <h3 className="truncate text-lg font-semibold">{threadTitle}</h3>
+                    </div>
                     <div className="flex items-center gap-1">
                       {(user?.id === selectedThread?.created_by || canManageMessages) && (
                         <Button
@@ -2036,7 +2071,7 @@ export const ForumChannelArea = () => {
 
                     {/* Thread Description */}
                     {threadDescription && (
-                      <div className="mb-6 pb-6 border-b border-border">
+                      <div className="mb-4 border-b border-border pb-4">
                         <div className="flex gap-3">
                           <Avatar
                             className="w-8 h-8 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
@@ -2088,13 +2123,13 @@ export const ForumChannelArea = () => {
 
                     {/* Thread Replies */}
                     <div className="mb-4">
-                      <h4 className="text-sm font-medium text-muted-foreground mb-3">
+                      <h4 className="mb-3 text-sm font-medium text-muted-foreground">
                         Replies ({threadMessages[selectedThreadId]?.length || 0})
                       </h4>
                     </div>
 
                     {threadMessages[selectedThreadId] ? (
-                      <div className="space-y-4">
+                      <div className="space-y-3">
                         {threadMessages[selectedThreadId].map((msg) => {
                           const isOwnMessage = user?.id === msg.user_id;
                           const isHovered = hoveredMessageId === msg.id;
@@ -2106,7 +2141,7 @@ export const ForumChannelArea = () => {
                           return (
                             <div
                               key={msg.id}
-                              className="group relative flex gap-3"
+                              className="group relative flex gap-3 border-b border-border pb-3"
                               onMouseEnter={() => setHoveredMessageId(msg.id)}
                               onMouseLeave={() => setHoveredMessageId(null)}
                             >
@@ -2379,6 +2414,7 @@ export const ForumChannelArea = () => {
 
                   {/* Reply Input */}
                   {renderThreadReplyComposer(selectedThreadId)}
+                </div>
                 </div>}
 
                 {/* Mobile: Full-screen overlay */}
@@ -2486,6 +2522,7 @@ export const ForumChannelArea = () => {
                             const isEditing = editingMessageId === msg.id;
                             const canDeleteMessage = isOwnMessage || canManageMessages;
                             const msgUsernameColor = getUsernameColor(msg.user_id || msg.user?.id);
+                            const msgCachedUser = getUserFromCache(msg.user_id);
 
                             return (
                               <div
@@ -2495,8 +2532,10 @@ export const ForumChannelArea = () => {
                                 onTouchEnd={() => setTimeout(() => setHoveredMessageId(null), 2000)}
                               >
                                 <Avatar className="w-8 h-8 flex-shrink-0">
-                                  <AvatarImage src={msg.user?.avatar_url} />
-                                  <AvatarFallback>{msg.user?.username?.[0]?.toUpperCase() || "?"}</AvatarFallback>
+                                  <AvatarImage src={msgCachedUser?.avatar_url || msg.user?.avatar_url} />
+                                  <AvatarFallback>
+                                    {msgCachedUser?.username?.[0]?.toUpperCase() || msg.user?.username?.[0]?.toUpperCase() || "?"}
+                                  </AvatarFallback>
                                 </Avatar>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2 mb-1">
@@ -2577,11 +2616,17 @@ export const ForumChannelArea = () => {
                                     <>
                                       <div className="text-sm">
                                         <MessageContent
-                                          content={msg.content}
-                                          currentUserId={user?.id}
-                                          messageId={msg.id}
-                                          messageUser={
-                                            msg.user
+                                        content={msg.content}
+                                        currentUserId={user?.id}
+                                        messageId={msg.id}
+                                        messageUser={
+                                          msgCachedUser
+                                            ? {
+                                                id: msgCachedUser.id,
+                                                username: msgCachedUser.username,
+                                                display_name: msgCachedUser.display_name,
+                                              }
+                                            : msg.user
                                               ? {
                                                   id: msg.user.id,
                                                   username: msg.user.username,

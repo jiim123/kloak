@@ -62,6 +62,7 @@ import { cn } from "@/lib/utils";
 import { useSignedUrl } from "@/hooks/useSignedUrl";
 import { getPollIdFromContent, isPollMessageContent } from "@/lib/poll";
 import { canRevealGhostIdentityForUser } from "@/lib/ghostIdentity";
+import { pickFirstNonBlank } from "@/lib/utils";
 
 // Static data moved outside component
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "👋", "🔥", "👀", "💯", "🙌", "😍", "🤔"] as const;
@@ -872,7 +873,12 @@ export const MessageItem = memo(function MessageItem({
 
   const displayName = showGhostIdentity
     ? "Anonymous"
-    : messageMember?.nickname || authorStyleFallback?.nickname || messageUser?.display_name || messageUser?.username;
+    : pickFirstNonBlank(
+        messageMember?.nickname,
+        authorStyleFallback?.nickname,
+        messageUser?.display_name,
+        messageUser?.username,
+      ) ?? "Unknown";
   const isBotMessageAuthor = !showGhostIdentity && Boolean(messageUser?.is_bot);
 
   const handleUsernameClick = useCallback(
