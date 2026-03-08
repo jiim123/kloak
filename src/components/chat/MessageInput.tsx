@@ -208,7 +208,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     }
     return () => {
       setPendingAttachments((prev) => {
-        prev.forEach((a) => URL.revokeObjectURL(a.preview));
+        prev.forEach((a) => { if (!a.gifUrl) URL.revokeObjectURL(a.preview); });
         return [];
       });
     };
