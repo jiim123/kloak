@@ -693,6 +693,7 @@ const MobileOptimizedInput = memo(
             hasAttachments={hasAttachments}
             onSubmit={handleSubmit}
             onEmojiSelect={handleEmojiSelect}
+            onGifSelect={handleGifSelect}
             currentServer={currentServer}
             showAttachButton={shouldCollapse}
             onAttachClick={onAttachClick}
