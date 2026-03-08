@@ -66,6 +66,7 @@ const isImageUrl = (url: string): boolean => {
     /media\.discordapp\.net/i,
     /cdn\.discordapp\.com/i,
     /supabase\.co.*\/storage/i, // Supabase storage URLs
+    /klipy/i, // Klipy GIF CDN
   ];
 
   return imageHosts.some((pattern) => pattern.test(url));

@@ -332,18 +332,33 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     try {
       let finalContent = contentToSend;
       const uploadedUrls: string[] = [];
+
+      // Separate GIF URLs from file attachments
+      const gifAttachments = pendingAttachments.filter((a) => a.gifUrl);
+      const fileAttachments = pendingAttachments.filter((a) => !a.gifUrl);
+
       // Save metadata before any state changes
-      const savedAttachmentMeta = pendingAttachments.map((a) => ({
+      const savedAttachmentMeta = fileAttachments.map((a) => ({
         name: a.file.name,
         type: a.file.type,
         size: a.file.size,
       }));
-      if (pendingAttachments.length > 0) {
-        for (const att of pendingAttachments) {
+
+      // Upload file attachments to storage
+      if (fileAttachments.length > 0) {
+        for (const att of fileAttachments) {
           const fileName = `${user.id}/${Date.now()}-${crypto.randomUUID()}.${att.file.name.split(".").pop()}`;
           const res = await secureUpload("attachments", fileName, att.file, { contentType: att.file.type });
           uploadedUrls.push(res.publicUrl);
         }
+      }
+
+      // Append GIF URLs directly (no upload needed)
+      for (const gif of gifAttachments) {
+        uploadedUrls.push(gif.gifUrl!);
+      }
+
+      if (uploadedUrls.length > 0) {
         // Always append attachment URLs to content so images render via content parsing
         // even if the message_attachments insert fails
         const urlBlock = uploadedUrls.join("\n");

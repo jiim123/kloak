@@ -6,6 +6,8 @@ export interface PendingAttachment {
   file: File;
   preview: string;
   uploading?: boolean;
+  /** When set, this attachment is a remote GIF URL (no file upload needed). */
+  gifUrl?: string;
 }
 
 const MAX_ATTACHMENTS = 10;
