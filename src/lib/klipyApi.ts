@@ -27,13 +27,19 @@ export interface KlipyGif {
   };
 }
 
+export interface KlipyCategory {
+  category: string;
+  query: string;
+  preview_url: string;
+}
+
 // ── Direct fetch to edge function (bypasses custom supabase fetch wrapper) ──
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZvcXV1Y3VybndwcWN2Z3F1a3B6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2ODUwNjEsImV4cCI6MjA4NzA0NTA2MX0.XgkhNWxe7CHzeyc8PrXJKztuT6oxFYXX1T8Fab1N6QA";
 
-async function callProxy(body: Record<string, unknown>): Promise<KlipyGif[]> {
+async function callProxy(body: Record<string, unknown>): Promise<any> {
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/klipy-proxy`, {
       method: "POST",
@@ -47,36 +53,50 @@ async function callProxy(body: Record<string, unknown>): Promise<KlipyGif[]> {
 
     if (!res.ok) {
       console.error("[klipyApi] Edge function HTTP error:", res.status);
-      return [];
+      return null;
     }
 
-    const data = await res.json();
-    const gifs = data?.data?.data ?? data?.data ?? [];
-
-    if (!Array.isArray(gifs)) {
-      console.warn("[klipyApi] Unexpected response shape:", JSON.stringify(data)?.substring(0, 300));
-      return [];
-    }
-
-    return gifs;
+    return await res.json();
   } catch (err) {
     console.error("[klipyApi] Fetch error:", err);
+    return null;
+  }
+}
+
+function extractGifs(data: any): KlipyGif[] {
+  const gifs = data?.data?.data ?? data?.data ?? [];
+  if (!Array.isArray(gifs)) {
+    console.warn("[klipyApi] Unexpected response shape:", JSON.stringify(data)?.substring(0, 300));
     return [];
   }
+  return gifs;
 }
 
 // ── API Functions ──────────────────────────────────────────────────────
 
 export async function fetchTrendingGifs(perPage = 24, userId?: string): Promise<KlipyGif[]> {
-  return callProxy({ action: "trending", perPage, userId: userId || "anonymous" });
+  const data = await callProxy({ action: "trending", perPage, userId: userId || "anonymous" });
+  return extractGifs(data);
 }
 
 export async function searchGifs(query: string, perPage = 24, userId?: string): Promise<KlipyGif[]> {
-  return callProxy({ action: "search", query, perPage, userId: userId || "anonymous" });
+  const data = await callProxy({ action: "search", query, perPage, userId: userId || "anonymous" });
+  return extractGifs(data);
 }
 
 export async function fetchRecentGifs(userId: string, perPage = 24): Promise<KlipyGif[]> {
-  return callProxy({ action: "recent", userId, perPage });
+  const data = await callProxy({ action: "recent", userId, perPage });
+  return extractGifs(data);
+}
+
+export async function fetchCategories(locale = "en-US"): Promise<KlipyCategory[]> {
+  const data = await callProxy({ action: "categories", locale });
+  const categories = data?.data?.categories ?? data?.categories ?? [];
+  if (!Array.isArray(categories)) {
+    console.warn("[klipyApi] Unexpected categories shape:", JSON.stringify(data)?.substring(0, 300));
+    return [];
+  }
+  return categories;
 }
 
 export async function shareGif(slug: string, userId?: string): Promise<void> {

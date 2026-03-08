@@ -62,6 +62,9 @@ serve(async (req) => {
         url = `${BASE}/gifs/share/${encodeURIComponent(slug)}`;
         method = "POST";
         break;
+      case "categories":
+        url = `${BASE}/gifs/categories?locale=${encodeURIComponent(locale)}`;
+        break;
       default:
         return new Response(JSON.stringify({ error: "Unknown action" }), {
           status: 400,
