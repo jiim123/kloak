@@ -62,6 +62,11 @@ function getCached(filePath: string): string | null {
   return null;
 }
 
+/** Synchronous cache probe for hooks that want instant access without async. */
+export function _peekCache(filePath: string): string | null {
+  return getCached(filePath);
+}
+
 function setCache(filePath: string, signedUrl: string) {
   urlCache.set(filePath, {
     url: signedUrl,
