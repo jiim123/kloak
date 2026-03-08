@@ -148,7 +148,11 @@ const ActionButtons = memo(
                 <Smile className="w-5 h-5" />
               </button>
             </EmojiPicker>
-          </>
+            <GifPicker open={showGifPicker} onOpenChange={setShowGifPicker} onSelect={onGifSelect}>
+              <button type="button" className="p-2 rounded-xl text-muted-foreground hover:bg-muted/50">
+                <ImageIcon className="w-5 h-5" />
+              </button>
+            </GifPicker>
         )}
         <button
           onClick={onSubmit}
