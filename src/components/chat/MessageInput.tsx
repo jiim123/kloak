@@ -19,6 +19,7 @@ import { ReplyPreview } from "./MessageContent";
 import { MentionAutocomplete } from "./MentionAutocomplete";
 import { ChannelAutocomplete } from "./ChannelAutocomplete";
 import { EmojiPicker } from "@/components/modals/EmojiPicker";
+import { GifPicker } from "@/components/chat/GifPicker";
 import { CreatePollModal } from "@/components/modals/CreatePollModal";
 import { SelectionFormatToolbar, FORMAT_SYNTAX, getCodeBlockSyntax } from "./FormatToolbar";
 import { AttachmentPreviewBar, PendingAttachment } from "./AttachmentPreviewBar";
