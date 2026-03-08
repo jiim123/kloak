@@ -63,6 +63,8 @@ const statusOptions: StatusOption[] = [
 
 const COMMON_EMOJIS = ['😊', '😄', '🎮', '💻', '🎵', '☕', '🔥', '✨', '💤', '🏠', '📚', '🎯'];
 
+const CUSTOM_STATUS_MAX_LENGTH = 20;
+
 const CLEAR_AFTER_OPTIONS = [
   { value: 'never', label: "Don't clear" },
   { value: '30m', label: '30 minutes', ms: 30 * 60 * 1000 },
@@ -256,7 +258,7 @@ export const StatusSelector = ({ children, side = 'right', align = 'start' }: St
               value={customStatusText}
               onChange={(e) => setCustomStatusText(e.target.value)}
               className="h-9 text-sm flex-1"
-              maxLength={20}
+              maxLength={CUSTOM_STATUS_MAX_LENGTH}
             />
           </div>
           

@@ -131,8 +131,8 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (errMsg.includes("reserved")) {
-        return new Response(JSON.stringify({ error: "This username is reserved" }), {
+      if (errMsg.includes("reserved") || errMsg.includes("not allowed")) {
+        return new Response(JSON.stringify({ error: "This username is not allowed" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });

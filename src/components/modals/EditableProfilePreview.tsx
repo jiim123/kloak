@@ -31,13 +31,6 @@ import type { User } from "@/types";
 
 const BIO_MAX_LENGTH = 400;
 
-// Validates display name: only letters (any language), numbers, spaces, hyphens, underscores, periods
-const isValidDisplayName = (name: string): boolean => {
-  if (name === "") return true;
-  const validPattern = /^[\p{L}\p{N}\s\-_.]+$/u;
-  return validPattern.test(name);
-};
-
 interface EditableProfilePreviewProps {
   user: User | null;
   localAvatarUrl: string | null;
@@ -87,8 +80,6 @@ export const EditableProfilePreview = ({
 }: EditableProfilePreviewProps) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingBio, setIsEditingBio] = useState(false);
-  const [displayNameError, setDisplayNameError] = useState<string | null>(null);
-  
   const nameInputRef = useRef<HTMLInputElement>(null);
   const bioInputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -186,12 +177,7 @@ export const EditableProfilePreview = ({
   const bannerUrl = previewUser?.banner_url || localBannerUrl;
 
   const handleDisplayNameChange = (value: string) => {
-    if (isValidDisplayName(value)) {
-      setDisplayNameError(null);
-      onDisplayNameChange(value);
-    } else {
-      setDisplayNameError("Only letters, numbers, spaces, and basic punctuation allowed");
-    }
+    onDisplayNameChange(value);
   };
 
   const handleBioChange = (value: string) => {
@@ -344,9 +330,6 @@ export const EditableProfilePreview = ({
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
-                {displayNameError && (
-                  <p className="text-xs text-destructive">{displayNameError}</p>
-                )}
               </div>
             ) : (
               <button

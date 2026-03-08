@@ -174,8 +174,8 @@ export const useAuthStore = create<AuthState>()(
               set({ error: "Username already taken", isLoading: false });
               return null;
             }
-            if (errorMessage.includes("reserved")) {
-              set({ error: "This username is reserved", isLoading: false });
+            if (errorMessage.includes("reserved") || errorMessage.includes("not allowed")) {
+              set({ error: "This username is not allowed", isLoading: false });
               return null;
             }
             set({ error: errorMessage, isLoading: false });

@@ -341,8 +341,8 @@ Deno.serve(async (req) => {
       if (errMsg.includes("Username already taken")) {
         return jsonResponse(400, { error: "Username already taken" }, requestOrigin);
       }
-      if (errMsg.includes("reserved")) {
-        return jsonResponse(400, { error: "This username is reserved" }, requestOrigin);
+      if (errMsg.includes("reserved") || errMsg.includes("not allowed")) {
+        return jsonResponse(400, { error: "This username is not allowed" }, requestOrigin);
       }
       throw error;
     }
