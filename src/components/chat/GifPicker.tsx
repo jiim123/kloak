@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import poweredByKlipy from "@/assets/powered-by-klipy.svg";
 import { Search, X, Clock, TrendingUp, LayoutGrid } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -344,9 +345,9 @@ export const GifPicker = ({ children, onSelect, open, onOpenChange }: GifPickerP
             href="https://klipy.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[11px] text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+            className="opacity-60 hover:opacity-80 transition-opacity"
           >
-            Powered by KLIPY
+            <img src={poweredByKlipy} alt="Powered by KLIPY" className="h-5" />
           </a>
         </div>
       </PopoverContent>
