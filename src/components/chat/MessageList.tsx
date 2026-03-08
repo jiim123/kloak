@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, useCallback, useMemo, Fragment, useLayoutEffect } from "react";
-import { ViewportList, type ViewportListRef } from "react-viewport-list";
 
 import { Ghost } from "lucide-react";
 import { Loader2, Hash, Sparkles } from "lucide-react";
@@ -92,7 +91,6 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     return messages.filter((m) => seen.get(getStableMessageKey(m)) === m);
   }, [messages]);
 
-  // FIX 3: Flat array of messages + date dividers for ViewportList
   type ListItem =
     | { type: "message"; message: Message }
     | { type: "dateDivider"; label: string; date: Date };
@@ -161,7 +159,6 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   }, [currentServerId]);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const listRef = useRef<ViewportListRef>(null);
   const [externalEditTargetId, setExternalEditTargetId] = useState<string | null>(null);
   const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
   const [globalEmojiMap, setGlobalEmojiMap] = useState<Map<string, ResolvedEmoji>>(new Map());
@@ -205,7 +202,6 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   const { highlightedMessageId } = useScrollToMessage({
     messages: deduplicatedMessages,
     isLoading,
-    virtuosoRef: listRef,
     containerRef,
   });
 
@@ -317,7 +313,6 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     isProgrammaticScrollRef.current = true;
     node.scrollTop = node.scrollHeight;
 
-    // Single delayed confirmation after ViewportList settles
     setTimeout(() => {
       if (node) node.scrollTop = node.scrollHeight;
       isProgrammaticScrollRef.current = false;
@@ -465,7 +460,6 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     });
   }, [isLoading, msgCount]);
 
-  // FIX 6: Store frequently-changing values in refs to stabilize itemContent
   const authorStyleMapRef = useRef(authorStyleMap);
   authorStyleMapRef.current = authorStyleMap;
   const customEmojiMapRef = useRef(customEmojiMap);
@@ -477,7 +471,6 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   const externalEditTargetIdRef = useRef(externalEditTargetId);
   externalEditTargetIdRef.current = externalEditTargetId;
 
-  // FIX 3: itemContent now handles both message and dateDivider items
   const itemContent = useCallback(
     (item: ListItem, index: number) => {
       if (item.type === "dateDivider") {
@@ -519,13 +512,12 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   );
 
   const computeItemKey = useCallback(
-    (index: number) => {
-      const item = flatItems[index];
+    (item: ListItem, index: number) => {
       if (!item) return `item-${index}`;
       if (item.type === "dateDivider") return `date-divider-${item.date.toISOString().slice(0, 10)}`;
       return getStableMessageKey(item.message);
     },
-    [flatItems],
+    [],
   );
 
   const headerContent = useMemo(() => {
@@ -597,19 +589,13 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
               </div>
             </div>
           )}
-          <ViewportList
-            key={channelId}
-            ref={listRef}
-            viewportRef={containerRef}
-            items={flatItems}
-            overscan={8}
-          >
-            {(item, index) => (
-              <Fragment key={computeItemKey(index)}>
+          <div key={channelId}>
+            {flatItems.map((item, index) => (
+              <Fragment key={computeItemKey(item, index)}>
                 {itemContent(item, index)}
               </Fragment>
-            )}
-          </ViewportList>
+            ))}
+          </div>
         </div>
       )}
 
