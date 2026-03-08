@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Search, X, Clock, TrendingUp } from "lucide-react";
+import { Search, X, Clock, TrendingUp, LayoutGrid } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,8 +9,10 @@ import {
   fetchTrendingGifs,
   searchGifs,
   fetchRecentGifs,
+  fetchCategories,
   shareGif,
   type KlipyGif,
+  type KlipyCategory,
 } from "@/lib/klipyApi";
 
 interface GifPickerProps {
@@ -20,7 +22,7 @@ interface GifPickerProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type Tab = "trending" | "recent";
+type Tab = "trending" | "categories" | "recent";
 
 const GIF_GRID_SKELETON = Array.from({ length: 9 });
 
@@ -51,38 +53,53 @@ export const GifPicker = ({ children, onSelect, open, onOpenChange }: GifPickerP
   const [query, setQuery] = useState("");
   const [gifs, setGifs] = useState<KlipyGif[]>([]);
   const [recentGifs, setRecentGifs] = useState<KlipyGif[]>([]);
+  const [categories, setCategories] = useState<KlipyCategory[]>([]);
   const [loading, setLoading] = useState(false);
   const [recentLoading, setRecentLoading] = useState(false);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Fetch trending GIFs when the picker opens
   useEffect(() => {
     if (!open) return;
-
-    console.log("[GifPicker] useEffect fired, open:", open, "user:", user?.id);
     setLoading(true);
     fetchTrendingGifs(24, user?.id)
-      .then((result) => {
-        console.log("[GifPicker] Got trending result, count:", result.length);
-        setGifs(result);
-      })
-      .catch((err) => {
-        console.error("[GifPicker] Failed to load trending:", err);
-        setGifs([]);
-      })
+      .then(setGifs)
+      .catch(() => setGifs([]))
       .finally(() => setLoading(false));
   }, [open, user?.id]);
 
   // Fetch recent GIFs when "recent" tab is selected
   useEffect(() => {
     if (!open || tab !== "recent" || !user?.id) return;
-
     setRecentLoading(true);
     fetchRecentGifs(user.id)
       .then(setRecentGifs)
       .catch(() => setRecentGifs([]))
       .finally(() => setRecentLoading(false));
   }, [open, tab, user?.id]);
+
+  // Fetch categories when "categories" tab is selected
+  useEffect(() => {
+    if (!open || tab !== "categories") return;
+    if (categories.length > 0 && !selectedCategory) return; // already fetched
+
+    if (selectedCategory) {
+      // Fetch GIFs for selected category
+      setLoading(true);
+      searchGifs(selectedCategory, 24, user?.id)
+        .then(setGifs)
+        .catch(() => setGifs([]))
+        .finally(() => setLoading(false));
+    } else {
+      setCategoriesLoading(true);
+      fetchCategories()
+        .then(setCategories)
+        .catch(() => setCategories([]))
+        .finally(() => setCategoriesLoading(false));
+    }
+  }, [open, tab, selectedCategory, user?.id]);
 
   // Debounced search
   const handleSearchChange = useCallback(
@@ -91,7 +108,6 @@ export const GifPicker = ({ children, onSelect, open, onOpenChange }: GifPickerP
       if (debounceRef.current) clearTimeout(debounceRef.current);
 
       if (!value.trim()) {
-        // Revert to trending
         setLoading(true);
         fetchTrendingGifs(24, user?.id)
           .then(setGifs)
@@ -117,7 +133,6 @@ export const GifPicker = ({ children, onSelect, open, onOpenChange }: GifPickerP
       if (!url) return;
       onSelect(url);
       onOpenChange(false);
-      // Fire-and-forget share trigger
       if (gif.slug) {
         shareGif(gif.slug, user?.id);
       }
@@ -125,16 +140,64 @@ export const GifPicker = ({ children, onSelect, open, onOpenChange }: GifPickerP
     [onSelect, onOpenChange, user?.id],
   );
 
+  const handleCategoryClick = useCallback((categoryQuery: string) => {
+    setSelectedCategory(categoryQuery);
+  }, []);
+
+  const handleBackToCategories = useCallback(() => {
+    setSelectedCategory(null);
+  }, []);
+
   // Reset state when closing
   useEffect(() => {
     if (!open) {
       setQuery("");
       setTab("trending");
+      setSelectedCategory(null);
     }
   }, [open]);
 
-  const displayGifs = tab === "recent" ? recentGifs : gifs;
-  const isLoading = tab === "recent" ? recentLoading : loading;
+  // Render GIF grid (shared between trending, search, and category results)
+  const renderGifGrid = (gifList: KlipyGif[], isLoadingState: boolean, emptyIcon: React.ReactNode, emptyTitle: string, emptySubtitle: string) => {
+    if (isLoadingState) {
+      return (
+        <div className="grid grid-cols-3 gap-1.5">
+          {GIF_GRID_SKELETON.map((_, i) => (
+            <Skeleton key={i} className="aspect-square rounded-lg" />
+          ))}
+        </div>
+      );
+    }
+    if (gifList.length > 0) {
+      return (
+        <div className="grid grid-cols-3 gap-1.5">
+          {gifList.map((gif) => (
+            <button
+              key={gif.id}
+              type="button"
+              className="aspect-square rounded-lg overflow-hidden hover:ring-2 ring-primary/60 transition-all focus:outline-none focus:ring-2 focus:ring-primary/60"
+              onClick={() => handleGifClick(gif)}
+              onMouseDown={(e) => e.preventDefault()}
+            >
+              <img
+                src={getThumbnailUrl(gif)}
+                alt={gif.title || "GIF"}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            </button>
+          ))}
+        </div>
+      );
+    }
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        {emptyIcon}
+        <p className="text-sm font-medium text-muted-foreground">{emptyTitle}</p>
+        <p className="text-xs text-muted-foreground/60 mt-1">{emptySubtitle}</p>
+      </div>
+    );
+  };
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
@@ -148,32 +211,29 @@ export const GifPicker = ({ children, onSelect, open, onOpenChange }: GifPickerP
       >
         {/* Tab bar */}
         <div className="flex border-b border-border/30">
-          <button
-            type="button"
-            className={cn(
-              "flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors border-b-2",
-              tab === "trending"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground",
-            )}
-            onClick={() => setTab("trending")}
-          >
-            <TrendingUp className="w-4 h-4" />
-            Trending
-          </button>
-          <button
-            type="button"
-            className={cn(
-              "flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors border-b-2",
-              tab === "recent"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground",
-            )}
-            onClick={() => setTab("recent")}
-          >
-            <Clock className="w-4 h-4" />
-            Recent
-          </button>
+          {([
+            { key: "trending" as Tab, icon: TrendingUp, label: "Trending" },
+            { key: "categories" as Tab, icon: LayoutGrid, label: "Categories" },
+            { key: "recent" as Tab, icon: Clock, label: "Recent" },
+          ]).map(({ key, icon: Icon, label }) => (
+            <button
+              key={key}
+              type="button"
+              className={cn(
+                "flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-colors border-b-2",
+                tab === key
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground",
+              )}
+              onClick={() => {
+                setTab(key);
+                if (key === "categories") setSelectedCategory(null);
+              }}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {label}
+            </button>
+          ))}
         </div>
 
         {/* Search bar (trending tab only) */}
@@ -201,46 +261,79 @@ export const GifPicker = ({ children, onSelect, open, onOpenChange }: GifPickerP
           </div>
         )}
 
-        {/* GIF Grid */}
+        {/* Content */}
         <ScrollArea className="h-[280px] sm:h-[320px]">
           <div className="p-2 sm:p-3">
-            {isLoading ? (
-              <div className="grid grid-cols-3 gap-1.5">
-                {GIF_GRID_SKELETON.map((_, i) => (
-                  <Skeleton key={i} className="aspect-square rounded-lg" />
-                ))}
+            {tab === "trending" && renderGifGrid(
+              gifs, loading,
+              <Search className="w-8 h-8 text-muted-foreground/30 mb-3" />,
+              "No GIFs found",
+              "Try a different search term",
+            )}
+
+            {tab === "categories" && !selectedCategory && (
+              categoriesLoading ? (
+                <div className="grid grid-cols-2 gap-2">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <Skeleton key={i} className="h-20 rounded-lg" />
+                  ))}
+                </div>
+              ) : categories.length > 0 ? (
+                <div className="grid grid-cols-2 gap-2">
+                  {categories.map((cat) => (
+                    <button
+                      key={cat.query}
+                      type="button"
+                      className="relative h-20 rounded-lg overflow-hidden group focus:outline-none focus:ring-2 focus:ring-primary/60"
+                      onClick={() => handleCategoryClick(cat.query)}
+                      onMouseDown={(e) => e.preventDefault()}
+                    >
+                      <img
+                        src={cat.preview_url}
+                        alt={cat.category}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors flex items-center justify-center">
+                        <span className="text-white text-sm font-semibold capitalize drop-shadow-md">
+                          {cat.category}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <LayoutGrid className="w-8 h-8 text-muted-foreground/30 mb-3" />
+                  <p className="text-sm font-medium text-muted-foreground">No categories</p>
+                </div>
+              )
+            )}
+
+            {tab === "categories" && selectedCategory && (
+              <div>
+                <button
+                  type="button"
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mb-2 transition-colors"
+                  onClick={handleBackToCategories}
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span className="capitalize">{selectedCategory}</span>
+                </button>
+                {renderGifGrid(
+                  gifs, loading,
+                  <Search className="w-8 h-8 text-muted-foreground/30 mb-3" />,
+                  "No GIFs found",
+                  "Try another category",
+                )}
               </div>
-            ) : displayGifs.length > 0 ? (
-              <div className="grid grid-cols-3 gap-1.5">
-                {displayGifs.map((gif) => (
-                  <button
-                    key={gif.id}
-                    type="button"
-                    className="aspect-square rounded-lg overflow-hidden hover:ring-2 ring-primary/60 transition-all focus:outline-none focus:ring-2 focus:ring-primary/60"
-                    onClick={() => handleGifClick(gif)}
-                    onMouseDown={(e) => e.preventDefault()}
-                  >
-                    <img
-                      src={getThumbnailUrl(gif)}
-                      alt={gif.title || "GIF"}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
-                  </button>
-                ))}
-              </div>
-            ) : tab === "recent" ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Clock className="w-8 h-8 text-muted-foreground/30 mb-3" />
-                <p className="text-sm font-medium text-muted-foreground">No recent GIFs</p>
-                <p className="text-xs text-muted-foreground/60 mt-1">GIFs you send will appear here</p>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Search className="w-8 h-8 text-muted-foreground/30 mb-3" />
-                <p className="text-sm font-medium text-muted-foreground">No GIFs found</p>
-                <p className="text-xs text-muted-foreground/60 mt-1">Try a different search term</p>
-              </div>
+            )}
+
+            {tab === "recent" && renderGifGrid(
+              recentGifs, recentLoading,
+              <Clock className="w-8 h-8 text-muted-foreground/30 mb-3" />,
+              "No recent GIFs",
+              "GIFs you send will appear here",
             )}
           </div>
         </ScrollArea>
