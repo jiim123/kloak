@@ -378,6 +378,14 @@ export const useDMStore = create<DMState>((set, get) => ({
         };
       });
 
+      // Pre-warm signed URL cache for DM attachments (fire-and-forget)
+      const dmAttachmentUrls = messages
+        .flatMap((m) => (m.attachments || []).map((a: any) => a.file_url as string))
+        .filter((url): url is string => !!url && isSupabaseAttachmentUrl(url));
+      if (dmAttachmentUrls.length > 0) {
+        resolveSignedUrls(dmAttachmentUrls).catch(() => {});
+      }
+
       set((state) => {
         const currentMessages = state.messagesByConversation[conversationId] || [];
 
