@@ -12,6 +12,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, DELETE, OPTIONS",
 };
 
+const EXPIRY_SECONDS = 3600; // 1 hour signed URL expiry for private buckets
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const AVATAR_FILE_RE = /^(avatar|banner)-\d{10,20}\.(png|jpe?g|gif|webp|avif)$/i;
 const SERVER_ICON_FILE_RE = /^(icon|banner)(-\d{10,20})?\.(png|jpe?g|gif|webp|avif)$/i;
@@ -335,6 +336,21 @@ Deno.serve(async (req) => {
 
       if (uploadError) {
         return jsonResponse({ error: uploadError.message }, 500);
+      }
+
+      // For private buckets (attachments), return a signed URL instead of public URL
+      if (bucket === "attachments") {
+        const { data: signedData, error: signError } = await supabase.storage
+          .from(bucket)
+          .createSignedUrl(normalizedPath, EXPIRY_SECONDS);
+        if (signError || !signedData?.signedUrl) {
+          return jsonResponse({ error: "Upload succeeded but failed to generate signed URL" }, 500);
+        }
+        return jsonResponse({
+          success: true,
+          path: data?.path || normalizedPath,
+          publicUrl: signedData.signedUrl,
+        });
       }
 
       const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(normalizedPath);
