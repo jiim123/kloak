@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.storage-upload]
 verify_jwt = false
+
+[functions.klipy-proxy]
+verify_jwt = false
