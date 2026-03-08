@@ -125,9 +125,9 @@ const isReservedUsername = (username: string): boolean => {
 
 /**
  * Validate username format
- * - 3-20 characters
- * - Only alphanumeric and underscores
- * - No consecutive underscores
+ * - 3-16 characters
+ * - Only lowercase alphanumeric, underscores, and hyphens
+ * - No consecutive underscores or hyphens
  * - Not a reserved username
  */
 export const validateUsername = (username: string): { valid: boolean; error?: string } => {
@@ -141,20 +141,20 @@ export const validateUsername = (username: string): { valid: boolean; error?: st
     return { valid: false, error: "Username must be at least 3 characters" };
   }
 
-  if (trimmed.length > 14) {
-    return { valid: false, error: "Username must be 14 characters or less" };
+  if (trimmed.length > 16) {
+    return { valid: false, error: "Username must be 16 characters or less" };
   }
 
-  if (!/^[a-z0-9_]+$/.test(trimmed)) {
-    return { valid: false, error: "Only letters, numbers, and underscores allowed" };
+  if (!/^[a-z0-9_-]+$/.test(trimmed)) {
+    return { valid: false, error: "Only letters, numbers, underscores, and hyphens allowed" };
   }
 
-  if (/_{2,}/.test(trimmed)) {
-    return { valid: false, error: "Consecutive underscores not allowed" };
+  if (/[-_]{2,}/.test(trimmed)) {
+    return { valid: false, error: "Consecutive underscores or hyphens not allowed" };
   }
 
-  if (trimmed.startsWith("_") || trimmed.endsWith("_")) {
-    return { valid: false, error: "Username cannot start or end with underscore" };
+  if (/^[-_]|[-_]$/.test(trimmed)) {
+    return { valid: false, error: "Username cannot start or end with underscore or hyphen" };
   }
 
   if (isReservedUsername(trimmed)) {
