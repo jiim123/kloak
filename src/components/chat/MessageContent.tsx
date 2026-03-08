@@ -1,4 +1,5 @@
 import { useMemo, useCallback, useEffect, useState, useRef } from "react";
+import { isSupabaseAttachmentUrl, resolveSignedUrl } from "@/lib/signedUrl";
 import { replaceNativeEmojisInElement } from "@/lib/fluentEmoji";
 import { useNavigate } from "react-router-dom";
 import { CodeBlock, InlineCode } from "./CodeBlock";
