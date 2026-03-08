@@ -11,7 +11,7 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const API_KEY = Deno.env.get("VITE_KLIPY_API_KEY");
+  const API_KEY = Deno.env.get("KLIPY_API_KEY");
   if (!API_KEY) {
     return new Response(JSON.stringify({ error: "Klipy API key not configured" }), {
       status: 500,
