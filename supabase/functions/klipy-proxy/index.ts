@@ -27,6 +27,7 @@ serve(async (req) => {
 
     let url: string;
     let method = "GET";
+    let fetchBody: string | undefined;
 
     switch (action) {
       case "trending":
@@ -61,6 +62,7 @@ serve(async (req) => {
         }
         url = `${BASE}/gifs/share/${encodeURIComponent(slug)}`;
         method = "POST";
+        fetchBody = JSON.stringify({ customer_id: userId || "anonymous" });
         break;
       case "categories":
         url = `${BASE}/gifs/categories?locale=${encodeURIComponent(locale)}`;
@@ -75,6 +77,7 @@ serve(async (req) => {
     const res = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
+      ...(fetchBody ? { body: fetchBody } : {}),
     });
 
     const data = await res.json();
