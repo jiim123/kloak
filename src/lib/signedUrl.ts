@@ -67,6 +67,11 @@ export function _peekCache(filePath: string): string | null {
   return getCached(filePath);
 }
 
+/** Remove a single entry from the cache so the next access re-signs. */
+export function invalidateCacheEntry(filePath: string): void {
+  urlCache.delete(filePath);
+}
+
 function setCache(filePath: string, signedUrl: string) {
   urlCache.set(filePath, {
     url: signedUrl,

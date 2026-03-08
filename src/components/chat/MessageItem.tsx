@@ -146,7 +146,7 @@ const AttachmentItem = memo(function AttachmentItem({
 }: {
   attachment: { id: string; file_url: string; file_name: string; file_type?: string; file_size?: number; width?: number | null; height?: number | null };
 }) {
-  const signedUrl = useSignedUrl(attachment.file_url);
+  const { url: signedUrl, refresh } = useSignedUrl(attachment.file_url, { withRefresh: true });
   const isImage = attachment.file_type?.startsWith("image/");
 
   // Compute constrained dimensions to reserve space and prevent layout shift
@@ -175,7 +175,8 @@ const AttachmentItem = memo(function AttachmentItem({
               src={signedUrl}
               alt={attachment.file_name}
               className="w-full h-full object-contain rounded-lg cursor-pointer hover:opacity-90"
-               decoding="async"
+              decoding="async"
+              onError={refresh}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
