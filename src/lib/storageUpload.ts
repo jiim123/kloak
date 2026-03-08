@@ -1,4 +1,5 @@
 import { getKeyHashAsync } from "@/integrations/supabase/client";
+import { getSignedAttachmentUrl } from "@/lib/signedUrl";
 
 const STORAGE_FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/storage-upload`;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -65,7 +66,15 @@ export async function secureUpload(
     const err = await res.json().catch(() => ({ error: "Upload failed" }));
     throw new Error(err.error || "Upload failed");
   }
-  return res.json();
+  const result: { publicUrl: string; path: string } = await res.json();
+
+  // Pre-warm the signed URL cache for attachment uploads so the sender sees
+  // their own image instantly without waiting for the hook to resolve.
+  if (bucket === "attachments" && result.path) {
+    getSignedAttachmentUrl(result.path).catch(() => {});
+  }
+
+  return result;
 }
 
 /**
