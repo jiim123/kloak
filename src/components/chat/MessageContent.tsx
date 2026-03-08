@@ -117,6 +117,9 @@ const isTrustedInlineImageUrl = (url: string): boolean => {
       if (parsed.pathname.endsWith("/functions/v1/fetch-link-preview-asset")) return true;
     }
 
+    // Trust Klipy GIF CDN URLs
+    if (/klipy/i.test(parsed.host)) return true;
+
     return false;
   } catch {
     return false;
