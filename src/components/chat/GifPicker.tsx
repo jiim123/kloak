@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Search, X, Clock, TrendingUp, Loader2 } from "lucide-react";
+import { Search, X, Clock, TrendingUp } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,25 +16,37 @@ import {
 interface GifPickerProps {
   children: React.ReactNode;
   onSelect: (url: string) => void;
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 type Tab = "trending" | "recent";
 
 const GIF_GRID_SKELETON = Array.from({ length: 9 });
 
-/** Pick the best URL for grid thumbnails (small webp) and for sending (hd gif). */
+/** Pick the best URL for grid thumbnails (small webp/gif). */
 function getThumbnailUrl(gif: KlipyGif): string {
-  return gif.file?.sm?.webp?.url || gif.file?.sm?.gif?.url || gif.file?.md?.gif?.url || "";
+  return (
+    gif.file?.sm?.webp?.url ||
+    gif.file?.sm?.gif?.url ||
+    gif.file?.md?.webp?.url ||
+    gif.file?.md?.gif?.url ||
+    gif.file?.hd?.gif?.url ||
+    ""
+  );
 }
 
+/** Pick the best URL for the sent message (high quality). */
 function getOriginalUrl(gif: KlipyGif): string {
-  return gif.file?.hd?.gif?.url || gif.file?.md?.gif?.url || getThumbnailUrl(gif);
+  return (
+    gif.file?.hd?.gif?.url ||
+    gif.file?.md?.gif?.url ||
+    getThumbnailUrl(gif)
+  );
 }
 
 export const GifPicker = ({ children, onSelect, open, onOpenChange }: GifPickerProps) => {
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
   const [tab, setTab] = useState<Tab>("trending");
   const [query, setQuery] = useState("");
   const [gifs, setGifs] = useState<KlipyGif[]>([]);
@@ -42,30 +54,27 @@ export const GifPicker = ({ children, onSelect, open, onOpenChange }: GifPickerP
   const [loading, setLoading] = useState(false);
   const [recentLoading, setRecentLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const hasFetchedTrending = useRef(false);
-  const hasFetchedRecent = useRef(false);
 
-  // Fetch trending on first open
+  // Fetch trending GIFs when the picker opens
   useEffect(() => {
-    if (!open) {
-      hasFetchedTrending.current = false;
-      hasFetchedRecent.current = false;
-      return;
-    }
-    if (hasFetchedTrending.current) return;
-    hasFetchedTrending.current = true;
+    if (!open) return;
+
     setLoading(true);
     fetchTrendingGifs(24, user?.id)
-      .then(setGifs)
-      .catch((err) => { console.error('[GifPicker] trending fetch failed:', err); setGifs([]); })
+      .then((result) => {
+        setGifs(result);
+      })
+      .catch((err) => {
+        console.error("[GifPicker] Failed to load trending:", err);
+        setGifs([]);
+      })
       .finally(() => setLoading(false));
   }, [open, user?.id]);
 
-  // Fetch recent when tab switches
+  // Fetch recent GIFs when "recent" tab is selected
   useEffect(() => {
-    if (!open || tab !== "recent" || hasFetchedRecent.current || !user?.id) return;
-    hasFetchedRecent.current = true;
+    if (!open || tab !== "recent" || !user?.id) return;
+
     setRecentLoading(true);
     fetchRecentGifs(user.id)
       .then(setRecentGifs)
@@ -78,7 +87,9 @@ export const GifPicker = ({ children, onSelect, open, onOpenChange }: GifPickerP
     (value: string) => {
       setQuery(value);
       if (debounceRef.current) clearTimeout(debounceRef.current);
+
       if (!value.trim()) {
+        // Revert to trending
         setLoading(true);
         fetchTrendingGifs(24, user?.id)
           .then(setGifs)
@@ -86,6 +97,7 @@ export const GifPicker = ({ children, onSelect, open, onOpenChange }: GifPickerP
           .finally(() => setLoading(false));
         return;
       }
+
       debounceRef.current = setTimeout(() => {
         setLoading(true);
         searchGifs(value.trim(), 24, user?.id)
@@ -102,7 +114,7 @@ export const GifPicker = ({ children, onSelect, open, onOpenChange }: GifPickerP
       const url = getOriginalUrl(gif);
       if (!url) return;
       onSelect(url);
-      onOpenChange?.(false);
+      onOpenChange(false);
       // Fire-and-forget share trigger
       if (gif.slug) {
         shareGif(gif.slug, user?.id);
@@ -168,7 +180,6 @@ export const GifPicker = ({ children, onSelect, open, onOpenChange }: GifPickerP
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50 pointer-events-none" />
               <input
-                ref={searchInputRef}
                 type="text"
                 value={query}
                 onChange={(e) => handleSearchChange(e.target.value)}
