@@ -190,7 +190,7 @@ export const useRealtimeServer = (serverId: string | null) => {
               const { data } = await supabase
                 .from('channel_members')
                 .select('id')
-                .eq('channel_id', newChannel.id)
+                .eq('channel_id', newChannel.id as string)
                 .eq('user_id', userId)
                 .maybeSingle();
               if (!data) return;
@@ -200,24 +200,24 @@ export const useRealtimeServer = (serverId: string | null) => {
               channels: [
                 ...state.channels,
                 {
-                  id: newChannel.id,
-                  server_id: newChannel.server_id,
-                  category_id: newChannel.category_id,
-                  linked_voice_channel_id: newChannel.linked_voice_channel_id ?? null,
-                  name: newChannel.name,
-                  topic: newChannel.topic,
+                  id: newChannel.id as string,
+                  server_id: newChannel.server_id as string,
+                  category_id: (newChannel.category_id as string | null) ?? null,
+                  linked_voice_channel_id: (newChannel.linked_voice_channel_id as string | null) ?? null,
+                  name: newChannel.name as string,
+                  topic: (newChannel.topic as string | null) ?? null,
                   type: (newChannel.type as Channel['type']) || 'text',
-                  position: newChannel.position || 0,
-                  is_nsfw: newChannel.is_nsfw || false,
-                  slowmode_seconds: newChannel.slowmode_seconds || 0,
-                  is_read_only: newChannel.is_read_only || false,
-                  is_private: newChannel.is_private || false,
-                  icon: newChannel.icon,
-                  created_at: newChannel.created_at,
-                  block_links: newChannel.block_links || false,
-                  allowed_link_domains: newChannel.allowed_link_domains || [],
-                  ghost_mode: newChannel.ghost_mode || false,
-                },
+                  position: (newChannel.position as number) || 0,
+                  is_nsfw: (newChannel.is_nsfw as boolean) || false,
+                  slowmode_seconds: (newChannel.slowmode_seconds as number) || 0,
+                  is_read_only: (newChannel.is_read_only as boolean) || false,
+                  is_private: (newChannel.is_private as boolean) || false,
+                  icon: (newChannel.icon as string | null) ?? null,
+                  created_at: newChannel.created_at as string,
+                  block_links: (newChannel.block_links as boolean) || false,
+                  allowed_link_domains: (newChannel.allowed_link_domains as string[]) || [],
+                  ghost_mode: (newChannel.ghost_mode as boolean) || false,
+                } as Channel,
               ],
             }));
           } catch (error) {
@@ -308,13 +308,13 @@ export const useRealtimeServer = (serverId: string | null) => {
               categories: [
                 ...state.categories,
                 {
-                  id: newCat.id,
-                  server_id: newCat.server_id,
-                  name: newCat.name,
-                  position: newCat.position || 0,
-                  is_collapsed: newCat.is_collapsed || false,
-                  created_at: newCat.created_at,
-                },
+                  id: newCat.id as string,
+                  server_id: newCat.server_id as string,
+                  name: newCat.name as string,
+                  position: (newCat.position as number) || 0,
+                  is_collapsed: (newCat.is_collapsed as boolean) || false,
+                  created_at: newCat.created_at as string,
+                } as import('@/types').ChannelCategory,
               ],
             }));
           } catch (error) {
