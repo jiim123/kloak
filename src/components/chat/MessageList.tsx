@@ -287,11 +287,19 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }
   }, [messages, channelId, markAsRead]);
 
-  // Fix A: New message nudge — useLayoutEffect with programmatic scroll guard
+  // New message nudge — tracks lastMessageId for reliable detection
   useLayoutEffect(() => {
     const currentLength = messages.length;
     const prevLength = prevMessagesLengthRef.current;
-    if (currentLength > prevLength && prevLength > 0) {
+    const currentLastId = lastMessageId;
+    const prevLastId = lastNudgedMessageIdRef.current;
+
+    // Detect genuinely new message: either length increased or last ID changed
+    const hasNewMessage =
+      (currentLength > prevLength && prevLength > 0) ||
+      (currentLastId !== null && prevLastId !== null && currentLastId !== prevLastId && prevLength > 0);
+
+    if (hasNewMessage) {
       const node = containerRef.current;
       const actualDistanceFromBottom = node
         ? node.scrollHeight - node.scrollTop - node.clientHeight
@@ -299,7 +307,8 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       const effectivelyAtBottom = isNearBottomRef.current || actualDistanceFromBottom <= 400;
 
       if (!effectivelyAtBottom) {
-        setNewMessageCount((prev) => prev + (currentLength - prevLength));
+        const added = Math.max(1, currentLength - prevLength);
+        setNewMessageCount((prev) => prev + added);
       } else {
         // Guard: mark as programmatic so handleScroll won't corrupt isNearBottomRef
         isProgrammaticScrollRef.current = true;
@@ -313,17 +322,35 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
         };
         // Immediate (before paint via useLayoutEffect)
         nudge();
-        // Retry at 100ms and 250ms for async content (images, embeds)
-        setTimeout(nudge, 100);
+        // Retry at 50ms, 150ms, 300ms for async content (images, embeds)
+        setTimeout(nudge, 50);
+        setTimeout(nudge, 150);
         setTimeout(() => {
           nudge();
           // Release guard after final nudge
           isProgrammaticScrollRef.current = false;
-        }, 250);
+        }, 300);
       }
     }
+
     prevMessagesLengthRef.current = currentLength;
-  }, [messages.length]);
+    if (currentLastId) lastNudgedMessageIdRef.current = currentLastId;
+  }, [lastMessageId, messages.length]);
+
+  // Safety-net: periodic check to ensure we stay at bottom when we should be
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!isNearBottomRef.current) return;
+      if (isProgrammaticScrollRef.current) return;
+      const node = containerRef.current;
+      if (!node) return;
+      const distanceFromBottom = node.scrollHeight - node.scrollTop - node.clientHeight;
+      if (distanceFromBottom > 2) {
+        node.scrollTop = node.scrollHeight;
+      }
+    }, 500);
+    return () => clearInterval(interval);
+  }, [channelId]);
 
   const newMessagesDividerIndex = useMemo(() => {
     if (!lastReadAt || !firstUnreadMessageId) return -1;
