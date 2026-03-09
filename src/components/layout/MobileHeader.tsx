@@ -47,6 +47,9 @@ export const MobileHeader = memo(({ isDMView, showFriends, showExplore }: Mobile
   }, [isDMView, currentChannel]);
 
   const openSidebar = useCallback(() => setMobileSidebarOpen(true), [setMobileSidebarOpen]);
+  const toggleMembers = useCallback(() => setMemberSidebarOpen(!isMemberSidebarOpen), [setMemberSidebarOpen, isMemberSidebarOpen]);
+
+  const showMembersToggle = !isDMView && currentServer;
 
   return (
     <header
