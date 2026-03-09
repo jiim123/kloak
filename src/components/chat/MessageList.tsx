@@ -482,6 +482,35 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     });
   }, [isLoading, msgCount]);
 
+  // Fix C: ResizeObserver — auto-scroll when content grows (images, embeds load)
+  // while user is at bottom
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+
+    lastScrollHeightRef.current = node.scrollHeight;
+
+    const observer = new ResizeObserver(() => {
+      const n = containerRef.current;
+      if (!n) return;
+      const newHeight = n.scrollHeight;
+      const oldHeight = lastScrollHeightRef.current;
+      if (newHeight > oldHeight && isNearBottomRef.current) {
+        n.scrollTop = n.scrollHeight;
+      }
+      lastScrollHeightRef.current = newHeight;
+    });
+
+    // Observe the inner content wrapper for size changes
+    const contentWrapper = node.firstElementChild;
+    if (contentWrapper) {
+      observer.observe(contentWrapper);
+    }
+    observer.observe(node);
+
+    return () => observer.disconnect();
+  }, [channelId, msgCount > 0]); // re-attach when channel changes or first messages arrive
+
   const authorStyleMapRef = useRef(authorStyleMap);
   authorStyleMapRef.current = authorStyleMap;
   const customEmojiMapRef = useRef(customEmojiMap);
