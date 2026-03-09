@@ -64,8 +64,8 @@ export const ChannelHeader = ({ channel }: ChannelHeaderProps) => {
           <TooltipTrigger asChild>
             <Button
               variant="ghost"
-              size="icon-sm"
-              className="rounded-lg text-muted-foreground hover:text-foreground"
+              size="icon"
+              className="relative w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground"
               onClick={() => openModal("pinned-messages", { channelId: channel.id })}
             >
               <Pin className="w-4 h-4" />
@@ -78,8 +78,8 @@ export const ChannelHeader = ({ channel }: ChannelHeaderProps) => {
           <TooltipTrigger asChild>
             <Button
               variant="ghost"
-              size="icon-sm"
-              className="rounded-lg text-muted-foreground hover:text-foreground"
+              size="icon"
+              className="relative w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground"
               onClick={() => openModal("search", { channelId: channel.id })}
             >
               <Search className="w-4 h-4" />
