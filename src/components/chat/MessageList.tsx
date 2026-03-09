@@ -434,8 +434,11 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     pendingPrependAnchorRef.current = null;
   }, [prependComplete]);
 
-  // Scroll handler — always syncs isNearBottomRef, only updates state on transitions
+  // Scroll handler — skips during programmatic scrolls, always syncs isNearBottomRef
   const handleScroll = useCallback(() => {
+    // Fix B: Skip entirely during programmatic scrolls to prevent ref corruption
+    if (isProgrammaticScrollRef.current) return;
+
     const node = containerRef.current;
     if (!node) return;
 
@@ -443,14 +446,14 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     const atBottom = distanceFromBottom <= 300;
     const wasAtBottom = isNearBottomRef.current;
 
-    // Fix A: ALWAYS sync the ref so it never gets stuck
+    // ALWAYS sync the ref so it never gets stuck
     isNearBottomRef.current = atBottom;
 
     // Track scroll height for ResizeObserver
     lastScrollHeightRef.current = node.scrollHeight;
 
-    // Load older — only when genuinely near top and not during programmatic scroll
-    if (node.scrollTop <= 96 && !isProgrammaticScrollRef.current && !atBottom && distanceFromBottom > 300) {
+    // Load older — only when genuinely near top
+    if (node.scrollTop <= 96 && !atBottom && distanceFromBottom > 300) {
       handleLoadOlder();
     }
 
