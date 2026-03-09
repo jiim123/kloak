@@ -1,6 +1,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { createServiceClient, enforceRateLimit, getClientId } from "../_shared/edgeSecurity.ts";
+import {
+  hashIp,
+  getClientIpRaw,
+  checkRegistrationRateLimit,
+  validateUsernameServerSide,
+} from "../_shared/registrationSecurity.ts";
 
 interface RegisterBody {
   username: string;
@@ -52,7 +58,19 @@ Deno.serve(async (req) => {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
-    // Rate limit: 5 registration attempts per 5 minutes per client IP
+    // ─── Phase 3: IP-based rate limiting (runs FIRST) ───────────────────
+    const rawIp = getClientIpRaw(req);
+    const ipHash = await hashIp(rawIp);
+    const rateResult = await checkRegistrationRateLimit(supabase, ipHash);
+
+    if (!rateResult.allowed) {
+      return new Response(
+        JSON.stringify({ error: "Too many registration attempts. Please try again later." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // ─── Existing edge-level rate limit (kept for backward compat) ──────
     const sharedClient = createServiceClient();
     const clientId = getClientId(req);
     const rateScope = `client:${clientId}`;
@@ -63,13 +81,22 @@ Deno.serve(async (req) => {
       rateOk = true;
     }
     if (!rateOk) {
-      return new Response(JSON.stringify({ error: "Rate limited: too many registration attempts" }), {
-        status: 429,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Too many registration attempts. Please try again later." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
-    // Fetch the challenge
+    // ─── Phase 2: Username validation (runs BEFORE account creation) ────
+    const usernameCheck = validateUsernameServerSide(username);
+    if (!usernameCheck.valid) {
+      return new Response(
+        JSON.stringify({ error: usernameCheck.error || "Username is not allowed" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // ─── Fetch and verify the PoW challenge ─────────────────────────────
     const { data: challenge, error: challengeError } = await supabase
       .from("pow_challenges")
       .select("*")
@@ -99,7 +126,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Verify the PoW solution
+    // ─── Phase 4: Verify PoW at SERVER-DICTATED difficulty ──────────────
+    // The difficulty stored in the challenge is what the server assigned.
+    // We verify against that, NOT any client-reported value.
     const hash = await sha256Hex(challenge.nonce + solution);
     const target = "0".repeat(challenge.difficulty);
     if (!hash.startsWith(target)) {

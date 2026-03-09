@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { createServiceClient, enforceRateLimit, getClientId } from "../_shared/edgeSecurity.ts";
+import { hashIp, getClientIpRaw, peekAttemptCount, getDynamicDifficulty } from "../_shared/registrationSecurity.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -31,13 +32,18 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Dynamic difficulty based on IP registration attempts
+    const rawIp = getClientIpRaw(req);
+    const ipHash = await hashIp(rawIp);
+    const currentAttempts = await peekAttemptCount(supabase, ipHash);
+    const difficulty = getDynamicDifficulty(currentAttempts);
+
     // Generate a random nonce
     const nonceBytes = new Uint8Array(16);
     crypto.getRandomValues(nonceBytes);
     const nonce = Array.from(nonceBytes, (b) => b.toString(16).padStart(2, "0")).join("");
 
-    const difficulty = 4;
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 minutes
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString(); // 5 minutes (shorter TTL)
 
     const { data, error } = await supabase
       .from("pow_challenges")
