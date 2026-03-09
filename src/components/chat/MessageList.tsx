@@ -535,8 +535,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }, 300);
   }, [isLoading, msgCount]);
 
-  // Fix C: ResizeObserver — observe the actual messages wrapper (data-messages-container)
-  // so async content growth (images, embeds) triggers auto-scroll when at bottom
+  // ResizeObserver + MutationObserver — dual safety net for auto-scroll
   const messagesWrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -545,25 +544,34 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
 
     lastScrollHeightRef.current = node.scrollHeight;
 
-    const observer = new ResizeObserver(() => {
+    const autoScrollIfNeeded = () => {
       const n = containerRef.current;
-      if (!n) return;
+      if (!n || !isNearBottomRef.current) return;
       const newHeight = n.scrollHeight;
       const oldHeight = lastScrollHeightRef.current;
-      if (newHeight > oldHeight && isNearBottomRef.current) {
+      if (newHeight > oldHeight) {
         n.scrollTop = n.scrollHeight;
         isNearBottomRef.current = true;
       }
       lastScrollHeightRef.current = newHeight;
-    });
+    };
 
-    // Observe the messages content wrapper (the div that actually grows)
+    // ResizeObserver: catches element size changes (images loading, embeds expanding)
+    const resizeObserver = new ResizeObserver(autoScrollIfNeeded);
+
+    // MutationObserver: catches new DOM nodes being added (new messages rendered)
+    const mutationObserver = new MutationObserver(autoScrollIfNeeded);
+
     const wrapper = messagesWrapperRef.current;
     if (wrapper) {
-      observer.observe(wrapper);
+      resizeObserver.observe(wrapper);
+      mutationObserver.observe(wrapper, { childList: true, subtree: true });
     }
 
-    return () => observer.disconnect();
+    return () => {
+      resizeObserver.disconnect();
+      mutationObserver.disconnect();
+    };
   }, [channelId, msgCount > 0]); // re-attach when channel changes or first messages arrive
 
   const authorStyleMapRef = useRef(authorStyleMap);
