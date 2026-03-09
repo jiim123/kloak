@@ -949,7 +949,7 @@ export const ServerSidebar = () => {
                   </MotionButton>
                 </TooltipTrigger>
                 <TooltipContent side="right" className="font-medium">
-                  Home{totalDMUnread > 0 ? ` (${totalDMUnread} unread)` : ""}
+                  Home{totalHomeBadge > 0 ? ` (${totalHomeBadge} unread)` : ""}
                 </TooltipContent>
               </Tooltip>
 
