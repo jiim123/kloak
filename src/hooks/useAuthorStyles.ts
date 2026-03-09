@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
+import { useServerStore } from "@/stores/serverStore";
 import type { CustomServerRole, ServerRole } from "@/types";
 
 const AUTHOR_STYLE_FETCH_CHUNK = 100;
@@ -38,6 +39,8 @@ const parseRows = (payload: unknown): AuthorStyle[] => {
 
 export const useAuthorStyles = (serverId: string | null | undefined, targetUserIds: Array<string | null | undefined>) => {
   const userId = useAuthStore((s) => s.user?.id ?? null);
+  const members = useServerStore((s) => s.members);
+  const roles = useServerStore((s) => s.roles);
   const [styleMap, setStyleMap] = useState<Record<string, AuthorStyle>>({});
 
   const normalizedIds = useMemo(() => normalizeTargetUserIds(targetUserIds), [targetUserIds]);
@@ -46,9 +49,32 @@ export const useAuthorStyles = (serverId: string | null | undefined, targetUserI
     setStyleMap({});
   }, [serverId]);
 
+  const liveStyleMap = useMemo(() => {
+    if (!serverId || normalizedIds.length === 0) return {};
+
+    const roleById = new Map(roles.map((role) => [role.id, role]));
+    const memberByUserId = new Map(
+      members.filter((member) => member.server_id === serverId).map((member) => [member.user_id, member]),
+    );
+
+    const next: Record<string, AuthorStyle> = {};
+    for (const id of normalizedIds) {
+      const member = memberByUserId.get(id);
+      if (!member) continue;
+      next[id] = {
+        user_id: id,
+        role: member.role ?? null,
+        nickname: member.nickname ?? null,
+        roles: (member.roles ?? []).map((role) => roleById.get(role.id) ?? role),
+      };
+    }
+
+    return next;
+  }, [members, normalizedIds, roles, serverId]);
+
   const missingIds = useMemo(
-    () => normalizedIds.filter((id) => !styleMap[id]),
-    [normalizedIds, styleMap],
+    () => normalizedIds.filter((id) => !liveStyleMap[id] && !styleMap[id]),
+    [liveStyleMap, normalizedIds, styleMap],
   );
 
   useEffect(() => {
@@ -99,6 +125,6 @@ export const useAuthorStyles = (serverId: string | null | undefined, targetUserI
     };
   }, [serverId, userId, missingIds]);
 
-  return styleMap;
+  return useMemo(() => ({ ...styleMap, ...liveStyleMap }), [liveStyleMap, styleMap]);
 };
 
