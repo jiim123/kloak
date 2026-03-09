@@ -1530,6 +1530,36 @@ export type Database = {
           },
         ]
       }
+      registration_rate_limits: {
+        Row: {
+          attempt_count: number
+          daily_count: number
+          daily_window_start: string
+          id: string
+          ip_hash: string
+          last_attempt_at: string
+          window_start: string
+        }
+        Insert: {
+          attempt_count?: number
+          daily_count?: number
+          daily_window_start?: string
+          id?: string
+          ip_hash: string
+          last_attempt_at?: string
+          window_start?: string
+        }
+        Update: {
+          attempt_count?: number
+          daily_count?: number
+          daily_window_start?: string
+          id?: string
+          ip_hash?: string
+          last_attempt_at?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       role_permissions: {
         Row: {
           allowed: boolean
