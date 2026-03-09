@@ -163,12 +163,14 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
   const [globalEmojiMap, setGlobalEmojiMap] = useState<Map<string, ResolvedEmoji>>(new Map());
   const [showJumpToPresent, setShowJumpToPresent] = useState(false);
+  const showJumpToPresentRef = useRef(false);
   const [newMessageCount, setNewMessageCount] = useState(0);
   const isNearBottomRef = useRef(true);
   const lastMarkedMessageIdRef = useRef<string | null>(null);
   const prevMessagesLengthRef = useRef(0);
   const prevChannelIdRef = useRef<string>(channelId);
   const didInitialBottomScrollRef = useRef(false);
+  const lastScrollHeightRef = useRef(0);
   const pendingPrependAnchorRef = useRef<{
     requestId: number;
     prevTop: number;
