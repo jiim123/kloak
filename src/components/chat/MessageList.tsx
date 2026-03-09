@@ -337,20 +337,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     if (currentLastId) lastNudgedMessageIdRef.current = currentLastId;
   }, [lastMessageId, messages.length]);
 
-  // Safety-net: periodic check to ensure we stay at bottom when we should be
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (!isNearBottomRef.current) return;
-      if (isProgrammaticScrollRef.current) return;
-      const node = containerRef.current;
-      if (!node) return;
-      const distanceFromBottom = node.scrollHeight - node.scrollTop - node.clientHeight;
-      if (distanceFromBottom > 2) {
-        node.scrollTop = node.scrollHeight;
-      }
-    }, 500);
-    return () => clearInterval(interval);
-  }, [channelId]);
+  // Safety-net removed: it was forcing users back to bottom on small scrolls
 
   const newMessagesDividerIndex = useMemo(() => {
     if (!lastReadAt || !firstUnreadMessageId) return -1;
