@@ -190,7 +190,7 @@ export const useRealtimeServer = (serverId: string | null) => {
               const { data } = await supabase
                 .from('channel_members')
                 .select('id')
-                .eq('channel_id', newChannel.id)
+                .eq('channel_id', newChannel.id as string)
                 .eq('user_id', userId)
                 .maybeSingle();
               if (!data) return;
