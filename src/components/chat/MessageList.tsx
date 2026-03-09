@@ -304,7 +304,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       const actualDistanceFromBottom = node
         ? node.scrollHeight - node.scrollTop - node.clientHeight
         : 0;
-      const effectivelyAtBottom = isNearBottomRef.current || actualDistanceFromBottom <= 400;
+      const effectivelyAtBottom = isNearBottomRef.current || actualDistanceFromBottom <= 150;
 
       if (!effectivelyAtBottom) {
         const added = Math.max(1, currentLength - prevLength);
