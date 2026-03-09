@@ -1149,7 +1149,7 @@ export const HorizontalServerSidebar = () => {
                       className="absolute -bottom-3 left-1/2 -translate-x-1/2 h-1 bg-foreground rounded-t-full"
                       variants={pillVariants}
                       initial="hidden"
-                      animate={getPillState(null, false)}
+                      animate={getPillState(null, hasHomeUnread)}
                       transition={{ type: "spring", stiffness: 500, damping: 30 }}
                     />
 
