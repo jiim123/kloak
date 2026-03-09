@@ -279,7 +279,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }
   }, [messages, channelId, markAsRead]);
 
-  // Fix A: New message nudge — useLayoutEffect so scroll adjusts before paint
+  // Fix A: New message nudge — useLayoutEffect with programmatic scroll guard
   useLayoutEffect(() => {
     const currentLength = messages.length;
     const prevLength = prevMessagesLengthRef.current;
@@ -293,7 +293,8 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       if (!effectivelyAtBottom) {
         setNewMessageCount((prev) => prev + (currentLength - prevLength));
       } else {
-        // Multi-frame nudge for resilience
+        // Guard: mark as programmatic so handleScroll won't corrupt isNearBottomRef
+        isProgrammaticScrollRef.current = true;
         const nudge = () => {
           const n = containerRef.current;
           if (n) {
@@ -306,7 +307,11 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
         nudge();
         // Retry at 100ms and 250ms for async content (images, embeds)
         setTimeout(nudge, 100);
-        setTimeout(nudge, 250);
+        setTimeout(() => {
+          nudge();
+          // Release guard after final nudge
+          isProgrammaticScrollRef.current = false;
+        }, 250);
       }
     }
     prevMessagesLengthRef.current = currentLength;
