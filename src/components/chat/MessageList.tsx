@@ -228,6 +228,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   useEffect(() => {
     if (manageCurrentChannel) setCurrentChannel(channelId);
     prevMessagesLengthRef.current = 0;
+    lastNudgedMessageIdRef.current = null;
     lastMarkedMessageIdRef.current = null;
     setShowJumpToPresent(false);
     showJumpToPresentRef.current = false;
