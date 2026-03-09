@@ -76,6 +76,17 @@ export const MobileHeader = memo(({ isDMView, showFriends, showExplore }: Mobile
 
         {/* Right: Action buttons */}
         <div className="flex items-center gap-1 shrink-0">
+          {showMembersToggle && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-11 h-11 shrink-0 rounded-xl active:scale-95 transition-transform"
+              onClick={toggleMembers}
+              aria-label="Toggle members"
+            >
+              <Users className="w-5 h-5" />
+            </Button>
+          )}
           <div className="[&_button]:w-11 [&_button]:h-11 [&_button]:rounded-xl [&_button]:active:scale-95 [&_button]:transition-transform">
             <NotificationBell />
           </div>
