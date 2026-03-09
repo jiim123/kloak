@@ -304,7 +304,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       const actualDistanceFromBottom = node
         ? node.scrollHeight - node.scrollTop - node.clientHeight
         : 0;
-      const effectivelyAtBottom = isNearBottomRef.current || actualDistanceFromBottom <= 400;
+      const effectivelyAtBottom = isNearBottomRef.current || actualDistanceFromBottom <= 150;
 
       if (!effectivelyAtBottom) {
         const added = Math.max(1, currentLength - prevLength);
@@ -337,20 +337,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     if (currentLastId) lastNudgedMessageIdRef.current = currentLastId;
   }, [lastMessageId, messages.length]);
 
-  // Safety-net: periodic check to ensure we stay at bottom when we should be
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (!isNearBottomRef.current) return;
-      if (isProgrammaticScrollRef.current) return;
-      const node = containerRef.current;
-      if (!node) return;
-      const distanceFromBottom = node.scrollHeight - node.scrollTop - node.clientHeight;
-      if (distanceFromBottom > 2) {
-        node.scrollTop = node.scrollHeight;
-      }
-    }, 500);
-    return () => clearInterval(interval);
-  }, [channelId]);
+  // Safety-net removed: it was forcing users back to bottom on small scrolls
 
   const newMessagesDividerIndex = useMemo(() => {
     if (!lastReadAt || !firstUnreadMessageId) return -1;
@@ -483,7 +470,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     if (!node) return;
 
     const distanceFromBottom = node.scrollHeight - node.scrollTop - node.clientHeight;
-    const atBottom = distanceFromBottom <= 300;
+    const atBottom = distanceFromBottom <= 100;
     const wasAtBottom = isNearBottomRef.current;
 
     // ALWAYS sync the ref so it never gets stuck
