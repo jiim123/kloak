@@ -27,6 +27,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { useUnreadDMsContext } from "@/hooks/useUnreadDMsContext";
 import { useUnreadChannelsContext } from "@/hooks/useUnreadChannelsContext";
 import { useDMStore } from "@/stores/dmStore";
+import { useFriendStore } from "@/stores/friendStore";
 import { supabase } from "@/integrations/supabase/client";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { SupportUsButton } from "@/components/support/SupportUsButton";
@@ -817,6 +818,9 @@ export const HorizontalServerSidebar = () => {
   }, [servers]);
 
   const { totalUnread: totalDMUnread, hasUnread: hasDMUnread } = useUnreadDMsContext();
+  const pendingFriendCount = useFriendStore((s) => s.pendingRequests.length);
+  const totalHomeBadge = totalDMUnread + pendingFriendCount;
+  const hasHomeUnread = hasDMUnread || pendingFriendCount > 0;
 
   const getServerInitials = (name: string) => {
     return name
@@ -1145,7 +1149,7 @@ export const HorizontalServerSidebar = () => {
                       className="absolute -bottom-3 left-1/2 -translate-x-1/2 h-1 bg-foreground rounded-t-full"
                       variants={pillVariants}
                       initial="hidden"
-                      animate={getPillState(null, false)}
+                      animate={getPillState(null, hasHomeUnread)}
                       transition={{ type: "spring", stiffness: 500, damping: 30 }}
                     />
 
@@ -1165,10 +1169,23 @@ export const HorizontalServerSidebar = () => {
                     >
                       <Home className="w-4 h-4" />
                     </motion.div>
+                    {/* Unread / pending badge */}
+                    <AnimatePresence>
+                      {totalHomeBadge > 0 && currentServer !== null && (
+                        <motion.span
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          exit={{ scale: 0 }}
+                          className="absolute -bottom-1 -right-1 min-w-[16px] h-[16px] bg-destructive rounded-[4px] text-[10px] text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
+                        >
+                          {totalHomeBadge > 99 ? "99+" : totalHomeBadge}
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
                   </MotionButton>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="font-medium">
-                  Home
+                  Home{totalHomeBadge > 0 ? ` (${totalHomeBadge} unread)` : ""}
                 </TooltipContent>
               </Tooltip>
 

@@ -13,6 +13,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { useUnreadDMsContext } from "@/hooks/useUnreadDMsContext";
 import { useUnreadChannelsContext } from "@/hooks/useUnreadChannelsContext";
 import { useDMStore } from "@/stores/dmStore";
+import { useFriendStore } from "@/stores/friendStore";
 import { supabase } from "@/integrations/supabase/client";
 import {
   DndContext,
@@ -617,6 +618,9 @@ export const ServerSidebar = () => {
   }, [servers]);
 
   const { totalUnread: totalDMUnread, hasUnread: hasDMUnread } = useUnreadDMsContext();
+  const pendingFriendCount = useFriendStore((s) => s.pendingRequests.length);
+  const totalHomeBadge = totalDMUnread + pendingFriendCount;
+  const hasHomeUnread = hasDMUnread || pendingFriendCount > 0;
 
   const getServerInitials = (name: string) => {
     return name
@@ -886,7 +890,7 @@ export const ServerSidebar = () => {
                       className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 bg-foreground rounded-r-full"
                       variants={pillVariants}
                       initial="hidden"
-                      animate={getPillState(null, hasDMUnread)}
+                      animate={getPillState(null, hasHomeUnread)}
                       transition={{ type: "spring", stiffness: 500, damping: 30 }}
                     />
 
@@ -931,21 +935,21 @@ export const ServerSidebar = () => {
 
                     {/* Unread DM badge */}
                     <AnimatePresence>
-                      {totalDMUnread > 0 && currentServer !== null && (
+                      {totalHomeBadge > 0 && currentServer !== null && (
                         <motion.span
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
                           exit={{ scale: 0 }}
                           className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
                         >
-                          {totalDMUnread > 99 ? "99+" : totalDMUnread}
+                          {totalHomeBadge > 99 ? "99+" : totalHomeBadge}
                         </motion.span>
                       )}
                     </AnimatePresence>
                   </MotionButton>
                 </TooltipTrigger>
                 <TooltipContent side="right" className="font-medium">
-                  Home{totalDMUnread > 0 ? ` (${totalDMUnread} unread)` : ""}
+                  Home{totalHomeBadge > 0 ? ` (${totalHomeBadge} unread)` : ""}
                 </TooltipContent>
               </Tooltip>
 
