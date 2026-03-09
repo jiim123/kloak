@@ -192,6 +192,13 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   const deduplicatedMessagesRef = useRef(deduplicatedMessages);
   deduplicatedMessagesRef.current = deduplicatedMessages;
 
+  // Stable last-message-id for detecting genuinely new messages
+  const lastMessageId = useMemo(() => {
+    if (messages.length === 0) return null;
+    return messages[messages.length - 1].id;
+  }, [messages]);
+  const lastNudgedMessageIdRef = useRef<string | null>(null);
+
   if (prevChannelIdRef.current !== channelId) {
     prevChannelIdRef.current = channelId;
     didInitialBottomScrollRef.current = false;
