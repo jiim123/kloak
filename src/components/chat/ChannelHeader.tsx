@@ -4,6 +4,8 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useUIStore } from "@/stores/uiStore";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { SupportUsButton } from "@/components/support/SupportUsButton";
 import type { Channel } from "@/types";
 
 interface ChannelHeaderProps {
@@ -16,7 +18,7 @@ export const ChannelHeader = ({ channel }: ChannelHeaderProps) => {
   const ChannelIcon = channel.type === "voice" ? Volume2 : channel.type === "forum" ? MessageSquare : channel.type === "announcement" ? Megaphone : channel.type === "media" ? Film : Hash;
 
   return (
-    <div className="h-12 px-4 hidden md:flex items-center justify-between border-b border-border/50 flex-shrink-0 bg-background">
+    <div className="px-4 py-3 hidden md:flex items-center justify-between border-b border-border/50 flex-shrink-0 bg-background">
       {/* Left side - Channel info */}
       <div className="flex items-center gap-2 min-w-0 flex-1">
         <div className="w-8 h-8 rounded-lg bg-secondary/50 flex items-center justify-center flex-shrink-0">
@@ -57,17 +59,16 @@ export const ChannelHeader = ({ channel }: ChannelHeaderProps) => {
       </div>
 
       {/* Right side - Actions */}
-      <div className="flex items-center gap-1 flex-shrink-0">
+      <div className="flex items-center gap-0.5 flex-shrink-0">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
               variant="ghost"
-              size="sm"
-              className="gap-1.5 rounded-lg text-muted-foreground hover:text-foreground"
+              size="icon-sm"
+              className="rounded-lg text-muted-foreground hover:text-foreground"
               onClick={() => openModal("pinned-messages", { channelId: channel.id })}
             >
               <Pin className="w-4 h-4" />
-              <span className="text-sm">Pinned</span>
             </Button>
           </TooltipTrigger>
           <TooltipContent>Pinned Messages</TooltipContent>
@@ -77,16 +78,18 @@ export const ChannelHeader = ({ channel }: ChannelHeaderProps) => {
           <TooltipTrigger asChild>
             <Button
               variant="ghost"
-              size="sm"
-              className="gap-1.5 rounded-lg text-muted-foreground hover:text-foreground"
+              size="icon-sm"
+              className="rounded-lg text-muted-foreground hover:text-foreground"
               onClick={() => openModal("search", { channelId: channel.id })}
             >
               <Search className="w-4 h-4" />
-              <span className="text-sm">Search</span>
             </Button>
           </TooltipTrigger>
           <TooltipContent>Search Messages</TooltipContent>
         </Tooltip>
+
+        <NotificationBell />
+        <SupportUsButton tooltipsEnabled />
       </div>
     </div>
   );
