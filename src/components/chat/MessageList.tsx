@@ -362,14 +362,11 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     setExternalEditTargetId((current) => (current === messageId ? null : current));
   }, []);
 
-  const handleAtBottomStateChange = useCallback((atBottom: boolean, distanceFromBottom?: number) => {
-    isNearBottomRef.current = atBottom;
+  const handleAtBottomStateChange = useCallback((atBottom: boolean) => {
     if (atBottom) {
       setShowJumpToPresent(false);
+      showJumpToPresentRef.current = false;
       setNewMessageCount(0);
-    }
-    if (!atBottom && (distanceFromBottom ?? 0) >= 600 && deduplicatedMessagesRef.current.length > 10) {
-      setShowJumpToPresent(true);
     }
   }, []);
 
