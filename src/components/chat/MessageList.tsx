@@ -223,6 +223,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     prevMessagesLengthRef.current = 0;
     lastMarkedMessageIdRef.current = null;
     setShowJumpToPresent(false);
+    showJumpToPresentRef.current = false;
     setNewMessageCount(0);
 
     const cacheEntry = useMessageStore.getState().messagesByChannel[channelId];
