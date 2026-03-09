@@ -1,5 +1,5 @@
 import { memo, useMemo, useCallback } from "react";
-import { Menu, Hash, Volume2 } from "lucide-react";
+import { Menu, Hash, Volume2, Users } from "lucide-react";
 import { useServerStore } from "@/stores/serverStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useDMStore } from "@/stores/dmStore";
@@ -17,7 +17,7 @@ const safeAreaStyle = { paddingTop: "env(safe-area-inset-top, 0px)" } as const;
 export const MobileHeader = memo(({ isDMView, showFriends, showExplore }: MobileHeaderProps) => {
   const { currentServer, currentChannel } = useServerStore();
   const { currentConversation } = useDMStore();
-  const { setMobileSidebarOpen } = useUIStore();
+  const { setMobileSidebarOpen, isMemberSidebarOpen, setMemberSidebarOpen } = useUIStore();
 
   const title = useMemo(() => {
     if (isDMView) {
@@ -47,6 +47,9 @@ export const MobileHeader = memo(({ isDMView, showFriends, showExplore }: Mobile
   }, [isDMView, currentChannel]);
 
   const openSidebar = useCallback(() => setMobileSidebarOpen(true), [setMobileSidebarOpen]);
+  const toggleMembers = useCallback(() => setMemberSidebarOpen(!isMemberSidebarOpen), [setMemberSidebarOpen, isMemberSidebarOpen]);
+
+  const showMembersToggle = !isDMView && currentServer;
 
   return (
     <header
@@ -73,6 +76,17 @@ export const MobileHeader = memo(({ isDMView, showFriends, showExplore }: Mobile
 
         {/* Right: Action buttons */}
         <div className="flex items-center gap-1 shrink-0">
+          {showMembersToggle && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-11 h-11 shrink-0 rounded-xl active:scale-95 transition-transform"
+              onClick={toggleMembers}
+              aria-label="Toggle members"
+            >
+              <Users className="w-5 h-5" />
+            </Button>
+          )}
           <div className="[&_button]:w-11 [&_button]:h-11 [&_button]:rounded-xl [&_button]:active:scale-95 [&_button]:transition-transform">
             <NotificationBell />
           </div>
