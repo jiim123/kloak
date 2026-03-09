@@ -935,14 +935,14 @@ export const ServerSidebar = () => {
 
                     {/* Unread DM badge */}
                     <AnimatePresence>
-                      {totalDMUnread > 0 && currentServer !== null && (
+                      {totalHomeBadge > 0 && currentServer !== null && (
                         <motion.span
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
                           exit={{ scale: 0 }}
                           className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
                         >
-                          {totalDMUnread > 99 ? "99+" : totalDMUnread}
+                          {totalHomeBadge > 99 ? "99+" : totalHomeBadge}
                         </motion.span>
                       )}
                     </AnimatePresence>
