@@ -27,6 +27,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { useUnreadDMsContext } from "@/hooks/useUnreadDMsContext";
 import { useUnreadChannelsContext } from "@/hooks/useUnreadChannelsContext";
 import { useDMStore } from "@/stores/dmStore";
+import { useFriendStore } from "@/stores/friendStore";
 import { supabase } from "@/integrations/supabase/client";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { SupportUsButton } from "@/components/support/SupportUsButton";
