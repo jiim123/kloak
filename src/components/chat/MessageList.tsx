@@ -470,7 +470,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     if (!node) return;
 
     const distanceFromBottom = node.scrollHeight - node.scrollTop - node.clientHeight;
-    const atBottom = distanceFromBottom <= 300;
+    const atBottom = distanceFromBottom <= 100;
     const wasAtBottom = isNearBottomRef.current;
 
     // ALWAYS sync the ref so it never gets stuck
