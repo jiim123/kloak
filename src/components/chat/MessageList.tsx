@@ -279,7 +279,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }
   }, [messages, channelId, markAsRead]);
 
-  // Fix A: New message nudge — useLayoutEffect so scroll adjusts before paint
+  // Fix A: New message nudge — useLayoutEffect with programmatic scroll guard
   useLayoutEffect(() => {
     const currentLength = messages.length;
     const prevLength = prevMessagesLengthRef.current;
@@ -293,7 +293,8 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       if (!effectivelyAtBottom) {
         setNewMessageCount((prev) => prev + (currentLength - prevLength));
       } else {
-        // Multi-frame nudge for resilience
+        // Guard: mark as programmatic so handleScroll won't corrupt isNearBottomRef
+        isProgrammaticScrollRef.current = true;
         const nudge = () => {
           const n = containerRef.current;
           if (n) {
@@ -306,7 +307,11 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
         nudge();
         // Retry at 100ms and 250ms for async content (images, embeds)
         setTimeout(nudge, 100);
-        setTimeout(nudge, 250);
+        setTimeout(() => {
+          nudge();
+          // Release guard after final nudge
+          isProgrammaticScrollRef.current = false;
+        }, 250);
       }
     }
     prevMessagesLengthRef.current = currentLength;
@@ -434,8 +439,11 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     pendingPrependAnchorRef.current = null;
   }, [prependComplete]);
 
-  // Scroll handler — always syncs isNearBottomRef, only updates state on transitions
+  // Scroll handler — skips during programmatic scrolls, always syncs isNearBottomRef
   const handleScroll = useCallback(() => {
+    // Fix B: Skip entirely during programmatic scrolls to prevent ref corruption
+    if (isProgrammaticScrollRef.current) return;
+
     const node = containerRef.current;
     if (!node) return;
 
@@ -443,14 +451,14 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     const atBottom = distanceFromBottom <= 300;
     const wasAtBottom = isNearBottomRef.current;
 
-    // Fix A: ALWAYS sync the ref so it never gets stuck
+    // ALWAYS sync the ref so it never gets stuck
     isNearBottomRef.current = atBottom;
 
     // Track scroll height for ResizeObserver
     lastScrollHeightRef.current = node.scrollHeight;
 
-    // Load older — only when genuinely near top and not during programmatic scroll
-    if (node.scrollTop <= 96 && !isProgrammaticScrollRef.current && !atBottom && distanceFromBottom > 300) {
+    // Load older — only when genuinely near top
+    if (node.scrollTop <= 96 && !atBottom && distanceFromBottom > 300) {
       handleLoadOlder();
     }
 
@@ -484,8 +492,10 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     });
   }, [isLoading, msgCount]);
 
-  // Fix C: ResizeObserver — auto-scroll when content grows (images, embeds load)
-  // while user is at bottom
+  // Fix C: ResizeObserver — observe the actual messages wrapper (data-messages-container)
+  // so async content growth (images, embeds) triggers auto-scroll when at bottom
+  const messagesWrapperRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const node = containerRef.current;
     if (!node) return;
@@ -499,16 +509,16 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       const oldHeight = lastScrollHeightRef.current;
       if (newHeight > oldHeight && isNearBottomRef.current) {
         n.scrollTop = n.scrollHeight;
+        isNearBottomRef.current = true;
       }
       lastScrollHeightRef.current = newHeight;
     });
 
-    // Observe the inner content wrapper for size changes
-    const contentWrapper = node.firstElementChild;
-    if (contentWrapper) {
-      observer.observe(contentWrapper);
+    // Observe the messages content wrapper (the div that actually grows)
+    const wrapper = messagesWrapperRef.current;
+    if (wrapper) {
+      observer.observe(wrapper);
     }
-    observer.observe(node);
 
     return () => observer.disconnect();
   }, [channelId, msgCount > 0]); // re-attach when channel changes or first messages arrive
@@ -642,7 +652,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
               </div>
             </div>
           )}
-          <div key={channelId}>
+          <div key={channelId} ref={messagesWrapperRef} data-messages-container>
             {flatItems.map((item, index) => (
               <Fragment key={computeItemKey(item, index)}>
                 {itemContent(item, index)}
