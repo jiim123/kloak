@@ -508,23 +508,31 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }
   }, [handleLoadOlder, handleAtBottomStateChange]);
 
-  // FIX 4: Initial bottom scroll with null guards
+  // Initial bottom scroll — multiple retries for reliability
   useEffect(() => {
     if (isLoading || msgCount === 0 || didInitialBottomScrollRef.current) return;
     didInitialBottomScrollRef.current = true;
     isProgrammaticScrollRef.current = true;
-    requestAnimationFrame(() => {
+
+    const scrollDown = () => {
       const node = containerRef.current;
-      if (!node) return;
-      node.scrollTop = node.scrollHeight;
-      setTimeout(() => {
-        const n = containerRef.current;
-        if (!n) return;
-        n.scrollTop = n.scrollHeight;
-        isNearBottomRef.current = true;
-        isProgrammaticScrollRef.current = false;
-      }, 100);
-    });
+      if (node) {
+        node.scrollTop = node.scrollHeight;
+        lastScrollHeightRef.current = node.scrollHeight;
+      }
+    };
+
+    // Immediate attempt
+    scrollDown();
+    // Retries to catch late-rendering content
+    requestAnimationFrame(scrollDown);
+    setTimeout(scrollDown, 50);
+    setTimeout(scrollDown, 150);
+    setTimeout(() => {
+      scrollDown();
+      isNearBottomRef.current = true;
+      isProgrammaticScrollRef.current = false;
+    }, 300);
   }, [isLoading, msgCount]);
 
   // Fix C: ResizeObserver — observe the actual messages wrapper (data-messages-container)
