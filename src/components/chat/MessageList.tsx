@@ -432,39 +432,36 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     pendingPrependAnchorRef.current = null;
   }, [prependComplete]);
 
-  // Scroll handler — uses React onScroll (synchronous, no rAF cascading).
-  // Only updates refs during scroll; state updates are on transitions only.
+  // Scroll handler — always syncs isNearBottomRef, only updates state on transitions
   const handleScroll = useCallback(() => {
     const node = containerRef.current;
     if (!node) return;
 
     const distanceFromBottom = node.scrollHeight - node.scrollTop - node.clientHeight;
-    // Use a generous threshold so input area resizing (reply preview, multi-line)
-    // doesn't falsely flip isNearBottomRef to false
     const atBottom = distanceFromBottom <= 300;
+    const wasAtBottom = isNearBottomRef.current;
+
+    // Fix A: ALWAYS sync the ref so it never gets stuck
+    isNearBottomRef.current = atBottom;
+
+    // Track scroll height for ResizeObserver
+    lastScrollHeightRef.current = node.scrollHeight;
 
     // Load older — only when genuinely near top and not during programmatic scroll
     if (node.scrollTop <= 96 && !isProgrammaticScrollRef.current && !atBottom && distanceFromBottom > 300) {
       handleLoadOlder();
     }
 
-    // Only call handleAtBottomStateChange on actual transitions to avoid
-    // unnecessary state updates (re-renders) during continuous scrolling.
-    const wasAtBottom = isNearBottomRef.current;
+    // State transitions only
     if (atBottom && !wasAtBottom) {
-      // Transition: scrolled TO bottom
-      handleAtBottomStateChange(true, distanceFromBottom);
-    } else if (!atBottom && wasAtBottom) {
-      // Transition: scrolled AWAY from bottom — just update the ref, defer jump button
-      isNearBottomRef.current = false;
+      handleAtBottomStateChange(true);
     } else if (!atBottom && !wasAtBottom && distanceFromBottom >= 600) {
-      // Already scrolled up, check if we should show jump button
-      // Use ref check to avoid calling setState if already showing
-      if (!showJumpToPresent && deduplicatedMessagesRef.current.length > 10) {
+      if (!showJumpToPresentRef.current && deduplicatedMessagesRef.current.length > 10) {
         setShowJumpToPresent(true);
+        showJumpToPresentRef.current = true;
       }
     }
-  }, [handleLoadOlder, handleAtBottomStateChange, showJumpToPresent]);
+  }, [handleLoadOlder, handleAtBottomStateChange]);
 
   // FIX 4: Initial bottom scroll with null guards
   useEffect(() => {
