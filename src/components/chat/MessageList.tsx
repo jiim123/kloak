@@ -163,12 +163,14 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
   const [globalEmojiMap, setGlobalEmojiMap] = useState<Map<string, ResolvedEmoji>>(new Map());
   const [showJumpToPresent, setShowJumpToPresent] = useState(false);
+  const showJumpToPresentRef = useRef(false);
   const [newMessageCount, setNewMessageCount] = useState(0);
   const isNearBottomRef = useRef(true);
   const lastMarkedMessageIdRef = useRef<string | null>(null);
   const prevMessagesLengthRef = useRef(0);
   const prevChannelIdRef = useRef<string>(channelId);
   const didInitialBottomScrollRef = useRef(false);
+  const lastScrollHeightRef = useRef(0);
   const pendingPrependAnchorRef = useRef<{
     requestId: number;
     prevTop: number;
@@ -221,6 +223,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     prevMessagesLengthRef.current = 0;
     lastMarkedMessageIdRef.current = null;
     setShowJumpToPresent(false);
+    showJumpToPresentRef.current = false;
     setNewMessageCount(0);
 
     const cacheEntry = useMessageStore.getState().messagesByChannel[channelId];
@@ -276,16 +279,12 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }
   }, [messages, channelId, markAsRead]);
 
-  // FIX 4: New message nudge — check actual scroll distance at execution time
-  // so layout shifts from input resizing / reply previews don't break auto-scroll
-  useEffect(() => {
+  // Fix A: New message nudge — useLayoutEffect so scroll adjusts before paint
+  useLayoutEffect(() => {
     const currentLength = messages.length;
     const prevLength = prevMessagesLengthRef.current;
     if (currentLength > prevLength && prevLength > 0) {
       const node = containerRef.current;
-      // Re-check actual distance from bottom instead of relying solely on the ref,
-      // because UI interactions (typing, reply preview, reactions) can shift layout
-      // and falsely flip isNearBottomRef to false.
       const actualDistanceFromBottom = node
         ? node.scrollHeight - node.scrollTop - node.clientHeight
         : 0;
@@ -294,15 +293,20 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       if (!effectivelyAtBottom) {
         setNewMessageCount((prev) => prev + (currentLength - prevLength));
       } else {
+        // Multi-frame nudge for resilience
         const nudge = () => {
           const n = containerRef.current;
           if (n) {
             n.scrollTop = n.scrollHeight;
             isNearBottomRef.current = true;
+            lastScrollHeightRef.current = n.scrollHeight;
           }
         };
-        requestAnimationFrame(nudge);
-        setTimeout(nudge, 200);
+        // Immediate (before paint via useLayoutEffect)
+        nudge();
+        // Retry at 100ms and 250ms for async content (images, embeds)
+        setTimeout(nudge, 100);
+        setTimeout(nudge, 250);
       }
     }
     prevMessagesLengthRef.current = currentLength;
@@ -330,6 +334,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }, 100);
 
     setShowJumpToPresent(false);
+    showJumpToPresentRef.current = false;
     setNewMessageCount(0);
     isNearBottomRef.current = true;
 
@@ -359,14 +364,11 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     setExternalEditTargetId((current) => (current === messageId ? null : current));
   }, []);
 
-  const handleAtBottomStateChange = useCallback((atBottom: boolean, distanceFromBottom?: number) => {
-    isNearBottomRef.current = atBottom;
+  const handleAtBottomStateChange = useCallback((atBottom: boolean) => {
     if (atBottom) {
       setShowJumpToPresent(false);
+      showJumpToPresentRef.current = false;
       setNewMessageCount(0);
-    }
-    if (!atBottom && (distanceFromBottom ?? 0) >= 600 && deduplicatedMessagesRef.current.length > 10) {
-      setShowJumpToPresent(true);
     }
   }, []);
 
@@ -432,39 +434,36 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     pendingPrependAnchorRef.current = null;
   }, [prependComplete]);
 
-  // Scroll handler — uses React onScroll (synchronous, no rAF cascading).
-  // Only updates refs during scroll; state updates are on transitions only.
+  // Scroll handler — always syncs isNearBottomRef, only updates state on transitions
   const handleScroll = useCallback(() => {
     const node = containerRef.current;
     if (!node) return;
 
     const distanceFromBottom = node.scrollHeight - node.scrollTop - node.clientHeight;
-    // Use a generous threshold so input area resizing (reply preview, multi-line)
-    // doesn't falsely flip isNearBottomRef to false
     const atBottom = distanceFromBottom <= 300;
+    const wasAtBottom = isNearBottomRef.current;
+
+    // Fix A: ALWAYS sync the ref so it never gets stuck
+    isNearBottomRef.current = atBottom;
+
+    // Track scroll height for ResizeObserver
+    lastScrollHeightRef.current = node.scrollHeight;
 
     // Load older — only when genuinely near top and not during programmatic scroll
     if (node.scrollTop <= 96 && !isProgrammaticScrollRef.current && !atBottom && distanceFromBottom > 300) {
       handleLoadOlder();
     }
 
-    // Only call handleAtBottomStateChange on actual transitions to avoid
-    // unnecessary state updates (re-renders) during continuous scrolling.
-    const wasAtBottom = isNearBottomRef.current;
+    // State transitions only
     if (atBottom && !wasAtBottom) {
-      // Transition: scrolled TO bottom
-      handleAtBottomStateChange(true, distanceFromBottom);
-    } else if (!atBottom && wasAtBottom) {
-      // Transition: scrolled AWAY from bottom — just update the ref, defer jump button
-      isNearBottomRef.current = false;
+      handleAtBottomStateChange(true);
     } else if (!atBottom && !wasAtBottom && distanceFromBottom >= 600) {
-      // Already scrolled up, check if we should show jump button
-      // Use ref check to avoid calling setState if already showing
-      if (!showJumpToPresent && deduplicatedMessagesRef.current.length > 10) {
+      if (!showJumpToPresentRef.current && deduplicatedMessagesRef.current.length > 10) {
         setShowJumpToPresent(true);
+        showJumpToPresentRef.current = true;
       }
     }
-  }, [handleLoadOlder, handleAtBottomStateChange, showJumpToPresent]);
+  }, [handleLoadOlder, handleAtBottomStateChange]);
 
   // FIX 4: Initial bottom scroll with null guards
   useEffect(() => {
@@ -484,6 +483,35 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       }, 100);
     });
   }, [isLoading, msgCount]);
+
+  // Fix C: ResizeObserver — auto-scroll when content grows (images, embeds load)
+  // while user is at bottom
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+
+    lastScrollHeightRef.current = node.scrollHeight;
+
+    const observer = new ResizeObserver(() => {
+      const n = containerRef.current;
+      if (!n) return;
+      const newHeight = n.scrollHeight;
+      const oldHeight = lastScrollHeightRef.current;
+      if (newHeight > oldHeight && isNearBottomRef.current) {
+        n.scrollTop = n.scrollHeight;
+      }
+      lastScrollHeightRef.current = newHeight;
+    });
+
+    // Observe the inner content wrapper for size changes
+    const contentWrapper = node.firstElementChild;
+    if (contentWrapper) {
+      observer.observe(contentWrapper);
+    }
+    observer.observe(node);
+
+    return () => observer.disconnect();
+  }, [channelId, msgCount > 0]); // re-attach when channel changes or first messages arrive
 
   const authorStyleMapRef = useRef(authorStyleMap);
   authorStyleMapRef.current = authorStyleMap;

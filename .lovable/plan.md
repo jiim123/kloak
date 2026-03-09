@@ -1,52 +1,96 @@
 
 
-## Auto-scroll bug analysis and fix plan
+## Audit: Role Permission System — Issues Found
 
-### Root cause analysis
+### Summary of Issues
 
-After auditing the full scroll pipeline (`handleScroll` → `isNearBottomRef` → new-message nudge effect → `scrollToBottom`), I identified **three compounding issues**:
+After a thorough audit of the DB functions (`check_user_permission`, `check_user_server_permission`), the frontend evaluation (`evaluatePermission` in `src/lib/permissions.ts`), and how permissions are consumed across the app, here are the problems identified:
 
-**1. The scroll handler never sets `isNearBottomRef = true` when `atBottom && wasAtBottom`.**
-The transition-only logic (lines 453-466) only calls `handleAtBottomStateChange(true)` when transitioning FROM not-at-bottom TO at-bottom. But when the user is already at the bottom and minor scroll events fire (from browser reflows, content height changes, image loads), the handler enters no branch. If a brief scroll jitter pushes `distanceFromBottom` above 300 for a single frame, `isNearBottomRef` flips to `false` (line 459) and **never flips back** unless the user scrolls enough to trigger the `atBottom && !wasAtBottom` transition. Meanwhile the nudge effect checks `isNearBottomRef` and may skip auto-scroll.
+---
 
-**2. The nudge effect (`useEffect`) runs after paint, creating a visible gap.**
-The new-message nudge (lines 281-309) uses `useEffect` + `requestAnimationFrame`. The browser may paint the new message at the old scroll position before the nudge fires, causing a brief flash. More critically, between the React commit and the rAF callback, other scroll events or layout reflows can fire, corrupting `isNearBottomRef`.
+### Issue 1: `check_user_server_permission` Has No Base Role Defaults (Critical)
 
-**3. No `ResizeObserver` safety net for async content.**
-Images, link previews, and embeds load asynchronously and increase `scrollHeight` after the nudge has already fired. The 200ms `setTimeout` retry partially helps but doesn't cover all cases. Once the content finishes loading, the user is no longer at the bottom with no mechanism to re-scroll.
+The `check_user_server_permission` function (used for server-level actions like `manage_channels`, `manage_roles`, `kick_members`, `ban_members`, etc.) falls through to `RETURN false` when no explicit `role_permissions` rows exist. This means:
 
-### Fix plan
+- An **admin** with no custom roles and no explicit `role_permissions` rows will be **denied** `manage_channels`, `manage_roles`, etc.
+- A **moderator** will be denied `kick_members`, `mute_members`, `manage_messages`, etc.
 
-**A. Always sync `isNearBottomRef` in the scroll handler (remove transition-only guard for the ref).**
-Keep the transition-only optimization for state updates (`setShowJumpToPresent`, `setNewMessageCount`) to avoid re-renders, but always set `isNearBottomRef.current = atBottom`. This prevents the ref from getting "stuck" at false after a brief jitter.
+**`check_user_permission`** (channel-scoped) has proper CASE defaults (lines 1810-1842), but **`check_user_server_permission`** does not — it just returns `false`.
 
-```text
-handleScroll:
-  distanceFromBottom = scrollHeight - scrollTop - clientHeight
-  atBottom = distanceFromBottom <= 300
-  wasAtBottom = isNearBottomRef.current
-  isNearBottomRef.current = atBottom          ← ALWAYS sync
-  
-  if atBottom && !wasAtBottom → clear jump/count state
-  if !atBottom && distance >= 600 → show jump button
-```
+**Fix:** Add the same CASE fallback defaults from `check_user_permission` to `check_user_server_permission` before the final `RETURN false`.
 
-**B. Switch the new-message nudge from `useEffect` to `useLayoutEffect`.**
-`useLayoutEffect` fires synchronously after DOM commit but before paint, so the scroll adjustment happens before the user sees anything. This also eliminates the window where scroll events from reflows can corrupt the ref between commit and nudge.
+---
 
-**C. Add a `ResizeObserver` on the scroll container to catch async content growth.**
-When `scrollHeight` increases while `isNearBottomRef` is `true`, auto-scroll to the new bottom. This covers image loads, embed expansions, and any other async height changes. The observer will be guarded by a `lastScrollHeightRef` to only fire on actual growth.
+### Issue 2: `check_user_server_permission` Doesn't Check `@everyone` Role via `server_member_roles` (Minor)
 
-**D. Make the nudge more resilient with a multi-frame retry.**
-Replace the single `rAF` + 200ms `setTimeout` with a small retry loop (3 attempts at 0/100/250ms) that checks if the scroll actually landed at the bottom after each attempt.
+The function looks up `@everyone` role separately (correct), but the main query joins `role_permissions` with `server_member_roles` — members are not automatically assigned the `@everyone` role in `server_member_roles`, so this join would miss the `@everyone` role. The separate fallback check for `_everyone_role_id` handles this, so this is working correctly.
 
-### Files to modify
+---
 
-- `src/components/chat/MessageList.tsx` — all four changes above (scroll handler, nudge effect, ResizeObserver, retry logic)
+### Issue 3: `view_channels` Not Enforced in `get_server_channels` (Previously Identified)
 
-### Technical details
+`get_server_channels` only checks `is_private` + `channel_members`. It never calls `check_user_permission` for `view_channels`. Setting `view_channels` to deny on a role or channel override has no effect.
 
-The `handleScroll` callback dependency on `showJumpToPresent` (for the jump-button guard) will be replaced with a ref to eliminate unnecessary callback recreation, which reduces the chance of stale closure issues during rapid message delivery.
+**Fix:** Add `check_user_permission(_user_id, c.id, 'view_channels')` filter to the channel query in `get_server_channels`.
 
-The `ResizeObserver` will be attached/detached alongside the container div lifecycle and will only trigger auto-scroll when `isNearBottomRef.current` is `true`, so it won't interfere when the user has intentionally scrolled up.
+---
+
+### Issue 4: `read_message_history` Not Enforced at DB Level
+
+No RPC or RLS policy checks `read_message_history`. The messages SELECT RLS uses `can_access_channel` which checks membership/private but not the `read_message_history` permission.
+
+**Fix:** This is lower priority since it's uncommon, but should be added to the messages SELECT policy or the message-fetching RPCs.
+
+---
+
+### Issue 5: Frontend `Permission` Type Missing Task Permissions
+
+The DB enum includes `view_tasks`, `create_tasks`, `edit_own_tasks`, `edit_all_tasks`, `assign_tasks`, `change_task_status`, `delete_tasks` but the frontend `Permission` type in `src/types/index.ts` doesn't include them. This means task permissions can't be configured via the role permission UI.
+
+**Fix:** Add task permissions to the frontend `Permission` type and the permission meta/groups.
+
+---
+
+### Issue 6: Frontend Base Role Defaults Don't Include All Permissions
+
+The frontend `evaluatePermission` defaults for `moderator` and `member` are mostly correct but should be cross-checked against the DB. Comparison:
+
+| Permission | DB (check_user_permission) | Frontend (moderator) | Frontend (member) |
+|---|---|---|---|
+| `manage_emojis` | admin | Not in list (correct) | Not in list (correct) |
+| `manage_webhooks` | admin | Not in list (correct) | Not in list (correct) |
+| `manage_threads` | moderator | Not in list (**MISSING**) | Not in list (correct) |
+
+Wait — `manage_threads` IS in the moderator list. Let me re-check... No, it is NOT in the frontend moderator defaults. The DB says moderators get `manage_threads`, but the frontend moderator list doesn't include it.
+
+Actually checking again: the frontend moderator list does NOT include `manage_threads`. But the DB defaults DO include it (`WHEN 'manage_threads' THEN RETURN user_base_role IN ('owner', 'admin', 'moderator')`). This is a **mismatch**.
+
+Additionally, the frontend moderator defaults don't include `manage_emojis` or `manage_webhooks`, matching the DB. Good.
+
+---
+
+### Plan
+
+#### 1. SQL Migration: Add base role defaults to `check_user_server_permission`
+
+Add the same CASE fallback that `check_user_permission` has, so server-level permission checks work for admins/moderators without explicit `role_permissions` rows.
+
+#### 2. SQL Migration: Add `view_channels` enforcement to `get_server_channels`
+
+Filter channels through `check_user_permission(_user_id, c.id, 'view_channels')`, with owner/admin bypass.
+
+#### 3. Frontend: Fix `evaluatePermission` moderator defaults
+
+Add `manage_threads` to the moderator allowed list to match DB defaults.
+
+#### 4. Frontend: Add task permissions to `Permission` type (optional, lower priority)
+
+Add the 7 task permissions to `src/types/index.ts` and `permissionMeta.ts`.
+
+#### Files to Change
+
+- **New SQL migration**: Update `check_user_server_permission` with base role defaults; update `get_server_channels` with `view_channels` filter
+- **`src/lib/permissions.ts`**: Add `manage_threads` to moderator defaults
+- **`src/types/index.ts`**: Add task permission types (optional)
+- **`src/lib/permissionMeta.ts`**: Add task permission metadata (optional)
 
