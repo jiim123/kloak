@@ -278,16 +278,12 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }
   }, [messages, channelId, markAsRead]);
 
-  // FIX 4: New message nudge — check actual scroll distance at execution time
-  // so layout shifts from input resizing / reply previews don't break auto-scroll
-  useEffect(() => {
+  // Fix A: New message nudge — useLayoutEffect so scroll adjusts before paint
+  useLayoutEffect(() => {
     const currentLength = messages.length;
     const prevLength = prevMessagesLengthRef.current;
     if (currentLength > prevLength && prevLength > 0) {
       const node = containerRef.current;
-      // Re-check actual distance from bottom instead of relying solely on the ref,
-      // because UI interactions (typing, reply preview, reactions) can shift layout
-      // and falsely flip isNearBottomRef to false.
       const actualDistanceFromBottom = node
         ? node.scrollHeight - node.scrollTop - node.clientHeight
         : 0;
@@ -296,15 +292,20 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       if (!effectivelyAtBottom) {
         setNewMessageCount((prev) => prev + (currentLength - prevLength));
       } else {
+        // Multi-frame nudge for resilience
         const nudge = () => {
           const n = containerRef.current;
           if (n) {
             n.scrollTop = n.scrollHeight;
             isNearBottomRef.current = true;
+            lastScrollHeightRef.current = n.scrollHeight;
           }
         };
-        requestAnimationFrame(nudge);
-        setTimeout(nudge, 200);
+        // Immediate (before paint via useLayoutEffect)
+        nudge();
+        // Retry at 100ms and 250ms for async content (images, embeds)
+        setTimeout(nudge, 100);
+        setTimeout(nudge, 250);
       }
     }
     prevMessagesLengthRef.current = currentLength;
