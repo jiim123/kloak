@@ -818,6 +818,9 @@ export const HorizontalServerSidebar = () => {
   }, [servers]);
 
   const { totalUnread: totalDMUnread, hasUnread: hasDMUnread } = useUnreadDMsContext();
+  const pendingFriendCount = useFriendStore((s) => s.pendingRequests.length);
+  const totalHomeBadge = totalDMUnread + pendingFriendCount;
+  const hasHomeUnread = hasDMUnread || pendingFriendCount > 0;
 
   const getServerInitials = (name: string) => {
     return name
