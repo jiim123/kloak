@@ -439,7 +439,9 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     if (!node) return;
 
     const distanceFromBottom = node.scrollHeight - node.scrollTop - node.clientHeight;
-    const atBottom = distanceFromBottom <= 150;
+    // Use a generous threshold so input area resizing (reply preview, multi-line)
+    // doesn't falsely flip isNearBottomRef to false
+    const atBottom = distanceFromBottom <= 300;
 
     // Load older — only when genuinely near top and not during programmatic scroll
     if (node.scrollTop <= 96 && !isProgrammaticScrollRef.current && !atBottom && distanceFromBottom > 300) {
