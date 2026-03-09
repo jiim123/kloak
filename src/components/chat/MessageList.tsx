@@ -333,6 +333,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }, 100);
 
     setShowJumpToPresent(false);
+    showJumpToPresentRef.current = false;
     setNewMessageCount(0);
     isNearBottomRef.current = true;
 
