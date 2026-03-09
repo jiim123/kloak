@@ -17,7 +17,7 @@ const safeAreaStyle = { paddingTop: "env(safe-area-inset-top, 0px)" } as const;
 export const MobileHeader = memo(({ isDMView, showFriends, showExplore }: MobileHeaderProps) => {
   const { currentServer, currentChannel } = useServerStore();
   const { currentConversation } = useDMStore();
-  const { setMobileSidebarOpen, toggleMemberSidebar } = useUIStore();
+  const { setMobileSidebarOpen } = useUIStore();
 
   const title = useMemo(() => {
     if (isDMView) {
