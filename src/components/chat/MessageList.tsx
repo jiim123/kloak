@@ -276,18 +276,29 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }
   }, [messages, channelId, markAsRead]);
 
-  // FIX 4: New message nudge with isNearBottom guard at execution time
+  // FIX 4: New message nudge — check actual scroll distance at execution time
+  // so layout shifts from input resizing / reply previews don't break auto-scroll
   useEffect(() => {
     const currentLength = messages.length;
     const prevLength = prevMessagesLengthRef.current;
     if (currentLength > prevLength && prevLength > 0) {
-      if (!isNearBottomRef.current) {
+      const node = containerRef.current;
+      // Re-check actual distance from bottom instead of relying solely on the ref,
+      // because UI interactions (typing, reply preview, reactions) can shift layout
+      // and falsely flip isNearBottomRef to false.
+      const actualDistanceFromBottom = node
+        ? node.scrollHeight - node.scrollTop - node.clientHeight
+        : 0;
+      const effectivelyAtBottom = isNearBottomRef.current || actualDistanceFromBottom <= 400;
+
+      if (!effectivelyAtBottom) {
         setNewMessageCount((prev) => prev + (currentLength - prevLength));
       } else {
         const nudge = () => {
-          const node = containerRef.current;
-          if (node && isNearBottomRef.current) {
-            node.scrollTop = node.scrollHeight;
+          const n = containerRef.current;
+          if (n) {
+            n.scrollTop = n.scrollHeight;
+            isNearBottomRef.current = true;
           }
         };
         requestAnimationFrame(nudge);
