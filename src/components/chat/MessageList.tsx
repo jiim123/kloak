@@ -652,7 +652,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
               </div>
             </div>
           )}
-          <div key={channelId}>
+          <div key={channelId} ref={messagesWrapperRef} data-messages-container>
             {flatItems.map((item, index) => (
               <Fragment key={computeItemKey(item, index)}>
                 {itemContent(item, index)}
