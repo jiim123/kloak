@@ -11,6 +11,7 @@ import { VoiceConnectedBanner } from "@/components/layout/VoiceConnectedBanner";
 import { CreateGroupModal } from "@/components/dm/CreateGroupModal";
 import { UserSearchResults } from "@/components/dm/UserSearchResults";
 import { useDMStore } from "@/stores/dmStore";
+import { useFriendStore } from "@/stores/friendStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useUnreadDMsContext } from "@/hooks/useUnreadDMsContext";
 import { formatCompactTime } from "@/lib/format";
