@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { getKeyHash, supabase, setKeyHashHeader } from "@/integrations/supabase/client";
-import { generateSecretKey, hashSecretKey, isValidSecretKey } from "@/lib/crypto";
+import { generateSecretKey, hashSecretKey, isValidSecretKey, fetchPoWChallenge, solvePoWChallenge } from "@/lib/crypto";
 import { authRateLimiter, accountCreationRateLimiter, validateUsername } from "@/lib/security";
 import { useUserCacheStore } from "@/stores/userCacheStore";
 import type { User, UserStatus } from "@/types";
@@ -95,7 +95,7 @@ export const useAuthStore = create<AuthState>()(
         return success;
       },
 
-      createAccount: async (username: string, hcaptchaResponse: string) => {
+      createAccount: async (username: string, _hcaptchaResponse?: string) => {
         set({ isLoading: true, error: null });
 
         // Rate limit account creation to prevent abuse
@@ -126,25 +126,44 @@ export const useAuthStore = create<AuthState>()(
             return null;
           }
 
+          // PoW challenge-response flow
+          let challenge: { id: string; nonce: string; difficulty: number; expires_at: string };
+          try {
+            challenge = await fetchPoWChallenge();
+          } catch (err) {
+            console.error("Failed to fetch PoW challenge:", err);
+            set({ error: "Registration service unavailable. Please try again.", isLoading: false });
+            return null;
+          }
+
+          let solution: string;
+          try {
+            solution = await solvePoWChallenge(challenge.nonce, challenge.difficulty);
+          } catch (err) {
+            console.error("Failed to solve PoW challenge:", err);
+            set({ error: "Registration failed. Please try again.", isLoading: false });
+            return null;
+          }
+
           let data: Record<string, unknown> | null = null;
           let errorMessage: string | null = null;
           let res: Response;
           try {
-            res = await fetch(`${supabaseUrl}/functions/v1/register-with-captcha`, {
+            res = await fetch(`${supabaseUrl}/functions/v1/register-with-pow`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 username: normalizedUsername,
                 key_hash: keyHash,
-                hcaptcha_response: hcaptchaResponse,
+                challenge_id: challenge.id,
+                solution,
                 banner_color: bannerColor,
               }),
             });
           } catch (fetchError) {
             const msg = fetchError instanceof Error ? fetchError.message : "Network request failed";
             set({
-              error:
-                "Registration endpoint unreachable. Check REGISTER_ALLOWED_ORIGINS/CORS and network connectivity.",
+              error: "Registration service unavailable. Please try again later.",
               isLoading: false,
             });
             console.error("Registration fetch failed:", msg);
