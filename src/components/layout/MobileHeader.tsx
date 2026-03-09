@@ -1,5 +1,5 @@
 import { memo, useMemo, useCallback } from "react";
-import { Menu, Hash, Volume2 } from "lucide-react";
+import { Menu, Hash, Volume2, Users } from "lucide-react";
 import { useServerStore } from "@/stores/serverStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useDMStore } from "@/stores/dmStore";
