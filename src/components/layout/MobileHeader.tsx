@@ -48,8 +48,6 @@ export const MobileHeader = memo(({ isDMView, showFriends, showExplore }: Mobile
 
   const openSidebar = useCallback(() => setMobileSidebarOpen(true), [setMobileSidebarOpen]);
 
-  const showMembersToggle = !isDMView && currentServer;
-
   return (
     <header
       className="sticky top-0 z-40 md:hidden bg-background/90 backdrop-blur-sm border-b border-border/50 rounded-b-2xl"
@@ -78,18 +76,6 @@ export const MobileHeader = memo(({ isDMView, showFriends, showExplore }: Mobile
           <div className="[&_button]:w-11 [&_button]:h-11 [&_button]:rounded-xl [&_button]:active:scale-95 [&_button]:transition-transform">
             <NotificationBell />
           </div>
-
-          {showMembersToggle && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="w-11 h-11 rounded-xl active:scale-95 transition-transform"
-              onClick={toggleMemberSidebar}
-              aria-label="Toggle member list"
-            >
-              <Users className="w-5 h-5" />
-            </Button>
-          )}
         </div>
       </div>
     </header>

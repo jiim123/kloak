@@ -1,10 +1,8 @@
-import { useState } from "react";
-import { Hash, Volume2, MessageSquare, Pin, Search, Users, Lock, Megaphone, Film } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Hash, Volume2, MessageSquare, Pin, Search, Lock, Megaphone, Film } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { useServerStore } from "@/stores/serverStore";
+import { Button } from "@/components/ui/button";
 import { useUIStore } from "@/stores/uiStore";
 import type { Channel } from "@/types";
 
@@ -12,67 +10,10 @@ interface ChannelHeaderProps {
   channel: Channel;
 }
 
-interface HeaderButtonProps {
-  icon: React.ElementType;
-  label: string;
-  onClick: () => void;
-  isHovered: boolean;
-  onMouseEnter: () => void;
-  onMouseLeave: () => void;
-}
-
-const HeaderButton = ({ icon: Icon, label, onClick, isHovered, onMouseEnter, onMouseLeave }: HeaderButtonProps) => {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          onClick={onClick}
-          onMouseEnter={onMouseEnter}
-          onMouseLeave={onMouseLeave}
-          className={cn(
-            "relative flex items-center rounded-xl py-2 text-sm font-medium transition-all duration-200",
-            isHovered ? "bg-muted/70 text-foreground gap-2 px-3" : "text-muted-foreground hover:text-foreground gap-0 px-2",
-          )}
-        >
-          <Icon className="w-4 h-4 flex-shrink-0" />
-          {isHovered && (
-            <span className="whitespace-nowrap text-sm">
-              {label}
-            </span>
-          )}
-        </button>
-      </TooltipTrigger>
-      <TooltipContent>{label}</TooltipContent>
-    </Tooltip>
-  );
-};
-
 export const ChannelHeader = ({ channel }: ChannelHeaderProps) => {
-  const { isMemberSidebarOpen, toggleMemberSidebar, openModal } = useUIStore();
-  const [hoveredButton, setHoveredButton] = useState<string | null>(null);
+  const openModal = useUIStore((s) => s.openModal);
 
   const ChannelIcon = channel.type === "voice" ? Volume2 : channel.type === "forum" ? MessageSquare : channel.type === "announcement" ? Megaphone : channel.type === "media" ? Film : Hash;
-
-  const buttons = [
-    {
-      id: "pinned",
-      icon: Pin,
-      label: "Pinned",
-      onClick: () => openModal("pinned-messages", { channelId: channel.id }),
-    },
-    {
-      id: "search",
-      icon: Search,
-      label: "Search",
-      onClick: () => openModal("search", { channelId: channel.id }),
-    },
-    {
-      id: "members",
-      icon: Users,
-      label: isMemberSidebarOpen ? "Hide" : "Show",
-      onClick: toggleMemberSidebar,
-    },
-  ];
 
   return (
     <div className="h-12 px-4 hidden md:flex items-center justify-between border-b border-border/50 flex-shrink-0 bg-background">
@@ -116,18 +57,36 @@ export const ChannelHeader = ({ channel }: ChannelHeaderProps) => {
       </div>
 
       {/* Right side - Actions */}
-      <div className="flex items-center gap-1 flex-shrink-0 rounded-xl border border-border/50 bg-secondary/50 p-1">
-        {buttons.map((button) => (
-          <HeaderButton
-            key={button.id}
-            icon={button.icon}
-            label={button.label}
-            onClick={button.onClick}
-            isHovered={hoveredButton === button.id}
-            onMouseEnter={() => setHoveredButton(button.id)}
-            onMouseLeave={() => setHoveredButton(null)}
-          />
-        ))}
+      <div className="flex items-center gap-1 flex-shrink-0">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 rounded-lg text-muted-foreground hover:text-foreground"
+              onClick={() => openModal("pinned-messages", { channelId: channel.id })}
+            >
+              <Pin className="w-4 h-4" />
+              <span className="text-sm">Pinned</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Pinned Messages</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 rounded-lg text-muted-foreground hover:text-foreground"
+              onClick={() => openModal("search", { channelId: channel.id })}
+            >
+              <Search className="w-4 h-4" />
+              <span className="text-sm">Search</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Search Messages</TooltipContent>
+        </Tooltip>
       </div>
     </div>
   );

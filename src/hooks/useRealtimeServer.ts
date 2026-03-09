@@ -308,13 +308,13 @@ export const useRealtimeServer = (serverId: string | null) => {
               categories: [
                 ...state.categories,
                 {
-                  id: newCat.id,
-                  server_id: newCat.server_id,
-                  name: newCat.name,
-                  position: newCat.position || 0,
-                  is_collapsed: newCat.is_collapsed || false,
-                  created_at: newCat.created_at,
-                },
+                  id: newCat.id as string,
+                  server_id: newCat.server_id as string,
+                  name: newCat.name as string,
+                  position: (newCat.position as number) || 0,
+                  is_collapsed: (newCat.is_collapsed as boolean) || false,
+                  created_at: newCat.created_at as string,
+                } as import('@/types').ChannelCategory,
               ],
             }));
           } catch (error) {
