@@ -492,8 +492,10 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     });
   }, [isLoading, msgCount]);
 
-  // Fix C: ResizeObserver — auto-scroll when content grows (images, embeds load)
-  // while user is at bottom
+  // Fix C: ResizeObserver — observe the actual messages wrapper (data-messages-container)
+  // so async content growth (images, embeds) triggers auto-scroll when at bottom
+  const messagesWrapperRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const node = containerRef.current;
     if (!node) return;
@@ -507,16 +509,16 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       const oldHeight = lastScrollHeightRef.current;
       if (newHeight > oldHeight && isNearBottomRef.current) {
         n.scrollTop = n.scrollHeight;
+        isNearBottomRef.current = true;
       }
       lastScrollHeightRef.current = newHeight;
     });
 
-    // Observe the inner content wrapper for size changes
-    const contentWrapper = node.firstElementChild;
-    if (contentWrapper) {
-      observer.observe(contentWrapper);
+    // Observe the messages content wrapper (the div that actually grows)
+    const wrapper = messagesWrapperRef.current;
+    if (wrapper) {
+      observer.observe(wrapper);
     }
-    observer.observe(node);
 
     return () => observer.disconnect();
   }, [channelId, msgCount > 0]); // re-attach when channel changes or first messages arrive
