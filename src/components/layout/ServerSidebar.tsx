@@ -890,7 +890,7 @@ export const ServerSidebar = () => {
                       className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 bg-foreground rounded-r-full"
                       variants={pillVariants}
                       initial="hidden"
-                      animate={getPillState(null, hasDMUnread)}
+                      animate={getPillState(null, hasHomeUnread)}
                       transition={{ type: "spring", stiffness: 500, damping: 30 }}
                     />
 
