@@ -192,6 +192,13 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   const deduplicatedMessagesRef = useRef(deduplicatedMessages);
   deduplicatedMessagesRef.current = deduplicatedMessages;
 
+  // Stable last-message-id for detecting genuinely new messages
+  const lastMessageId = useMemo(() => {
+    if (messages.length === 0) return null;
+    return messages[messages.length - 1].id;
+  }, [messages]);
+  const lastNudgedMessageIdRef = useRef<string | null>(null);
+
   if (prevChannelIdRef.current !== channelId) {
     prevChannelIdRef.current = channelId;
     didInitialBottomScrollRef.current = false;
@@ -221,6 +228,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   useEffect(() => {
     if (manageCurrentChannel) setCurrentChannel(channelId);
     prevMessagesLengthRef.current = 0;
+    lastNudgedMessageIdRef.current = null;
     lastMarkedMessageIdRef.current = null;
     setShowJumpToPresent(false);
     showJumpToPresentRef.current = false;
@@ -279,11 +287,19 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }
   }, [messages, channelId, markAsRead]);
 
-  // Fix A: New message nudge — useLayoutEffect with programmatic scroll guard
+  // New message nudge — tracks lastMessageId for reliable detection
   useLayoutEffect(() => {
     const currentLength = messages.length;
     const prevLength = prevMessagesLengthRef.current;
-    if (currentLength > prevLength && prevLength > 0) {
+    const currentLastId = lastMessageId;
+    const prevLastId = lastNudgedMessageIdRef.current;
+
+    // Detect genuinely new message: either length increased or last ID changed
+    const hasNewMessage =
+      (currentLength > prevLength && prevLength > 0) ||
+      (currentLastId !== null && prevLastId !== null && currentLastId !== prevLastId && prevLength > 0);
+
+    if (hasNewMessage) {
       const node = containerRef.current;
       const actualDistanceFromBottom = node
         ? node.scrollHeight - node.scrollTop - node.clientHeight
@@ -291,7 +307,8 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       const effectivelyAtBottom = isNearBottomRef.current || actualDistanceFromBottom <= 400;
 
       if (!effectivelyAtBottom) {
-        setNewMessageCount((prev) => prev + (currentLength - prevLength));
+        const added = Math.max(1, currentLength - prevLength);
+        setNewMessageCount((prev) => prev + added);
       } else {
         // Guard: mark as programmatic so handleScroll won't corrupt isNearBottomRef
         isProgrammaticScrollRef.current = true;
@@ -305,17 +322,35 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
         };
         // Immediate (before paint via useLayoutEffect)
         nudge();
-        // Retry at 100ms and 250ms for async content (images, embeds)
-        setTimeout(nudge, 100);
+        // Retry at 50ms, 150ms, 300ms for async content (images, embeds)
+        setTimeout(nudge, 50);
+        setTimeout(nudge, 150);
         setTimeout(() => {
           nudge();
           // Release guard after final nudge
           isProgrammaticScrollRef.current = false;
-        }, 250);
+        }, 300);
       }
     }
+
     prevMessagesLengthRef.current = currentLength;
-  }, [messages.length]);
+    if (currentLastId) lastNudgedMessageIdRef.current = currentLastId;
+  }, [lastMessageId, messages.length]);
+
+  // Safety-net: periodic check to ensure we stay at bottom when we should be
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!isNearBottomRef.current) return;
+      if (isProgrammaticScrollRef.current) return;
+      const node = containerRef.current;
+      if (!node) return;
+      const distanceFromBottom = node.scrollHeight - node.scrollTop - node.clientHeight;
+      if (distanceFromBottom > 2) {
+        node.scrollTop = node.scrollHeight;
+      }
+    }, 500);
+    return () => clearInterval(interval);
+  }, [channelId]);
 
   const newMessagesDividerIndex = useMemo(() => {
     if (!lastReadAt || !firstUnreadMessageId) return -1;
@@ -473,27 +508,34 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }
   }, [handleLoadOlder, handleAtBottomStateChange]);
 
-  // FIX 4: Initial bottom scroll with null guards
+  // Initial bottom scroll — multiple retries for reliability
   useEffect(() => {
     if (isLoading || msgCount === 0 || didInitialBottomScrollRef.current) return;
     didInitialBottomScrollRef.current = true;
     isProgrammaticScrollRef.current = true;
-    requestAnimationFrame(() => {
+
+    const scrollDown = () => {
       const node = containerRef.current;
-      if (!node) return;
-      node.scrollTop = node.scrollHeight;
-      setTimeout(() => {
-        const n = containerRef.current;
-        if (!n) return;
-        n.scrollTop = n.scrollHeight;
-        isNearBottomRef.current = true;
-        isProgrammaticScrollRef.current = false;
-      }, 100);
-    });
+      if (node) {
+        node.scrollTop = node.scrollHeight;
+        lastScrollHeightRef.current = node.scrollHeight;
+      }
+    };
+
+    // Immediate attempt
+    scrollDown();
+    // Retries to catch late-rendering content
+    requestAnimationFrame(scrollDown);
+    setTimeout(scrollDown, 50);
+    setTimeout(scrollDown, 150);
+    setTimeout(() => {
+      scrollDown();
+      isNearBottomRef.current = true;
+      isProgrammaticScrollRef.current = false;
+    }, 300);
   }, [isLoading, msgCount]);
 
-  // Fix C: ResizeObserver — observe the actual messages wrapper (data-messages-container)
-  // so async content growth (images, embeds) triggers auto-scroll when at bottom
+  // ResizeObserver + MutationObserver — dual safety net for auto-scroll
   const messagesWrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -502,25 +544,34 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
 
     lastScrollHeightRef.current = node.scrollHeight;
 
-    const observer = new ResizeObserver(() => {
+    const autoScrollIfNeeded = () => {
       const n = containerRef.current;
-      if (!n) return;
+      if (!n || !isNearBottomRef.current) return;
       const newHeight = n.scrollHeight;
       const oldHeight = lastScrollHeightRef.current;
-      if (newHeight > oldHeight && isNearBottomRef.current) {
+      if (newHeight > oldHeight) {
         n.scrollTop = n.scrollHeight;
         isNearBottomRef.current = true;
       }
       lastScrollHeightRef.current = newHeight;
-    });
+    };
 
-    // Observe the messages content wrapper (the div that actually grows)
+    // ResizeObserver: catches element size changes (images loading, embeds expanding)
+    const resizeObserver = new ResizeObserver(autoScrollIfNeeded);
+
+    // MutationObserver: catches new DOM nodes being added (new messages rendered)
+    const mutationObserver = new MutationObserver(autoScrollIfNeeded);
+
     const wrapper = messagesWrapperRef.current;
     if (wrapper) {
-      observer.observe(wrapper);
+      resizeObserver.observe(wrapper);
+      mutationObserver.observe(wrapper, { childList: true, subtree: true });
     }
 
-    return () => observer.disconnect();
+    return () => {
+      resizeObserver.disconnect();
+      mutationObserver.disconnect();
+    };
   }, [channelId, msgCount > 0]); // re-attach when channel changes or first messages arrive
 
   const authorStyleMapRef = useRef(authorStyleMap);
