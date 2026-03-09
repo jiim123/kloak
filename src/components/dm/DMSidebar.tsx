@@ -38,6 +38,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
     isLoading,
   } = useDMStore();
   const { getUnreadCount, markAsRead } = useUnreadDMsContext();
+  const pendingFriendCount = useFriendStore((s) => s.pendingRequests.length);
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateGroup, setShowCreateGroup] = useState(false);
 
