@@ -186,6 +186,8 @@ const Auth = ({ formOnly = false }: AuthProps) => {
       setUsernameError(null);
       setUsernameErrorType(null);
       setUsernameSuggestions([]);
+      setIsUsernameAvailable(false);
+      setIsCheckingUsername(false);
       return;
     }
 
@@ -194,6 +196,8 @@ const Auth = ({ formOnly = false }: AuthProps) => {
     if (!validation.isValid) {
       setUsernameError(validation.error || "Invalid username");
       setUsernameErrorType(validation.errorType || null);
+      setIsUsernameAvailable(false);
+      setIsCheckingUsername(false);
 
       // Log blocked username attempts for security monitoring
       if (validation.errorType === "reserved" || validation.errorType === "contains_restricted") {
@@ -207,11 +211,47 @@ const Auth = ({ formOnly = false }: AuthProps) => {
       return;
     }
 
-    // Clear error and suggestions if validation passed
+    // Clear error and suggestions if validation passed, start checking availability
     setUsernameError(null);
     setUsernameErrorType(null);
     setUsernameSuggestions([]);
-    setIsCheckingUsername(false);
+    setIsUsernameAvailable(false);
+    setIsCheckingUsername(true);
+
+    // Debounced availability check
+    const timer = setTimeout(async () => {
+      try {
+        const { data, error } = await supabase.rpc("check_username_available", {
+          _username: username.trim().toLowerCase(),
+        });
+
+        // Only update if username hasn't changed during the async call
+        if (username === username) {
+          if (error) {
+            console.error("Username availability check failed:", error);
+            setIsCheckingUsername(false);
+            // Don't block registration on availability check failure
+            setIsUsernameAvailable(true);
+            return;
+          }
+
+          if (data === true) {
+            setIsUsernameAvailable(true);
+            setUsernameError(null);
+          } else {
+            setIsUsernameAvailable(false);
+            setUsernameError("Username is already taken");
+            setUsernameErrorType("format");
+          }
+          setIsCheckingUsername(false);
+        }
+      } catch {
+        setIsCheckingUsername(false);
+        setIsUsernameAvailable(true); // Don't block on network errors
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
   }, [username]);
 
   // Handle create account
