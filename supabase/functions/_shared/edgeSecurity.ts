@@ -63,8 +63,6 @@ export async function resolveRequestUserId(
 
   const normalizedKeyHash = /^[a-fA-F0-9]{64}$/.test(keyHash) ? keyHash.toLowerCase() : keyHash;
 
-  let matchedUserAuth = false;
-  let matchedUsersLegacy = false;
 
   // Prefer RPC-based resolution to avoid RLS blocking direct reads on user_auth.
   try {
