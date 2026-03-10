@@ -202,7 +202,7 @@ export const WelcomeModal = ({ open, onClose }: WelcomeModalProps) => {
             <div className="space-y-4">
               <div className="flex justify-center">
                 <DotLottiePlayer
-                  src={checkmarkLottie}
+                  src="/animations/checkmark.lottie"
                   autoplay
                   style={{ width: 120, height: 120 }}
                 />
