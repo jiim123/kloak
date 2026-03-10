@@ -428,12 +428,11 @@ const Auth = ({ formOnly = false }: AuthProps) => {
     if (usernameError) {
       return <p className="text-xs text-destructive">{usernameError}</p>;
     }
-    if (!usernameError && username && !isCheckingUsername) {
-      return (
-        <p className="text-xs text-muted-foreground">
-          Username availability is checked when you submit registration.
-        </p>
-      );
+    if (isCheckingUsername && username) {
+      return <p className="text-xs text-muted-foreground">Checking availability...</p>;
+    }
+    if (isUsernameAvailable && username && !isCheckingUsername) {
+      return <p className="text-xs text-[hsl(var(--kloak-success))]">Username is available!</p>;
     }
     return null;
   };
