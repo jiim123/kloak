@@ -1282,6 +1282,45 @@ export type Database = {
           },
         ]
       }
+      muted_users: {
+        Row: {
+          id: string
+          muted_at: string
+          muted_until: string | null
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          muted_at?: string
+          muted_until?: string | null
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          muted_at?: string
+          muted_until?: string | null
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "muted_users_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "muted_users_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           body: string | null
@@ -2691,7 +2730,28 @@ export type Database = {
         }
         Returns: boolean
       }
+      check_dm_rate_limit: {
+        Args: { _conv_id: string; _user_id: string }
+        Returns: boolean
+      }
       check_e2e_status: { Args: { _user_id: string }; Returns: boolean }
+      check_mention_limit: { Args: { _content: string }; Returns: boolean }
+      check_message_rate_limit: {
+        Args: { _channel_id: string; _user_id: string }
+        Returns: boolean
+      }
+      check_new_account_no_links: {
+        Args: { _content: string; _user_id: string }
+        Returns: boolean
+      }
+      check_no_duplicate_dm: {
+        Args: { _content: string; _conv_id: string; _user_id: string }
+        Returns: boolean
+      }
+      check_no_duplicate_message: {
+        Args: { _channel_id: string; _content: string; _user_id: string }
+        Returns: boolean
+      }
       check_rate_limit: {
         Args: {
           _action: string
@@ -3321,6 +3381,7 @@ export type Database = {
         Returns: boolean
       }
       is_unicode_emoji: { Args: { _emoji: string }; Returns: boolean }
+      is_user_muted: { Args: { _user_id: string }; Returns: boolean }
       is_username_blocked: { Args: { username: string }; Returns: boolean }
       join_server_by_invite: {
         Args: { _invite_code: string; _join_source?: string; _user_id: string }

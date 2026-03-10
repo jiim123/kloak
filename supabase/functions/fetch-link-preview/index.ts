@@ -562,6 +562,9 @@ serve(async (req) => {
   try {
     const supabase = createServiceClient();
     const auth = await getAuthContext(supabase, req);
+    if (!auth.requestUserId) {
+      return jsonResponse({ error: 'Authentication required' }, 401, 0);
+    }
     const rateOk = await enforceRateLimit(supabase, auth.scopeBase, 'edge_link_preview', 60, 60);
     if (!rateOk) {
       return jsonResponse({ error: 'Rate limited: too many link previews' }, 429, 0);
