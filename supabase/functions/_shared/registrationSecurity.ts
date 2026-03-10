@@ -124,7 +124,7 @@ export function getDynamicDifficulty(attemptCount: number): number {
  * Used by generate-challenge to set difficulty before registration.
  */
 export async function peekAttemptCount(
-  supabase: ReturnType<typeof createClient>,
+  supabase: AnySupabaseClient,
   ipHash: string,
 ): Promise<number> {
   const now = new Date();
