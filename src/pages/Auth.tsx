@@ -159,6 +159,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
     setSecretKey("");
     setGeneratedKey(null);
     setUsernameSuggestions([]);
+    setIsUsernameAvailable(false);
     setCaptchaToken(null);
     setCaptchaError(null);
     captchaRef.current?.resetCaptcha();
