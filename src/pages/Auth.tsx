@@ -87,6 +87,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [usernameErrorType, setUsernameErrorType] = useState<string | null>(null);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+  const [isUsernameAvailable, setIsUsernameAvailable] = useState(false);
   const [generatedKey, setGeneratedKey] = useState<string | null>(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([]);
