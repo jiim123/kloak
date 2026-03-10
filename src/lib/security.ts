@@ -137,8 +137,8 @@ export const validateUsername = (username: string): { valid: boolean; error?: st
 
   const trimmed = username.trim().toLowerCase();
 
-  if (trimmed.length < 3) {
-    return { valid: false, error: "Username must be at least 3 characters" };
+  if (trimmed.length < 4) {
+    return { valid: false, error: "Username must be at least 4 characters" };
   }
 
   if (trimmed.length > 16) {
