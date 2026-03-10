@@ -137,12 +137,12 @@ export async function peekAttemptCount(
 
   if (!row) return 0;
 
-  const windowStart = new Date(row.window_start);
+  const windowStart = new Date((row as any).window_start);
   if (now.getTime() - windowStart.getTime() > HOURLY_WINDOW_MS) {
     return 0; // window expired
   }
 
-  return row.attempt_count as number;
+  return (row as any).attempt_count as number;
 }
 
 // ─── Username Validation ──────────────────────────────────────────────────────
