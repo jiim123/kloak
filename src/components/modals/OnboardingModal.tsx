@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { DotLottiePlayer } from "@dotlottie/react-player";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 
 interface OnboardingModalProps {
   open: boolean;
@@ -183,7 +183,7 @@ export const OnboardingModal = ({
                   {/* Key display */}
                   <div className="relative">
                     <div className="bg-secondary/50 rounded-lg p-3.5 font-mono text-xs sm:text-sm break-all border border-border pr-10">
-                      {showKey ? secretKey : "•".repeat(64)}
+                      {showKey && secretKey ? secretKey : "•".repeat(secretKey?.length || 64)}
                     </div>
                     <Button
                       type="button"
@@ -200,6 +200,7 @@ export const OnboardingModal = ({
                     variant={keyCopied ? "secondary" : "outline"}
                     className="w-full"
                     onClick={copyKey}
+                    disabled={!secretKey}
                   >
                     {keyCopied ? (
                       <><Check className="w-4 h-4 mr-2 text-[hsl(var(--kloak-success))]" /> Copied</>
@@ -256,7 +257,7 @@ export const OnboardingModal = ({
             {currentStep === 3 && (
               <>
                 <div className="flex justify-center mb-2">
-                  <DotLottiePlayer
+                  <DotLottieReact
                     src="/animations/checkmark-2.lottie"
                     autoplay
                     loop={false}
