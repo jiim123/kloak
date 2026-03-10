@@ -1,11 +1,11 @@
 import { corsHeaders } from "../_shared/cors.ts";
+import { createServiceClient, enforceRateLimit, getAuthContext } from "../_shared/edgeSecurity.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  // Check maintenance status from app_config table
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
@@ -17,10 +17,21 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    // Lightweight rate limit to prevent abuse (60 req/min per client)
+    const supabase = createServiceClient();
+    const auth = await getAuthContext(supabase, req);
+    let rateOk = false;
+    try {
+      rateOk = await enforceRateLimit(supabase, auth.scopeBase, "edge_maintenance_check", 60, 60);
+    } catch {
+      rateOk = true; // fail open
+    }
+    if (!rateOk) {
+      return new Response(
+        JSON.stringify({ error: "Rate limited" }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     const { data } = await supabase
       .from("app_config")
@@ -42,7 +53,6 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch {
-    // If we can't check, assume not in maintenance
     return new Response(
       JSON.stringify({ maintenance: false }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
