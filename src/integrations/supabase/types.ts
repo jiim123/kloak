@@ -2738,6 +2738,7 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
+      check_decline_rate_limit: { Args: { _user_id: string }; Returns: boolean }
       check_dm_rate_limit: {
         Args: { _conv_id: string; _user_id: string }
         Returns: boolean
@@ -2785,6 +2786,10 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
+      check_server_create_rate_limit: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       check_server_join_rate_limit: {
         Args: { _user_id: string }
         Returns: boolean
@@ -2826,6 +2831,16 @@ export type Database = {
       }
       close_expired_polls: { Args: { _channel_id: string }; Returns: number }
       close_poll: { Args: { _poll_id: string }; Returns: boolean }
+      consume_registration_rate_limit: {
+        Args: {
+          _daily_limit?: number
+          _daily_window_seconds?: number
+          _hourly_limit?: number
+          _hourly_window_seconds?: number
+          _ip_hash: string
+        }
+        Returns: Json
+      }
       count_available_prekeys: {
         Args: { _device_id: number; _user_id: string }
         Returns: number
