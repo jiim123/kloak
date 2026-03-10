@@ -57,15 +57,12 @@ export async function resolveRequestUserId(
   supabase: ReturnType<typeof createServiceClient>,
   req: Request,
 ): Promise<string | null> {
-  const debugAuth = req.headers.get("x-debug-auth") === "1";
   const rawKeyHash = req.headers.get("x-key-hash");
   const keyHash = rawKeyHash ? rawKeyHash.trim() : "";
   if (!keyHash) return null;
 
   const normalizedKeyHash = /^[a-fA-F0-9]{64}$/.test(keyHash) ? keyHash.toLowerCase() : keyHash;
 
-  let matchedUserAuth = false;
-  let matchedUsersLegacy = false;
 
   // Prefer RPC-based resolution to avoid RLS blocking direct reads on user_auth.
   try {
@@ -79,14 +76,6 @@ export async function resolveRequestUserId(
     });
     const { data: rpcUserId, error: rpcError } = await rpcClient.rpc("get_request_user_id");
     if (!rpcError && rpcUserId) {
-      matchedUserAuth = true;
-      if (debugAuth) {
-        console.log("[edge-auth] rpc get_request_user_id match", {
-          keyHashLen: keyHash.length,
-          isHex64: /^[a-fA-F0-9]{64}$/.test(keyHash),
-          normalized: normalizedKeyHash !== keyHash,
-        });
-      }
       return rpcUserId as string;
     }
   } catch {
@@ -100,14 +89,6 @@ export async function resolveRequestUserId(
     .single();
 
   if (!error && data?.user_id) {
-    matchedUserAuth = true;
-    if (debugAuth) {
-      console.log("[edge-auth] user_auth match", {
-        keyHashLen: keyHash.length,
-        isHex64: /^[a-fA-F0-9]{64}$/.test(keyHash),
-        normalized: normalizedKeyHash !== keyHash,
-      });
-    }
     return data.user_id as string;
   }
 
@@ -120,14 +101,6 @@ export async function resolveRequestUserId(
     data = retry.data;
     error = retry.error;
     if (!error && data?.user_id) {
-      matchedUserAuth = true;
-      if (debugAuth) {
-        console.log("[edge-auth] user_auth match (raw)", {
-          keyHashLen: keyHash.length,
-          isHex64: /^[a-fA-F0-9]{64}$/.test(keyHash),
-          normalized: true,
-        });
-      }
       return data.user_id as string;
     }
   }
@@ -143,7 +116,6 @@ export async function resolveRequestUserId(
 
     if (!legacy.error && legacy.data?.id) {
       const legacyUserId = legacy.data.id as string;
-      matchedUsersLegacy = true;
       const insertResult = await supabase.from("user_auth").insert({
         user_id: legacyUserId,
         key_hash: normalizedKeyHash,
@@ -159,15 +131,6 @@ export async function resolveRequestUserId(
     // ignore legacy fallback errors (e.g. column missing)
   }
 
-  if (debugAuth) {
-    console.log("[edge-auth] resolve failed", {
-      keyHashLen: keyHash.length,
-      isHex64: /^[a-fA-F0-9]{64}$/.test(keyHash),
-      normalized: normalizedKeyHash !== keyHash,
-      matchedUserAuth,
-      matchedUsersLegacy,
-    });
-  }
   return null;
 }
 
