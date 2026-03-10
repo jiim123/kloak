@@ -503,7 +503,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
                                 </TooltipTrigger>
                                 <TooltipContent side="top" className="max-w-[220px] text-xs">
                                   <p>
-                                    3-16 characters. Letters, numbers, underscores, and hyphens only. No offensive or
+                                    4-16 characters. Letters, numbers, underscores, and hyphens only. No offensive or
                                     impersonating names.
                                   </p>
                                 </TooltipContent>
@@ -746,7 +746,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
                                 </TooltipTrigger>
                                 <TooltipContent side="top" className="max-w-[220px] text-xs">
                                   <p>
-                                    3-16 characters. Letters, numbers, underscores, and hyphens only. No offensive or
+                                    4-16 characters. Letters, numbers, underscores, and hyphens only. No offensive or
                                     impersonating names.
                                   </p>
                                 </TooltipContent>
