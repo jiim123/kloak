@@ -8,7 +8,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.registration_rate_limits TO
 
 WITH collapsed AS (
   SELECT
-    min(id) AS keep_id,
+    (array_agg(id ORDER BY last_attempt_at DESC NULLS LAST, id::text))[1] AS keep_id,
     ip_hash,
     COALESCE(
       sum(
