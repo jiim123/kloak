@@ -78,14 +78,6 @@ export async function resolveRequestUserId(
     });
     const { data: rpcUserId, error: rpcError } = await rpcClient.rpc("get_request_user_id");
     if (!rpcError && rpcUserId) {
-      matchedUserAuth = true;
-      if (debugAuth) {
-        console.log("[edge-auth] rpc get_request_user_id match", {
-          keyHashLen: keyHash.length,
-          isHex64: /^[a-fA-F0-9]{64}$/.test(keyHash),
-          normalized: normalizedKeyHash !== keyHash,
-        });
-      }
       return rpcUserId as string;
     }
   } catch {
