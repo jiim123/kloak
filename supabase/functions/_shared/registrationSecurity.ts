@@ -63,10 +63,10 @@ export async function checkRegistrationRateLimit(
     return { allowed: true, attemptCount: 1 };
   }
 
-  let attemptCount = row.attempt_count as number;
-  let windowStart = new Date(row.window_start);
-  let dailyCount = row.daily_count as number;
-  let dailyWindowStart = new Date(row.daily_window_start);
+  let attemptCount = (row as any).attempt_count as number;
+  let windowStart = new Date((row as any).window_start);
+  let dailyCount = (row as any).daily_count as number;
+  let dailyWindowStart = new Date((row as any).daily_window_start);
 
   // Reset hourly window if expired
   if (now.getTime() - windowStart.getTime() > HOURLY_WINDOW_MS) {
