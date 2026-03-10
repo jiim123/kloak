@@ -381,7 +381,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
     if (!username) return null;
     if (usernameError) return <XCircle className="w-4 h-4 text-destructive" />;
     if (isCheckingUsername) return <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />;
-    if (username) return <CheckCircle2 className="w-4 h-4 text-[hsl(var(--kloak-success))]" />;
+    if (isUsernameAvailable) return <CheckCircle2 className="w-4 h-4 text-[hsl(var(--kloak-success))]" />;
     return null;
   };
 
