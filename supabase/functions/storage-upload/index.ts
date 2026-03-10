@@ -233,9 +233,9 @@ Deno.serve(async (req) => {
     let rateOk = false;
     try {
       rateOk = await enforceRateLimit(sharedClient, rateScope, "edge_storage_upload", 60, 60);
-    } catch {
-      // If rate limit backend is unavailable, allow the request
-      rateOk = true;
+    } catch (rateError) {
+      const msg = rateError instanceof Error ? rateError.message : "Rate-limit backend unavailable";
+      return jsonResponse({ error: msg }, 503);
     }
     if (!rateOk) {
       return jsonResponse({ error: "Rate limited: too many storage operations" }, 429);

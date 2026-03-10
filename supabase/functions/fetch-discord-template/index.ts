@@ -233,7 +233,7 @@ serve(async (req) => {
   } catch (error: any) {
     console.error("Error fetching Discord template:", error);
     return new Response(
-      JSON.stringify({ error: error.message || "Failed to fetch template" }),
+      JSON.stringify({ error: "Failed to fetch template" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

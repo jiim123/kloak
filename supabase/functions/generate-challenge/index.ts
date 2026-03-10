@@ -22,8 +22,12 @@ Deno.serve(async (req) => {
     let rateOk = false;
     try {
       rateOk = await enforceRateLimit(sharedClient, rateScope, "edge_generate_challenge", 10, 60);
-    } catch {
-      rateOk = true; // fail open if rate limit backend unavailable
+    } catch (rateError) {
+      console.error("[generate-challenge] rate limit backend error:", rateError);
+      return new Response(JSON.stringify({ error: "Service temporarily unavailable" }), {
+        status: 503,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
     if (!rateOk) {
       return new Response(JSON.stringify({ error: "Rate limited: too many challenge requests" }), {

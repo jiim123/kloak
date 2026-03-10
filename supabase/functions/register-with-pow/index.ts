@@ -160,8 +160,11 @@ Deno.serve(async (req) => {
     let rateOk = false;
     try {
       rateOk = await enforceRateLimit(sharedClient, rateScope, "edge_register_pow", 5, 300);
-    } catch {
-      rateOk = true;
+    } catch (rateError) {
+      console.error("[register-with-pow] rate limit backend error:", rateError);
+      return new Response(JSON.stringify({ error: "Service temporarily unavailable" }), {
+        status: 503, headers: resHeaders,
+      });
     }
     if (!rateOk) {
       return new Response(

@@ -109,6 +109,7 @@ serve(async (req) => {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    return jsonResponse({ error: message }, 500);
+    console.error("klipy-proxy internal:", message);
+    return jsonResponse({ error: "GIF service unavailable" }, 500);
   }
 });

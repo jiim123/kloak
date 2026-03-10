@@ -24,7 +24,9 @@ Deno.serve(async (req) => {
     try {
       rateOk = await enforceRateLimit(supabase, auth.scopeBase, "edge_maintenance_check", 60, 60);
     } catch {
-      rateOk = true; // fail open
+      // For maintenance check, fail open to avoid blocking app startup
+      // This is acceptable since the endpoint only reads a single config row
+      rateOk = true;
     }
     if (!rateOk) {
       return new Response(
