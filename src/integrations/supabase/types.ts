@@ -2738,6 +2738,7 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
+      check_decline_rate_limit: { Args: { _user_id: string }; Returns: boolean }
       check_dm_rate_limit: {
         Args: { _conv_id: string; _user_id: string }
         Returns: boolean
@@ -2782,6 +2783,10 @@ export type Database = {
         Returns: boolean
       }
       check_reaction_rate_limit: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
+      check_server_create_rate_limit: {
         Args: { _user_id: string }
         Returns: boolean
       }
