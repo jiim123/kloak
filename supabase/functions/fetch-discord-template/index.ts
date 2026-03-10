@@ -99,11 +99,12 @@ serve(async (req) => {
       );
     }
 
-    const { templateUrl } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const templateUrl = typeof body?.templateUrl === "string" ? body.templateUrl : null;
 
-    if (!templateUrl) {
+    if (!templateUrl || templateUrl.length > 512) {
       return new Response(
-        JSON.stringify({ error: "Template URL is required" }),
+        JSON.stringify({ error: "Template URL is required (max 512 characters)" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
