@@ -125,15 +125,13 @@ Deno.serve(async (req) => {
 
     if (!username || typeof username !== "string" || !key_hash || typeof key_hash !== "string") {
       return new Response(JSON.stringify({ error: "Username and key_hash are required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: resHeaders,
       });
     }
 
     if (!challenge_id || !solution) {
       return new Response(JSON.stringify({ error: "Challenge ID and solution are required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: resHeaders,
       });
     }
 
@@ -151,7 +149,7 @@ Deno.serve(async (req) => {
     if (!rateResult.allowed) {
       return new Response(
         JSON.stringify({ error: "Too many registration attempts. Please try again later." }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: 429, headers: resHeaders },
       );
     }
 
@@ -168,7 +166,7 @@ Deno.serve(async (req) => {
     if (!rateOk) {
       return new Response(
         JSON.stringify({ error: "Too many registration attempts. Please try again later." }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: 429, headers: resHeaders },
       );
     }
 
@@ -177,7 +175,7 @@ Deno.serve(async (req) => {
     if (!usernameCheck.valid) {
       return new Response(
         JSON.stringify({ error: usernameCheck.error || "Username is not allowed" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: 400, headers: resHeaders },
       );
     }
 
@@ -190,36 +188,30 @@ Deno.serve(async (req) => {
 
     if (challengeError || !challenge) {
       return new Response(JSON.stringify({ error: "Invalid challenge" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: resHeaders,
       });
     }
 
     // Check expiry
     if (new Date(challenge.expires_at) < new Date()) {
       return new Response(JSON.stringify({ error: "Challenge expired" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: resHeaders,
       });
     }
 
     // Check if already used
     if (challenge.used) {
       return new Response(JSON.stringify({ error: "Challenge already used" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: resHeaders,
       });
     }
 
     // ─── Phase 4: Verify PoW at SERVER-DICTATED difficulty ──────────────
-    // The difficulty stored in the challenge is what the server assigned.
-    // We verify against that, NOT any client-reported value.
     const hash = await sha256Hex(challenge.nonce + solution);
     const target = "0".repeat(challenge.difficulty);
     if (!hash.startsWith(target)) {
       return new Response(JSON.stringify({ error: "Invalid proof of work solution" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: resHeaders,
       });
     }
 
@@ -241,14 +233,12 @@ Deno.serve(async (req) => {
       const errMsg = error.message ?? "";
       if (errMsg.includes("Username already taken")) {
         return new Response(JSON.stringify({ error: "Username already taken" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400, headers: resHeaders,
         });
       }
       if (errMsg.includes("reserved") || errMsg.includes("not allowed")) {
         return new Response(JSON.stringify({ error: "This username is not allowed" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400, headers: resHeaders,
         });
       }
       throw error;
@@ -256,14 +246,11 @@ Deno.serve(async (req) => {
 
     if (!data) {
       return new Response(JSON.stringify({ error: "Registration failed" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: resHeaders,
       });
     }
 
-    return new Response(JSON.stringify({ data }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(JSON.stringify({ data }), { headers: resHeaders });
   } catch (err) {
     console.error("[register-with-pow] Unhandled error:", err);
     const message = err instanceof Error ? err.message : "Registration failed";
