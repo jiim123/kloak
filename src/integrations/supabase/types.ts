@@ -2734,6 +2734,10 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
+      check_channel_flood: {
+        Args: { _channel_id: string; _user_id: string }
+        Returns: boolean
+      }
       check_channel_member_rate_limit: {
         Args: { _user_id: string }
         Returns: boolean
