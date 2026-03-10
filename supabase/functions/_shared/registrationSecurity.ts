@@ -39,8 +39,9 @@ export interface RateLimitResult {
 }
 
 export async function checkRegistrationRateLimit(
-  supabase: ReturnType<typeof createClient>,
+  supabase: AnySupabaseClient,
   ipHash: string,
+): Promise<RateLimitResult> {
 ): Promise<RateLimitResult> {
   const now = new Date();
 
