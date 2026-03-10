@@ -257,12 +257,7 @@ export const OnboardingModal = ({
             {currentStep === 3 && (
               <>
                 <div className="flex justify-center mb-2">
-                  <DotLottieReact
-                    src="/animations/checkmark-2.lottie"
-                    autoplay
-                    loop={false}
-                    style={{ width: 120, height: 120 }}
-                  />
+                  <CheckmarkAnimation size={120} />
                 </div>
 
                 <DialogHeader className="text-left pb-4">
