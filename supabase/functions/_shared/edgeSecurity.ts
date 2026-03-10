@@ -91,14 +91,6 @@ export async function resolveRequestUserId(
     .single();
 
   if (!error && data?.user_id) {
-    matchedUserAuth = true;
-    if (debugAuth) {
-      console.log("[edge-auth] user_auth match", {
-        keyHashLen: keyHash.length,
-        isHex64: /^[a-fA-F0-9]{64}$/.test(keyHash),
-        normalized: normalizedKeyHash !== keyHash,
-      });
-    }
     return data.user_id as string;
   }
 
