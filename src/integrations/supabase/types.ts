@@ -1282,6 +1282,45 @@ export type Database = {
           },
         ]
       }
+      muted_users: {
+        Row: {
+          id: string
+          muted_at: string
+          muted_until: string | null
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          muted_at?: string
+          muted_until?: string | null
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          muted_at?: string
+          muted_until?: string | null
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "muted_users_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "muted_users_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           body: string | null
