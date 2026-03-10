@@ -131,15 +131,6 @@ export async function resolveRequestUserId(
     // ignore legacy fallback errors (e.g. column missing)
   }
 
-  if (debugAuth) {
-    console.log("[edge-auth] resolve failed", {
-      keyHashLen: keyHash.length,
-      isHex64: /^[a-fA-F0-9]{64}$/.test(keyHash),
-      normalized: normalizedKeyHash !== keyHash,
-      matchedUserAuth,
-      matchedUsersLegacy,
-    });
-  }
   return null;
 }
 
