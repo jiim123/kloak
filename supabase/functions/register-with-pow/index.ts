@@ -22,20 +22,105 @@ async function sha256Hex(input: string): Promise<string> {
   return Array.from(new Uint8Array(hashBuffer), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+// ─── Origin allowlist ───────────────────────────────────────────────────────
+const LOCAL_DEV_ORIGINS = [
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "https://klbetadis.lovable.app",
+  "https://id-preview--67ba8495-ca58-4eeb-80ed-94fbf23fb179.lovable.app",
+];
+
+function getAllowedOrigins(): string[] {
+  const envKeys = ["REGISTER_ALLOWED_ORIGINS", "SUPABASE_REGISTER_ALLOWED_ORIGINS", "APP_ALLOWED_ORIGINS", "APP_ORIGIN"];
+  const configured: string[] = [];
+  for (const key of envKeys) {
+    const raw = Deno.env.get(key);
+    if (!raw) continue;
+    for (const entry of raw.split(",").map((e) => e.trim()).filter(Boolean)) {
+      try { const o = new URL(entry).origin; if (!configured.includes(o)) configured.push(o); } catch { /* skip */ }
+    }
+  }
+  return configured.length > 0 ? configured : LOCAL_DEV_ORIGINS;
+}
+
+const allowedOrigins = getAllowedOrigins();
+
+function getRequestOrigin(req: Request): string | null {
+  const raw = req.headers.get("origin")?.trim();
+  if (!raw) return null;
+  try { return new URL(raw).origin; } catch { return null; }
+}
+
+function isOriginAllowed(origin: string | null): origin is string {
+  return origin !== null && allowedOrigins.includes(origin);
+}
+
+function corsHeadersForOrigin(origin: string | null): Record<string, string> {
+  if (!origin) return { ...corsHeaders };
+  return { ...corsHeaders, "Access-Control-Allow-Origin": origin };
+}
+
+const MAX_BODY_BYTES = 10 * 1024; // 10 KB
+
 Deno.serve(async (req) => {
+  const requestOrigin = getRequestOrigin(req);
+  const originAllowed = isOriginAllowed(requestOrigin);
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    if (!originAllowed) {
+      return new Response(null, { status: 403, headers: corsHeaders });
+    }
+    return new Response(null, { status: 204, headers: corsHeadersForOrigin(requestOrigin) });
   }
 
-  if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
+  // Reject disallowed origins
+  if (!originAllowed) {
+    return new Response(JSON.stringify({ error: "Origin not allowed" }), {
+      status: 403,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
+  const resHeaders = { ...corsHeadersForOrigin(requestOrigin), "Content-Type": "application/json" };
+
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405, headers: resHeaders,
+    });
+  }
+
   try {
-    const body = (await req.json()) as RegisterBody;
+    // ─── Content-Type validation ────────────────────────────────────────
+    const ct = req.headers.get("content-type") || "";
+    if (!ct.includes("application/json")) {
+      return new Response(JSON.stringify({ error: "Invalid content type" }), {
+        status: 415, headers: resHeaders,
+      });
+    }
+
+    // ─── Body size limit ────────────────────────────────────────────────
+    const contentLength = req.headers.get("content-length");
+    if (contentLength && parseInt(contentLength, 10) > MAX_BODY_BYTES) {
+      return new Response(JSON.stringify({ error: "Request too large" }), {
+        status: 413, headers: resHeaders,
+      });
+    }
+
+    const rawBody = await req.text();
+    if (rawBody.length > MAX_BODY_BYTES) {
+      return new Response(JSON.stringify({ error: "Request too large" }), {
+        status: 413, headers: resHeaders,
+      });
+    }
+
+    let body: RegisterBody;
+    try {
+      body = JSON.parse(rawBody) as RegisterBody;
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid JSON" }), {
+        status: 400, headers: resHeaders,
+      });
+    }
     const { username, key_hash, challenge_id, solution, banner_color } = body;
 
     if (!username || typeof username !== "string" || !key_hash || typeof key_hash !== "string") {

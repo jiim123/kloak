@@ -33,6 +33,9 @@ serve(async (req) => {
     // ── Auth + rate limiting ──
     const supabase = createServiceClient();
     const auth = await getAuthContext(supabase, req);
+    if (!auth.requestUserId) {
+      return jsonResponse({ error: "Authentication required" }, 401);
+    }
 
     let rateOk = false;
     try {

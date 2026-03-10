@@ -25,6 +25,12 @@ serve(async (req) => {
 
     const supabase = createServiceClient();
     const auth = await getAuthContext(supabase, req);
+    if (!auth.requestUserId) {
+      return new Response(JSON.stringify({ error: "Authentication required" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const rateOk = await enforceRateLimit(supabase, auth.scopeBase, "edge_giphy_search", 90, 60);
     if (!rateOk) {
       return new Response(JSON.stringify({ error: "Rate limited: too many GIF lookups" }), {
