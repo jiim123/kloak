@@ -93,6 +93,10 @@ export const useRealtimeNotifications = (userId: string | null) => {
       });
 
     const pollInterval = window.setInterval(async () => {
+      // Skip poll if auth key hash is unavailable (prevents 401s)
+      const { getKeyHash } = await import('@/integrations/supabase/client');
+      if (!getKeyHash()) return;
+
       const { data, error } = await supabase
         .from('notifications')
         .select('id, user_id, type, title, body, link, is_read, created_at')
