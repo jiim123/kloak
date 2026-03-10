@@ -1,9 +1,10 @@
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { createServiceClient as createSharedServiceClient, enforceRateLimit, getClientId } from "../_shared/edgeSecurity.ts";
+import { createServiceClient as createSharedServiceClient, enforceRateLimit } from "../_shared/edgeSecurity.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -80,6 +81,26 @@ function createServiceClient() {
   return createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   }) as any;
+}
+
+function createStorageRlsClient(keyHash: string) {
+  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false },
+    global: {
+      headers: {
+        "x-key-hash": keyHash,
+      },
+    },
+  }) as any;
+}
+
+function getStorageClientForBucket(serviceClient: any, rlsClient: any, bucket: string) {
+  // Buckets that rely on storage RLS policies keyed by x-key-hash.
+  if (bucket === "avatars" || bucket === "attachments") {
+    return rlsClient;
+  }
+  // Server buckets are permission-checked in this function first.
+  return serviceClient;
 }
 
 async function resolveUser(supabase: any, keyHash: string): Promise<string | null> {
@@ -221,6 +242,7 @@ Deno.serve(async (req) => {
     }
 
     const supabase = createServiceClient();
+    const storageRlsClient = createStorageRlsClient(keyHash);
 
     const userId = await resolveUser(supabase, keyHash);
     if (!userId) {
@@ -259,7 +281,8 @@ Deno.serve(async (req) => {
         normalizedPaths.push(perm.normalizedPath!);
       }
 
-      const { error: deleteError } = await supabase.storage.from(bucket).remove(normalizedPaths);
+      const storageClient = getStorageClientForBucket(supabase, storageRlsClient, bucket);
+      const { error: deleteError } = await storageClient.storage.from(bucket).remove(normalizedPaths);
       if (deleteError) {
         return jsonResponse({ error: deleteError.message }, 500);
       }
@@ -286,7 +309,8 @@ Deno.serve(async (req) => {
           if (perm.error) return jsonResponse({ error: perm.error }, 403);
           const normalizedPrefix = perm.normalizedPath!;
 
-          const { data: files } = await supabase.storage.from(bucket).list(normalizedPrefix, { search: searchFilter });
+          const storageClient = getStorageClientForBucket(supabase, storageRlsClient, bucket);
+          const { data: files } = await storageClient.storage.from(bucket).list(normalizedPrefix, { search: searchFilter });
 
           if (files && files.length > 0) {
             const toRemove = searchFilter
@@ -294,7 +318,7 @@ Deno.serve(async (req) => {
               : files.map((f: any) => `${normalizedPrefix}/${f.name}`);
 
             if (toRemove.length > 0) {
-              await supabase.storage.from(bucket).remove(toRemove);
+              await storageClient.storage.from(bucket).remove(toRemove);
             }
           }
 
@@ -330,7 +354,8 @@ Deno.serve(async (req) => {
       }
       const upsert = requestedUpsert && bucket === "server-icons";
 
-      const { data, error: uploadError } = await supabase.storage
+      const storageClient = getStorageClientForBucket(supabase, storageRlsClient, bucket);
+      const { data, error: uploadError } = await storageClient.storage
         .from(bucket)
         .upload(normalizedPath, file, { contentType: fileContentType, upsert, cacheControl });
 
@@ -340,7 +365,7 @@ Deno.serve(async (req) => {
 
       // For private buckets (attachments), return a signed URL instead of public URL
       if (bucket === "attachments") {
-        const { data: signedData, error: signError } = await supabase.storage
+        const { data: signedData, error: signError } = await storageClient.storage
           .from(bucket)
           .createSignedUrl(normalizedPath, EXPIRY_SECONDS);
         if (signError || !signedData?.signedUrl) {
@@ -353,7 +378,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(normalizedPath);
+      const { data: urlData } = storageClient.storage.from(bucket).getPublicUrl(normalizedPath);
       const shouldCacheBust = bucket === "server-icons" && upsert;
 
       return jsonResponse({
