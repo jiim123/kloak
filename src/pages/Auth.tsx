@@ -3,6 +3,7 @@ import { useNavigate, Link, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import HCaptcha from "@hcaptcha/react-hcaptcha";
 import { useAuthStore, initializeAuth } from "@/stores/authStore";
+import { supabase } from "@/integrations/supabase/client";
 import { markWelcomeSeen } from "@/lib/storage";
 import {
   Key,
