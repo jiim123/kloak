@@ -57,7 +57,6 @@ export async function resolveRequestUserId(
   supabase: ReturnType<typeof createServiceClient>,
   req: Request,
 ): Promise<string | null> {
-  const debugAuth = req.headers.get("x-debug-auth") === "1";
   const rawKeyHash = req.headers.get("x-key-hash");
   const keyHash = rawKeyHash ? rawKeyHash.trim() : "";
   if (!keyHash) return null;
