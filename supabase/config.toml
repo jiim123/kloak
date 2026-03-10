@@ -13,10 +13,10 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.generate-challenge]
-verify_jwt = false
+verify_jwt = true
 
 [functions.register-with-pow]
-verify_jwt = false
+verify_jwt = true
 
 [functions.broadcast-typing]
 verify_jwt = false
