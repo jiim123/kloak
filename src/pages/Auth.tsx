@@ -603,6 +603,8 @@ const Auth = ({ formOnly = false }: AuthProps) => {
                             MAINTENANCE_MODE ||
                             isLoading ||
                             !!usernameError ||
+                            !isUsernameAvailable ||
+                            isCheckingUsername ||
                             !hcaptchaSiteKey ||
                             !captchaToken ||
                             (rateLimitCooldown !== null && rateLimitCooldown > 0)
