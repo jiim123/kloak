@@ -390,7 +390,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
     if (usernameError) {
       return "pr-10 border-destructive focus-visible:border-destructive focus-visible:ring-destructive/30 bg-destructive/5";
     }
-    if (username) {
+    if (isUsernameAvailable) {
       return "pr-10 border-[hsl(var(--kloak-success))] focus-visible:border-[hsl(var(--kloak-success))] focus-visible:ring-[hsl(var(--kloak-success))]/30 bg-[hsl(var(--kloak-success))]/5";
     }
     return "pr-10";
