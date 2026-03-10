@@ -52,7 +52,7 @@ export async function checkRegistrationRateLimit(
 
   if (!row) {
     // First attempt — insert
-    await supabase.from("registration_rate_limits").insert({
+    await (supabase as any).from("registration_rate_limits").insert({
       ip_hash: ipHash,
       attempt_count: 1,
       window_start: now.toISOString(),
