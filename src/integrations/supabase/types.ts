@@ -2735,6 +2735,10 @@ export type Database = {
         Returns: boolean
       }
       check_e2e_status: { Args: { _user_id: string }; Returns: boolean }
+      check_generic_rate_limit: {
+        Args: { _max_per_minute: number; _table_name: string; _user_id: string }
+        Returns: boolean
+      }
       check_mention_limit: { Args: { _content: string }; Returns: boolean }
       check_message_rate_limit: {
         Args: { _channel_id: string; _user_id: string }
