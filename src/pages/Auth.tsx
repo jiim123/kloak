@@ -3,6 +3,7 @@ import { useNavigate, Link, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import HCaptcha from "@hcaptcha/react-hcaptcha";
 import { useAuthStore, initializeAuth } from "@/stores/authStore";
+import { supabase } from "@/integrations/supabase/client";
 import { markWelcomeSeen } from "@/lib/storage";
 import {
   Key,
@@ -87,6 +88,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [usernameErrorType, setUsernameErrorType] = useState<string | null>(null);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+  const [isUsernameAvailable, setIsUsernameAvailable] = useState(false);
   const [generatedKey, setGeneratedKey] = useState<string | null>(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([]);
@@ -157,6 +159,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
     setSecretKey("");
     setGeneratedKey(null);
     setUsernameSuggestions([]);
+    setIsUsernameAvailable(false);
     setCaptchaToken(null);
     setCaptchaError(null);
     captchaRef.current?.resetCaptcha();
@@ -185,6 +188,8 @@ const Auth = ({ formOnly = false }: AuthProps) => {
       setUsernameError(null);
       setUsernameErrorType(null);
       setUsernameSuggestions([]);
+      setIsUsernameAvailable(false);
+      setIsCheckingUsername(false);
       return;
     }
 
@@ -193,6 +198,8 @@ const Auth = ({ formOnly = false }: AuthProps) => {
     if (!validation.isValid) {
       setUsernameError(validation.error || "Invalid username");
       setUsernameErrorType(validation.errorType || null);
+      setIsUsernameAvailable(false);
+      setIsCheckingUsername(false);
 
       // Log blocked username attempts for security monitoring
       if (validation.errorType === "reserved" || validation.errorType === "contains_restricted") {
@@ -206,11 +213,47 @@ const Auth = ({ formOnly = false }: AuthProps) => {
       return;
     }
 
-    // Clear error and suggestions if validation passed
+    // Clear error and suggestions if validation passed, start checking availability
     setUsernameError(null);
     setUsernameErrorType(null);
     setUsernameSuggestions([]);
-    setIsCheckingUsername(false);
+    setIsUsernameAvailable(false);
+    setIsCheckingUsername(true);
+
+    // Debounced availability check
+    const timer = setTimeout(async () => {
+      try {
+        const { data, error } = await supabase.rpc("check_username_available", {
+          _username: username.trim().toLowerCase(),
+        });
+
+        // Only update if username hasn't changed during the async call
+        if (username === username) {
+          if (error) {
+            console.error("Username availability check failed:", error);
+            setIsCheckingUsername(false);
+            // Don't block registration on availability check failure
+            setIsUsernameAvailable(true);
+            return;
+          }
+
+          if (data === true) {
+            setIsUsernameAvailable(true);
+            setUsernameError(null);
+          } else {
+            setIsUsernameAvailable(false);
+            setUsernameError("Username is already taken");
+            setUsernameErrorType("format");
+          }
+          setIsCheckingUsername(false);
+        }
+      } catch {
+        setIsCheckingUsername(false);
+        setIsUsernameAvailable(true); // Don't block on network errors
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
   }, [username]);
 
   // Handle create account
@@ -339,7 +382,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
     if (!username) return null;
     if (usernameError) return <XCircle className="w-4 h-4 text-destructive" />;
     if (isCheckingUsername) return <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />;
-    if (username) return <CheckCircle2 className="w-4 h-4 text-[hsl(var(--kloak-success))]" />;
+    if (isUsernameAvailable) return <CheckCircle2 className="w-4 h-4 text-[hsl(var(--kloak-success))]" />;
     return null;
   };
 
@@ -348,7 +391,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
     if (usernameError) {
       return "pr-10 border-destructive focus-visible:border-destructive focus-visible:ring-destructive/30 bg-destructive/5";
     }
-    if (username) {
+    if (isUsernameAvailable) {
       return "pr-10 border-[hsl(var(--kloak-success))] focus-visible:border-[hsl(var(--kloak-success))] focus-visible:ring-[hsl(var(--kloak-success))]/30 bg-[hsl(var(--kloak-success))]/5";
     }
     return "pr-10";
@@ -561,6 +604,8 @@ const Auth = ({ formOnly = false }: AuthProps) => {
                             MAINTENANCE_MODE ||
                             isLoading ||
                             !!usernameError ||
+                            !isUsernameAvailable ||
+                            isCheckingUsername ||
                             !hcaptchaSiteKey ||
                             !captchaToken ||
                             (rateLimitCooldown !== null && rateLimitCooldown > 0)
