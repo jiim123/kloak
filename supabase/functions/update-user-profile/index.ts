@@ -37,39 +37,10 @@ serve(async (req) => {
     if (!keyHash) {
       return jsonResponse({ error: "Missing x-key-hash header" }, 401);
     }
-    const debugAuth = req.headers.get("x-debug-auth") === "1";
 
     const supabase = createServiceClient();
     const auth = await getAuthContext(supabase, req);
     if (!auth.requestUserId) {
-      if (debugAuth) {
-        const normalized = /^[a-fA-F0-9]{64}$/.test(keyHash) ? keyHash.toLowerCase() : keyHash;
-        const exact = await supabase
-          .from("user_auth")
-          .select("user_id")
-          .eq("key_hash", keyHash)
-          .maybeSingle();
-        const normalizedMatch =
-          normalized === keyHash
-            ? exact
-            : await supabase
-                .from("user_auth")
-                .select("user_id")
-                .eq("key_hash", normalized)
-                .maybeSingle();
-        return jsonResponse(
-          {
-            error: "Invalid credentials",
-            debug: {
-              keyHashLen: keyHash.length,
-              isHex64: /^[a-fA-F0-9]{64}$/.test(keyHash),
-              exactMatch: !!exact.data?.user_id,
-              normalizedMatch: !!normalizedMatch.data?.user_id,
-            },
-          },
-          401,
-        );
-      }
       return jsonResponse({ error: "Invalid credentials" }, 401);
     }
 

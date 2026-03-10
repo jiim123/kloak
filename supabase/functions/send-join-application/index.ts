@@ -145,8 +145,9 @@ const handler = async (req: Request): Promise<Response> => {
   } catch (error: unknown) {
     console.error("Error in send-join-application function:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("send-join-application internal:", errorMessage);
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: "Failed to process application" }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },

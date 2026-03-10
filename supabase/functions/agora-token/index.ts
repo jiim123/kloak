@@ -179,14 +179,34 @@ serve(async (req) => {
       return jsonResponse({ error: "Rate limited: too many token requests" }, 429);
     }
 
-    const { channelName, uid } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const channelName = typeof body?.channelName === "string" ? body.channelName : null;
+    const uid = typeof body?.uid === "number" ? body.uid : null;
 
     if (!channelName || typeof channelName !== "string") {
       return jsonResponse({ error: "channelName is required" }, 400);
     }
 
+    if (channelName.length > 128) {
+      return jsonResponse({ error: "channelName too long" }, 400);
+    }
+
     if (!uid || typeof uid !== "number") {
       return jsonResponse({ error: "uid (number) is required" }, 400);
+    }
+
+    const requestUserId = auth.requestUserId;
+
+    // Verify user has access to the voice channel (matches get-livekit-token behavior)
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (UUID_RE.test(channelName)) {
+      const { data: canAccess, error: accessError } = await supabase.rpc("has_channel_access", {
+        _channel_id: channelName,
+        _user_id: requestUserId,
+      });
+      if (accessError || !canAccess) {
+        return jsonResponse({ error: "Not allowed to join this voice channel" }, 403);
+      }
     }
 
     const token = await buildToken(AGORA_APP_ID, AGORA_APP_CERTIFICATE, channelName, uid, 6 * 60 * 60);

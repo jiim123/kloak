@@ -40,8 +40,9 @@ serve(async (req) => {
     let rateOk = false;
     try {
       rateOk = await enforceRateLimit(supabase, auth.scopeBase, "edge_klipy_proxy", 90, 60);
-    } catch {
-      rateOk = true; // fail open if rate limit backend unavailable
+    } catch (rateError) {
+      const msg = rateError instanceof Error ? rateError.message : "Rate-limit backend unavailable";
+      return jsonResponse({ error: msg }, 503);
     }
     if (!rateOk) {
       return jsonResponse({ error: "Rate limited: too many GIF lookups" }, 429);
@@ -108,6 +109,7 @@ serve(async (req) => {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    return jsonResponse({ error: message }, 500);
+    console.error("klipy-proxy internal:", message);
+    return jsonResponse({ error: "GIF service unavailable" }, 500);
   }
 });

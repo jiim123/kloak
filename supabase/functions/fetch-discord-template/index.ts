@@ -99,11 +99,12 @@ serve(async (req) => {
       );
     }
 
-    const { templateUrl } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const templateUrl = typeof body?.templateUrl === "string" ? body.templateUrl : null;
 
-    if (!templateUrl) {
+    if (!templateUrl || templateUrl.length > 512) {
       return new Response(
-        JSON.stringify({ error: "Template URL is required" }),
+        JSON.stringify({ error: "Template URL is required (max 512 characters)" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -232,7 +233,7 @@ serve(async (req) => {
   } catch (error: any) {
     console.error("Error fetching Discord template:", error);
     return new Response(
-      JSON.stringify({ error: error.message || "Failed to fetch template" }),
+      JSON.stringify({ error: "Failed to fetch template" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

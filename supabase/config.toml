@@ -35,3 +35,18 @@ verify_jwt = false
 
 [functions.klipy-proxy]
 verify_jwt = false
+
+[functions.fetch-emoji-pack]
+verify_jwt = false
+
+[functions.fetch-discord-template]
+verify_jwt = false
+
+[functions.giphy-search]
+verify_jwt = false
+
+[functions.send-join-application]
+verify_jwt = false
+
+[functions.cleanup-attachments]
+verify_jwt = false
