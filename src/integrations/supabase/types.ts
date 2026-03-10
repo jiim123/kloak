@@ -3384,6 +3384,7 @@ export type Database = {
         Args: { _conversation_id: string; _user_id: string }
         Returns: boolean
       }
+      message_content_allowed: { Args: { content: string }; Returns: boolean }
       move_channel_to_category: {
         Args: { _category_id?: string; _channel_id: string; _server_id: string }
         Returns: boolean
