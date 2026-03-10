@@ -42,7 +42,6 @@ export async function checkRegistrationRateLimit(
   supabase: AnySupabaseClient,
   ipHash: string,
 ): Promise<RateLimitResult> {
-): Promise<RateLimitResult> {
   const now = new Date();
 
   const { data: row } = await supabase
