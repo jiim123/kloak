@@ -5,7 +5,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { DotLottiePlayer } from "@dotlottie/react-player";
 import { Link } from "react-router-dom";
-import checkmarkLottie from "@/assets/checkmark.lottie";
 
 interface WelcomeModalProps {
   open: boolean;
