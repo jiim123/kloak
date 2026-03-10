@@ -92,7 +92,7 @@ export async function checkRegistrationRateLimit(
   attemptCount += 1;
   dailyCount += 1;
 
-  await supabase
+  await (supabase as any)
     .from("registration_rate_limits")
     .update({
       attempt_count: attemptCount,
@@ -101,7 +101,7 @@ export async function checkRegistrationRateLimit(
       daily_window_start: dailyWindowStart.toISOString(),
       last_attempt_at: now.toISOString(),
     })
-    .eq("id", row.id);
+    .eq("id", (row as any).id);
 
   return { allowed: true, attemptCount };
 }
