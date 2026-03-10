@@ -1,6 +1,6 @@
 // deno-lint-ignore-file no-explicit-any
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-type AnySupabaseClient = ReturnType<typeof createClient>;
+// Use `any` to avoid SupabaseClient generic mismatches across different call sites
+type AnySupabaseClient = any;
 
 /**
  * Registration anti-spam utilities.
