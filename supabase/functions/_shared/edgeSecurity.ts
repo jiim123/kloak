@@ -116,7 +116,6 @@ export async function resolveRequestUserId(
 
     if (!legacy.error && legacy.data?.id) {
       const legacyUserId = legacy.data.id as string;
-      matchedUsersLegacy = true;
       const insertResult = await supabase.from("user_auth").insert({
         user_id: legacyUserId,
         key_hash: normalizedKeyHash,
