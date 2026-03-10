@@ -1,4 +1,6 @@
+// deno-lint-ignore-file no-explicit-any
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+type AnySupabaseClient = ReturnType<typeof createClient>;
 
 /**
  * Registration anti-spam utilities.
@@ -37,27 +39,71 @@ export interface RateLimitResult {
 }
 
 export async function checkRegistrationRateLimit(
-  supabase: ReturnType<typeof createClient>,
+  supabase: AnySupabaseClient,
   ipHash: string,
 ): Promise<RateLimitResult> {
-  const { data, error } = await supabase.rpc("consume_registration_rate_limit", {
-    _ip_hash: ipHash,
-    _hourly_limit: HOURLY_LIMIT,
-    _daily_limit: DAILY_LIMIT,
-    _hourly_window_seconds: Math.floor(HOURLY_WINDOW_MS / 1000),
-    _daily_window_seconds: Math.floor(DAILY_WINDOW_MS / 1000),
-  });
+  const now = new Date();
 
-  if (error) {
-    console.error("[registrationSecurity] consume_registration_rate_limit failed:", error.message);
-    return { allowed: false, attemptCount: HOURLY_LIMIT };
+  const { data: row } = await supabase
+    .from("registration_rate_limits")
+    .select("*")
+    .eq("ip_hash", ipHash)
+    .maybeSingle();
+
+  if (!row) {
+    // First attempt — insert
+    await (supabase as any).from("registration_rate_limits").insert({
+      ip_hash: ipHash,
+      attempt_count: 1,
+      window_start: now.toISOString(),
+      daily_count: 1,
+      daily_window_start: now.toISOString(),
+      last_attempt_at: now.toISOString(),
+    });
+    return { allowed: true, attemptCount: 1 };
   }
 
-  const payload = (data ?? {}) as { allowed?: boolean; attempt_count?: number };
-  return {
-    allowed: payload.allowed === true,
-    attemptCount: typeof payload.attempt_count === "number" ? payload.attempt_count : 0,
-  };
+  let attemptCount = (row as any).attempt_count as number;
+  let windowStart = new Date((row as any).window_start);
+  let dailyCount = (row as any).daily_count as number;
+  let dailyWindowStart = new Date((row as any).daily_window_start);
+
+  // Reset hourly window if expired
+  if (now.getTime() - windowStart.getTime() > HOURLY_WINDOW_MS) {
+    attemptCount = 0;
+    windowStart = now;
+  }
+
+  // Reset daily window if expired
+  if (now.getTime() - dailyWindowStart.getTime() > DAILY_WINDOW_MS) {
+    dailyCount = 0;
+    dailyWindowStart = now;
+  }
+
+  // Check limits BEFORE incrementing
+  if (attemptCount >= HOURLY_LIMIT) {
+    return { allowed: false, attemptCount };
+  }
+  if (dailyCount >= DAILY_LIMIT) {
+    return { allowed: false, attemptCount };
+  }
+
+  // Increment
+  attemptCount += 1;
+  dailyCount += 1;
+
+  await (supabase as any)
+    .from("registration_rate_limits")
+    .update({
+      attempt_count: attemptCount,
+      window_start: windowStart.toISOString(),
+      daily_count: dailyCount,
+      daily_window_start: dailyWindowStart.toISOString(),
+      last_attempt_at: now.toISOString(),
+    })
+    .eq("id", (row as any).id);
+
+  return { allowed: true, attemptCount };
 }
 
 // ─── Dynamic PoW Difficulty ───────────────────────────────────────────────────
@@ -78,7 +124,7 @@ export function getDynamicDifficulty(attemptCount: number): number {
  * Used by generate-challenge to set difficulty before registration.
  */
 export async function peekAttemptCount(
-  supabase: ReturnType<typeof createClient>,
+  supabase: AnySupabaseClient,
   ipHash: string,
 ): Promise<number> {
   const now = new Date();
@@ -91,12 +137,12 @@ export async function peekAttemptCount(
 
   if (!row) return 0;
 
-  const windowStart = new Date(row.window_start);
+  const windowStart = new Date((row as any).window_start);
   if (now.getTime() - windowStart.getTime() > HOURLY_WINDOW_MS) {
     return 0; // window expired
   }
 
-  return row.attempt_count as number;
+  return (row as any).attempt_count as number;
 }
 
 // ─── Username Validation ──────────────────────────────────────────────────────

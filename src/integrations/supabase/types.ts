@@ -2730,11 +2730,31 @@ export type Database = {
         }
         Returns: boolean
       }
+      check_attachment_rate_limit: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
+      check_channel_member_rate_limit: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       check_dm_rate_limit: {
         Args: { _conv_id: string; _user_id: string }
         Returns: boolean
       }
+      check_dm_reaction_rate_limit: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       check_e2e_status: { Args: { _user_id: string }; Returns: boolean }
+      check_friendship_rate_limit: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
+      check_generic_rate_limit: {
+        Args: { _max_per_minute: number; _table_name: string; _user_id: string }
+        Returns: boolean
+      }
       check_mention_limit: { Args: { _content: string }; Returns: boolean }
       check_message_rate_limit: {
         Args: { _channel_id: string; _user_id: string }
@@ -2761,7 +2781,24 @@ export type Database = {
         }
         Returns: boolean
       }
+      check_reaction_rate_limit: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
+      check_server_join_rate_limit: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       check_server_membership: { Args: { _server_id: string }; Returns: Json }
+      check_thread_message_rate_limit: {
+        Args: { _thread_id: string; _user_id: string }
+        Returns: boolean
+      }
+      check_thread_rate_limit: { Args: { _user_id: string }; Returns: boolean }
+      check_thread_reaction_rate_limit: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       check_user_permission: {
         Args: {
           _channel_id: string

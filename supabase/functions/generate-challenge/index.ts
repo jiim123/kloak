@@ -1,17 +1,72 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { createServiceClient, enforceRateLimit, getClientId } from "../_shared/edgeSecurity.ts";
+import { hashIp, getClientIpRaw, peekAttemptCount, getDynamicDifficulty } from "../_shared/registrationSecurity.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
-  return new Response(
-    JSON.stringify({
-      error: "Proof-of-work registration is disabled. Use register-with-captcha instead.",
-    }),
-    {
-      status: 410,
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+    // Rate limit: 10 challenge generations per minute per client IP
+    const sharedClient = createServiceClient();
+    const clientId = getClientId(req);
+    const rateScope = `client:${clientId}`;
+    let rateOk = false;
+    try {
+      rateOk = await enforceRateLimit(sharedClient, rateScope, "edge_generate_challenge", 10, 60);
+    } catch {
+      rateOk = true; // fail open if rate limit backend unavailable
+    }
+    if (!rateOk) {
+      return new Response(JSON.stringify({ error: "Rate limited: too many challenge requests" }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Dynamic difficulty based on IP registration attempts
+    const rawIp = getClientIpRaw(req);
+    const ipHash = await hashIp(rawIp);
+    const currentAttempts = await peekAttemptCount(supabase, ipHash);
+    const difficulty = getDynamicDifficulty(currentAttempts);
+
+    // Generate a random nonce
+    const nonceBytes = new Uint8Array(16);
+    crypto.getRandomValues(nonceBytes);
+    const nonce = Array.from(nonceBytes, (b) => b.toString(16).padStart(2, "0")).join("");
+
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString(); // 5 minutes (shorter TTL)
+
+    const { data, error } = await supabase
+      .from("pow_challenges")
+      .insert({ nonce, difficulty, expires_at: expiresAt })
+      .select("id, nonce, difficulty, expires_at")
+      .single();
+
+    if (error) {
+      console.error("Failed to create challenge:", error);
+      return new Response(JSON.stringify({ error: "Failed to create challenge" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    return new Response(JSON.stringify(data), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
-    },
-  );
+    });
+  } catch (err) {
+    console.error("generate-challenge error:", err);
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 });
