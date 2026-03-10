@@ -42,7 +42,13 @@ export const useRealtimeNotifications = (userId: string | null) => {
   useEffect(() => {
     if (!userId) return;
 
-    fetchNotifications(userId);
+    // Delay initial fetch until auth key hash is available
+    const initFetch = async () => {
+      const { getKeyHashAsync } = await import('@/integrations/supabase/client');
+      const kh = await getKeyHashAsync();
+      if (kh) fetchNotifications(userId);
+    };
+    void initFetch();
 
     const processIncomingNotification = (notification: Notification) => {
       const existing = useNotificationStore.getState().notifications.some((n) => n.id === notification.id);
