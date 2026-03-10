@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { DotLottieReact } from "@lottiefiles/dotlottie-react";
+import { CheckmarkAnimation } from "@/components/ui/checkmark-animation";
 
 interface OnboardingModalProps {
   open: boolean;
@@ -257,12 +257,7 @@ export const OnboardingModal = ({
             {currentStep === 3 && (
               <>
                 <div className="flex justify-center mb-2">
-                  <DotLottieReact
-                    src="/animations/checkmark-2.lottie"
-                    autoplay
-                    loop={false}
-                    style={{ width: 120, height: 120 }}
-                  />
+                  <CheckmarkAnimation size={120} />
                 </div>
 
                 <DialogHeader className="text-left pb-4">
