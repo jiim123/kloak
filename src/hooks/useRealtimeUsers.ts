@@ -247,6 +247,7 @@ export const useRealtimeUsers = () => {
   const manualStatus = useAuthStore((s) => s.manualStatus);
   const lastPollRef = useRef<number>(0);
   const lastBackstopPollRef = useRef<number>(0);
+  const lastPresenceSnapshotAtRef = useRef<number>(0);
   const presenceChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const presenceConnectedRef = useRef(false);
   const presenceSigByUserRef = useRef<Map<string, string>>(new Map());
@@ -284,6 +285,7 @@ export const useRealtimeUsers = () => {
 
     const applyPresenceSnapshot = () => {
       const nowMs = Date.now();
+      lastPresenceSnapshotAtRef.current = nowMs;
       const targetIds = collectPresenceTargetUserIds();
       if (targetIds.length === 0) return;
 
@@ -457,9 +459,15 @@ export const useRealtimeUsers = () => {
       });
     };
 
-    // Poll immediately on mount (if tab is visible)
+    let initialPollTimer: ReturnType<typeof setTimeout> | null = null;
     if (document.visibilityState === 'visible') {
-      pollPresence({ force: true });
+      initialPollTimer = setTimeout(() => {
+        const lastSnapshotAt = lastPresenceSnapshotAtRef.current;
+        const hasRecentSnapshot = lastSnapshotAt > 0 && Date.now() - lastSnapshotAt < 15_000;
+        if (!hasRecentSnapshot) {
+          void pollPresence({ force: true });
+        }
+      }, 4_000);
     }
 
     // Poll at reduced frequency while the tab is visible.
@@ -486,6 +494,7 @@ export const useRealtimeUsers = () => {
     document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
+      if (initialPollTimer) clearTimeout(initialPollTimer);
       clearInterval(pollInterval);
       document.removeEventListener('visibilitychange', handleVisibility);
     };

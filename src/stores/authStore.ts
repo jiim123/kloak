@@ -14,6 +14,7 @@ let pendingAutoStatus: UserStatus | null = null;
 let pendingAutoUserId: string | null = null;
 const statusInFlight = new Map<UserStatus, Promise<void>>();
 const LAST_SEEN_INTERVAL = 60_000; // 60 seconds minimum between calls
+const LAST_SEEN_STORAGE_PREFIX = "kloak:last-seen:";
 let initializeAuthInFlight: Promise<void> | null = null;
 
 interface AuthState {
@@ -289,16 +290,10 @@ export const useAuthStore = create<AuthState>()(
             is_bot: (userData.is_bot as boolean | null) ?? false,
           };
 
-          set({ user, secretKey, isAuthenticated: true, isLoading: false });
+          set({ user, secretKey, isAuthenticated: true, isLoading: false, manualStatus: null });
           // Seed user cache to avoid redundant get_user_by_id calls (realtime / DMs).
           useUserCacheStore.getState().upsertUser(user);
 
-          // Re-apply a persisted manual status (e.g. Invisible/DND) on login.
-          const { manualStatus } = get();
-          if (manualStatus && (manualStatus === "offline" || manualStatus === "dnd")) {
-            // Use auto to avoid mutating persisted manualStatus redundantly.
-            await get().updateStatus(manualStatus, { source: "auto" });
-          }
           return true;
         } catch (error) {
           console.error("Login error:", error);
@@ -333,14 +328,8 @@ export const useAuthStore = create<AuthState>()(
             normalizedUpdates.custom_status = null;
           }
 
-          const keyHash = getKeyHash();
-          if (!keyHash) {
-            throw new Error("Missing auth credentials");
-          }
-
           const { data, error } = await supabase.functions.invoke("update-user-profile", {
             body: { updates: normalizedUpdates },
-            headers: { "x-key-hash": keyHash },
           });
 
           if (error) throw error;
@@ -502,10 +491,26 @@ export const useAuthStore = create<AuthState>()(
         const { user } = get();
         if (!user) return;
 
+        const persistedLastSeen =
+          typeof window !== "undefined"
+            ? Number(window.sessionStorage.getItem(`${LAST_SEEN_STORAGE_PREFIX}${user.id}`) ?? 0)
+            : 0;
+
+        if (persistedLastSeen > lastSeenTimestamp) {
+          lastSeenTimestamp = persistedLastSeen;
+        }
+
         // Throttle: skip if called within the last 60 seconds
         const now = Date.now();
         if (now - lastSeenTimestamp < LAST_SEEN_INTERVAL) return;
         lastSeenTimestamp = now;
+        if (typeof window !== "undefined") {
+          try {
+            window.sessionStorage.setItem(`${LAST_SEEN_STORAGE_PREFIX}${user.id}`, String(now));
+          } catch {
+            // ignore storage failures
+          }
+        }
 
         try {
           await supabase.rpc("update_user_last_seen", {

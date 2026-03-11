@@ -27,7 +27,7 @@ interface MessageListProps {
   manageCurrentChannel?: boolean;
 }
 
-const CHANNEL_ENTRY_FORCE_REFETCH_MAX_AGE_MS = 12_000;
+const CHANNEL_ENTRY_FORCE_REFETCH_MAX_AGE_MS = 5 * 60_000;
 
 const shouldGroupMessages = (current: Message, previous: Message | null): boolean => {
   if (!previous) return false;

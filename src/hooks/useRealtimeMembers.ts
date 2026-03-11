@@ -52,160 +52,27 @@ export const useRealtimeMembers = (serverId: string | null, opts?: { full?: bool
     if (!serverId) return;
 
     const channel = supabase
-      .channel(`members:${serverId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'server_members',
-          filter: `server_id=eq.${serverId}`,
-        },
-        async (payload) => {
-          // Fetch the new member's full data and add to store incrementally
-          const newMemberData = payload.new as { user_id: string; id: string; role: string; nickname: string | null; is_banned: boolean; is_muted: boolean; joined_at: string };
-          
-          // Skip banned members
-          if (newMemberData.is_banned) return;
+      .channel(`server:${serverId}`)
+      .on('broadcast', { event: 'server_surface' }, ({ payload }) => {
+        const event = payload as { table?: string } | null;
+        if (!event?.table) return;
 
-          // Fetch user info for the new member (use users_public view to respect privacy)
-          const { data: userData } = await supabase
-            .from('users_public')
-            .select('id, username, display_name, avatar_url, avatar_decoration, banner_color, bio, status, custom_status, created_at, last_seen, is_bot')
-            .eq('id', newMemberData.user_id)
-            .single();
-
-          if (userData) {
-            const displayName = userData.display_name || userData.username;
-            toast({
-              title: `${displayName} has joined the server!`,
-              duration: 3000,
-            });
-
-            // Add member to store incrementally instead of full refetch
-            useServerStore.setState((state) => {
-              // Prevent duplicates
-              if (state.members.some(m => m.id === newMemberData.id)) return {};
-              return {
-                members: [...state.members, {
-                  id: newMemberData.id,
-                  server_id: serverId,
-                  user_id: newMemberData.user_id,
-                  role: newMemberData.role as any,
-                  nickname: newMemberData.nickname,
-                  is_banned: newMemberData.is_banned,
-                  is_muted: newMemberData.is_muted || false,
-                  joined_at: newMemberData.joined_at,
-                  user: userData as any,
-                  roles: [],
-                }],
-              };
-            });
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'server_members',
-          filter: `server_id=eq.${serverId}`,
-        },
-        (payload) => {
-          const updated = payload.new as any;
-          // Update member in-place instead of full refetch
-          useServerStore.setState((state) => {
-            let changed = false;
-            const members = state.members
-              .filter(m => {
-                // Remove if now banned
-                if (m.id === updated.id && updated.is_banned) {
-                  changed = true;
-                  return false;
-                }
-                return true;
-              })
-              .map(m => {
-                if (m.id !== updated.id) return m;
-                changed = true;
-                return {
-                  ...m,
-                  role: updated.role ?? m.role,
-                  nickname: updated.nickname ?? m.nickname,
-                  is_muted: updated.is_muted ?? m.is_muted,
-                  is_banned: updated.is_banned ?? m.is_banned,
-                };
-              });
-            return changed ? { members } : {};
+        if (event.table === 'server_members') {
+          toast({
+            title: 'Server members updated',
+            duration: 2000,
           });
         }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'server_members',
-          filter: `server_id=eq.${serverId}`,
-        },
-        (payload) => {
-          const deleted = payload.old as any;
-          // Remove member from store incrementally
-          useServerStore.setState((state) => {
-            const filtered = state.members.filter(m => m.id !== deleted.id);
-            if (filtered.length === state.members.length) return {};
-            return { members: filtered };
-          });
-        }
-      )
-      // Listen for role changes (server_roles table)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'server_roles',
-          filter: `server_id=eq.${serverId}`,
-        },
-        () => {
-          // Refresh roles when any role changes, then refresh members for role assignments
-          fetchRolesRef.current(serverId);
+
+        if (
+          event.table === 'server_members' ||
+          event.table === 'server_roles' ||
+          event.table === 'server_member_roles'
+        ) {
+          fetchRolesRef.current(serverId, { force: true });
           fetchMembersRef.current(serverId, { force: true, full: useFull });
         }
-      )
-      // Listen for member role assignments (server_member_roles table)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'server_member_roles',
-        },
-        (payload) => {
-          const { members } = useServerStore.getState();
-          const memberExists = members.some(m => m.id === payload.new.member_id);
-          if (memberExists) {
-            // Full refetch needed to get updated role data
-            fetchMembersRef.current(serverId, { force: true, full: useFull });
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'server_member_roles',
-        },
-        (payload) => {
-          const { members } = useServerStore.getState();
-          const memberExists = members.some(m => m.id === payload.old.member_id);
-          if (memberExists) {
-            fetchMembersRef.current(serverId, { force: true, full: useFull });
-          }
-        }
-      )
+      })
       .subscribe();
 
     return () => {

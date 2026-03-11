@@ -243,25 +243,6 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     fetchFriends(user.id);
   }, [fetchFriends, isOpen, user?.id, variant]);
 
-  useEffect(() => {
-    if (!user?.id) return;
-    if (variant === "modal" && !isOpen) return;
-
-    const loadDmPrivacy = async () => {
-      const { data, error } = await supabase.rpc("get_user_preferences" as any, {
-        _user_id: user.id,
-      });
-
-      if (error) return;
-      const value = (data as any)?.dm_privacy;
-      if (typeof value === "string") {
-        setDmPrivacy(value as "everyone" | "shared_servers" | "friends" | "no_one");
-      }
-    };
-
-    loadDmPrivacy();
-  }, [isOpen, setDmPrivacy, user?.id, variant]);
-
   // ESC key to close (desktop page variant)
   useEffect(() => {
     if (variant !== "page") return;

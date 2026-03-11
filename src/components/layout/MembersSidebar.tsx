@@ -31,6 +31,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { ServerMember, CustomServerRole, UserStatus } from "@/types";
 import { getEffectivePresence } from "@/lib/presence";
 import { hasRecentRealtimePresence } from "@/hooks/useRealtimeUsers";
+import { readCachedMemberCount, persistMemberCount } from "@/lib/serverMemberCount";
 
 const OFFLINE_PAGE_SIZE = 50;
 
@@ -242,40 +243,52 @@ export const MembersSidebar = () => {
     fetchMembers(currentServer.id);
   }, [currentServer?.id, isMemberSidebarOpen, isMobile, fetchMembers]);
 
-  // Load permissions when server changes
-  useEffect(() => {
-    if (currentServer?.id) {
-      fetchRolePermissions(currentServer.id);
-    }
-  }, [currentServer?.id, fetchRolePermissions]);
-
   // Fetch total member count (online + offline) for header display.
   useEffect(() => {
     if (!currentServer?.id || !user?.id) return;
     if (!isMemberSidebarOpen && isMobile) return;
 
+    const cachedCount = readCachedMemberCount(currentServer.id, user.id);
+    if (cachedCount !== null) {
+      setTotalMemberCount(cachedCount);
+      return;
+    }
+
     let cancelled = false;
+    let fetchTimer: ReturnType<typeof setTimeout> | null = null;
 
-    (async () => {
-      try {
-        const { data, error } = await supabase.rpc("get_server_member_count_secure", {
-          _server_id: currentServer.id,
-          _user_id: user.id,
-        });
-
-        if (error) throw error;
-        if (cancelled) return;
-
-        const count = typeof data === "number" ? data : Number(data);
-        setTotalMemberCount(Number.isFinite(count) ? count : null);
-      } catch (error) {
-        console.error("Failed to fetch total member count:", error);
-        if (!cancelled) setTotalMemberCount(null);
+    fetchTimer = setTimeout(() => {
+      const seededCount = readCachedMemberCount(currentServer.id, user.id);
+      if (seededCount !== null) {
+        if (!cancelled) setTotalMemberCount(seededCount);
+        return;
       }
-    })();
+
+      void (async () => {
+        try {
+          const { data, error } = await supabase.rpc("get_server_member_count_secure", {
+            _server_id: currentServer.id,
+            _user_id: user.id,
+          });
+
+          if (error) throw error;
+          if (cancelled) return;
+
+          const count = typeof data === "number" ? data : Number(data);
+          if (Number.isFinite(count)) {
+            persistMemberCount(currentServer.id, user.id, count);
+          }
+          setTotalMemberCount(Number.isFinite(count) ? count : null);
+        } catch (error) {
+          console.error("Failed to fetch total member count:", error);
+          if (!cancelled) setTotalMemberCount(null);
+        }
+      })();
+    }, 350);
 
     return () => {
       cancelled = true;
+      if (fetchTimer) clearTimeout(fetchTimer);
     };
   }, [currentServer?.id, isMemberSidebarOpen, isMobile, user?.id]);
 

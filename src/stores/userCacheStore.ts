@@ -226,6 +226,15 @@ export function getUserFromCache(userId: string): User | null {
 }
 
 /**
+ * Returns the age of a cached user entry in milliseconds, or null when absent.
+ */
+export function getUserCacheAge(userId: string): number | null {
+  const entry = useUserCacheStore.getState()._cache.get(userId);
+  if (!entry) return null;
+  return Date.now() - entry.cachedAt;
+}
+
+/**
  * Upsert a single user (non-reactive helper for use outside components).
  */
 export function setUserInCache(userId: string, user: User): void {

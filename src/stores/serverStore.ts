@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { inviteCodeRateLimiter } from "@/lib/security";
 import { saveLastChannel, getLastChannel } from "@/lib/storage";
 import { deduplicatedFetch } from "@/lib/deduplicatedFetch";
+import { hydrateServerEmojis, type ServerEmoji } from "@/lib/serverEmojis";
+import { persistMemberCount } from "@/lib/serverMemberCount";
 import { bulkSetUsersInCache } from "@/stores/userCacheStore";
 import { useAuthStore } from "./authStore";
 import { useFriendStore } from "./friendStore";
@@ -27,12 +29,149 @@ import type {
 const PERMISSIONS_TTL_MS = 5 * 60_000;
 const rolePermissionsCache = new Map<string, { data: RolePermission[]; cachedAt: number }>();
 const channelPermissionsCache = new Map<string, { data: ChannelPermission[]; cachedAt: number }>();
+const SERVER_SURFACE_TTL_MS = 5 * 60_000;
+const SERVER_ROLES_TTL_MS = 5 * 60_000;
+const SERVER_SURFACE_STORAGE_PREFIX = "kloak:server-surface:";
+const SERVER_ROLES_STORAGE_PREFIX = "kloak:server-roles:";
+
+const isMissingRpcError = (error: unknown) => {
+  const typedError = error as { code?: string; message?: string } | null | undefined;
+  const message = String(typedError?.message ?? "");
+  return (
+    typedError?.code === "PGRST202" ||
+    typedError?.code === "42883" ||
+    message.includes("Could not find the function") ||
+    message.includes("does not exist")
+  );
+};
+
+type ServerSurfaceCacheEntry = {
+  categories: ChannelCategory[];
+  channels: Channel[];
+  cachedAt: number;
+};
+
+type ServerRolesCacheEntry = {
+  roles: CustomServerRole[];
+  cachedAt: number;
+};
+
+const serverSurfaceCache = new Map<string, ServerSurfaceCacheEntry>();
+const serverRolesCache = new Map<string, ServerRolesCacheEntry>();
+const getScopedServerCacheKey = (serverId: string, userId: string | null) => `${serverId}:${userId ?? "anon"}`;
+
+const readSessionCache = <T>(key: string): T | null => {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(key);
+    if (!raw) return null;
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+};
+
+const writeSessionCache = (key: string, value: unknown) => {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // ignore storage pressure/quota issues
+  }
+};
+
+const removeSessionCache = (key: string) => {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(key);
+  } catch {
+    // ignore storage failures
+  }
+};
+
+const getCachedServerSurface = (serverId: string, userId: string | null): ServerSurfaceCacheEntry | null => {
+  const scopedKey = getScopedServerCacheKey(serverId, userId);
+  const storageKey = `${SERVER_SURFACE_STORAGE_PREFIX}${scopedKey}`;
+  const cached = serverSurfaceCache.get(scopedKey);
+  if (!cached) {
+    const persisted = readSessionCache<ServerSurfaceCacheEntry>(storageKey);
+    if (!persisted) return null;
+    if (Date.now() - persisted.cachedAt >= SERVER_SURFACE_TTL_MS) {
+      removeSessionCache(storageKey);
+      return null;
+    }
+    serverSurfaceCache.set(scopedKey, persisted);
+    return persisted;
+  }
+  if (Date.now() - cached.cachedAt >= SERVER_SURFACE_TTL_MS) {
+    serverSurfaceCache.delete(scopedKey);
+    removeSessionCache(storageKey);
+    return null;
+  }
+  return cached;
+};
+
+const setCachedServerSurface = (
+  serverId: string,
+  userId: string | null,
+  categories: ChannelCategory[],
+  channels: Channel[],
+) => {
+  const scopedKey = getScopedServerCacheKey(serverId, userId);
+  const nextValue = {
+    categories: [...categories],
+    channels: [...channels],
+    cachedAt: Date.now(),
+  } satisfies ServerSurfaceCacheEntry;
+  serverSurfaceCache.set(scopedKey, nextValue);
+  writeSessionCache(`${SERVER_SURFACE_STORAGE_PREFIX}${scopedKey}`, nextValue);
+};
+
+const getCachedServerRoles = (serverId: string, userId: string | null): ServerRolesCacheEntry | null => {
+  const scopedKey = getScopedServerCacheKey(serverId, userId);
+  const storageKey = `${SERVER_ROLES_STORAGE_PREFIX}${scopedKey}`;
+  const cached = serverRolesCache.get(scopedKey);
+  if (!cached) {
+    const persisted = readSessionCache<ServerRolesCacheEntry>(storageKey);
+    if (!persisted) return null;
+    if (Date.now() - persisted.cachedAt >= SERVER_ROLES_TTL_MS) {
+      removeSessionCache(storageKey);
+      return null;
+    }
+    serverRolesCache.set(scopedKey, persisted);
+    return persisted;
+  }
+  if (Date.now() - cached.cachedAt >= SERVER_ROLES_TTL_MS) {
+    serverRolesCache.delete(scopedKey);
+    removeSessionCache(storageKey);
+    return null;
+  }
+  return cached;
+};
+
+const setCachedServerRoles = (serverId: string, userId: string | null, roles: CustomServerRole[]) => {
+  const scopedKey = getScopedServerCacheKey(serverId, userId);
+  const nextValue = {
+    roles: [...roles],
+    cachedAt: Date.now(),
+  } satisfies ServerRolesCacheEntry;
+  serverRolesCache.set(scopedKey, nextValue);
+  writeSessionCache(`${SERVER_ROLES_STORAGE_PREFIX}${scopedKey}`, nextValue);
+};
 
 type MembersFetchMode = "lite" | "full";
+type MembersCacheEntry = {
+  members: ServerMember[];
+  cachedAt: number;
+};
 
 const MEMBERS_CACHE_TTL_MS = 180_000;
 const membersCachedAt = new Map<string, number>();
+const membersCache = new Map<string, MembersCacheEntry>();
+const MEMBERS_STORAGE_PREFIX = "kloak:server-members:";
 const getMembersCacheKey = (serverId: string, mode: MembersFetchMode) => `${serverId}:${mode}`;
+const getScopedMembersCacheKey = (serverId: string, mode: MembersFetchMode, userId: string | null) =>
+  `${MEMBERS_STORAGE_PREFIX}${serverId}:${mode}:${userId ?? "anon"}`;
 const clearMembersCacheForServer = (serverId: string) => {
   const prefix = `${serverId}:`;
   for (const key of membersCachedAt.keys()) {
@@ -40,6 +179,36 @@ const clearMembersCacheForServer = (serverId: string) => {
       membersCachedAt.delete(key);
     }
   }
+  for (const key of membersCache.keys()) {
+    if (key.includes(`${serverId}:`)) {
+      membersCache.delete(key);
+    }
+  }
+};
+
+const getCachedMembers = (serverId: string, mode: MembersFetchMode, userId: string | null): MembersCacheEntry | null => {
+  const scopedKey = getScopedMembersCacheKey(serverId, mode, userId);
+  const cached = membersCache.get(scopedKey);
+  if (cached) {
+    if (Date.now() - cached.cachedAt < MEMBERS_CACHE_TTL_MS) return cached;
+    membersCache.delete(scopedKey);
+  }
+
+  const persisted = readSessionCache<MembersCacheEntry>(scopedKey);
+  if (!persisted) return null;
+  if (Date.now() - persisted.cachedAt >= MEMBERS_CACHE_TTL_MS) {
+    removeSessionCache(scopedKey);
+    return null;
+  }
+  membersCache.set(scopedKey, persisted);
+  return persisted;
+};
+
+const setCachedMembers = (serverId: string, mode: MembersFetchMode, userId: string | null, members: ServerMember[], cachedAt: number) => {
+  const scopedKey = getScopedMembersCacheKey(serverId, mode, userId);
+  const nextValue = { members: [...members], cachedAt };
+  membersCache.set(scopedKey, nextValue);
+  writeSessionCache(scopedKey, nextValue);
 };
 
 const normalizeChannelPermissionsRows = (rows: any[]): ChannelPermission[] => {
@@ -49,6 +218,18 @@ const normalizeChannelPermissionsRows = (rows: any[]): ChannelPermission[] => {
     role_id: row.role_id,
     role_name: row.role_name as ServerRole | null,
     user_id: row.user_id || null,
+    permission: row.permission as Permission,
+    allowed: row.allowed,
+    created_at: row.created_at ?? "",
+  }));
+};
+
+const normalizeRolePermissionRows = (rows: any[]): RolePermission[] => {
+  return rows.map((row: any) => ({
+    id: row.id,
+    server_id: row.server_id,
+    role_id: row.role_id,
+    role_name: row.role_name as ServerRole | null,
     permission: row.permission as Permission,
     allowed: row.allowed,
     created_at: row.created_at ?? "",
@@ -91,7 +272,7 @@ interface ServerState {
   setCurrentChannel: (channel: Channel | null) => void;
 
   // Channel actions
-  fetchChannels: (serverId: string) => Promise<void>;
+  fetchChannels: (serverId: string, opts?: { force?: boolean }) => Promise<void>;
   createCategory: (serverId: string, name: string, userId: string) => Promise<ChannelCategory | null>;
   createChannel: (
     serverId: string,
@@ -126,7 +307,7 @@ interface ServerState {
 
   // Role actions
   roles: CustomServerRole[];
-  fetchRoles: (serverId: string) => Promise<void>;
+  fetchRoles: (serverId: string, opts?: { force?: boolean }) => Promise<void>;
   createRole: (
     serverId: string,
     userId: string,
@@ -650,6 +831,10 @@ export const useServerStore = create<ServerState>((set, get) => ({
         members: [],
         membersServerId: null,
         membersFetchMode: null,
+        roles: [],
+        rolePermissions: [],
+        channelPermissions: [],
+        categoryPermissions: [],
         isMembersLoading: true,
       });
     } else {
@@ -672,58 +857,158 @@ export const useServerStore = create<ServerState>((set, get) => ({
     set({ currentChannel: channel });
   },
 
-  fetchChannels: async (serverId: string) => {
+  fetchChannels: async (serverId: string, opts?: { force?: boolean }) => {
     const uid = useAuthStore.getState().user?.id ?? "anon";
     return deduplicatedFetch(`serverStore:fetchChannels:${serverId}:${uid}`, async () => {
       try {
         // Get current user ID for private channel filtering
-        const userId = useAuthStore.getState().user?.id;
+        const userId = useAuthStore.getState().user?.id ?? null;
 
-        // Use RPC functions to bypass RLS
-        const [categoriesResult, channelsResult] = await Promise.all([
-          supabase.rpc("get_server_categories", { _server_id: serverId, _user_id: userId }),
-          supabase.rpc("get_server_channels", { _server_id: serverId, _user_id: userId }),
-        ]);
+        const applyServerSurface = (categories: ChannelCategory[], channels: Channel[]) => {
+          set({
+            categories,
+            channels,
+          });
 
-        if (categoriesResult.error) throw categoriesResult.error;
-        if (channelsResult.error) throw channelsResult.error;
+          const { currentChannel } = get();
+          const lastChannelForServer = getLastChannel(serverId);
+          const persistedChannelId = localStorage.getItem("kloak-current-channel-id");
 
-        const categories = (categoriesResult.data || []) as unknown as ChannelCategory[];
-        const channels = (channelsResult.data || []) as unknown as Channel[];
+          if (channels.length > 0) {
+            const lastChannel = lastChannelForServer ? channels.find((c) => c.id === lastChannelForServer) : null;
+            const restoredChannel =
+              lastChannel || (persistedChannelId ? channels.find((c) => c.id === persistedChannelId) : null);
 
-        set({
-          categories,
-          channels,
+            const currentIsValid = currentChannel && channels.find((c) => c.id === currentChannel.id);
+
+            if (restoredChannel) {
+              set({ currentChannel: restoredChannel });
+            } else if (!currentIsValid) {
+              set({ currentChannel: channels[0] });
+            }
+          } else {
+            set({ currentChannel: null });
+          }
+        };
+
+        const cachedSurface = !opts?.force ? getCachedServerSurface(serverId, userId) : null;
+        if (cachedSurface) {
+          applyServerSurface(cachedSurface.categories, cachedSurface.channels);
+          const cachedRoles = getCachedServerRoles(serverId, userId);
+          if (cachedRoles) {
+            if (get().currentServer?.id === serverId) {
+              set({ roles: cachedRoles.roles });
+            }
+          } else {
+            await get().fetchRoles(serverId);
+          }
+          return;
+        }
+
+        let categories: ChannelCategory[] = [];
+        let channels: Channel[] = [];
+        let rolesFromSurface: CustomServerRole[] | null = null;
+        let rolePermissionsFromSurface: RolePermission[] | null = null;
+        let memberCountFromSurface: number | null = null;
+        let emojisFromSurface: ServerEmoji[] | null = null;
+
+        const surfaceResult = await supabase.rpc("server", {
+          _server_id: serverId,
+          _user_id: userId,
         });
 
-        // Also fetch roles when fetching channels
-        await get().fetchRoles(serverId);
+        if (surfaceResult.error) {
+          if (!isMissingRpcError(surfaceResult.error)) {
+            throw surfaceResult.error;
+          }
 
-        // Try to restore the last visited channel for this specific server
-        const { currentChannel } = get();
-        const lastChannelForServer = getLastChannel(serverId);
-        const persistedChannelId = localStorage.getItem("kloak-current-channel-id");
+          const legacySurfaceResult = await supabase.rpc("get_server_surface_secure", {
+            _server_id: serverId,
+            _user_id: userId,
+          });
 
-        // Restore channel priority:
-        // 1. Last channel for this specific server
-        // 2. Global persisted channel (if it belongs to this server)
-        // 3. First channel in the server
-        if (channels.length > 0) {
-          const lastChannel = lastChannelForServer ? channels.find((c) => c.id === lastChannelForServer) : null;
-          const restoredChannel =
-            lastChannel || (persistedChannelId ? channels.find((c) => c.id === persistedChannelId) : null);
+          if (legacySurfaceResult.error) {
+            if (!isMissingRpcError(legacySurfaceResult.error)) {
+              throw legacySurfaceResult.error;
+            }
 
-          // If current channel is valid for this server, keep it
-          const currentIsValid = currentChannel && channels.find((c) => c.id === currentChannel.id);
+            const [categoriesResult, channelsResult] = await Promise.all([
+              supabase.rpc("get_server_categories", { _server_id: serverId, _user_id: userId }),
+              supabase.rpc("get_server_channels", { _server_id: serverId, _user_id: userId }),
+            ]);
 
-          if (restoredChannel) {
-            set({ currentChannel: restoredChannel });
-          } else if (!currentIsValid) {
-            set({ currentChannel: channels[0] });
+            if (categoriesResult.error) throw categoriesResult.error;
+            if (channelsResult.error) throw channelsResult.error;
+
+            categories = (categoriesResult.data || []) as unknown as ChannelCategory[];
+            channels = (channelsResult.data || []) as unknown as Channel[];
+          } else {
+            const legacySurface = (legacySurfaceResult.data || {}) as {
+              categories?: ChannelCategory[];
+              channels?: Channel[];
+              roles?: CustomServerRole[];
+              role_permissions?: any[];
+              member_count?: number | null;
+              emojis?: ServerEmoji[];
+            };
+            categories = Array.isArray(legacySurface.categories) ? legacySurface.categories : [];
+            channels = Array.isArray(legacySurface.channels) ? legacySurface.channels : [];
+            rolesFromSurface = Array.isArray(legacySurface.roles) ? legacySurface.roles : null;
+            rolePermissionsFromSurface = Array.isArray(legacySurface.role_permissions)
+              ? normalizeRolePermissionRows(legacySurface.role_permissions)
+              : null;
+            memberCountFromSurface =
+              typeof legacySurface.member_count === "number" ? legacySurface.member_count : null;
+            emojisFromSurface = Array.isArray(legacySurface.emojis) ? legacySurface.emojis : null;
           }
         } else {
-          // No channels in this server
-          set({ currentChannel: null });
+          const surface = (surfaceResult.data || {}) as {
+            categories?: ChannelCategory[];
+            channels?: Channel[];
+            roles?: CustomServerRole[];
+            role_permissions?: any[];
+            member_count?: number | null;
+            emojis?: ServerEmoji[];
+          };
+          categories = Array.isArray(surface.categories) ? surface.categories : [];
+          channels = Array.isArray(surface.channels) ? surface.channels : [];
+          rolesFromSurface = Array.isArray(surface.roles) ? surface.roles : null;
+          rolePermissionsFromSurface = Array.isArray(surface.role_permissions)
+            ? normalizeRolePermissionRows(surface.role_permissions)
+            : null;
+          memberCountFromSurface = typeof surface.member_count === "number" ? surface.member_count : null;
+          emojisFromSurface = Array.isArray(surface.emojis) ? surface.emojis : null;
+        }
+
+        setCachedServerSurface(serverId, userId, categories, channels);
+        if (rolesFromSurface) {
+          setCachedServerRoles(serverId, userId, rolesFromSurface);
+        }
+        if (rolePermissionsFromSurface) {
+          rolePermissionsCache.set(serverId, { data: rolePermissionsFromSurface, cachedAt: Date.now() });
+        }
+        if (userId && memberCountFromSurface !== null && Number.isFinite(memberCountFromSurface)) {
+          persistMemberCount(serverId, userId, memberCountFromSurface);
+        }
+        if (emojisFromSurface) {
+          hydrateServerEmojis(serverId, emojisFromSurface);
+        }
+
+        applyServerSurface(categories, channels);
+
+        const isActiveServer = get().currentServer?.id === serverId;
+        if (isActiveServer) {
+          if (rolesFromSurface) {
+            set({ roles: rolesFromSurface });
+          } else {
+            const cachedRoles = getCachedServerRoles(serverId, userId);
+            if (cachedRoles) {
+              set({ roles: cachedRoles.roles });
+            }
+          }
+        }
+        if (isActiveServer && rolePermissionsFromSurface) {
+          set({ rolePermissions: rolePermissionsFromSurface });
         }
       } catch (error) {
         console.error("Failed to fetch channels:", error);
@@ -1151,6 +1436,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
     const state = get();
     const modeCacheKey = getMembersCacheKey(serverId, mode);
     const modeCachedAt = membersCachedAt.get(modeCacheKey);
+    const userId = useAuthStore.getState().user?.id ?? null;
 
     const hasFreshSameMode =
       state.membersServerId === serverId &&
@@ -1162,17 +1448,24 @@ export const useServerStore = create<ServerState>((set, get) => ({
       return;
     }
 
+    if (!opts?.force) {
+      const cachedMembers = getCachedMembers(serverId, mode, userId);
+      if (cachedMembers) {
+        membersCachedAt.set(modeCacheKey, cachedMembers.cachedAt);
+        set({
+          members: cachedMembers.members,
+          isMembersLoading: false,
+          membersServerId: serverId,
+          membersFetchMode: mode,
+        });
+        return;
+      }
+    }
+
     return deduplicatedFetch(`serverStore:fetchMembers:${serverId}:${mode}`, async () => {
       set({ isMembersLoading: true, membersServerId: serverId, membersFetchMode: mode });
       try {
-        // Fetch roles first if not already loaded
-        const { roles: currentRoles } = get();
-        if (currentRoles.length === 0 || currentRoles[0]?.server_id !== serverId) {
-          await get().fetchRoles(serverId);
-        }
-
         // Use lightweight member RPC for global surfaces; full member RPC only for member pages/settings.
-        const userId = useAuthStore.getState().user?.id;
         const rpcName = mode === "full" ? "get_server_members_full_secure" : "get_server_members";
         const rpcParams = mode === "full" ? { _server_id: serverId, _user_id: userId } : { _server_id: serverId };
 
@@ -1279,7 +1572,9 @@ export const useServerStore = create<ServerState>((set, get) => ({
         if (mode === "full") {
           // Full roster is a strict superset of lightweight member data.
           membersCachedAt.set(getMembersCacheKey(serverId, "lite"), now);
+          setCachedMembers(serverId, "lite", userId, members, now);
         }
+        setCachedMembers(serverId, mode, userId, members, now);
         set({ members, isMembersLoading: false, membersServerId: serverId, membersFetchMode: mode });
       } catch (error) {
         console.error("Failed to fetch members:", error);
@@ -1426,12 +1721,18 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }
   },
 
-  fetchRoles: async (serverId: string) => {
+  fetchRoles: async (serverId: string, opts?: { force?: boolean }) => {
     return deduplicatedFetch(`serverStore:fetchRoles:${serverId}`, async () => {
       try {
-        const userId = useAuthStore.getState().user?.id;
+        const userId = useAuthStore.getState().user?.id ?? null;
         if (!userId) {
           set({ roles: [] });
+          return;
+        }
+
+        const cached = !opts?.force ? getCachedServerRoles(serverId, userId) : null;
+        if (cached) {
+          set({ roles: cached.roles });
           return;
         }
 
@@ -1443,6 +1744,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         if (error) throw error;
 
         const roles = (Array.isArray(data) ? data : []) as unknown as CustomServerRole[];
+        setCachedServerRoles(serverId, userId, roles);
         set({ roles });
       } catch (error) {
         console.error("Failed to fetch roles:", error);
@@ -1656,15 +1958,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         }
 
         const rows = Array.isArray(data) ? (data as any[]) : [];
-        const permissions: RolePermission[] = rows.map((row) => ({
-          id: row.id,
-          server_id: row.server_id,
-          role_id: row.role_id,
-          role_name: row.role_name as ServerRole | null,
-          permission: row.permission as Permission,
-          allowed: row.allowed,
-          created_at: row.created_at ?? "",
-        }));
+        const permissions = normalizeRolePermissionRows(rows);
 
         rolePermissionsCache.set(serverId, { data: permissions, cachedAt: Date.now() });
         set({ rolePermissions: permissions });
@@ -2064,3 +2358,32 @@ export const useServerStore = create<ServerState>((set, get) => ({
       roles: [],
     }),
 }));
+
+useServerStore.subscribe((state, prevState) => {
+  const userId = useAuthStore.getState().user?.id ?? null;
+  const serverId = state.currentServer?.id;
+  if (!serverId) return;
+  const sameServer = serverId === prevState.currentServer?.id;
+
+  if (sameServer && (state.channels !== prevState.channels || state.categories !== prevState.categories)) {
+    const channels = state.channels.filter((channel) => channel.server_id === serverId);
+    const categories = state.categories.filter((category) => category.server_id === serverId);
+    setCachedServerSurface(serverId, userId, categories, channels);
+  }
+
+  if (sameServer && state.roles !== prevState.roles) {
+    setCachedServerRoles(serverId, userId, state.roles);
+  }
+});
+
+export const getCachedServerChannelMap = (serverIds: string[], userId: string | null): Record<string, string[]> => {
+  const channelsByServer: Record<string, string[]> = {};
+
+  for (const serverId of serverIds) {
+    const cached = getCachedServerSurface(serverId, userId);
+    if (!cached) continue;
+    channelsByServer[serverId] = cached.channels.map((channel) => channel.id);
+  }
+
+  return channelsByServer;
+};

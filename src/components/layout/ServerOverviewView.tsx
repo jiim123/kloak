@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useAuthStore } from "@/stores/authStore";
 import { supabase } from "@/integrations/supabase/client";
+import { readCachedMemberCount, persistMemberCount } from "@/lib/serverMemberCount";
 import { useNavigate } from "react-router-dom";
 import type { Message, User } from "@/types";
 import { getUserFromCache, getOrFetchUser } from "@/stores/userCacheStore";
@@ -108,16 +109,32 @@ export const ServerOverviewView = () => {
       setTotalMemberCount(null);
       return;
     }
+    const cachedCount = readCachedMemberCount(currentServer.id, userId);
+    if (cachedCount !== null) {
+      setTotalMemberCount(cachedCount);
+    }
     let cancelled = false;
+    let fetchTimer: ReturnType<typeof setTimeout> | null = null;
     const fetchTotalMemberCount = async () => {
       const { data, error } = await (supabase.rpc as any)("get_server_member_count_secure", {
         _server_id: currentServer.id,
         _user_id: userId,
       });
       if (cancelled || error) return;
-      setTotalMemberCount(typeof data === "number" ? data : 0);
+      const count = typeof data === "number" ? data : 0;
+      persistMemberCount(currentServer.id, userId, count);
+      setTotalMemberCount(count);
     };
-    fetchTotalMemberCount();
+    if (cachedCount === null) {
+      fetchTimer = setTimeout(() => {
+        const seededCount = readCachedMemberCount(currentServer.id, userId);
+        if (seededCount !== null) {
+          if (!cancelled) setTotalMemberCount(seededCount);
+          return;
+        }
+        void fetchTotalMemberCount();
+      }, 350);
+    }
     const channel = supabase
       .channel(`overview-member-count:${currentServer.id}`)
       .on(
@@ -130,6 +147,7 @@ export const ServerOverviewView = () => {
       .subscribe();
     return () => {
       cancelled = true;
+      if (fetchTimer) clearTimeout(fetchTimer);
       supabase.removeChannel(channel);
     };
   }, [currentServer?.id, userId]);

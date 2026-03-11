@@ -3,9 +3,10 @@ import { useNavigate, useSearchParams, useLocation, useParams, Outlet } from "re
 import { MotionConfig } from "framer-motion";
 import { useAuthStore, initializeAuth } from "@/stores/authStore";
 import { useUIStore } from "@/stores/uiStore";
-import { useServerStore } from "@/stores/serverStore";
+import { getCachedServerChannelMap, useServerStore } from "@/stores/serverStore";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { useVoiceSettingsStore } from "@/stores/voiceSettingsStore";
+import { fetchAndCacheUser } from "@/stores/userCacheStore";
 import { getLastChannel } from "@/lib/storage";
 import { ServerSidebar } from "@/components/layout/ServerSidebar";
 import { HomeLanding } from "@/components/home/HomeLanding";
@@ -183,10 +184,7 @@ const AppLayout = () => {
               })
               .then(async ({ data: otherParticipantId }) => {
                 if (otherParticipantId) {
-                  // Fetch the other user's details
-                  const { data: otherUserData } = await supabase.rpc("get_user_by_id", {
-                    _user_id: otherParticipantId,
-                  });
+                  const otherUserData = await fetchAndCacheUser(otherParticipantId);
 
                   if (otherUserData) {
                     const conversation = {
@@ -341,20 +339,11 @@ const AppLayout = () => {
     }
   }, [isServerSpecialView, currentServer, currentChannel, setCurrentChannel]);
 
-  // Fetch channels + permissions only when server changes.
-  // Keep this separate from member-sidebar state to avoid repeated channel refetches.
+  // Fetch server bootstrap only when server changes.
   useEffect(() => {
     if (!currentServer?.id) return;
     fetchChannels(currentServer.id);
-    fetchRolePermissions(currentServer.id);
-  }, [currentServer?.id, fetchChannels, fetchRolePermissions]);
-
-  // Members can be large; only fetch when members UI is actually needed.
-  useEffect(() => {
-    if (!currentServer?.id) return;
-    if (!isMemberSidebarOpen) return;
-    fetchMembers(currentServer.id, { full: false });
-  }, [currentServer?.id, isMemberSidebarOpen, fetchMembers]);
+  }, [currentServer?.id, fetchChannels]);
 
   // Clear DM conversation when switching to a server
   useEffect(() => {
@@ -431,49 +420,28 @@ const AppLayout = () => {
   // DM View (no server selected)
   const isDMView = currentServer === null;
 
-  // Build a server_id -> channel_id[] map for unread indicators.
-  // NOTE: This intentionally uses the `channels` table directly for a single batched lookup
-  // rather than N RPC calls. It matches the previous sidebar behavior.
-  const [serverChannels, setServerChannels] = useState<Record<string, string[]>>({});
   const serverIdsKey = useMemo(() => {
     if (!servers || servers.length === 0) return "";
     return [...servers.map((s) => s.id)].sort().join(",");
   }, [servers]);
+  const serverChannels = useMemo(() => {
+    if (!serverIdsKey) return {};
 
-  useEffect(() => {
-    if (!serverIdsKey) {
-      setServerChannels({});
-      return;
+    const serverIds = serverIdsKey.split(",").filter(Boolean);
+    const channelsByServer = getCachedServerChannelMap(serverIds, user?.id ?? null);
+
+    if (currentServer?.id) {
+      const currentServerChannels = channels
+        .filter((channel) => channel.server_id === currentServer.id)
+        .map((channel) => channel.id);
+
+      if (currentServerChannels.length > 0) {
+        channelsByServer[currentServer.id] = currentServerChannels;
+      }
     }
 
-    let cancelled = false;
-    const serverIds = serverIdsKey.split(",").filter(Boolean);
-
-    (async () => {
-      try {
-        const { data, error } = await supabase.from("channels").select("id, server_id").in("server_id", serverIds);
-        if (cancelled) return;
-        if (error) throw error;
-
-        const channelsByServer: Record<string, string[]> = {};
-        for (const row of data || []) {
-          const sid = (row as any).server_id as string;
-          const cid = (row as any).id as string;
-          if (!sid || !cid) continue;
-          if (!channelsByServer[sid]) channelsByServer[sid] = [];
-          channelsByServer[sid].push(cid);
-        }
-        setServerChannels(channelsByServer);
-      } catch (e) {
-        console.error("[AppLayout] Failed to build serverChannels map:", e);
-        if (!cancelled) setServerChannels({});
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [serverIdsKey]);
+    return channelsByServer;
+  }, [serverIdsKey, user?.id, currentServer?.id, channels]);
 
   const allChannelIds = useMemo(() => {
     const ids = Object.values(serverChannels).flat();

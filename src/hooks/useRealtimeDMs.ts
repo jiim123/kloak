@@ -61,9 +61,23 @@ export const useRealtimeDMs = ({
   const { addMessage, updateMessage, removeMessage, updateConversation, fetchConversations, fetchMessages } =
     useDMStore();
   const conversationIdsRef = useRef<Set<string>>(new Set());
+  const conversations = useDMStore((state) => state.conversations);
 
   const onNewMessageRef = useRef(onNewMessage);
   onNewMessageRef.current = onNewMessage;
+
+  useEffect(() => {
+    const next = new Set<string>();
+    conversations.forEach((conversation) => {
+      if (conversation.id) {
+        next.add(conversation.id);
+      }
+    });
+    if (currentConversationId) {
+      next.add(currentConversationId);
+    }
+    conversationIdsRef.current = next;
+  }, [conversations, currentConversationId]);
 
   const hydrateMessageRow = useCallback(
     async (row: DirectMessageRealtimeRow): Promise<DirectMessageRealtimeRow> => {
@@ -235,17 +249,6 @@ export const useRealtimeDMs = ({
   useEffect(() => {
     if (!userId) return;
 
-    // Prime a local set of conversation IDs for this user to avoid
-    // doing a DB lookup for every global direct_messages event.
-    let cancelled = false;
-    (async () => {
-      const { data } = await supabase.rpc('get_user_dm_conversation_ids_secure', {
-        _user_id: userId,
-      });
-      if (cancelled) return;
-      conversationIdsRef.current = new Set((Array.isArray(data) ? data : []) as string[]);
-    })();
-
     const channel = supabase
       .channel(`all-dms:${userId}`)
       .on(
@@ -290,7 +293,6 @@ export const useRealtimeDMs = ({
       });
 
     return () => {
-      cancelled = true;
       supabase.removeChannel(channel);
     };
   }, [userId, handleNewMessage, handleMessageUpdate, handleMessageDelete, currentConversationId]);
@@ -428,7 +430,6 @@ export const useRealtimeDMs = ({
   }, [userId, debouncedFetchConversations]);
 
   // Subscribe to user updates for all DM conversation participants
-  const conversations = useDMStore((state) => state.conversations);
   const currentConversation = useDMStore((state) => state.currentConversation);
 
   const participantUserIds = (() => {

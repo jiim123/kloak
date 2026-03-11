@@ -14,6 +14,38 @@ export interface ChannelUserSettings {
   mute_until: string | null;
 }
 
+const CHANNEL_SETTINGS_CACHE_TTL_MS = 5 * 60_000;
+const CHANNEL_SETTINGS_STORAGE_PREFIX = 'kloak:channel-settings:';
+
+const getChannelSettingsCacheKey = (userId: string, channelIds: string[]) =>
+  `${CHANNEL_SETTINGS_STORAGE_PREFIX}${userId}:${[...channelIds].sort().join(',')}`;
+
+const readCachedChannelSettings = (userId: string, channelIds: string[]): Record<string, ChannelUserSettings> | null => {
+  if (typeof window === 'undefined' || channelIds.length === 0) return null;
+  try {
+    const raw = window.sessionStorage.getItem(getChannelSettingsCacheKey(userId, channelIds));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { settings?: Record<string, ChannelUserSettings>; cachedAt?: number };
+    if (!parsed?.settings || typeof parsed.cachedAt !== 'number') return null;
+    if (Date.now() - parsed.cachedAt >= CHANNEL_SETTINGS_CACHE_TTL_MS) return null;
+    return parsed.settings;
+  } catch {
+    return null;
+  }
+};
+
+const persistChannelSettings = (userId: string, channelIds: string[], settings: Record<string, ChannelUserSettings>) => {
+  if (typeof window === 'undefined' || channelIds.length === 0) return;
+  try {
+    window.sessionStorage.setItem(
+      getChannelSettingsCacheKey(userId, channelIds),
+      JSON.stringify({ settings, cachedAt: Date.now() }),
+    );
+  } catch {
+    // ignore storage failures
+  }
+};
+
 interface ChannelSettingsState {
   settings: Record<string, ChannelUserSettings>; // keyed by channel_id
   loading: boolean;
@@ -39,6 +71,12 @@ export const useChannelSettingsStore = create<ChannelSettingsState>((set, get) =
     const userId = useAuthStore.getState().user?.id;
     if (!userId || serverChannelIds.length === 0) return;
 
+    const cached = readCachedChannelSettings(userId, serverChannelIds);
+    if (cached) {
+      set({ settings: cached, loading: false });
+      return;
+    }
+
     set({ loading: true });
     try {
       const { data, error } = await supabase
@@ -53,6 +91,7 @@ export const useChannelSettingsStore = create<ChannelSettingsState>((set, get) =
       (data || []).forEach((row: any) => {
         map[row.channel_id] = row;
       });
+      persistChannelSettings(userId, serverChannelIds, map);
       set({ settings: map });
     } catch (e) {
       console.error('Failed to fetch channel settings:', e);

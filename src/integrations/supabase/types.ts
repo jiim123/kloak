@@ -1489,33 +1489,6 @@ export type Database = {
           },
         ]
       }
-      pow_challenges: {
-        Row: {
-          created_at: string
-          difficulty: number
-          expires_at: string
-          id: string
-          nonce: string
-          used: boolean | null
-        }
-        Insert: {
-          created_at?: string
-          difficulty?: number
-          expires_at?: string
-          id?: string
-          nonce: string
-          used?: boolean | null
-        }
-        Update: {
-          created_at?: string
-          difficulty?: number
-          expires_at?: string
-          id?: string
-          nonce?: string
-          used?: boolean | null
-        }
-        Relationships: []
-      }
       reactions: {
         Row: {
           channel_id: string
@@ -2828,7 +2801,6 @@ export type Database = {
         Args: { _username: string }
         Returns: boolean
       }
-      cleanup_pow_challenges: { Args: never; Returns: undefined }
       close_dm_conversation: {
         Args: { _conversation_id: string; _user_id: string }
         Returns: Json
@@ -3228,6 +3200,14 @@ export type Database = {
         Args: { _server_id: string; _user_id?: string }
         Returns: Json
       }
+      server: {
+        Args: { _server_id: string; _user_id?: string }
+        Returns: Json
+      }
+      get_server_surface_secure: {
+        Args: { _server_id: string; _user_id?: string }
+        Returns: Json
+      }
       get_server_member_count_secure: {
         Args: { _server_id: string; _user_id: string }
         Returns: number
@@ -3235,10 +3215,6 @@ export type Database = {
       get_server_members: { Args: { _server_id: string }; Returns: Json }
       get_server_members_full_secure: {
         Args: { _server_id: string; _user_id: string }
-        Returns: Json
-      }
-      get_server_members_offline: {
-        Args: { _server_id: string }
         Returns: Json
       }
       get_server_members_offline_page_secure: {
@@ -3252,7 +3228,6 @@ export type Database = {
         }
         Returns: Json
       }
-      get_server_members_online: { Args: { _server_id: string }; Returns: Json }
       get_server_mention_candidates_secure: {
         Args: {
           _limit?: number

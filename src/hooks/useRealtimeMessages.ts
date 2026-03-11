@@ -11,7 +11,7 @@ import { fetchAndCacheUser, getUserFromCache, getOrFetchUser } from '@/stores/us
 import type { User } from '@/types';
 import { canRevealGhostIdentityForUser, getGhostPseudonymousUserId } from '@/lib/ghostIdentity';
 
-const CHANNEL_SUBSCRIBE_CATCHUP_MAX_AGE_MS = 12_000;
+const CHANNEL_SUBSCRIBE_CATCHUP_MAX_AGE_MS = 5 * 60_000;
 const MIN_CATCHUP_FETCH_GAP_MS = 30_000;
 const BROADCAST_RESYNC_INTERVAL_MS = 12_000;
 const MIN_BROADCAST_RESYNC_GAP_MS = 6_000;

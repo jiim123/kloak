@@ -2,13 +2,23 @@ import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { patchUserAcrossStores } from './useRealtimeUsers';
 import { useAuthStore } from '@/stores/authStore';
+import { getUserCacheAge } from '@/stores/userCacheStore';
 import type { User } from '@/types';
 
 /**
  * Maximum number of user IDs to fetch in one targeted poll.
  */
 const MAX_USER_IDS_FOR_SUBSCRIPTION = 100;
-const TARGETED_USER_POLL_INTERVAL_MS = 15_000;
+const TARGETED_USER_POLL_INTERVAL_MS = 60_000;
+const TARGETED_USER_REFRESH_TTL_MS = 5 * 60_000;
+
+const inflightTargetedFetches = new Map<string, Promise<void>>();
+
+const collectStaleUserIds = (userIds: string[]): string[] =>
+  userIds.filter((userId) => {
+    const cacheAge = getUserCacheAge(userId);
+    return cacheAge == null || cacheAge >= TARGETED_USER_REFRESH_TTL_MS;
+  });
 
 /**
  * Hook for targeted user updates.
@@ -42,21 +52,40 @@ export const useRealtimeUserUpdates = (
     let mounted = true;
 
     const fetchUsers = async () => {
-      const { data, error } = await supabase.rpc('get_users_basic_secure', {
-        _user_id: viewerId,
-        _target_user_ids: targetUserIds,
-      });
+      const staleTargetUserIds = collectStaleUserIds(targetUserIds);
+      if (staleTargetUserIds.length === 0) return;
 
-      if (!mounted || error || !Array.isArray(data)) return;
+      const fetchKey = `${viewerId}:${staleTargetUserIds.slice().sort().join(',')}`;
+      const existingFetch = inflightTargetedFetches.get(fetchKey);
+      if (existingFetch) {
+        await existingFetch;
+        return;
+      }
 
-      data.forEach((row) => {
-        if (!row || typeof row !== 'object' || !('id' in row)) return;
-        const updatedUser = row as unknown as User;
-        patchUserAcrossStores(updatedUser);
-        if (onUpdateRef.current) {
-          onUpdateRef.current(updatedUser);
-        }
-      });
+      const fetchPromise = (async () => {
+        const { data, error } = await supabase.rpc('get_users_basic_secure', {
+          _user_id: viewerId,
+          _target_user_ids: staleTargetUserIds,
+        });
+
+        if (!mounted || error || !Array.isArray(data)) return;
+
+        data.forEach((row) => {
+          if (!row || typeof row !== 'object' || !('id' in row)) return;
+          const updatedUser = row as unknown as User;
+          patchUserAcrossStores(updatedUser);
+          if (onUpdateRef.current) {
+            onUpdateRef.current(updatedUser);
+          }
+        });
+      })();
+
+      inflightTargetedFetches.set(fetchKey, fetchPromise);
+      try {
+        await fetchPromise;
+      } finally {
+        inflightTargetedFetches.delete(fetchKey);
+      }
     };
 
     void fetchUsers();

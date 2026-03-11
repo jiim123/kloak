@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { useServerStore } from "@/stores/serverStore";
-import { useUserCacheStore, bulkSetUsersInCache } from "@/stores/userCacheStore";
+import { useUserCacheStore, bulkSetUsersInCache, fetchAndCacheUser } from "@/stores/userCacheStore";
 import { resolveSignedUrls, isSupabaseAttachmentUrl } from "@/lib/signedUrl";
 import type { Message, MessageReply, ReactionGroup, User } from "@/types";
 
@@ -126,6 +126,7 @@ const REPLY_CACHE_EXPIRY_MS = 5 * 60 * 1000;
 const MAX_CACHED_CHANNELS = 5;
 const MAX_MESSAGES_PER_CHANNEL = 150;
 const MAX_REPLY_CACHE_ITEMS = 800;
+const MESSAGE_CACHE_STORAGE_KEY = "kloak:message-cache:v1";
 
 // In-flight request coalescing (prevents duplicate message fetches during rapid switching)
 const inflightFetches = new Map<string, Promise<void>>();
@@ -142,6 +143,41 @@ const pruneReplyCache = () => {
   const sorted = Array.from(replyCache.entries()).sort((a, b) => a[1].cachedAt - b[1].cachedAt);
   const toDelete = sorted.slice(0, replyCache.size - MAX_REPLY_CACHE_ITEMS);
   toDelete.forEach(([key]) => replyCache.delete(key));
+};
+
+const readPersistedMessagesByChannel = (): Record<string, ChannelMessages> => {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.sessionStorage.getItem(MESSAGE_CACHE_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, ChannelMessages>;
+    const now = Date.now();
+    const next: Record<string, ChannelMessages> = {};
+
+    for (const [channelId, cache] of Object.entries(parsed || {})) {
+      if (!cache || !Array.isArray(cache.messages)) continue;
+      if (now - Number(cache.lastFetched ?? 0) >= CACHE_EXPIRY_MS) continue;
+      next[channelId] = {
+        messages: trimMessages(cache.messages),
+        hasMore: cache.hasMore ?? true,
+        lastFetched: Number(cache.lastFetched ?? now),
+        oldestLoadedAt: cache.oldestLoadedAt ?? null,
+      };
+    }
+
+    return pruneMessagesByChannel(next);
+  } catch {
+    return {};
+  }
+};
+
+const persistMessagesByChannel = (messagesByChannel: Record<string, ChannelMessages>) => {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(MESSAGE_CACHE_STORAGE_KEY, JSON.stringify(pruneMessagesByChannel(messagesByChannel)));
+  } catch {
+    // ignore storage pressure/quota issues
+  }
 };
 
 const pruneMessagesByChannel = (
@@ -184,7 +220,7 @@ const pruneMessagesByChannel = (
 };
 
 export const useMessageStore = create<MessageState>((set, get) => ({
-  messagesByChannel: {},
+  messagesByChannel: readPersistedMessagesByChannel(),
   currentChannelId: null,
   isLoading: false,
   fetchingChannels: {},
@@ -219,7 +255,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     skipBootstrap = false,
   ) => {
     const normalizedBefore = typeof before === "string" && before.trim().length > 0 ? before : undefined;
-    const inflightKey = `${channelId}:${normalizedBefore ?? ""}:${force ? 1 : 0}:${limit}:${skipBootstrap ? 1 : 0}`;
+    const inflightKey = `${channelId}:${normalizedBefore ?? ""}:${limit}`;
     const existingInflight = inflightFetches.get(inflightKey);
     if (existingInflight) return existingInflight;
 
@@ -682,10 +718,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       }
 
       const localUser = useAuthStore.getState().user;
-      const { data: userData } =
-        localUser?.id === userId
-          ? { data: localUser }
-          : await supabase.rpc("get_user_by_id" as any, { _user_id: userId });
+      const userData = localUser?.id === userId ? localUser : await fetchAndCacheUser(userId);
 
       // Cache the user data
       const userDataParsed = userData as unknown as User;
@@ -1110,6 +1143,11 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     });
   },
 }));
+
+useMessageStore.subscribe((state, prevState) => {
+  if (state.messagesByChannel === prevState.messagesByChannel) return;
+  persistMessagesByChannel(state.messagesByChannel);
+});
 
 // Legacy compatibility - expose messages as a computed value
 // Components should migrate to using getMessages() instead
