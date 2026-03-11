@@ -293,12 +293,6 @@ export const useAuthStore = create<AuthState>()(
           // Seed user cache to avoid redundant get_user_by_id calls (realtime / DMs).
           useUserCacheStore.getState().upsertUser(user);
 
-          // Re-apply a persisted manual status (e.g. Invisible/DND) on login.
-          const { manualStatus } = get();
-          if (manualStatus && (manualStatus === "offline" || manualStatus === "dnd")) {
-            // Use auto to avoid mutating persisted manualStatus redundantly.
-            await get().updateStatus(manualStatus, { source: "auto" });
-          }
           return true;
         } catch (error) {
           console.error("Login error:", error);
