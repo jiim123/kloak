@@ -5,8 +5,17 @@
 
 import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
+import type { RealtimeChannel } from '@supabase/supabase-js';
+import type { Database } from '@/integrations/supabase/types';
 import { VoiceSettings, DEFAULT_VOICE_SETTINGS } from '@/types/voiceSettings';
 import { validateVoiceSettings } from '@/utils/voiceSettingsValidation';
+
+type UserVoiceSettingsRow = Database["public"]["Tables"]["user_voice_settings"]["Row"];
+type BroadcastMutationPayload<T> = {
+  op?: 'INSERT' | 'UPDATE' | 'DELETE';
+  new?: T | null;
+  old?: T | null;
+};
 
 interface VoiceSettingsStore {
   settings: VoiceSettings;
@@ -27,6 +36,7 @@ interface VoiceSettingsStore {
 // Debounce timer for saving
 let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 let currentUserId: string | null = null;
+let settingsChannel: RealtimeChannel | null = null;
 
 // Debounced save function
 async function debouncedSave(userId: string, settings: VoiceSettings) {
@@ -36,10 +46,9 @@ async function debouncedSave(userId: string, settings: VoiceSettings) {
   
   saveTimeout = setTimeout(async () => {
     try {
-      // Cast to any since RPC may not be in generated types yet
-      await (supabase.rpc as Function)('upsert_user_voice_settings', {
-        p_user_id: userId,
-        p_settings: settings,
+      await supabase.from('user_voice_settings').upsert({
+        user_id: userId,
+        settings,
       });
     } catch (error) {
       console.error('Failed to save voice settings:', error);
@@ -57,27 +66,48 @@ export const useVoiceSettingsStore = create<VoiceSettingsStore>((set, get) => ({
     currentUserId = userId;
     set({ isLoading: true, error: null });
 
+    if (settingsChannel) {
+      supabase.removeChannel(settingsChannel);
+      settingsChannel = null;
+    }
+
     try {
-      // Cast to any since RPC may not be in generated types yet
-      const { data, error } = await (supabase.rpc as Function)('get_user_voice_settings', {
-        p_user_id: userId,
-      });
+      const { data, error } = await supabase
+        .from('user_voice_settings')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
 
       if (error) {
-        // If function doesn't exist yet, use defaults
-        if (error.message.includes('function') || error.code === '42883') {
-          set({ 
-            settings: { ...DEFAULT_VOICE_SETTINGS }, 
-            isLoaded: true, 
-            isLoading: false 
-          });
-          return;
-        }
         throw error;
       }
 
-      const validatedSettings = validateVoiceSettings(data);
+      const validatedSettings = validateVoiceSettings(data?.settings ?? DEFAULT_VOICE_SETTINGS);
       set({ settings: validatedSettings, isLoaded: true, isLoading: false });
+
+      settingsChannel = supabase
+        .channel(`user:${userId}`)
+        .on(
+          'broadcast',
+          {
+            event: 'voice_settings',
+          },
+          (payload) => {
+            const eventPayload = payload as BroadcastMutationPayload<UserVoiceSettingsRow>;
+            if (eventPayload.op === 'DELETE') {
+              set({ settings: { ...DEFAULT_VOICE_SETTINGS }, isLoaded: true, isLoading: false });
+              return;
+            }
+
+            const row = eventPayload.new as UserVoiceSettingsRow | null;
+            set({
+              settings: validateVoiceSettings(row?.settings ?? DEFAULT_VOICE_SETTINGS),
+              isLoaded: true,
+              isLoading: false,
+            });
+          },
+        )
+        .subscribe();
     } catch (error) {
       console.error('Failed to load voice settings:', error);
       // Use defaults on error
@@ -143,10 +173,9 @@ export const useVoiceSettingsStore = create<VoiceSettingsStore>((set, get) => ({
       }
       
       try {
-        // Cast to any since RPC may not be in generated types yet
-        await (supabase.rpc as Function)('upsert_user_voice_settings', {
-          p_user_id: currentUserId,
-          p_settings: DEFAULT_VOICE_SETTINGS,
+        await supabase.from('user_voice_settings').upsert({
+          user_id: currentUserId,
+          settings: DEFAULT_VOICE_SETTINGS,
         });
       } catch (error) {
         console.error('Failed to reset voice settings:', error);
@@ -159,6 +188,10 @@ export const useVoiceSettingsStore = create<VoiceSettingsStore>((set, get) => ({
     if (saveTimeout) {
       clearTimeout(saveTimeout);
       saveTimeout = null;
+    }
+    if (settingsChannel) {
+      supabase.removeChannel(settingsChannel);
+      settingsChannel = null;
     }
     set({ 
       settings: { ...DEFAULT_VOICE_SETTINGS }, 

@@ -3200,6 +3200,14 @@ export type Database = {
         Args: { _server_id: string; _user_id?: string }
         Returns: Json
       }
+      server: {
+        Args: { _server_id: string; _user_id?: string }
+        Returns: Json
+      }
+      get_server_surface_secure: {
+        Args: { _server_id: string; _user_id?: string }
+        Returns: Json
+      }
       get_server_member_count_secure: {
         Args: { _server_id: string; _user_id: string }
         Returns: number

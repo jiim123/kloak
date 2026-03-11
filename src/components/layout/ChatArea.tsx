@@ -170,16 +170,6 @@ export const ChatArea = () => {
     return s.messagesByChannel[channelId]?.messages ?? EMPTY_MESSAGES;
   });
 
-  // Ensure member data exists for the active server (role colors, nicknames, moderation checks).
-  // This should be server-scoped only; channel switches must not trigger member refetches.
-  useEffect(() => {
-    if (!serverId) return;
-    // If the currently loaded members are for a different server (or not loaded yet), load them.
-    if (membersServerId !== serverId) {
-      fetchMembers(serverId);
-    }
-  }, [serverId, membersServerId, fetchMembers]);
-
   const { typingUsers, startTyping, stopTyping } = useTyping(isGhostMode ? null : channelId);
   const pinnedMessages = useMemo(() => {
     if (channelMessages.length === 0) return EMPTY_MESSAGES;

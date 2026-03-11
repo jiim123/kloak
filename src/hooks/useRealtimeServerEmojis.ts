@@ -15,17 +15,18 @@ export function useRealtimeServerEmojis(serverId: string | null) {
     if (!serverId) return;
 
     const channel = supabase
-      .channel(`server-emojis:${serverId}`)
+      .channel(`server:${serverId}`)
       .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'server_emojis', filter: `server_id=eq.${serverId}` },
+        'broadcast',
+        { event: 'server_emojis' },
         (payload) => {
           try {
             invalidateServerEmojis(serverId);
             invalidateGlobalEmojiCache();
 
-            const emojiId = (payload.new as any)?.id ?? (payload.old as any)?.id ?? null;
-            const eventType = payload.eventType;
+            const eventPayload = payload as { op?: string; new?: { id?: string } | null; old?: { id?: string } | null };
+            const emojiId = eventPayload.new?.id ?? eventPayload.old?.id ?? null;
+            const eventType = eventPayload.op ?? null;
             window.dispatchEvent(
               new CustomEvent('server-emojis-changed', {
                 detail: { serverId, emojiId, eventType },

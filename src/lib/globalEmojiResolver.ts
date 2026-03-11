@@ -32,7 +32,53 @@ type GlobalCache = {
 };
 
 const CACHE_TTL_MS = 120_000; // 2 minutes
+const GLOBAL_EMOJI_STORAGE_KEY = 'kloak:global-emoji-map:v1';
 let globalCache: GlobalCache | null = null;
+
+const readPersistedGlobalEmojiCache = (serverIds: string[]): GlobalCache | null => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.sessionStorage.getItem(GLOBAL_EMOJI_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as {
+      map?: Array<[string, ResolvedEmoji]>;
+      qualifiedMap?: Array<[string, ResolvedEmoji]>;
+      duplicateNames?: string[];
+      serverIds?: string[];
+      builtAt?: number;
+    };
+    if (!Array.isArray(parsed?.serverIds) || typeof parsed?.builtAt !== 'number') return null;
+    if (parsed.serverIds.join(',') !== serverIds.join(',')) return null;
+    if (Date.now() - parsed.builtAt >= CACHE_TTL_MS) return null;
+    return {
+      map: new Map(parsed.map ?? []),
+      qualifiedMap: new Map(parsed.qualifiedMap ?? []),
+      duplicateNames: new Set(parsed.duplicateNames ?? []),
+      serverIds: parsed.serverIds,
+      builtAt: parsed.builtAt,
+    };
+  } catch {
+    return null;
+  }
+};
+
+const persistGlobalEmojiCache = (cache: GlobalCache) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.setItem(
+      GLOBAL_EMOJI_STORAGE_KEY,
+      JSON.stringify({
+        map: Array.from(cache.map.entries()),
+        qualifiedMap: Array.from(cache.qualifiedMap.entries()),
+        duplicateNames: Array.from(cache.duplicateNames.values()),
+        serverIds: cache.serverIds,
+        builtAt: cache.builtAt,
+      }),
+    );
+  } catch {
+    // ignore storage failures
+  }
+};
 
 /**
  * Build (or return cached) global emoji map from all user servers.
@@ -42,6 +88,10 @@ export async function getGlobalEmojiMap(opts?: { force?: boolean }): Promise<Map
   const force = opts?.force ?? false;
   const servers = useServerStore.getState().servers;
   const serverIds = servers.map((s) => s.id).sort();
+
+  if (!globalCache) {
+    globalCache = readPersistedGlobalEmojiCache(serverIds);
+  }
 
   // Always deduplicate in-flight builds (even when forced).
   // Multiple components may ask for a force-refresh at once; coalesce them.
@@ -120,6 +170,7 @@ export async function getGlobalEmojiMap(opts?: { force?: boolean }): Promise<Map
     }
 
     globalCache = { map, qualifiedMap, duplicateNames, serverIds, builtAt: Date.now() };
+    persistGlobalEmojiCache(globalCache);
     return map;
   })();
 
@@ -158,6 +209,13 @@ export function resolveQualifiedEmoji(qualifiedName: string): ResolvedEmoji | un
 /** Invalidate the global cache (e.g. after uploading a new emoji). */
 export function invalidateGlobalEmojiCache() {
   globalCache = null;
+  if (typeof window !== 'undefined') {
+    try {
+      window.sessionStorage.removeItem(GLOBAL_EMOJI_STORAGE_KEY);
+    } catch {
+      // ignore storage failures
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------

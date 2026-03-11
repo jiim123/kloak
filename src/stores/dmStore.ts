@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
-import { useUserCacheStore, bulkSetUsersInCache } from "@/stores/userCacheStore";
+import { useUserCacheStore, bulkSetUsersInCache, fetchAndCacheUser } from "@/stores/userCacheStore";
 import { resolveSignedUrls, isSupabaseAttachmentUrl } from "@/lib/signedUrl";
 import type { DMConversation, DirectMessage, User, ReactionGroup } from "@/types";
 
@@ -157,9 +157,7 @@ export const useDMStore = create<DMState>((set, get) => ({
       const convData = data as { id: string; created_at: string };
 
       // Fetch other user details
-      const { data: userData } = await supabase.rpc("get_user_by_id", {
-        _user_id: otherUserId,
-      });
+      const userData = await fetchAndCacheUser(otherUserId);
 
       const conversation: DMConversation = {
         id: convData.id,
@@ -439,8 +437,7 @@ export const useDMStore = create<DMState>((set, get) => ({
 
       // Cache sender data instead of embedding on message
       const localUser = useAuthStore.getState().user;
-      const senderData =
-        localUser?.id === senderId ? localUser : (await supabase.rpc("get_user_by_id", { _user_id: senderId })).data;
+      const senderData = localUser?.id === senderId ? localUser : await fetchAndCacheUser(senderId);
       if (senderData) {
         useUserCacheStore.getState().upsertUser(senderData as unknown as User);
       }

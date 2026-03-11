@@ -45,6 +45,63 @@ const extractFirstMessageId = (rows: unknown): string | null => {
 const UNREAD_POLL_INTERVAL_MS = 90000;
 const UNREAD_FETCH_COOLDOWN_MS = 3000;
 const CHANNEL_READ_EVENT = 'kloak:channel-read';
+const UNREAD_STORAGE_PREFIX = 'kloak:channel-unread:';
+const sharedUnreadSnapshotByUser = new Map<string, { unreadState: UnreadState; cachedAt: number }>();
+
+const readPersistedUnreadState = (userId: string): { unreadState: UnreadState; cachedAt: number } | null => {
+  const existing = sharedUnreadSnapshotByUser.get(userId);
+  if (existing && Date.now() - existing.cachedAt < UNREAD_POLL_INTERVAL_MS) {
+    return existing;
+  }
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.sessionStorage.getItem(`${UNREAD_STORAGE_PREFIX}${userId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { unreadState?: UnreadState; cachedAt?: number };
+    if (!parsed?.unreadState || typeof parsed.cachedAt !== 'number') return null;
+    if (Date.now() - parsed.cachedAt >= UNREAD_POLL_INTERVAL_MS) return null;
+    const snapshot = { unreadState: parsed.unreadState, cachedAt: parsed.cachedAt };
+    sharedUnreadSnapshotByUser.set(userId, snapshot);
+    return snapshot;
+  } catch {
+    return null;
+  }
+};
+
+const persistUnreadState = (userId: string, unreadState: UnreadState) => {
+  const existing = sharedUnreadSnapshotByUser.get(userId);
+  const next = {
+    unreadState: {
+      ...(existing?.unreadState ?? {}),
+      ...unreadState,
+    },
+    cachedAt: Date.now(),
+  };
+  sharedUnreadSnapshotByUser.set(userId, next);
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.setItem(
+      `${UNREAD_STORAGE_PREFIX}${userId}`,
+      JSON.stringify(next),
+    );
+  } catch {
+    // ignore storage failures
+  }
+};
+
+const getUnreadSubset = (snapshot: UnreadState, channelIds: string[]): { unreadState: UnreadState; complete: boolean } => {
+  const unreadState: UnreadState = {};
+  let complete = channelIds.length > 0;
+  for (const channelId of channelIds) {
+    const existing = snapshot[channelId];
+    if (existing) {
+      unreadState[channelId] = existing;
+      continue;
+    }
+    complete = false;
+  }
+  return { unreadState, complete };
+};
 
 export const useUnread = (serverChannelIds: string[] = []) => {
   const { user } = useAuthStore();
@@ -64,11 +121,28 @@ export const useUnread = (serverChannelIds: string[] = []) => {
 
   useEffect(() => {
     unreadStateRef.current = unreadState;
-  }, [unreadState]);
+    if (userId && Object.keys(unreadState).length > 0) {
+      persistUnreadState(userId, unreadState);
+    }
+  }, [unreadState, userId]);
 
   useEffect(() => {
     serverChannelIdsRef.current = serverChannelIds;
   }, [serverChannelIds]);
+
+  useEffect(() => {
+    if (!userId || !channelIdsKey) return;
+
+    const persisted = readPersistedUnreadState(userId);
+    if (!persisted) return;
+
+    const { unreadState: subset } = getUnreadSubset(persisted.unreadState, serverChannelIds);
+    if (Object.keys(subset).length === 0) return;
+    setUnreadState(subset);
+    unreadStateRef.current = subset;
+    channelIdsRef.current = [...serverChannelIds];
+    lastFetchAtRef.current = persisted.cachedAt;
+  }, [channelIdsKey, serverChannelIds, userId]);
 
   // OPTIMIZATION: Use batch RPC instead of N+1 queries
   // This reduces 50+ queries to a single query per polling cycle
@@ -82,6 +156,20 @@ export const useUnread = (serverChannelIds: string[] = []) => {
     const now = Date.now();
     if (!opts?.force && !idsChanged && now - lastFetchAtRef.current < UNREAD_FETCH_COOLDOWN_MS) {
       return;
+    }
+
+    if (!opts?.force) {
+      const persisted = readPersistedUnreadState(user.id);
+      if (persisted) {
+        const { unreadState: subset, complete } = getUnreadSubset(persisted.unreadState, serverChannelIds);
+        if (complete) {
+          channelIdsRef.current = [...serverChannelIds];
+          lastFetchAtRef.current = persisted.cachedAt;
+          setUnreadState(subset);
+          unreadStateRef.current = subset;
+          return;
+        }
+      }
     }
     
     channelIdsRef.current = [...serverChannelIds];
@@ -144,6 +232,7 @@ export const useUnread = (serverChannelIds: string[] = []) => {
       });
 
       setUnreadState(newState);
+      persistUnreadState(user.id, newState);
     } catch (error) {
       console.error('Error fetching unread counts:', error);
     } finally {

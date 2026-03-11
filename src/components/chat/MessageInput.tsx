@@ -199,10 +199,6 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const draftSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (currentServer?.id) fetchRolePermissions(currentServer.id);
-  }, [currentServer?.id, fetchRolePermissions]);
-
-  useEffect(() => {
     if (channelId) {
       setContent(getDraft(channelId));
     }

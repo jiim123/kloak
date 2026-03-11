@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNotificationStore } from '@/stores/notificationStore';
 import { useServerStore } from '@/stores/serverStore';
@@ -36,13 +36,21 @@ const mapNotificationTypeToSoundType = (dbType: DBNotificationType): SoundNotifi
   }
 };
 
+type BroadcastMutationPayload<T> = {
+  op?: 'INSERT' | 'UPDATE' | 'DELETE';
+  new?: T;
+  old?: T;
+};
+
 export const useRealtimeNotifications = (userId: string | null) => {
   const { fetchNotifications, addNotification, removeNotification } = useNotificationStore();
+  const isSubscribedRef = useRef(false);
 
   useEffect(() => {
     if (!userId) return;
+    isSubscribedRef.current = false;
 
-    // Delay initial fetch until auth key hash is available
+    // Delay initial fetch until auth key hash is available.
     const initFetch = async () => {
       const { getKeyHashAsync } = await import('@/integrations/supabase/client');
       const kh = await getKeyHashAsync();
@@ -68,38 +76,35 @@ export const useRealtimeNotifications = (userId: string | null) => {
     };
 
     const channel = supabase
-      .channel(`notifications:${userId}`)
+      .channel(`user:${userId}`)
       .on(
-        'postgres_changes',
+        'broadcast',
         {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload) => processIncomingNotification(payload.new as Notification),
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${userId}`,
+          event: 'notifications',
         },
         (payload) => {
-          const oldNotification = payload.old as { id: string };
-          removeNotification(oldNotification.id);
+          const eventPayload = payload as BroadcastMutationPayload<Notification>;
+          if (eventPayload.op === 'DELETE' && eventPayload.old?.id) {
+            removeNotification(eventPayload.old.id);
+            return;
+          }
+
+          if ((eventPayload.op === 'INSERT' || eventPayload.op === 'UPDATE') && eventPayload.new) {
+            processIncomingNotification(eventPayload.new);
+          }
         },
       )
       .subscribe((status, err) => {
+        isSubscribedRef.current = status === 'SUBSCRIBED';
         if (status !== 'SUBSCRIBED') {
           console.warn('[Realtime] Notifications subscription status:', { status, userId, err });
         }
       });
 
     const pollInterval = window.setInterval(async () => {
-      // Skip poll if auth key hash is unavailable (prevents 401s)
+      if (isSubscribedRef.current) return;
+
+      // Skip poll if auth key hash is unavailable (prevents 401s).
       const { getKeyHash } = await import('@/integrations/supabase/client');
       if (!getKeyHash()) return;
 
@@ -118,9 +123,10 @@ export const useRealtimeNotifications = (userId: string | null) => {
         .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
       unseen.forEach(processIncomingNotification);
-    }, 120_000); // 2 minutes — safety net only; realtime handles live updates
+    }, 300_000);
 
     return () => {
+      isSubscribedRef.current = false;
       window.clearInterval(pollInterval);
       supabase.removeChannel(channel);
     };

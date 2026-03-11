@@ -14,6 +14,7 @@ let pendingAutoStatus: UserStatus | null = null;
 let pendingAutoUserId: string | null = null;
 const statusInFlight = new Map<UserStatus, Promise<void>>();
 const LAST_SEEN_INTERVAL = 60_000; // 60 seconds minimum between calls
+const LAST_SEEN_STORAGE_PREFIX = "kloak:last-seen:";
 let initializeAuthInFlight: Promise<void> | null = null;
 
 interface AuthState {
@@ -490,10 +491,26 @@ export const useAuthStore = create<AuthState>()(
         const { user } = get();
         if (!user) return;
 
+        const persistedLastSeen =
+          typeof window !== "undefined"
+            ? Number(window.sessionStorage.getItem(`${LAST_SEEN_STORAGE_PREFIX}${user.id}`) ?? 0)
+            : 0;
+
+        if (persistedLastSeen > lastSeenTimestamp) {
+          lastSeenTimestamp = persistedLastSeen;
+        }
+
         // Throttle: skip if called within the last 60 seconds
         const now = Date.now();
         if (now - lastSeenTimestamp < LAST_SEEN_INTERVAL) return;
         lastSeenTimestamp = now;
+        if (typeof window !== "undefined") {
+          try {
+            window.sessionStorage.setItem(`${LAST_SEEN_STORAGE_PREFIX}${user.id}`, String(now));
+          } catch {
+            // ignore storage failures
+          }
+        }
 
         try {
           await supabase.rpc("update_user_last_seen", {
