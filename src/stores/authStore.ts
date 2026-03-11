@@ -327,14 +327,8 @@ export const useAuthStore = create<AuthState>()(
             normalizedUpdates.custom_status = null;
           }
 
-          const keyHash = getKeyHash();
-          if (!keyHash) {
-            throw new Error("Missing auth credentials");
-          }
-
           const { data, error } = await supabase.functions.invoke("update-user-profile", {
             body: { updates: normalizedUpdates },
-            headers: { "x-key-hash": keyHash },
           });
 
           if (error) throw error;
