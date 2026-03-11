@@ -289,7 +289,7 @@ export const useAuthStore = create<AuthState>()(
             is_bot: (userData.is_bot as boolean | null) ?? false,
           };
 
-          set({ user, secretKey, isAuthenticated: true, isLoading: false });
+          set({ user, secretKey, isAuthenticated: true, isLoading: false, manualStatus: null });
           // Seed user cache to avoid redundant get_user_by_id calls (realtime / DMs).
           useUserCacheStore.getState().upsertUser(user);
 
