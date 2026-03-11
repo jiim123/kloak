@@ -76,10 +76,46 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
   });
 }
 
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  try {
+    const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
+    const json = atob(padded);
+    const parsed = JSON.parse(json);
+    if (!parsed || typeof parsed !== "object") return null;
+    return parsed as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function assertServiceRoleKeyConfigured(key: string): void {
+  if (!key) {
+    throw new Error("Supabase service credentials are not configured");
+  }
+
+  // New API keys are prefixed; publishable keys cannot bypass RLS.
+  if (key.startsWith("sb_publishable_")) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY is a publishable key, not a service-role key");
+  }
+  if (key.startsWith("sb_secret_")) {
+    return; // valid modern secret key format
+  }
+
+  // Legacy JWT service key should have role=service_role in claims.
+  const payload = decodeJwtPayload(key);
+  if (payload && payload.role !== "service_role") {
+    throw new Error(`SUPABASE_SERVICE_ROLE_KEY JWT role is '${String(payload.role)}', expected 'service_role'`);
+  }
+}
+
 function createServiceClient() {
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
     throw new Error("Supabase service credentials are not configured");
   }
+  assertServiceRoleKeyConfigured(SERVICE_ROLE_KEY);
   return createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   }) as any;
@@ -338,7 +374,12 @@ Deno.serve(async (req) => {
         .upload(normalizedPath, file, { contentType: fileContentType, upsert, cacheControl });
 
       if (uploadError) {
-        return jsonResponse({ error: uploadError.message }, 500);
+        const msg = uploadError.message || "Upload failed";
+        const lower = msg.toLowerCase();
+        const hint = lower.includes("row-level security")
+          ? "Storage RLS blocked upload. Check service key type and grant EXECUTE on public.is_safe_storage_object_key(text,text) / public.enforce_safe_storage_object_keys() to service_role."
+          : undefined;
+        return jsonResponse({ error: msg, hint }, 500);
       }
 
       // For private buckets (attachments), return a signed URL instead of public URL
