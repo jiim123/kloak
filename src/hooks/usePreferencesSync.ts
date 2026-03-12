@@ -149,7 +149,7 @@ export const usePreferencesSync = () => {
       setAnimateEmojis(data.animate_emojis);
     }
     if (typeof data.dm_privacy === "string") {
-      setDmPrivacy(data.dm_privacy);
+      setDmPrivacy(data.dm_privacy as DmPrivacy);
     }
     if (typeof data.enable_mention_notifications === "boolean") {
       setEnableMentionNotifications(data.enable_mention_notifications);
