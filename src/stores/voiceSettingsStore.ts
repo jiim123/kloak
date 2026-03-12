@@ -175,7 +175,7 @@ export const useVoiceSettingsStore = create<VoiceSettingsStore>((set, get) => ({
       try {
         await supabase.from('user_voice_settings').upsert({
           user_id: currentUserId,
-          settings: DEFAULT_VOICE_SETTINGS,
+          settings: DEFAULT_VOICE_SETTINGS as unknown as Database["public"]["Tables"]["user_voice_settings"]["Insert"]["settings"],
         });
       } catch (error) {
         console.error('Failed to reset voice settings:', error);
