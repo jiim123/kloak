@@ -48,7 +48,7 @@ async function debouncedSave(userId: string, settings: VoiceSettings) {
     try {
       await supabase.from('user_voice_settings').upsert({
         user_id: userId,
-        settings,
+        settings: settings as unknown as Database["public"]["Tables"]["user_voice_settings"]["Insert"]["settings"],
       });
     } catch (error) {
       console.error('Failed to save voice settings:', error);
