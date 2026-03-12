@@ -215,7 +215,7 @@ export type Database = {
           category_id: string
           created_at: string | null
           id: string
-          permission: string
+          permission: Database["public"]["Enums"]["permission_type"]
           role_id: string | null
           role_name: string | null
           user_id: string | null
@@ -225,7 +225,7 @@ export type Database = {
           category_id: string
           created_at?: string | null
           id?: string
-          permission: string
+          permission: Database["public"]["Enums"]["permission_type"]
           role_id?: string | null
           role_name?: string | null
           user_id?: string | null
@@ -235,7 +235,7 @@ export type Database = {
           category_id?: string
           created_at?: string | null
           id?: string
-          permission?: string
+          permission?: Database["public"]["Enums"]["permission_type"]
           role_id?: string | null
           role_name?: string | null
           user_id?: string | null
@@ -2638,6 +2638,10 @@ export type Database = {
         Args: { _emoji: string; _message_id: string; _user_id: string }
         Returns: Json
       }
+      are_messages_similar_for_raid: {
+        Args: { _left: string; _right: string }
+        Returns: boolean
+      }
       are_users_blocked: {
         Args: { _user_a: string; _user_b: string }
         Returns: boolean
@@ -2910,23 +2914,6 @@ export type Database = {
         Args: { _message_id: string; _user_id: string }
         Returns: string
       }
-      debug_channel_permissions: {
-        Args: { _channel_id: string; _user_id: string }
-        Returns: Json
-      }
-      debug_request_headers: { Args: never; Returns: Json }
-      debug_server_system_messages: {
-        Args: { _server_id: string }
-        Returns: Json
-      }
-      debug_user_permission: {
-        Args: {
-          _channel_id: string
-          _permission: Database["public"]["Enums"]["permission_type"]
-          _user_id: string
-        }
-        Returns: Json
-      }
       decline_friend_request: {
         Args: { _friendship_id: string; _user_id: string }
         Returns: boolean
@@ -3016,6 +3003,15 @@ export type Database = {
         Args: { _content: string; _message_id: string; _user_id: string }
         Returns: Json
       }
+      enforce_server_raid_protection: {
+        Args: {
+          _channel_id: string
+          _content: string
+          _server_id: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
       fetch_key_backup: { Args: { _user_id: string }; Returns: Json }
       fetch_prekey_bundle: { Args: { _target_user_id: string }; Returns: Json }
       generate_invite_code: { Args: never; Returns: string }
@@ -3057,15 +3053,6 @@ export type Database = {
         Returns: Json
       }
       get_channel_members: { Args: { _channel_id: string }; Returns: Json }
-      get_channel_messages: {
-        Args: {
-          _before_id?: string
-          _channel_id: string
-          _limit?: number
-          _user_id: string
-        }
-        Returns: Json
-      }
       get_channel_messages_secure: {
         Args: {
           _before?: string
@@ -3200,14 +3187,6 @@ export type Database = {
         Args: { _server_id: string; _user_id?: string }
         Returns: Json
       }
-      server: {
-        Args: { _server_id: string; _user_id?: string }
-        Returns: Json
-      }
-      get_server_surface_secure: {
-        Args: { _server_id: string; _user_id?: string }
-        Returns: Json
-      }
       get_server_member_count_secure: {
         Args: { _server_id: string; _user_id: string }
         Returns: number
@@ -3244,6 +3223,10 @@ export type Database = {
       get_server_roles: { Args: { _server_id: string }; Returns: Json }
       get_server_roles_secure: {
         Args: { _server_id: string; _user_id: string }
+        Returns: Json
+      }
+      get_server_surface_secure: {
+        Args: { _server_id: string; _user_id?: string }
         Returns: Json
       }
       get_shared_server_ids_secure: {
@@ -3490,6 +3473,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      normalize_raid_message_content: {
+        Args: { _content: string }
+        Returns: string
+      }
       open_dm_conversation: {
         Args: { _other_user_id: string; _user_id: string }
         Returns: Json
@@ -3678,11 +3665,12 @@ export type Database = {
         }
         Returns: Json
       }
+      server: { Args: { _server_id: string; _user_id?: string }; Returns: Json }
       set_category_permission: {
         Args: {
           _allowed: boolean
           _category_id: string
-          _permission: string
+          _permission: Database["public"]["Enums"]["permission_type"]
           _role_id?: string
           _role_name?: string
           _target_user_id?: string
@@ -3732,14 +3720,6 @@ export type Database = {
       sync_category_permissions_to_channels: {
         Args: { _category_id: string; _user_id: string }
         Returns: undefined
-      }
-      test_channel_permission: {
-        Args: {
-          _channel_id: string
-          _permission: Database["public"]["Enums"]["permission_type"]
-          _user_id: string
-        }
-        Returns: Json
       }
       toggle_announcement_comment_reaction: {
         Args: { _comment_id: string; _emoji: string; _user_id: string }
