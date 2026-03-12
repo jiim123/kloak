@@ -4,7 +4,6 @@ import { useAuthStore } from '@/stores/authStore';
 import { useConnectionStatus } from './useConnectionStatus';
 import { toast } from '@/hooks/use-toast';
 import { acquireChannel, subscribeChannel, releaseChannel } from '@/lib/sharedChannel';
-import { toast } from '@/hooks/use-toast';
 type RealtimeRow = Record<string, unknown>;
 type RealtimeErrorLike = { message?: string; name?: string; cause?: unknown };
 type ServerSurfaceBroadcastPayload = {
