@@ -6,6 +6,7 @@ import { useUIStore } from '@/stores/uiStore';
 import type { Notification, NotificationType as DBNotificationType } from '@/types';
 import { isTauri } from '@/lib/tauriRuntime';
 import { playNotificationSound, type NotificationType as SoundNotificationType } from './useNotificationSound';
+import { acquireChannel, subscribeChannel, releaseChannel, isChannelSubscribed } from '@/lib/sharedChannel';
 
 const isNotificationTypeEnabled = (type: DBNotificationType): boolean => {
   const state = useUIStore.getState();
@@ -44,8 +45,6 @@ type BroadcastMutationPayload<T> = {
 
 export const useRealtimeNotifications = (userId: string | null) => {
   // FIX: Use refs for store functions to stabilize effect deps.
-  // Previously, destructured store functions in deps caused the effect to re-run
-  // every render, tearing down and recreating the channel subscription.
   const storeRef = useRef(useNotificationStore.getState());
   useEffect(() => {
     return useNotificationStore.subscribe((state) => {
@@ -58,6 +57,8 @@ export const useRealtimeNotifications = (userId: string | null) => {
   useEffect(() => {
     if (!userId) return;
     isSubscribedRef.current = false;
+
+    const topic = `user:${userId}`;
 
     // Delay initial fetch until auth key hash is available.
     const initFetch = async () => {
@@ -84,31 +85,30 @@ export const useRealtimeNotifications = (userId: string | null) => {
       void showDesktopNotification(notification);
     };
 
-    const channel = supabase
-      .channel(`user:${userId}`)
-      .on(
-        'broadcast',
-        {
-          event: 'notifications',
-        },
-        (payload) => {
-          const eventPayload = payload as BroadcastMutationPayload<Notification>;
-          if (eventPayload.op === 'DELETE' && eventPayload.old?.id) {
-            storeRef.current.removeNotification(eventPayload.old.id);
-            return;
-          }
-
-          if ((eventPayload.op === 'INSERT' || eventPayload.op === 'UPDATE') && eventPayload.new) {
-            processIncomingNotification(eventPayload.new);
-          }
-        },
-      )
-      .subscribe((status, err) => {
-        isSubscribedRef.current = status === 'SUBSCRIBED';
-        if (status !== 'SUBSCRIBED') {
-          console.warn('[Realtime] Notifications subscription status:', { status, userId, err });
+    const channel = acquireChannel(topic);
+    channel.on(
+      'broadcast',
+      { event: 'notifications' },
+      (payload) => {
+        const eventPayload = payload as BroadcastMutationPayload<Notification>;
+        if (eventPayload.op === 'DELETE' && eventPayload.old?.id) {
+          storeRef.current.removeNotification(eventPayload.old.id);
+          return;
         }
-      });
+
+        if ((eventPayload.op === 'INSERT' || eventPayload.op === 'UPDATE') && eventPayload.new) {
+          processIncomingNotification(eventPayload.new);
+        }
+      },
+    );
+    subscribeChannel(topic);
+
+    // Track subscription status via the shared channel manager
+    const checkSubscribed = () => {
+      isSubscribedRef.current = isChannelSubscribed(topic);
+    };
+    const subCheckInterval = window.setInterval(checkSubscribed, 5000);
+    checkSubscribed();
 
     const pollInterval = window.setInterval(async () => {
       if (isSubscribedRef.current) return;
@@ -137,7 +137,8 @@ export const useRealtimeNotifications = (userId: string | null) => {
     return () => {
       isSubscribedRef.current = false;
       window.clearInterval(pollInterval);
-      supabase.removeChannel(channel);
+      window.clearInterval(subCheckInterval);
+      releaseChannel(topic);
     };
   }, [userId]);
 };
