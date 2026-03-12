@@ -1,8 +1,8 @@
 import { useEffect, useRef, useMemo } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useServerStore } from '@/stores/serverStore';
 import { toast } from '@/hooks/use-toast';
 import { useRealtimeUserUpdates } from './useRealtimeUserUpdates';
+import { acquireChannel, subscribeChannel, releaseChannel } from '@/lib/sharedChannel';
 
 export const useRealtimeMembers = (serverId: string | null, opts?: { full?: boolean }) => {
   const useFull = opts?.full === true;
@@ -53,32 +53,32 @@ export const useRealtimeMembers = (serverId: string | null, opts?: { full?: bool
   useEffect(() => {
     if (!serverId) return;
 
-    const channel = supabase
-      .channel(`server:${serverId}`)
-      .on('broadcast', { event: 'server_surface' }, ({ payload }) => {
-        const event = payload as { table?: string } | null;
-        if (!event?.table) return;
+    const topic = `server:${serverId}`;
+    const channel = acquireChannel(topic);
+    channel.on('broadcast', { event: 'server_surface' }, ({ payload }) => {
+      const event = payload as { table?: string } | null;
+      if (!event?.table) return;
 
-        if (event.table === 'server_members') {
-          toast({
-            title: 'Server members updated',
-            duration: 2000,
-          });
-        }
+      if (event.table === 'server_members') {
+        toast({
+          title: 'Server members updated',
+          duration: 2000,
+        });
+      }
 
-        if (
-          event.table === 'server_members' ||
-          event.table === 'server_roles' ||
-          event.table === 'server_member_roles'
-        ) {
-          fetchRolesRef.current(serverId, { force: true });
-          fetchMembersRef.current(serverId, { force: true, full: useFull });
-        }
-      })
-      .subscribe();
+      if (
+        event.table === 'server_members' ||
+        event.table === 'server_roles' ||
+        event.table === 'server_member_roles'
+      ) {
+        fetchRolesRef.current(serverId, { force: true });
+        fetchMembersRef.current(serverId, { force: true, full: useFull });
+      }
+    });
+    subscribeChannel(topic);
 
     return () => {
-      supabase.removeChannel(channel);
+      releaseChannel(topic);
     };
   }, [serverId, useFull]);
 };

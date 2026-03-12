@@ -5,10 +5,10 @@
 
 import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
-import type { RealtimeChannel } from '@supabase/supabase-js';
 import { type Database } from '@/integrations/supabase/types';
 import { VoiceSettings, DEFAULT_VOICE_SETTINGS } from '@/types/voiceSettings';
 import { validateVoiceSettings } from '@/utils/voiceSettingsValidation';
+import { acquireChannel, subscribeChannel, releaseChannel } from '@/lib/sharedChannel';
 
 type UserVoiceSettingsRow = Database["public"]["Tables"]["user_voice_settings"]["Row"];
 type BroadcastMutationPayload<T> = {
@@ -36,7 +36,7 @@ interface VoiceSettingsStore {
 // Debounce timer for saving
 let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 let currentUserId: string | null = null;
-let settingsChannel: RealtimeChannel | null = null;
+let currentChannelTopic: string | null = null;
 
 // Debounced save function
 async function debouncedSave(userId: string, settings: VoiceSettings) {
@@ -66,9 +66,10 @@ export const useVoiceSettingsStore = create<VoiceSettingsStore>((set, get) => ({
     currentUserId = userId;
     set({ isLoading: true, error: null });
 
-    if (settingsChannel) {
-      supabase.removeChannel(settingsChannel);
-      settingsChannel = null;
+    // Release previous channel if switching users
+    if (currentChannelTopic) {
+      releaseChannel(currentChannelTopic);
+      currentChannelTopic = null;
     }
 
     try {
@@ -85,29 +86,28 @@ export const useVoiceSettingsStore = create<VoiceSettingsStore>((set, get) => ({
       const validatedSettings = validateVoiceSettings(data?.settings ?? DEFAULT_VOICE_SETTINGS);
       set({ settings: validatedSettings, isLoaded: true, isLoading: false });
 
-      settingsChannel = supabase
-        .channel(`user:${userId}`)
-        .on(
-          'broadcast',
-          {
-            event: 'voice_settings',
-          },
-          (payload) => {
-            const eventPayload = payload as BroadcastMutationPayload<UserVoiceSettingsRow>;
-            if (eventPayload.op === 'DELETE') {
-              set({ settings: { ...DEFAULT_VOICE_SETTINGS }, isLoaded: true, isLoading: false });
-              return;
-            }
+      const topic = `user:${userId}`;
+      currentChannelTopic = topic;
+      const channel = acquireChannel(topic);
+      channel.on(
+        'broadcast',
+        { event: 'voice_settings' },
+        (payload) => {
+          const eventPayload = payload as BroadcastMutationPayload<UserVoiceSettingsRow>;
+          if (eventPayload.op === 'DELETE') {
+            set({ settings: { ...DEFAULT_VOICE_SETTINGS }, isLoaded: true, isLoading: false });
+            return;
+          }
 
-            const row = eventPayload.new as UserVoiceSettingsRow | null;
-            set({
-              settings: validateVoiceSettings(row?.settings ?? DEFAULT_VOICE_SETTINGS),
-              isLoaded: true,
-              isLoading: false,
-            });
-          },
-        )
-        .subscribe();
+          const row = eventPayload.new as UserVoiceSettingsRow | null;
+          set({
+            settings: validateVoiceSettings(row?.settings ?? DEFAULT_VOICE_SETTINGS),
+            isLoaded: true,
+            isLoading: false,
+          });
+        },
+      );
+      subscribeChannel(topic);
     } catch (error) {
       console.error('Failed to load voice settings:', error);
       // Use defaults on error
@@ -189,9 +189,9 @@ export const useVoiceSettingsStore = create<VoiceSettingsStore>((set, get) => ({
       clearTimeout(saveTimeout);
       saveTimeout = null;
     }
-    if (settingsChannel) {
-      supabase.removeChannel(settingsChannel);
-      settingsChannel = null;
+    if (currentChannelTopic) {
+      releaseChannel(currentChannelTopic);
+      currentChannelTopic = null;
     }
     set({ 
       settings: { ...DEFAULT_VOICE_SETTINGS }, 

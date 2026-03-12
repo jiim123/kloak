@@ -6,6 +6,7 @@ import { resolveSignedUrls, isSupabaseAttachmentUrl } from '@/lib/signedUrl';
 import type { DirectMessage, ReactionGroup } from '@/types';
 import { useRealtimeUserUpdates } from './useRealtimeUserUpdates';
 import { getOrFetchUser, useUserCacheStore } from '@/stores/userCacheStore';
+import { acquireChannel, subscribeChannel, releaseChannel } from '@/lib/sharedChannel';
 
 interface UseRealtimeDMsOptions {
   userId: string | null;
@@ -213,8 +214,10 @@ export const useRealtimeDMs = ({
   useEffect(() => {
     if (!userId) return;
 
+    const topic = `user:${userId}`;
     const filter = { event: 'direct_messages', scope: `dms-${userId}` };
-    const channel = supabase.channel(`user:${userId}`).on(
+    const channel = acquireChannel(topic);
+    channel.on(
       'broadcast',
       filter as { event: string },
       ({ payload }) => {
@@ -235,13 +238,10 @@ export const useRealtimeDMs = ({
         }
       },
     );
+    subscribeChannel(topic);
 
-    // user:<id> is owned/subscribed by useUnread. Only attach scoped listener here.
     return () => {
-      (channel as unknown as { _off?: (type: string, filter: Record<string, unknown>) => void })._off?.(
-        'broadcast',
-        filter,
-      );
+      releaseChannel(topic);
     };
   }, [userId, handleNewMessage, handleMessageUpdate, handleMessageDelete]);
 

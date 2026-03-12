@@ -1,9 +1,9 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useServerStore } from '@/stores/serverStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useConnectionStatus } from './useConnectionStatus';
 import { toast } from '@/hooks/use-toast';
+import { acquireChannel, subscribeChannel, releaseChannel } from '@/lib/sharedChannel';
 type RealtimeRow = Record<string, unknown>;
 type RealtimeErrorLike = { message?: string; name?: string; cause?: unknown };
 type ServerSurfaceBroadcastPayload = {
@@ -110,68 +110,47 @@ export const useRealtimeServer = (serverId: string | null) => {
   useEffect(() => {
     if (!serverId) return;
 
-    const channel = supabase
-      .channel(`server:${serverId}`)
-      .on(
-        'broadcast',
-        { event: 'server_surface' },
-        ({ payload }) => {
-          const event = payload as ServerSurfaceBroadcastPayload | null;
-          if (!event?.table) return;
+    const topic = `server:${serverId}`;
+    const channel = acquireChannel(topic);
+    channel.on(
+      'broadcast',
+      { event: 'server_surface' },
+      ({ payload }) => {
+        const event = payload as ServerSurfaceBroadcastPayload | null;
+        if (!event?.table) return;
 
-          if (event.table === 'servers') {
-            const user = authStoreRef.current.user;
-            if (user?.id) {
-              void serverStoreRef.current.fetchServers(user.id);
-            }
-          }
-
-          if (
-            event.table === 'channels' ||
-            event.table === 'channel_categories' ||
-            event.table === 'channel_permissions' ||
-            event.table === 'role_permissions' ||
-            event.table === 'channel_members' ||
-            event.table === 'servers'
-          ) {
-            debouncedRefreshRef.current?.();
-          }
-
-          if (
-            event.table === 'server_roles' ||
-            event.table === 'server_member_roles' ||
-            event.table === 'server_members'
-          ) {
-            void refreshRoleMetadata(serverId);
-            void refreshMemberSnapshot(serverId);
-          }
-        },
-      )
-      .subscribe((status, err) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('[Realtime] Successfully subscribed to server:', serverId);
-        } else if (status === 'CHANNEL_ERROR' || status === 'CLOSED' || status === 'TIMED_OUT') {
-          if (err) {
-            console.warn('[Realtime] Server subscribe error:', {
-              serverId,
-              status,
-              message: (err as RealtimeErrorLike | null)?.message,
-              name: (err as RealtimeErrorLike | null)?.name,
-              cause: (err as RealtimeErrorLike | null)?.cause,
-              details: err,
-            });
-          } else {
-            console.warn('[Realtime] Server subscribe status:', { serverId, status });
+        if (event.table === 'servers') {
+          const user = authStoreRef.current.user;
+          if (user?.id) {
+            void serverStoreRef.current.fetchServers(user.id);
           }
         }
-      });
+
+        if (
+          event.table === 'channels' ||
+          event.table === 'channel_categories' ||
+          event.table === 'channel_permissions' ||
+          event.table === 'role_permissions' ||
+          event.table === 'channel_members' ||
+          event.table === 'servers'
+        ) {
+          debouncedRefreshRef.current?.();
+        }
+
+        if (
+          event.table === 'server_roles' ||
+          event.table === 'server_member_roles' ||
+          event.table === 'server_members'
+        ) {
+          void refreshRoleMetadata(serverId);
+          void refreshMemberSnapshot(serverId);
+        }
+      },
+    );
+    subscribeChannel(topic);
 
     return () => {
-      try {
-        supabase.removeChannel(channel);
-      } catch {
-        // Ignore cleanup errors.
-      }
+      releaseChannel(topic);
     };
   }, [refreshMemberSnapshot, refreshRoleMetadata, serverId]);
 };
