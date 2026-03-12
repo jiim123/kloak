@@ -1,8 +1,8 @@
 import { useEffect, useRef, useMemo } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useServerStore } from '@/stores/serverStore';
 import { toast } from '@/hooks/use-toast';
 import { useRealtimeUserUpdates } from './useRealtimeUserUpdates';
+import { acquireChannel, subscribeChannel, releaseChannel } from '@/lib/sharedChannel';
 
 export const useRealtimeMembers = (serverId: string | null, opts?: { full?: boolean }) => {
   const useFull = opts?.full === true;
