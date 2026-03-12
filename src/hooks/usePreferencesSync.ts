@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useUIStore, type Theme, THEMES } from "@/stores/uiStore";
+import { useUIStore, type Theme, type DmPrivacy, THEMES } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -149,7 +149,7 @@ export const usePreferencesSync = () => {
       setAnimateEmojis(data.animate_emojis);
     }
     if (typeof data.dm_privacy === "string") {
-      setDmPrivacy(data.dm_privacy);
+      setDmPrivacy(data.dm_privacy as DmPrivacy);
     }
     if (typeof data.enable_mention_notifications === "boolean") {
       setEnableMentionNotifications(data.enable_mention_notifications);

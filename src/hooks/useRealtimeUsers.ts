@@ -359,11 +359,20 @@ export const useRealtimeUsers = () => {
 
     // Throttle store-subscription-driven presence snapshots to avoid hot-path re-runs
     // on every friend/DM store mutation (status updates, message caching, etc.)
+    // FIX: Track target user IDs to break the feedback loop where
+    // applyPresenceSnapshot → patchUserAcrossStores → store mutation → throttledApply → repeat
     let storeSubTimer: ReturnType<typeof setTimeout> | null = null;
+    let lastTargetIdsKey = '';
     const throttledApply = () => {
       if (storeSubTimer) return;
       storeSubTimer = setTimeout(() => {
         storeSubTimer = null;
+        // Only reapply if the set of target users actually changed.
+        // Status/avatar patches don't change WHO is in the list, just their data.
+        const currentIds = collectPresenceTargetUserIds();
+        const currentKey = currentIds.slice().sort().join(',');
+        if (currentKey === lastTargetIdsKey) return;
+        lastTargetIdsKey = currentKey;
         applyPresenceSnapshot();
       }, 2000);
     };

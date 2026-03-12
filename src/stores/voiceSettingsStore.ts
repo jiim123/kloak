@@ -6,7 +6,7 @@
 import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import type { Database } from '@/integrations/supabase/types';
+import { type Database } from '@/integrations/supabase/types';
 import { VoiceSettings, DEFAULT_VOICE_SETTINGS } from '@/types/voiceSettings';
 import { validateVoiceSettings } from '@/utils/voiceSettingsValidation';
 
@@ -48,7 +48,7 @@ async function debouncedSave(userId: string, settings: VoiceSettings) {
     try {
       await supabase.from('user_voice_settings').upsert({
         user_id: userId,
-        settings,
+        settings: settings as unknown as Database["public"]["Tables"]["user_voice_settings"]["Insert"]["settings"],
       });
     } catch (error) {
       console.error('Failed to save voice settings:', error);
@@ -175,7 +175,7 @@ export const useVoiceSettingsStore = create<VoiceSettingsStore>((set, get) => ({
       try {
         await supabase.from('user_voice_settings').upsert({
           user_id: currentUserId,
-          settings: DEFAULT_VOICE_SETTINGS,
+          settings: DEFAULT_VOICE_SETTINGS as unknown as Database["public"]["Tables"]["user_voice_settings"]["Insert"]["settings"],
         });
       } catch (error) {
         console.error('Failed to reset voice settings:', error);

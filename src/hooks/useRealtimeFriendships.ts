@@ -3,7 +3,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useFriendStore } from "@/stores/friendStore";
 
 export const useRealtimeFriendships = (userId: string | null) => {
-  const { fetchFriends } = useFriendStore();
+  // FIX: Use ref for store function to stabilize effect deps.
+  // Previously, fetchFriends in deps caused the effect to re-run every render,
+  // tearing down and recreating the channel subscription unnecessarily.
+  const fetchFriendsRef = useRef(useFriendStore.getState().fetchFriends);
+  useEffect(() => {
+    return useFriendStore.subscribe((state) => {
+      fetchFriendsRef.current = state.fetchFriends;
+    });
+  }, []);
+
   const refetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -17,7 +26,7 @@ export const useRealtimeFriendships = (userId: string | null) => {
       }
       refetchTimerRef.current = setTimeout(() => {
         refetchTimerRef.current = null;
-        fetchFriends(userId, { force: true });
+        fetchFriendsRef.current(userId, { force: true });
       }, 250);
     };
 
@@ -39,5 +48,5 @@ export const useRealtimeFriendships = (userId: string | null) => {
       }
       supabase.removeChannel(channel);
     };
-  }, [userId, fetchFriends]);
+  }, [userId]);
 };
