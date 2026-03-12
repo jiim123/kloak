@@ -43,7 +43,16 @@ type BroadcastMutationPayload<T> = {
 };
 
 export const useRealtimeNotifications = (userId: string | null) => {
-  const { fetchNotifications, addNotification, removeNotification } = useNotificationStore();
+  // FIX: Use refs for store functions to stabilize effect deps.
+  // Previously, destructured store functions in deps caused the effect to re-run
+  // every render, tearing down and recreating the channel subscription.
+  const storeRef = useRef(useNotificationStore.getState());
+  useEffect(() => {
+    return useNotificationStore.subscribe((state) => {
+      storeRef.current = state;
+    });
+  }, []);
+
   const isSubscribedRef = useRef(false);
 
   useEffect(() => {
@@ -54,7 +63,7 @@ export const useRealtimeNotifications = (userId: string | null) => {
     const initFetch = async () => {
       const { getKeyHashAsync } = await import('@/integrations/supabase/client');
       const kh = await getKeyHashAsync();
-      if (kh) fetchNotifications(userId);
+      if (kh) storeRef.current.fetchNotifications(userId);
     };
     void initFetch();
 
@@ -64,7 +73,7 @@ export const useRealtimeNotifications = (userId: string | null) => {
 
       if (!isNotificationTypeEnabled(notification.type)) return;
 
-      addNotification(notification);
+      storeRef.current.addNotification(notification);
 
       if (notification.title === 'You have been kicked' || notification.title === 'You have been banned') {
         useServerStore.getState().fetchServers(userId);
@@ -85,7 +94,7 @@ export const useRealtimeNotifications = (userId: string | null) => {
         (payload) => {
           const eventPayload = payload as BroadcastMutationPayload<Notification>;
           if (eventPayload.op === 'DELETE' && eventPayload.old?.id) {
-            removeNotification(eventPayload.old.id);
+            storeRef.current.removeNotification(eventPayload.old.id);
             return;
           }
 
@@ -130,7 +139,7 @@ export const useRealtimeNotifications = (userId: string | null) => {
       window.clearInterval(pollInterval);
       supabase.removeChannel(channel);
     };
-  }, [userId, fetchNotifications, addNotification, removeNotification]);
+  }, [userId]);
 };
 
 export const requestNotificationPermission = async (): Promise<boolean> => {
