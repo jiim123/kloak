@@ -51,7 +51,14 @@ export const usePresence = () => {
 
     const activityEvents = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'];
 
+    // FIX: Throttle activity handler to prevent excessive timer churn
+    // from high-frequency events like mousemove (fires hundreds of times per second)
+    let lastActivityAt = 0;
+    const ACTIVITY_THROTTLE_MS = 5000;
     const handleActivity = () => {
+      const now = Date.now();
+      if (now - lastActivityAt < ACTIVITY_THROTTLE_MS) return;
+      lastActivityAt = now;
       resetIdleTimer();
     };
 

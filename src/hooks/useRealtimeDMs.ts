@@ -432,7 +432,9 @@ export const useRealtimeDMs = ({
   // Subscribe to user updates for all DM conversation participants
   const currentConversation = useDMStore((state) => state.currentConversation);
 
-  const participantUserIds = (() => {
+  // FIX: Memoize to prevent unstable array references from causing
+  // useRealtimeUserUpdates to continuously re-run its polling effect
+  const participantUserIds = useMemo(() => {
     const ids = new Set<string>();
     conversations.forEach((conv) => {
       if (conv.other_user?.id) {
@@ -456,7 +458,7 @@ export const useRealtimeDMs = ({
     }
 
     return Array.from(ids);
-  })();
+  }, [conversations, currentConversation, userId]);
 
   useRealtimeUserUpdates(participantUserIds, `dm-participant-users:${userId || 'none'}`);
 };
