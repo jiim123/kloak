@@ -6,6 +6,7 @@ import { resolveSignedUrls, isSupabaseAttachmentUrl } from '@/lib/signedUrl';
 import type { DirectMessage, ReactionGroup } from '@/types';
 import { useRealtimeUserUpdates } from './useRealtimeUserUpdates';
 import { getOrFetchUser, useUserCacheStore } from '@/stores/userCacheStore';
+import { acquireChannel, subscribeChannel, releaseChannel } from '@/lib/sharedChannel';
 
 interface UseRealtimeDMsOptions {
   userId: string | null;
