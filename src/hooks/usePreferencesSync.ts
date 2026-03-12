@@ -233,25 +233,23 @@ export const usePreferencesSync = () => {
   useEffect(() => {
     if (!isAuthenticated || !user?.id) return;
 
-    const channel = supabase
-      .channel(`user:${user.id}`)
-      .on(
-        "broadcast",
-        {
-          event: "preferences",
-        },
-        (payload) => {
-          const eventPayload = payload as BroadcastMutationPayload<UserPreferencesRow>;
-          if (eventPayload.op === "DELETE" || !eventPayload.new) return;
-          applyPreferenceRow(eventPayload.new);
-          hasLoadedFromDB.current = true;
-          hydratedUserIdRef.current = user.id;
-        },
-      )
-      .subscribe();
+    const topic = `user:${user.id}`;
+    const channel = acquireChannel(topic);
+    channel.on(
+      "broadcast",
+      { event: "preferences" },
+      (payload) => {
+        const eventPayload = payload as BroadcastMutationPayload<UserPreferencesRow>;
+        if (eventPayload.op === "DELETE" || !eventPayload.new) return;
+        applyPreferenceRow(eventPayload.new);
+        hasLoadedFromDB.current = true;
+        hydratedUserIdRef.current = user.id;
+      },
+    );
+    subscribeChannel(topic);
 
     return () => {
-      supabase.removeChannel(channel);
+      releaseChannel(topic);
     };
   }, [applyPreferenceRow, isAuthenticated, user?.id]);
 

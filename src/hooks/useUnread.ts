@@ -503,50 +503,50 @@ export const useUnread = (serverChannelIds: string[] = []) => {
   useEffect(() => {
     if (!userId) return;
 
-    const channel = supabase
-      .channel(`user:${userId}`)
-      .on(
-        'broadcast',
-        { event: 'channel_reads' },
-        ({ payload }) => {
-          const eventPayload = payload as BroadcastMutationPayload<ChannelReadBroadcastRow>;
-          const op = eventPayload?.op;
-          if (!op) return;
+    const topic = `user:${userId}`;
+    const channel = acquireChannel(topic);
+    channel.on(
+      'broadcast',
+      { event: 'channel_reads' },
+      ({ payload }) => {
+        const eventPayload = payload as BroadcastMutationPayload<ChannelReadBroadcastRow>;
+        const op = eventPayload?.op;
+        if (!op) return;
 
-          const row = op === "DELETE" ? eventPayload.old : eventPayload.new;
-          const channelId = row?.channel_id;
-          if (!channelId) {
-            fetchUnreadCountsRef.current({ force: true });
-            return;
-          }
+        const row = op === "DELETE" ? eventPayload.old : eventPayload.new;
+        const channelId = row?.channel_id;
+        if (!channelId) {
+          fetchUnreadCountsRef.current({ force: true });
+          return;
+        }
 
-          const trackedChannels = serverChannelIdsRef.current;
-          if (trackedChannels.length > 0 && !trackedChannels.includes(channelId)) {
-            return;
-          }
+        const trackedChannels = serverChannelIdsRef.current;
+        if (trackedChannels.length > 0 && !trackedChannels.includes(channelId)) {
+          return;
+        }
 
-          if (op === "DELETE") {
-            fetchUnreadCountsRef.current({ force: true });
-            return;
-          }
+        if (op === "DELETE") {
+          fetchUnreadCountsRef.current({ force: true });
+          return;
+        }
 
-          // A channel_read update for this user means unread is cleared for that channel.
-          setUnreadState((prev) => ({
-            ...prev,
-            [channelId]: {
-              unreadCount: 0,
-              mentionCount: 0,
-              lastReadMessageId: row?.last_read_message_id ?? prev[channelId]?.lastReadMessageId ?? null,
-              lastReadAt: row?.last_read_at ?? prev[channelId]?.lastReadAt ?? null,
-              firstUnreadMessageId: null,
-            },
-          }));
-        },
-      )
-      .subscribe();
+        // A channel_read update for this user means unread is cleared for that channel.
+        setUnreadState((prev) => ({
+          ...prev,
+          [channelId]: {
+            unreadCount: 0,
+            mentionCount: 0,
+            lastReadMessageId: row?.last_read_message_id ?? prev[channelId]?.lastReadMessageId ?? null,
+            lastReadAt: row?.last_read_at ?? prev[channelId]?.lastReadAt ?? null,
+            firstUnreadMessageId: null,
+          },
+        }));
+      },
+    );
+    subscribeChannel(topic);
 
     return () => {
-      supabase.removeChannel(channel);
+      releaseChannel(topic);
     };
   }, [userId]);
 
