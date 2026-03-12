@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useUIStore, type Theme, type DmPrivacy, THEMES } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
 import type { Database } from "@/integrations/supabase/types";
+import { acquireChannel, subscribeChannel, releaseChannel } from '@/lib/sharedChannel';
 
 type UserPreferencesRow = Database["public"]["Tables"]["user_preferences"]["Row"];
 type BroadcastMutationPayload<T> = {
