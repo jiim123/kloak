@@ -5,6 +5,7 @@
 
 import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
+import { getKeyHashAsync } from '@/integrations/supabase/client';
 import { type Database } from '@/integrations/supabase/types';
 import { VoiceSettings, DEFAULT_VOICE_SETTINGS } from '@/types/voiceSettings';
 import { validateVoiceSettings } from '@/utils/voiceSettingsValidation';
