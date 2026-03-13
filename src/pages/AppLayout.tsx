@@ -92,8 +92,6 @@ const AppLayout = () => {
     setCurrentChannel,
     setCurrentServer,
     fetchChannels,
-    fetchMembers,
-    fetchRolePermissions,
     servers,
     channels,
   } = useServerStore();
@@ -124,12 +122,6 @@ const AppLayout = () => {
   const isServerOverviewView = !!params.serverId && currentPath === `/servers/${params.serverId}/overview`;
   
 
-  const currentMembership = useMemo(() => {
-    if (!currentServer) return null;
-    return servers.find((s) => s.id === currentServer.id) ?? null;
-  }, [servers, currentServer]);
-
-  const isOwner = !!user && !!currentServer && currentServer.owner_id === user.id;
   const isServerSpecialView = isServerOverviewView;
 
   // Extract serverId and channelId from URL params
@@ -409,13 +401,6 @@ const AppLayout = () => {
     }
   }, [currentChannel, currentConversation, closeMobileSidebars]);
 
-  // Handle mobile back navigation
-  const handleMobileBack = () => {
-    if (currentConversation) {
-      setCurrentConversation(null);
-      navigate("/app/friends");
-    }
-  };
 
   // DM View (no server selected)
   const isDMView = currentServer === null;
