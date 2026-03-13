@@ -407,18 +407,9 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
                   </div>
                 ) : filteredAllFriends.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 text-center">
-                    {!searchQuery ? (
-                      <img
-                        src="/krill/krill-alone.svg"
-                        alt="Krill waiting"
-                        className="w-48 h-48 object-contain mb-4"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
-                        <UserPlus className="w-8 h-8 text-muted-foreground" />
-                      </div>
-                    )}
+                    <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
+                      <UserPlus className="w-8 h-8 text-muted-foreground" />
+                    </div>
                     <h3 className="font-medium text-foreground mb-1">
                       {searchQuery ? "No matches found" : "No friends yet"}
                     </h3>
