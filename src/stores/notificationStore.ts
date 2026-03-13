@@ -28,6 +28,12 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   fetchNotifications: async (userId: string) => {
     set({ isLoading: true });
     try {
+      // Wait for auth key hash before querying (prevents 401/RLS errors during init)
+      const kh = await getKeyHashAsync();
+      if (!kh) {
+        set({ isLoading: false });
+        return;
+      }
       // Only fetch columns we need (optimized query)
       const { data, error } = await supabase
         .from('notifications')
