@@ -687,10 +687,10 @@ const MobileOptimizedInput = memo(
             placeholder={canSendMessage ? `Message #${channelName}` : "Locked"}
             disabled={!canSendMessage}
             rows={1}
-            className="message-input-textarea w-full bg-transparent resize-none outline-none py-2.5 min-h-[44px] max-h-[160px] overflow-y-auto text-foreground placeholder:text-muted-foreground/60 font-[Inter,system-ui,sans-serif]"
+            className="message-input-textarea w-full bg-transparent resize-none outline-none py-3.5 min-h-[48px] max-h-[160px] overflow-y-auto text-foreground placeholder:text-muted-foreground/60 font-[General_Sans,system-ui,sans-serif]"
             style={{
-              fontSize: isMobile ? "16px" : "15px",
-              lineHeight: "1.5",
+              fontSize: "0.6875em",
+              lineHeight: "1.6",
               fontWeight: 400,
             }}
           />
