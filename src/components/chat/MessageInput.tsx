@@ -689,7 +689,7 @@ const MobileOptimizedInput = memo(
             rows={1}
             className="message-input-textarea w-full bg-transparent resize-none outline-none py-3.5 min-h-[48px] max-h-[160px] overflow-y-auto text-foreground placeholder:text-muted-foreground/60 font-[General_Sans,system-ui,sans-serif]"
             style={{
-              fontSize: "0.75em",
+              fontSize: "1em",
               lineHeight: "1.6",
               fontWeight: 400,
             }}
