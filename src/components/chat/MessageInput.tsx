@@ -559,7 +559,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       <SelectionFormatToolbar textareaRef={textareaRef} onFormat={handleFormat} />
 
       {replyingTo && (
-        <div className="flex items-center gap-2 px-4 py-2 bg-muted/40 border-b border-border/50 rounded-t-2xl">
+        <div className="flex items-center gap-2 px-4 py-2 bg-muted/40 border-b border-border/50 rounded-t-3xl">
           <span className="text-xs text-muted-foreground">
             Replying to{" "}
             {showReplyAuthorIdentity ? (
