@@ -12,7 +12,6 @@ import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { useDMStore } from "@/stores/dmStore";
-import { useUserBadges } from "@/hooks/useUserBadges";
 import { useAuthorStyles } from "@/hooks/useAuthorStyles";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -20,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { getProfileEffectSrc } from "@/lib/profileEffects";
 import { getEffectivePresence } from "@/lib/presence";
 import type { User, UserStatus } from "@/types";
+import type { Badge } from "@/types/badge";
 
 const statusColors: Record<UserStatus, string> = {
   online: "bg-[hsl(var(--kloak-success))]",
@@ -103,6 +103,7 @@ export const UserProfilePopup = () => {
   const { openConversation, setCurrentConversation } = useDMStore();
 
   const [profileUser, setProfileUser] = useState<User | null>(null);
+  const [userBadges, setUserBadges] = useState<Badge[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [sharedServers, setSharedServers] = useState<typeof servers>([]);
   const [cooldownSeconds, setCooldownSeconds] = useState<number>(0);
@@ -115,43 +116,38 @@ export const UserProfilePopup = () => {
   const isOpen = activeModal === "userProfile";
   const userId = modalData?.userId as string | undefined;
 
-  // Fetch user badges
-  const { badges: userBadges } = useUserBadges(isOpen ? userId : undefined);
+  const applyCooldownFromDeclinedAt = useCallback((declinedAtRaw: string | null | undefined) => {
+    if (!declinedAtRaw) {
+      setCooldownSeconds(0);
+      return;
+    }
 
-  // Check for cooldown from declined requests
-  const checkCooldown = useCallback(async () => {
+    const declinedAt = new Date(declinedAtRaw);
+    const cooldownEnd = new Date(declinedAt.getTime() + COOLDOWN_MINUTES * 60 * 1000);
+    const now = new Date();
+    const remainingMs = cooldownEnd.getTime() - now.getTime();
+    setCooldownSeconds(remainingMs > 0 ? Math.ceil(remainingMs / 1000) : 0);
+  }, []);
+
+  const refreshCooldown = useCallback(async () => {
     if (!currentUser?.id || !userId || currentUser.id === userId) return;
     try {
-      const { data, error } = await supabase
-        .from("declined_friend_requests")
-        .select("declined_at")
-        .eq("requester_id", currentUser.id)
-        .eq("addressee_id", userId)
-        .maybeSingle();
+      const { data, error } = await supabase.rpc("profile", {
+        _target_user_id: userId,
+        _requesting_user_id: currentUser.id,
+        _server_ids: [],
+      });
 
       if (error) {
-        console.error("Failed to check cooldown:", error);
+        console.error("Failed to refresh cooldown:", error);
         return;
       }
 
-      if (data?.declined_at) {
-        const declinedAt = new Date(data.declined_at);
-        const cooldownEnd = new Date(declinedAt.getTime() + COOLDOWN_MINUTES * 60 * 1000);
-        const now = new Date();
-        const remainingMs = cooldownEnd.getTime() - now.getTime();
-
-        if (remainingMs > 0) {
-          setCooldownSeconds(Math.ceil(remainingMs / 1000));
-        } else {
-          setCooldownSeconds(0);
-        }
-      } else {
-        setCooldownSeconds(0);
-      }
+      applyCooldownFromDeclinedAt((data as any)?.declined_at ?? null);
     } catch (err) {
-      console.error("Error checking cooldown:", err);
+      console.error("Error refreshing cooldown:", err);
     }
-  }, [currentUser?.id, userId]);
+  }, [applyCooldownFromDeclinedAt, currentUser?.id, userId]);
 
   // Reset profile effect play state when modal opens
   useEffect(() => {
@@ -212,15 +208,17 @@ export const UserProfilePopup = () => {
     const fetchProfile = async () => {
       setIsLoading(true);
       try {
-        const { data, error } = await supabase.rpc("get_user_profile_secure", {
+        const { data, error } = await supabase.rpc("profile", {
           _target_user_id: userId,
           _requesting_user_id: currentUser!.id,
+          _server_ids: serverIds,
         });
 
         if (error) throw error;
-        if (!data) throw new Error("Profile not found");
+        const payload = data as any;
+        if (!payload?.user) throw new Error("Profile not found");
 
-        const d = data as any;
+        const d = payload.user as any;
         setProfileUser({
           id: d.id,
           username: d.username,
@@ -240,34 +238,22 @@ export const UserProfilePopup = () => {
           is_bot: d.is_bot ?? false,
         });
 
-        // Find shared servers
-        if (serverIds.length > 0) {
-          const { data: membershipData, error: membershipError } = await supabase.rpc("get_shared_server_ids_secure", {
-            _target_user_id: userId,
-            _requesting_user_id: currentUser!.id,
-            _server_ids: serverIds,
-          });
-
-          if (membershipError) throw membershipError;
-
-          const sharedServerIds = new Set((Array.isArray(membershipData) ? membershipData : []) as string[]);
-          const shared = servers.filter((s) => sharedServerIds.has(s.id));
-          setSharedServers(shared.slice(0, 3));
-        } else {
-          setSharedServers([]);
-        }
-
-        await checkCooldown();
+        setUserBadges((Array.isArray(payload.badges) ? payload.badges : []) as Badge[]);
+        const sharedServerIds = new Set((Array.isArray(payload.shared_server_ids) ? payload.shared_server_ids : []) as string[]);
+        const shared = servers.filter((s) => sharedServerIds.has(s.id));
+        setSharedServers(shared.slice(0, 3));
+        applyCooldownFromDeclinedAt(payload.declined_at ?? null);
       } catch (error) {
         console.error("Failed to fetch profile:", error);
         toast.error("Failed to load profile");
+        setUserBadges([]);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchProfile();
-  }, [isOpen, userId, serverIds, checkCooldown, currentUser?.id]);
+  }, [isOpen, userId, serverIds, servers, applyCooldownFromDeclinedAt, currentUser?.id]);
 
   // Countdown timer effect
   useEffect(() => {
@@ -342,7 +328,7 @@ export const UserProfilePopup = () => {
       if (success) {
         toast.success("Friend request sent!");
       } else {
-        await checkCooldown();
+        await refreshCooldown();
       }
     }
   };
@@ -387,6 +373,7 @@ export const UserProfilePopup = () => {
 
   const handleClose = () => {
     setProfileUser(null);
+    setUserBadges([]);
     closeModal();
   };
 

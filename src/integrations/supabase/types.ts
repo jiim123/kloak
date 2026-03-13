@@ -3490,6 +3490,14 @@ export type Database = {
         Args: { _channel_id: string; _content: string; _user_id: string }
         Returns: string
       }
+      profile: {
+        Args: {
+          _requesting_user_id: string
+          _server_ids?: string[]
+          _target_user_id: string
+        }
+        Returns: Json
+      }
       publish_e2e_key_bundle: {
         Args: {
           _backup_iv: string
