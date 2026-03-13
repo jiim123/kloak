@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
@@ -158,7 +158,16 @@ export const useAuthorStyles = (serverId: string | null | undefined, targetUserI
   const roles = useServerStore((s) => s.roles);
   const [styleMap, setStyleMap] = useState<Record<string, AuthorStyle>>({});
 
-  const normalizedIds = useMemo(() => normalizeTargetUserIds(targetUserIds), [targetUserIds]);
+  const rawNormalized = useMemo(() => normalizeTargetUserIds(targetUserIds), [targetUserIds]);
+  const normalizedIdsRef = useRef(rawNormalized);
+  const normalizedIds = useMemo(() => {
+    const prev = normalizedIdsRef.current;
+    if (prev.length === rawNormalized.length && prev.every((id, i) => id === rawNormalized[i])) {
+      return prev;
+    }
+    normalizedIdsRef.current = rawNormalized;
+    return rawNormalized;
+  }, [rawNormalized]);
   const cachedStyleMap = useMemo(
     () => (serverId && normalizedIds.length > 0 ? getCachedAuthorStyles(serverId, normalizedIds) : {}),
     [serverId, normalizedIds],
