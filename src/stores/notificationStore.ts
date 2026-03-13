@@ -125,23 +125,6 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     }
   },
 
-  createMentionNotification: async (userId, mentionedBy, channelId, channelName, serverId) => {
-    try {
-      const { error } = await supabase
-        .from('notifications')
-        .insert({
-          user_id: userId,
-          type: 'mention' as NotificationType,
-          title: `You were mentioned in #${channelName}`,
-          body: `Someone mentioned you`,
-          link: `/app?server=${serverId}&channel=${channelId}`,
-        });
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Failed to create notification:', error);
-    }
-  },
 
   addNotification: (notification) => {
     set((state) => ({
