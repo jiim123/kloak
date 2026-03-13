@@ -627,7 +627,7 @@
   .landing-typography a[role="button"],
   .landing-typography .btn {
     font-family: "General Sans", system-ui, sans-serif;
-    font-size: 0.8125em; /* 13px */
+    font-size: 0.6875em; /* 11px */
     letter-spacing: 0.01em;
     font-weight: 400;
   }
