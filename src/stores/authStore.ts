@@ -263,7 +263,19 @@ export const useAuthStore = create<AuthState>()(
             _key_hash: keyHash,
           });
 
-          if (error || !data) {
+          if (error) {
+            const message = error.message || "";
+            const normalizedMessage =
+              message.includes("Rate limited:")
+                ? message
+                : message.includes("permission denied") || message.includes("forbidden")
+                  ? "Login service is temporarily unavailable."
+                  : "Failed to login. Please try again.";
+            setKeyHashHeader(null);
+            set({ error: normalizedMessage, isLoading: false, isAuthenticated: false, keyHash: null });
+            return false;
+          }
+          if (!data) {
             setKeyHashHeader(null);
             set({ error: "Invalid secret key", isLoading: false, isAuthenticated: false, keyHash: null });
             return false;
