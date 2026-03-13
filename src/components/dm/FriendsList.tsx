@@ -414,7 +414,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
                       {searchQuery ? "No matches found" : "No friends yet"}
                     </h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      {searchQuery ? "Try a different search term" : "Krill is waiting for you to add a friend!"}
+                      {searchQuery ? "Try a different search term" : "Add some friends to get started!"}
                     </p>
                     {!searchQuery && (
                       <Button onClick={() => setShowAddFriend(true)} className="gap-2">
