@@ -3,6 +3,7 @@ import { getKeyHash, supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import { useServerStore } from '@/stores/serverStore';
 import { getUserFromCache, getOrFetchUser } from '@/stores/userCacheStore';
+import { acquireChannel, releaseChannel, subscribeChannel } from '@/lib/sharedChannel';
 import type { TypingUser } from '@/types';
 
 const TYPING_DEBOUNCE_MS = 4500;
@@ -43,11 +44,14 @@ export const useTyping = (channelId: string | null) => {
   useEffect(() => {
     if (!channelId || !user) return;
 
-    const channel = supabase.channel(`typing:${channelId}`);
+    const topic = `typing:${channelId}`;
+    const channel = acquireChannel(topic);
+    const typingFilter = { event: 'typing', scope: `typing:${channelId}:${user.id}` };
+    const stopTypingFilter = { event: 'stop_typing', scope: `typing-stop:${channelId}:${user.id}` };
     channelRef.current = channel;
 
     channel
-      .on('broadcast', { event: 'typing' }, ({ payload }) => {
+      .on('broadcast', typingFilter as { event: string }, ({ payload }) => {
         const incomingUserId = typeof payload?.user_id === 'string' ? payload.user_id : '';
         if (!UUID_V4ish_RE.test(incomingUserId) || incomingUserId === user.id) return;
 
@@ -102,21 +106,25 @@ export const useTyping = (channelId: string | null) => {
           });
         }
       })
-      .on('broadcast', { event: 'stop_typing' }, ({ payload }) => {
+      .on('broadcast', stopTypingFilter as { event: string }, ({ payload }) => {
         const incomingUserId = typeof payload?.user_id === 'string' ? payload.user_id : '';
         if (!UUID_V4ish_RE.test(incomingUserId)) return;
         setTypingUsers((prev) =>
           prev.filter((u) => u.user_id !== incomingUserId)
         );
-      })
-      .subscribe((status, err) => {
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn('Typing channel subscribe failed', status, err);
-        }
       });
+    subscribeChannel(topic);
 
     return () => {
-      supabase.removeChannel(channel);
+      (channel as unknown as { _off?: (type: string, filter: Record<string, unknown>) => void })._off?.(
+        'broadcast',
+        typingFilter,
+      );
+      (channel as unknown as { _off?: (type: string, filter: Record<string, unknown>) => void })._off?.(
+        'broadcast',
+        stopTypingFilter,
+      );
+      releaseChannel(topic);
       channelRef.current = null;
     };
   }, [channelId, user]);
