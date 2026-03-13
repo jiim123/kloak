@@ -622,13 +622,13 @@
     font-weight: 400;
   }
 
-  /* Button text on landing pages - Monaspace Krypton, 14px = 0.875em, Regular */
+  /* Button text on landing pages - General Sans, clean and readable */
   .landing-typography button,
   .landing-typography a[role="button"],
   .landing-typography .btn {
-    font-family: "Monaspace Krypton", ui-monospace, SFMono-Regular, monospace;
-    font-size: 0.5625em; /* 9px */
-    letter-spacing: -0.02em; /* -20 */
+    font-family: "General Sans", system-ui, sans-serif;
+    font-size: 0.8125em; /* 13px */
+    letter-spacing: 0.01em;
     font-weight: 400;
   }
 
