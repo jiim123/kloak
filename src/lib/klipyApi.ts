@@ -41,12 +41,19 @@ const SUPABASE_ANON_KEY =
 
 async function callProxy(body: Record<string, unknown>): Promise<any> {
   try {
+    const keyHash = await getKeyHashAsync();
+    if (!keyHash) {
+      console.warn("[klipyApi] Not authenticated — skipping request");
+      return null;
+    }
+
     const res = await fetch(`${SUPABASE_URL}/functions/v1/klipy-proxy`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
         "apikey": SUPABASE_ANON_KEY,
+        "x-key-hash": keyHash,
       },
       body: JSON.stringify(body),
     });
