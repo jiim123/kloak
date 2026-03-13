@@ -102,7 +102,6 @@ const Auth = ({ formOnly = false }: AuthProps) => {
   const [secretKey, setSecretKey] = useState("");
   const [showSecretKey, setShowSecretKey] = useState(false);
 
-
   // Check for saved session on mount
   useEffect(() => {
     let cancelled = false;
@@ -452,241 +451,255 @@ const Auth = ({ formOnly = false }: AuthProps) => {
       <div className="min-h-screen bg-background flex flex-col">
         {maintenanceBanner}
         <div className="flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-md">
-          {/* Auth card */}
-          <div className="bg-card border border-border rounded-xl p-6 shadow-xl">
-            <div className="flex items-center justify-center mb-6">
-              <img src={kloakLogo} alt="Kloak" className="h-7" />
-            </div>
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "create" | "login")}>
-              <TabsList className="w-full grid grid-cols-2 mb-6 h-auto p-1.5 bg-muted/50 rounded-2xl border border-border/50">
-                <TabsTrigger
-                  value="create"
-                  className="rounded-xl py-2.5 px-4 text-sm font-medium transition-all duration-200 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
-                >
-                  <CircleUserRound className="w-4 h-4 mr-2" />
-                  Create Account
-                </TabsTrigger>
-                <TabsTrigger
-                  value="login"
-                  className="rounded-xl py-2.5 px-4 text-sm font-medium transition-all duration-200 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
-                >
-                  <Key className="w-4 h-4 mr-2" />
-                  Login with Key
-                </TabsTrigger>
-              </TabsList>
+          <div className="w-full max-w-md">
+            {/* Auth card */}
+            <div className="bg-card border border-border rounded-xl p-6 shadow-xl">
+              <div className="flex items-center justify-center mb-6">
+                <img src={kloakLogo} alt="Kloak" className="h-7" />
+              </div>
+              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "create" | "login")}>
+                <TabsList className="w-full grid grid-cols-2 mb-6 h-auto p-1.5 bg-muted/50 rounded-2xl border border-border/50">
+                  <TabsTrigger
+                    value="create"
+                    className="rounded-xl py-2.5 px-4 text-sm font-medium transition-all duration-200 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
+                  >
+                    <CircleUserRound className="w-4 h-4 mr-2" />
+                    Create Account
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="login"
+                    className="rounded-xl py-2.5 px-4 text-sm font-medium transition-all duration-200 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
+                  >
+                    <Key className="w-4 h-4 mr-2" />
+                    Login with Key
+                  </TabsTrigger>
+                </TabsList>
 
-              {/* Maintenance notice */}
-              {MAINTENANCE_MODE && (
-                <div className="mb-4 p-4 rounded-lg bg-slate-700 border border-slate-600 text-sm leading-relaxed text-slate-300">
-                  We are currently experiencing high traffic volumes and are scaling our systems to keep up. Login and Registration are temporarily disabled to ensure stability for active sessions. We'll be back shortly!
-                </div>
-              )}
+                {/* Maintenance notice */}
+                {MAINTENANCE_MODE && (
+                  <div className="mb-4 p-4 rounded-lg bg-slate-700 border border-slate-600 text-sm leading-relaxed text-slate-300">
+                    We are currently experiencing high traffic volumes and are scaling our systems to keep up. Login and
+                    Registration are temporarily disabled to ensure stability for active sessions. We'll be back
+                    shortly!
+                  </div>
+                )}
 
-              {/* Rate limit warning */}
-              {rateLimitCooldown !== null && rateLimitCooldown > 0 && (
-                <div className="mb-4 p-3 rounded-lg bg-[hsl(var(--kloak-warning))]/10 border border-[hsl(var(--kloak-warning))]/20 flex items-center gap-2 text-[hsl(var(--kloak-warning))]">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  <p className="text-sm">Too many attempts. Try again in {rateLimitCooldown}s</p>
-                </div>
-              )}
+                {/* Rate limit warning */}
+                {rateLimitCooldown !== null && rateLimitCooldown > 0 && (
+                  <div className="mb-4 p-3 rounded-lg bg-[hsl(var(--kloak-warning))]/10 border border-[hsl(var(--kloak-warning))]/20 flex items-center gap-2 text-[hsl(var(--kloak-warning))]">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <p className="text-sm">Too many attempts. Try again in {rateLimitCooldown}s</p>
+                  </div>
+                )}
 
-              {/* Error display */}
-              {error && (
-                <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 flex items-center gap-2 text-destructive">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  <p className="text-sm">{error}</p>
-                </div>
-              )}
+                {/* Error display */}
+                {error && (
+                  <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 flex items-center gap-2 text-destructive">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <p className="text-sm">{error}</p>
+                  </div>
+                )}
 
-              {/* Animated Tab Content */}
-              <div className="relative overflow-hidden">
-                <AnimatePresence mode="wait" initial={false} custom={activeTab === "login" ? 1 : -1}>
-                  {activeTab === "create" && (
-                    <motion.div
-                      key="create"
-                      custom={-1}
-                      variants={tabContentVariants}
-                      initial="enter"
-                      animate="center"
-                      exit="exit"
-                      transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
-                    >
-                      {REGISTRATION_DISABLED ? (
-                        <div className="space-y-4">
-                          <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm leading-relaxed text-amber-400">
-                            <div className="flex items-center gap-2 mb-2 font-medium">
-                              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                              Registration Temporarily Disabled
+                {/* Animated Tab Content */}
+                <div className="relative overflow-hidden">
+                  <AnimatePresence mode="wait" initial={false} custom={activeTab === "login" ? 1 : -1}>
+                    {activeTab === "create" && (
+                      <motion.div
+                        key="create"
+                        custom={-1}
+                        variants={tabContentVariants}
+                        initial="enter"
+                        animate="center"
+                        exit="exit"
+                        transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
+                      >
+                        {REGISTRATION_DISABLED ? (
+                          <div className="space-y-4">
+                            <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm leading-relaxed text-amber-400">
+                              <div className="flex items-center gap-2 mb-2 font-medium">
+                                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                                Registration Temporarily Disabled
+                              </div>
+                              <p className="text-muted-foreground">
+                                New account registrations are currently paused. If you already have an account, please
+                                use the <strong className="text-foreground">Login with Key</strong> tab to sign in.
+                                Check back later for updates.
+                              </p>
                             </div>
-                            <p className="text-muted-foreground">
-                              New account registrations are currently paused. If you already have an account, please use the <strong className="text-foreground">Login with Key</strong> tab to sign in. Check back later for updates.
-                            </p>
-                          </div>
-                          <Button className="w-full" disabled>
-                            <Key className="w-4 h-4 mr-2" />
-                            Create Account
-                          </Button>
-                        </div>
-                      ) : (
-                      <form onSubmit={handleCreateAccount} className="space-y-4">
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-1.5">
-                            <Label htmlFor="username">Username</Label>
-                            <TooltipProvider delayDuration={0}>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <button
-                                    type="button"
-                                    className="text-muted-foreground hover:text-foreground transition-colors"
-                                  >
-                                    <Info className="w-3.5 h-3.5" />
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent side="top" className="max-w-[220px] text-xs">
-                                  <p>
-                                    4-16 characters. Letters, numbers, underscores, and hyphens only. No offensive or
-                                    impersonating names.
-                                  </p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </div>
-                          <div className="relative">
-                            <Input
-                              id="username"
-                              placeholder="your_username"
-                              value={username}
-                              onChange={(e) => setUsername(e.target.value)}
-                              maxLength={16}
-                              disabled={MAINTENANCE_MODE || isLoading || (rateLimitCooldown !== null && rateLimitCooldown > 0)}
-                              className={cn(getInputClassName())}
-                            />
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2">{renderUsernameStatus()}</div>
-                          </div>
-                          {renderUsernameHelperText()}
-                          {renderUsernameSuggestions()}
-                        </div>
-                        <div className="space-y-2">
-                          {!hcaptchaSiteKey ? (
-                            <p className="text-xs text-destructive">
-                              Registration captcha is not configured. Missing `VITE_HCAPTCHA_SITE_KEY`.
-                            </p>
-                          ) : (
-                            <>
-                              <HCaptcha
-                                ref={captchaRef}
-                                sitekey={hcaptchaSiteKey}
-                                onVerify={(token) => {
-                                  setCaptchaToken(token);
-                                  setCaptchaError(null);
-                                  setError(null);
-                                }}
-                                onExpire={() => {
-                                  setCaptchaToken(null);
-                                  setCaptchaError("Captcha expired. Please verify again.");
-                                }}
-                                onError={() => {
-                                  setCaptchaToken(null);
-                                  setCaptchaError("Captcha failed to load. Please retry.");
-                                }}
-                              />
-                              {captchaError ? <p className="text-xs text-destructive">{captchaError}</p> : null}
-                            </>
-                          )}
-                        </div>
-
-                        <Button
-                          type="submit"
-                          className="w-full"
-                          disabled={
-                            MAINTENANCE_MODE ||
-                            isLoading ||
-                            !!usernameError ||
-                            !isUsernameAvailable ||
-                            isCheckingUsername ||
-                            !hcaptchaSiteKey ||
-                            !captchaToken ||
-                            (rateLimitCooldown !== null && rateLimitCooldown > 0)
-                          }
-                        >
-                          {isLoading ? (
-                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                          ) : (
-                            <Key className="w-4 h-4 mr-2" />
-                          )}
-                          Create Account
-                        </Button>
-
-                        <p className="text-center text-xs text-muted-foreground mt-3">
-                          By creating an account, you agree to our{" "}
-                          <Link to="/terms" className="text-foreground hover:underline">
-                            Terms of Service
-                          </Link>{" "}
-                          and{" "}
-                          <Link to="/privacy" className="text-foreground hover:underline">
-                            Privacy Policy
-                          </Link>
-                        </p>
-                      </form>
-                      )}
-                    </motion.div>
-                  )}
-
-                  {activeTab === "login" && (
-                    <motion.div
-                      key="login"
-                      custom={1}
-                      variants={tabContentVariants}
-                      initial="enter"
-                      animate="center"
-                      exit="exit"
-                      transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
-                    >
-                      <form onSubmit={handleLogin} className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="secretKey">Secret Key</Label>
-                          <div className="relative">
-                            <Input
-                              id="secretKey"
-                              type={showSecretKey ? "text" : "password"}
-                              placeholder="Paste your 64-character secret key"
-                              value={secretKey}
-                              onChange={(e) => setSecretKey(e.target.value)}
-                              onPaste={handleKeyPaste}
-                              className="font-mono text-sm pr-10"
-                              disabled={MAINTENANCE_MODE || isLoading}
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                              onClick={() => setShowSecretKey(!showSecretKey)}
-                            >
-                              {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            <Button className="w-full" disabled>
+                              <Key className="w-4 h-4 mr-2" />
+                              Create Account
                             </Button>
                           </div>
-                        </div>
+                        ) : (
+                          <form onSubmit={handleCreateAccount} className="space-y-4">
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-1.5">
+                                <Label htmlFor="username">Username</Label>
+                                <TooltipProvider delayDuration={0}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        type="button"
+                                        className="text-muted-foreground hover:text-foreground transition-colors"
+                                      >
+                                        <Info className="w-3.5 h-3.5" />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-[220px] text-xs">
+                                      <p>
+                                        4-16 characters. Letters, numbers, underscores, and hyphens only. No offensive
+                                        or impersonating names.
+                                      </p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                              <div className="relative">
+                                <Input
+                                  id="username"
+                                  placeholder="your_username"
+                                  value={username}
+                                  onChange={(e) => setUsername(e.target.value)}
+                                  maxLength={16}
+                                  disabled={
+                                    MAINTENANCE_MODE ||
+                                    isLoading ||
+                                    (rateLimitCooldown !== null && rateLimitCooldown > 0)
+                                  }
+                                  className={cn(getInputClassName())}
+                                />
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                  {renderUsernameStatus()}
+                                </div>
+                              </div>
+                              {renderUsernameHelperText()}
+                              {renderUsernameSuggestions()}
+                            </div>
+                            <div className="space-y-2">
+                              {!hcaptchaSiteKey ? (
+                                <p className="text-xs text-destructive">
+                                  Registration captcha is not configured. Missing `VITE_HCAPTCHA_SITE_KEY`.
+                                </p>
+                              ) : (
+                                <>
+                                  <HCaptcha
+                                    ref={captchaRef}
+                                    sitekey={hcaptchaSiteKey}
+                                    onVerify={(token) => {
+                                      setCaptchaToken(token);
+                                      setCaptchaError(null);
+                                      setError(null);
+                                    }}
+                                    onExpire={() => {
+                                      setCaptchaToken(null);
+                                      setCaptchaError("Captcha expired. Please verify again.");
+                                    }}
+                                    onError={() => {
+                                      setCaptchaToken(null);
+                                      setCaptchaError("Captcha failed to load. Please retry.");
+                                    }}
+                                  />
+                                  {captchaError ? <p className="text-xs text-destructive">{captchaError}</p> : null}
+                                </>
+                              )}
+                            </div>
 
-                        <Button type="submit" className="w-full" disabled={MAINTENANCE_MODE || isLoading || !secretKey}>
-                          {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                          Login
-                        </Button>
+                            <Button
+                              type="submit"
+                              className="w-full"
+                              disabled={
+                                MAINTENANCE_MODE ||
+                                isLoading ||
+                                !!usernameError ||
+                                !isUsernameAvailable ||
+                                isCheckingUsername ||
+                                !hcaptchaSiteKey ||
+                                !captchaToken ||
+                                (rateLimitCooldown !== null && rateLimitCooldown > 0)
+                              }
+                            >
+                              {isLoading ? (
+                                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                              ) : (
+                                <Key className="w-4 h-4 mr-2" />
+                              )}
+                              Create Account
+                            </Button>
 
-                        <p className="text-xs text-muted-foreground">
-                          Forgot your key? Unfortunately, keys cannot be recovered.
-                        </p>
-                      </form>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </Tabs>
+                            <p className="text-center text-xs text-muted-foreground mt-3">
+                              By creating an account, you agree to our{" "}
+                              <Link to="/terms" className="text-foreground hover:underline">
+                                Terms of Service
+                              </Link>{" "}
+                              and{" "}
+                              <Link to="/privacy" className="text-foreground hover:underline">
+                                Privacy Policy
+                              </Link>
+                            </p>
+                          </form>
+                        )}
+                      </motion.div>
+                    )}
+
+                    {activeTab === "login" && (
+                      <motion.div
+                        key="login"
+                        custom={1}
+                        variants={tabContentVariants}
+                        initial="enter"
+                        animate="center"
+                        exit="exit"
+                        transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
+                      >
+                        <form onSubmit={handleLogin} className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="secretKey">Secret Key</Label>
+                            <div className="relative">
+                              <Input
+                                id="secretKey"
+                                type={showSecretKey ? "text" : "password"}
+                                placeholder="Paste your 64-character secret key"
+                                value={secretKey}
+                                onChange={(e) => setSecretKey(e.target.value)}
+                                onPaste={handleKeyPaste}
+                                className="font-normal text-sm pr-10"
+                                disabled={MAINTENANCE_MODE || isLoading}
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                                onClick={() => setShowSecretKey(!showSecretKey)}
+                              >
+                                {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                              </Button>
+                            </div>
+                          </div>
+
+                          <Button
+                            type="submit"
+                            className="w-full"
+                            disabled={MAINTENANCE_MODE || isLoading || !secretKey}
+                          >
+                            {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                            Login
+                          </Button>
+
+                          <p className="text-xs text-muted-foreground">
+                            Forgot your key? Unfortunately, keys cannot be recovered.
+                          </p>
+                        </form>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </Tabs>
+            </div>
           </div>
-        </div>
-        {/* Onboarding Modal for new users */}
-        <OnboardingModal open={showWelcomeModal} onClose={handleOnboardingClose} secretKey={generatedKey} />
+          {/* Onboarding Modal for new users */}
+          <OnboardingModal open={showWelcomeModal} onClose={handleOnboardingClose} secretKey={generatedKey} />
         </div>
       </div>
     );
@@ -724,7 +737,8 @@ const Auth = ({ formOnly = false }: AuthProps) => {
               {/* Maintenance notice */}
               {MAINTENANCE_MODE && (
                 <div className="mb-4 p-4 rounded-lg bg-slate-700 border border-slate-600 text-sm leading-relaxed text-slate-300">
-                  We are currently experiencing high traffic volumes and are scaling our systems to keep up. Login and Registration are temporarily disabled to ensure stability for active sessions. We'll be back shortly!
+                  We are currently experiencing high traffic volumes and are scaling our systems to keep up. Login and
+                  Registration are temporarily disabled to ensure stability for active sessions. We'll be back shortly!
                 </div>
               )}
 
@@ -765,7 +779,9 @@ const Auth = ({ formOnly = false }: AuthProps) => {
                               Registration Temporarily Disabled
                             </div>
                             <p className="text-muted-foreground">
-                              New account registrations are currently paused. If you already have an account, please use the <strong className="text-foreground">Login with Key</strong> tab to sign in. Check back later for updates.
+                              New account registrations are currently paused. If you already have an account, please use
+                              the <strong className="text-foreground">Login with Key</strong> tab to sign in. Check back
+                              later for updates.
                             </p>
                           </div>
                           <Button className="w-full" disabled>
@@ -774,104 +790,106 @@ const Auth = ({ formOnly = false }: AuthProps) => {
                           </Button>
                         </div>
                       ) : (
-                      <form onSubmit={handleCreateAccount} className="space-y-4">
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-1.5">
-                            <Label htmlFor="username">Username</Label>
-                            <TooltipProvider delayDuration={0}>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <button
-                                    type="button"
-                                    className="text-muted-foreground hover:text-foreground transition-colors"
-                                  >
-                                    <Info className="w-3.5 h-3.5" />
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent side="top" className="max-w-[220px] text-xs">
-                                  <p>
-                                    4-16 characters. Letters, numbers, underscores, and hyphens only. No offensive or
-                                    impersonating names.
-                                  </p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </div>
-                          <div className="relative">
-                            <Input
-                              id="username"
-                              placeholder="your_username"
-                              value={username}
-                              onChange={(e) => setUsername(e.target.value)}
-                              maxLength={16}
-                              disabled={MAINTENANCE_MODE || isLoading || (rateLimitCooldown !== null && rateLimitCooldown > 0)}
-                              className={cn(getInputClassName())}
-                            />
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2">{renderUsernameStatus()}</div>
-                          </div>
-                          {renderUsernameHelperText()}
-                          {renderUsernameSuggestions()}
-                        </div>
-                        <div className="space-y-2">
-                          {!hcaptchaSiteKey ? (
-                            <p className="text-xs text-destructive">
-                              Registration captcha is not configured. Missing `VITE_HCAPTCHA_SITE_KEY`.
-                            </p>
-                          ) : (
-                            <>
-                              <HCaptcha
-                                ref={captchaRef}
-                                sitekey={hcaptchaSiteKey}
-                                onVerify={(token) => {
-                                  setCaptchaToken(token);
-                                  setCaptchaError(null);
-                                  setError(null);
-                                }}
-                                onExpire={() => {
-                                  setCaptchaToken(null);
-                                  setCaptchaError("Captcha expired. Please verify again.");
-                                }}
-                                onError={() => {
-                                  setCaptchaToken(null);
-                                  setCaptchaError("Captcha failed to load. Please retry.");
-                                }}
+                        <form onSubmit={handleCreateAccount} className="space-y-4">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-1.5">
+                              <Label htmlFor="username">Username</Label>
+                              <TooltipProvider delayDuration={0}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      type="button"
+                                      className="text-muted-foreground hover:text-foreground transition-colors"
+                                    >
+                                      <Info className="w-3.5 h-3.5" />
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="max-w-[220px] text-xs">
+                                    <p>
+                                      4-16 characters. Letters, numbers, underscores, and hyphens only. No offensive or
+                                      impersonating names.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                            <div className="relative">
+                              <Input
+                                id="username"
+                                placeholder="your_username"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                maxLength={16}
+                                disabled={
+                                  MAINTENANCE_MODE || isLoading || (rateLimitCooldown !== null && rateLimitCooldown > 0)
+                                }
+                                className={cn(getInputClassName())}
                               />
-                              {captchaError ? <p className="text-xs text-destructive">{captchaError}</p> : null}
-                            </>
-                          )}
-                        </div>
+                              <div className="absolute right-3 top-1/2 -translate-y-1/2">{renderUsernameStatus()}</div>
+                            </div>
+                            {renderUsernameHelperText()}
+                            {renderUsernameSuggestions()}
+                          </div>
+                          <div className="space-y-2">
+                            {!hcaptchaSiteKey ? (
+                              <p className="text-xs text-destructive">
+                                Registration captcha is not configured. Missing `VITE_HCAPTCHA_SITE_KEY`.
+                              </p>
+                            ) : (
+                              <>
+                                <HCaptcha
+                                  ref={captchaRef}
+                                  sitekey={hcaptchaSiteKey}
+                                  onVerify={(token) => {
+                                    setCaptchaToken(token);
+                                    setCaptchaError(null);
+                                    setError(null);
+                                  }}
+                                  onExpire={() => {
+                                    setCaptchaToken(null);
+                                    setCaptchaError("Captcha expired. Please verify again.");
+                                  }}
+                                  onError={() => {
+                                    setCaptchaToken(null);
+                                    setCaptchaError("Captcha failed to load. Please retry.");
+                                  }}
+                                />
+                                {captchaError ? <p className="text-xs text-destructive">{captchaError}</p> : null}
+                              </>
+                            )}
+                          </div>
 
-                        <Button
-                          type="submit"
-                          className="w-full"
-                          disabled={
-                            MAINTENANCE_MODE ||
-                            isLoading ||
-                            !!usernameError ||
-                            !hcaptchaSiteKey ||
-                            !captchaToken ||
-                            (rateLimitCooldown !== null && rateLimitCooldown > 0)
-                          }
-                        >
-                          {isLoading ? (
-                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                          ) : (
-                            <Key className="w-4 h-4 mr-2" />
-                          )}
-                          Create Account
-                        </Button>
+                          <Button
+                            type="submit"
+                            className="w-full"
+                            disabled={
+                              MAINTENANCE_MODE ||
+                              isLoading ||
+                              !!usernameError ||
+                              !hcaptchaSiteKey ||
+                              !captchaToken ||
+                              (rateLimitCooldown !== null && rateLimitCooldown > 0)
+                            }
+                          >
+                            {isLoading ? (
+                              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                            ) : (
+                              <Key className="w-4 h-4 mr-2" />
+                            )}
+                            Create Account
+                          </Button>
 
-                        <p className="text-center text-xs text-muted-foreground mt-3">
-                          By creating an account, you agree to our{" "}
-                          <Link to="/terms" className="text-foreground hover:underline">
-                            Terms of Service
-                          </Link>{" "}
-                          and{" "}
-                          <Link to="/privacy" className="text-foreground hover:underline">
-                            Privacy Policy
-                          </Link>
-                        </p>
-                      </form>
+                          <p className="text-center text-xs text-muted-foreground mt-3">
+                            By creating an account, you agree to our{" "}
+                            <Link to="/terms" className="text-foreground hover:underline">
+                              Terms of Service
+                            </Link>{" "}
+                            and{" "}
+                            <Link to="/privacy" className="text-foreground hover:underline">
+                              Privacy Policy
+                            </Link>
+                          </p>
+                        </form>
                       )}
                     </motion.div>
                   )}
@@ -897,7 +915,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
                               value={secretKey}
                               onChange={(e) => setSecretKey(e.target.value)}
                               onPaste={handleKeyPaste}
-                              className="font-mono text-sm pr-10"
+                              className="font-normal text-sm pr-10"
                               disabled={MAINTENANCE_MODE || isLoading}
                             />
                             <Button
