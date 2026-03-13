@@ -122,7 +122,7 @@ export const useTyping = (channelId: string | null) => {
   }, [channelId, user]);
 
   const publishTypingEvent = useCallback(async (event: TypingEvent) => {
-    if (!channelId || !user) return;
+    if (!channelId || !user || !UUID_V4ish_RE.test(channelId)) return;
     const keyHash = getKeyHash();
     if (!keyHash) return;
 

@@ -57,6 +57,9 @@ serve(async (req) => {
     }
 
     const body = await req.json().catch(() => null);
+    if (body === null) {
+      console.warn("broadcast-typing: failed to parse request body as JSON");
+    }
     const channelId = typeof body?.channel_id === "string" ? body.channel_id.trim() : "";
     if (!CHANNEL_ID_RE.test(channelId)) {
       return jsonResponse({ error: "Invalid channel_id" }, 400);
