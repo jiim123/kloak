@@ -92,8 +92,6 @@ const AppLayout = () => {
     setCurrentChannel,
     setCurrentServer,
     fetchChannels,
-    fetchMembers,
-    fetchRolePermissions,
     servers,
     channels,
   } = useServerStore();
