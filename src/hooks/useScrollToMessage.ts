@@ -20,23 +20,14 @@ interface UseScrollToMessageOptions {
 }
 
 /**
- * Center a message element within its scroll container.
+ * Center a message element within its scroll container using its DOM id.
  * Returns true if the element was found and scrolled to.
  */
-function centerMessageInView(container: HTMLElement, targetId: string, smooth: boolean): boolean {
+function centerMessageInView(targetId: string, smooth: boolean): boolean {
   const el = document.getElementById(`message-${targetId}`);
   if (!el) return false;
 
-  const containerRect = container.getBoundingClientRect();
-  const elRect = el.getBoundingClientRect();
-  const scrollTop = container.scrollTop;
-  const elTopInContainer = elRect.top - containerRect.top + scrollTop;
-  const targetScroll = elTopInContainer - containerRect.height / 2 + elRect.height / 2;
-
-  container.scrollTo({
-    top: Math.max(0, targetScroll),
-    behavior: smooth ? 'smooth' : 'auto',
-  });
+  el.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'center' });
   return true;
 }
 
