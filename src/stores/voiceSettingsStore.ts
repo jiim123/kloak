@@ -74,6 +74,13 @@ export const useVoiceSettingsStore = create<VoiceSettingsStore>((set, get) => ({
     }
 
     try {
+      // Wait for auth key hash before querying (prevents 401/RLS errors during init)
+      const kh = await getKeyHashAsync();
+      if (!kh) {
+        set({ settings: { ...DEFAULT_VOICE_SETTINGS }, isLoaded: true, isLoading: false });
+        return;
+      }
+
       const { data, error } = await supabase
         .from('user_voice_settings')
         .select('*')
