@@ -122,12 +122,6 @@ const AppLayout = () => {
   const isServerOverviewView = !!params.serverId && currentPath === `/servers/${params.serverId}/overview`;
   
 
-  const currentMembership = useMemo(() => {
-    if (!currentServer) return null;
-    return servers.find((s) => s.id === currentServer.id) ?? null;
-  }, [servers, currentServer]);
-
-  const isOwner = !!user && !!currentServer && currentServer.owner_id === user.id;
   const isServerSpecialView = isServerOverviewView;
 
   // Extract serverId and channelId from URL params
