@@ -56,8 +56,8 @@ const MAX_ATTACHMENTS = 5;
 const DRAFT_SAVE_DELAY = 500;
 const TYPING_STOP_DELAY = 2000;
 
-// Memoized action buttons
-const ActionButtons = memo(
+// Memoized action bar (full-width bottom bar)
+const ActionBar = memo(
   ({
     showCreatePoll,
     setShowCreatePoll,
@@ -73,7 +73,6 @@ const ActionButtons = memo(
     onEmojiSelect,
     onGifSelect,
     currentServer,
-    showAttachButton,
     onAttachClick,
   }: any) => {
     const showCharacterWarning = content.length > MAX_LENGTH - 200;
@@ -81,92 +80,92 @@ const ActionButtons = memo(
     const shouldCollapse = isMobile && content.length > 10;
     const canSend = (content.trim() || hasAttachments) && !isSending;
 
+    const iconBtnClass =
+      "flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors";
+
     return (
-      <div className="flex items-center gap-1 mb-0.5 relative">
-        {showCharacterWarning && (
-          <span
-            className={`text-[13px] font-sans mr-1 ${content.length > MAX_LENGTH - 50 ? "text-destructive" : "text-muted-foreground"}`}
-          >
-            {MAX_LENGTH - content.length}
-          </span>
-        )}
-        {shouldCollapse ? (
-          <>
+      <div className="flex items-center justify-between px-2 sm:px-3 pb-2 pt-0.5">
+        {/* Left actions */}
+        <div className="flex items-center gap-0.5">
+          {shouldCollapse ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="p-2 rounded-xl text-muted-foreground hover:bg-muted/50 transition-colors"
-                >
+                <button type="button" className={iconBtnClass} onMouseDown={(e) => e.preventDefault()}>
                   <MoreHorizontal className="w-5 h-5" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="min-w-[160px]">
-                {showAttachButton && (
-                  <DropdownMenuItem onClick={onAttachClick} disabled={!canSendMessage}>
-                    <Paperclip className="w-4 h-4 mr-2" /> Upload image
-                  </DropdownMenuItem>
-                )}
+              <DropdownMenuContent align="start" className="min-w-[160px]">
+                <DropdownMenuItem onClick={onAttachClick} disabled={!canSendMessage}>
+                  <Paperclip className="w-4 h-4 mr-2" /> Upload image
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setShowCreatePoll(true)} disabled={!canSendMessage}>
                   <SquareChartGantt className="w-4 h-4 mr-2" /> Create poll
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <EmojiPicker
-              open={showEmojiPicker}
-              onOpenChange={setShowEmojiPicker}
-              onEmojiSelect={onEmojiSelect}
-              serverId={currentServer?.id}
-            >
-              <button type="button" className="p-2 rounded-xl text-muted-foreground hover:bg-muted/50">
-                <Smile className="w-5 h-5" />
+          ) : (
+            <>
+              <button onClick={onAttachClick} disabled={!canSendMessage} className={iconBtnClass}>
+                <Paperclip className="w-5 h-5" />
               </button>
-            </EmojiPicker>
-            <GifPicker open={showGifPicker} onOpenChange={setShowGifPicker} onSelect={onGifSelect}>
-              <button type="button" className="p-2 rounded-xl text-muted-foreground hover:bg-muted/50">
-                <ImageIcon className="w-5 h-5" />
+              <div className="w-px h-5 bg-border/40 mx-0.5" />
+              <button
+                type="button"
+                onClick={() => setShowCreatePoll(true)}
+                disabled={!canSendMessage}
+                className={iconBtnClass}
+              >
+                <SquareChartGantt className="w-5 h-5" />
               </button>
-            </GifPicker>
-          </>
-        ) : (
-          <>
-            <button
-              type="button"
-              onClick={() => setShowCreatePoll(true)}
-              disabled={!canSendMessage}
-              className="p-2 rounded-xl text-muted-foreground hover:bg-muted/50"
-            >
-              <SquareChartGantt className="w-5 h-5" />
+            </>
+          )}
+
+          <div className="w-px h-5 bg-border/40 mx-0.5" />
+
+          <EmojiPicker
+            open={showEmojiPicker}
+            onOpenChange={setShowEmojiPicker}
+            onEmojiSelect={onEmojiSelect}
+            serverId={currentServer?.id}
+          >
+            <button type="button" className={iconBtnClass} onMouseDown={(e) => e.preventDefault()}>
+              <Smile className="w-5 h-5" />
             </button>
-            <EmojiPicker
-              open={showEmojiPicker}
-              onOpenChange={setShowEmojiPicker}
-              onEmojiSelect={onEmojiSelect}
-              serverId={currentServer?.id}
+          </EmojiPicker>
+
+          <GifPicker open={showGifPicker} onOpenChange={setShowGifPicker} onSelect={onGifSelect}>
+            <button type="button" className={iconBtnClass} onMouseDown={(e) => e.preventDefault()}>
+              <ImageIcon className="w-5 h-5" />
+            </button>
+          </GifPicker>
+        </div>
+
+        {/* Right side */}
+        <div className="flex items-center gap-1.5">
+          {showCharacterWarning && (
+            <span
+              className={`text-[13px] font-sans ${content.length > MAX_LENGTH - 50 ? "text-destructive" : "text-muted-foreground"}`}
             >
-              <button type="button" className="p-2 rounded-xl text-muted-foreground hover:bg-muted/50">
-                <Smile className="w-5 h-5" />
-              </button>
-            </EmojiPicker>
-            <GifPicker open={showGifPicker} onOpenChange={setShowGifPicker} onSelect={onGifSelect}>
-              <button type="button" className="p-2 rounded-xl text-muted-foreground hover:bg-muted/50">
-                <ImageIcon className="w-5 h-5" />
-              </button>
-            </GifPicker>
-          </>
-        )}
-        <button
-          onClick={onSubmit}
-          disabled={!canSend}
-          className={`p-2 rounded-xl transition-all ${canSend ? "bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95" : "bg-muted/50 text-muted-foreground/50 cursor-not-allowed"}`}
-        >
-          {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-        </button>
+              {MAX_LENGTH - content.length}
+            </span>
+          )}
+          <button
+            onClick={onSubmit}
+            disabled={!canSend}
+            className={`flex h-8 w-8 items-center justify-center rounded-full transition-all duration-200 ${
+              canSend
+                ? "bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95"
+                : "bg-muted/50 text-muted-foreground/50 cursor-not-allowed"
+            }`}
+          >
+            {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+          </button>
+        </div>
       </div>
     );
   },
 );
-ActionButtons.displayName = "ActionButtons";
+ActionBar.displayName = "ActionBar";
 
 export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }: MessageInputProps) => {
   const { user } = useAuthStore();
