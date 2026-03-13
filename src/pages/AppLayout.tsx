@@ -401,13 +401,6 @@ const AppLayout = () => {
     }
   }, [currentChannel, currentConversation, closeMobileSidebars]);
 
-  // Handle mobile back navigation
-  const handleMobileBack = () => {
-    if (currentConversation) {
-      setCurrentConversation(null);
-      navigate("/app/friends");
-    }
-  };
 
   // DM View (no server selected)
   const isDMView = currentServer === null;
