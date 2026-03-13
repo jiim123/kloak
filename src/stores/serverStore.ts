@@ -1862,8 +1862,9 @@ export const useServerStore = create<ServerState>((set, get) => ({
     const { currentServer, members, roles: allRoles } = get();
     if (!currentServer) throw new Error("No server selected");
 
-    // Optimistic update: add the role to the member locally
+    // Optimistic update: REPLACE all non-@everyone roles with the new one (single role enforcement)
     const role = allRoles.find((r) => r.id === roleId);
+    const everyoneRole = allRoles.find((r) => r.name === "@everyone");
     const prevMembers = members;
     if (role) {
       set({
@@ -1872,8 +1873,10 @@ export const useServerStore = create<ServerState>((set, get) => ({
             ? {
                 ...m,
                 roles: [
-                  ...(m.roles || []).filter((r) => r.id !== roleId),
-                  { ...role, position: role.position ?? 0 } as CustomServerRole,
+                  // Keep @everyone if it exists
+                  ...(m.roles || []).filter((r) => everyoneRole && r.id === everyoneRole.id),
+                  // Add new role (if not @everyone itself)
+                  ...(everyoneRole && roleId === everyoneRole.id ? [] : [{ ...role, position: role.position ?? 0 } as CustomServerRole]),
                 ],
               }
             : m,
