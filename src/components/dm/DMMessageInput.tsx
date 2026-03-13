@@ -551,7 +551,7 @@ export const DMMessageInput = ({ conversationId, otherUsername, replyingTo, onCa
         )}
 
         {/* Textarea area */}
-        <div className="px-3 sm:px-4">
+        <div className="px-4 sm:px-5 pt-3">
           <textarea
             ref={textareaRef}
             value={content}
@@ -568,7 +568,7 @@ export const DMMessageInput = ({ conversationId, otherUsername, replyingTo, onCa
                   : `Message @${otherUsername}`
             }
             rows={1}
-            className="message-input-textarea w-full bg-transparent resize-none outline-none py-3.5 min-h-[48px] overflow-y-auto text-foreground placeholder:text-muted-foreground/60 font-[General_Sans,system-ui,sans-serif]"
+            className="message-input-textarea w-full bg-transparent resize-none outline-none py-1 min-h-[36px] overflow-y-auto text-foreground placeholder:text-muted-foreground/60 font-[General_Sans,system-ui,sans-serif]"
             style={{
               fontSize: "1em",
               lineHeight: "1.6",
