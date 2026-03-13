@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, getKeyHashAsync } from "@/integrations/supabase/client";
 import { useUIStore, type Theme, type DmPrivacy, THEMES } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
 import type { Database } from "@/integrations/supabase/types";
