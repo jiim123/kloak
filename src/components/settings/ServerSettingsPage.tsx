@@ -2215,7 +2215,7 @@ export const ServerSettingsPage = () => {
                                           </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end" className="w-48">
-                                          {roles.map((role) => {
+                                          {roles.filter((r) => r.name !== "@everyone").map((role) => {
                                             const hasRole = memberRoles.some((r) => r.id === role.id);
                                             return (
                                               <DropdownMenuItem
@@ -2234,7 +2234,7 @@ export const ServerSettingsPage = () => {
                                                     }
                                                   />
                                                   <span className="flex-1">{role.name}</span>
-                                                  {hasRole && <span className="text-xs text-muted-foreground">✓</span>}
+                                                  {hasRole && <span className="text-xs text-primary">●</span>}
                                                 </div>
                                               </DropdownMenuItem>
                                             );
