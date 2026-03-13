@@ -98,7 +98,7 @@ const ALLOWED_ICON_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_EMOJI_SIZE = 1 * 1024 * 1024; // 1MB
 const ALLOWED_EMOJI_TYPES = ["image/png", "image/gif", "image/webp", "image/jpeg"];
 const EMOJI_NAME_REGEX = /^[a-z0-9_]{2,12}$/;
-const MAX_SERVER_EMOJIS = 1000;
+const MAX_SERVER_EMOJIS = 30;
 
 const serverSettingsSchema = z.object({
   name: z.string().trim().min(1, "Server name is required").max(50, "Server name must be less than 50 characters"),
