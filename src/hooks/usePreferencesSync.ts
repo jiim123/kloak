@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, getKeyHashAsync } from "@/integrations/supabase/client";
 import { useUIStore, type Theme, type DmPrivacy, THEMES } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
 import type { Database } from "@/integrations/supabase/types";
@@ -200,6 +200,10 @@ export const usePreferencesSync = () => {
 
     const loadPreferences = async () => {
       try {
+        // Wait for auth key hash before querying (prevents 401/RLS errors during init)
+        const kh = await getKeyHashAsync();
+        if (!kh) return;
+
         const { data, error } = await supabase
           .from("user_preferences")
           .select("*")
