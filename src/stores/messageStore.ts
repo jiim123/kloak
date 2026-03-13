@@ -5,6 +5,7 @@ import { useFriendStore } from "@/stores/friendStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useUserCacheStore, bulkSetUsersInCache, fetchAndCacheUser } from "@/stores/userCacheStore";
 import { resolveSignedUrls, isSupabaseAttachmentUrl } from "@/lib/signedUrl";
+import { toast } from "sonner";
 import type { Message, MessageReply, ReactionGroup, User } from "@/types";
 
 interface ChannelMessages {
@@ -118,6 +119,11 @@ const isMissingRpcError = (error: any) => {
     message.includes("Could not find the function") ||
     message.includes("does not exist")
   );
+};
+
+const isNewAccountMessagingRestrictionError = (error: any) => {
+  const message = String(error?.message ?? "").toLowerCase();
+  return message.includes("messaging is temporarily restricted for new accounts");
 };
 
 // Cache expiry time - 5 minutes
@@ -686,6 +692,11 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       return message;
     } catch (error) {
       console.error("Failed to send message:", error);
+      if (isNewAccountMessagingRestrictionError(error)) {
+        toast.warning("Messaging is temporarily restricted", {
+          description: "Please wait a few minutes after creating your account, then try again.",
+        });
+      }
       return null;
     }
   },
