@@ -200,6 +200,10 @@ export const usePreferencesSync = () => {
 
     const loadPreferences = async () => {
       try {
+        // Wait for auth key hash before querying (prevents 401/RLS errors during init)
+        const kh = await getKeyHashAsync();
+        if (!kh) return;
+
         const { data, error } = await supabase
           .from("user_preferences")
           .select("*")
