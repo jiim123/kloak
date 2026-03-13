@@ -14,15 +14,6 @@ interface NotificationState {
   clearAllNotifications: (userId: string) => Promise<void>;
   deleteNotification: (notificationId: string) => Promise<void>;
   
-  // Create notifications
-  createMentionNotification: (
-    userId: string,
-    mentionedBy: string,
-    channelId: string,
-    channelName: string,
-    serverId: string
-  ) => Promise<void>;
-  
   // Realtime
   addNotification: (notification: Notification) => void;
   updateNotification: (notificationId: string, updates: Partial<Notification>) => void;
