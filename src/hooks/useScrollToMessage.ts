@@ -126,11 +126,9 @@ export const useScrollToMessage = ({ messages, isLoading, virtuosoRef, container
 
   // Retry-based centering: poll until the DOM element exists, then center it
   const centerWithRetry = useCallback((targetId: string, attempt = 0) => {
-    const maxAttempts = 15; // ~750ms max wait
-    const container = containerRef?.current;
-    if (!container) return;
+    const maxAttempts = 15;
 
-    const found = centerMessageInView(container, targetId, attempt > 0);
+    const found = centerMessageInView(targetId, attempt > 0);
     if (found) {
       applyHighlight(targetId);
       return;
@@ -138,18 +136,15 @@ export const useScrollToMessage = ({ messages, isLoading, virtuosoRef, container
 
     if (attempt < maxAttempts) {
       rafRef.current = requestAnimationFrame(() => {
-        // Use nested rAF to wait for paint
         rafRef.current = requestAnimationFrame(() => {
           centerWithRetry(targetId, attempt + 1);
         });
       });
     }
-  }, [containerRef, applyHighlight]);
+  }, [applyHighlight]);
 
   // Main scroll effect
   const performScroll = useCallback((targetIndex: number, targetId: string) => {
-    const container = containerRef?.current;
-
     // Step 1: Use scrollToIndex to ensure the virtual list renders the item
     if (virtuosoRef?.current) {
       virtuosoRef.current.scrollToIndex({
@@ -160,26 +155,19 @@ export const useScrollToMessage = ({ messages, isLoading, virtuosoRef, container
     }
 
     // Step 2: After a frame, find the actual DOM element and center it
-    // Use rAF to wait for the virtual list to render the target
     requestAnimationFrame(() => {
-      if (container) {
-        // First try immediate centering
-        const found = centerMessageInView(container, targetId, false);
-        if (found) {
-          // Do a second smooth center pass after the instant jump settles
-          setTimeout(() => {
-            centerMessageInView(container, targetId, true);
-          }, 50);
-          applyHighlight(targetId);
-        } else {
-          // Element not rendered yet, start retry loop
-          centerWithRetry(targetId, 0);
-        }
-      } else {
+      const found = centerMessageInView(targetId, false);
+      if (found) {
+        // Second smooth pass after the instant jump settles
+        setTimeout(() => {
+          centerMessageInView(targetId, true);
+        }, 50);
         applyHighlight(targetId);
+      } else {
+        centerWithRetry(targetId, 0);
       }
     });
-  }, [virtuosoRef, containerRef, applyHighlight, centerWithRetry]);
+  }, [virtuosoRef, applyHighlight, centerWithRetry]);
 
   // Scroll to message when it's available in the messages array
   useEffect(() => {
