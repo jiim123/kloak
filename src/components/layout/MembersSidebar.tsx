@@ -980,7 +980,7 @@ export const MembersSidebar = () => {
   // Mobile: render as a right-side drawer (Sheet)
   if (isMobile) {
     return (
-      <Sheet open={isMemberSidebarOpen} onOpenChange={setMemberSidebarOpen}>
+      <Sheet open={isMemberSidebarOpen} onOpenChange={setMemberSidebarOpen} modal={false}>
         <SheetContent
           side="right"
           className="p-0 w-60 max-w-[80vw]"
