@@ -938,7 +938,27 @@ export const MessageItem = memo(function MessageItem({
     [message.user_id, openModal, showGhostIdentity],
   );
 
-  const handleReplyClick = useCallback(
+  const handleKickUser = useCallback(() => {
+    if (!messageMember) return;
+    openModal("confirmAction", {
+      action: "kick",
+      member: messageMember,
+      title: `Kick ${displayName}`,
+      message: `Are you sure you want to kick ${displayName} from the server?`,
+    });
+  }, [messageMember, displayName, openModal]);
+
+  const handleBanUser = useCallback(() => {
+    if (!messageMember) return;
+    openModal("confirmAction", {
+      action: "ban",
+      member: messageMember,
+      title: `Ban ${displayName}`,
+      message: `Are you sure you want to ban ${displayName} from the server? They will not be able to rejoin.`,
+    });
+  }, [messageMember, displayName, openModal]);
+
+
     (e: React.MouseEvent | React.TouchEvent) => {
       e.preventDefault();
       e.stopPropagation();
