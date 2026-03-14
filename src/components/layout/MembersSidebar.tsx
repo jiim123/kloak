@@ -727,6 +727,47 @@ export const MembersSidebar = () => {
 
     const hasAdminActions = canKick || canBan || canChangeNickname || canTransfer || canManageRoles;
 
+    // Mass ban selection mode: show checkbox overlay
+    if (massBanMode) {
+      const isSelected = massBanSelected.has(member.user_id);
+      const canSelectForBan = canBan && !isSelf && !isServerOwner;
+
+      return (
+        <div
+          className={cn(
+            "relative cursor-pointer",
+            !canSelectForBan && "opacity-40 pointer-events-none",
+          )}
+          onClick={() => canSelectForBan && toggleMassBanSelection(member.user_id)}
+        >
+          <MemberListItemContent
+            member={member}
+            memberIsOffline={memberIsOffline}
+            presence={presence}
+            displayName={displayName}
+            isServerOwner={isServerOwner}
+            priorityCustomRoleColor={priorityCustomRoleColor}
+            isGradientName={isGradientName}
+            onClick={() => {}}
+          />
+          {canSelectForBan && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              <div
+                className={cn(
+                  "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
+                  isSelected
+                    ? "bg-destructive border-destructive"
+                    : "border-muted-foreground/40 bg-transparent",
+                )}
+              >
+                {isSelected && <Check className="w-3 h-3 text-white" />}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
     const content = (
       <MemberListItemContent
         member={member}
@@ -784,6 +825,19 @@ export const MembersSidebar = () => {
                 >
                   <Ban className="w-4 h-4" />
                   Ban
+                </ContextMenuItem>
+              )}
+
+              {canBan && (
+                <ContextMenuItem
+                  onClick={() => {
+                    setMassBanMode(true);
+                    setMassBanSelected(new Set([member.user_id]));
+                  }}
+                  className="rounded-lg gap-3 text-destructive focus:text-destructive"
+                >
+                  <ListChecks className="w-4 h-4" />
+                  Select for Mass Ban
                 </ContextMenuItem>
               )}
             </>
