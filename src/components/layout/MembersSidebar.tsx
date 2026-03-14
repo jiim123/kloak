@@ -195,7 +195,9 @@ const MemberListItemContent = ({
       className={cn(
         "group flex items-center gap-2.5 mx-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors",
         "hover:bg-secondary/60 active:bg-secondary/80",
+        "touch-callout-none",
       )}
+      style={{ WebkitTouchCallout: "none" } as React.CSSProperties}
       onClick={onClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -688,7 +690,7 @@ export const MembersSidebar = () => {
     return (
       <ContextMenu>
         <ContextMenuTrigger asChild>{content}</ContextMenuTrigger>
-        <ContextMenuContent className="w-52 rounded-xl border-border/50 p-1.5">
+        <ContextMenuContent className="w-52 rounded-xl border-border/50 p-1.5 z-[60]">
           {/* Basic actions */}
           <ContextMenuItem onClick={() => handleMessage(member)} className="rounded-lg gap-3 hover:bg-primary/80">
             <MessageSquare className="w-4 h-4" />
@@ -978,7 +980,7 @@ export const MembersSidebar = () => {
   // Mobile: render as a right-side drawer (Sheet)
   if (isMobile) {
     return (
-      <Sheet open={isMemberSidebarOpen} onOpenChange={setMemberSidebarOpen}>
+      <Sheet open={isMemberSidebarOpen} onOpenChange={setMemberSidebarOpen} modal={false}>
         <SheetContent
           side="right"
           className="p-0 w-60 max-w-[80vw]"
