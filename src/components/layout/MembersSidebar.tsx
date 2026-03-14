@@ -195,7 +195,9 @@ const MemberListItemContent = ({
       className={cn(
         "group flex items-center gap-2.5 mx-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors",
         "hover:bg-secondary/60 active:bg-secondary/80",
+        "touch-callout-none",
       )}
+      style={{ WebkitTouchCallout: "none" } as React.CSSProperties}
       onClick={onClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
