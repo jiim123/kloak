@@ -1,4 +1,4 @@
-import { useMemo, useEffect, memo, useState, useRef } from "react";
+import { useMemo, useEffect, memo, useState, useRef, forwardRef } from "react";
 import { ViewportList } from "react-viewport-list";
 import { cn, pickFirstNonBlank } from "@/lib/utils";
 import { Crown, MessageSquare, Edit3, UserX, Ban, VolumeX, Shield, Users, ChevronDown, Loader2 } from "lucide-react";
