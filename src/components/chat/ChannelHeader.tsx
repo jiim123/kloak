@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Hash, Volume2, MessageSquare, Pin, Search, Lock, Megaphone, Film, Users } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
@@ -11,9 +12,15 @@ import type { Channel } from "@/types";
 
 interface ChannelHeaderProps {
   channel: Channel;
+  extraActions?: ReactNode;
+  showMessageActions?: boolean;
 }
 
-export const ChannelHeader = ({ channel }: ChannelHeaderProps) => {
+export const ChannelHeader = ({
+  channel,
+  extraActions,
+  showMessageActions = true,
+}: ChannelHeaderProps) => {
   const openModal = useUIStore((s) => s.openModal);
   const isMemberSidebarOpen = useUIStore((s) => s.isMemberSidebarOpen);
   const setMemberSidebarOpen = useUIStore((s) => s.setMemberSidebarOpen);
@@ -64,33 +71,39 @@ export const ChannelHeader = ({ channel }: ChannelHeaderProps) => {
 
       {/* Right side - Actions */}
       <div className="flex items-center gap-0.5 flex-shrink-0">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground"
-              onClick={() => openModal("pinned-messages", { channelId: channel.id })}
-            >
-              <Pin className="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Pinned Messages</TooltipContent>
-        </Tooltip>
+        {showMessageActions && (
+          <>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground"
+                  onClick={() => openModal("pinned-messages", { channelId: channel.id })}
+                >
+                  <Pin className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Pinned Messages</TooltipContent>
+            </Tooltip>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground"
-              onClick={() => openModal("search", { channelId: channel.id })}
-            >
-              <Search className="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Search Messages</TooltipContent>
-        </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground"
+                  onClick={() => openModal("search", { channelId: channel.id })}
+                >
+                  <Search className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Search Messages</TooltipContent>
+            </Tooltip>
+          </>
+        )}
+
+        {extraActions}
 
         {currentServer && (
           <Tooltip>

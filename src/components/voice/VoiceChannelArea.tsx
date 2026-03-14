@@ -33,6 +33,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { MessageList } from "@/components/chat/MessageList";
 import { MessageInput } from "@/components/chat/MessageInput";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
+import { ChannelHeader } from "@/components/chat/ChannelHeader";
 import { useTyping } from "@/hooks/useTyping";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Channel, ServerMember } from "@/types";
@@ -421,41 +422,63 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
     }
   };
 
+  const textPanelToggle = (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className={cn(
+        "h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground",
+        showTextPanel && "bg-accent text-foreground"
+      )}
+      onClick={() => (showTextPanel ? setIsTextPanelOpen(false) : handleOpenLinkedText())}
+      disabled={!linkedTextChannel || !effectivelyJoined}
+      title={
+        !linkedTextChannel
+          ? "No attached text chat yet"
+          : effectivelyJoined
+            ? "Open attached text chat"
+            : "Join voice to open attached text chat"
+      }
+    >
+      <MessageSquareText className="w-4 h-4" />
+    </Button>
+  );
+
   return (
     <div className="h-full flex flex-col min-w-0 bg-black text-white relative overflow-hidden">
-      {/* Top bar */}
-      <div className="h-11 px-3 sm:px-4 flex items-center justify-between border-b border-white/10 bg-black/95">
-        <div className="flex items-center gap-2 min-w-0">
-          <Volume2 className="w-4 h-4 text-white/70 flex-shrink-0" />
+      <ChannelHeader channel={channel} extraActions={textPanelToggle} showMessageActions={false} />
+
+      <div className="flex h-11 items-center justify-between border-b border-white/10 bg-black/95 px-3 sm:px-4 md:hidden">
+        <div className="flex min-w-0 items-center gap-2">
+          <Volume2 className="h-4 w-4 flex-shrink-0 text-white/70" />
           <div className="min-w-0">
-            <div className="text-sm font-medium truncate text-white">{channel.name}</div>
-            <div className="text-[11px] text-white/55 truncate">
+            <div className="truncate text-sm font-medium text-white">{channel.name}</div>
+            <div className="truncate text-[11px] text-white/55">
               {effectivelyJoined ? "Voice connected" : "Not connected"}
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className={cn(
-              "h-8 w-8 text-white/70 hover:text-white hover:bg-white/10",
-              showTextPanel && "bg-white/10 text-white"
-            )}
-            onClick={() => (showTextPanel ? setIsTextPanelOpen(false) : handleOpenLinkedText())}
-            disabled={!linkedTextChannel || !effectivelyJoined}
-            title={
-              !linkedTextChannel
-                ? "No attached text chat yet"
-                : effectivelyJoined
-                  ? "Open attached text chat"
-                  : "Join voice to open attached text chat"
-            }
-          >
-            <MessageSquareText className="w-4 h-4" />
-          </Button>
-        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className={cn(
+            "h-8 w-8 text-white/70 hover:bg-white/10 hover:text-white",
+            showTextPanel && "bg-white/10 text-white"
+          )}
+          onClick={() => (showTextPanel ? setIsTextPanelOpen(false) : handleOpenLinkedText())}
+          disabled={!linkedTextChannel || !effectivelyJoined}
+          title={
+            !linkedTextChannel
+              ? "No attached text chat yet"
+              : effectivelyJoined
+                ? "Open attached text chat"
+                : "Join voice to open attached text chat"
+          }
+        >
+          <MessageSquareText className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* Main content */}
@@ -722,7 +745,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
 
       {/* Voice-attached text panel */}
       {showTextPanel && (
-        <aside className="absolute right-0 top-11 bottom-0 z-30 w-full sm:w-[420px] overflow-hidden border-l border-white/15 bg-background/95 backdrop-blur">
+        <aside className="absolute bottom-0 right-0 top-11 z-30 w-full overflow-hidden border-l border-white/15 bg-background/95 backdrop-blur md:top-[57px] sm:w-[420px]">
           <div className="h-full flex flex-col min-h-0">
             <div className="h-11 px-3 border-b border-border/70 flex items-center justify-between bg-background/90">
               <div className="min-w-0">
