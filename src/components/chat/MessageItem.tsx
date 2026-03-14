@@ -1779,6 +1779,37 @@ export const MessageItem = memo(function MessageItem({
                   </button>
                 </>
               )}
+
+              {/* Kick / Ban */}
+              {hasModActions && (
+                <>
+                  <div className="my-2 h-px bg-border" />
+                  {canKickUser && (
+                    <button
+                      className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-orange-500/10 active:bg-orange-500/10 text-left text-orange-400 transition-colors"
+                      onClick={() => {
+                        handleKickUser();
+                        setShowMobileActions(false);
+                      }}
+                    >
+                      <UserX className="w-5 h-5" />
+                      <span className="font-medium">Kick {displayName}</span>
+                    </button>
+                  )}
+                  {canBanUser && (
+                    <button
+                      className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-destructive/10 active:bg-destructive/10 text-left text-destructive transition-colors"
+                      onClick={() => {
+                        handleBanUser();
+                        setShowMobileActions(false);
+                      }}
+                    >
+                      <Ban className="w-5 h-5" />
+                      <span className="font-medium">Ban {displayName}</span>
+                    </button>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </DrawerContent>
