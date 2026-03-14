@@ -1,7 +1,7 @@
 import { useMemo, useEffect, memo, useState, useRef, forwardRef } from "react";
 import { ViewportList } from "react-viewport-list";
 import { cn, pickFirstNonBlank } from "@/lib/utils";
-import { Crown, MessageSquare, Edit3, UserX, Ban, VolumeX, Shield, Users, ChevronDown, Loader2 } from "lucide-react";
+import { Crown, MessageSquare, Edit3, UserX, Ban, VolumeX, Shield, Users, ChevronDown, Loader2, ListChecks, X, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -352,6 +352,44 @@ export const MembersSidebar = () => {
   const offlineLoadingRef = useRef(false);
   const listViewportRef = useRef<HTMLDivElement | null>(null);
 
+  // Mass ban selection mode
+  const [massBanMode, setMassBanMode] = useState(false);
+  const [massBanSelected, setMassBanSelected] = useState<Set<string>>(new Set());
+
+  const toggleMassBanSelection = (userId: string) => {
+    setMassBanSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) {
+        next.delete(userId);
+      } else {
+        next.add(userId);
+      }
+      return next;
+    });
+  };
+
+  const exitMassBanMode = () => {
+    setMassBanMode(false);
+    setMassBanSelected(new Set());
+  };
+
+  const confirmMassBan = () => {
+    if (massBanSelected.size === 0) return;
+    const selectedMembers = [...onlineMembers, ...offlineMembers].filter((m) => massBanSelected.has(m.user_id));
+    openModal("confirmAction", {
+      action: "massBan",
+      members: selectedMembers,
+      title: `Ban ${massBanSelected.size} member${massBanSelected.size > 1 ? "s" : ""}`,
+      message: `Are you sure you want to ban ${massBanSelected.size} member${massBanSelected.size > 1 ? "s" : ""} from the server?`,
+    });
+    exitMassBanMode();
+  };
+
+  // Reset mass ban mode when switching servers
+  useEffect(() => {
+    exitMassBanMode();
+  }, [currentServer?.id]);
+
   // Subscribe to realtime member updates
   useRealtimeMembers(currentServer?.id || null);
 
@@ -689,6 +727,47 @@ export const MembersSidebar = () => {
 
     const hasAdminActions = canKick || canBan || canChangeNickname || canTransfer || canManageRoles;
 
+    // Mass ban selection mode: show checkbox overlay
+    if (massBanMode) {
+      const isSelected = massBanSelected.has(member.user_id);
+      const canSelectForBan = canBan && !isSelf && !isServerOwner;
+
+      return (
+        <div
+          className={cn(
+            "relative cursor-pointer",
+            !canSelectForBan && "opacity-40 pointer-events-none",
+          )}
+          onClick={() => canSelectForBan && toggleMassBanSelection(member.user_id)}
+        >
+          <MemberListItemContent
+            member={member}
+            memberIsOffline={memberIsOffline}
+            presence={presence}
+            displayName={displayName}
+            isServerOwner={isServerOwner}
+            priorityCustomRoleColor={priorityCustomRoleColor}
+            isGradientName={isGradientName}
+            onClick={() => {}}
+          />
+          {canSelectForBan && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              <div
+                className={cn(
+                  "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
+                  isSelected
+                    ? "bg-destructive border-destructive"
+                    : "border-muted-foreground/40 bg-transparent",
+                )}
+              >
+                {isSelected && <Check className="w-3 h-3 text-white" />}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
     const content = (
       <MemberListItemContent
         member={member}
@@ -746,6 +825,19 @@ export const MembersSidebar = () => {
                 >
                   <Ban className="w-4 h-4" />
                   Ban
+                </ContextMenuItem>
+              )}
+
+              {canBan && (
+                <ContextMenuItem
+                  onClick={() => {
+                    setMassBanMode(true);
+                    setMassBanSelected(new Set([member.user_id]));
+                  }}
+                  className="rounded-lg gap-3 text-destructive focus:text-destructive"
+                >
+                  <ListChecks className="w-4 h-4" />
+                  Select for Mass Ban
                 </ContextMenuItem>
               )}
             </>
@@ -972,15 +1064,30 @@ export const MembersSidebar = () => {
   }
 
   const sidebarContent = (
-    <div className="h-full flex flex-col bg-[#111111] w-full overflow-hidden rounded-[10px] border border-white/5">
+    <div className="h-full flex flex-col bg-[#111111] w-full overflow-hidden rounded-[10px] border border-white/5 relative">
       {/* Header */}
       <div className="px-4 py-3 border-b border-white/5">
-        <p className="text-sm text-muted-foreground">Members</p>
-        <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 mt-2">
-          <span className="text-muted-foreground">{onlineCount} online</span>
-          {totalMemberCount != null && <span className="text-muted-foreground">-</span>}
-          {totalMemberCount != null && <span className="text-muted-foreground">{totalMemberCount} members</span>}
-        </p>
+        {massBanMode ? (
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-destructive">Select members to ban</p>
+            <button
+              type="button"
+              onClick={exitMassBanMode}
+              className="p-1 rounded-md hover:bg-secondary/60 transition-colors"
+            >
+              <X className="w-4 h-4 text-muted-foreground" />
+            </button>
+          </div>
+        ) : (
+          <>
+            <p className="text-sm text-muted-foreground">Members</p>
+            <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 mt-2">
+              <span className="text-muted-foreground">{onlineCount} online</span>
+              {totalMemberCount != null && <span className="text-muted-foreground">-</span>}
+              {totalMemberCount != null && <span className="text-muted-foreground">{totalMemberCount} members</span>}
+            </p>
+          </>
+        )}
       </div>
 
       {/* Members List */}
@@ -994,6 +1101,32 @@ export const MembersSidebar = () => {
           {(row) => <div key={row.key}>{renderMemberListRow(row)}</div>}
         </ViewportList>
       </div>
+
+      {/* Mass ban floating action bar */}
+      {massBanMode && (
+        <div className="absolute bottom-4 left-3 right-3 bg-destructive/95 backdrop-blur-sm rounded-xl p-3 flex items-center justify-between shadow-lg border border-destructive/50">
+          <span className="text-sm font-medium text-white">
+            {massBanSelected.size} selected
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={exitMassBanMode}
+              className="px-3 py-1.5 text-xs font-medium text-white/80 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={confirmMassBan}
+              disabled={massBanSelected.size === 0}
+              className="px-3 py-1.5 text-xs font-medium bg-white text-destructive rounded-lg hover:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Ban {massBanSelected.size > 0 ? massBanSelected.size : ""}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 

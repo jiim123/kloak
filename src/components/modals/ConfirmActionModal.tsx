@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import type { ServerMember } from "@/types";
 
-type ActionType = "kick" | "ban" | "mute" | "unmute" | "transferOwnership";
+type ActionType = "kick" | "ban" | "mute" | "unmute" | "transferOwnership" | "massBan";
 
 export const ConfirmActionModal = () => {
   const { activeModal, modalData, closeModal } = useUIStore();
@@ -28,6 +28,7 @@ export const ConfirmActionModal = () => {
   const isOpen = activeModal === "confirmAction";
   const action = modalData?.action as ActionType | undefined;
   const member = modalData?.member as ServerMember | undefined;
+  const massBanMembers = modalData?.members as ServerMember[] | undefined;
   const title = modalData?.title as string | undefined;
   const message = modalData?.message as string | undefined;
 
@@ -36,7 +37,38 @@ export const ConfirmActionModal = () => {
   };
 
   const handleConfirm = async () => {
-    if (!member || !currentServer || !action) return;
+    if (!currentServer || !action) return;
+
+    // Mass ban flow
+    if (action === "massBan" && massBanMembers && massBanMembers.length > 0) {
+      setIsSubmitting(true);
+      try {
+        let successCount = 0;
+        let failCount = 0;
+        for (const m of massBanMembers) {
+          try {
+            await banMember(currentServer.id, m.user_id);
+            successCount++;
+          } catch {
+            failCount++;
+          }
+        }
+        if (failCount === 0) {
+          toast.success(`Banned ${successCount} member${successCount > 1 ? "s" : ""} from the server`);
+        } else {
+          toast.warning(`Banned ${successCount}, failed ${failCount}`);
+        }
+        handleClose();
+      } catch (error) {
+        console.error("Mass ban failed:", error);
+        toast.error("Mass ban failed");
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
+    if (!member) return;
 
     setIsSubmitting(true);
 
@@ -84,6 +116,7 @@ export const ConfirmActionModal = () => {
       case "kick":
         return "bg-orange-500 hover:bg-orange-600";
       case "ban":
+      case "massBan":
         return "bg-destructive hover:bg-destructive/90";
       case "transferOwnership":
         return "bg-yellow-500 hover:bg-yellow-600 text-black";
@@ -98,6 +131,8 @@ export const ConfirmActionModal = () => {
         return "Kick";
       case "ban":
         return "Ban";
+      case "massBan":
+        return `Ban ${massBanMembers?.length ?? ""} Members`;
       case "mute":
         return "Mute";
       case "unmute":
@@ -126,6 +161,20 @@ export const ConfirmActionModal = () => {
               <p className="text-muted-foreground text-sm">
                 They will not be able to rejoin the server until unbanned.
               </p>
+            )}
+            {action === "massBan" && massBanMembers && (
+              <div className="space-y-2">
+                <p className="text-muted-foreground text-sm">
+                  They will not be able to rejoin the server until unbanned.
+                </p>
+                <div className="max-h-32 overflow-y-auto rounded-lg bg-secondary/30 p-2 space-y-1">
+                  {massBanMembers.map((m) => (
+                    <p key={m.user_id} className="text-sm text-foreground">
+                      {m.nickname || m.user?.display_name || m.user?.username}
+                    </p>
+                  ))}
+                </div>
+              </div>
             )}
             {action === "transferOwnership" && (
               <p className="text-destructive text-sm font-medium">
