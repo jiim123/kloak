@@ -43,6 +43,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { useSyncStore } from "@/stores/syncStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
+import { canModerateByRoles } from "@/lib/permissions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MessageContent } from "./MessageContent";
 import { PollMessage } from "./PollMessage";
