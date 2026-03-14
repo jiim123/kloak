@@ -37,7 +37,38 @@ export const ConfirmActionModal = () => {
   };
 
   const handleConfirm = async () => {
-    if (!member || !currentServer || !action) return;
+    if (!currentServer || !action) return;
+
+    // Mass ban flow
+    if (action === "massBan" && massBanMembers && massBanMembers.length > 0) {
+      setIsSubmitting(true);
+      try {
+        let successCount = 0;
+        let failCount = 0;
+        for (const m of massBanMembers) {
+          try {
+            await banMember(currentServer.id, m.user_id);
+            successCount++;
+          } catch {
+            failCount++;
+          }
+        }
+        if (failCount === 0) {
+          toast.success(`Banned ${successCount} member${successCount > 1 ? "s" : ""} from the server`);
+        } else {
+          toast.warning(`Banned ${successCount}, failed ${failCount}`);
+        }
+        handleClose();
+      } catch (error) {
+        console.error("Mass ban failed:", error);
+        toast.error("Mass ban failed");
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
+    if (!member) return;
 
     setIsSubmitting(true);
 
