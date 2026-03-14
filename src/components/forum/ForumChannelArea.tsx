@@ -29,6 +29,9 @@ import {
   ArrowLeft,
   Users,
   Layers,
+  Pin,
+  Lock,
+  LockOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -70,6 +73,8 @@ interface Thread {
   channel_id: string;
   created_by: string;
   created_at: string;
+  is_pinned: boolean;
+  is_closed: boolean;
   message?: Message;
   message_count?: number;
   last_activity?: string;
@@ -117,6 +122,14 @@ const getGradientTextStyle = (gradient: string): CSSProperties =>
   }) as CSSProperties;
 const forumMetaChipClass =
   "inline-flex items-center gap-1.5 border border-border bg-background px-2 py-0.5 text-[11px] text-muted-foreground";
+
+const sortThreads = (threadList: Thread[]) =>
+  [...threadList].sort((a, b) => {
+    if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
+    const aTime = new Date(a.last_activity ?? a.created_at).getTime();
+    const bTime = new Date(b.last_activity ?? b.created_at).getTime();
+    return bTime - aTime;
+  });
 
 const revokeAttachmentPreviews = (attachments: PendingAttachment[]) => {
   attachments.forEach((attachment) => URL.revokeObjectURL(attachment.preview));
@@ -637,7 +650,7 @@ export const ForumChannelArea = () => {
           };
         });
 
-        setThreads(threadsWithInfo);
+        setThreads(sortThreads(threadsWithInfo));
       } catch (error) {
         handleError(error, "Failed to fetch threads");
       } finally {
@@ -915,17 +928,19 @@ export const ForumChannelArea = () => {
 
             // Update thread message count locally instead of full refresh
             setThreads((prev) =>
-              prev.map((thread) => {
-                if (thread.id === currentThreadId) {
-                  return {
-                    ...thread,
-                    message_count: (thread.message_count || 0) + 1,
-                    last_activity: newMsg.created_at,
-                    last_message_author: userData,
-                  };
-                }
-                return thread;
-              }),
+              sortThreads(
+                prev.map((thread) => {
+                  if (thread.id === currentThreadId) {
+                    return {
+                      ...thread,
+                      message_count: (thread.message_count || 0) + 1,
+                      last_activity: newMsg.created_at,
+                      last_message_author: userData,
+                    };
+                  }
+                  return thread;
+                }),
+              ),
             );
           } catch (error) {
             // Failed to handle new thread message
@@ -1103,15 +1118,17 @@ export const ForumChannelArea = () => {
 
             // Update thread message count locally
             setThreads((prev) =>
-              prev.map((thread) => {
-                if (thread.id === threadId) {
-                  return {
-                    ...thread,
-                    message_count: Math.max(0, (thread.message_count || 0) - 1),
-                  };
-                }
-                return thread;
-              }),
+              sortThreads(
+                prev.map((thread) => {
+                  if (thread.id === threadId) {
+                    return {
+                      ...thread,
+                      message_count: Math.max(0, (thread.message_count || 0) - 1),
+                    };
+                  }
+                  return thread;
+                }),
+              ),
             );
           } catch (error) {
             // Failed to handle thread message delete
@@ -1199,6 +1216,12 @@ export const ForumChannelArea = () => {
     async (threadId: string) => {
       if (!user || (!replyContent.trim() && replyPendingAttachments.length === 0)) return;
 
+      const targetThread = threads.find((thread) => thread.id === threadId);
+      if (targetThread?.is_closed && !canManageMessages) {
+        showWarning("Thread closed", "This topic is closed.");
+        return;
+      }
+
       const content = replyContent.trim();
       setIsSendingReply(true);
 
@@ -1270,15 +1293,18 @@ export const ForumChannelArea = () => {
 
         // Update thread message count locally instead of full refresh
         setThreads((prev) =>
-          prev.map((thread) => {
-            if (thread.id === threadId) {
-              return {
-                ...thread,
-                message_count: (thread.message_count || 0) + 1,
-              };
-            }
-            return thread;
-          }),
+          sortThreads(
+            prev.map((thread) => {
+              if (thread.id === threadId) {
+                return {
+                  ...thread,
+                  message_count: (thread.message_count || 0) + 1,
+                  last_activity: messageData.created_at || new Date().toISOString(),
+                };
+              }
+              return thread;
+            }),
+          ),
         );
         if (currentChannel?.id) {
           void markAsRead(currentChannel.id);
@@ -1292,7 +1318,60 @@ export const ForumChannelArea = () => {
         setIsSendingReply(false);
       }
     },
-    [user, replyContent, currentChannel, replyingToThread, replyPendingAttachments, uploadPendingAttachments, clearPendingAttachments, markAsRead],
+    [
+      user,
+      replyContent,
+      currentChannel,
+      replyingToThread,
+      replyPendingAttachments,
+      uploadPendingAttachments,
+      clearPendingAttachments,
+      markAsRead,
+      threads,
+      canManageMessages,
+    ],
+  );
+
+  const handleUpdateThreadModeration = useCallback(
+    async (threadId: string, updates: { is_pinned?: boolean; is_closed?: boolean }) => {
+      if (!user) return;
+
+      try {
+        const { data, error } = await (supabase.rpc as any)("update_forum_thread_moderation", {
+          _thread_id: threadId,
+          _user_id: user.id,
+          _is_pinned: typeof updates.is_pinned === "boolean" ? updates.is_pinned : null,
+          _is_closed: typeof updates.is_closed === "boolean" ? updates.is_closed : null,
+        });
+
+        if (error) throw error;
+
+        const moderation = typeof data === "string" ? JSON.parse(data) : data;
+        setThreads((prev) =>
+          sortThreads(
+            prev.map((thread) =>
+              thread.id === threadId
+                ? {
+                    ...thread,
+                    is_pinned: moderation?.is_pinned ?? thread.is_pinned,
+                    is_closed: moderation?.is_closed ?? thread.is_closed,
+                  }
+                : thread,
+            ),
+          ),
+        );
+
+        if (updates.is_pinned !== undefined) {
+          showSuccess(updates.is_pinned ? "Topic pinned" : "Topic unpinned");
+        }
+        if (updates.is_closed !== undefined) {
+          showSuccess(updates.is_closed ? "Topic closed" : "Topic reopened");
+        }
+      } catch (error) {
+        handleError(error, "Failed to update topic");
+      }
+    },
+    [user],
   );
 
   const handleThreadClick = useCallback(
@@ -1374,6 +1453,10 @@ export const ForumChannelArea = () => {
     setShowFormatToolbar(false);
   }, [clearPendingAttachments]);
 
+  const selectedThread = selectedThreadId ? threads.find((thread) => thread.id === selectedThreadId) ?? null : null;
+  const selectedThreadIsClosed = !!selectedThread?.is_closed;
+  const canReplyToSelectedThread = !!selectedThread && (!selectedThreadIsClosed || canManageMessages);
+
   const handleEditMessage = useCallback(
     async (messageId: string) => {
       if (!user || !editContent.trim()) return;
@@ -1441,15 +1524,17 @@ export const ForumChannelArea = () => {
 
         // Update thread count
         setThreads((prev) =>
-          prev.map((thread) => {
-            if (thread.id === selectedThreadId) {
-              return {
-                ...thread,
-                message_count: Math.max(0, (thread.message_count || 0) - 1),
-              };
-            }
-            return thread;
-          }),
+          sortThreads(
+            prev.map((thread) => {
+              if (thread.id === selectedThreadId) {
+                return {
+                  ...thread,
+                  message_count: Math.max(0, (thread.message_count || 0) - 1),
+                };
+              }
+              return thread;
+            }),
+          ),
         );
 
         setShowDeleteModal(false);
@@ -1579,7 +1664,21 @@ export const ForumChannelArea = () => {
   );
 
   const renderThreadReplyComposer = (threadId: string) => {
+    const thread = threads.find((item) => item.id === threadId);
+    const isClosed = !!thread?.is_closed;
+    const canReply = !isClosed || canManageMessages;
     const replyToMsg = replyingToThread ? threadMessages[threadId]?.find((m) => m.id === replyingToThread) : null;
+
+    if (!canReply) {
+      return (
+        <div className="border-t border-border bg-background p-3">
+          <div className="flex items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+            <Lock className="h-4 w-4" />
+            <span>This topic is closed</span>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className="border-t border-border bg-background p-3">
@@ -1891,10 +1990,19 @@ export const ForumChannelArea = () => {
                     className={`group/thread relative w-full cursor-pointer text-left transition-colors ${
                       isSelected
                         ? "bg-muted/35"
-                        : "bg-background hover:bg-muted/20"
+                        : thread.is_pinned
+                          ? "bg-amber-500/10 hover:bg-amber-500/14"
+                          : "bg-background hover:bg-muted/20"
                     }`}
                   >
-                    {isSelected && <div className="absolute inset-y-0 left-0 w-0.5 bg-foreground/70" />}
+                    {(isSelected || thread.is_pinned) && (
+                      <div
+                        className={cn(
+                          "absolute inset-y-0 left-0 w-0.5",
+                          isSelected ? "bg-foreground/70" : "bg-amber-500/65",
+                        )}
+                      />
+                    )}
 
                     <div className="p-3 md:p-4">
                       {/* Desktop: Single line layout */}
@@ -1929,6 +2037,18 @@ export const ForumChannelArea = () => {
                             />
                             <span>{replyCount > 0 ? `${replyCount} replies` : "No replies"}</span>
                           </div>
+                          {thread.is_pinned && (
+                            <div className={forumMetaChipClass}>
+                              <Pin className="h-3.5 w-3.5" />
+                              <span>Pinned</span>
+                            </div>
+                          )}
+                          {thread.is_closed && (
+                            <div className={forumMetaChipClass}>
+                              <Lock className="h-3.5 w-3.5" />
+                              <span>Closed</span>
+                            </div>
+                          )}
                           <div className={forumMetaChipClass}>
                             <Clock className="h-3.5 w-3.5" />
                             <span>
@@ -1984,6 +2104,18 @@ export const ForumChannelArea = () => {
                             />
                             <span>{replyCount > 0 ? `${replyCount} replies` : "No replies"}</span>
                           </div>
+                          {thread.is_pinned && (
+                            <div className={forumMetaChipClass}>
+                              <Pin className="w-3.5 h-3.5" />
+                              <span>Pinned</span>
+                            </div>
+                          )}
+                          {thread.is_closed && (
+                            <div className={forumMetaChipClass}>
+                              <Lock className="w-3.5 h-3.5" />
+                              <span>Closed</span>
+                            </div>
+                          )}
                           <div className={forumMetaChipClass}>
                             <Clock className="w-3.5 h-3.5" />
                             <span>
@@ -2044,6 +2176,38 @@ export const ForumChannelArea = () => {
                       <h3 className="truncate text-lg font-semibold">{threadTitle}</h3>
                     </div>
                     <div className="flex items-center gap-1">
+                      {canManageMessages && selectedThread && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              void handleUpdateThreadModeration(selectedThread.id, { is_pinned: !selectedThread.is_pinned })
+                            }
+                            className={cn(
+                              "h-8 w-8 p-0 text-muted-foreground",
+                              selectedThread.is_pinned && "text-amber-600 hover:text-amber-600",
+                            )}
+                            title={selectedThread.is_pinned ? "Unpin topic" : "Pin topic"}
+                          >
+                            <Pin className="w-4 h-4 translate-y-px" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              void handleUpdateThreadModeration(selectedThread.id, { is_closed: !selectedThread.is_closed })
+                            }
+                            className={cn(
+                              "h-8 w-8 p-0 text-muted-foreground",
+                              selectedThread.is_closed && "text-amber-600 hover:text-amber-600",
+                            )}
+                            title={selectedThread.is_closed ? "Reopen topic" : "Close topic"}
+                          >
+                            {selectedThread.is_closed ? <LockOpen className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                          </Button>
+                        </>
+                      )}
                       {(user?.id === selectedThread?.created_by || canManageMessages) && (
                         <Button
                           variant="ghost"
@@ -2109,6 +2273,18 @@ export const ForumChannelArea = () => {
                                 {selectedThread?.created_at &&
                                   formatDistanceToNow(new Date(selectedThread.created_at), { addSuffix: true })}
                               </span>
+                              {selectedThread?.is_pinned && (
+                                <span className={forumMetaChipClass}>
+                                  <Pin className="h-3 w-3" />
+                                  <span>Pinned</span>
+                                </span>
+                              )}
+                              {selectedThread?.is_closed && (
+                                <span className={forumMetaChipClass}>
+                                  <Lock className="h-3 w-3" />
+                                  <span>Closed</span>
+                                </span>
+                              )}
                             </div>
                             <div className="text-sm text-foreground">
                               <MessageContent
@@ -2354,23 +2530,25 @@ export const ForumChannelArea = () => {
                                   </EmojiGifPicker>
 
                                   {/* Reply */}
-                                  <button
-                                    type="button"
-                                    className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      setReplyingToThread(msg.id);
-                                    }}
-                                    onMouseDown={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                    }}
-                                    aria-label="Reply"
-                                    title="Reply"
-                                  >
-                                    <Reply className="w-4 h-4" />
-                                  </button>
+                                  {canReplyToSelectedThread && (
+                                    <button
+                                      type="button"
+                                      className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setReplyingToThread(msg.id);
+                                      }}
+                                      onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                      }}
+                                      aria-label="Reply"
+                                      title="Reply"
+                                    >
+                                      <Reply className="w-4 h-4" />
+                                    </button>
+                                  )}
 
                                   {/* Edit (own messages) */}
                                   {isOwnMessage && (
@@ -2449,6 +2627,38 @@ export const ForumChannelArea = () => {
                         <ArrowLeft className="w-5 h-5" />
                       </Button>
                       <h3 className="text-lg font-medium flex-1 truncate">{threadTitle}</h3>
+                      {canManageMessages && selectedThread && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              void handleUpdateThreadModeration(selectedThread.id, { is_pinned: !selectedThread.is_pinned })
+                            }
+                            className={cn(
+                              "h-9 w-9 p-0 text-muted-foreground",
+                              selectedThread.is_pinned && "text-amber-600 hover:text-amber-600",
+                            )}
+                            title={selectedThread.is_pinned ? "Unpin topic" : "Pin topic"}
+                          >
+                            <Pin className="w-4 h-4 translate-y-px" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              void handleUpdateThreadModeration(selectedThread.id, { is_closed: !selectedThread.is_closed })
+                            }
+                            className={cn(
+                              "h-9 w-9 p-0 text-muted-foreground",
+                              selectedThread.is_closed && "text-amber-600 hover:text-amber-600",
+                            )}
+                            title={selectedThread.is_closed ? "Reopen topic" : "Close topic"}
+                          >
+                            {selectedThread.is_closed ? <LockOpen className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                          </Button>
+                        </>
+                      )}
                       {(user?.id === selectedThread?.created_by || canManageMessages) && (
                         <Button
                           variant="ghost"
@@ -2502,6 +2712,18 @@ export const ForumChannelArea = () => {
                                   {selectedThread?.created_at &&
                                     formatDistanceToNow(new Date(selectedThread.created_at), { addSuffix: true })}
                                 </span>
+                                {selectedThread?.is_pinned && (
+                                  <span className={forumMetaChipClass}>
+                                    <Pin className="h-3 w-3" />
+                                    <span>Pinned</span>
+                                  </span>
+                                )}
+                                {selectedThread?.is_closed && (
+                                  <span className={forumMetaChipClass}>
+                                    <Lock className="h-3 w-3" />
+                                    <span>Closed</span>
+                                  </span>
+                                )}
                               </div>
                               <div className="text-sm text-foreground">
                                 <MessageContent
@@ -2747,19 +2969,21 @@ export const ForumChannelArea = () => {
                                     </EmojiGifPicker>
 
                                     {/* Reply */}
-                                    <button
-                                      type="button"
-                                      className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        setReplyingToThread(msg.id);
-                                      }}
-                                      aria-label="Reply"
-                                      title="Reply"
-                                    >
-                                      <Reply className="w-4 h-4" />
-                                    </button>
+                                    {canReplyToSelectedThread && (
+                                      <button
+                                        type="button"
+                                        className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          setReplyingToThread(msg.id);
+                                        }}
+                                        aria-label="Reply"
+                                        title="Reply"
+                                      >
+                                        <Reply className="w-4 h-4" />
+                                      </button>
+                                    )}
 
                                     {/* Edit (own messages) */}
                                     {isOwnMessage && (

@@ -2111,6 +2111,8 @@ export type Database = {
           created_at: string | null
           created_by: string
           id: string
+          is_closed: boolean
+          is_pinned: boolean
           message_id: string
         }
         Insert: {
@@ -2118,6 +2120,8 @@ export type Database = {
           created_at?: string | null
           created_by: string
           id?: string
+          is_closed?: boolean
+          is_pinned?: boolean
           message_id: string
         }
         Update: {
@@ -2125,6 +2129,8 @@ export type Database = {
           created_at?: string | null
           created_by?: string
           id?: string
+          is_closed?: boolean
+          is_pinned?: boolean
           message_id?: string
         }
         Relationships: [
