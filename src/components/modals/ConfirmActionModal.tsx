@@ -131,6 +131,8 @@ export const ConfirmActionModal = () => {
         return "Kick";
       case "ban":
         return "Ban";
+      case "massBan":
+        return `Ban ${massBanMembers?.length ?? ""} Members`;
       case "mute":
         return "Mute";
       case "unmute":
