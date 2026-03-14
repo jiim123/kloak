@@ -116,6 +116,7 @@ export const ConfirmActionModal = () => {
       case "kick":
         return "bg-orange-500 hover:bg-orange-600";
       case "ban":
+      case "massBan":
         return "bg-destructive hover:bg-destructive/90";
       case "transferOwnership":
         return "bg-yellow-500 hover:bg-yellow-600 text-black";
