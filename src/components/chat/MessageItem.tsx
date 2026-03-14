@@ -14,6 +14,8 @@ import {
   EyeOff,
   Paperclip,
   Loader2,
+  UserX,
+  Ban,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
