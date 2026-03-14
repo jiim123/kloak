@@ -14,6 +14,8 @@ import {
   EyeOff,
   Paperclip,
   Loader2,
+  UserX,
+  Ban,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
@@ -41,6 +43,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { useSyncStore } from "@/stores/syncStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
+import { canModerateByRoles } from "@/lib/permissions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MessageContent } from "./MessageContent";
 import { PollMessage } from "./PollMessage";
@@ -572,12 +575,19 @@ export const MessageItem = memo(function MessageItem({
   // RoleIconWrapper moved outside component body (FIX 5)
 
   // Permissions
-  const { hasPermission } = useMemberPermissions(message.channel_id);
+  const { hasPermission, isOwner: currentUserIsOwner } = useMemberPermissions(message.channel_id);
   const canPinMessages = hasPermission("pin_messages");
   const canManageMessages = hasPermission("manage_messages");
   const canAddReactions = hasPermission("add_reactions");
   const canUseExternalEmojis = hasPermission("use_external_emojis");
   const isAdmin = canManageMessages;
+
+  // Kick/Ban permissions for avatar context menu
+  const isMessageAuthorOwner = currentServer?.owner_id === message.user_id;
+  const canModTarget = canModerateByRoles(currentUserIsOwner, currentMember?.roles, isMessageAuthorOwner, messageRoles);
+  const canKickUser = hasPermission("kick_members") && canModTarget && !isOwnMessage;
+  const canBanUser = hasPermission("ban_members") && canModTarget && !isOwnMessage;
+  const hasModActions = canKickUser || canBanUser;
 
   const isMentioned = useMemo(() => {
     if (!user?.id) return false;
@@ -928,6 +938,26 @@ export const MessageItem = memo(function MessageItem({
     [message.user_id, openModal, showGhostIdentity],
   );
 
+  const handleKickUser = useCallback(() => {
+    if (!messageMember) return;
+    openModal("confirmAction", {
+      action: "kick",
+      member: messageMember,
+      title: `Kick ${displayName}`,
+      message: `Are you sure you want to kick ${displayName} from the server?`,
+    });
+  }, [messageMember, displayName, openModal]);
+
+  const handleBanUser = useCallback(() => {
+    if (!messageMember) return;
+    openModal("confirmAction", {
+      action: "ban",
+      member: messageMember,
+      title: `Ban ${displayName}`,
+      message: `Are you sure you want to ban ${displayName} from the server? They will not be able to rejoin.`,
+    });
+  }, [messageMember, displayName, openModal]);
+
   const handleReplyClick = useCallback(
     (e: React.MouseEvent | React.TouchEvent) => {
       e.preventDefault();
@@ -992,6 +1022,38 @@ export const MessageItem = memo(function MessageItem({
                           >
                             <Eye className="w-5 h-5 text-muted-foreground" />
                           </div>
+                        ) : hasModActions ? (
+                          <ContextMenu>
+                            <ContextMenuTrigger asChild>
+                              <AvatarWithDecoration
+                                user={messageUser}
+                                className={cn(messageAvatarSizeClass, "cursor-pointer")}
+                                active={isRowHovered}
+                                onClick={handleUsernameClick}
+                                freezeGifUntilHover
+                              />
+                            </ContextMenuTrigger>
+                            <ContextMenuContent className="w-48 rounded-xl border-border/50 p-1.5 z-[60]">
+                              {canKickUser && (
+                                <ContextMenuItem
+                                  onClick={handleKickUser}
+                                  className="rounded-lg gap-3 text-orange-400 focus:text-orange-400"
+                                >
+                                  <UserX className="w-4 h-4" />
+                                  Kick {displayName}
+                                </ContextMenuItem>
+                              )}
+                              {canBanUser && (
+                                <ContextMenuItem
+                                  onClick={handleBanUser}
+                                  className="rounded-lg gap-3 text-destructive focus:text-destructive"
+                                >
+                                  <Ban className="w-4 h-4" />
+                                  Ban {displayName}
+                                </ContextMenuItem>
+                              )}
+                            </ContextMenuContent>
+                          </ContextMenu>
                         ) : (
                           <AvatarWithDecoration
                             user={messageUser}
@@ -1715,6 +1777,37 @@ export const MessageItem = memo(function MessageItem({
                     <Trash2 className="w-5 h-5" />
                     <span className="font-medium">Delete Message</span>
                   </button>
+                </>
+              )}
+
+              {/* Kick / Ban */}
+              {hasModActions && (
+                <>
+                  <div className="my-2 h-px bg-border" />
+                  {canKickUser && (
+                    <button
+                      className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-orange-500/10 active:bg-orange-500/10 text-left text-orange-400 transition-colors"
+                      onClick={() => {
+                        handleKickUser();
+                        setShowMobileActions(false);
+                      }}
+                    >
+                      <UserX className="w-5 h-5" />
+                      <span className="font-medium">Kick {displayName}</span>
+                    </button>
+                  )}
+                  {canBanUser && (
+                    <button
+                      className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-destructive/10 active:bg-destructive/10 text-left text-destructive transition-colors"
+                      onClick={() => {
+                        handleBanUser();
+                        setShowMobileActions(false);
+                      }}
+                    >
+                      <Ban className="w-5 h-5" />
+                      <span className="font-medium">Ban {displayName}</span>
+                    </button>
+                  )}
                 </>
               )}
             </div>
