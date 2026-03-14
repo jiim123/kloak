@@ -600,7 +600,7 @@ export const UserProfilePopup = () => {
         profileUser.profile_theme_primary && profileUser.profile_theme_accent
           ? `linear-gradient(180deg, ${profileUser.profile_theme_primary} 0%, ${profileUser.profile_theme_accent} 100%)`
           : `linear-gradient(180deg, ${withAlpha(profileUser.banner_color, "33")} 0%, ${withAlpha(profileUser.banner_color, "12")} 100%)`,
-      ["--profile-muted" as "--profile-muted"]: muted,
+      ["--profile-muted" as string]: muted,
     };
 
     return (
