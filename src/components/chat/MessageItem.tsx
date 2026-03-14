@@ -958,7 +958,7 @@ export const MessageItem = memo(function MessageItem({
     });
   }, [messageMember, displayName, openModal]);
 
-
+  const handleReplyClick = useCallback(
     (e: React.MouseEvent | React.TouchEvent) => {
       e.preventDefault();
       e.stopPropagation();
