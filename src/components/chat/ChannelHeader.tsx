@@ -1,9 +1,10 @@
-import { Hash, Volume2, MessageSquare, Pin, Search, Lock, Megaphone, Film } from "lucide-react";
+import { Hash, Volume2, MessageSquare, Pin, Search, Lock, Megaphone, Film, Users } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useUIStore } from "@/stores/uiStore";
+import { useServerStore } from "@/stores/serverStore";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { SupportUsButton } from "@/components/support/SupportUsButton";
 import type { Channel } from "@/types";
@@ -14,6 +15,9 @@ interface ChannelHeaderProps {
 
 export const ChannelHeader = ({ channel }: ChannelHeaderProps) => {
   const openModal = useUIStore((s) => s.openModal);
+  const isMemberSidebarOpen = useUIStore((s) => s.isMemberSidebarOpen);
+  const setMemberSidebarOpen = useUIStore((s) => s.setMemberSidebarOpen);
+  const currentServer = useServerStore((s) => s.currentServer);
 
   const ChannelIcon = channel.type === "voice" ? Volume2 : channel.type === "forum" ? MessageSquare : channel.type === "announcement" ? Megaphone : channel.type === "media" ? Film : Hash;
 
@@ -87,6 +91,23 @@ export const ChannelHeader = ({ channel }: ChannelHeaderProps) => {
           </TooltipTrigger>
           <TooltipContent>Search Messages</TooltipContent>
         </Tooltip>
+
+        {currentServer && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground"
+                onClick={() => setMemberSidebarOpen(!isMemberSidebarOpen)}
+                aria-label={isMemberSidebarOpen ? "Hide member sidebar" : "Show member sidebar"}
+              >
+                <Users className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{isMemberSidebarOpen ? "Hide Member Sidebar" : "Show Member Sidebar"}</TooltipContent>
+          </Tooltip>
+        )}
 
         <NotificationBell />
         <SupportUsButton tooltipsEnabled />

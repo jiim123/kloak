@@ -33,6 +33,9 @@ import type { Badge } from "@/types/badge";
 import type { User, UserStatus } from "@/types";
 import type { UserProfileAnchorRect } from "@/lib/userProfilePopover";
 
+type UserProfileAnchorSide = "left" | "right";
+type UserProfileAnchorAlign = "auto" | "center";
+
 const statusColors: Record<UserStatus, string> = {
   online: "bg-[hsl(var(--kloak-success))]",
   idle: "bg-[hsl(var(--kloak-warning))]",
@@ -94,7 +97,13 @@ const isLightTheme = (primary?: string | null, accent?: string | null, fallback?
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
-const getAnchoredPosition = (anchorRect: UserProfileAnchorRect | undefined, cardHeight: number) => {
+const getAnchoredPosition = (
+  anchorRect: UserProfileAnchorRect | undefined,
+  cardHeight: number,
+  anchorSide: UserProfileAnchorSide = "right",
+  anchorAlign: UserProfileAnchorAlign = "auto",
+  anchorOffset = 10,
+) => {
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
   const fallbackLeft = viewportWidth / 2 - DESKTOP_CARD_WIDTH / 2;
@@ -107,22 +116,46 @@ const getAnchoredPosition = (anchorRect: UserProfileAnchorRect | undefined, card
     };
   }
 
-  const preferredBelow = anchorRect.bottom + 10;
-  const preferredAbove = anchorRect.top - cardHeight - 10;
-  const fitsBelow = preferredBelow + cardHeight <= viewportHeight - VIEWPORT_MARGIN;
-  const fitsAbove = preferredAbove >= VIEWPORT_MARGIN;
-  const top = fitsBelow
-    ? preferredBelow
-    : fitsAbove
-      ? preferredAbove
-      : clamp(preferredBelow, VIEWPORT_MARGIN, viewportHeight - cardHeight - VIEWPORT_MARGIN);
+  const top =
+    anchorAlign === "center"
+      ? clamp(
+          anchorRect.top + anchorRect.height / 2 - cardHeight / 2,
+          VIEWPORT_MARGIN,
+          viewportHeight - cardHeight - VIEWPORT_MARGIN,
+        )
+      : (() => {
+          const preferredBelow = anchorRect.bottom + 10;
+          const preferredAbove = anchorRect.top - cardHeight - 10;
+          const fitsBelow = preferredBelow + cardHeight <= viewportHeight - VIEWPORT_MARGIN;
+          const fitsAbove = preferredAbove >= VIEWPORT_MARGIN;
 
-  const preferredLeft = anchorRect.left;
+          return fitsBelow
+            ? preferredBelow
+            : fitsAbove
+              ? preferredAbove
+              : clamp(preferredBelow, VIEWPORT_MARGIN, viewportHeight - cardHeight - VIEWPORT_MARGIN);
+        })();
+
+  const fitsToLeft = anchorRect.left - anchorOffset - DESKTOP_CARD_WIDTH >= VIEWPORT_MARGIN;
+  const fitsToRight = anchorRect.right + anchorOffset + DESKTOP_CARD_WIDTH <= viewportWidth - VIEWPORT_MARGIN;
+  const leftOfAnchor = anchorRect.left - DESKTOP_CARD_WIDTH - anchorOffset;
+  const rightOfAnchor = anchorRect.right + anchorOffset;
+  const alignedLeft = anchorRect.left;
   const rightAligned = anchorRect.right - DESKTOP_CARD_WIDTH;
-  const left =
-    preferredLeft + DESKTOP_CARD_WIDTH <= viewportWidth - VIEWPORT_MARGIN
-      ? preferredLeft
-      : clamp(rightAligned, VIEWPORT_MARGIN, viewportWidth - DESKTOP_CARD_WIDTH - VIEWPORT_MARGIN);
+
+  let left: number;
+  if (anchorSide === "left") {
+    left = fitsToLeft
+      ? leftOfAnchor
+      : fitsToRight
+        ? rightOfAnchor
+        : clamp(rightAligned, VIEWPORT_MARGIN, viewportWidth - DESKTOP_CARD_WIDTH - VIEWPORT_MARGIN);
+  } else {
+    left =
+      alignedLeft + DESKTOP_CARD_WIDTH <= viewportWidth - VIEWPORT_MARGIN
+        ? alignedLeft
+        : clamp(rightAligned, VIEWPORT_MARGIN, viewportWidth - DESKTOP_CARD_WIDTH - VIEWPORT_MARGIN);
+  }
 
   return { left, top };
 };
@@ -165,6 +198,9 @@ export const UserProfilePopup = () => {
   const isOpen = activeModal === "userProfile";
   const userId = modalData?.userId as string | undefined;
   const anchorRect = modalData?.anchorRect as UserProfileAnchorRect | undefined;
+  const anchorSide = (modalData?.anchorSide as UserProfileAnchorSide | undefined) ?? "right";
+  const anchorAlign = (modalData?.anchorAlign as UserProfileAnchorAlign | undefined) ?? "auto";
+  const anchorOffset = typeof modalData?.anchorOffset === "number" ? modalData.anchorOffset : 10;
 
   const applyCooldownFromDeclinedAt = useCallback((declinedAtRaw: string | null | undefined) => {
     if (!declinedAtRaw) {
@@ -327,13 +363,13 @@ export const UserProfilePopup = () => {
     const updatePosition = () => {
       const rect = cardRef.current?.getBoundingClientRect();
       const height = rect?.height ?? 480;
-      setPosition(getAnchoredPosition(anchorRect, height));
+      setPosition(getAnchoredPosition(anchorRect, height, anchorSide, anchorAlign, anchorOffset));
     };
 
     updatePosition();
     window.addEventListener("resize", updatePosition);
     return () => window.removeEventListener("resize", updatePosition);
-  }, [anchorRect, isLoading, isMobile, isOpen, profileUser, sharedServers.length]);
+  }, [anchorAlign, anchorOffset, anchorRect, anchorSide, isLoading, isMobile, isOpen, profileUser, sharedServers.length]);
 
   const isSelf = currentUser?.id === userId;
   const isFriend = friends.some((f) => f.id === userId);

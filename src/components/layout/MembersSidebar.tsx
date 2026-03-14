@@ -465,7 +465,12 @@ export const MembersSidebar = () => {
   }, [onlineMembers, roles]);
 
   const handleMemberClick = (member: ServerMember, anchor?: HTMLElement | null) => {
-    openUserProfileModal(openModal, member.user_id, anchor ?? null, { user: member.user });
+    openUserProfileModal(openModal, member.user_id, anchor ?? null, {
+      user: member.user,
+      anchorAlign: "center",
+      anchorOffset: 20,
+      anchorSide: "left",
+    });
   };
 
   const handleMessage = async (member: ServerMember) => {
