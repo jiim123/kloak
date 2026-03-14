@@ -575,12 +575,19 @@ export const MessageItem = memo(function MessageItem({
   // RoleIconWrapper moved outside component body (FIX 5)
 
   // Permissions
-  const { hasPermission } = useMemberPermissions(message.channel_id);
+  const { hasPermission, isOwner: currentUserIsOwner } = useMemberPermissions(message.channel_id);
   const canPinMessages = hasPermission("pin_messages");
   const canManageMessages = hasPermission("manage_messages");
   const canAddReactions = hasPermission("add_reactions");
   const canUseExternalEmojis = hasPermission("use_external_emojis");
   const isAdmin = canManageMessages;
+
+  // Kick/Ban permissions for avatar context menu
+  const isMessageAuthorOwner = currentServer?.owner_id === message.user_id;
+  const canModTarget = canModerateByRoles(currentUserIsOwner, currentMember?.roles, isMessageAuthorOwner, messageRoles);
+  const canKickUser = hasPermission("kick_members") && canModTarget && !isOwnMessage;
+  const canBanUser = hasPermission("ban_members") && canModTarget && !isOwnMessage;
+  const hasModActions = canKickUser || canBanUser;
 
   const isMentioned = useMemo(() => {
     if (!user?.id) return false;
