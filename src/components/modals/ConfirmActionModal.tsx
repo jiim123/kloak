@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import type { ServerMember } from "@/types";
 
-type ActionType = "kick" | "ban" | "mute" | "unmute" | "transferOwnership";
+type ActionType = "kick" | "ban" | "mute" | "unmute" | "transferOwnership" | "massBan";
 
 export const ConfirmActionModal = () => {
   const { activeModal, modalData, closeModal } = useUIStore();
@@ -28,6 +28,7 @@ export const ConfirmActionModal = () => {
   const isOpen = activeModal === "confirmAction";
   const action = modalData?.action as ActionType | undefined;
   const member = modalData?.member as ServerMember | undefined;
+  const massBanMembers = modalData?.members as ServerMember[] | undefined;
   const title = modalData?.title as string | undefined;
   const message = modalData?.message as string | undefined;
 
