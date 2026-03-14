@@ -1064,15 +1064,30 @@ export const MembersSidebar = () => {
   }
 
   const sidebarContent = (
-    <div className="h-full flex flex-col bg-[#111111] w-full overflow-hidden rounded-[10px] border border-white/5">
+    <div className="h-full flex flex-col bg-[#111111] w-full overflow-hidden rounded-[10px] border border-white/5 relative">
       {/* Header */}
       <div className="px-4 py-3 border-b border-white/5">
-        <p className="text-sm text-muted-foreground">Members</p>
-        <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 mt-2">
-          <span className="text-muted-foreground">{onlineCount} online</span>
-          {totalMemberCount != null && <span className="text-muted-foreground">-</span>}
-          {totalMemberCount != null && <span className="text-muted-foreground">{totalMemberCount} members</span>}
-        </p>
+        {massBanMode ? (
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-destructive">Select members to ban</p>
+            <button
+              type="button"
+              onClick={exitMassBanMode}
+              className="p-1 rounded-md hover:bg-secondary/60 transition-colors"
+            >
+              <X className="w-4 h-4 text-muted-foreground" />
+            </button>
+          </div>
+        ) : (
+          <>
+            <p className="text-sm text-muted-foreground">Members</p>
+            <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 mt-2">
+              <span className="text-muted-foreground">{onlineCount} online</span>
+              {totalMemberCount != null && <span className="text-muted-foreground">-</span>}
+              {totalMemberCount != null && <span className="text-muted-foreground">{totalMemberCount} members</span>}
+            </p>
+          </>
+        )}
       </div>
 
       {/* Members List */}
@@ -1086,6 +1101,32 @@ export const MembersSidebar = () => {
           {(row) => <div key={row.key}>{renderMemberListRow(row)}</div>}
         </ViewportList>
       </div>
+
+      {/* Mass ban floating action bar */}
+      {massBanMode && (
+        <div className="absolute bottom-4 left-3 right-3 bg-destructive/95 backdrop-blur-sm rounded-xl p-3 flex items-center justify-between shadow-lg border border-destructive/50">
+          <span className="text-sm font-medium text-white">
+            {massBanSelected.size} selected
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={exitMassBanMode}
+              className="px-3 py-1.5 text-xs font-medium text-white/80 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={confirmMassBan}
+              disabled={massBanSelected.size === 0}
+              className="px-3 py-1.5 text-xs font-medium bg-white text-destructive rounded-lg hover:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Ban {massBanSelected.size > 0 ? massBanSelected.size : ""}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 

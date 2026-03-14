@@ -159,6 +159,20 @@ export const ConfirmActionModal = () => {
                 They will not be able to rejoin the server until unbanned.
               </p>
             )}
+            {action === "massBan" && massBanMembers && (
+              <div className="space-y-2">
+                <p className="text-muted-foreground text-sm">
+                  They will not be able to rejoin the server until unbanned.
+                </p>
+                <div className="max-h-32 overflow-y-auto rounded-lg bg-secondary/30 p-2 space-y-1">
+                  {massBanMembers.map((m) => (
+                    <p key={m.user_id} className="text-sm text-foreground">
+                      {m.nickname || m.user?.display_name || m.user?.username}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
             {action === "transferOwnership" && (
               <p className="text-destructive text-sm font-medium">
                 Warning: This action cannot be undone! You will become an admin.
