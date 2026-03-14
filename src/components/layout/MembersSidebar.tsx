@@ -169,16 +169,7 @@ const StatusIndicator = memo(
 
 StatusIndicator.displayName = "StatusIndicator";
 
-const MemberListItemContent = ({
-  member,
-  memberIsOffline,
-  presence,
-  displayName,
-  isServerOwner,
-  priorityCustomRoleColor,
-  isGradientName,
-  onClick,
-}: {
+type MemberListItemContentProps = {
   member: ServerMember;
   memberIsOffline: boolean;
   presence: ReturnType<typeof getMemberPresence>;
@@ -187,84 +178,113 @@ const MemberListItemContent = ({
   priorityCustomRoleColor: string | null;
   isGradientName: boolean;
   onClick: (event: React.MouseEvent<HTMLDivElement>) => void;
-}) => {
-  const [isHovered, setIsHovered] = useState(false);
+} & Omit<React.ComponentPropsWithoutRef<"div">, "onClick">;
 
-  return (
-    <div
-      className={cn(
-        "group flex items-center gap-2.5 mx-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors",
-        "hover:bg-secondary/60 active:bg-secondary/80",
-        "touch-callout-none",
-      )}
-      style={{ WebkitTouchCallout: "none" } as React.CSSProperties}
-      onClick={onClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <div className="relative flex-shrink-0">
-        <AvatarWithDecoration
-          user={member.user}
-          className={cn("w-8 h-8 rounded-full", memberIsOffline && "opacity-40 grayscale-[30%]")}
-          showDecoration={false}
-          freezeGifUntilHover
-          active={isHovered}
-        />
-        <div className="absolute -bottom-0.5 -right-0.5 p-[2px] bg-background rounded-full">
-          <StatusIndicator
-            status={presence.status}
-            isStale={presence.isOffline && presence.isStale}
-            isInvisible={member.user_id === useAuthStore.getState().user?.id && useAuthStore.getState().manualStatus === "offline"}
-          />
-        </div>
-      </div>
+const MemberListItemContent = forwardRef<HTMLDivElement, MemberListItemContentProps>(
+  (
+    {
+      member,
+      memberIsOffline,
+      presence,
+      displayName,
+      isServerOwner,
+      priorityCustomRoleColor,
+      isGradientName,
+      onClick,
+      className,
+      style,
+      onMouseEnter,
+      onMouseLeave,
+      ...props
+    },
+    ref,
+  ) => {
+    const [isHovered, setIsHovered] = useState(false);
 
-      <div className="flex-1 min-w-0 overflow-hidden">
-        <div className="flex items-center gap-1.5">
-          {isServerOwner && <Crown className="w-3 h-3 text-amber-400 flex-shrink-0" />}
-          <span
-            className={cn(
-              "text-[14px] sm:text-[15px] font-medium truncate leading-tight",
-              memberIsOffline
-                ? "text-muted-foreground/70"
-                : priorityCustomRoleColor
-                  ? ""
-                  : "text-foreground",
-            )}
-            style={
-              !memberIsOffline && priorityCustomRoleColor
-                ? isGradientName
-                  ? ({
-                      background: priorityCustomRoleColor,
-                      WebkitBackgroundClip: "text",
-                      backgroundClip: "text",
-                      color: "transparent",
-                    } as React.CSSProperties)
-                  : ({ color: priorityCustomRoleColor } as React.CSSProperties)
-                : undefined
-            }
-          >
-            {displayName}
-          </span>
-          {member.user?.is_bot && <BotTag className="flex-shrink-0" />}
-          {member.is_muted && <VolumeX className="w-3 h-3 text-muted-foreground/50 flex-shrink-0" />}
-        </div>
-
-        {member.user?.custom_status && (
-          <p
-            className={cn(
-              "text-[11px] truncate mt-0.5 max-w-[140px]",
-              memberIsOffline ? "text-muted-foreground/50" : "text-muted-foreground",
-            )}
-            title={member.user.custom_status}
-          >
-            {member.user.custom_status}
-          </p>
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          "group flex items-center gap-2.5 mx-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors",
+          "hover:bg-secondary/60 active:bg-secondary/80",
+          className,
         )}
+        style={{ ...style, WebkitTouchCallout: "none" } as React.CSSProperties}
+        onClick={onClick}
+        onMouseEnter={(event) => {
+          setIsHovered(true);
+          onMouseEnter?.(event);
+        }}
+        onMouseLeave={(event) => {
+          setIsHovered(false);
+          onMouseLeave?.(event);
+        }}
+        {...props}
+      >
+        <div className="relative flex-shrink-0">
+          <AvatarWithDecoration
+            user={member.user}
+            className={cn("w-8 h-8 rounded-full", memberIsOffline && "opacity-40 grayscale-[30%]")}
+            showDecoration={false}
+            freezeGifUntilHover
+            active={isHovered}
+          />
+          <div className="absolute -bottom-0.5 -right-0.5 p-[2px] bg-background rounded-full">
+            <StatusIndicator
+              status={presence.status}
+              isStale={presence.isOffline && presence.isStale}
+              isInvisible={member.user_id === useAuthStore.getState().user?.id && useAuthStore.getState().manualStatus === "offline"}
+            />
+          </div>
+        </div>
+
+        <div className="flex-1 min-w-0 overflow-hidden">
+          <div className="flex items-center gap-1.5">
+            {isServerOwner && <Crown className="w-3 h-3 text-amber-400 flex-shrink-0" />}
+            <span
+              className={cn(
+                "text-[14px] sm:text-[15px] font-medium truncate leading-tight",
+                memberIsOffline
+                  ? "text-muted-foreground/70"
+                  : priorityCustomRoleColor
+                    ? ""
+                    : "text-foreground",
+              )}
+              style={
+                !memberIsOffline && priorityCustomRoleColor
+                  ? isGradientName
+                    ? ({
+                        background: priorityCustomRoleColor,
+                        WebkitBackgroundClip: "text",
+                        backgroundClip: "text",
+                        color: "transparent",
+                      } as React.CSSProperties)
+                    : ({ color: priorityCustomRoleColor } as React.CSSProperties)
+                  : undefined
+              }
+            >
+              {displayName}
+            </span>
+            {member.user?.is_bot && <BotTag className="flex-shrink-0" />}
+            {member.is_muted && <VolumeX className="w-3 h-3 text-muted-foreground/50 flex-shrink-0" />}
+          </div>
+
+          {member.user?.custom_status && (
+            <p
+              className={cn(
+                "text-[11px] truncate mt-0.5 max-w-[140px]",
+                memberIsOffline ? "text-muted-foreground/50" : "text-muted-foreground",
+              )}
+              title={member.user.custom_status}
+            >
+              {member.user.custom_status}
+            </p>
+          )}
+        </div>
       </div>
-    </div>
-  );
-};
+    );
+  },
+);
 
 MemberListItemContent.displayName = "MemberListItemContent";
 
