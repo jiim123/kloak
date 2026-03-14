@@ -352,6 +352,44 @@ export const MembersSidebar = () => {
   const offlineLoadingRef = useRef(false);
   const listViewportRef = useRef<HTMLDivElement | null>(null);
 
+  // Mass ban selection mode
+  const [massBanMode, setMassBanMode] = useState(false);
+  const [massBanSelected, setMassBanSelected] = useState<Set<string>>(new Set());
+
+  const toggleMassBanSelection = (userId: string) => {
+    setMassBanSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) {
+        next.delete(userId);
+      } else {
+        next.add(userId);
+      }
+      return next;
+    });
+  };
+
+  const exitMassBanMode = () => {
+    setMassBanMode(false);
+    setMassBanSelected(new Set());
+  };
+
+  const confirmMassBan = () => {
+    if (massBanSelected.size === 0) return;
+    const selectedMembers = [...onlineMembers, ...offlineMembers].filter((m) => massBanSelected.has(m.user_id));
+    openModal("confirmAction", {
+      action: "massBan",
+      members: selectedMembers,
+      title: `Ban ${massBanSelected.size} member${massBanSelected.size > 1 ? "s" : ""}`,
+      message: `Are you sure you want to ban ${massBanSelected.size} member${massBanSelected.size > 1 ? "s" : ""} from the server?`,
+    });
+    exitMassBanMode();
+  };
+
+  // Reset mass ban mode when switching servers
+  useEffect(() => {
+    exitMassBanMode();
+  }, [currentServer?.id]);
+
   // Subscribe to realtime member updates
   useRealtimeMembers(currentServer?.id || null);
 
