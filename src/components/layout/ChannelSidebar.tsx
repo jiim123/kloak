@@ -839,12 +839,13 @@ export const ChannelSidebar = () => {
   const handleSelectChannel = useCallback(
     (channel: Channel) => {
       setCurrentChannel(channel);
+      closeMobileSidebars();
       // Navigate to channel URL
       if (currentServer) {
         navigate(`/app/servers/${currentServer.id}/channels/${channel.id}`);
       }
     },
-    [setCurrentChannel, currentServer, navigate],
+    [setCurrentChannel, currentServer, navigate, closeMobileSidebars],
   );
 
   const isOverviewActive = !!currentServer && location.pathname === `/app/servers/${currentServer.id}/overview`;

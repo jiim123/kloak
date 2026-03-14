@@ -3784,6 +3784,15 @@ export type Database = {
         Args: { _channel_id: string; _updates: string; _user_id: string }
         Returns: Json
       }
+      update_forum_thread_moderation: {
+        Args: {
+          _is_closed?: boolean
+          _is_pinned?: boolean
+          _thread_id: string
+          _user_id: string
+        }
+        Returns: Json
+      }
       update_group_dm_name: {
         Args: { _conversation_id: string; _new_name: string; _user_id: string }
         Returns: Json

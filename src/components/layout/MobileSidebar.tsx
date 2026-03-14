@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useUIStore } from '@/stores/uiStore';
-import { useServerStore } from '@/stores/serverStore';
 import { ServerSidebar } from './ServerSidebar';
 import { ChannelSidebar } from './ChannelSidebar';
 import { DMSidebar } from '@/components/dm/DMSidebar';
@@ -18,18 +17,10 @@ interface MobileSidebarProps {
 export const MobileSidebar = ({ isDMView, showFriends, onShowFriendsChange, showExplore, onShowExploreChange }: MobileSidebarProps) => {
   const location = useLocation();
   const { isMobileSidebarOpen, setMobileSidebarOpen, closeMobileSidebars } = useUIStore();
-  const { currentChannel } = useServerStore();
   
   // Track previous pathname to detect actual navigation changes
   const prevPathnameRef = useRef(location.pathname);
   const wasOpenRef = useRef(false);
-
-  // Close sidebar when a channel is selected
-  useEffect(() => {
-    if (currentChannel && isMobileSidebarOpen) {
-      closeMobileSidebars();
-    }
-  }, [currentChannel?.id]); // Only react to channel ID changes
 
   // Close sidebar when route changes (for Friends/Explore navigation)
   useEffect(() => {
