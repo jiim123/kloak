@@ -53,8 +53,8 @@ export const LoggedInUserPanel = ({
   return (
     <motion.div
       className={cn(
-        "h-14 px-3 flex items-center gap-3 border-t border-border/50",
-        containerClassName ?? "bg-layout-sidebar",
+        "h-14 px-3 flex items-center gap-3 border-t border-white/6",
+        containerClassName ?? "bg-[rgb(24_24_24_/_55%)]",
       )}
       initial={{ y: 20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}

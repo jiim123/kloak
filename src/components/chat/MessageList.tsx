@@ -576,12 +576,12 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     (item: ListItem, index: number) => {
       if (item.type === "dateDivider") {
         return (
-          <div key={`date-divider-${item.date.toISOString().slice(0, 10)}`} className="flex items-center gap-3 px-4 my-4" style={{ overflowAnchor: "none" }}>
-            <div className="h-px flex-1 bg-border/70" />
+          <div key={`date-divider-${item.date.toISOString().slice(0, 10)}`} className="flex items-center gap-3 px-6 my-4" style={{ overflowAnchor: "none" }}>
+            <div className="h-px flex-1 bg-white/8" />
             <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
               {item.label}
             </span>
-            <div className="h-px flex-1 bg-border/70" />
+            <div className="h-px flex-1 bg-white/8" />
           </div>
         );
       }
@@ -637,7 +637,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       {isLoading && messages.length === 0 && <MessageListSkeleton />}
 
       {!isLoading && messages.length === 0 && (
-        <div className={`flex flex-col px-4 pt-16 pb-8 ${currentChannel?.ghost_mode ? "items-center text-center" : "items-start"}`}>
+        <div className={`flex flex-col px-6 pt-16 pb-8 ${currentChannel?.ghost_mode ? "items-center text-center" : "items-start"}`}>
           {currentChannel?.ghost_mode ? (
             <>
               <div className="relative mb-6">
@@ -679,7 +679,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       {msgCount > 0 && (
         <div
           ref={containerRef}
-          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative"
+          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative bg-transparent"
           onScroll={handleScroll}
         >
           <div style={{ overflowAnchor: "none" }}>{headerContent}</div>

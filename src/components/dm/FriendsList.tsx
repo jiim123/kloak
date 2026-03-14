@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { Check, X, MessageSquare, MoreHorizontal, UserPlus, Ban, UserX, Users, Inbox, Info } from "lucide-react";
+import { Check, X, MessageSquare, MoreHorizontal, UserPlus, Ban, UserX, Users, Inbox } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -361,7 +361,6 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
                   )}
                 </TabsTrigger>
                 <TabsTrigger value="blocked">Blocked</TabsTrigger>
-                <TabsTrigger value="info">Info</TabsTrigger>
               </TabsList>
             </div>
 
@@ -479,58 +478,6 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
                 )}
               </TabsContent>
 
-              <TabsContent value="info" className="m-0">
-                <div className="max-w-3xl mx-auto py-8 px-4 space-y-8">
-                  <div className="text-center space-y-4">
-                    <h2 className="text-3xl font-medium text-foreground">Welcome to Kloak</h2>
-                    <p className="text-muted-foreground max-w-lg mx-auto">
-                      Privacy isn't a feature. It's the architecture.
-                    </p>
-                  </div>
-
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div className="p-6 rounded-lg border border-border/40 bg-card/30 hover:border-primary/30 transition-colors">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                        <Users className="w-5 h-5 text-primary" />
-                      </div>
-                      <h3 className="text-lg font-medium mb-2">Zero Data Collection</h3>
-                      <p className="text-sm text-muted-foreground">
-                        We don't ask for your email, phone number, or identity. We collect only what is essential.
-                      </p>
-                    </div>
-
-                    <div className="p-6 rounded-lg border border-border/40 bg-card/30 hover:border-primary/30 transition-colors">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                        <Check className="w-5 h-5 text-primary" />
-                      </div>
-                      <h3 className="text-lg font-medium mb-2">Key-Based Auth</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Your account is secured by a cryptographic key only you possess. We cannot access it.
-                      </p>
-                    </div>
-
-                    <div className="p-6 rounded-lg border border-border/40 bg-card/30 hover:border-primary/30 transition-colors">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                        <Ban className="w-5 h-5 text-primary" />
-                      </div>
-                      <h3 className="text-lg font-medium mb-2">No Tracking</h3>
-                      <p className="text-sm text-muted-foreground">
-                        No ads, no behavior tracking, no profiling. Your data is yours alone.
-                      </p>
-                    </div>
-
-                    <div className="p-6 rounded-lg border border-border/40 bg-card/30 hover:border-primary/30 transition-colors">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                        <Info className="w-5 h-5 text-primary" />
-                      </div>
-                      <h3 className="text-lg font-medium mb-2">Open Architecture</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Transparent approach. We tell you exactly what we do and don't do.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
             </div>
           </Tabs>
         </div>

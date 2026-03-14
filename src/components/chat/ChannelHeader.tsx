@@ -29,13 +29,13 @@ export const ChannelHeader = ({
   const ChannelIcon = channel.type === "voice" ? Volume2 : channel.type === "forum" ? MessageSquare : channel.type === "announcement" ? Megaphone : channel.type === "media" ? Film : Hash;
 
   return (
-    <div className="px-4 py-3 hidden md:flex items-center justify-between border-b border-border/50 flex-shrink-0 bg-background">
+    <div className="px-4 py-3 hidden md:flex items-center justify-between border-b border-white/5 flex-shrink-0 bg-[#1c1c1c]">
       {/* Left side - Channel info */}
       <div className="flex items-center gap-2 min-w-0 flex-1">
-        <div className="w-8 h-8 rounded-lg bg-secondary/50 flex items-center justify-center flex-shrink-0">
-          <ChannelIcon className="w-4 h-4 text-muted-foreground" />
+        <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
+          <ChannelIcon className="w-4 h-4 text-[#d7d7d7]" />
         </div>
-        <span className="font-medium text-foreground truncate">{channel.name}</span>
+        <span className="font-normal text-foreground truncate">{channel.name}</span>
 
         {channel.is_private && (
           <Tooltip>
@@ -78,7 +78,7 @@ export const ChannelHeader = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="relative w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground"
+                  className="relative w-8 h-8 rounded-lg text-muted-foreground hover:bg-white/5 hover:text-foreground"
                   onClick={() => openModal("pinned-messages", { channelId: channel.id })}
                 >
                   <Pin className="w-4 h-4" />
@@ -92,7 +92,7 @@ export const ChannelHeader = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="relative w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground"
+                  className="relative w-8 h-8 rounded-lg text-muted-foreground hover:bg-white/5 hover:text-foreground"
                   onClick={() => openModal("search", { channelId: channel.id })}
                 >
                   <Search className="w-4 h-4" />
@@ -111,7 +111,7 @@ export const ChannelHeader = ({
               <Button
                 variant="ghost"
                 size="icon"
-                className="relative w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground"
+                className="relative w-8 h-8 rounded-lg text-muted-foreground hover:bg-white/5 hover:text-foreground"
                 onClick={() => setMemberSidebarOpen(!isMemberSidebarOpen)}
                 aria-label={isMemberSidebarOpen ? "Hide member sidebar" : "Show member sidebar"}
               >

@@ -913,13 +913,13 @@ export const MembersSidebar = () => {
   }
 
   const sidebarContent = (
-    <div className="h-full flex flex-col bg-background/50 border-l border-border/50 w-full">
+    <div className="h-full flex flex-col bg-[#111111] w-full overflow-hidden rounded-[10px] border border-white/5">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-border/50">
-        <h3 className="text-sm font-medium">Members</h3>
-        <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
+      <div className="px-4 py-3 border-b border-white/5">
+        <p className="text-sm text-muted-foreground">Members</p>
+        <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 mt-2">
           <span className="text-muted-foreground">{onlineCount} online</span>
-          {totalMemberCount != null && <span className="text-muted-foreground">•</span>}
+          {totalMemberCount != null && <span className="text-muted-foreground">-</span>}
           {totalMemberCount != null && <span className="text-muted-foreground">{totalMemberCount} members</span>}
         </p>
       </div>
@@ -957,7 +957,7 @@ export const MembersSidebar = () => {
           <SheetHeader className="sr-only">
             <SheetTitle>Members</SheetTitle>
           </SheetHeader>
-          <div className="h-full bg-layout-members">{sidebarContent}</div>
+          <div className="h-full bg-transparent p-1.5">{sidebarContent}</div>
         </SheetContent>
       </Sheet>
     );

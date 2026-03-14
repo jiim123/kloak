@@ -77,7 +77,7 @@ export const MobileSidebar = ({ isDMView, showFriends, onShowFriendsChange, show
         </SheetHeader>
         
         {/* Server sidebar - always visible */}
-        <div className="w-[72px] flex-shrink-0 bg-layout-sidebar h-full">
+        <div className="w-[72px] flex-shrink-0 bg-layout-sidebar h-full pt-3">
           <ServerSidebar />
         </div>
         

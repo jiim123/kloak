@@ -36,7 +36,7 @@ const EMPTY_MESSAGES: Message[] = [];
 // ── Empty‑channel placeholder (static, extracted to avoid re‑creation) ──
 
 const NoChannelPlaceholder = () => (
-  <div className="h-full flex flex-col items-center justify-center text-center px-4 bg-background relative overflow-hidden">
+  <div className="h-full flex flex-col items-center justify-center text-center px-4 bg-transparent relative overflow-hidden">
     <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent" />
 
     <motion.div
@@ -247,7 +247,7 @@ export const ChatArea = () => {
   }
 
   return (
-    <div ref={swipeRef} className="h-full flex flex-col min-w-0 max-w-full overflow-x-hidden bg-background relative">
+    <div ref={swipeRef} className="h-full flex flex-col min-w-0 max-w-full overflow-x-hidden bg-transparent relative">
       {/* Channel header */}
       <ChannelHeader channel={currentChannel} />
 

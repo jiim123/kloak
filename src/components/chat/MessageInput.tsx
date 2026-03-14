@@ -81,7 +81,7 @@ const ActionBar = memo(
     const canSend = (content.trim() || hasAttachments) && !isSending;
 
     const iconBtnClass =
-      "flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors";
+      "flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-white/6 hover:text-foreground transition-colors";
 
     return (
       <div className="flex items-center justify-between px-2 sm:px-3 pb-2 pt-0.5">
@@ -108,7 +108,7 @@ const ActionBar = memo(
               <button onClick={onAttachClick} disabled={!canSendMessage} className={iconBtnClass}>
                 <Paperclip className="w-5 h-5" />
               </button>
-              <div className="w-px h-5 bg-border/40 mx-0.5" />
+              <div className="w-px h-5 bg-white/8 mx-0.5" />
               <button
                 type="button"
                 onClick={() => setShowCreatePoll(true)}
@@ -120,7 +120,7 @@ const ActionBar = memo(
             </>
           )}
 
-          <div className="w-px h-5 bg-border/40 mx-0.5" />
+          <div className="w-px h-5 bg-white/8 mx-0.5" />
 
           <EmojiPicker
             open={showEmojiPicker}
@@ -154,8 +154,8 @@ const ActionBar = memo(
             disabled={!canSend}
             className={`flex h-8 w-8 items-center justify-center rounded-full transition-all duration-200 ${
               canSend
-                ? "bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95"
-                : "bg-muted/50 text-muted-foreground/50 cursor-not-allowed"
+                ? "bg-white/10 text-white hover:bg-white/16 active:scale-95"
+                : "bg-white/5 text-muted-foreground/50 cursor-not-allowed"
             }`}
           >
             {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
@@ -507,7 +507,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   }
 
   return (
-    <div className="px-4 pb-4 sm:pb-6 relative">
+    <div className="px-4 pb-4 sm:pb-5 relative bg-transparent">
       <input
         ref={fileInputRef}
         type="file"
@@ -559,7 +559,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       <SelectionFormatToolbar textareaRef={textareaRef} onFormat={handleFormat} />
 
       {replyingTo && (
-        <div className="flex items-center gap-2 px-4 py-2 bg-muted/40 border-b border-border/50 rounded-t-3xl">
+        <div className="flex items-center gap-2 px-3.5 py-1.5 bg-white/5 border-b border-white/6 rounded-t-[14px]">
           <span className="text-xs text-muted-foreground">
             Replying to{" "}
             {showReplyAuthorIdentity ? (
@@ -661,8 +661,8 @@ const MobileOptimizedInput = memo(
 
     return (
       <div
-        className={`rounded-3xl bg-card/80 border transition-all duration-200 shadow-[0_4px_20px_rgba(0,0,0,0.15)] ${
-          isFocused ? "border-primary/30 shadow-lg shadow-primary/5 bg-card" : "border-border/50 hover:border-border"
+        className={`rounded-[14px] bg-[rgb(24_24_24_/_55%)] border transition-all duration-200 shadow-[0_8px_30px_rgba(0,0,0,0.22)] ${
+          isFocused ? "border-white/14 shadow-[0_10px_34px_rgba(0,0,0,0.28)] bg-[rgb(24_24_24_/_55%)]" : "border-white/6 hover:border-white/10"
         } ${replyingTo ? "rounded-t-none" : ""}`}
       >
         {hasAttachments && (
@@ -675,7 +675,7 @@ const MobileOptimizedInput = memo(
         )}
 
         {/* Textarea area */}
-        <div className="px-4 sm:px-5 pt-3">
+        <div className="px-3.5 sm:px-4 pt-2.5">
           <textarea
             ref={textareaRef}
             value={content}
@@ -684,7 +684,7 @@ const MobileOptimizedInput = memo(
             onBlur={() => setIsFocused(false)}
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
-            placeholder={canSendMessage ? `Message #${channelName}` : "Locked"}
+            placeholder={canSendMessage ? "Write a message..." : "Locked"}
             disabled={!canSendMessage}
             rows={1}
             className="message-input-textarea w-full bg-transparent resize-none outline-none py-1 min-h-[36px] max-h-[160px] overflow-y-auto text-foreground placeholder:text-muted-foreground/60 font-[General_Sans,system-ui,sans-serif]"

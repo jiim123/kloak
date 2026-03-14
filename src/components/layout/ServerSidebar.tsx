@@ -146,7 +146,7 @@ const ServerIconVisual = ({
   return (
     <div
       className={cn(
-        "w-12 h-12 overflow-hidden rounded-[6px] flex items-center justify-center",
+        "w-12 h-12 overflow-hidden rounded-full flex items-center justify-center",
         !server.icon_url && getServerColor(server.name),
       )}
     >
@@ -355,8 +355,8 @@ const DraggableServerItem = forwardRef<
                     whileTap="tap"
                     transition={{ type: "spring", stiffness: 400, damping: 25 }}
                     className={cn(
-                      "w-12 h-12 overflow-hidden",
-                      isActive && !server.icon_url && "ring-2 ring-primary/50",
+                      "w-12 h-12 overflow-hidden rounded-full",
+                      isActive && !server.icon_url && "ring-2 ring-white/15",
                       !server.icon_url && getServerColor(server.name),
                       server.icon_url && "border-0",
                     )}
@@ -837,7 +837,7 @@ export const ServerSidebar = () => {
   );
 
   return (
-    <div className="h-full flex flex-col items-center bg-layout-sidebar relative overflow-hidden">
+    <div className="h-full w-[68px] shrink-0 flex flex-col items-center border-r border-white/6 bg-transparent relative overflow-hidden">
       {/* Server list */}
       <DndContext
         sensors={sensors}
@@ -850,7 +850,7 @@ export const ServerSidebar = () => {
             <div
               ref={setRootDroppableRef}
               className={cn(
-                "flex-1 flex flex-col items-center gap-2 overflow-y-auto scrollbar-overlay scrollbar-hide w-full pl-3 pr-2 pt-3 pb-24",
+                "flex-1 flex flex-col items-center gap-3 overflow-y-auto scrollbar-overlay scrollbar-hide w-full px-2 pt-0 pb-24",
                 isOverRoot && "outline outline-2 outline-primary/30 outline-offset-[-2px] rounded-md",
               )}
             >
@@ -872,7 +872,7 @@ export const ServerSidebar = () => {
               <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
                 <TooltipTrigger asChild>
                   <MotionButton
-                    className="relative group mb-2"
+                    className="relative group mb-1"
                     onMouseEnter={() => setHoveredServer(null)}
                     onMouseLeave={() => setHoveredServer(null)}
                     onClick={() => {
@@ -902,10 +902,10 @@ export const ServerSidebar = () => {
                       whileTap="tap"
                       transition={{ type: "spring", stiffness: 400, damping: 25 }}
                       className={cn(
-                        "w-12 h-12 flex items-center justify-center",
+                        "w-12 h-12 flex items-center justify-center rounded-full",
                         currentServer === null
-                          ? "bg-primary text-primary-foreground ring-2 ring-primary/50"
-                          : "bg-secondary hover:bg-primary/20 hover:text-neutral-200",
+                          ? "bg-[#2d2d2d] text-white"
+                          : "bg-[#242424] text-[#d0d0d0] hover:bg-[#303030] hover:text-white",
                       )}
                     >
                       <AnimatePresence mode="wait" initial={false}>
@@ -917,7 +917,7 @@ export const ServerSidebar = () => {
                             exit={{ opacity: 0 }}
                             transition={{ duration: 0.15 }}
                           >
-                            <Columns3 className="w-5 h-5" />
+                            <Home className="w-5 h-5" />
                           </motion.span>
                         ) : (
                           <motion.span
@@ -954,7 +954,7 @@ export const ServerSidebar = () => {
               </Tooltip>
 
               {/* Separator */}
-              <div className="w-8 h-0.5 bg-border rounded-full mb-2 shrink-0" />
+              <div className="w-8 h-px bg-white/10 mb-1 shrink-0" />
 
               {/* Folder items + servers */}
               <AnimatePresence mode="popLayout">

@@ -93,10 +93,9 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
   };
 
   return (
-    <div className="h-full flex flex-col p-2 bg-layout-sidebar">
-      <div className="flex-1 flex flex-col bg-card/50 rounded-2xl border border-border/50 overflow-hidden">
+    <div className="h-full flex flex-col bg-[#111111] rounded-[10px] overflow-hidden">
         {/* Header */}
-        <div className="h-12 px-4 flex items-center border-b border-border/50">
+        <div className="h-12 px-4 flex items-center border-b border-white/6">
           <h2 className="font-medium text-lg text-foreground">
             {showFriends ? "Friends" : showExplore ? "Explore" : "Direct Messages"}
           </h2>
@@ -307,7 +306,6 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
 
         <VoiceConnectedBanner />
         <LoggedInUserPanel />
-      </div>
 
       {/* Create Group Modal */}
       <CreateGroupModal open={showCreateGroup} onOpenChange={setShowCreateGroup} />

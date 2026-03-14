@@ -47,7 +47,6 @@ import { PersistentEmbedContainer } from "@/components/chat/PersistentEmbedConta
 import { DesktopTitleBar } from "@/components/layout/DesktopTitleBar";
 import { VoicePersistentHost } from "@/components/voice/VoicePersistentHost";
 import { cn } from "@/lib/utils";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { useDMStore } from "@/stores/dmStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { supabase } from "@/integrations/supabase/client";
@@ -557,17 +556,13 @@ const AppLayout = () => {
               </div>
             ) : (
               /* Desktop layout */
-              <div className="flex flex-col flex-1 overflow-hidden">
+              <div className="flex flex-col flex-1 overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.045),transparent_28%),linear-gradient(180deg,rgba(18,18,18,0.98),rgba(10,10,10,1))]">
                 {/* Alpha notice banner */}
                 {!isFullscreenSettingsOverlayOpen && <AlphaNoticeBanner />}
 
-                <div className="flex flex-1 overflow-hidden relative">
+                <div className="flex flex-1 overflow-hidden relative px-2 pb-2 pt-1.5 gap-2">
                   {/* Server list on left - hidden during full-screen settings */}
-                  {!isFullscreenSettingsOverlayOpen && (
-                    <div className="w-[68px] shrink-0 bg-layout-sidebar">
-                      <ServerSidebar />
-                    </div>
-                  )}
+                  {!isFullscreenSettingsOverlayOpen && <ServerSidebar />}
 
                   {/* Full-screen settings overlays - rendered on top, main layout stays mounted */}
                   {isServerSettingsOpen && (
@@ -588,75 +583,57 @@ const AppLayout = () => {
 
                   {/* Main layout - ALWAYS mounted so VoicePersistentHost never unmounts */}
                   <div className={cn("flex-1 overflow-hidden", isFullscreenSettingsOverlayOpen && "invisible")}>
-                    <ResizablePanelGroup direction="horizontal" className="flex-1">
-                      {/* Secondary sidebar - resizable */}
-                      <ResizablePanel defaultSize={20} minSize={10} maxSize={30} className="bg-layout-sidebar-secondary">
-                        <div className="h-full">
-                          {isDMView ? (
-                            <DMSidebar
-                              showFriends={showFriends}
-                              onShowFriendsChange={(show: boolean) => navigate(show ? "/app/friends" : "/app")}
-                              showExplore={showExplore}
-                              onShowExploreChange={(show: boolean) => navigate(show ? "/app/explore" : "/app")}
-                            />
-                          ) : (
-                            <ChannelSidebar />
-                          )}
-                        </div>
-                      </ResizablePanel>
+                    <div className="flex h-full gap-2">
+                      <div className="w-[278px] shrink-0 overflow-hidden rounded-[10px] border border-white/5 bg-[#111111]">
+                        {isDMView ? (
+                          <DMSidebar
+                            showFriends={showFriends}
+                            onShowFriendsChange={(show: boolean) => navigate(show ? "/app/friends" : "/app")}
+                            showExplore={showExplore}
+                            onShowExploreChange={(show: boolean) => navigate(show ? "/app/explore" : "/app")}
+                          />
+                        ) : (
+                          <ChannelSidebar />
+                        )}
+                      </div>
 
-                      <ResizableHandle className="w-1 bg-transparent hover:bg-primary/20 transition-colors" />
-
-                      {/* Main area - flexible */}
-                      <ResizablePanel defaultSize={isMemberSidebarOpen && !isDMView && !isServerSpecialView ? 70 : 85}>
-                        <div className="h-full bg-layout-chat relative overflow-hidden">
-                          <VoicePersistentHost />
-                          {/* Keep all views mounted, toggle visibility with CSS to prevent remount sluggishness */}
-                          {currentConversation && (
-                            <div className={isDMView && currentConversation ? "block h-full" : "hidden"}>
-                              <DMChatArea />
+                      <div className="min-w-0 flex-1 rounded-[10px] border border-white/5 bg-transparent relative overflow-hidden">
+                        <VoicePersistentHost />
+                        {/* Keep all views mounted, toggle visibility with CSS to prevent remount sluggishness */}
+                        {currentConversation && (
+                          <div className={isDMView && currentConversation ? "block h-full" : "hidden"}>
+                            <DMChatArea />
+                          </div>
+                        )}
+                        {isDMView && !currentConversation && (
+                          <>
+                            <div className={showFriends ? "block h-full" : "hidden"}>
+                              <FriendsList onOpenDM={() => navigate("/app")} />
                             </div>
-                          )}
-                          {isDMView && !currentConversation && (
-                            <>
-                              <div className={showFriends ? "block h-full" : "hidden"}>
-                                <FriendsList onOpenDM={() => navigate("/app")} />
-                              </div>
-                              <div className={showExplore ? "block h-full" : "hidden"}>
-                                <ExploreServers />
-                              </div>
-                              <div className={!showFriends && !showExplore ? "block h-full" : "hidden"}>
-                                <HomeLanding />
-                              </div>
-                            </>
-                          )}
-                          {currentServer && (
-                            <>
-                              {isServerOverviewView && <ServerOverviewView />}
-                              <div
-                                className={
-                                  !isServerOverviewView && !isDMView
-                                    ? "block h-full"
-                                    : "hidden"
-                                }
-                              >
-                                <ChatArea />
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </ResizablePanel>
+                            <div className={showExplore ? "block h-full" : "hidden"}>
+                              <ExploreServers />
+                            </div>
+                            <div className={!showFriends && !showExplore ? "block h-full" : "hidden"}>
+                              <HomeLanding />
+                            </div>
+                          </>
+                        )}
+                        {currentServer && (
+                          <>
+                            {isServerOverviewView && <ServerOverviewView />}
+                            <div className={!isServerOverviewView && !isDMView ? "block h-full" : "hidden"}>
+                              <ChatArea />
+                            </div>
+                          </>
+                        )}
+                      </div>
 
-                      {/* Members sidebar - collapsible, desktop only (mobile uses Sheet drawer) */}
                       {!isDMView && !isServerSpecialView && isMemberSidebarOpen && (
-                        <>
-                          <ResizableHandle className="w-1 bg-transparent hover:bg-primary/20 transition-colors" />
-                          <ResizablePanel defaultSize={15} minSize={10} maxSize={25} className="bg-layout-members">
-                            <MembersSidebar />
-                          </ResizablePanel>
-                        </>
+                        <div className="w-[260px] shrink-0 rounded-[10px] overflow-hidden">
+                          <MembersSidebar />
+                        </div>
                       )}
-                    </ResizablePanelGroup>
+                    </div>
                   </div>
                 </div>
               </div>

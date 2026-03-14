@@ -259,9 +259,9 @@ const SortableChannel = ({
       <button
         onClick={isSortingMode ? undefined : onSelect}
         className={cn(
-          "group relative flex-1 min-w-0 flex items-center gap-2 px-2 py-2 rounded-md text-sm transition-all duration-150 select-none",
-          "hover:bg-secondary/80",
-          isActive && !isSortingMode && "bg-secondary text-foreground",
+          "group relative flex-1 min-w-0 flex items-center gap-2 px-2.5 py-1.5 text-sm transition-all duration-150 select-none",
+          "hover:bg-white/[0.04]",
+          isActive && !isSortingMode && "bg-white/[0.06] text-foreground",
           !isActive && "text-muted-foreground hover:text-foreground",
           isUnread && !isActive && "text-foreground font-medium",
           isDragging && "opacity-50 shadow-lg ring-2 ring-primary/30 bg-secondary",
@@ -271,7 +271,7 @@ const SortableChannel = ({
         {/* Active indicator */}
         <div
           className={cn(
-            "absolute -left-2 top-0 bottom-0 w-1 bg-primary rounded-full transition-opacity duration-150",
+            "absolute left-1 top-1.5 bottom-1.5 w-0.5 bg-white rounded-full transition-opacity duration-150",
             isActive && !isSortingMode ? "opacity-100" : "opacity-0",
           )}
         />
@@ -520,7 +520,7 @@ const SortableCategory = ({
       )}
       <button
         className={cn(
-          "flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground uppercase tracking-wider flex-1 py-1",
+          "flex items-center gap-1 text-xs font-normal text-muted-foreground hover:text-foreground uppercase tracking-wider flex-1 py-1",
           isDragging && "opacity-50",
           isSortingMode && "cursor-default",
         )}
@@ -1033,7 +1033,7 @@ export const ChannelSidebar = () => {
         return (
           <div className="flex items-center gap-1 px-3 py-1.5 bg-card border border-border shadow-lg rounded-md text-sm ring-2 ring-primary/30">
             <ChevronRight className="w-3 h-3 text-muted-foreground" />
-            <span className="uppercase text-xs font-medium">{category.name}</span>
+            <span className="uppercase text-xs font-normal">{category.name}</span>
           </div>
         );
       }
@@ -1083,44 +1083,39 @@ export const ChannelSidebar = () => {
   }
 
   return (
-    <div className="h-full flex flex-col p-2 bg-layout-sidebar">
-      <div className="flex-1 flex flex-col bg-card/50 rounded-2xl border border-border/50 overflow-hidden">
+    <div className="h-full flex flex-col bg-[#111111] rounded-[10px]">
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* Server header with banner */}
-        <div className="relative">
-          {/* Server banner with smooth fade out effect */}
-          {currentServer.banner_url && (
-            <div className="relative h-20 sm:h-24 overflow-hidden rounded-t-2xl">
-              <img
-                src={
-                  currentServer.banner_url?.includes("blob:")
-                    ? currentServer.banner_url
-                    : `${currentServer.banner_url}${currentServer.banner_url?.includes("?") ? "&" : "?"}cb=${encodeURIComponent(currentServer.banner_url?.split("/").pop()?.split("?")[0] ?? "")}`
-                }
-                alt={`${currentServer.name} banner`}
-                className="w-full h-full object-cover"
-              />
-              {/* Smooth fade out gradient overlay */}
-              <div
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  background:
-                    "linear-gradient(to bottom, transparent 0%, transparent 40%, hsl(var(--card) / 0.5) 100%)",
-                }}
-              />
-            </div>
-          )}
-
+        <div className="relative border-b border-white/6">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button
-                className={cn(
-                  "h-12 px-4 flex items-center justify-between border-b border-border/50 hover:bg-secondary/50 cursor-pointer w-full text-left transition-colors active:scale-[0.99]",
-                  currentServer.banner_url && "border-t-0",
-                  !currentServer.banner_url && "rounded-t-2xl",
-                )}
-              >
-                <h2 className="font-normal text-lg text-foreground truncate">{currentServer.name}</h2>
-                <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <button className="group w-full overflow-hidden text-left transition-colors active:scale-[0.995]">
+                <div className="relative h-32 overflow-hidden">
+                  {currentServer.banner_url ? (
+                    <img
+                      src={
+                        currentServer.banner_url?.includes("blob:")
+                          ? currentServer.banner_url
+                          : `${currentServer.banner_url}${currentServer.banner_url?.includes("?") ? "&" : "?"}cb=${encodeURIComponent(currentServer.banner_url?.split("/").pop()?.split("?")[0] ?? "")}`
+                      }
+                      alt={`${currentServer.name} banner`}
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                    />
+                  ) : (
+                    <div className="h-full w-full bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.14),transparent_34%),linear-gradient(160deg,#303030,#151515_72%)]" />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#111111]" />
+                  <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#111111] via-[#111111]/82 to-transparent" />
+
+                  <div className="absolute inset-x-0 bottom-0 flex items-center gap-3 px-4 pb-3">
+                    <h2 className="min-w-0 flex-1 truncate text-[20px] font-normal leading-tight tracking-[-0.02em] text-white drop-shadow-[0_1px_8px_rgba(0,0,0,0.45)]">
+                      {currentServer.name}
+                    </h2>
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-black/30 text-white/80 backdrop-blur-sm transition-colors group-hover:bg-black/40">
+                      <ChevronDown className="h-4 w-4" />
+                    </div>
+                  </div>
+                </div>
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
@@ -1211,7 +1206,7 @@ export const ChannelSidebar = () => {
 
         {/* Sorting Mode Header */}
         {isSortingMode && (
-          <div className="flex items-center justify-between px-3 py-2 bg-primary/10 border-b border-primary/20">
+          <div className="flex items-center justify-between px-2.5 py-1.5 bg-transparent border-b border-white/6">
             <div className="flex items-center gap-2">
               <GripVertical className="w-4 h-4 text-primary" />
               <span className="text-sm font-medium text-primary">Sorting Mode</span>
@@ -1234,26 +1229,26 @@ export const ChannelSidebar = () => {
             <ContextMenuTrigger asChild disabled={isSortingMode}>
               <div
                 className={cn(
-                  "flex-1 overflow-y-auto scrollbar-overlay p-2 scrollbar-hide",
-                  isSortingMode && "bg-primary/5 border-2 border-dashed border-primary/20 rounded-lg mx-1 my-1",
+                "flex-1 overflow-y-auto scrollbar-overlay px-1.5 py-2 scrollbar-hide",
+                  isSortingMode && "bg-white/[0.03] border-2 border-dashed border-white/10 rounded-xl mx-1 my-1",
                 )}
                 style={{ touchAction: "pan-y" }}
               >
                 {/* Default sections */}
-                <div className="mb-3 space-y-0.5">
+                <div className="mb-2 space-y-0.5">
                   <button
                     onClick={handleSelectOverview}
                     className={cn(
-                      "group relative w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-all duration-150 select-none",
-                      "hover:bg-secondary/80",
-                      isOverviewActive && "bg-secondary text-foreground",
+                      "group relative w-full flex items-center gap-2 px-2.5 py-1.5 text-sm transition-all duration-150 select-none",
+                      "hover:bg-white/[0.04]",
+                      isOverviewActive && "bg-white/[0.06] text-foreground",
                       !isOverviewActive && "text-muted-foreground hover:text-foreground",
                     )}
                   >
                     {/* Active indicator */}
                     <div
                       className={cn(
-                        "absolute -left-2 top-0 bottom-0 w-1 bg-primary rounded-full transition-opacity duration-150",
+                        "absolute left-1 top-1.5 bottom-1.5 w-0.5 bg-white rounded-full transition-opacity duration-150",
                         isOverviewActive ? "opacity-100" : "opacity-0",
                       )}
                     />
@@ -1276,7 +1271,7 @@ export const ChannelSidebar = () => {
                   hasChannels={uncategorizedChannels.length > 0}
                 >
                   {uncategorizedChannels.length > 0 && (
-                    <div className="mb-4 space-y-0.5">
+                    <div className="mb-3 space-y-0.5">
                       <SortableContext
                         items={uncategorizedChannels.map((c) => c.id)}
                         strategy={verticalListSortingStrategy}
@@ -1344,7 +1339,7 @@ export const ChannelSidebar = () => {
                   <div className="mt-4 border-t border-border/30 pt-2">
                     <button
                       onClick={() => setShowHidden(!showHidden)}
-                      className="w-full flex items-center gap-1.5 px-2 py-1 text-xs font-medium uppercase text-muted-foreground hover:text-foreground transition-colors"
+                      className="w-full flex items-center gap-1.5 px-2 py-1 text-xs font-normal uppercase text-muted-foreground hover:text-foreground transition-colors"
                     >
                       {showHidden ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                       <EyeOff className="w-3 h-3" />
