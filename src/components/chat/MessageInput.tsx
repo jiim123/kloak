@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
 import { useMessageUser } from "@/stores/userCacheStore";
-import { Paperclip, Smile, Send, X, Loader2, WifiOff, Lock, SquareChartGantt, MoreHorizontal, Image as ImageIcon } from "lucide-react";
+import { Paperclip, Smile, Send, X, Loader2, WifiOff, Lock, SquareChartGantt, MoreHorizontal, ImagePlay } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   DropdownMenu,
@@ -135,7 +135,7 @@ const ActionBar = memo(
 
           <GifPicker open={showGifPicker} onOpenChange={setShowGifPicker} onSelect={onGifSelect}>
             <button type="button" className={iconBtnClass} onMouseDown={(e) => e.preventDefault()}>
-              <ImageIcon className="w-5 h-5" />
+              <ImagePlay className="w-5 h-5" />
             </button>
           </GifPicker>
         </div>
