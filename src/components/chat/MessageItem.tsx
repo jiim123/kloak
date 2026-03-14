@@ -63,7 +63,7 @@ import { useSignedUrl } from "@/hooks/useSignedUrl";
 import { getPollIdFromContent, isPollMessageContent } from "@/lib/poll";
 import { canRevealGhostIdentityForUser } from "@/lib/ghostIdentity";
 import { pickFirstNonBlank } from "@/lib/utils";
-import { openUserProfileModal } from "@/lib/userProfilePopover";
+import { openUserProfileModal, SIDE_ALIGNED_USER_PROFILE_POPOVER } from "@/lib/userProfilePopover";
 
 // Static data moved outside component
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "👋", "🔥", "👀", "💯", "🙌", "😍", "🤔"] as const;
@@ -892,7 +892,7 @@ export const MessageItem = memo(function MessageItem({
       // Don't show profile in ghost mode for non-admins
       if (showGhostIdentity) return;
       if (message.user_id) {
-        openUserProfileModal(openModal, message.user_id, e.currentTarget);
+        openUserProfileModal(openModal, message.user_id, e.currentTarget, SIDE_ALIGNED_USER_PROFILE_POPOVER);
       }
     },
     [message.user_id, openModal, showGhostIdentity],

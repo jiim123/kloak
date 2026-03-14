@@ -65,7 +65,7 @@ import { fetchServerEmojis } from "@/lib/serverEmojis";
 import { getUserFromCache, getOrFetchUser, useMessageUser, bulkSetUsersInCache } from "@/stores/userCacheStore";
 import { cn, pickFirstNonBlank } from "@/lib/utils";
 import type { Message, User, ReactionGroup, CustomServerRole, ServerMember, ServerRole } from "@/types";
-import { openUserProfileModal } from "@/lib/userProfilePopover";
+import { openUserProfileModal, SIDE_ALIGNED_USER_PROFILE_POPOVER } from "@/lib/userProfilePopover";
 
 interface Thread {
   id: string;
@@ -2247,7 +2247,12 @@ export const ForumChannelArea = () => {
                           <Avatar
                             className="w-8 h-8 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
                             onClick={(event) =>
-                              openUserProfileModal(openModal, selectedThread?.created_by, event.currentTarget)
+                              openUserProfileModal(
+                                openModal,
+                                selectedThread?.created_by,
+                                event.currentTarget,
+                                SIDE_ALIGNED_USER_PROFILE_POPOVER,
+                              )
                             }
                           >
                             <AvatarImage src={opUser?.avatar_url} />
@@ -2262,7 +2267,12 @@ export const ForumChannelArea = () => {
                                   opUsernameColor.isGradient ? "transition-none" : "hover:opacity-80 transition-opacity",
                                 )}
                                 onClick={(event) =>
-                                  openUserProfileModal(openModal, selectedThread?.created_by, event.currentTarget)
+                                  openUserProfileModal(
+                                    openModal,
+                                    selectedThread?.created_by,
+                                    event.currentTarget,
+                                    SIDE_ALIGNED_USER_PROFILE_POPOVER,
+                                  )
                                 }
                               >
                                 <span className={opUsernameColor.className} style={opUsernameColor.style}>
@@ -2345,7 +2355,14 @@ export const ForumChannelArea = () => {
                                       msgUsernameColor.className,
                                     )}
                                     style={msgUsernameColor.style}
-                                    onClick={(event) => openUserProfileModal(openModal, msg.user_id, event.currentTarget)}
+                                    onClick={(event) =>
+                                      openUserProfileModal(
+                                        openModal,
+                                        msg.user_id,
+                                        event.currentTarget,
+                                        SIDE_ALIGNED_USER_PROFILE_POPOVER,
+                                      )
+                                    }
                                   >
                                     {getDisplayName(msg.user_id)}
                                   </span>
@@ -2686,7 +2703,12 @@ export const ForumChannelArea = () => {
                             <Avatar
                               className="w-8 h-8 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
                               onClick={(event) =>
-                                openUserProfileModal(openModal, selectedThread?.created_by, event.currentTarget)
+                                openUserProfileModal(
+                                  openModal,
+                                  selectedThread?.created_by,
+                                  event.currentTarget,
+                                  SIDE_ALIGNED_USER_PROFILE_POPOVER,
+                                )
                               }
                             >
                               <AvatarImage src={opUser?.avatar_url} />
@@ -2701,7 +2723,12 @@ export const ForumChannelArea = () => {
                                     opUsernameColor.isGradient ? "transition-none" : "hover:opacity-80 transition-opacity",
                                   )}
                                   onClick={(event) =>
-                                    openUserProfileModal(openModal, selectedThread?.created_by, event.currentTarget)
+                                    openUserProfileModal(
+                                      openModal,
+                                      selectedThread?.created_by,
+                                      event.currentTarget,
+                                      SIDE_ALIGNED_USER_PROFILE_POPOVER,
+                                    )
                                   }
                                 >
                                   <span className={opUsernameColor.className} style={opUsernameColor.style}>
@@ -2785,7 +2812,14 @@ export const ForumChannelArea = () => {
                                         msgUsernameColor.className,
                                       )}
                                       style={msgUsernameColor.style}
-                                      onClick={(event) => openUserProfileModal(openModal, msg.user_id, event.currentTarget)}
+                                      onClick={(event) =>
+                                        openUserProfileModal(
+                                          openModal,
+                                          msg.user_id,
+                                          event.currentTarget,
+                                          SIDE_ALIGNED_USER_PROFILE_POPOVER,
+                                        )
+                                      }
                                     >
                                       {getDisplayName(msg.user_id || msg.user?.id, msg.user)}
                                     </span>

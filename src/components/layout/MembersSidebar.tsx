@@ -32,7 +32,7 @@ import type { ServerMember, CustomServerRole, UserStatus } from "@/types";
 import { getEffectivePresence } from "@/lib/presence";
 import { hasRecentRealtimePresence } from "@/hooks/useRealtimeUsers";
 import { readCachedMemberCount, persistMemberCount } from "@/lib/serverMemberCount";
-import { openUserProfileModal } from "@/lib/userProfilePopover";
+import { LEFT_ALIGNED_USER_PROFILE_POPOVER, openUserProfileModal } from "@/lib/userProfilePopover";
 
 const OFFLINE_PAGE_SIZE = 50;
 
@@ -467,9 +467,7 @@ export const MembersSidebar = () => {
   const handleMemberClick = (member: ServerMember, anchor?: HTMLElement | null) => {
     openUserProfileModal(openModal, member.user_id, anchor ?? null, {
       user: member.user,
-      anchorAlign: "center",
-      anchorOffset: 20,
-      anchorSide: "left",
+      ...LEFT_ALIGNED_USER_PROFILE_POPOVER,
     });
   };
 

@@ -32,7 +32,7 @@ import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { MessageContent, ReplyPreview } from "@/components/chat/MessageContent";
 import { isImageOnlyMessage } from "@/lib/message";
 import { toast } from "sonner";
-import { openUserProfileModal } from "@/lib/userProfilePopover";
+import { openUserProfileModal, SIDE_ALIGNED_USER_PROFILE_POPOVER } from "@/lib/userProfilePopover";
 
 interface DMMessageItemProps {
   message: DirectMessage;
@@ -264,7 +264,12 @@ export const DMMessageItem = memo(function DMMessageItem({
                     className="dm-avatar-click cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();
-                      openUserProfileModal(openModal, message.sender_id, e.currentTarget);
+                      openUserProfileModal(
+                        openModal,
+                        message.sender_id,
+                        e.currentTarget,
+                        SIDE_ALIGNED_USER_PROFILE_POPOVER,
+                      );
                     }}
                   >
                     <AvatarWithDecoration user={senderUser} className={senderAvatarSizeClass} active={isRowHovered} />
@@ -286,7 +291,12 @@ export const DMMessageItem = memo(function DMMessageItem({
                       className="dm-username-click text-[14px] sm:text-[15px] font-medium text-foreground leading-tight cursor-pointer hover:underline"
                       onClick={(e) => {
                         e.stopPropagation();
-                        openUserProfileModal(openModal, message.sender_id, e.currentTarget);
+                        openUserProfileModal(
+                          openModal,
+                          message.sender_id,
+                          e.currentTarget,
+                          SIDE_ALIGNED_USER_PROFILE_POPOVER,
+                        );
                       }}
                     >
                       {senderUser?.display_name || senderUser?.username}

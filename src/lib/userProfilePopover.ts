@@ -11,6 +11,18 @@ export interface UserProfileAnchorRect {
 
 type OpenModal = (modal: ModalType, data?: Record<string, unknown> | null) => void;
 
+export const SIDE_ALIGNED_USER_PROFILE_POPOVER = {
+  anchorAlign: "center",
+  anchorOffset: 20,
+  anchorSide: "right",
+} as const;
+
+export const LEFT_ALIGNED_USER_PROFILE_POPOVER = {
+  anchorAlign: "center",
+  anchorOffset: 20,
+  anchorSide: "left",
+} as const;
+
 const toAnchorRect = (source: Element | DOMRect | null | undefined): UserProfileAnchorRect | undefined => {
   if (!source) return undefined;
 

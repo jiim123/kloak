@@ -151,10 +151,11 @@ const getAnchoredPosition = (
         ? rightOfAnchor
         : clamp(rightAligned, VIEWPORT_MARGIN, viewportWidth - DESKTOP_CARD_WIDTH - VIEWPORT_MARGIN);
   } else {
-    left =
-      alignedLeft + DESKTOP_CARD_WIDTH <= viewportWidth - VIEWPORT_MARGIN
-        ? alignedLeft
-        : clamp(rightAligned, VIEWPORT_MARGIN, viewportWidth - DESKTOP_CARD_WIDTH - VIEWPORT_MARGIN);
+    left = fitsToRight
+      ? rightOfAnchor
+      : fitsToLeft
+        ? leftOfAnchor
+        : clamp(alignedLeft, VIEWPORT_MARGIN, viewportWidth - DESKTOP_CARD_WIDTH - VIEWPORT_MARGIN);
   }
 
   return { left, top };
