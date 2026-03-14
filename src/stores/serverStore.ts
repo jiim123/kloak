@@ -186,6 +186,21 @@ const clearMembersCacheForServer = (serverId: string) => {
   }
 };
 
+const invalidateServerBootstrapCache = (serverId: string, userId: string | null) => {
+  const scopedKey = getScopedServerCacheKey(serverId, userId);
+  serverSurfaceCache.delete(scopedKey);
+  serverRolesCache.delete(scopedKey);
+  rolePermissionsCache.delete(serverId);
+  removeSessionCache(`${SERVER_SURFACE_STORAGE_PREFIX}${scopedKey}`);
+  removeSessionCache(`${SERVER_ROLES_STORAGE_PREFIX}${scopedKey}`);
+
+  for (const mode of ["lite", "full"] as const) {
+    removeSessionCache(getScopedMembersCacheKey(serverId, mode, userId));
+  }
+
+  clearMembersCacheForServer(serverId);
+};
+
 const getCachedMembers = (serverId: string, mode: MembersFetchMode, userId: string | null): MembersCacheEntry | null => {
   const scopedKey = getScopedMembersCacheKey(serverId, mode, userId);
   const cached = membersCache.get(scopedKey);
@@ -722,6 +737,10 @@ export const useServerStore = create<ServerState>((set, get) => ({
         set({ error: "You are banned from this server" });
         return null;
       }
+
+      // A newly joined server can briefly race with stale/empty cached surface data.
+      // Drop any cached bootstrap state so the next fetch reads the fresh server surface.
+      invalidateServerBootstrapCache(server.id, userId);
 
       // Refresh servers list
       await get().fetchServers(userId);

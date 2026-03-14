@@ -71,7 +71,7 @@ export const InviteLinkPreview = ({ inviteCode }: { inviteCode: string }) => {
       const existingServer = servers.find((s) => s.id === invite.id);
       if (existingServer) {
         setCurrentServer(existingServer);
-        await fetchChannels(existingServer.id);
+        await fetchChannels(existingServer.id, { force: true });
         navigate(`/app/servers/${existingServer.id}`);
         return;
       }
@@ -87,7 +87,7 @@ export const InviteLinkPreview = ({ inviteCode }: { inviteCode: string }) => {
       }
 
       setCurrentServer(joinedServer);
-      await fetchChannels(joinedServer.id);
+      await fetchChannels(joinedServer.id, { force: true });
       toast.success("Successfully joined server!");
       navigate(`/app/servers/${joinedServer.id}`);
     } finally {

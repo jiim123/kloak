@@ -334,7 +334,7 @@ const AppLayout = () => {
   // Fetch server bootstrap only when server changes.
   useEffect(() => {
     if (!currentServer?.id) return;
-    fetchChannels(currentServer.id);
+    void fetchChannels(currentServer.id, { force: true });
   }, [currentServer?.id, fetchChannels]);
 
   // Clear DM conversation when switching to a server

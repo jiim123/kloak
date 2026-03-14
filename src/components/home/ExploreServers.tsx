@@ -64,7 +64,7 @@ const LazyCardMount = ({ children }: { children: ReactNode }) => {
 const ExploreServersOriginal = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { servers: myServers, joinServer, setCurrentServer } = useServerStore();
+  const { servers: myServers, joinServer, setCurrentServer, fetchChannels } = useServerStore();
 
   const [isLoading, setIsLoading] = useState(false);
   const [query, setQuery] = useState('');
@@ -172,6 +172,7 @@ const ExploreServersOriginal = () => {
 
     toast.success(`Joined ${joined.name}`);
     setCurrentServer(joined);
+    await fetchChannels(joined.id, { force: true });
     navigate(`/app/servers/${joined.id}`);
   };
 

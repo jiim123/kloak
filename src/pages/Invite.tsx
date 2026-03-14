@@ -126,7 +126,7 @@ const Invite = () => {
       const existingServer = servers.find((s) => s.id === server.id);
       if (existingServer) {
         setCurrentServer(existingServer);
-        await fetchChannels(existingServer.id);
+        await fetchChannels(existingServer.id, { force: true });
         navigate(`/app/servers/${existingServer.id}`);
         return;
       }
@@ -145,7 +145,7 @@ const Invite = () => {
       }
 
       setCurrentServer(joinedServer);
-      await fetchChannels(joinedServer.id);
+      await fetchChannels(joinedServer.id, { force: true });
       toast.success("Successfully joined server!");
       navigate(`/app/servers/${joinedServer.id}`);
     } finally {
