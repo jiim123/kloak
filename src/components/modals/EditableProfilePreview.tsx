@@ -159,7 +159,7 @@ export const EditableProfilePreview = ({
       avatar_url: localAvatarUrl,
       banner_url: localBannerUrl,
       display_name: (displayName.trim() || null) as User["display_name"],
-      bio: (bio.trim() || null) as User["bio"],
+      bio: (bio.trim() ? bio : null) as User["bio"],
       profile_theme_primary: profileThemePrimary,
       profile_theme_accent: profileThemeAccent,
     };
@@ -387,7 +387,7 @@ export const EditableProfilePreview = ({
                 onClick={() => setIsEditingBio(true)}
                 className="flex items-start gap-2 hover:opacity-80 transition-opacity text-left w-full"
               >
-                <span className="text-sm leading-relaxed flex-1" style={{ color: muted }}>
+                <span className="flex-1 whitespace-pre-wrap break-words text-sm leading-relaxed" style={{ color: muted }}>
                   {bio.trim() || user.bio || "Click to add a bio..."}
                 </span>
                 <Pencil className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: muted }} />

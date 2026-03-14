@@ -189,6 +189,7 @@ export const UserProfilePopup = () => {
   const [cooldownSeconds, setCooldownSeconds] = useState<number>(0);
   const [isSendingRequest, setIsSendingRequest] = useState(false);
   const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
+  const [isBioExpanded, setIsBioExpanded] = useState(false);
   const cardRef = useRef<HTMLDivElement | null>(null);
   const profileEffectPlayedRef = useRef(false);
   const profileEffectImgRef = useRef<HTMLImageElement | null>(null);
@@ -247,6 +248,7 @@ export const UserProfilePopup = () => {
     profileEffectPlayedRef.current = false;
     profileEffectAnimationEndedRef.current = false;
     setProfileEffectStillFrame(null);
+    setIsBioExpanded(false);
   }, [isOpen, userId]);
 
   useEffect(() => {
@@ -589,6 +591,7 @@ export const UserProfilePopup = () => {
     const joinedAt = profileUser.created_at ? format(new Date(profileUser.created_at), "MMM d, yyyy") : "Unknown";
     const rolePreview = userRoles.slice(0, 3);
     const bioText = profileUser.bio?.trim();
+    const shouldCollapseBio = Boolean(bioText && bioText.length > 50);
     const statusText = profileUser.custom_status?.trim();
     const themeStyle: CSSProperties = {
       color: fg,
@@ -703,9 +706,32 @@ export const UserProfilePopup = () => {
               </div>
 
               {bioText && (
-                <p className="mt-2 text-[13px] leading-5" style={{ maxHeight: "2.5rem", overflow: "hidden" }}>
-                  {bioText}
-                </p>
+                <div className="mt-2">
+                  <div className="relative">
+                    <p
+                      className="whitespace-pre-wrap break-words text-[13px] leading-5"
+                      style={!isBioExpanded && shouldCollapseBio ? { maxHeight: "3.75rem", overflow: "hidden" } : undefined}
+                    >
+                      {bioText}
+                    </p>
+                    {!isBioExpanded && shouldCollapseBio && (
+                      <div
+                        className="pointer-events-none absolute inset-x-0 bottom-0 h-8"
+                        style={{ background: `linear-gradient(180deg, rgba(255,255,255,0) 0%, ${surface} 100%)` }}
+                      />
+                    )}
+                  </div>
+                  {shouldCollapseBio && (
+                    <button
+                      type="button"
+                      className="mt-1 text-[12px] font-medium transition-opacity hover:opacity-80"
+                      style={{ color: fg }}
+                      onClick={() => setIsBioExpanded((prev) => !prev)}
+                    >
+                      {isBioExpanded ? "See less" : "See more"}
+                    </button>
+                  )}
+                </div>
               )}
 
               {(rolePreview.length > 0 || (!isSelf && sharedServers.length > 0)) && (

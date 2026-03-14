@@ -259,7 +259,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     try {
       await updateUser({
         display_name: displayName.trim() || null,
-        bio: bio.trim() || null,
+        bio: bio.trim() ? bio : null,
         profile_theme_primary: profileThemePrimary,
         profile_theme_accent: profileThemeAccent,
       });
