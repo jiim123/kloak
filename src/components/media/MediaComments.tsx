@@ -29,6 +29,7 @@ import { fetchServerEmojis } from "@/lib/serverEmojis";
 import { getUserFromCache, getOrFetchUser } from "@/stores/userCacheStore";
 import { pickFirstNonBlank } from "@/lib/utils";
 import type { User, ReactionGroup, CustomServerRole, ServerRole } from "@/types";
+import { openUserProfileModal } from "@/lib/userProfilePopover";
 
 interface MediaComment {
   id: string;
@@ -900,9 +901,9 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
                   <button
                     type="button"
                     className="flex-shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-full"
-                    onClick={() => {
+                    onClick={(event) => {
                       if (comment.user) {
-                        openModal('userProfile', { userId: comment.user.id });
+                        openUserProfileModal(openModal, comment.user.id, event.currentTarget);
                       }
                     }}
                     aria-label={`View ${comment.user?.username}'s profile`}
@@ -924,9 +925,9 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
                         type="button"
                         className={`font-medium text-sm hover:underline focus:outline-none ${usernameColor.className}`}
                         style={usernameColor.style}
-                        onClick={() => {
+                        onClick={(event) => {
                           if (comment.user) {
-                            openModal('userProfile', { userId: comment.user.id });
+                            openUserProfileModal(openModal, comment.user.id, event.currentTarget);
                           }
                         }}
                       >

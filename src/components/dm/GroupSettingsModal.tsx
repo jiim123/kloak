@@ -13,6 +13,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useUIStore } from "@/stores/uiStore";
 import { toast } from "sonner";
 import type { DMConversation, User } from "@/types";
+import { openUserProfileModal } from "@/lib/userProfilePopover";
 
 interface GroupSettingsModalProps {
   open: boolean;
@@ -121,8 +122,8 @@ export const GroupSettingsModal = ({
     }
   };
 
-  const handleAvatarClick = (targetUser: User) => {
-    openModal("userProfile", { user: targetUser });
+  const handleAvatarClick = (targetUser: User, anchor?: HTMLElement | null) => {
+    openUserProfileModal(openModal, targetUser.id, anchor ?? null, { user: targetUser });
   };
 
   const selectedFriendData = friends.filter((f) => selectedFriends.includes(f.id));
@@ -185,7 +186,7 @@ export const GroupSettingsModal = ({
                 return (
                   <button
                     key={participant.id}
-                    onClick={() => handleAvatarClick(participant)}
+                    onClick={(event) => handleAvatarClick(participant, event.currentTarget)}
                     className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-secondary/50 transition-colors w-full text-left"
                   >
                     <AvatarWithDecoration user={participant} className="w-7 h-7 shrink-0" />

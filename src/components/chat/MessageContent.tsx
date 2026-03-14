@@ -19,6 +19,7 @@ import {
   resolveQualifiedEmojiByNameFallback,
   type ResolvedEmoji,
 } from "@/lib/globalEmojiResolver";
+import { openUserProfileModal } from "@/lib/userProfilePopover";
 
 interface UserInfo {
   id: string;
@@ -788,7 +789,7 @@ export const MessageContent = ({
       if (target.classList.contains("mention-clickable") && target.dataset.userId) {
         e.preventDefault();
         e.stopPropagation();
-        openModal("userProfile", { userId: target.dataset.userId });
+        openUserProfileModal(openModal, target.dataset.userId, target);
       }
       if (target.classList.contains("channel-tag-clickable") && target.dataset.channelId) {
         e.preventDefault();
@@ -817,7 +818,7 @@ export const MessageContent = ({
         }
         if (target.classList.contains("mention-clickable") && target.dataset.userId) {
           e.preventDefault();
-          openModal("userProfile", { userId: target.dataset.userId });
+          openUserProfileModal(openModal, target.dataset.userId, target);
         }
         if (target.classList.contains("channel-tag-clickable") && target.dataset.channelId) {
           e.preventDefault();

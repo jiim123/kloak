@@ -1,0 +1,41 @@
+import type { ModalType } from "@/stores/uiStore";
+
+export interface UserProfileAnchorRect {
+  top: number;
+  left: number;
+  right: number;
+  bottom: number;
+  width: number;
+  height: number;
+}
+
+type OpenModal = (modal: ModalType, data?: Record<string, unknown> | null) => void;
+
+const toAnchorRect = (source: Element | DOMRect | null | undefined): UserProfileAnchorRect | undefined => {
+  if (!source) return undefined;
+
+  const rect = source instanceof Element ? source.getBoundingClientRect() : source;
+  return {
+    top: rect.top,
+    left: rect.left,
+    right: rect.right,
+    bottom: rect.bottom,
+    width: rect.width,
+    height: rect.height,
+  };
+};
+
+export const openUserProfileModal = (
+  openModal: OpenModal,
+  userId: string | null | undefined,
+  anchor?: Element | DOMRect | null,
+  extraData?: Record<string, unknown>,
+) => {
+  if (!userId) return;
+
+  openModal("userProfile", {
+    userId,
+    ...extraData,
+    anchorRect: toAnchorRect(anchor),
+  });
+};

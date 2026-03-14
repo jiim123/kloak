@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 import { MoreHorizontal, Flag, Ban, Phone, Menu } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { openUserProfileModal } from "@/lib/userProfilePopover";
 
 interface DMHeaderProps {
   otherUser: User | null | undefined;
@@ -89,9 +90,9 @@ export const DMHeader = ({ otherUser }: DMHeaderProps) => {
     setIsMenuOpen(false);
   };
 
-  const handleUserClick = () => {
+  const handleUserClick = (event: MouseEvent<HTMLButtonElement>) => {
     if (otherUser?.id) {
-      openModal("userProfile", { userId: otherUser.id });
+      openUserProfileModal(openModal, otherUser.id, event.currentTarget);
     }
   };
 

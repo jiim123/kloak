@@ -1,6 +1,16 @@
-import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { format } from "date-fns";
-import { MessageCircle, UserPlus, UserMinus, Loader2, Check, X, Clock, Calendar, Ban } from "lucide-react";
+import {
+  Ban,
+  Calendar,
+  Check,
+  Clock,
+  Loader2,
+  MessageCircle,
+  UserMinus,
+  UserPlus,
+  X,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -13,13 +23,15 @@ import { useServerStore } from "@/stores/serverStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { useDMStore } from "@/stores/dmStore";
 import { useAuthorStyles } from "@/hooks/useAuthorStyles";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { getProfileEffectSrc } from "@/lib/profileEffects";
 import { getEffectivePresence } from "@/lib/presence";
-import type { User, UserStatus } from "@/types";
 import type { Badge } from "@/types/badge";
+import type { User, UserStatus } from "@/types";
+import type { UserProfileAnchorRect } from "@/lib/userProfilePopover";
 
 const statusColors: Record<UserStatus, string> = {
   online: "bg-[hsl(var(--kloak-success))]",
@@ -36,6 +48,8 @@ const statusLabels: Record<UserStatus, string> = {
 };
 
 const COOLDOWN_MINUTES = 5;
+const DESKTOP_CARD_WIDTH = 320;
+const VIEWPORT_MARGIN = 12;
 
 const withAlpha = (hex: string, alphaHex: string) => {
   if (!hex || !hex.startsWith("#") || hex.length !== 7) return hex;
@@ -75,8 +89,42 @@ const isLightTheme = (primary?: string | null, accent?: string | null, fallback?
     if (l !== null) lums.push(l);
   }
   if (lums.length === 0) return false;
-  const avg = lums.reduce((a, b) => a + b, 0) / lums.length;
-  return avg > 0.62;
+  return lums.reduce((a, b) => a + b, 0) / lums.length > 0.62;
+};
+
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
+const getAnchoredPosition = (anchorRect: UserProfileAnchorRect | undefined, cardHeight: number) => {
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const fallbackLeft = viewportWidth / 2 - DESKTOP_CARD_WIDTH / 2;
+  const fallbackTop = viewportHeight / 2 - cardHeight / 2;
+
+  if (!anchorRect) {
+    return {
+      left: clamp(fallbackLeft, VIEWPORT_MARGIN, viewportWidth - DESKTOP_CARD_WIDTH - VIEWPORT_MARGIN),
+      top: clamp(fallbackTop, VIEWPORT_MARGIN, viewportHeight - cardHeight - VIEWPORT_MARGIN),
+    };
+  }
+
+  const preferredBelow = anchorRect.bottom + 10;
+  const preferredAbove = anchorRect.top - cardHeight - 10;
+  const fitsBelow = preferredBelow + cardHeight <= viewportHeight - VIEWPORT_MARGIN;
+  const fitsAbove = preferredAbove >= VIEWPORT_MARGIN;
+  const top = fitsBelow
+    ? preferredBelow
+    : fitsAbove
+      ? preferredAbove
+      : clamp(preferredBelow, VIEWPORT_MARGIN, viewportHeight - cardHeight - VIEWPORT_MARGIN);
+
+  const preferredLeft = anchorRect.left;
+  const rightAligned = anchorRect.right - DESKTOP_CARD_WIDTH;
+  const left =
+    preferredLeft + DESKTOP_CARD_WIDTH <= viewportWidth - VIEWPORT_MARGIN
+      ? preferredLeft
+      : clamp(rightAligned, VIEWPORT_MARGIN, viewportWidth - DESKTOP_CARD_WIDTH - VIEWPORT_MARGIN);
+
+  return { left, top };
 };
 
 export const UserProfilePopup = () => {
@@ -84,8 +132,8 @@ export const UserProfilePopup = () => {
   const { user: currentUser } = useAuthStore();
   const navigate = useNavigate();
   const { servers, setCurrentServer, currentServer, members } = useServerStore();
+  const isMobile = useIsMobile();
 
-  // Stable server IDs — only changes when servers are added/removed, not on any property update
   const serverIds = useMemo(() => servers.map((s) => s.id), [servers]);
   const {
     friends,
@@ -98,7 +146,6 @@ export const UserProfilePopup = () => {
     declineRequest,
     blockUser,
     unblockUser,
-    error: friendError,
   } = useFriendStore();
   const { openConversation, setCurrentConversation } = useDMStore();
 
@@ -108,13 +155,16 @@ export const UserProfilePopup = () => {
   const [sharedServers, setSharedServers] = useState<typeof servers>([]);
   const [cooldownSeconds, setCooldownSeconds] = useState<number>(0);
   const [isSendingRequest, setIsSendingRequest] = useState(false);
+  const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
+  const cardRef = useRef<HTMLDivElement | null>(null);
   const profileEffectPlayedRef = useRef(false);
   const profileEffectImgRef = useRef<HTMLImageElement | null>(null);
-  const [profileEffectStillFrame, setProfileEffectStillFrame] = useState<string | null>(null);
   const profileEffectAnimationEndedRef = useRef(false);
+  const [profileEffectStillFrame, setProfileEffectStillFrame] = useState<string | null>(null);
 
   const isOpen = activeModal === "userProfile";
   const userId = modalData?.userId as string | undefined;
+  const anchorRect = modalData?.anchorRect as UserProfileAnchorRect | undefined;
 
   const applyCooldownFromDeclinedAt = useCallback((declinedAtRaw: string | null | undefined) => {
     if (!declinedAtRaw) {
@@ -124,8 +174,7 @@ export const UserProfilePopup = () => {
 
     const declinedAt = new Date(declinedAtRaw);
     const cooldownEnd = new Date(declinedAt.getTime() + COOLDOWN_MINUTES * 60 * 1000);
-    const now = new Date();
-    const remainingMs = cooldownEnd.getTime() - now.getTime();
+    const remainingMs = cooldownEnd.getTime() - Date.now();
     setCooldownSeconds(remainingMs > 0 ? Math.ceil(remainingMs / 1000) : 0);
   }, []);
 
@@ -149,30 +198,31 @@ export const UserProfilePopup = () => {
     }
   }, [applyCooldownFromDeclinedAt, currentUser?.id, userId]);
 
-  // Reset profile effect play state when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      profileEffectPlayedRef.current = false;
-      profileEffectAnimationEndedRef.current = false;
-      setProfileEffectStillFrame(null);
-    }
-  }, [isOpen]);
+  const handleClose = useCallback(() => {
+    setProfileUser(null);
+    setUserBadges([]);
+    setSharedServers([]);
+    setPosition(null);
+    closeModal();
+  }, [closeModal]);
 
-  // Capture still frame after animation plays once to prevent looping
+  useEffect(() => {
+    if (!isOpen) return;
+    profileEffectPlayedRef.current = false;
+    profileEffectAnimationEndedRef.current = false;
+    setProfileEffectStillFrame(null);
+  }, [isOpen, userId]);
+
   useEffect(() => {
     if (!profileUser?.profile_effect || !isOpen) return;
 
     const effectSrc = getProfileEffectSrc(profileUser.profile_effect);
-    if (!effectSrc) return;
-
-    // If we already have a still frame, don't recapture
-    if (profileEffectStillFrame) return;
+    if (!effectSrc || profileEffectStillFrame) return;
 
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.src = effectSrc;
 
-    // Wait for image to load, then after animation duration, capture the last frame
     const captureStillFrame = () => {
       try {
         const canvas = document.createElement("canvas");
@@ -182,26 +232,22 @@ export const UserProfilePopup = () => {
         if (!ctx) return;
 
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL("image/png");
-        setProfileEffectStillFrame(dataUrl);
+        setProfileEffectStillFrame(canvas.toDataURL("image/png"));
         profileEffectAnimationEndedRef.current = true;
-      } catch (e) {
-        console.error("Failed to capture still frame:", e);
+      } catch (error) {
+        console.error("Failed to capture still frame:", error);
       }
     };
 
     img.onload = () => {
-      // Wait for animation to complete (heuristic: 3 seconds for most animations)
-      // Then capture the last frame to prevent looping
-      setTimeout(captureStillFrame, 3000);
+      window.setTimeout(captureStillFrame, 3000);
     };
 
     return () => {
       img.onload = null;
     };
-  }, [profileUser?.profile_effect, isOpen, profileEffectStillFrame]);
+  }, [isOpen, profileEffectStillFrame, profileUser?.profile_effect]);
 
-  // Fetch user profile
   useEffect(() => {
     if (!isOpen || !userId || !currentUser?.id) return;
 
@@ -210,7 +256,7 @@ export const UserProfilePopup = () => {
       try {
         const { data, error } = await supabase.rpc("profile", {
           _target_user_id: userId,
-          _requesting_user_id: currentUser!.id,
+          _requesting_user_id: currentUser.id,
           _server_ids: serverIds,
         });
 
@@ -235,42 +281,59 @@ export const UserProfilePopup = () => {
           custom_status: d.custom_status,
           created_at: d.created_at,
           last_seen: d.last_seen,
+          pronouns: d.pronouns ?? null,
           is_bot: d.is_bot ?? false,
         });
 
         setUserBadges((Array.isArray(payload.badges) ? payload.badges : []) as Badge[]);
         const sharedServerIds = new Set((Array.isArray(payload.shared_server_ids) ? payload.shared_server_ids : []) as string[]);
-        const shared = servers.filter((s) => sharedServerIds.has(s.id));
-        setSharedServers(shared.slice(0, 3));
+        setSharedServers(servers.filter((s) => sharedServerIds.has(s.id)).slice(0, 3));
         applyCooldownFromDeclinedAt(payload.declined_at ?? null);
       } catch (error) {
         console.error("Failed to fetch profile:", error);
         toast.error("Failed to load profile");
+        setProfileUser(null);
         setUserBadges([]);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchProfile();
-  }, [isOpen, userId, serverIds, servers, applyCooldownFromDeclinedAt, currentUser?.id]);
+    void fetchProfile();
+  }, [applyCooldownFromDeclinedAt, currentUser?.id, isOpen, serverIds, servers, userId]);
 
-  // Countdown timer effect
   useEffect(() => {
     if (cooldownSeconds <= 0) return;
-
-    const interval = setInterval(() => {
-      setCooldownSeconds((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          return 0;
-        }
-        return prev - 1;
-      });
+    const interval = window.setInterval(() => {
+      setCooldownSeconds((prev) => Math.max(prev - 1, 0));
     }, 1000);
-
-    return () => clearInterval(interval);
+    return () => window.clearInterval(interval);
   }, [cooldownSeconds]);
+
+  useEffect(() => {
+    if (!isOpen || isMobile) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") handleClose();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isMobile, isOpen]);
+
+  useLayoutEffect(() => {
+    if (!isOpen || isMobile || !cardRef.current) return;
+
+    const updatePosition = () => {
+      const rect = cardRef.current?.getBoundingClientRect();
+      const height = rect?.height ?? 480;
+      setPosition(getAnchoredPosition(anchorRect, height));
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    return () => window.removeEventListener("resize", updatePosition);
+  }, [anchorRect, isLoading, isMobile, isOpen, profileUser, sharedServers.length]);
 
   const isSelf = currentUser?.id === userId;
   const isFriend = friends.some((f) => f.id === userId);
@@ -279,35 +342,34 @@ export const UserProfilePopup = () => {
   const isBlocked = blockedUsers.some((b) => b.id === userId);
   const isInCooldown = cooldownSeconds > 0;
 
-  const formatCooldown = (seconds: number): string => {
+  const formatCooldown = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   const authorStyles = useAuthorStyles(currentServer?.id, userId ? [userId] : []);
-  // Get user's roles in current server. Fallback to targeted author-style RPC for offline users.
   const userRoles = useMemo(() => {
     if (!currentServer || !userId) return [];
     const memberRoles = members.find((m) => m.user_id === userId && m.server_id === currentServer.id)?.roles;
     if (memberRoles && memberRoles.length > 0) return memberRoles;
     return authorStyles[userId]?.roles || [];
-  }, [currentServer, userId, members, authorStyles]);
+  }, [authorStyles, currentServer, members, userId]);
 
   const handleMessage = async () => {
     if (!currentUser || !profileUser) return;
     try {
       const conversation = await openConversation(currentUser.id, profileUser.id);
-      if (conversation) {
-        // Navigate using the app's built-in DM deep-link handler (avoids URL/store race with server routes)
-        navigate(`/app?conversation=${conversation.id}`, { replace: true });
-        setCurrentServer(null);
-        setCurrentConversation(conversation);
-        closeModal();
-      } else {
+      if (!conversation) {
         toast.error("You can't message this user");
+        return;
       }
-    } catch (error) {
+
+      navigate(`/app?conversation=${conversation.id}`, { replace: true });
+      setCurrentServer(null);
+      setCurrentConversation(conversation);
+      handleClose();
+    } catch {
       toast.error("Failed to open conversation");
     }
   };
@@ -317,16 +379,18 @@ export const UserProfilePopup = () => {
 
     if (isFriend) {
       const friendship = friends.find((f) => f.id === profileUser.id);
-      if (friendship) {
-        await removeFriend(friendship.friendship_id, currentUser.id);
-        toast.success("Friend removed");
-      }
-    } else if (!hasPendingRequest && !hasSentRequest && !isInCooldown) {
+      if (!friendship) return;
+      await removeFriend(friendship.friendship_id, currentUser.id);
+      toast.success("Friend removed");
+      return;
+    }
+
+    if (!hasPendingRequest && !hasSentRequest && !isInCooldown) {
       setIsSendingRequest(true);
       const success = await sendRequest(currentUser.id, profileUser.username);
       setIsSendingRequest(false);
       if (success) {
-        toast.success("Friend request sent!");
+        toast.success("Friend request sent");
       } else {
         await refreshCooldown();
       }
@@ -336,19 +400,17 @@ export const UserProfilePopup = () => {
   const handleAcceptRequest = async () => {
     if (!currentUser) return;
     const pendingFriend = pendingRequests.find((f) => f.id === userId);
-    if (pendingFriend) {
-      await acceptRequest(pendingFriend.friendship_id, currentUser.id);
-      toast.success("Friend request accepted!");
-    }
+    if (!pendingFriend) return;
+    await acceptRequest(pendingFriend.friendship_id, currentUser.id);
+    toast.success("Friend request accepted");
   };
 
   const handleDeclineRequest = async () => {
     if (!currentUser) return;
     const pendingFriend = pendingRequests.find((f) => f.id === userId);
-    if (pendingFriend) {
-      await declineRequest(pendingFriend.friendship_id, currentUser.id);
-      toast.success("Friend request declined");
-    }
+    if (!pendingFriend) return;
+    await declineRequest(pendingFriend.friendship_id, currentUser.id);
+    toast.success("Friend request declined");
   };
 
   const handleBlockUser = async () => {
@@ -356,7 +418,7 @@ export const UserProfilePopup = () => {
     try {
       await blockUser(currentUser.id, profileUser.id);
       toast.success(`Blocked ${profileUser.display_name || profileUser.username}`);
-    } catch (error) {
+    } catch {
       toast.error("Failed to block user");
     }
   };
@@ -366,418 +428,346 @@ export const UserProfilePopup = () => {
     try {
       await unblockUser(currentUser.id, profileUser.id);
       toast.success(`Unblocked ${profileUser.display_name || profileUser.username}`);
-    } catch (error) {
+    } catch {
       toast.error("Failed to unblock user");
     }
   };
 
-  const handleClose = () => {
-    setProfileUser(null);
-    setUserBadges([]);
-    closeModal();
+  const renderActionRow = (divider: string) => {
+    if (isSelf || !profileUser) return null;
+
+    const iconButtonClass =
+      "h-7 flex-1 rounded-lg border border-white/10 bg-[#2a2a2a] px-2 text-white hover:bg-[#353535] hover:text-white disabled:border-white/5 disabled:bg-[#1c1c1c] disabled:text-white/35";
+    const dmButtonClass =
+      "h-7 flex-1 rounded-lg border border-white/10 bg-[#2a2a2a] px-2 text-white shadow-none hover:bg-[#353535] hover:text-white hover:shadow-none";
+
+    return (
+      <div className="relative z-10 border-t px-3 py-2" style={{ borderColor: divider }}>
+        {!isBlocked ? (
+          <div className="flex items-center gap-1.5">
+            <Button onClick={handleMessage} className={dmButtonClass}>
+              <MessageCircle className="mr-1.5 h-3.5 w-3.5" />
+              Message
+            </Button>
+
+            {hasPendingRequest ? (
+              <>
+                <Button variant="secondary" className={iconButtonClass} onClick={handleAcceptRequest}>
+                  <Check className="h-3.5 w-3.5" />
+                  Accept
+                </Button>
+                <Button variant="secondary" className={iconButtonClass} onClick={handleDeclineRequest}>
+                  <X className="h-3.5 w-3.5" />
+                  Decline
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="secondary"
+                className={iconButtonClass}
+                onClick={handleFriendAction}
+                disabled={hasSentRequest || isInCooldown || isSendingRequest}
+                title={
+                  hasSentRequest
+                    ? "Friend request sent"
+                    : isInCooldown
+                      ? `Retry in ${formatCooldown(cooldownSeconds)}`
+                      : isFriend
+                        ? "Remove friend"
+                        : "Add friend"
+                }
+              >
+                {isSendingRequest ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Sending
+                  </>
+                ) : isFriend ? (
+                  <>
+                    <UserMinus className="h-3.5 w-3.5" />
+                    Remove
+                  </>
+                ) : isInCooldown ? (
+                  <>
+                    <Clock className="h-3.5 w-3.5" />
+                    Wait
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="h-3.5 w-3.5" />
+                    Add
+                  </>
+                )}
+              </Button>
+            )}
+
+            <Button variant="secondary" size="icon" className="h-7 w-7 rounded-lg border border-white/10 bg-[#2a2a2a] text-white hover:bg-[#353535] hover:text-white" onClick={handleBlockUser}>
+              <Ban className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ) : (
+          <Button
+            variant="secondary"
+            className="h-7 w-full rounded-lg border border-white/10 bg-white/10 text-white hover:bg-white/18"
+            onClick={handleUnblockUser}
+          >
+            <Ban className="mr-1.5 h-3.5 w-3.5" />
+            Unblock
+          </Button>
+        )}
+
+      </div>
+    );
   };
 
-  return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent
-        className="sm:max-w-md max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-hidden bg-background/95 backdrop-blur-xl border-none rounded-2xl p-0"
-        onOpenAutoFocus={(e) => e.preventDefault()}
-      >
-        {isLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="flex flex-col items-center gap-3">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-              <p className="text-sm text-muted-foreground">Loading profile...</p>
+  const renderCard = () => {
+    if (isLoading) {
+      return (
+        <div className="flex h-64 items-center justify-center">
+          <div className="flex flex-col items-center gap-3 text-white/75">
+            <Loader2 className="h-7 w-7 animate-spin" />
+            <p className="text-sm">Loading profile...</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (!profileUser) return null;
+
+    const light = isLightTheme(
+      profileUser.profile_theme_primary,
+      profileUser.profile_theme_accent,
+      profileUser.banner_color,
+    );
+    const fg = light ? "#0b0b0f" : "#f8fafc";
+    const muted = light ? "rgba(11, 11, 15, 0.64)" : "rgba(248, 250, 252, 0.7)";
+    const divider = light ? "rgba(11, 11, 15, 0.12)" : "rgba(248, 250, 252, 0.12)";
+    const surface = light ? "rgba(255,255,255,0.32)" : "rgba(17,18,21,0.72)";
+    const overlay = light ? "rgba(255,255,255,0.42)" : "rgba(0,0,0,0.28)";
+    const bannerUrl = profileUser.banner_url;
+    const hasProfileDecoration = Boolean(profileUser.avatar_decoration);
+    const presence = getEffectivePresence(profileUser.status || "offline", profileUser.last_seen);
+    const effectSrc = profileUser.profile_effect ? getProfileEffectSrc(profileUser.profile_effect) : null;
+    const displayEffectSrc =
+      profileEffectAnimationEndedRef.current && profileEffectStillFrame ? profileEffectStillFrame : effectSrc;
+    const joinedAt = profileUser.created_at ? format(new Date(profileUser.created_at), "MMM d, yyyy") : "Unknown";
+    const rolePreview = userRoles.slice(0, 3);
+    const bioText = profileUser.bio?.trim();
+    const statusText = profileUser.custom_status?.trim();
+    const themeStyle: CSSProperties = {
+      color: fg,
+      background:
+        profileUser.profile_theme_primary && profileUser.profile_theme_accent
+          ? `linear-gradient(180deg, ${profileUser.profile_theme_primary} 0%, ${profileUser.profile_theme_accent} 100%)`
+          : `linear-gradient(180deg, ${withAlpha(profileUser.banner_color, "33")} 0%, ${withAlpha(profileUser.banner_color, "12")} 100%)`,
+      ["--profile-muted" as "--profile-muted"]: muted,
+    };
+
+    return (
+      <div className="relative overflow-hidden rounded-[11px]" style={themeStyle}>
+        <div className="pointer-events-none absolute inset-0" style={{ backgroundColor: overlay }} />
+
+        {bannerUrl ? (
+          <div className="relative h-16 overflow-hidden">
+            <img src={bannerUrl} alt="Profile banner" className="h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-black/10 to-black/50" />
+          </div>
+        ) : (
+          <div className="h-14" />
+        )}
+
+        {displayEffectSrc && (
+          <div className="pointer-events-none absolute inset-0 overflow-hidden">
+            <img
+              ref={profileEffectImgRef}
+              key={profileEffectPlayedRef.current ? `played-${userId}` : `effect-${profileUser.profile_effect}-${userId}`}
+              src={displayEffectSrc}
+              alt=""
+              className="h-full w-full object-cover object-top opacity-85"
+              onLoad={() => {
+                if (!profileEffectPlayedRef.current) profileEffectPlayedRef.current = true;
+              }}
+              onError={() => {
+                profileEffectPlayedRef.current = true;
+              }}
+            />
+          </div>
+        )}
+
+        <div className="relative z-10 px-3 pb-0">
+          <div className="-mt-3 flex items-end gap-3">
+            <div className="relative shrink-0">
+              <AvatarWithDecoration
+                user={profileUser}
+                className={hasProfileDecoration ? "h-[52px] w-[52px]" : "h-[58px] w-[58px]"}
+                active
+              />
+              <div
+                className={cn(
+                  "absolute bottom-1 right-1 rounded-full border-[3px] border-background shadow-lg",
+                  hasProfileDecoration ? "h-3.5 w-3.5" : "h-4 w-4",
+                  statusColors[presence.status],
+                )}
+                title={statusLabels[presence.status]}
+              />
+            </div>
+            <div className="min-w-0 flex-1 pt-5 pb-0.5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <h2 className="truncate text-[19px] font-semibold leading-none">
+                      {profileUser.display_name || profileUser.username}
+                    </h2>
+                    {profileUser.is_bot && <BotTag className="rounded-md px-1.5 py-0.5 text-[10px]" />}
+                  </div>
+                  <p className="mt-1 truncate text-[13px] font-medium text-[color:var(--profile-muted)]">
+                    @{profileUser.username}
+                  </p>
+                </div>
+                {userBadges.length > 0 && (
+                  <div className="shrink-0 self-start pt-0.5">
+                    <UserBadges badges={userBadges} />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        ) : profileUser ? (
-          (() => {
-            const light = isLightTheme(
-              profileUser.profile_theme_primary,
-              profileUser.profile_theme_accent,
-              profileUser.banner_color,
-            );
-            const fg = light ? "#0b0b0f" : "#f8fafc";
-            const muted = light ? "rgba(11, 11, 15, 0.66)" : "rgba(248, 250, 252, 0.72)";
-            const overlay = light ? "rgba(255, 255, 255, 0.46)" : "rgba(0, 0, 0, 0.34)";
-            const divider = light ? "rgba(11, 11, 15, 0.12)" : "rgba(248, 250, 252, 0.12)";
-            const cardBg = light ? "rgba(255, 255, 255, 0.3)" : "rgba(0, 0, 0, 0.2)";
-            const bannerUrl = profileUser.banner_url;
-            const hasProfileDecoration = Boolean(profileUser.avatar_decoration);
 
-            return (
-              <div
-                className="relative overflow-hidden rounded-2xl"
-                style={{
-                  background:
-                    profileUser.profile_theme_primary && profileUser.profile_theme_accent
-                      ? `linear-gradient(180deg, ${profileUser.profile_theme_primary} 0%, ${profileUser.profile_theme_accent} 100%)`
-                      : `linear-gradient(180deg, ${withAlpha(profileUser.banner_color, "33")} 0%, ${withAlpha(
-                          profileUser.banner_color,
-                          "14",
-                        )} 100%)`,
-                }}
-              >
-                {/* Soft overlay */}
-                <div className="absolute inset-0" style={{ backgroundColor: overlay }} />
-
-                {/* Profile Content */}
-                <div
-                  className="relative p-4 sm:p-6"
-                  style={
-                    {
-                      color: fg,
-                      ["--profile-muted" as any]: muted,
-                    } as React.CSSProperties
-                  }
-                >
-                  {/* Banner image */}
-                  {bannerUrl && (
-                    <div
-                      className="-mx-4 sm:-mx-6 -mt-4 sm:-mt-6 mb-4 h-24 sm:h-28 relative overflow-hidden"
-                      style={{ zIndex: 0 }}
+          <div className="mt-4 pb-3">
+            <div className="rounded-[11px] p-3" style={{ backgroundColor: surface, backdropFilter: "blur(14px)" }}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap gap-1.5">
+                    <span
+                      className="inline-flex items-center rounded-full px-2 py-1 text-[10px] font-medium"
+                      style={{ backgroundColor: divider }}
                     >
-                      <img
-                        src={bannerUrl}
-                        alt="Profile banner"
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-black/10 to-black/40" />
-                    </div>
-                  )}
-
-                  {/* Profile Effect - rendered once when modal opens, stops after first play, above banner but below content */}
-                  {profileUser.profile_effect &&
-                    getProfileEffectSrc(profileUser.profile_effect) &&
-                    (() => {
-                      const effectSrc = getProfileEffectSrc(profileUser.profile_effect);
-                      // Use still frame if animation has ended, otherwise use animated version
-                      const displaySrc =
-                        profileEffectAnimationEndedRef.current && profileEffectStillFrame
-                          ? profileEffectStillFrame
-                          : effectSrc;
-                      const effectKey = profileEffectPlayedRef.current
-                        ? `played-${userId}`
-                        : `effect-${profileUser.profile_effect}-${userId}`;
-
-                      return (
-                        <div
-                          className="absolute -inset-4 sm:-inset-6 pointer-events-none overflow-hidden"
-                          style={{ zIndex: 2 }}
-                        >
-                          <img
-                            ref={profileEffectImgRef}
-                            key={effectKey}
-                            src={displaySrc!}
-                            alt="Profile effect"
-                            className="absolute top-0 left-0 w-full h-full object-cover object-top"
-                            style={{
-                              imageRendering: "auto",
-                            }}
-                            onLoad={() => {
-                              if (!profileEffectPlayedRef.current) {
-                                profileEffectPlayedRef.current = true;
-                              }
-                            }}
-                            onError={() => {
-                              profileEffectPlayedRef.current = true;
-                            }}
-                          />
-                        </div>
-                      );
-                    })()}
-
-                  {/* Avatar Section */}
-                  <div
-                    className={cn("flex items-end gap-4 mb-4 relative", bannerUrl && "-mt-14 sm:-mt-16 pt-2")}
-                    style={{ zIndex: 10 }}
-                  >
-                    <div className="relative flex-shrink-0">
-                      <AvatarWithDecoration
-                        user={profileUser}
-                        className={hasProfileDecoration ? "w-[72px] h-[72px] sm:w-[88px] sm:h-[88px]" : "w-20 h-20 sm:w-24 sm:h-24"}
-                        active={true}
-                      />
-                      {/* Status indicator */}
-                      {(() => {
-                        const presence = getEffectivePresence(profileUser.status || "offline", profileUser.last_seen);
-                        return (
-                          <div
-                            className={cn(
-                              hasProfileDecoration
-                                ? "absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 shadow-lg z-10 border-background"
-                                : "absolute bottom-1 right-1 w-5 h-5 rounded-full border-[3px] shadow-lg z-10 border-background",
-                              statusColors[presence.status],
-                            )}
-                            title={statusLabels[presence.status]}
-                          />
-                        );
-                      })()}
-                    </div>
-
-                    {/* Name and username - shown next to avatar on larger screens */}
-                    <div className="hidden sm:block flex-1 min-w-0 pb-1 pt-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h2 className="text-xl font-medium tracking-tight truncate">
-                          {profileUser.display_name || profileUser.username}
-                        </h2>
-                        {profileUser.is_bot && (
-                          <BotTag className="text-[11px] px-2 py-1 rounded-lg" />
-                        )}
-                        {userBadges.length > 0 && <UserBadges badges={userBadges} />}
-                        {profileUser.pronouns && (
-                          <span className="text-sm text-[color:var(--profile-muted)] font-normal">
-                            • {profileUser.pronouns}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm font-medium text-[color:var(--profile-muted)] truncate">
-                        @{profileUser.username}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Name and username - shown below avatar on mobile */}
-                  <div className="sm:hidden mb-4 relative" style={{ zIndex: 10 }}>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h2 className="text-xl font-medium tracking-tight">
-                        {profileUser.display_name || profileUser.username}
-                      </h2>
-                      {profileUser.is_bot && (
-                        <BotTag className="text-[11px] px-2 py-1 rounded-lg" />
-                      )}
-                      {userBadges.length > 0 && <UserBadges badges={userBadges} />}
-                      {profileUser.pronouns && (
-                        <span className="text-sm text-[color:var(--profile-muted)] font-normal">
-                          • {profileUser.pronouns}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm font-medium text-[color:var(--profile-muted)]">@{profileUser.username}</p>
-                  </div>
-
-                  {/* Custom Status */}
-                  {profileUser.custom_status && (
-                    <div
-                      className="mb-4 px-3 py-2 rounded-xl text-sm relative"
-                      style={{ backgroundColor: cardBg, backdropFilter: "blur(8px)", zIndex: 10 }}
-                    >
-                      <p className="italic text-[color:var(--profile-muted)]">"{profileUser.custom_status}"</p>
-                    </div>
-                  )}
-
-                  {/* Bio */}
-                  {profileUser.bio && (
-                    <div className="mb-4 relative" style={{ zIndex: 10 }}>
-                      <p className="text-sm leading-relaxed opacity-90">{profileUser.bio}</p>
-                    </div>
-                  )}
-
-                  {/* Info Cards */}
-                  <div
-                    className="rounded-xl p-3 sm:p-4 space-y-3 mb-4 relative"
-                    style={{ backgroundColor: cardBg, backdropFilter: "blur(8px)", zIndex: 10 }}
-                  >
-                    {/* Member Since */}
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                      {statusLabels[presence.status]}
+                    </span>
+                    {profileUser.pronouns && (
+                      <span
+                        className="inline-flex items-center rounded-full px-2 py-1 text-[10px] font-medium"
                         style={{ backgroundColor: divider }}
                       >
-                        <Calendar className="w-4 h-4" style={{ color: muted }} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-[color:var(--profile-muted)] uppercase tracking-wider">
-                          Member Since
-                        </p>
-                        <p className="text-sm font-medium truncate">
-                          {profileUser.created_at
-                            ? format(new Date(profileUser.created_at), "MMMM d, yyyy")
-                            : "Unknown"}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Server Roles */}
-                    {currentServer && userId && userRoles.length > 0 && (
-                      <>
-                        <div className="h-px" style={{ backgroundColor: divider }} />
-                        <div>
-                          <p className="text-xs font-medium text-[color:var(--profile-muted)] uppercase tracking-wider mb-2">
-                            Roles in {currentServer.name}
-                          </p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {userRoles.map((role) => {
-                              const isGradient = role.color.startsWith("linear-gradient");
-                              return (
-                                <span
-                                  key={role.id}
-                                  className="text-xs font-medium px-2.5 py-1 rounded-lg"
-                                  style={
-                                    isGradient
-                                      ? { background: role.color, color: "#fff" }
-                                      : { backgroundColor: `${role.color}20`, color: role.color }
-                                  }
-                                >
-                                  {role.name}
-                                </span>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </>
+                        {profileUser.pronouns}
+                      </span>
                     )}
-
-                    {/* Shared Servers */}
-                    {sharedServers.length > 0 && (
-                      <>
-                        <div className="h-px" style={{ backgroundColor: divider }} />
-                        <div>
-                          <p className="text-xs font-medium text-[color:var(--profile-muted)] uppercase tracking-wider mb-2">
-                            Shared Servers
-                          </p>
-                          <div className="flex gap-2">
-                            {sharedServers.map((server) => (
-                              <div
-                                key={server.id}
-                                className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-medium overflow-hidden transition-transform hover:scale-105"
-                                style={{ backgroundColor: divider }}
-                                title={server.name}
-                              >
-                                {server.icon_url ? (
-                                  <img src={server.icon_url} alt={server.name} className="w-full h-full object-cover" />
-                                ) : (
-                                  server.name.slice(0, 2).toUpperCase()
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </>
-                    )}
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-medium"
+                      style={{ backgroundColor: divider }}
+                    >
+                      <Calendar className="h-3 w-3" />
+                      {joinedAt}
+                    </span>
                   </div>
-
-                  {/* Action Buttons */}
-                  {!isSelf && (
-                    <div className="flex flex-col gap-2 pt-4 border-t relative z-10" style={{ borderColor: divider }}>
-                      {/* All buttons inline */}
-                      {!isBlocked && (
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={handleMessage}
-                            className="font-normal flex-1 rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent"
-                            variant="outline"
-                            style={{ backgroundColor: "#232629", color: "#fff" }}
-                            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#2a2f33")}
-                            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#232629")}
-                          >
-                            <MessageCircle className="w-3.5 h-3.5 mr-1.5" />
-                            Message
-                          </Button>
-
-                          {hasPendingRequest ? (
-                            <>
-                              <Button
-                                variant="outline"
-                                onClick={handleAcceptRequest}
-                                className="font-normal flex-1 rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent"
-                                style={{ backgroundColor: "#232629", color: "#fff" }}
-                                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#2a2f33")}
-                                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#232629")}
-                              >
-                                <Check className="w-3.5 h-3.5 mr-1.5" />
-                                Accept
-                              </Button>
-                              <Button
-                                variant="outline"
-                                onClick={handleDeclineRequest}
-                                className="font-normal flex-1 rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent"
-                                style={{ backgroundColor: "#232629", color: "#fff" }}
-                                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#2a2f33")}
-                                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#232629")}
-                              >
-                                <X className="w-3.5 h-3.5 mr-1.5" />
-                                Decline
-                              </Button>
-                            </>
-                          ) : (
-                            <Button
-                              variant="outline"
-                              onClick={handleFriendAction}
-                              disabled={hasSentRequest || isInCooldown || isSendingRequest}
-                              className={cn(
-                                "font-normal flex-1 rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent",
-                                isInCooldown && "opacity-80",
-                              )}
-                              style={{ backgroundColor: "#232629", color: "#fff" }}
-                              onMouseEnter={(e) =>
-                                !e.currentTarget.disabled && (e.currentTarget.style.backgroundColor = "#2a2f33")
-                              }
-                              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#232629")}
-                            >
-                              {isSendingRequest ? (
-                                <>
-                                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                                  Sending...
-                                </>
-                              ) : isFriend ? (
-                                <>
-                                  <UserMinus className="w-3.5 h-3.5 mr-1.5" />
-                                  Remove
-                                </>
-                              ) : hasSentRequest ? (
-                                "Request Sent"
-                              ) : isInCooldown ? (
-                                <>
-                                  <Clock className="w-3.5 h-3.5 mr-1.5" />
-                                  Retry {formatCooldown(cooldownSeconds)}
-                                </>
-                              ) : (
-                                <>
-                                  <UserPlus className="w-3.5 h-3.5 mr-1.5" />
-                                  Add Friend
-                                </>
-                              )}
-                            </Button>
-                          )}
-
-                          {/* Block button */}
-                          <Button
-                            variant="outline"
-                            onClick={handleBlockUser}
-                            className="font-normal flex-1 rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent"
-                            style={{ backgroundColor: "#232629", color: "#fff" }}
-                            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#2a2f33")}
-                            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#232629")}
-                          >
-                            <Ban className="w-3.5 h-3.5 mr-1.5" />
-                            Block
-                          </Button>
-                        </div>
-                      )}
-
-                      {/* Unblock button (when blocked) */}
-                      {isBlocked && (
-                        <Button
-                          variant="outline"
-                          onClick={handleUnblockUser}
-                          className="font-normal rounded-xl h-8 text-xs px-3 border-transparent hover:border-transparent"
-                          style={{ backgroundColor: "#232629", color: "#fff" }}
-                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#2a2f33")}
-                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#232629")}
-                        >
-                          <Ban className="w-3.5 h-3.5 mr-1.5" />
-                          Unblock User
-                        </Button>
-                      )}
-                    </div>
+                  {statusText && (
+                    <p className="mt-2 truncate text-[13px] font-medium text-[color:var(--profile-muted)]">{statusText}</p>
                   )}
                 </div>
               </div>
-            );
-          })()
-        ) : null}
-      </DialogContent>
-    </Dialog>
+
+              {bioText && (
+                <p className="mt-2 text-[13px] leading-5" style={{ maxHeight: "2.5rem", overflow: "hidden" }}>
+                  {bioText}
+                </p>
+              )}
+
+              {(rolePreview.length > 0 || (!isSelf && sharedServers.length > 0)) && (
+                <>
+                  <div className="mt-3 h-px" style={{ backgroundColor: divider }} />
+                  <div className="mt-3 space-y-2">
+                    {rolePreview.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {rolePreview.map((role) => {
+                          const isGradient = role.color.startsWith("linear-gradient");
+                          return (
+                            <span
+                              key={role.id}
+                              className="rounded-md px-2 py-1 text-[10px] font-medium"
+                              style={
+                                isGradient
+                                  ? { background: role.color, color: "#fff" }
+                                  : { backgroundColor: `${role.color}26`, color: role.color }
+                              }
+                            >
+                              {role.name}
+                            </span>
+                          );
+                        })}
+                        {userRoles.length > rolePreview.length && (
+                          <span className="rounded-md px-2 py-1 text-[10px] font-medium" style={{ backgroundColor: divider }}>
+                            +{userRoles.length - rolePreview.length}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {!isSelf && sharedServers.length > 0 && (
+                      <div className="flex gap-1.5">
+                        {sharedServers.map((server) => (
+                          <button
+                            key={server.id}
+                            type="button"
+                            className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg text-[10px] font-semibold transition-transform hover:scale-105"
+                            style={{ backgroundColor: divider }}
+                            title={server.name}
+                            onClick={() => {
+                              setCurrentServer(server);
+                              handleClose();
+                            }}
+                          >
+                            {server.icon_url ? (
+                              <img src={server.icon_url} alt={server.name} className="h-full w-full object-cover" />
+                            ) : (
+                              server.name.slice(0, 2).toUpperCase()
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {renderActionRow(divider)}
+      </div>
+    );
+  };
+
+  if (!isOpen) return null;
+
+  if (isMobile) {
+    return (
+      <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+        <DialogContent
+          className="max-h-[85vh] max-w-[calc(100vw-1rem)] overflow-hidden border-none bg-transparent p-0 shadow-none"
+          onOpenAutoFocus={(event) => event.preventDefault()}
+        >
+          <div className="max-h-[75vh] overflow-y-auto rounded-[11px] border border-white/10 bg-[#1c1d22] shadow-2xl">
+            {renderCard()}
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-50" onMouseDown={handleClose}>
+      <div
+        ref={cardRef}
+        className="absolute max-h-[70vh] w-[320px] overflow-y-auto rounded-[11px] border border-white/10 bg-[#1c1d22] shadow-[0_22px_80px_rgba(0,0,0,0.45)]"
+        style={{
+          left: position?.left ?? -9999,
+          top: position?.top ?? -9999,
+          opacity: position ? 1 : 0,
+        }}
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        {renderCard()}
+      </div>
+    </div>
   );
 };

@@ -44,6 +44,14 @@ interface ModalData {
   userId?: string;
   messageId?: string;
   inviteCode?: string;
+  anchorRect?: {
+    top: number;
+    left: number;
+    right: number;
+    bottom: number;
+    width: number;
+    height: number;
+  };
   [key: string]: unknown;
 }
 

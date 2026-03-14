@@ -32,6 +32,7 @@ import type { ServerMember, CustomServerRole, UserStatus } from "@/types";
 import { getEffectivePresence } from "@/lib/presence";
 import { hasRecentRealtimePresence } from "@/hooks/useRealtimeUsers";
 import { readCachedMemberCount, persistMemberCount } from "@/lib/serverMemberCount";
+import { openUserProfileModal } from "@/lib/userProfilePopover";
 
 const OFFLINE_PAGE_SIZE = 50;
 
@@ -463,8 +464,8 @@ export const MembersSidebar = () => {
     };
   }, [onlineMembers, roles]);
 
-  const handleMemberClick = (member: ServerMember) => {
-    openModal("userProfile", { userId: member.user_id, user: member.user });
+  const handleMemberClick = (member: ServerMember, anchor?: HTMLElement | null) => {
+    openUserProfileModal(openModal, member.user_id, anchor ?? null, { user: member.user });
   };
 
   const handleMessage = async (member: ServerMember) => {
@@ -572,7 +573,7 @@ export const MembersSidebar = () => {
           "group flex items-center gap-2.5 mx-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors",
           "hover:bg-secondary/60 active:bg-secondary/80",
         )}
-        onClick={() => handleMemberClick(member)}
+        onClick={(event) => handleMemberClick(member, event.currentTarget)}
       >
         {/* Avatar with status */}
         <div className="relative flex-shrink-0">
