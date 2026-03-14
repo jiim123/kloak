@@ -1022,15 +1022,47 @@ export const MessageItem = memo(function MessageItem({
                           >
                             <Eye className="w-5 h-5 text-muted-foreground" />
                           </div>
-                        ) : (
-                          <AvatarWithDecoration
-                            user={messageUser}
-                            className={cn(messageAvatarSizeClass, "cursor-pointer")}
-                            active={isRowHovered}
-                            onClick={handleUsernameClick}
-                            freezeGifUntilHover
-                          />
-                        )
+                          hasModActions ? (
+                            <ContextMenu>
+                              <ContextMenuTrigger asChild>
+                                <AvatarWithDecoration
+                                  user={messageUser}
+                                  className={cn(messageAvatarSizeClass, "cursor-pointer")}
+                                  active={isRowHovered}
+                                  onClick={handleUsernameClick}
+                                  freezeGifUntilHover
+                                />
+                              </ContextMenuTrigger>
+                              <ContextMenuContent className="w-48 rounded-xl border-border/50 p-1.5 z-[60]">
+                                {canKickUser && (
+                                  <ContextMenuItem
+                                    onClick={handleKickUser}
+                                    className="rounded-lg gap-3 text-orange-400 focus:text-orange-400"
+                                  >
+                                    <UserX className="w-4 h-4" />
+                                    Kick {displayName}
+                                  </ContextMenuItem>
+                                )}
+                                {canBanUser && (
+                                  <ContextMenuItem
+                                    onClick={handleBanUser}
+                                    className="rounded-lg gap-3 text-destructive focus:text-destructive"
+                                  >
+                                    <Ban className="w-4 h-4" />
+                                    Ban {displayName}
+                                  </ContextMenuItem>
+                                )}
+                              </ContextMenuContent>
+                            </ContextMenu>
+                          ) : (
+                            <AvatarWithDecoration
+                              user={messageUser}
+                              className={cn(messageAvatarSizeClass, "cursor-pointer")}
+                              active={isRowHovered}
+                              onClick={handleUsernameClick}
+                              freezeGifUntilHover
+                            />
+                          )
                       ) : (
                         <div className="h-full flex items-center justify-center">
                           <span className="text-[10px] font-[Inter,system-ui,sans-serif] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150">
