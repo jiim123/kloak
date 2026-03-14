@@ -523,7 +523,11 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
               className="flex items-center justify-between gap-3 p-4 bg-secondary/50 rounded-xl border border-border/50"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <AvatarWithDecoration user={u as unknown as UserType} className="w-10 h-10 flex-shrink-0" />
+                <AvatarWithDecoration
+                  user={u as unknown as UserType}
+                  className="w-10 h-10 flex-shrink-0"
+                  freezeGifUntilHover
+                />
                 <div className="min-w-0">
                   <div className="text-sm font-medium truncate">{u.display_name || u.username}</div>
                   <div className="text-xs text-muted-foreground truncate">@{u.username}</div>

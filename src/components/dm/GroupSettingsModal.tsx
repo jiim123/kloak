@@ -189,7 +189,7 @@ export const GroupSettingsModal = ({
                     onClick={(event) => handleAvatarClick(participant, event.currentTarget)}
                     className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-secondary/50 transition-colors w-full text-left"
                   >
-                    <AvatarWithDecoration user={participant} className="w-7 h-7 shrink-0" />
+                    <AvatarWithDecoration user={participant} className="w-7 h-7 shrink-0" freezeGifUntilHover />
                     <span className="flex-1 min-w-0 text-sm font-medium truncate hover:underline">
                       {participant.display_name || participant.username}
                     </span>
@@ -226,7 +226,7 @@ export const GroupSettingsModal = ({
                     key={friend.id}
                     className="flex items-center gap-1.5 px-2 py-1 bg-primary/20 rounded-full text-sm"
                   >
-                    <AvatarWithDecoration user={friend} className="w-5 h-5" />
+                    <AvatarWithDecoration user={friend} className="w-5 h-5" freezeGifUntilHover />
                     <span className="truncate max-w-[100px]">
                       {friend.display_name || friend.username}
                     </span>
@@ -277,7 +277,7 @@ export const GroupSettingsModal = ({
                     checked={selectedFriends.includes(friend.id)}
                     onCheckedChange={() => toggleFriend(friend.id)}
                   />
-                  <AvatarWithDecoration user={friend} className="w-8 h-8" />
+                  <AvatarWithDecoration user={friend} className="w-8 h-8" freezeGifUntilHover />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">
                       {friend.display_name || friend.username}

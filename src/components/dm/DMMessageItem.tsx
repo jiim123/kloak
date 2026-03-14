@@ -272,7 +272,12 @@ export const DMMessageItem = memo(function DMMessageItem({
                       );
                     }}
                   >
-                    <AvatarWithDecoration user={senderUser} className={senderAvatarSizeClass} active={isRowHovered} />
+                    <AvatarWithDecoration
+                      user={senderUser}
+                      className={senderAvatarSizeClass}
+                      active={isRowHovered}
+                      freezeGifUntilHover
+                    />
                   </div>
                 ) : (
                   <div className="h-full flex items-center justify-center">

@@ -123,7 +123,7 @@ export const ChannelMembersEditor = ({ channelId, serverId, onClose }: ChannelMe
                   key={member.id}
                   className="flex items-center gap-3 p-3 rounded-xl bg-secondary/30 border border-border/50"
                 >
-                  <AvatarWithDecoration user={member.user} size={32} />
+                  <AvatarWithDecoration user={member.user} size={32} freezeGifUntilHover />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">
                       {member.user?.display_name || member.user?.username || "Unknown"}
@@ -184,7 +184,7 @@ export const ChannelMembersEditor = ({ channelId, serverId, onClose }: ChannelMe
                   key={member.id}
                   className="flex items-center gap-3 p-3 rounded-xl bg-secondary/30 border border-border/50 hover:bg-secondary/50 transition-colors"
                 >
-                  <AvatarWithDecoration user={member.user} size={32} />
+                  <AvatarWithDecoration user={member.user} size={32} freezeGifUntilHover />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">
                       {member.user?.display_name || member.user?.username || "Unknown"}

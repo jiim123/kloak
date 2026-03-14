@@ -369,7 +369,7 @@ const SortableChannel = ({
             const info = resolveUser(id);
             return (
               <div key={id} className="flex items-center gap-2 px-2 py-1 rounded-md text-xs text-muted-foreground">
-                <AvatarWithDecoration user={info.avatarUser} size={18} />
+                <AvatarWithDecoration user={info.avatarUser} size={18} freezeGifUntilHover />
                 <span className="truncate">{info.label}</span>
               </div>
             );

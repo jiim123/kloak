@@ -133,7 +133,7 @@ export const CreateGroupModal = ({ open, onOpenChange }: CreateGroupModalProps) 
                   key={friend.id}
                   className="flex items-center gap-1.5 px-2 py-1 bg-secondary rounded-full text-sm"
                 >
-                  <AvatarWithDecoration user={friend} className="w-5 h-5" />
+                  <AvatarWithDecoration user={friend} className="w-5 h-5" freezeGifUntilHover />
                   <span className="truncate max-w-[100px]">
                     {friend.display_name || friend.username}
                   </span>
@@ -183,7 +183,7 @@ export const CreateGroupModal = ({ open, onOpenChange }: CreateGroupModalProps) 
                     checked={selectedFriends.includes(friend.id)}
                     onCheckedChange={() => toggleFriend(friend.id)}
                   />
-                  <AvatarWithDecoration user={friend} className="w-8 h-8" />
+                  <AvatarWithDecoration user={friend} className="w-8 h-8" freezeGifUntilHover />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">
                       {friend.display_name || friend.username}

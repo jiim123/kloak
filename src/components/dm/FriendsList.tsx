@@ -149,7 +149,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
     <div className="flex items-center gap-3 px-4 py-3 hover:bg-secondary/30 rounded-lg transition-smooth">
       {/* Avatar */}
       <div className="relative flex-shrink-0">
-        <AvatarWithDecoration user={friend} className="w-10 h-10" />
+        <AvatarWithDecoration user={friend} className="w-10 h-10" freezeGifUntilHover />
         {(() => {
           const presence = getEffectivePresence((friend.status as UserStatus) || "offline", friend.last_seen);
           return (
@@ -220,7 +220,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
     <div className="flex items-center gap-3 px-4 py-3 hover:bg-secondary/30 rounded-lg transition-smooth">
       {/* Avatar */}
       <div className="relative flex-shrink-0">
-        <AvatarWithDecoration user={request} className="w-10 h-10" />
+        <AvatarWithDecoration user={request} className="w-10 h-10" freezeGifUntilHover />
       </div>
 
       {/* Info */}
@@ -259,7 +259,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
     <div className="flex items-center gap-3 px-4 py-3 hover:bg-secondary/30 rounded-lg transition-smooth">
       {/* Avatar */}
       <div className="relative flex-shrink-0">
-        <AvatarWithDecoration user={blocked} className="w-10 h-10 opacity-50" />
+        <AvatarWithDecoration user={blocked} className="w-10 h-10 opacity-50" freezeGifUntilHover />
       </div>
 
       {/* Info */}

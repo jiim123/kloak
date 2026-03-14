@@ -133,6 +133,7 @@ export const UserSearchResults = ({ query }: UserSearchResultsProps) => {
                   avatar_decoration: result.avatar_decoration,
                 } as any}
                 className="w-8 h-8"
+                freezeGifUntilHover
               />
               <div
                 className={cn(

@@ -904,6 +904,7 @@ export const AnnouncementChannelArea = () => {
                               hasAnnouncementDecoration ? "w-9 h-9" : "w-10 h-10",
                               "flex-shrink-0",
                             )}
+                            freezeGifUntilHover
                           />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">

@@ -139,7 +139,7 @@ function ParticipantTile({
 
       <div className="absolute inset-0 flex items-center justify-center">
         <div className={cn("rounded-full bg-black/10 p-1.5 backdrop-blur-[1px]", isSharing && "ring-2 ring-white/25")}>
-          <AvatarWithDecoration user={member?.user} size={78} />
+          <AvatarWithDecoration user={member?.user} size={78} freezeGifUntilHover />
         </div>
       </div>
 

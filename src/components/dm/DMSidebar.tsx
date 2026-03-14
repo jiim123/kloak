@@ -239,7 +239,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
                     />
                   ) : (
                     <>
-                      <AvatarWithDecoration user={conversation.other_user} className="w-8 h-8" />
+                      <AvatarWithDecoration user={conversation.other_user} className="w-8 h-8" freezeGifUntilHover />
                       {(() => {
                         const presence = getEffectivePresence(
                           (conversation.other_user?.status as UserStatus) || "offline",

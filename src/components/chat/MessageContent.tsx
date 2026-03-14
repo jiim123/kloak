@@ -11,6 +11,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { useServerStore } from "@/stores/serverStore";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
 import { getUserFromCache, getOrFetchUser } from "@/stores/userCacheStore";
+import { getGifStillPreview, isGifUrl } from "@/lib/gifPreview";
 import {
   getGlobalEmojiMap,
   getGlobalEmojiDuplicates,
@@ -586,6 +587,36 @@ export const MessageContent = ({
     const el = contentRef.current;
     if (!el) return;
     let cancelled = false;
+    const cleanupCallbacks: Array<() => void> = [];
+
+    const attachGifHoverBehavior = async (img: HTMLImageElement, url: string) => {
+      if (!isGifUrl(url)) return;
+
+      const previewUrl = await getGifStillPreview(url);
+      if (cancelled || !previewUrl) return;
+
+      const animatedUrl = url;
+      img.src = previewUrl;
+
+      const playGif = () => {
+        img.src = animatedUrl;
+      };
+      const pauseGif = () => {
+        img.src = previewUrl;
+      };
+
+      img.addEventListener("mouseenter", playGif);
+      img.addEventListener("mouseleave", pauseGif);
+      img.addEventListener("focus", playGif);
+      img.addEventListener("blur", pauseGif);
+
+      cleanupCallbacks.push(() => {
+        img.removeEventListener("mouseenter", playGif);
+        img.removeEventListener("mouseleave", pauseGif);
+        img.removeEventListener("focus", playGif);
+        img.removeEventListener("blur", pauseGif);
+      });
+    };
 
     const imgs = el.querySelectorAll<HTMLImageElement>("img[data-image-url]");
     imgs.forEach((img) => {
@@ -601,10 +632,20 @@ export const MessageContent = ({
         img.src = signedUrl;
         img.dataset.imageUrl = signedUrl;
         img.style.opacity = "1";
+        void attachGifHoverBehavior(img, signedUrl);
       });
     });
 
-    return () => { cancelled = true; };
+    imgs.forEach((img) => {
+      const originalUrl = img.dataset.imageUrl;
+      if (!originalUrl || isSupabaseAttachmentUrl(originalUrl)) return;
+      void attachGifHoverBehavior(img, originalUrl);
+    });
+
+    return () => {
+      cancelled = true;
+      cleanupCallbacks.forEach((cleanup) => cleanup());
+    };
   }, [content]);
 
   // Ensure mention display names resolve even when members list is online-filtered.

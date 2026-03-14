@@ -64,6 +64,7 @@ import { getPollIdFromContent, isPollMessageContent } from "@/lib/poll";
 import { canRevealGhostIdentityForUser } from "@/lib/ghostIdentity";
 import { pickFirstNonBlank } from "@/lib/utils";
 import { openUserProfileModal, SIDE_ALIGNED_USER_PROFILE_POPOVER } from "@/lib/userProfilePopover";
+import { getGifStillPreview } from "@/lib/gifPreview";
 
 // Static data moved outside component
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "👋", "🔥", "👀", "💯", "🙌", "😍", "🤔"] as const;
@@ -149,6 +150,9 @@ const AttachmentItem = memo(function AttachmentItem({
 }) {
   const { url: signedUrl, refresh } = useSignedUrl(attachment.file_url, { withRefresh: true });
   const isImage = attachment.file_type?.startsWith("image/");
+  const isGif = attachment.file_type === "image/gif";
+  const [gifPreviewSrc, setGifPreviewSrc] = useState<string | null>(null);
+  const [isGifHovered, setIsGifHovered] = useState(false);
 
   // Compute constrained dimensions to reserve space and prevent layout shift
   const reservedStyle = useMemo(() => {
@@ -164,6 +168,27 @@ const AttachmentItem = memo(function AttachmentItem({
     return { width: w, height: h };
   }, [isImage, attachment.width, attachment.height]);
 
+  useEffect(() => {
+    if (!isGif || !signedUrl) {
+      setGifPreviewSrc(null);
+      setIsGifHovered(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    getGifStillPreview(signedUrl).then((previewSrc) => {
+      if (cancelled) return;
+      setGifPreviewSrc(previewSrc);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isGif, signedUrl]);
+
+  const imageSrc = isGif && gifPreviewSrc && !isGifHovered ? gifPreviewSrc : signedUrl;
+
   return (
     <div className="relative">
       {isImage ? (
@@ -173,10 +198,14 @@ const AttachmentItem = memo(function AttachmentItem({
         >
           {signedUrl ? (
             <img
-              src={signedUrl}
+              src={imageSrc}
               alt={attachment.file_name}
               className="w-full h-full object-contain rounded-lg cursor-pointer hover:opacity-90"
               decoding="async"
+              onMouseEnter={isGif ? () => setIsGifHovered(true) : undefined}
+              onMouseLeave={isGif ? () => setIsGifHovered(false) : undefined}
+              onFocus={isGif ? () => setIsGifHovered(true) : undefined}
+              onBlur={isGif ? () => setIsGifHovered(false) : undefined}
               onError={refresh}
             />
           ) : (
@@ -242,6 +271,7 @@ export const MessageItem = memo(function MessageItem({
   const [showDesktopEmojiPicker, setShowDesktopEmojiPicker] = useState(false);
   const [showMobileEmojiPicker, setShowMobileEmojiPicker] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [isRowHovered, setIsRowHovered] = useState(false);
   const customEmojiMap = sharedCustomEmojiMap ?? EMPTY_CUSTOM_EMOJI_MAP;
   const globalEmojiMap = sharedGlobalEmojiMap ?? EMPTY_GLOBAL_EMOJI_MAP;
   const [hoveredRoleIcon, setHoveredRoleIcon] = useState(false);
@@ -932,6 +962,8 @@ export const MessageItem = memo(function MessageItem({
           <ContextMenuTrigger asChild disabled={isMobile}>
             <div
               className={innerClassName}
+              onMouseEnter={() => setIsRowHovered(true)}
+              onMouseLeave={() => setIsRowHovered(false)}
               onTouchStart={handleTouchStart}
               onTouchEnd={clearLongPress}
               onTouchMove={clearLongPress}
@@ -964,8 +996,9 @@ export const MessageItem = memo(function MessageItem({
                           <AvatarWithDecoration
                             user={messageUser}
                             className={cn(messageAvatarSizeClass, "cursor-pointer")}
-                            active={false}
+                            active={isRowHovered}
                             onClick={handleUsernameClick}
+                            freezeGifUntilHover
                           />
                         )
                       ) : (
@@ -1008,8 +1041,9 @@ export const MessageItem = memo(function MessageItem({
                           <AvatarWithDecoration
                             user={messageUser}
                             className="w-5 h-5 cursor-pointer flex-shrink-0"
-                            active={false}
+                            active={isRowHovered}
                             onClick={handleUsernameClick}
+                            freezeGifUntilHover
                           />
                         )}
                         <span className="text-sm text-muted-foreground tracking-tight inline-flex items-center gap-1.5">
