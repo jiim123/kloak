@@ -394,12 +394,12 @@ const AppLayout = () => {
     }
   }, [user?.id, loadVoiceSettings]);
 
-  // Close mobile sidebars when navigating
+  // Close mobile sidebars when selecting a DM conversation
   useEffect(() => {
-    if (currentChannel || currentConversation) {
+    if (currentConversation) {
       closeMobileSidebars();
     }
-  }, [currentChannel, currentConversation, closeMobileSidebars]);
+  }, [currentConversation, closeMobileSidebars]);
 
 
   // DM View (no server selected)
