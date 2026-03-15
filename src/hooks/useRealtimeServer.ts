@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
+import { useMessageStore } from '@/stores/messageStore';
 import { useServerStore } from '@/stores/serverStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useConnectionStatus } from './useConnectionStatus';
