@@ -143,8 +143,22 @@ export const useRealtimeServer = (serverId: string | null) => {
           event.table === 'server_member_roles' ||
           event.table === 'server_members'
         ) {
+          // Capture current member user IDs before refresh
+          const prevMemberUserIds = new Set(
+            serverStoreRef.current.members.map((m) => m.user_id)
+          );
+
           void refreshRoleMetadata(serverId);
-          void refreshMemberSnapshot(serverId);
+          void refreshMemberSnapshot(serverId).then(() => {
+            // After refresh, detect removed members and purge their messages
+            const currentMembers = useServerStore.getState().members;
+            const currentMemberUserIds = new Set(currentMembers.map((m) => m.user_id));
+            for (const uid of prevMemberUserIds) {
+              if (!currentMemberUserIds.has(uid)) {
+                useMessageStore.getState().removeMessagesByUser(uid);
+              }
+            }
+          });
         }
       },
     );
