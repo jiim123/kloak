@@ -34,8 +34,9 @@ export const useRealtimeOwnMembership = () => {
     channel.on(
       'broadcast',
       { event: 'server_membership' },
-      async (payload) => {
-        const eventPayload = payload as BroadcastMutationPayload<{ server_id?: string; is_banned?: boolean }>;
+      async (msg) => {
+        const eventPayload = (msg as any).payload as BroadcastMutationPayload<{ server_id?: string; is_banned?: boolean }> | undefined;
+        if (!eventPayload) return;
         const newData = eventPayload.new ?? null;
         const oldData = eventPayload.old ?? null;
 
