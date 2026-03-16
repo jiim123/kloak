@@ -2045,7 +2045,7 @@ export const ServerSettingsPage = () => {
                 )}
 
                 {/* System Message Channels */}
-                {(isAdmin || isOwner) && (
+                {canManageServer && (
                   <div className="space-y-3 border-t border-border pt-4">
                     <div className="flex items-center justify-between gap-4">
                       <Label className="text-sm font-medium">User Joined Messages</Label>
@@ -2095,7 +2095,7 @@ export const ServerSettingsPage = () => {
                   </div>
                 )}
 
-                {(isAdmin || isOwner) && (
+                {canManageServer && (
                   <div className="pt-4">
                     <Button type="submit" disabled={isLoading || isUploadingIcon || isUploadingBanner} size="sm">
                       {(isLoading || isUploadingIcon || isUploadingBanner) && (
