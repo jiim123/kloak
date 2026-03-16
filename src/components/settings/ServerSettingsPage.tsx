@@ -2095,7 +2095,7 @@ export const ServerSettingsPage = () => {
                   </div>
                 )}
 
-                {(isAdmin || isOwner) && (
+                {canManageServer && (
                   <div className="pt-4">
                     <Button type="submit" disabled={isLoading || isUploadingIcon || isUploadingBanner} size="sm">
                       {(isLoading || isUploadingIcon || isUploadingBanner) && (
