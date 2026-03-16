@@ -363,6 +363,17 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
       // 🚀 Optimization: The DB Trigger now handles all mention processing automatically.
       const sentMessage = await sendMessage(channelId, user.id, finalContent, replyingTo?.id);
 
+      // Show toast if mentions were suppressed due to missing permissions
+      if (sentMessage && (sentMessage as any)?._mentions_suppressed) {
+        const suppressedTypes: string[] = (sentMessage as any)?._suppressed_types || [];
+        if (suppressedTypes.includes('everyone')) {
+          toast.info("You don't have permission to mention @everyone in this channel");
+        }
+        if (suppressedTypes.includes('roles')) {
+          toast.info("You don't have permission to mention roles in this channel");
+        }
+      }
+
       // Insert attachment records into message_attachments table (file uploads only, not GIF URLs)
       const fileUploadedUrls = uploadedUrls.slice(0, fileAttachments.length);
       if (sentMessage && fileUploadedUrls.length > 0) {
