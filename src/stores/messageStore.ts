@@ -689,6 +689,10 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         };
       });
 
+      // Attach suppression metadata for the caller
+      (message as any)._mentions_suppressed = (data as any).mentions_suppressed;
+      (message as any)._suppressed_types = (data as any).suppressed_types;
+
       return message;
     } catch (error) {
       console.error("Failed to send message:", error);
