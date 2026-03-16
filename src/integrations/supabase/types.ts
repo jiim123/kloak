@@ -44,6 +44,30 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_actions: {
+        Row: {
+          action_type: string
+          created_at: string | null
+          details: Json | null
+          id: number
+          performed_by: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string | null
+          details?: Json | null
+          id?: number
+          performed_by: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: number
+          performed_by?: string
+        }
+        Relationships: []
+      }
       announcement_comment_reactions: {
         Row: {
           comment_id: string
@@ -1489,6 +1513,33 @@ export type Database = {
           },
         ]
       }
+      raid_config: {
+        Row: {
+          id: number
+          raid_level: number
+          registration_locked: boolean
+          registration_locked_at: string | null
+          registration_locked_reason: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: number
+          raid_level?: number
+          registration_locked?: boolean
+          registration_locked_at?: string | null
+          registration_locked_reason?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: number
+          raid_level?: number
+          registration_locked?: boolean
+          registration_locked_at?: string | null
+          registration_locked_reason?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       reactions: {
         Row: {
           channel_id: string
@@ -1541,6 +1592,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      recent_message_cache: {
+        Row: {
+          channel_id: string
+          content_hash: string
+          created_at: string | null
+          id: number
+          server_id: string
+          user_id: string
+        }
+        Insert: {
+          channel_id: string
+          content_hash: string
+          created_at?: string | null
+          id?: number
+          server_id: string
+          user_id: string
+        }
+        Update: {
+          channel_id?: string
+          content_hash?: string
+          created_at?: string | null
+          id?: number
+          server_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      registration_events: {
+        Row: {
+          created_at: string | null
+          id: number
+          ip_hash: string
+          success: boolean
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          ip_hash: string
+          success?: boolean
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          ip_hash?: string
+          success?: boolean
+        }
+        Relationships: []
       }
       registration_rate_limits: {
         Row: {
@@ -2644,6 +2743,19 @@ export type Database = {
         Args: { _emoji: string; _message_id: string; _user_id: string }
         Returns: Json
       }
+      admin_mass_mute: {
+        Args: {
+          _admin_user_id: string
+          _reason?: string
+          _server_id: string
+          _target_user_ids: string[]
+        }
+        Returns: Json
+      }
+      admin_set_raid_mode: {
+        Args: { _admin_user_id: string; _level: number; _reason?: string }
+        Returns: Json
+      }
       are_messages_similar_for_raid: {
         Args: { _left: string; _right: string }
         Returns: boolean
@@ -3018,6 +3130,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      enforce_single_account_variant_spam: {
+        Args: {
+          _channel_id: string
+          _content: string
+          _server_id: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
+      evaluate_raid_escalation: { Args: never; Returns: undefined }
       fetch_key_backup: { Args: { _user_id: string }; Returns: Json }
       fetch_prekey_bundle: { Args: { _target_user_id: string }; Returns: Json }
       generate_invite_code: { Args: never; Returns: string }
