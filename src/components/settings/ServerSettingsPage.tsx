@@ -198,7 +198,7 @@ const PERMISSION_META: Record<Permission, PermissionMeta> = {
   mention_everyone: {
     label: "Mention @everyone",
     description: "Allows members to use @everyone to notify all members.",
-    enabled: false,
+    enabled: true,
   },
   mention_roles: {
     label: "Mention Roles",
