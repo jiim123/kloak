@@ -137,7 +137,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
   const [activeTab, setActiveTab] = useState("account");
   const [isLoading, setIsLoading] = useState(false);
-  const [showSecretKey, setShowSecretKey] = useState(false);
+  const [showSecretKey, _setShowSecretKey] = useState(false);
   const [showKeyConfirm, setShowKeyConfirm] = useState(false);
   const [showResetKeyConfirm, setShowResetKeyConfirm] = useState(false);
   const [newSecretKey, setNewSecretKey] = useState<string | null>(null);
