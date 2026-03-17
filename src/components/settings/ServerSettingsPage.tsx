@@ -3126,6 +3126,67 @@ export const ServerSettingsPage = () => {
                 </div>
               </TabsContent>
             )}
+
+            {/* Transfer Ownership Tab */}
+            {isOwner && (
+              <TabsContent value="transfer" className="m-0 p-6 pr-16">
+                <div className="space-y-5 max-w-3xl">
+                  <div>
+                    <h2 className="text-xl font-medium text-destructive">Transfer Ownership</h2>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Transfer this server to another member. You will lose ownership and become an admin.
+                      This action cannot be undone.
+                    </p>
+                  </div>
+
+                  <div className="flex items-end gap-3">
+                    <div className="flex-1 max-w-xs space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">Select new owner</Label>
+                      <Select
+                        value={transferTargetId || ""}
+                        onValueChange={(value) => setTransferTargetId(value || null)}
+                      >
+                        <SelectTrigger className="h-10 text-sm">
+                          <SelectValue placeholder="Select a member..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <ScrollArea className="max-h-60">
+                            {members
+                              .filter((m) => m.user_id !== user?.id && m.role !== "owner" && !m.is_banned)
+                              .map((member) => (
+                                <SelectItem key={member.user_id} value={member.user_id}>
+                                  <div className="flex items-center gap-2">
+                                    <Avatar className="w-5 h-5">
+                                      <AvatarImage src={member.user?.avatar_url || undefined} />
+                                      <AvatarFallback className="text-[10px]" style={{ backgroundColor: member.user?.banner_color || "#5865F2" }}>
+                                        {member.user?.username?.[0]?.toUpperCase() || "?"}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <span>{member.user?.username || "Unknown"}</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                          </ScrollArea>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      disabled={!transferTargetId}
+                      onClick={() => {
+                        setTransferConfirmName("");
+                        setShowTransferConfirm(true);
+                      }}
+                    >
+                      <Crown className="w-4 h-4 mr-2" />
+                      Transfer Ownership
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
+            )}
           </div>
         </Tabs>
       </div>
