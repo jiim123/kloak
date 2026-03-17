@@ -1969,45 +1969,58 @@ export const ServerSettingsPage = () => {
             <TabsContent value="overview" className="m-0 p-6 pr-16">
               <h2 className="text-xl font-medium mb-6">Overview</h2>
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 max-w-3xl">
-                {/* Server Icon */}
-                <div className="flex items-center gap-4">
-                  <div className="relative">
-                    <div
-                      onClick={() => canManageServer && fileInputRef.current?.click()}
-                      className={cn(
-                        "w-20 h-20 rounded-2xl bg-secondary flex items-center justify-center border-2 border-dashed border-muted-foreground/50 transition-colors flex-shrink-0 overflow-hidden",
-                        canManageServer && "cursor-pointer hover:border-primary",
-                      )}
-                    >
-                      {displayIconUrl ? (
-                        <img src={displayIconUrl} alt={server.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <Upload className="w-6 h-6 text-muted-foreground" />
+                {/* Server Icon + Server Name side by side */}
+                <div className="flex flex-col sm:flex-row gap-5">
+                  {/* Server Icon */}
+                  <div className="flex flex-col items-start gap-2">
+                    <Label className="text-sm">Server Icon</Label>
+                    <div className="relative">
+                      <div
+                        onClick={() => canManageServer && fileInputRef.current?.click()}
+                        className={cn(
+                          "w-20 h-20 rounded-2xl bg-secondary flex items-center justify-center border-2 border-dashed border-muted-foreground/50 transition-colors flex-shrink-0 overflow-hidden",
+                          canManageServer && "cursor-pointer hover:border-primary",
+                        )}
+                      >
+                        {displayIconUrl ? (
+                          <img src={displayIconUrl} alt={server.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <Upload className="w-6 h-6 text-muted-foreground" />
+                        )}
+                      </div>
+                      {canManageServer && displayIconUrl && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (iconPreview) {
+                              clearIcon();
+                            } else {
+                              handleRemoveIcon();
+                            }
+                          }}
+                          disabled={isUploadingIcon}
+                          className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/90 disabled:opacity-50"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
                       )}
                     </div>
-                    {canManageServer && displayIconUrl && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (iconPreview) {
-                            clearIcon();
-                          } else {
-                            handleRemoveIcon();
-                          }
-                        }}
-                        disabled={isUploadingIcon}
-                        className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/90 disabled:opacity-50"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    )}
+                    <p className="text-xs text-muted-foreground">Recommended 512×512</p>
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">Server Icon</p>
-                    <p className="text-xs text-muted-foreground">
-                      {canManageServer ? "Click to upload • Recommended 512x512" : "Recommended 512x512"}
-                    </p>
+
+                  {/* Server Name */}
+                  <div className="flex-1 space-y-2 sm:pt-0">
+                    <Label htmlFor="serverName" className="text-sm">
+                      Server Name
+                    </Label>
+                    <Input
+                      id="serverName"
+                      {...register("name")}
+                      className={cn("h-10 text-sm", errors.name ? "border-destructive" : "")}
+                      disabled={!canManageServer}
+                    />
+                    {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
                   </div>
                 </div>
 
@@ -2057,28 +2070,14 @@ export const ServerSettingsPage = () => {
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {canManageServer ? "Recommended 960x540 • Shown in server list" : "Shown in server list"}
+                    {canManageServer ? "Recommended 960×540 • Shown in server list" : "Shown in server list"}
                   </p>
                 </div>
 
-                {/* Server Name */}
-                <div className="space-y-2">
-                  <Label htmlFor="serverName" className="text-sm">
-                    Server Name
-                  </Label>
-                  <Input
-                    id="serverName"
-                    {...register("name")}
-                    className={cn("h-10 text-sm", errors.name ? "border-destructive" : "")}
-                    disabled={!canManageServer}
-                  />
-                  {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
-                </div>
-
-                {/* About Server */}
+                {/* Server Description */}
                 <div className="space-y-2">
                   <Label htmlFor="serverAbout" className="text-sm">
-                    About Server
+                    Server Description
                   </Label>
                   <Textarea
                     id="serverAbout"
@@ -2094,7 +2093,7 @@ export const ServerSettingsPage = () => {
                   </p>
                 </div>
 
-                {/* Publish Server (owner-only) - temporarily disabled while rebuilding Explore */}
+                {/* Publish Server (owner-only) */}
                 {isOwner && (
                   <div className="space-y-2">
                     <Label className="text-sm">Publish Server</Label>
@@ -2109,11 +2108,13 @@ export const ServerSettingsPage = () => {
                   </div>
                 )}
 
-                {/* System Message Channels */}
+                {/* User Messages */}
                 {canManageServer && (
-                  <div className="space-y-3 border-t border-border pt-4">
+                  <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
+                    <Label className="text-sm font-medium">User Messages</Label>
+
                     <div className="flex items-center justify-between gap-4">
-                      <Label className="text-sm font-medium">User Joined Messages</Label>
+                      <Label className="text-sm text-muted-foreground">User Joined Messages</Label>
                       <Select
                         value={systemChannelJoinId || "none"}
                         onValueChange={(value) => setSystemChannelJoinId(value === "none" ? "" : value)}
@@ -2136,7 +2137,7 @@ export const ServerSettingsPage = () => {
                     </div>
 
                     <div className="flex items-center justify-between gap-4">
-                      <Label className="text-sm font-medium">User Left Messages</Label>
+                      <Label className="text-sm text-muted-foreground">User Left Messages</Label>
                       <Select
                         value={systemChannelLeaveId || "none"}
                         onValueChange={(value) => setSystemChannelLeaveId(value === "none" ? "" : value)}
@@ -2159,7 +2160,6 @@ export const ServerSettingsPage = () => {
                     </div>
                   </div>
                 )}
-
                 {canManageServer && (
                   <div className="pt-4">
                     <Button type="submit" disabled={isLoading || isUploadingIcon || isUploadingBanner} size="sm">
