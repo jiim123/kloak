@@ -322,7 +322,7 @@ export const TasksChannelArea = () => {
               ? payload.old
               : null;
 
-        const taskId = record && typeof record.task_id === "string" ? record.task_id : null;
+        const taskId = record && typeof (record as Record<string, unknown>).task_id === "string" ? (record as Record<string, unknown>).task_id as string : null;
         if (taskId && taskIdsRef.current.has(taskId)) {
           scheduleRefresh();
         }

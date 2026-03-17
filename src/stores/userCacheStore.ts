@@ -258,6 +258,7 @@ export function bulkSetUsersInCache(users: User[]): void {
 const inflightFetches = new Map<string, Promise<User | null>>();
 
 export async function fetchAndCacheUser(userId: string): Promise<User | null> {
+  if (!userId || !isValidUuid(userId)) return null;
   const cached = useUserCacheStore.getState().getUser(userId);
   if (cached) return cached;
 
