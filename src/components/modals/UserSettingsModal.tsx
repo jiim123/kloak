@@ -586,59 +586,30 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         </div>
       </div>
 
-      {/* Secret Key Section - Redesigned */}
+      {/* Secret Key Section */}
       <div className="space-y-4">
         <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Secret Key</Label>
 
-        {/* View Secret Key Card */}
+        {/* Secret Key Security Notice */}
         <div className="p-4 rounded-xl bg-secondary/50 border border-border/50 space-y-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Eye className="w-5 h-5 text-primary" />
+              <Shield className="w-5 h-5 text-primary" />
             </div>
             <div className="flex-1">
-              <h4 className="text-sm font-medium">View Secret Key</h4>
-              <p className="text-xs text-muted-foreground">Access your current secret key</p>
+              <h4 className="text-sm font-medium">Secret Key</h4>
+              <p className="text-xs text-muted-foreground">Your key was shown once during registration</p>
             </div>
           </div>
 
-          {!keyRevealed ? (
-            <Button variant="secondary" onClick={() => setShowKeyConfirm(true)} className="w-full h-11 rounded-xl">
-              <Eye className="w-4 h-4 mr-2" />
-              Reveal Secret Key
-            </Button>
-          ) : (
-            <div className="space-y-3">
-              <div className="flex gap-2">
-                <Input
-                  type={showSecretKey ? "text" : "password"}
-                  value={secretKey || ""}
-                  readOnly
-                  className="font-mono text-xs h-11 rounded-xl bg-background/50"
-                />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowSecretKey(!showSecretKey)}
-                  className="h-11 w-11 rounded-xl flex-shrink-0"
-                >
-                  {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleCopyKey}
-                  className="h-11 w-11 rounded-xl flex-shrink-0"
-                >
-                  {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-                </Button>
-              </div>
-              <p className="text-xs text-destructive flex items-center gap-2">
-                <Key className="w-3 h-3" />
-                Keep this key safe! It's the only way to access your account.
-              </p>
-            </div>
-          )}
+          <div className="p-3 rounded-lg border border-border bg-secondary/30">
+            <p className="text-sm text-muted-foreground">
+              For security, Kloak does not store your secret key. It was displayed once when you created your account.
+            </p>
+            <p className="text-xs text-muted-foreground mt-2">
+              If you lose your secret key, you will not be able to recover your account. Make sure you have it saved in a secure location.
+            </p>
+          </div>
         </div>
 
         {/* Reset Secret Key Card */}
