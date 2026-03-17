@@ -18,6 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { CheckmarkAnimation } from "@/components/ui/checkmark-animation";
+import { useAuthStore } from "@/stores/authStore";
 
 interface OnboardingModalProps {
   open: boolean;
@@ -30,8 +31,11 @@ type OnboardingStep = 1 | 2 | 3;
 export const OnboardingModal = ({
   open,
   onClose,
-  secretKey,
+  secretKey: secretKeyProp,
 }: OnboardingModalProps) => {
+  // Fall back to auth store secretKey in case the prop hasn't been set yet (race condition)
+  const storeSecretKey = useAuthStore((s) => s.secretKey);
+  const secretKey = secretKeyProp || storeSecretKey;
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState<OnboardingStep>(1);
   const [termsAccepted, setTermsAccepted] = useState(false);
