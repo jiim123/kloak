@@ -17,6 +17,22 @@ const LAST_SEEN_INTERVAL = 60_000; // 60 seconds minimum between calls
 const LAST_SEEN_STORAGE_PREFIX = "kloak:last-seen:";
 let initializeAuthInFlight: Promise<void> | null = null;
 
+// One-time migration: remove raw secretKey from localStorage if present
+const clearLegacySecretKey = () => {
+  try {
+    const raw = localStorage.getItem('kloak-auth');
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (parsed?.state?.secretKey) {
+      delete parsed.state.secretKey;
+      localStorage.setItem('kloak-auth', JSON.stringify(parsed));
+    }
+  } catch {
+    // ignore
+  }
+};
+clearLegacySecretKey();
+
 interface AuthState {
   user: User | null;
   secretKey: string | null;
