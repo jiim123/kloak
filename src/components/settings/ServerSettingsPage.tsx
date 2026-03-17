@@ -1448,9 +1448,57 @@ export const ServerSettingsPage = () => {
       return;
     }
 
-    setBannerFile(file);
-    setBannerPreview(URL.createObjectURL(file));
+    // Open crop modal with the selected image
+    const src = URL.createObjectURL(file);
+    setCropImageSrc(src);
+    setShowCropModal(true);
+
+    if (bannerInputRef.current) bannerInputRef.current.value = "";
+  };
+
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    if (!server || !user) return;
+
+    // Show local preview immediately
+    const preview = URL.createObjectURL(croppedBlob);
+    setBannerPreview(preview);
     setBannerRemoved(false);
+    setIsUploadingBanner(true);
+
+    // Close crop modal
+    if (cropImageSrc) {
+      URL.revokeObjectURL(cropImageSrc);
+      setCropImageSrc(null);
+    }
+    setShowCropModal(false);
+
+    try {
+      const rawFile = new File([croppedBlob], "banner.webp", { type: "image/webp" });
+      const { compressImage } = await import("@/lib/imageCompression");
+      const compressed = await compressImage(rawFile, "server-banner");
+      const uploadedUrl = await uploadBanner(server.id, compressed);
+      if (!uploadedUrl) throw new Error("Upload returned null");
+
+      await updateServer(server.id, user.id, { banner_url: uploadedUrl });
+      setBannerPreview(uploadedUrl);
+      setBannerFile(null);
+      toast.success("Server banner updated");
+    } catch (err) {
+      console.error("Failed to upload banner:", err);
+      toast.error("Failed to upload server banner");
+      URL.revokeObjectURL(preview);
+      setBannerPreview(null);
+    } finally {
+      setIsUploadingBanner(false);
+    }
+  };
+
+  const handleCropCancel = () => {
+    if (cropImageSrc) {
+      URL.revokeObjectURL(cropImageSrc);
+      setCropImageSrc(null);
+    }
+    setShowCropModal(false);
   };
 
   const clearBanner = () => {
