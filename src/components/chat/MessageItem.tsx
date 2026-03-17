@@ -283,6 +283,7 @@ export const MessageItem = memo(function MessageItem({
   const [hoveredRoleIcon, setHoveredRoleIcon] = useState(false);
   
   const [reactionDetailsEmoji, setReactionDetailsEmoji] = useState<string | null>(null);
+  const [attachmentLightboxUrl, setAttachmentLightboxUrl] = useState<string | null>(null);
   const [reactionUserNameOverrides, setReactionUserNameOverrides] = useState<Map<string, string>>(new Map());
 
   // Refs
