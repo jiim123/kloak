@@ -309,7 +309,7 @@ export const TasksChannelArea = () => {
               ? payload.old
               : null;
 
-        const eventChannelId = record && typeof record.channel_id === "string" ? record.channel_id : null;
+        const eventChannelId = record && typeof (record as Record<string, unknown>).channel_id === "string" ? (record as Record<string, unknown>).channel_id as string : null;
         if (!eventChannelId || eventChannelId === channelId) {
           scheduleRefresh();
         }
