@@ -207,6 +207,7 @@ const AttachmentItem = memo(function AttachmentItem({
               alt={attachment.file_name}
               className="w-full h-full object-contain rounded-lg cursor-pointer hover:opacity-90"
               decoding="async"
+              onClick={() => signedUrl && onImageClick?.(signedUrl)}
               onMouseEnter={isGif ? () => setIsGifHovered(true) : undefined}
               onMouseLeave={isGif ? () => setIsGifHovered(false) : undefined}
               onFocus={isGif ? () => setIsGifHovered(true) : undefined}
