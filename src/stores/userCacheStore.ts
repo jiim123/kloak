@@ -3,10 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import type { User } from "@/types";
 
 const MAX_CACHE_SIZE = 1000;
-const CACHE_TTL_MS = 5 * 60 * 1000;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const isValidUuid = (id: string): boolean => UUID_RE.test(id);
-
 interface CachedEntry {
   user: User;
   cachedAt: number;
