@@ -1447,29 +1447,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         </div>
       )}
 
-      {/* View Key Confirmation */}
-      <AlertDialog open={showKeyConfirm} onOpenChange={setShowKeyConfirm}>
-        <AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md rounded-2xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Reveal Secret Key?</AlertDialogTitle>
-            <AlertDialogDescription className="leading-relaxed">
-              Make sure no one is looking at your screen. Your secret key is the only way to access your account.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-            <AlertDialogCancel className="m-0 rounded-xl">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                setKeyRevealed(true);
-                setShowKeyConfirm(false);
-              }}
-              className="rounded-xl bg-brand-600 text-black hover:bg-brand-700"
-            >
-              Reveal Key
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* View Key Confirmation - removed: secret key no longer viewable in settings */}
 
       {/* Logout Confirmation */}
       <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
