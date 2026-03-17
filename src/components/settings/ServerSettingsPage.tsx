@@ -3332,6 +3332,16 @@ export const ServerSettingsPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {/* Banner Crop Modal */}
+      {showCropModal && cropImageSrc && (
+        <BannerCropModal
+          open={showCropModal}
+          imageSrc={cropImageSrc}
+          onClose={handleCropCancel}
+          onCropComplete={handleCropComplete}
+          isUploading={isUploadingBanner}
+        />
+      )}
     </>
   );
 };
