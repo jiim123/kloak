@@ -399,10 +399,6 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const handleCopyKey = async () => {
     // Secret key is no longer accessible from settings
     return;
-      toast.success("Secret key copied!");
-    } catch {
-      toast.error("Failed to copy");
-    }
   };
 
   const handleLogout = () => {
