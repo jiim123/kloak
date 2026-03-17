@@ -3202,6 +3202,71 @@ export const ServerSettingsPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Transfer Ownership Confirmation */}
+      <AlertDialog open={showTransferConfirm} onOpenChange={setShowTransferConfirm}>
+        <AlertDialogContent className="max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Transfer Server Ownership</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  You are about to transfer ownership of <strong>{server.name}</strong> to{" "}
+                  <strong>{members.find((m) => m.user_id === transferTargetId)?.user?.username || "Unknown"}</strong>.
+                </p>
+                <p>
+                  You will be demoted to <strong>Admin</strong> and will no longer be able to delete the server or transfer ownership.
+                  This action <strong>cannot be undone</strong>.
+                </p>
+                <div className="space-y-1.5 pt-1">
+                  <Label className="text-xs text-muted-foreground">
+                    Type <span className="font-mono font-medium text-foreground">{server.name}</span> to confirm
+                  </Label>
+                  <Input
+                    value={transferConfirmName}
+                    onChange={(e) => setTransferConfirmName(e.target.value)}
+                    placeholder="Enter server name..."
+                    className="h-9 text-sm"
+                    autoComplete="off"
+                  />
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isTransferring}>Cancel</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={transferConfirmName !== server.name || isTransferring || !transferTargetId}
+              onClick={async () => {
+                if (!transferTargetId || !user) return;
+                setIsTransferring(true);
+                try {
+                  const { error } = await supabase.rpc("transfer_ownership", {
+                    _server_id: server.id,
+                    _current_owner_id: user.id,
+                    _new_owner_id: transferTargetId,
+                  });
+                  if (error) throw error;
+                  toast.success("Ownership transferred successfully");
+                  setShowTransferConfirm(false);
+                  setTransferTargetId(null);
+                  setTransferConfirmName("");
+                  closeServerSettings();
+                  await fetchServers(user.id);
+                } catch (error: any) {
+                  toast.error(error?.message || "Failed to transfer ownership");
+                } finally {
+                  setIsTransferring(false);
+                }
+              }}
+            >
+              {isTransferring ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Crown className="w-4 h-4 mr-2" />}
+              Transfer
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
