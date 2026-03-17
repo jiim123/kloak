@@ -2166,8 +2166,8 @@ export const ServerSettingsPage = () => {
                 )}
 
                 {canManageServer && (
-                  <div className="pt-4">
-                    <Button type="submit" disabled={isLoading || isUploadingIcon || isUploadingBanner} size="sm">
+                  <div className="fixed bottom-6 right-6 z-50">
+                    <Button type="submit" disabled={isLoading || isUploadingIcon || isUploadingBanner} size="sm" className="shadow-lg">
                       {(isLoading || isUploadingIcon || isUploadingBanner) && (
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       )}
