@@ -180,7 +180,7 @@ export const useRealtimeNotifications = (userId: string | null) => {
         .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
       unseen.forEach(processIncomingNotification);
-    }, 300_000);
+    }, 60_000);
 
     return () => {
       isSubscribedRef.current = false;
