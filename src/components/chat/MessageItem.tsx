@@ -1327,7 +1327,7 @@ export const MessageItem = memo(function MessageItem({
                         {currentChannel?.type === "announcement" ? (
                           (() => {
                             // Extract title and content for announcement channels
-                            const content = message.content || "";
+                            const content = displayContent || "";
                             const parts = content.split("\n\n");
                             const title = parts.length > 1 ? parts[0].trim() : content.split("\n")[0].trim() || "";
                             const announcementContent =
