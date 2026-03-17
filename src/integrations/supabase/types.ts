@@ -3309,17 +3309,34 @@ export type Database = {
         Args: { _name: string; _owner_id: string }
         Returns: Json
       }
-      create_task: {
-        Args: {
-          _assignee_ids?: string[]
-          _category_id?: string
-          _channel_id: string
-          _description?: string
-          _due_date?: string
-          _priority?: string
-          _title: string
-          _user_id: string
-        }
+      create_task:
+        | {
+            Args: {
+              _assignee_ids?: string[]
+              _channel_id: string
+              _description?: string
+              _due_date?: string
+              _priority?: string
+              _title: string
+              _user_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _assignee_ids?: string[]
+              _category_id?: string
+              _channel_id: string
+              _description?: string
+              _due_date?: string
+              _priority?: string
+              _title: string
+              _user_id: string
+            }
+            Returns: Json
+          }
+      create_task_category: {
+        Args: { _channel_id: string; _name: string; _user_id: string }
         Returns: Json
       }
       create_thread: {
@@ -4573,4 +4590,3 @@ export const Constants = {
     },
   },
 } as const
-

@@ -185,7 +185,7 @@ type RpcInvoker = (
 ) => Promise<{ data: unknown; error: { message?: string } | null }>;
 
 const runRpc: RpcInvoker = (fn, params) =>
-  supabase.rpc(fn as never, params as never) as Promise<{ data: unknown; error: { message?: string } | null }>;
+  supabase.rpc(fn as never, params as never) as unknown as Promise<{ data: unknown; error: { message?: string } | null }>;
 
 export const TasksChannelArea = () => {
   const currentChannel = useServerStore((s) => s.currentChannel);
@@ -309,7 +309,7 @@ export const TasksChannelArea = () => {
               ? payload.old
               : null;
 
-        const eventChannelId = record && typeof record.channel_id === "string" ? record.channel_id : null;
+        const eventChannelId = record && typeof (record as Record<string, unknown>).channel_id === "string" ? (record as Record<string, unknown>).channel_id as string : null;
         if (!eventChannelId || eventChannelId === channelId) {
           scheduleRefresh();
         }
@@ -322,7 +322,7 @@ export const TasksChannelArea = () => {
               ? payload.old
               : null;
 
-        const taskId = record && typeof record.task_id === "string" ? record.task_id : null;
+        const taskId = record && typeof (record as Record<string, unknown>).task_id === "string" ? (record as Record<string, unknown>).task_id as string : null;
         if (taskId && taskIdsRef.current.has(taskId)) {
           scheduleRefresh();
         }

@@ -9,6 +9,9 @@ import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
 import type { User } from '@/types';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const isValidUuid = (id: string): boolean => UUID_RE.test(id);
+
 const MAX_CACHE_SIZE = 1000;
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -208,7 +211,7 @@ export function useMessageUser(userId: string | undefined | null): User | undefi
   });
 
   // Auto-fetch missing users so avatars/names appear after server switch
-  if (userId && !user && !autoFetchingIds.has(userId)) {
+  if (userId && !user && !autoFetchingIds.has(userId) && isValidUuid(userId)) {
     autoFetchingIds.add(userId);
     fetchAndCacheUser(userId).finally(() => {
       autoFetchingIds.delete(userId);
@@ -222,6 +225,7 @@ export function useMessageUser(userId: string | undefined | null): User | undefi
  * Non-reactive cache lookup (for use outside React components).
  */
 export function getUserFromCache(userId: string): User | null {
+  if (!userId || !isValidUuid(userId)) return null;
   return useUserCacheStore.getState().getUser(userId) ?? null;
 }
 
@@ -254,6 +258,7 @@ export function bulkSetUsersInCache(users: User[]): void {
 const inflightFetches = new Map<string, Promise<User | null>>();
 
 export async function fetchAndCacheUser(userId: string): Promise<User | null> {
+  if (!userId || !isValidUuid(userId)) return null;
   const cached = useUserCacheStore.getState().getUser(userId);
   if (cached) return cached;
 
