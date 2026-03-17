@@ -442,8 +442,6 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
   const handleClose = () => {
     setActiveTab("account");
-    setShowSecretKey(false);
-    setKeyRevealed(false);
     closeModal();
   };
 
