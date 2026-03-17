@@ -2023,7 +2023,14 @@ export const ServerSettingsPage = () => {
                       )}
                     >
                       {displayBannerUrl ? (
-                        <img src={displayBannerUrl} alt="Server banner" className="w-full h-full object-cover" />
+                        <>
+                          <img src={displayBannerUrl} alt="Server banner" className="w-full h-full object-cover" />
+                          {isUploadingBanner && (
+                            <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
+                              <Loader2 className="w-5 h-5 animate-spin text-foreground" />
+                            </div>
+                          )}
+                        </>
                       ) : (
                         <div className="flex flex-col items-center gap-2 text-muted-foreground">
                           <Upload className="w-6 h-6" />
