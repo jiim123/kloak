@@ -101,6 +101,54 @@ export const useRealtimeNotifications = (userId: string | null) => {
         }
       },
     );
+
+    // postgres_changes listeners — more reliable than broadcast for notifications
+    channel.on(
+      'postgres_changes' as any,
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${userId}`,
+      },
+      (payload: any) => {
+        if (payload.new) {
+          processIncomingNotification(payload.new as Notification);
+        }
+      },
+    );
+
+    channel.on(
+      'postgres_changes' as any,
+      {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${userId}`,
+      },
+      (payload: any) => {
+        if (payload.old?.id) {
+          storeRef.current.removeNotification(payload.old.id);
+        }
+      },
+    );
+
+    channel.on(
+      'postgres_changes' as any,
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${userId}`,
+      },
+      (payload: any) => {
+        if (payload.new) {
+          const n = payload.new as Notification;
+          storeRef.current.updateNotification(n.id, n);
+        }
+      },
+    );
+
     subscribeChannel(topic);
 
     // Track subscription status via the shared channel manager
