@@ -701,6 +701,65 @@ export type Database = {
           },
         ]
       }
+      developer_bots: {
+        Row: {
+          bot_user_id: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          owner_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          bot_user_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          owner_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          bot_user_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          owner_user_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "developer_bots_bot_user_id_fkey"
+            columns: ["bot_user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "developer_bots_bot_user_id_fkey"
+            columns: ["bot_user_id"]
+            isOneToOne: true
+            referencedRelation: "users_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "developer_bots_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "developer_bots_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "users_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       direct_messages: {
         Row: {
           content: string
@@ -2689,7 +2748,7 @@ export type Database = {
           profile_theme_accent?: string | null
           profile_theme_primary?: string | null
           pronouns?: string | null
-          status?: Database["public"]["Enums"]["user_status"] | null
+          status?: never
           username?: string | null
         }
         Update: {
@@ -2708,7 +2767,7 @@ export type Database = {
           profile_theme_accent?: string | null
           profile_theme_primary?: string | null
           pronouns?: string | null
-          status?: Database["public"]["Enums"]["user_status"] | null
+          status?: never
           username?: string | null
         }
         Relationships: []
@@ -2806,6 +2865,13 @@ export type Database = {
       }
       block_user: {
         Args: { _blocked_user_id: string; _user_id: string }
+        Returns: Json
+      }
+      bot_heartbeat:
+        | { Args: never; Returns: boolean }
+        | { Args: { _bot_user_id: string }; Returns: boolean }
+      bot_send_message: {
+        Args: { _channel_id: string; _content: string; _reply_to_id?: string }
         Returns: Json
       }
       can_access_channel: {
@@ -2966,6 +3032,16 @@ export type Database = {
         }
         Returns: Json
       }
+      create_developer_bot: {
+        Args: {
+          _banner_color?: string
+          _description?: string
+          _display_name?: string
+          _owner_user_id: string
+          _username: string
+        }
+        Returns: Json
+      }
       create_group_dm: {
         Args: {
           _creator_id: string
@@ -3055,6 +3131,10 @@ export type Database = {
       delete_channel_permission: {
         Args: { _permission_id: string; _user_id: string }
         Returns: undefined
+      }
+      delete_developer_bot: {
+        Args: { _bot_user_id: string; _owner_user_id: string }
+        Returns: boolean
       }
       delete_dm: {
         Args: { _message_id: string; _sender_id: string }
@@ -3283,6 +3363,7 @@ export type Database = {
         }
         Returns: Json
       }
+      get_my_developer_bots: { Args: { _owner_user_id: string }; Returns: Json }
       get_outgoing_friend_requests: {
         Args: { _user_id: string }
         Returns: Json
@@ -3720,6 +3801,10 @@ export type Database = {
       revoke_server_invite: {
         Args: { _invite_id: string; _user_id: string }
         Returns: boolean
+      }
+      rotate_developer_bot_secret: {
+        Args: { _bot_user_id: string; _owner_user_id: string }
+        Returns: Json
       }
       save_user_server_folders: {
         Args: { _folder_data: Json; _user_id: string }
