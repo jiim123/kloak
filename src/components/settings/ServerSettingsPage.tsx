@@ -629,6 +629,12 @@ export const ServerSettingsPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+
+  // Transfer ownership state
+  const [transferTargetId, setTransferTargetId] = useState<string | null>(null);
+  const [showTransferConfirm, setShowTransferConfirm] = useState(false);
+  const [isTransferring, setIsTransferring] = useState(false);
+  const [transferConfirmName, setTransferConfirmName] = useState("");
   const [memberSearch, setMemberSearch] = useState("");
   const [memberDisplayCount, setMemberDisplayCount] = useState(50);
   const [systemChannelJoinId, setSystemChannelJoinId] = useState<string>("");
