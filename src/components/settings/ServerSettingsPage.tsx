@@ -1597,15 +1597,7 @@ export const ServerSettingsPage = () => {
         setIsUploadingIcon(false);
       }
 
-      // Upload new banner if selected
-      if (bannerFile) {
-        setIsUploadingBanner(true);
-        const uploadedUrl = await uploadBanner(server.id, bannerFile);
-        if (uploadedUrl) {
-          bannerUrl = uploadedUrl;
-        }
-        setIsUploadingBanner(false);
-      }
+      // Banner is uploaded immediately via crop modal, no deferred upload needed
 
       const aboutValue = (data.about || "").trim();
 
