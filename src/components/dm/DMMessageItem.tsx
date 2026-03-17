@@ -95,6 +95,20 @@ export const DMMessageItem = memo(function DMMessageItem({
   }, [animationKey]);
 
   const isOwnMessage = user?.id === message.sender_id;
+
+  // Strip attachment URLs from content to avoid duplicate rendering
+  const displayContent = useMemo(() => {
+    if (!message.attachments || message.attachments.length === 0) return message.content;
+    let cleaned = message.content;
+    for (const att of message.attachments) {
+      if (att.file_url) {
+        cleaned = cleaned.replace(att.file_url, '').trim();
+      }
+    }
+    cleaned = cleaned.replace(/https?:\/\/[^\s]*supabase\.co\/storage\/v1\/object\/sign\/attachments\/[^\s]*/g, '').trim();
+    return cleaned;
+  }, [message.content, message.attachments]);
+
   const senderUser = useMessageUser(message.sender_id);
   const replyToSenderUser = useMessageUser(message.reply_to?.sender_id);
   const hasSenderDecoration = Boolean(senderUser?.avatar_decoration);
