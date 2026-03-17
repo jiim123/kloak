@@ -161,7 +161,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     servers_to_delete: Array<{ id: string; name: string }>;
   } | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
-  const [keyRevealed, setKeyRevealed] = useState(false);
+  const [_keyRevealed, _setKeyRevealed] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showAvatarDecorationModal, setShowAvatarDecorationModal] = useState(false);
   const [showProfileEffectModal, setShowProfileEffectModal] = useState(false);
