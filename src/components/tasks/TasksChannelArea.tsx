@@ -185,7 +185,7 @@ type RpcInvoker = (
 ) => Promise<{ data: unknown; error: { message?: string } | null }>;
 
 const runRpc: RpcInvoker = (fn, params) =>
-  supabase.rpc(fn as never, params as never) as Promise<{ data: unknown; error: { message?: string } | null }>;
+  supabase.rpc(fn as never, params as never) as unknown as Promise<{ data: unknown; error: { message?: string } | null }>;
 
 export const TasksChannelArea = () => {
   const currentChannel = useServerStore((s) => s.currentChannel);
