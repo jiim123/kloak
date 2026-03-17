@@ -1673,6 +1673,8 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           if (!open) {
             setShowNewKeyModal(false);
             setNewSecretKey(null);
+            // Clear raw key from store memory after user confirms they saved it
+            useAuthStore.getState().setSecretKey(null);
           }
         }}
       >
