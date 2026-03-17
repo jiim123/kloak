@@ -1836,6 +1836,9 @@ export const MessageItem = memo(function MessageItem({
       {/* Delete confirmation modal */}
       <DeleteMessageModal message={showDeleteModal ? message : null} onClose={() => setShowDeleteModal(false)} />
 
+      {/* Attachment image lightbox */}
+      <ImageLightbox imageUrl={attachmentLightboxUrl} onClose={() => setAttachmentLightboxUrl(null)} />
+
       {/* Reaction details dialog */}
       <Dialog open={!!reactionDetailsEmoji} onOpenChange={(open) => !open && setReactionDetailsEmoji(null)}>
         <DialogContent className="max-w-sm">
