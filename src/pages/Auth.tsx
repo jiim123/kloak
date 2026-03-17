@@ -364,6 +364,8 @@ const Auth = ({ formOnly = false }: AuthProps) => {
     if (user) {
       markWelcomeSeen(user.id);
     }
+    // Clear secretKey from memory — it should never persist beyond onboarding
+    useAuthStore.getState().setSecretKey(null);
     setShowWelcomeModal(false);
     // Resize Tauri window to app size, then navigate
     await resizeWindowForApp();

@@ -54,7 +54,7 @@ const faqCategories = [
       },
       {
         q: "Where can I find my secret key after signing up?",
-        a: "After creating your account, your key is displayed once. You can always view it again by going to User Settings, then Account, then View Secret Key while logged in. We strongly recommend saving it immediately after account creation.",
+        a: "Your secret key is displayed once during account creation. For security, Kloak does not store your key — only a one-way hash is kept. Make sure to save it immediately in a password manager or another secure location. If you lose it, your account cannot be recovered.",
       },
       {
         q: "Is my data encrypted?",
