@@ -84,7 +84,7 @@ export const useAuthStore = create<AuthState>()(
       manualStatus: null,
 
       setUser: (user) => set({ user, isAuthenticated: !!user }),
-      setSecretKey: (key) => set({ secretKey: key, keyHash: null }),
+      setSecretKey: (key) => set({ secretKey: key }),
       setLoading: (loading) => set({ isLoading: loading }),
       setError: (error) => set({ error }),
       setIsNewUser: (isNew) => set({ isNewUser: isNew }),
