@@ -1362,7 +1362,7 @@ export const MessageItem = memo(function MessageItem({
                           })()
                         ) : (
                           <MessageContent
-                            content={message.content}
+                            content={displayContent}
                             currentUserId={user?.id}
                             messageId={message.id}
                             hideEmbeds={isEmbedHidden}

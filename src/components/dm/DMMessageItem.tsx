@@ -412,7 +412,7 @@ export const DMMessageItem = memo(function DMMessageItem({
                   </div>
                 ) : (
                   <div className="text-[14px] sm:text-[14px] font-normal leading-[1.5] font-[Inter,system-ui,sans-serif]">
-                    <MessageContent content={message.content} currentUserId={user?.id} messageId={message.id} />
+                    <MessageContent content={displayContent} currentUserId={user?.id} messageId={message.id} />
                   </div>
                 )}
 
