@@ -296,6 +296,20 @@ export const MessageItem = memo(function MessageItem({
     [message.is_own, user?.id, message.user_id],
   );
 
+  // Strip attachment URLs from content to avoid duplicate rendering with AttachmentItem
+  const displayContent = useMemo(() => {
+    if (!message.attachments || message.attachments.length === 0) return message.content;
+    let cleaned = message.content;
+    for (const att of message.attachments) {
+      if (att.file_url) {
+        cleaned = cleaned.replace(att.file_url, '').trim();
+      }
+    }
+    // Also strip any Supabase signed attachment URLs
+    cleaned = cleaned.replace(/https?:\/\/[^\s]*supabase\.co\/storage\/v1\/object\/sign\/attachments\/[^\s]*/g, '').trim();
+    return cleaned;
+  }, [message.content, message.attachments]);
+
   // Check if this message author is blocked (either direction)
   const isBlockedUser = useFriendStore(
     useCallback((s) => s.visibilityBlockedUserIds.includes(message.user_id), [message.user_id]),
@@ -1313,7 +1327,7 @@ export const MessageItem = memo(function MessageItem({
                         {currentChannel?.type === "announcement" ? (
                           (() => {
                             // Extract title and content for announcement channels
-                            const content = message.content || "";
+                            const content = displayContent || "";
                             const parts = content.split("\n\n");
                             const title = parts.length > 1 ? parts[0].trim() : content.split("\n")[0].trim() || "";
                             const announcementContent =
@@ -1348,7 +1362,7 @@ export const MessageItem = memo(function MessageItem({
                           })()
                         ) : (
                           <MessageContent
-                            content={message.content}
+                            content={displayContent}
                             currentUserId={user?.id}
                             messageId={message.id}
                             hideEmbeds={isEmbedHidden}
