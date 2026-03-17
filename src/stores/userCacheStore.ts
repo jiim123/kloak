@@ -1,31 +1,27 @@
-/**
- * Phase 1: Centralized User Cache Store
- * 
- * Single source of truth for user profile data in memory.
- * Messages only store user_id and look up user data from this cache.
- * This eliminates millions of duplicated {username, display_name, ...} objects.
- */
-import { create } from 'zustand';
-import { supabase } from '@/integrations/supabase/client';
-import type { User } from '@/types';
+import { create } from "zustand";
+import { supabase } from "@/integrations/supabase/client";
+import type { User } from "@/types";
 
 const MAX_CACHE_SIZE = 1000;
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL_MS = 5 * 60 * 1000;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const isValidUuid = (id: string): boolean => UUID_RE.test(id);
 
 interface CachedEntry {
   user: User;
   cachedAt: number;
 }
 
-/**
- * Fields that affect visual rendering (avatar, name, decoration).
- * Changes to these fields require a new object reference so React re-renders.
- * Status/last_seen changes do NOT need to re-render message components.
- */
 const VISUAL_FIELDS: ReadonlySet<string> = new Set([
-  'username', 'display_name', 'avatar_url', 'banner_url',
-  'avatar_decoration', 'profile_effect', 'bio', 'banner_color',
-  'custom_status',
+  "username",
+  "display_name",
+  "avatar_url",
+  "banner_url",
+  "avatar_decoration",
+  "profile_effect",
+  "bio",
+  "banner_color",
+  "custom_status",
 ]);
 
 /** Version counter per user — incremented only on visual field changes */
@@ -42,7 +38,7 @@ function bumpUserVersion(id: string): void {
 interface UserCacheState {
   /** Internal cache map - keyed by user ID. Mutated in place for status-only updates. */
   _cache: Map<string, CachedEntry>;
-  
+
   /** Version counter that increments on visual-field changes to trigger selectors */
   _version: number;
 
@@ -80,7 +76,7 @@ function evictOldest(cache: Map<string, CachedEntry>) {
 /** Check if a patch contains any visual field changes compared to existing user */
 function hasVisualChanges(incoming: Partial<User>, existing?: User): boolean {
   for (const key of Object.keys(incoming)) {
-    if (key === 'id') continue;
+    if (key === "id") continue;
     if (!VISUAL_FIELDS.has(key)) continue;
     // If no existing user, any visual field is a change
     if (!existing) return true;
@@ -104,12 +100,12 @@ export const useUserCacheStore = create<UserCacheState>((set, get) => ({
   upsertUser: (user: User) => {
     const state = get();
     const existing = state._cache.get(user.id);
-    
+
     // Skip if identical object reference
     if (existing?.user === user) return;
-    
+
     const isVisualChange = hasVisualChanges(user, existing?.user);
-    
+
     if (isVisualChange || !existing) {
       // New user or visual change: store the new object reference
       state._cache.set(user.id, { user, cachedAt: Date.now() });
@@ -129,7 +125,7 @@ export const useUserCacheStore = create<UserCacheState>((set, get) => ({
     const state = get();
     const now = Date.now();
     let anyVisualChange = false;
-    
+
     for (const user of users) {
       const existing = state._cache.get(user.id);
       if (existing?.user === user) continue;
@@ -144,9 +140,9 @@ export const useUserCacheStore = create<UserCacheState>((set, get) => ({
         existing.cachedAt = now;
       }
     }
-    
+
     evictOldest(state._cache);
-    
+
     if (anyVisualChange) {
       set({ _version: state._version + 1 });
     }
@@ -156,9 +152,9 @@ export const useUserCacheStore = create<UserCacheState>((set, get) => ({
     const state = get();
     const existing = state._cache.get(id);
     if (!existing) return;
-    
+
     const isVisual = hasVisualChanges(patch, existing.user);
-    
+
     if (isVisual) {
       // Visual change: create new object reference so selectors pick it up
       const patchedUser = { ...existing.user, ...patch };
@@ -197,7 +193,7 @@ const autoFetchingIds = new Set<string>();
  * Hook to subscribe to a specific user from the cache.
  * Uses per-user versioning so status-only updates to OTHER users
  * don't cause this component to re-render.
- * 
+ *
  * If the user is not in cache, triggers a background fetch automatically.
  */
 export function useMessageUser(userId: string | undefined | null): User | undefined {
@@ -262,7 +258,7 @@ export async function fetchAndCacheUser(userId: string): Promise<User | null> {
 
   const promise = (async () => {
     try {
-      const { data } = await supabase.rpc('get_user_by_id', { _user_id: userId });
+      const { data } = await supabase.rpc("get_user_by_id", { _user_id: userId });
       if (data) {
         const user = data as unknown as User;
         useUserCacheStore.getState().upsertUser(user);
