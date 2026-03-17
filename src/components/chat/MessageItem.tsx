@@ -51,6 +51,7 @@ import { isImageOnlyMessage, convertMentionsToReadable, convertMentionsToRaw } f
 import { ReplyPreview } from "./MessageContent";
 import { formatMessageTimestamp } from "@/lib/format";
 import { DeleteMessageModal } from "@/components/modals/DeleteMessageModal";
+import { ImageLightbox } from "@/components/modals/ImageLightbox";
 import { EmojiPicker } from "@/components/modals/EmojiPicker";
 import { BotTag } from "@/components/ui/bot-tag";
 import type { CustomServerRole, Message, ServerRole } from "@/types";
@@ -148,8 +149,10 @@ RoleIconWrapper.displayName = "RoleIconWrapper";
 // Renders a single attachment, using a signed URL for private bucket images
 const AttachmentItem = memo(function AttachmentItem({
   attachment,
+  onImageClick,
 }: {
   attachment: { id: string; file_url: string; file_name: string; file_type?: string; file_size?: number; width?: number | null; height?: number | null };
+  onImageClick?: (url: string) => void;
 }) {
   const { url: signedUrl, refresh } = useSignedUrl(attachment.file_url, { withRefresh: true });
   const isImage = attachment.file_type?.startsWith("image/");
@@ -205,6 +208,7 @@ const AttachmentItem = memo(function AttachmentItem({
               alt={attachment.file_name}
               className="w-full h-full object-contain rounded-lg cursor-pointer hover:opacity-90"
               decoding="async"
+              onClick={() => signedUrl && onImageClick?.(signedUrl)}
               onMouseEnter={isGif ? () => setIsGifHovered(true) : undefined}
               onMouseLeave={isGif ? () => setIsGifHovered(false) : undefined}
               onFocus={isGif ? () => setIsGifHovered(true) : undefined}
@@ -280,6 +284,7 @@ export const MessageItem = memo(function MessageItem({
   const [hoveredRoleIcon, setHoveredRoleIcon] = useState(false);
   
   const [reactionDetailsEmoji, setReactionDetailsEmoji] = useState<string | null>(null);
+  const [attachmentLightboxUrl, setAttachmentLightboxUrl] = useState<string | null>(null);
   const [reactionUserNameOverrides, setReactionUserNameOverrides] = useState<Map<string, string>>(new Map());
 
   // Refs
@@ -1396,7 +1401,7 @@ export const MessageItem = memo(function MessageItem({
                     {!message.is_system_message && message.attachments && message.attachments.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-2">
                         {message.attachments.map((attachment) => (
-                          <AttachmentItem key={attachment.id} attachment={attachment} />
+                          <AttachmentItem key={attachment.id} attachment={attachment} onImageClick={setAttachmentLightboxUrl} />
                         ))}
                       </div>
                     )}
@@ -1831,6 +1836,9 @@ export const MessageItem = memo(function MessageItem({
 
       {/* Delete confirmation modal */}
       <DeleteMessageModal message={showDeleteModal ? message : null} onClose={() => setShowDeleteModal(false)} />
+
+      {/* Attachment image lightbox */}
+      <ImageLightbox imageUrl={attachmentLightboxUrl} onClose={() => setAttachmentLightboxUrl(null)} />
 
       {/* Reaction details dialog */}
       <Dialog open={!!reactionDetailsEmoji} onOpenChange={(open) => !open && setReactionDetailsEmoji(null)}>
