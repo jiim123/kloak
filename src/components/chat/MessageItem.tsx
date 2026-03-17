@@ -1400,7 +1400,7 @@ export const MessageItem = memo(function MessageItem({
                     {!message.is_system_message && message.attachments && message.attachments.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-2">
                         {message.attachments.map((attachment) => (
-                          <AttachmentItem key={attachment.id} attachment={attachment} />
+                          <AttachmentItem key={attachment.id} attachment={attachment} onImageClick={setAttachmentLightboxUrl} />
                         ))}
                       </div>
                     )}
