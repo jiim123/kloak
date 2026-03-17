@@ -225,6 +225,7 @@ export function useMessageUser(userId: string | undefined | null): User | undefi
  * Non-reactive cache lookup (for use outside React components).
  */
 export function getUserFromCache(userId: string): User | null {
+  if (!userId || !isValidUuid(userId)) return null;
   return useUserCacheStore.getState().getUser(userId) ?? null;
 }
 
