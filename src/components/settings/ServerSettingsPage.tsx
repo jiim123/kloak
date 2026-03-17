@@ -62,6 +62,7 @@ import type { ServerRole, ServerMember, CustomServerRole, Permission } from "@/t
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RolePermissionsEditor } from "../modals/RolePermissionsEditor";
+import { BannerCropModal } from "../modals/BannerCropModal";
 import { RoleColorPicker } from "../modals/RoleColorPicker";
 import { RoleIconPreview } from "@/components/ui/role-icon-preview";
 import { Separator } from "@/components/ui/separator";
@@ -629,6 +630,12 @@ export const ServerSettingsPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+
+  // Transfer ownership state
+  const [transferTargetId, setTransferTargetId] = useState<string | null>(null);
+  const [showTransferConfirm, setShowTransferConfirm] = useState(false);
+  const [isTransferring, setIsTransferring] = useState(false);
+  const [transferConfirmName, setTransferConfirmName] = useState("");
   const [memberSearch, setMemberSearch] = useState("");
   const [memberDisplayCount, setMemberDisplayCount] = useState(50);
   const [systemChannelJoinId, setSystemChannelJoinId] = useState<string>("");
@@ -677,6 +684,10 @@ export const ServerSettingsPage = () => {
   // Track explicit removals so displayUrl becomes null immediately
   const [iconRemoved, setIconRemoved] = useState(false);
   const [bannerRemoved, setBannerRemoved] = useState(false);
+
+  // Banner crop modal state
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [showCropModal, setShowCropModal] = useState(false);
 
   // Custom emoji state (owner-only)
   const [emojiFile, setEmojiFile] = useState<File | null>(null);
@@ -1437,9 +1448,57 @@ export const ServerSettingsPage = () => {
       return;
     }
 
-    setBannerFile(file);
-    setBannerPreview(URL.createObjectURL(file));
+    // Open crop modal with the selected image
+    const src = URL.createObjectURL(file);
+    setCropImageSrc(src);
+    setShowCropModal(true);
+
+    if (bannerInputRef.current) bannerInputRef.current.value = "";
+  };
+
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    if (!server || !user) return;
+
+    // Show local preview immediately
+    const preview = URL.createObjectURL(croppedBlob);
+    setBannerPreview(preview);
     setBannerRemoved(false);
+    setIsUploadingBanner(true);
+
+    // Close crop modal
+    if (cropImageSrc) {
+      URL.revokeObjectURL(cropImageSrc);
+      setCropImageSrc(null);
+    }
+    setShowCropModal(false);
+
+    try {
+      const rawFile = new File([croppedBlob], "banner.webp", { type: "image/webp" });
+      const { compressImage } = await import("@/lib/imageCompression");
+      const compressed = await compressImage(rawFile, "server-banner");
+      const uploadedUrl = await uploadBanner(server.id, compressed);
+      if (!uploadedUrl) throw new Error("Upload returned null");
+
+      await updateServer(server.id, user.id, { banner_url: uploadedUrl });
+      setBannerPreview(uploadedUrl);
+      setBannerFile(null);
+      toast.success("Server banner updated");
+    } catch (err) {
+      console.error("Failed to upload banner:", err);
+      toast.error("Failed to upload server banner");
+      URL.revokeObjectURL(preview);
+      setBannerPreview(null);
+    } finally {
+      setIsUploadingBanner(false);
+    }
+  };
+
+  const handleCropCancel = () => {
+    if (cropImageSrc) {
+      URL.revokeObjectURL(cropImageSrc);
+      setCropImageSrc(null);
+    }
+    setShowCropModal(false);
   };
 
   const clearBanner = () => {
@@ -1538,15 +1597,7 @@ export const ServerSettingsPage = () => {
         setIsUploadingIcon(false);
       }
 
-      // Upload new banner if selected
-      if (bannerFile) {
-        setIsUploadingBanner(true);
-        const uploadedUrl = await uploadBanner(server.id, bannerFile);
-        if (uploadedUrl) {
-          bannerUrl = uploadedUrl;
-        }
-        setIsUploadingBanner(false);
-      }
+      // Banner is uploaded immediately via crop modal, no deferred upload needed
 
       const aboutValue = (data.about || "").trim();
 
@@ -1875,10 +1926,17 @@ export const ServerSettingsPage = () => {
                   </>
                 )}
 
-                {/* Delete Server - at bottom, separated */}
+                {/* Transfer Ownership & Delete Server - at bottom, separated */}
                 {isOwner && (
                   <>
                     <Separator className="my-3" />
+                    <TabsTrigger
+                      value="transfer"
+                      className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
+                    >
+                      <Crown className="w-4 h-4" />
+                      Transfer Ownership
+                    </TabsTrigger>
                     <button
                       type="button"
                       onClick={() => setShowDeleteConfirm(true)}
@@ -1911,61 +1969,104 @@ export const ServerSettingsPage = () => {
             <TabsContent value="overview" className="m-0 p-6 pr-16">
               <h2 className="text-xl font-medium mb-6">Overview</h2>
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 max-w-3xl">
-                {/* Server Icon */}
-                <div className="flex items-center gap-4">
-                  <div className="relative">
-                    <div
-                      onClick={() => canManageServer && fileInputRef.current?.click()}
-                      className={cn(
-                        "w-20 h-20 rounded-2xl bg-secondary flex items-center justify-center border-2 border-dashed border-muted-foreground/50 transition-colors flex-shrink-0 overflow-hidden",
-                        canManageServer && "cursor-pointer hover:border-primary",
-                      )}
-                    >
-                      {displayIconUrl ? (
-                        <img src={displayIconUrl} alt={server.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <Upload className="w-6 h-6 text-muted-foreground" />
-                      )}
+                {/* Server Information */}
+                <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-4">
+                  <Label className="text-sm font-medium">Server Information</Label>
+
+                  <div className="flex flex-col sm:flex-row gap-5">
+                    {/* Server Icon */}
+                    <div className="flex flex-col items-start gap-2">
+                      <Label className="text-xs text-muted-foreground">Server Icon</Label>
+                      <div className="relative">
+                        <div
+                          onClick={() => canManageServer && fileInputRef.current?.click()}
+                          className={cn(
+                            "w-20 h-20 rounded-2xl bg-secondary flex items-center justify-center border-2 border-dashed border-muted-foreground/50 transition-colors flex-shrink-0 overflow-hidden",
+                            canManageServer && "cursor-pointer hover:border-primary",
+                          )}
+                        >
+                          {displayIconUrl ? (
+                            <img src={displayIconUrl} alt={server.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <Upload className="w-6 h-6 text-muted-foreground" />
+                          )}
+                        </div>
+                        {canManageServer && displayIconUrl && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (iconPreview) {
+                                clearIcon();
+                              } else {
+                                handleRemoveIcon();
+                              }
+                            }}
+                            disabled={isUploadingIcon}
+                            className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/90 disabled:opacity-50"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">Recommended 512×512</p>
                     </div>
-                    {canManageServer && displayIconUrl && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (iconPreview) {
-                            clearIcon();
-                          } else {
-                            handleRemoveIcon();
-                          }
-                        }}
-                        disabled={isUploadingIcon}
-                        className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/90 disabled:opacity-50"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    )}
+
+                    {/* Server Name */}
+                    <div className="flex-1 space-y-2">
+                      <Label htmlFor="serverName" className="text-xs text-muted-foreground">
+                        Server Name
+                      </Label>
+                      <Input
+                        id="serverName"
+                        {...register("name")}
+                        className={cn("h-10 text-sm", errors.name ? "border-destructive" : "")}
+                        disabled={!canManageServer}
+                      />
+                      {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">Server Icon</p>
+
+                  {/* Server Description */}
+                  <div className="space-y-2">
+                    <Label htmlFor="serverAbout" className="text-xs text-muted-foreground">
+                      Server Description
+                    </Label>
+                    <Textarea
+                      id="serverAbout"
+                      {...register("about")}
+                      className={cn("min-h-[100px] text-sm resize-none", errors.about ? "border-destructive" : "")}
+                      disabled={!canManageServer}
+                      placeholder="Tell people what your server is about..."
+                      maxLength={500}
+                    />
+                    {errors.about && <p className="text-xs text-destructive">{errors.about.message}</p>}
                     <p className="text-xs text-muted-foreground">
-                      {canManageServer ? "Click to upload • Recommended 512x512" : "Recommended 512x512"}
+                      This description will be shown in the Explore page (if public) and server overview.
                     </p>
                   </div>
                 </div>
 
                 {/* Server Banner */}
-                <div className="space-y-2">
-                  <Label className="text-sm">Server Banner</Label>
+                <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
+                  <Label className="text-sm font-medium">Server Banner</Label>
                   <div className="relative">
                     <div
                       onClick={() => canManageServer && bannerInputRef.current?.click()}
                       className={cn(
-                        "w-full h-32 rounded-xl bg-secondary flex items-center justify-center border-2 border-dashed border-muted-foreground/50 transition-colors overflow-hidden",
+                        "w-full aspect-video rounded-xl bg-secondary flex items-center justify-center border-2 border-dashed border-muted-foreground/50 transition-colors overflow-hidden",
                         canManageServer && "cursor-pointer hover:border-primary",
                       )}
                     >
                       {displayBannerUrl ? (
-                        <img src={displayBannerUrl} alt="Server banner" className="w-full h-full object-cover" />
+                        <>
+                          <img src={displayBannerUrl} alt="Server banner" className="w-full h-full object-cover" />
+                          {isUploadingBanner && (
+                            <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
+                              <Loader2 className="w-5 h-5 animate-spin text-foreground" />
+                            </div>
+                          )}
+                        </>
                       ) : (
                         <div className="flex flex-col items-center gap-2 text-muted-foreground">
                           <Upload className="w-6 h-6" />
@@ -1992,48 +2093,15 @@ export const ServerSettingsPage = () => {
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {canManageServer ? "Recommended 960x540 • Shown in server list" : "Shown in server list"}
+                    {canManageServer ? "Recommended 960×540 • Shown in server list" : "Shown in server list"}
                   </p>
                 </div>
 
-                {/* Server Name */}
-                <div className="space-y-2">
-                  <Label htmlFor="serverName" className="text-sm">
-                    Server Name
-                  </Label>
-                  <Input
-                    id="serverName"
-                    {...register("name")}
-                    className={cn("h-10 text-sm", errors.name ? "border-destructive" : "")}
-                    disabled={!canManageServer}
-                  />
-                  {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
-                </div>
-
-                {/* About Server */}
-                <div className="space-y-2">
-                  <Label htmlFor="serverAbout" className="text-sm">
-                    About Server
-                  </Label>
-                  <Textarea
-                    id="serverAbout"
-                    {...register("about")}
-                    className={cn("min-h-[100px] text-sm resize-none", errors.about ? "border-destructive" : "")}
-                    disabled={!canManageServer}
-                    placeholder="Tell people what your server is about..."
-                    maxLength={500}
-                  />
-                  {errors.about && <p className="text-xs text-destructive">{errors.about.message}</p>}
-                  <p className="text-xs text-muted-foreground">
-                    This description will be shown in the Explore page (if public) and server overview.
-                  </p>
-                </div>
-
-                {/* Publish Server (owner-only) - temporarily disabled while rebuilding Explore */}
+                {/* Publish Server (owner-only) */}
                 {isOwner && (
-                  <div className="space-y-2">
-                    <Label className="text-sm">Publish Server</Label>
-                    <div className="flex items-start gap-3 p-3 rounded-lg border bg-secondary/30 opacity-75">
+                  <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
+                    <Label className="text-sm font-medium">Publish Server</Label>
+                    <div className="flex items-start gap-3 p-3 rounded-lg border border-border/50 bg-secondary/30 opacity-75">
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-foreground">Make this server public</p>
                         <p className="text-xs text-muted-foreground">
@@ -2044,11 +2112,13 @@ export const ServerSettingsPage = () => {
                   </div>
                 )}
 
-                {/* System Message Channels */}
+                {/* User Messages */}
                 {canManageServer && (
-                  <div className="space-y-3 border-t border-border pt-4">
+                  <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
+                    <Label className="text-sm font-medium">User Messages</Label>
+
                     <div className="flex items-center justify-between gap-4">
-                      <Label className="text-sm font-medium">User Joined Messages</Label>
+                      <Label className="text-sm text-muted-foreground">User Joined Messages</Label>
                       <Select
                         value={systemChannelJoinId || "none"}
                         onValueChange={(value) => setSystemChannelJoinId(value === "none" ? "" : value)}
@@ -2071,7 +2141,7 @@ export const ServerSettingsPage = () => {
                     </div>
 
                     <div className="flex items-center justify-between gap-4">
-                      <Label className="text-sm font-medium">User Left Messages</Label>
+                      <Label className="text-sm text-muted-foreground">User Left Messages</Label>
                       <Select
                         value={systemChannelLeaveId || "none"}
                         onValueChange={(value) => setSystemChannelLeaveId(value === "none" ? "" : value)}
@@ -2096,8 +2166,8 @@ export const ServerSettingsPage = () => {
                 )}
 
                 {canManageServer && (
-                  <div className="pt-4">
-                    <Button type="submit" disabled={isLoading || isUploadingIcon || isUploadingBanner} size="sm">
+                  <div className="fixed bottom-6 right-6 z-50">
+                    <Button type="submit" disabled={isLoading || isUploadingIcon || isUploadingBanner} size="sm" className="shadow-lg">
                       {(isLoading || isUploadingIcon || isUploadingBanner) && (
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       )}
@@ -3110,6 +3180,67 @@ export const ServerSettingsPage = () => {
                 </div>
               </TabsContent>
             )}
+
+            {/* Transfer Ownership Tab */}
+            {isOwner && (
+              <TabsContent value="transfer" className="m-0 p-6 pr-16">
+                <div className="space-y-5 max-w-3xl">
+                  <div>
+                    <h2 className="text-xl font-medium text-destructive">Transfer Ownership</h2>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Transfer this server to another member. You will lose ownership and become an admin.
+                      This action cannot be undone.
+                    </p>
+                  </div>
+
+                  <div className="flex items-end gap-3">
+                    <div className="flex-1 max-w-xs space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">Select new owner</Label>
+                      <Select
+                        value={transferTargetId || ""}
+                        onValueChange={(value) => setTransferTargetId(value || null)}
+                      >
+                        <SelectTrigger className="h-10 text-sm">
+                          <SelectValue placeholder="Select a member..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <ScrollArea className="max-h-60">
+                            {members
+                              .filter((m) => m.user_id !== user?.id && m.role !== "owner" && !m.is_banned)
+                              .map((member) => (
+                                <SelectItem key={member.user_id} value={member.user_id}>
+                                  <div className="flex items-center gap-2">
+                                    <Avatar className="w-5 h-5">
+                                      <AvatarImage src={member.user?.avatar_url || undefined} />
+                                      <AvatarFallback className="text-[10px]" style={{ backgroundColor: member.user?.banner_color || "#5865F2" }}>
+                                        {member.user?.username?.[0]?.toUpperCase() || "?"}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <span>{member.user?.username || "Unknown"}</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                          </ScrollArea>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      disabled={!transferTargetId}
+                      onClick={() => {
+                        setTransferConfirmName("");
+                        setShowTransferConfirm(true);
+                      }}
+                    >
+                      <Crown className="w-4 h-4 mr-2" />
+                      Transfer Ownership
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
+            )}
           </div>
         </Tabs>
       </div>
@@ -3137,6 +3268,81 @@ export const ServerSettingsPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Transfer Ownership Confirmation */}
+      <AlertDialog open={showTransferConfirm} onOpenChange={setShowTransferConfirm}>
+        <AlertDialogContent className="max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Transfer Server Ownership</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  You are about to transfer ownership of <strong>{server.name}</strong> to{" "}
+                  <strong>{members.find((m) => m.user_id === transferTargetId)?.user?.username || "Unknown"}</strong>.
+                </p>
+                <p>
+                  You will be demoted to <strong>Admin</strong> and will no longer be able to delete the server or transfer ownership.
+                  This action <strong>cannot be undone</strong>.
+                </p>
+                <div className="space-y-1.5 pt-1">
+                  <Label className="text-xs text-muted-foreground">
+                    Type <span className="font-mono font-medium text-foreground">{server.name}</span> to confirm
+                  </Label>
+                  <Input
+                    value={transferConfirmName}
+                    onChange={(e) => setTransferConfirmName(e.target.value)}
+                    placeholder="Enter server name..."
+                    className="h-9 text-sm"
+                    autoComplete="off"
+                  />
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isTransferring}>Cancel</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={transferConfirmName !== server.name || isTransferring || !transferTargetId}
+              onClick={async () => {
+                if (!transferTargetId || !user) return;
+                setIsTransferring(true);
+                try {
+                  const { error } = await supabase.rpc("transfer_ownership", {
+                    _server_id: server.id,
+                    _current_owner_id: user.id,
+                    _new_owner_id: transferTargetId,
+                  });
+                  if (error) throw error;
+                  toast.success("Ownership transferred successfully");
+                  setShowTransferConfirm(false);
+                  setTransferTargetId(null);
+                  setTransferConfirmName("");
+                  closeServerSettings();
+                  await fetchServers(user.id);
+                } catch (error: any) {
+                  toast.error(error?.message || "Failed to transfer ownership");
+                } finally {
+                  setIsTransferring(false);
+                }
+              }}
+            >
+              {isTransferring ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Crown className="w-4 h-4 mr-2" />}
+              Transfer
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      {/* Banner Crop Modal */}
+      {showCropModal && cropImageSrc && (
+        <BannerCropModal
+          open={showCropModal}
+          imageSrc={cropImageSrc}
+          onClose={handleCropCancel}
+          onCropComplete={handleCropComplete}
+          isUploading={isUploadingBanner}
+        />
+      )}
     </>
   );
 };
