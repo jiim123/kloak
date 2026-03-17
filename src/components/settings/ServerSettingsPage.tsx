@@ -1969,64 +1969,87 @@ export const ServerSettingsPage = () => {
             <TabsContent value="overview" className="m-0 p-6 pr-16">
               <h2 className="text-xl font-medium mb-6">Overview</h2>
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 max-w-3xl">
-                {/* Server Icon + Server Name side by side */}
-                <div className="flex flex-col sm:flex-row gap-5">
-                  {/* Server Icon */}
-                  <div className="flex flex-col items-start gap-2">
-                    <Label className="text-sm">Server Icon</Label>
-                    <div className="relative">
-                      <div
-                        onClick={() => canManageServer && fileInputRef.current?.click()}
-                        className={cn(
-                          "w-20 h-20 rounded-2xl bg-secondary flex items-center justify-center border-2 border-dashed border-muted-foreground/50 transition-colors flex-shrink-0 overflow-hidden",
-                          canManageServer && "cursor-pointer hover:border-primary",
-                        )}
-                      >
-                        {displayIconUrl ? (
-                          <img src={displayIconUrl} alt={server.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <Upload className="w-6 h-6 text-muted-foreground" />
+                {/* Server Information */}
+                <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-4">
+                  <Label className="text-sm font-medium">Server Information</Label>
+
+                  <div className="flex flex-col sm:flex-row gap-5">
+                    {/* Server Icon */}
+                    <div className="flex flex-col items-start gap-2">
+                      <Label className="text-xs text-muted-foreground">Server Icon</Label>
+                      <div className="relative">
+                        <div
+                          onClick={() => canManageServer && fileInputRef.current?.click()}
+                          className={cn(
+                            "w-20 h-20 rounded-2xl bg-secondary flex items-center justify-center border-2 border-dashed border-muted-foreground/50 transition-colors flex-shrink-0 overflow-hidden",
+                            canManageServer && "cursor-pointer hover:border-primary",
+                          )}
+                        >
+                          {displayIconUrl ? (
+                            <img src={displayIconUrl} alt={server.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <Upload className="w-6 h-6 text-muted-foreground" />
+                          )}
+                        </div>
+                        {canManageServer && displayIconUrl && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (iconPreview) {
+                                clearIcon();
+                              } else {
+                                handleRemoveIcon();
+                              }
+                            }}
+                            disabled={isUploadingIcon}
+                            className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/90 disabled:opacity-50"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
                         )}
                       </div>
-                      {canManageServer && displayIconUrl && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (iconPreview) {
-                              clearIcon();
-                            } else {
-                              handleRemoveIcon();
-                            }
-                          }}
-                          disabled={isUploadingIcon}
-                          className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/90 disabled:opacity-50"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      )}
+                      <p className="text-xs text-muted-foreground">Recommended 512×512</p>
                     </div>
-                    <p className="text-xs text-muted-foreground">Recommended 512×512</p>
+
+                    {/* Server Name */}
+                    <div className="flex-1 space-y-2">
+                      <Label htmlFor="serverName" className="text-xs text-muted-foreground">
+                        Server Name
+                      </Label>
+                      <Input
+                        id="serverName"
+                        {...register("name")}
+                        className={cn("h-10 text-sm", errors.name ? "border-destructive" : "")}
+                        disabled={!canManageServer}
+                      />
+                      {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+                    </div>
                   </div>
 
-                  {/* Server Name */}
-                  <div className="flex-1 space-y-2 sm:pt-0">
-                    <Label htmlFor="serverName" className="text-sm">
-                      Server Name
+                  {/* Server Description */}
+                  <div className="space-y-2">
+                    <Label htmlFor="serverAbout" className="text-xs text-muted-foreground">
+                      Server Description
                     </Label>
-                    <Input
-                      id="serverName"
-                      {...register("name")}
-                      className={cn("h-10 text-sm", errors.name ? "border-destructive" : "")}
+                    <Textarea
+                      id="serverAbout"
+                      {...register("about")}
+                      className={cn("min-h-[100px] text-sm resize-none", errors.about ? "border-destructive" : "")}
                       disabled={!canManageServer}
+                      placeholder="Tell people what your server is about..."
+                      maxLength={500}
                     />
-                    {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+                    {errors.about && <p className="text-xs text-destructive">{errors.about.message}</p>}
+                    <p className="text-xs text-muted-foreground">
+                      This description will be shown in the Explore page (if public) and server overview.
+                    </p>
                   </div>
                 </div>
 
                 {/* Server Banner */}
-                <div className="space-y-2">
-                  <Label className="text-sm">Server Banner</Label>
+                <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
+                  <Label className="text-sm font-medium">Server Banner</Label>
                   <div className="relative">
                     <div
                       onClick={() => canManageServer && bannerInputRef.current?.click()}
@@ -2074,30 +2097,11 @@ export const ServerSettingsPage = () => {
                   </p>
                 </div>
 
-                {/* Server Description */}
-                <div className="space-y-2">
-                  <Label htmlFor="serverAbout" className="text-sm">
-                    Server Description
-                  </Label>
-                  <Textarea
-                    id="serverAbout"
-                    {...register("about")}
-                    className={cn("min-h-[100px] text-sm resize-none", errors.about ? "border-destructive" : "")}
-                    disabled={!canManageServer}
-                    placeholder="Tell people what your server is about..."
-                    maxLength={500}
-                  />
-                  {errors.about && <p className="text-xs text-destructive">{errors.about.message}</p>}
-                  <p className="text-xs text-muted-foreground">
-                    This description will be shown in the Explore page (if public) and server overview.
-                  </p>
-                </div>
-
                 {/* Publish Server (owner-only) */}
                 {isOwner && (
-                  <div className="space-y-2">
-                    <Label className="text-sm">Publish Server</Label>
-                    <div className="flex items-start gap-3 p-3 rounded-lg border bg-secondary/30 opacity-75">
+                  <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
+                    <Label className="text-sm font-medium">Publish Server</Label>
+                    <div className="flex items-start gap-3 p-3 rounded-lg border border-border/50 bg-secondary/30 opacity-75">
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-foreground">Make this server public</p>
                         <p className="text-xs text-muted-foreground">
@@ -2160,6 +2164,7 @@ export const ServerSettingsPage = () => {
                     </div>
                   </div>
                 )}
+
                 {canManageServer && (
                   <div className="pt-4">
                     <Button type="submit" disabled={isLoading || isUploadingIcon || isUploadingBanner} size="sm">
@@ -2170,9 +2175,6 @@ export const ServerSettingsPage = () => {
                     </Button>
                   </div>
                 )}
-
-
-
               </form>
             </TabsContent>
 
