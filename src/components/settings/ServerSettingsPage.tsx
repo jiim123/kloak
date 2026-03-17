@@ -629,6 +629,12 @@ export const ServerSettingsPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+
+  // Transfer ownership state
+  const [transferTargetId, setTransferTargetId] = useState<string | null>(null);
+  const [showTransferConfirm, setShowTransferConfirm] = useState(false);
+  const [isTransferring, setIsTransferring] = useState(false);
+  const [transferConfirmName, setTransferConfirmName] = useState("");
   const [memberSearch, setMemberSearch] = useState("");
   const [memberDisplayCount, setMemberDisplayCount] = useState(50);
   const [systemChannelJoinId, setSystemChannelJoinId] = useState<string>("");
@@ -2105,6 +2111,65 @@ export const ServerSettingsPage = () => {
                     </Button>
                   </div>
                 )}
+
+                {/* Transfer Ownership */}
+                {isOwner && (
+                  <div className="space-y-3 border-t border-border pt-4 mt-6">
+                    <div>
+                      <h3 className="text-sm font-medium text-destructive">Transfer Ownership</h3>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Transfer this server to another member. You will lose ownership and become an admin.
+                        This action cannot be undone.
+                      </p>
+                    </div>
+
+                    <div className="flex items-end gap-3">
+                      <div className="flex-1 max-w-xs space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">Select new owner</Label>
+                        <Select
+                          value={transferTargetId || ""}
+                          onValueChange={(value) => setTransferTargetId(value || null)}
+                        >
+                          <SelectTrigger className="h-10 text-sm">
+                            <SelectValue placeholder="Select a member..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <ScrollArea className="max-h-60">
+                              {members
+                                .filter((m) => m.user_id !== user?.id && m.role !== "owner" && !m.is_banned)
+                                .map((member) => (
+                                  <SelectItem key={member.user_id} value={member.user_id}>
+                                    <div className="flex items-center gap-2">
+                                      <Avatar className="w-5 h-5">
+                                        <AvatarImage src={member.user?.avatar_url || undefined} />
+                                        <AvatarFallback className="text-[10px]" style={{ backgroundColor: member.user?.banner_color || "#5865F2" }}>
+                                          {member.user?.username?.[0]?.toUpperCase() || "?"}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <span>{member.user?.username || "Unknown"}</span>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                            </ScrollArea>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        disabled={!transferTargetId}
+                        onClick={() => {
+                          setTransferConfirmName("");
+                          setShowTransferConfirm(true);
+                        }}
+                      >
+                        <Crown className="w-4 h-4 mr-2" />
+                        Transfer Ownership
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </form>
             </TabsContent>
 
@@ -3134,6 +3199,71 @@ export const ServerSettingsPage = () => {
               {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
               Delete Server
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Transfer Ownership Confirmation */}
+      <AlertDialog open={showTransferConfirm} onOpenChange={setShowTransferConfirm}>
+        <AlertDialogContent className="max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Transfer Server Ownership</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  You are about to transfer ownership of <strong>{server.name}</strong> to{" "}
+                  <strong>{members.find((m) => m.user_id === transferTargetId)?.user?.username || "Unknown"}</strong>.
+                </p>
+                <p>
+                  You will be demoted to <strong>Admin</strong> and will no longer be able to delete the server or transfer ownership.
+                  This action <strong>cannot be undone</strong>.
+                </p>
+                <div className="space-y-1.5 pt-1">
+                  <Label className="text-xs text-muted-foreground">
+                    Type <span className="font-mono font-medium text-foreground">{server.name}</span> to confirm
+                  </Label>
+                  <Input
+                    value={transferConfirmName}
+                    onChange={(e) => setTransferConfirmName(e.target.value)}
+                    placeholder="Enter server name..."
+                    className="h-9 text-sm"
+                    autoComplete="off"
+                  />
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isTransferring}>Cancel</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={transferConfirmName !== server.name || isTransferring || !transferTargetId}
+              onClick={async () => {
+                if (!transferTargetId || !user) return;
+                setIsTransferring(true);
+                try {
+                  const { error } = await supabase.rpc("transfer_ownership", {
+                    _server_id: server.id,
+                    _current_owner_id: user.id,
+                    _new_owner_id: transferTargetId,
+                  });
+                  if (error) throw error;
+                  toast.success("Ownership transferred successfully");
+                  setShowTransferConfirm(false);
+                  setTransferTargetId(null);
+                  setTransferConfirmName("");
+                  closeServerSettings();
+                  await fetchServers(user.id);
+                } catch (error: any) {
+                  toast.error(error?.message || "Failed to transfer ownership");
+                } finally {
+                  setIsTransferring(false);
+                }
+              }}
+            >
+              {isTransferring ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Crown className="w-4 h-4 mr-2" />}
+              Transfer
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
