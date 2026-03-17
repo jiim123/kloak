@@ -685,6 +685,10 @@ export const ServerSettingsPage = () => {
   const [iconRemoved, setIconRemoved] = useState(false);
   const [bannerRemoved, setBannerRemoved] = useState(false);
 
+  // Banner crop modal state
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [showCropModal, setShowCropModal] = useState(false);
+
   // Custom emoji state (owner-only)
   const [emojiFile, setEmojiFile] = useState<File | null>(null);
   const [emojiPreview, setEmojiPreview] = useState<string | null>(null);
