@@ -51,6 +51,7 @@ import { isImageOnlyMessage, convertMentionsToReadable, convertMentionsToRaw } f
 import { ReplyPreview } from "./MessageContent";
 import { formatMessageTimestamp } from "@/lib/format";
 import { DeleteMessageModal } from "@/components/modals/DeleteMessageModal";
+import { ImageLightbox } from "@/components/modals/ImageLightbox";
 import { EmojiPicker } from "@/components/modals/EmojiPicker";
 import { BotTag } from "@/components/ui/bot-tag";
 import type { CustomServerRole, Message, ServerRole } from "@/types";
