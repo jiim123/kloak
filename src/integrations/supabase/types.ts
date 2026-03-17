@@ -2120,6 +2120,232 @@ export type Database = {
           },
         ]
       }
+      task_assignees: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          id: string
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_assignees_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_assignees_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "users_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_assignees_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_assignees_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_assignees_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_categories: {
+        Row: {
+          channel_id: string
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          position: number
+          server_id: string
+          updated_at: string
+        }
+        Insert: {
+          channel_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          position?: number
+          server_id: string
+          updated_at?: string
+        }
+        Update: {
+          channel_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          position?: number
+          server_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_categories_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_categories_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_categories_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_categories_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          category_id: string | null
+          channel_id: string
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          due_date: string | null
+          id: string
+          priority: Database["public"]["Enums"]["task_priority"]
+          server_id: string
+          status: Database["public"]["Enums"]["task_status"]
+          task_position: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category_id?: string | null
+          channel_id: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: Database["public"]["Enums"]["task_priority"]
+          server_id: string
+          status?: Database["public"]["Enums"]["task_status"]
+          task_position?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string | null
+          channel_id?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: Database["public"]["Enums"]["task_priority"]
+          server_id?: string
+          status?: Database["public"]["Enums"]["task_status"]
+          task_position?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "task_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "users_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       thread_attachments: {
         Row: {
           file_name: string
@@ -3083,25 +3309,34 @@ export type Database = {
         Args: { _name: string; _owner_id: string }
         Returns: Json
       }
-      create_task: {
-        Args: {
-          _assignee_ids?: string[]
-          _channel_id: string
-          _description?: string
-          _due_date?: string
-          _priority?: string
-          _title: string
-          _user_id: string
-        }
-        Returns: Json
-      }
-      create_task_comment: {
-        Args: {
-          _content: string
-          _reply_to_id?: string
-          _task_id: string
-          _user_id: string
-        }
+      create_task:
+        | {
+            Args: {
+              _assignee_ids?: string[]
+              _channel_id: string
+              _description?: string
+              _due_date?: string
+              _priority?: string
+              _title: string
+              _user_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _assignee_ids?: string[]
+              _category_id?: string
+              _channel_id: string
+              _description?: string
+              _due_date?: string
+              _priority?: string
+              _title: string
+              _user_id: string
+            }
+            Returns: Json
+          }
+      create_task_category: {
+        Args: { _channel_id: string; _name: string; _user_id: string }
         Returns: Json
       }
       create_thread: {
@@ -3176,8 +3411,8 @@ export type Database = {
         Args: { _task_id: string; _user_id: string }
         Returns: Json
       }
-      delete_task_comment: {
-        Args: { _comment_id: string; _user_id: string }
+      delete_task_category: {
+        Args: { _category_id: string; _user_id: string }
         Returns: Json
       }
       delete_thread_message: {
@@ -3446,8 +3681,8 @@ export type Database = {
         }
         Returns: Json
       }
-      get_task_comments: {
-        Args: { _task_id: string; _user_id: string }
+      get_task_categories: {
+        Args: { _channel_id: string; _user_id: string }
         Returns: Json
       }
       get_thread_by_message_id: { Args: { _message_id: string }; Returns: Json }
@@ -4041,6 +4276,8 @@ export type Database = {
       }
       update_task: {
         Args: {
+          _category_id?: string
+          _clear_category?: boolean
           _description?: string
           _due_date?: string
           _priority?: string
@@ -4051,8 +4288,8 @@ export type Database = {
         }
         Returns: undefined
       }
-      update_task_comment: {
-        Args: { _comment_id: string; _content: string; _user_id: string }
+      update_task_category: {
+        Args: { _category_id: string; _name?: string; _user_id: string }
         Returns: Json
       }
       update_user_last_seen: { Args: { _user_id: string }; Returns: boolean }
