@@ -62,6 +62,7 @@ import type { ServerRole, ServerMember, CustomServerRole, Permission } from "@/t
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RolePermissionsEditor } from "../modals/RolePermissionsEditor";
+import { BannerCropModal } from "../modals/BannerCropModal";
 import { RoleColorPicker } from "../modals/RoleColorPicker";
 import { RoleIconPreview } from "@/components/ui/role-icon-preview";
 import { Separator } from "@/components/ui/separator";
