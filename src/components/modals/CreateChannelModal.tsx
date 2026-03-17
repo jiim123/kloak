@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Hash, Volume2, FolderPlus, Loader2, Lock, MessageSquare, Megaphone, Film } from "lucide-react";
+import { Hash, Volume2, FolderPlus, Lock, MessageSquare, Megaphone, Film, ClipboardList, Loader2 } from "lucide-react";
 import type { ChannelType } from "@/types";
 
 export const CreateChannelModal = () => {
@@ -19,7 +19,7 @@ export const CreateChannelModal = () => {
 
   const [mode, setMode] = useState<"channel" | "category">("channel");
   const [name, setName] = useState("");
-  const [selectedChannelType, setSelectedChannelType] = useState<"text" | "voice" | "forum" | "announcement" | "media">("text");
+  const [selectedChannelType, setSelectedChannelType] = useState<"text" | "voice" | "forum" | "announcement" | "tasks" | "media">("text");
   const [categoryId, setCategoryId] = useState<string>("none");
   const [isPrivate, setIsPrivate] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -130,8 +130,8 @@ export const CreateChannelModal = () => {
                 </Label>
                 <RadioGroup
                   value={selectedChannelType}
-                  onValueChange={(value) => setSelectedChannelType(value as "text" | "voice" | "forum" | "announcement" | "media")}
-                  className="grid grid-cols-5 gap-2"
+                  onValueChange={(value) => setSelectedChannelType(value as "text" | "voice" | "forum" | "announcement" | "tasks" | "media")}
+                  className="grid grid-cols-6 gap-2"
                 >
                   <Label
                     htmlFor="text"
@@ -214,6 +214,26 @@ export const CreateChannelModal = () => {
                   </Label>
 
                   <Label
+                    htmlFor="tasks"
+                    className={`flex items-center justify-center py-2 px-3 rounded-xl cursor-pointer border transition-colors ${
+                      selectedChannelType === "tasks"
+                        ? "bg-primary/5 border-primary/50"
+                        : "bg-secondary/50 border-border/50 hover:bg-secondary/80"
+                    }`}
+                    onMouseEnter={() => setHoveredChannelType("tasks")}
+                    onMouseLeave={() => setHoveredChannelType(null)}
+                  >
+                    <div
+                      className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                        selectedChannelType === "tasks" ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground"
+                      }`}
+                    >
+                      <ClipboardList className="h-4 w-4" />
+                    </div>
+                    <RadioGroupItem value="tasks" id="tasks" className="sr-only" />
+                  </Label>
+
+                  <Label
                     htmlFor="media"
                     className={`flex items-center justify-center py-2 px-3 rounded-xl cursor-pointer border transition-colors ${
                       selectedChannelType === "media"
@@ -254,6 +274,11 @@ export const CreateChannelModal = () => {
                   {(hoveredChannelType || selectedChannelType) === "announcement" && (
                     <p className="text-xs text-muted-foreground">
                       <span className="font-medium text-foreground">Announcement Channel:</span> A read-only channel where admins can post announcements. Members can view and react to announcements but cannot send messages.
+                    </p>
+                  )}
+                  {(hoveredChannelType || selectedChannelType) === "tasks" && (
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-medium text-foreground">Tasks Channel:</span> Organize work into compact task categories, assign people, track deadlines, and mark items complete without mixing project work into chat history.
                     </p>
                   )}
                   {(hoveredChannelType || selectedChannelType) === "media" && (
@@ -364,3 +389,4 @@ export const CreateChannelModal = () => {
     </Dialog>
   );
 };
+

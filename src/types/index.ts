@@ -174,7 +174,7 @@ export interface ServerMember {
 // Channel Types
 // ============================================
 
-export type ChannelType = 'text' | 'voice' | 'announcement' | 'forum' | 'media';
+export type ChannelType = 'text' | 'voice' | 'announcement' | 'forum' | 'tasks' | 'media';
 
 export interface ChannelCategory {
   id: string;
@@ -232,6 +232,52 @@ export interface ChannelRead {
   last_read_message_id: string | null;
   last_read_at: string | null;
   mention_count: number;
+}
+
+export type TaskPriority = 'low' | 'medium' | 'high';
+
+export type TaskStatus = 'open' | 'in_progress' | 'completed' | 'archived';
+
+export interface TaskCategory {
+  id: string;
+  channel_id: string;
+  server_id: string;
+  name: string;
+  position: number;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TaskAssignee {
+  id: string;
+  task_id: string;
+  user_id: string;
+  assigned_by: string | null;
+  assigned_at: string;
+  user?: User;
+}
+
+
+export interface Task {
+  id: string;
+  channel_id: string;
+  server_id: string;
+  category_id: string | null;
+  created_by: string;
+  title: string;
+  description: string | null;
+  priority: TaskPriority;
+  status: TaskStatus;
+  due_date: string | null;
+  position: number;
+  completed_by: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  creator?: User;
+  completer?: User | null;
+  assignees: TaskAssignee[];
 }
 
 // ============================================
@@ -531,3 +577,4 @@ export interface SendMessageForm {
   attachments?: File[];
   reply_to_id?: string;
 }
+

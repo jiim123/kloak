@@ -1,5 +1,5 @@
 import { memo, useMemo, useCallback } from "react";
-import { Menu, Hash, Volume2, Users } from "lucide-react";
+import { Menu, Hash, Volume2, Users, ClipboardList, Megaphone, MessageSquare, Film } from "lucide-react";
 import { useServerStore } from "@/stores/serverStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useDMStore } from "@/stores/dmStore";
@@ -39,11 +39,23 @@ export const MobileHeader = memo(({ isDMView, showFriends, showExplore }: Mobile
   const channelIcon = useMemo(() => {
     if (isDMView || !currentChannel) return null;
 
-    return currentChannel.type === "voice" ? (
-      <Volume2 className="w-5 h-5 text-muted-foreground shrink-0" />
-    ) : (
-      <Hash className="w-5 h-5 text-muted-foreground shrink-0" />
-    );
+    if (currentChannel.type === "voice") {
+      return <Volume2 className="w-5 h-5 text-muted-foreground shrink-0" />;
+    }
+    if (currentChannel.type === "announcement") {
+      return <Megaphone className="w-5 h-5 text-muted-foreground shrink-0" />;
+    }
+    if (currentChannel.type === "forum") {
+      return <MessageSquare className="w-5 h-5 text-muted-foreground shrink-0" />;
+    }
+    if (currentChannel.type === "media") {
+      return <Film className="w-5 h-5 text-muted-foreground shrink-0" />;
+    }
+    if (currentChannel.type === "tasks") {
+      return <ClipboardList className="w-5 h-5 text-muted-foreground shrink-0" />;
+    }
+
+    return <Hash className="w-5 h-5 text-muted-foreground shrink-0" />;
   }, [isDMView, currentChannel]);
 
   const openSidebar = useCallback(() => setMobileSidebarOpen(true), [setMobileSidebarOpen]);

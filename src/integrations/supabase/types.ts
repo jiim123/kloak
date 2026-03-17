@@ -3086,6 +3086,7 @@ export type Database = {
       create_task: {
         Args: {
           _assignee_ids?: string[]
+          _category_id?: string
           _channel_id: string
           _description?: string
           _due_date?: string
@@ -4041,6 +4042,8 @@ export type Database = {
       }
       update_task: {
         Args: {
+          _category_id?: string
+          _clear_category?: boolean
           _description?: string
           _due_date?: string
           _priority?: string
@@ -4353,3 +4356,4 @@ export const Constants = {
     },
   },
 } as const
+

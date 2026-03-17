@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Hash, Volume2, MessageSquare, Pin, Search, Lock, Megaphone, Film, Users } from "lucide-react";
+import { Hash, Volume2, MessageSquare, Pin, Search, Lock, Megaphone, Film, Users, ClipboardList } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +26,18 @@ export const ChannelHeader = ({
   const setMemberSidebarOpen = useUIStore((s) => s.setMemberSidebarOpen);
   const currentServer = useServerStore((s) => s.currentServer);
 
-  const ChannelIcon = channel.type === "voice" ? Volume2 : channel.type === "forum" ? MessageSquare : channel.type === "announcement" ? Megaphone : channel.type === "media" ? Film : Hash;
+  const ChannelIcon =
+    channel.type === "voice"
+      ? Volume2
+      : channel.type === "forum"
+        ? MessageSquare
+        : channel.type === "announcement"
+          ? Megaphone
+          : channel.type === "media"
+            ? Film
+            : channel.type === "tasks"
+              ? ClipboardList
+              : Hash;
 
   return (
     <div className="px-4 py-3 hidden md:flex items-center justify-between border-b border-white/5 flex-shrink-0 bg-[#1c1c1c]">
