@@ -397,11 +397,8 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   };
 
   const handleCopyKey = async () => {
-    if (!secretKey) return;
-    try {
-      await navigator.clipboard.writeText(secretKey);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+    // Secret key is no longer accessible from settings
+    return;
       toast.success("Secret key copied!");
     } catch {
       toast.error("Failed to copy");
