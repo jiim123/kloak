@@ -132,7 +132,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     setDmPrivacy,
   } = useUIStore();
   const { playTestSound } = useNotificationSound();
-  const { user, secretKey, updateUser, logout, resetSecretKey } = useAuthStore();
+  const { user, updateUser, logout, resetSecretKey } = useAuthStore();
   const { blockedUsers, unblockUser, fetchFriends, isLoading: isFriendsLoading } = useFriendStore();
 
   const [activeTab, setActiveTab] = useState("account");
