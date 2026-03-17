@@ -1881,10 +1881,17 @@ export const ServerSettingsPage = () => {
                   </>
                 )}
 
-                {/* Delete Server - at bottom, separated */}
+                {/* Transfer Ownership & Delete Server - at bottom, separated */}
                 {isOwner && (
                   <>
                     <Separator className="my-3" />
+                    <TabsTrigger
+                      value="transfer"
+                      className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
+                    >
+                      <Crown className="w-4 h-4" />
+                      Transfer Ownership
+                    </TabsTrigger>
                     <button
                       type="button"
                       onClick={() => setShowDeleteConfirm(true)}
