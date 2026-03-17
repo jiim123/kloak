@@ -2018,7 +2018,7 @@ export const ServerSettingsPage = () => {
                     <div
                       onClick={() => canManageServer && bannerInputRef.current?.click()}
                       className={cn(
-                        "w-full h-32 rounded-xl bg-secondary flex items-center justify-center border-2 border-dashed border-muted-foreground/50 transition-colors overflow-hidden",
+                        "w-full aspect-video rounded-xl bg-secondary flex items-center justify-center border-2 border-dashed border-muted-foreground/50 transition-colors overflow-hidden",
                         canManageServer && "cursor-pointer hover:border-primary",
                       )}
                     >
