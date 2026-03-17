@@ -1462,12 +1462,10 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20">
                   <p className="text-sm text-red-600 dark:text-red-400 font-medium flex items-center gap-2">
                     <Key className="w-4 h-4 flex-shrink-0" />
-                    Remember to save your secret key!
+                    Make sure you have your secret key saved!
                   </p>
                   <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                    You can find your secret key in{" "}
-                    <span className="font-medium text-foreground">Settings → Account → View Secret Key</span>. Without
-                    it, you cannot recover your account.
+                    Your secret key was shown once during registration. Without it, you cannot recover your account.
                   </p>
                 </div>
               </div>

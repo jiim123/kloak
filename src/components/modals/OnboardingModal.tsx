@@ -217,9 +217,9 @@ export const OnboardingModal = ({
                       <li>Never share it with anyone</li>
                     </ul>
                     <p className="pt-1.5 text-xs">
-                      You can view your key later in{" "}
+                      This is the only time your key will be displayed.{" "}
                       <span className="text-foreground font-medium">
-                        Settings → Account → View Secret Key
+                        Save it now — it cannot be recovered later.
                       </span>
                     </p>
                   </div>

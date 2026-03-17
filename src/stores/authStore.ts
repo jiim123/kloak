@@ -647,8 +647,8 @@ export const useAuthStore = create<AuthState>()(
 
 // Initialize auth on app load
 export const initializeAuth = async () => {
-  const { checkAuth, isAuthenticated, isLoading, secretKey } = useAuthStore.getState();
-  if (!secretKey) return;
+  const { checkAuth, isAuthenticated, isLoading, keyHash } = useAuthStore.getState();
+  if (!keyHash) return;
   if (isAuthenticated && !isLoading) return;
   if (initializeAuthInFlight) return initializeAuthInFlight;
 
