@@ -211,7 +211,7 @@ export function useMessageUser(userId: string | undefined | null): User | undefi
   });
 
   // Auto-fetch missing users so avatars/names appear after server switch
-  if (userId && !user && !autoFetchingIds.has(userId)) {
+  if (userId && !user && !autoFetchingIds.has(userId) && isValidUuid(userId)) {
     autoFetchingIds.add(userId);
     fetchAndCacheUser(userId).finally(() => {
       autoFetchingIds.delete(userId);
