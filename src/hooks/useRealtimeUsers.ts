@@ -460,6 +460,8 @@ export const useRealtimeUsers = () => {
       // Patch each user's presence
       const rows = Array.isArray(data) ? (data as PresenceRow[]) : [];
       rows.forEach((presence) => {
+        // Don't overwrite status from realtime Presence with stale DB data
+        if (hasRecentRealtimePresence(presence.id)) return;
         patchUserAcrossStores({
           id: presence.id,
           status: toUserStatus(presence.status, 'offline'),
