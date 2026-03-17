@@ -62,6 +62,7 @@ import type { ServerRole, ServerMember, CustomServerRole, Permission } from "@/t
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RolePermissionsEditor } from "../modals/RolePermissionsEditor";
+import { BannerCropModal } from "../modals/BannerCropModal";
 import { RoleColorPicker } from "../modals/RoleColorPicker";
 import { RoleIconPreview } from "@/components/ui/role-icon-preview";
 import { Separator } from "@/components/ui/separator";
@@ -683,6 +684,10 @@ export const ServerSettingsPage = () => {
   // Track explicit removals so displayUrl becomes null immediately
   const [iconRemoved, setIconRemoved] = useState(false);
   const [bannerRemoved, setBannerRemoved] = useState(false);
+
+  // Banner crop modal state
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [showCropModal, setShowCropModal] = useState(false);
 
   // Custom emoji state (owner-only)
   const [emojiFile, setEmojiFile] = useState<File | null>(null);
@@ -1443,9 +1448,57 @@ export const ServerSettingsPage = () => {
       return;
     }
 
-    setBannerFile(file);
-    setBannerPreview(URL.createObjectURL(file));
+    // Open crop modal with the selected image
+    const src = URL.createObjectURL(file);
+    setCropImageSrc(src);
+    setShowCropModal(true);
+
+    if (bannerInputRef.current) bannerInputRef.current.value = "";
+  };
+
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    if (!server || !user) return;
+
+    // Show local preview immediately
+    const preview = URL.createObjectURL(croppedBlob);
+    setBannerPreview(preview);
     setBannerRemoved(false);
+    setIsUploadingBanner(true);
+
+    // Close crop modal
+    if (cropImageSrc) {
+      URL.revokeObjectURL(cropImageSrc);
+      setCropImageSrc(null);
+    }
+    setShowCropModal(false);
+
+    try {
+      const rawFile = new File([croppedBlob], "banner.webp", { type: "image/webp" });
+      const { compressImage } = await import("@/lib/imageCompression");
+      const compressed = await compressImage(rawFile, "server-banner");
+      const uploadedUrl = await uploadBanner(server.id, compressed);
+      if (!uploadedUrl) throw new Error("Upload returned null");
+
+      await updateServer(server.id, user.id, { banner_url: uploadedUrl });
+      setBannerPreview(uploadedUrl);
+      setBannerFile(null);
+      toast.success("Server banner updated");
+    } catch (err) {
+      console.error("Failed to upload banner:", err);
+      toast.error("Failed to upload server banner");
+      URL.revokeObjectURL(preview);
+      setBannerPreview(null);
+    } finally {
+      setIsUploadingBanner(false);
+    }
+  };
+
+  const handleCropCancel = () => {
+    if (cropImageSrc) {
+      URL.revokeObjectURL(cropImageSrc);
+      setCropImageSrc(null);
+    }
+    setShowCropModal(false);
   };
 
   const clearBanner = () => {
@@ -1544,15 +1597,7 @@ export const ServerSettingsPage = () => {
         setIsUploadingIcon(false);
       }
 
-      // Upload new banner if selected
-      if (bannerFile) {
-        setIsUploadingBanner(true);
-        const uploadedUrl = await uploadBanner(server.id, bannerFile);
-        if (uploadedUrl) {
-          bannerUrl = uploadedUrl;
-        }
-        setIsUploadingBanner(false);
-      }
+      // Banner is uploaded immediately via crop modal, no deferred upload needed
 
       const aboutValue = (data.about || "").trim();
 
@@ -1978,7 +2023,14 @@ export const ServerSettingsPage = () => {
                       )}
                     >
                       {displayBannerUrl ? (
-                        <img src={displayBannerUrl} alt="Server banner" className="w-full h-full object-cover" />
+                        <>
+                          <img src={displayBannerUrl} alt="Server banner" className="w-full h-full object-cover" />
+                          {isUploadingBanner && (
+                            <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
+                              <Loader2 className="w-5 h-5 animate-spin text-foreground" />
+                            </div>
+                          )}
+                        </>
                       ) : (
                         <div className="flex flex-col items-center gap-2 text-muted-foreground">
                           <Upload className="w-6 h-6" />
@@ -3279,6 +3331,16 @@ export const ServerSettingsPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {/* Banner Crop Modal */}
+      {showCropModal && cropImageSrc && (
+        <BannerCropModal
+          open={showCropModal}
+          imageSrc={cropImageSrc}
+          onClose={handleCropCancel}
+          onCropComplete={handleCropComplete}
+          isUploading={isUploadingBanner}
+        />
+      )}
     </>
   );
 };
