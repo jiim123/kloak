@@ -132,12 +132,12 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     setDmPrivacy,
   } = useUIStore();
   const { playTestSound } = useNotificationSound();
-  const { user, secretKey, updateUser, logout, resetSecretKey } = useAuthStore();
+  const { user, updateUser, logout, resetSecretKey } = useAuthStore();
   const { blockedUsers, unblockUser, fetchFriends, isLoading: isFriendsLoading } = useFriendStore();
 
   const [activeTab, setActiveTab] = useState("account");
   const [isLoading, setIsLoading] = useState(false);
-  const [showSecretKey, setShowSecretKey] = useState(false);
+  const [showSecretKey, _setShowSecretKey] = useState(false);
   const [showKeyConfirm, setShowKeyConfirm] = useState(false);
   const [showResetKeyConfirm, setShowResetKeyConfirm] = useState(false);
   const [newSecretKey, setNewSecretKey] = useState<string | null>(null);
@@ -161,7 +161,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     servers_to_delete: Array<{ id: string; name: string }>;
   } | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
-  const [keyRevealed, setKeyRevealed] = useState(false);
+  const [_keyRevealed, _setKeyRevealed] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showAvatarDecorationModal, setShowAvatarDecorationModal] = useState(false);
   const [showProfileEffectModal, setShowProfileEffectModal] = useState(false);
@@ -397,15 +397,8 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   };
 
   const handleCopyKey = async () => {
-    if (!secretKey) return;
-    try {
-      await navigator.clipboard.writeText(secretKey);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-      toast.success("Secret key copied!");
-    } catch {
-      toast.error("Failed to copy");
-    }
+    // Secret key is no longer accessible from settings
+    return;
   };
 
   const handleLogout = () => {
@@ -445,8 +438,6 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
   const handleClose = () => {
     setActiveTab("account");
-    setShowSecretKey(false);
-    setKeyRevealed(false);
     closeModal();
   };
 
@@ -591,59 +582,30 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         </div>
       </div>
 
-      {/* Secret Key Section - Redesigned */}
+      {/* Secret Key Section */}
       <div className="space-y-4">
         <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Secret Key</Label>
 
-        {/* View Secret Key Card */}
+        {/* Secret Key Security Notice */}
         <div className="p-4 rounded-xl bg-secondary/50 border border-border/50 space-y-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Eye className="w-5 h-5 text-primary" />
+              <Shield className="w-5 h-5 text-primary" />
             </div>
             <div className="flex-1">
-              <h4 className="text-sm font-medium">View Secret Key</h4>
-              <p className="text-xs text-muted-foreground">Access your current secret key</p>
+              <h4 className="text-sm font-medium">Secret Key</h4>
+              <p className="text-xs text-muted-foreground">Your key was shown once during registration</p>
             </div>
           </div>
 
-          {!keyRevealed ? (
-            <Button variant="secondary" onClick={() => setShowKeyConfirm(true)} className="w-full h-11 rounded-xl">
-              <Eye className="w-4 h-4 mr-2" />
-              Reveal Secret Key
-            </Button>
-          ) : (
-            <div className="space-y-3">
-              <div className="flex gap-2">
-                <Input
-                  type={showSecretKey ? "text" : "password"}
-                  value={secretKey || ""}
-                  readOnly
-                  className="font-mono text-xs h-11 rounded-xl bg-background/50"
-                />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowSecretKey(!showSecretKey)}
-                  className="h-11 w-11 rounded-xl flex-shrink-0"
-                >
-                  {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleCopyKey}
-                  className="h-11 w-11 rounded-xl flex-shrink-0"
-                >
-                  {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-                </Button>
-              </div>
-              <p className="text-xs text-destructive flex items-center gap-2">
-                <Key className="w-3 h-3" />
-                Keep this key safe! It's the only way to access your account.
-              </p>
-            </div>
-          )}
+          <div className="p-3 rounded-lg border border-border bg-secondary/30">
+            <p className="text-sm text-muted-foreground">
+              For security, Kloak does not store your secret key. It was displayed once when you created your account.
+            </p>
+            <p className="text-xs text-muted-foreground mt-2">
+              If you lose your secret key, you will not be able to recover your account. Make sure you have it saved in a secure location.
+            </p>
+          </div>
         </div>
 
         {/* Reset Secret Key Card */}
@@ -1481,29 +1443,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         </div>
       )}
 
-      {/* View Key Confirmation */}
-      <AlertDialog open={showKeyConfirm} onOpenChange={setShowKeyConfirm}>
-        <AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md rounded-2xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Reveal Secret Key?</AlertDialogTitle>
-            <AlertDialogDescription className="leading-relaxed">
-              Make sure no one is looking at your screen. Your secret key is the only way to access your account.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-            <AlertDialogCancel className="m-0 rounded-xl">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                setKeyRevealed(true);
-                setShowKeyConfirm(false);
-              }}
-              className="rounded-xl bg-brand-600 text-black hover:bg-brand-700"
-            >
-              Reveal Key
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* View Key Confirmation - removed: secret key no longer viewable in settings */}
 
       {/* Logout Confirmation */}
       <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
@@ -1518,12 +1458,10 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20">
                   <p className="text-sm text-red-600 dark:text-red-400 font-medium flex items-center gap-2">
                     <Key className="w-4 h-4 flex-shrink-0" />
-                    Remember to save your secret key!
+                    Make sure you have your secret key saved!
                   </p>
                   <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                    You can find your secret key in{" "}
-                    <span className="font-medium text-foreground">Settings → Account → View Secret Key</span>. Without
-                    it, you cannot recover your account.
+                    Your secret key was shown once during registration. Without it, you cannot recover your account.
                   </p>
                 </div>
               </div>
@@ -1735,6 +1673,8 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           if (!open) {
             setShowNewKeyModal(false);
             setNewSecretKey(null);
+            // Clear raw key from store memory after user confirms they saved it
+            useAuthStore.getState().setSecretKey(null);
           }
         }}
       >
