@@ -175,34 +175,31 @@ export const DMHeader = ({ otherUser }: DMHeaderProps) => {
             <TooltipContent>More Options</TooltipContent>
           </Tooltip>
 
-          <DropdownMenuContent
-            align="end"
-            className="w-48 bg-popover border border-border shadow-lg z-50"
-          >
+          <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuItem
               onClick={handleCallUser}
-              className="flex items-center gap-2 cursor-pointer"
+              className="cursor-pointer"
             >
               <Phone className="w-4 h-4" />
-              <span>Call User</span>
+              Call User
             </DropdownMenuItem>
 
             <DropdownMenuSeparator />
 
             <DropdownMenuItem
               onClick={handleReportUser}
-              className="flex items-center gap-2 cursor-pointer"
+              className="cursor-pointer"
             >
               <Flag className="w-4 h-4" />
-              <span>Report User</span>
+              Report User
             </DropdownMenuItem>
 
             <DropdownMenuItem
               onClick={handleBlockUser}
-              className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
+              className="cursor-pointer text-destructive focus:text-destructive"
             >
               <Ban className="w-4 h-4" />
-              <span>Block User</span>
+              Block User
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
