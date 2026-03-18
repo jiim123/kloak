@@ -1084,13 +1084,15 @@ export const MembersSidebar = () => {
               <span>{onlineCount} online</span>
             </p>
             {isMobile && (
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-9 h-9 rounded-xl active:scale-95 transition-transform"
                 onClick={() => setMemberSidebarOpen(false)}
-                className="p-1 rounded-md hover:bg-secondary/60 transition-colors"
+                aria-label="Close members"
               >
-                <X className="w-4 h-4 text-muted-foreground" />
-              </button>
+                <X className="w-4 h-4" />
+              </Button>
             )}
           </div>
         )}
