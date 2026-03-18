@@ -408,18 +408,18 @@ const HorizontalFolderItem = ({
         </Popover>
       </ContextMenuTrigger>
 
-      <ContextMenuContent className="w-52 rounded-xl border-border/50 p-1.5">
+      <ContextMenuContent className="w-52">
         <ContextMenuItem onSelect={() => onRename(folder.id)}>
-          <Edit2 className="w-4 h-4 mr-2" />
+          <Edit2 className="w-4 h-4" />
           Rename folder
         </ContextMenuItem>
         <ContextMenuItem onSelect={() => onChangeColor(folder.id)}>
-          <Palette className="w-4 h-4 mr-2" />
+          <Palette className="w-4 h-4" />
           Change color
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem onSelect={() => onDelete(folder.id)} className="text-destructive focus:text-destructive">
-          <Trash2 className="w-4 h-4 mr-2" />
+          <Trash2 className="w-4 h-4" />
           Delete folder
         </ContextMenuItem>
       </ContextMenuContent>
