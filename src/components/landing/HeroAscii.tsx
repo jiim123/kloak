@@ -47,7 +47,7 @@ export const HeroImage = () => {
             <Link to="/app">
               <Button
                 size="lg"
-                className="rounded-full px-8 h-12 text-sm font-normal tracking-wide bg-foreground hover:bg-foreground/90 text-background border-0 group"
+                className="px-8 h-12 text-sm font-normal group"
               >
                 Open Kloak
                 <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
@@ -55,9 +55,9 @@ export const HeroImage = () => {
             </Link>
             <Link to="/about">
               <Button
-                variant="ghost"
+                variant="secondary"
                 size="lg"
-                className="rounded-full px-8 h-12 text-sm font-normal tracking-wide text-muted-foreground hover:text-foreground hover:bg-muted"
+                className="px-8 h-12 text-sm font-normal"
               >
                 About Kloak
               </Button>

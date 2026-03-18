@@ -46,7 +46,7 @@ const buttonVariants = cva(
 
         // Legacy default (maps to primary)
         default:
-          "rounded-[4px] bg-primary text-primary-foreground hover:bg-primary-hover hover:shadow-[0_4px_12px_hsl(var(--primary)/0.2)] active:bg-primary-active",
+          "rounded-full bg-foreground text-background hover:bg-foreground/90 active:bg-foreground/80 border-0 tracking-wide",
 
         // Legacy destructive (maps to error)
         destructive:
