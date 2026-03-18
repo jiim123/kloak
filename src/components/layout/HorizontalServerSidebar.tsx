@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import {
   Folder,
+  FolderPlus,
   Plus,
   Settings,
   Home,
@@ -14,6 +15,7 @@ import {
   CheckCheck,
   BellOff,
   Bell,
+  GripVertical,
 } from "lucide-react";
 import { evaluatePermission } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
