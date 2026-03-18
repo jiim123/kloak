@@ -405,8 +405,11 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           if (request?.id) {
-                                            const { openModal: open } = useUIStore.getState();
-                                            openUserProfileModal(open, request.id);
+                                            setIsOpen(false);
+                                            setTimeout(() => {
+                                              const { openModal: open } = useUIStore.getState();
+                                              openUserProfileModal(open, request.id);
+                                            }, 150);
                                           }
                                         }}
                                       >
