@@ -1079,11 +1079,9 @@ export const MembersSidebar = () => {
           </div>
         ) : (
           <>
-            <p className="text-sm text-muted-foreground">Members</p>
-            <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 mt-2">
-              <span className="text-muted-foreground">{onlineCount} online</span>
-              {totalMemberCount != null && <span className="text-muted-foreground">-</span>}
-              {totalMemberCount != null && <span className="text-muted-foreground">{totalMemberCount} members</span>}
+            <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
+              <span>{onlineCount} online</span>
             </p>
           </>
         )}
