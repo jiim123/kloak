@@ -36,3 +36,4 @@ key.pem
 *.md
 
 .cursor/mcp.json
+/mobileapps
