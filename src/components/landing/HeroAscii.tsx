@@ -1,48 +1,26 @@
-import { useRef, useEffect } from "react";
+import { useRef } from "react";
 import { Link } from "react-router-dom";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import promoVideo from "@/assets/kloak-promo.mp4";
+import heroVideo from "@/assets/kloak-hero.mp4";
 
 export const HeroImage = () => {
   const sectionRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start start", "end start"],
-  });
-
-  // Video frame: scale up and fade in as user scrolls down
-  const videoScale = useTransform(scrollYProgress, [0.15, 0.45], [0.85, 1]);
-  const videoOpacity = useTransform(scrollYProgress, [0.1, 0.35], [0, 1]);
-  const videoY = useTransform(scrollYProgress, [0.15, 0.45], [60, 0]);
-
-  // Autoplay when video scrolls into view
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          video.play().catch(() => {});
-        } else {
-          video.pause();
-        }
-      },
-      { threshold: 0.3 },
-    );
-
-    observer.observe(video);
-    return () => observer.disconnect();
-  }, []);
 
   return (
     <section ref={sectionRef} className="relative overflow-hidden bg-[hsl(var(--neutral-0))]">
-      {/* Top hero area — 75vh */}
-      <div className="relative h-[75vh] flex flex-col items-center justify-center px-4 sm:px-6">
+      {/* Background video */}
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover"
+        src={heroVideo}
+      />
+      <div className="absolute inset-0 bg-background/60" />
+      <div className="relative z-10 h-[75vh] flex flex-col items-center justify-center px-4 sm:px-6">
         <div className="w-full max-w-4xl mx-auto text-center">
           {/* Pre-title */}
           <motion.p
