@@ -2253,6 +2253,7 @@ export type Database = {
           description: string | null
           due_date: string | null
           id: string
+          parent_task_id: string | null
           priority: Database["public"]["Enums"]["task_priority"]
           server_id: string
           status: Database["public"]["Enums"]["task_status"]
@@ -2270,6 +2271,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          parent_task_id?: string | null
           priority?: Database["public"]["Enums"]["task_priority"]
           server_id: string
           status?: Database["public"]["Enums"]["task_status"]
@@ -2287,6 +2289,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          parent_task_id?: string | null
           priority?: Database["public"]["Enums"]["task_priority"]
           server_id?: string
           status?: Database["public"]["Enums"]["task_status"]
@@ -2335,6 +2338,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_parent_task_id_fkey"
+            columns: ["parent_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
           {
@@ -3335,6 +3345,20 @@ export type Database = {
             }
             Returns: Json
           }
+        | {
+            Args: {
+              _assignee_ids?: string[]
+              _category_id?: string
+              _channel_id: string
+              _description?: string
+              _due_date?: string
+              _parent_task_id?: string
+              _priority?: string
+              _title: string
+              _user_id: string
+            }
+            Returns: Json
+          }
       create_task_category: {
         Args: { _channel_id: string; _name: string; _user_id: string }
         Returns: Json
@@ -3907,6 +3931,16 @@ export type Database = {
       move_channel_to_category: {
         Args: { _category_id?: string; _channel_id: string; _server_id: string }
         Returns: boolean
+      }
+      move_task: {
+        Args: {
+          _clear_parent?: boolean
+          _new_parent_task_id?: string
+          _new_position?: number
+          _task_id: string
+          _user_id: string
+        }
+        Returns: undefined
       }
       mute_member: {
         Args: {
