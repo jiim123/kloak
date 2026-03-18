@@ -56,25 +56,13 @@ export const MobileSidebar = ({ isDMView, showFriends, onShowFriendsChange, show
   };
 
   return (
-    <Sheet open={isMobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
-      <SheetContent
-        side="left"
-        className="p-0 gap-0 bg-layout-sidebar shadow-lg border-r border-border/30 w-[calc(72px+240px)] max-w-[85vw] flex"
-        hideCloseButton
-        onInteractOutside={(event) => {
-          const target = event.target as HTMLElement | null;
-          if (!target) return;
-
-          // Dropdown menus are portalled to <body>, which Radix Sheet treats as an outside click.
-          // Prevent the sheet from closing so menu item clicks can run, and let handlers close it explicitly.
-          if (target.closest('[data-radix-popper-content-wrapper]') || target.closest('[role="menu"]')) {
-            event.preventDefault();
-          }
-        }}
+    <Drawer direction="left" open={isMobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
+      <DrawerContent
+        className="p-0 gap-0 bg-layout-sidebar shadow-lg border-r border-border/30 w-[calc(72px+240px)] max-w-[85vw] flex flex-row h-full"
       >
-        <SheetHeader className="sr-only">
-          <SheetTitle>Navigation</SheetTitle>
-        </SheetHeader>
+        <DrawerHeader className="sr-only">
+          <DrawerTitle>Navigation</DrawerTitle>
+        </DrawerHeader>
         
         {/* Server sidebar - always visible */}
         <div className="w-[72px] flex-shrink-0 bg-layout-sidebar h-full pt-3">
@@ -94,7 +82,7 @@ export const MobileSidebar = ({ isDMView, showFriends, onShowFriendsChange, show
             <ChannelSidebar />
           )}
         </div>
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   );
 };
