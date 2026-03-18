@@ -160,102 +160,127 @@ export const ChannelContextMenu = ({
       {/* ========== ADMIN SECTION ========== */}
       {isAdmin && (
         <>
-          <ContextMenuLabel className="font-normal text-xs text-muted-foreground">Channel Management</ContextMenuLabel>
-          <ContextMenuItem onClick={() => openModal("edit-channel", { channelId: channel.id })}>
-            <Settings className="w-4 h-4" />
-            Channel Settings
-          </ContextMenuItem>
-          <ContextMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
-            <Trash2 className="w-4 h-4" />
-            Delete Channel
-          </ContextMenuItem>
-          <ContextMenuItem onClick={handleDuplicateChannel}>
-            <CopyPlus className="w-4 h-4" />
-            Duplicate Channel
-          </ContextMenuItem>
-          <ContextMenuItem onClick={() => handleNotImplemented("Archive Channel")}>
-            <Archive className="w-4 h-4" />
-            Archive Channel
-          </ContextMenuItem>
-
-          <ContextMenuSeparator />
-          <ContextMenuLabel className="font-normal text-xs text-muted-foreground">Organization</ContextMenuLabel>
-          <ContextMenuItem onClick={handleTogglePin}>
-            {channelPinned ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
-            {channelPinned ? "Unpin Channel" : "Pin Channel to Top"}
-          </ContextMenuItem>
-
-          {(otherCategories.length > 0 || channel.category_id) && (
-            <ContextMenuSub>
-              <ContextMenuSubTrigger>
-                <FolderInput className="w-4 h-4" />
-                Move to Category
-              </ContextMenuSubTrigger>
-              <ContextMenuSubContent className="w-48">
-                {channel.category_id && (
-                  <ContextMenuItem onClick={() => handleMoveToCategory(null)}>
-                    <Hash className="w-4 h-4 text-muted-foreground" />
-                    Uncategorized
-                  </ContextMenuItem>
-                )}
-                {otherCategories.map((cat) => (
-                  <ContextMenuItem key={cat.id} onClick={() => handleMoveToCategory(cat.id)}>
-                    <FolderInput className="w-4 h-4 text-muted-foreground" />
-                    {cat.name}
-                  </ContextMenuItem>
-                ))}
-              </ContextMenuSubContent>
-            </ContextMenuSub>
-          )}
-
-          <ContextMenuSeparator />
-          <ContextMenuLabel className="font-normal text-xs text-muted-foreground">
-            Notifications & Visibility
-          </ContextMenuLabel>
+          {/* Top-level quick actions */}
           {onMarkAsRead && (
             <ContextMenuItem onClick={onMarkAsRead}>
               <Check className="w-4 h-4" />
               Mark as Read
             </ContextMenuItem>
           )}
-          <ContextMenuItem onClick={() => handleNotImplemented("Mark as Unread")}>
-            <BookOpen className="w-4 h-4" />
-            Mark as Unread
-          </ContextMenuItem>
           <ContextMenuItem onClick={handleToggleMute}>
             {channelMuted ? <Volume2 className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
             {channelMuted ? "Unmute Channel" : "Mute Channel"}
           </ContextMenuItem>
+          <ContextMenuItem onClick={handleTogglePin}>
+            {channelPinned ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
+            {channelPinned ? "Unpin Channel" : "Pin Channel to Top"}
+          </ContextMenuItem>
 
           <ContextMenuSeparator />
-          <ContextMenuLabel className="font-normal text-xs text-muted-foreground">
-            Sharing & Administration
-          </ContextMenuLabel>
-          <ContextMenuItem onClick={onCopyLink}>
-            <Link className="w-4 h-4" />
-            Copy Channel Link
-          </ContextMenuItem>
-          <ContextMenuItem onClick={handleCopyChannelId}>
-            <Copy className="w-4 h-4" />
-            Copy Channel ID
-          </ContextMenuItem>
-          <ContextMenuItem onClick={() => openModal("invite", { channelId: channel.id })}>
-            <UserPlus className="w-4 h-4" />
-            Create Invite to Channel
-          </ContextMenuItem>
-          <ContextMenuItem onClick={() => handleNotImplemented("View Channel Audit Log")}>
-            <ClipboardList className="w-4 h-4" />
-            View Channel Audit Log
-          </ContextMenuItem>
+
+          {/* Channel Management submenu */}
+          <ContextMenuSub>
+            <ContextMenuSubTrigger>
+              <Settings className="w-4 h-4" />
+              Channel Management
+            </ContextMenuSubTrigger>
+            <ContextMenuSubContent className="w-52">
+              <ContextMenuItem onClick={() => openModal("edit-channel", { channelId: channel.id })}>
+                <Settings className="w-4 h-4" />
+                Channel Settings
+              </ContextMenuItem>
+              <ContextMenuItem onClick={handleDuplicateChannel}>
+                <CopyPlus className="w-4 h-4" />
+                Duplicate Channel
+              </ContextMenuItem>
+              <ContextMenuItem onClick={() => handleNotImplemented("Archive Channel")}>
+                <Archive className="w-4 h-4" />
+                Archive Channel
+              </ContextMenuItem>
+              <ContextMenuSeparator />
+              <ContextMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
+                <Trash2 className="w-4 h-4" />
+                Delete Channel
+              </ContextMenuItem>
+            </ContextMenuSubContent>
+          </ContextMenuSub>
+
+          {/* Organization submenu */}
+          <ContextMenuSub>
+            <ContextMenuSubTrigger>
+              <FolderInput className="w-4 h-4" />
+              Organization
+            </ContextMenuSubTrigger>
+            <ContextMenuSubContent className="w-48">
+              {onMarkAsRead && (
+                <ContextMenuItem onClick={() => handleNotImplemented("Mark as Unread")}>
+                  <BookOpen className="w-4 h-4" />
+                  Mark as Unread
+                </ContextMenuItem>
+              )}
+              {(otherCategories.length > 0 || channel.category_id) && (
+                <>
+                  <ContextMenuLabel className="font-normal text-xs text-muted-foreground">Move to Category</ContextMenuLabel>
+                  {channel.category_id && (
+                    <ContextMenuItem onClick={() => handleMoveToCategory(null)}>
+                      <Hash className="w-4 h-4 text-muted-foreground" />
+                      Uncategorized
+                    </ContextMenuItem>
+                  )}
+                  {otherCategories.map((cat) => (
+                    <ContextMenuItem key={cat.id} onClick={() => handleMoveToCategory(cat.id)}>
+                      <FolderInput className="w-4 h-4 text-muted-foreground" />
+                      {cat.name}
+                    </ContextMenuItem>
+                  ))}
+                </>
+              )}
+            </ContextMenuSubContent>
+          </ContextMenuSub>
+
+          {/* Sharing & Administration submenu */}
+          <ContextMenuSub>
+            <ContextMenuSubTrigger>
+              <Link className="w-4 h-4" />
+              Sharing & Admin
+            </ContextMenuSubTrigger>
+            <ContextMenuSubContent className="w-52">
+              <ContextMenuItem onClick={onCopyLink}>
+                <Link className="w-4 h-4" />
+                Copy Channel Link
+              </ContextMenuItem>
+              <ContextMenuItem onClick={handleCopyChannelId}>
+                <Copy className="w-4 h-4" />
+                Copy Channel ID
+              </ContextMenuItem>
+              <ContextMenuSeparator />
+              <ContextMenuItem onClick={() => openModal("invite", { channelId: channel.id })}>
+                <UserPlus className="w-4 h-4" />
+                Create Invite to Channel
+              </ContextMenuItem>
+              <ContextMenuItem onClick={() => handleNotImplemented("View Channel Audit Log")}>
+                <ClipboardList className="w-4 h-4" />
+                View Channel Audit Log
+              </ContextMenuItem>
+            </ContextMenuSubContent>
+          </ContextMenuSub>
         </>
       )}
 
       {/* ========== MEMBER SECTION ========== */}
       {!isAdmin && (
         <>
-          <ContextMenuLabel className="font-normal text-xs text-muted-foreground">
-            Personal Organization
-          </ContextMenuLabel>
+          {/* Top-level quick actions */}
+          {onMarkAsRead && (
+            <ContextMenuItem onClick={onMarkAsRead}>
+              <Check className="w-4 h-4" />
+              Mark as Read
+            </ContextMenuItem>
+          )}
+          <ContextMenuItem onClick={handleToggleMute}>
+            {channelMuted ? <Volume2 className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+            {channelMuted ? "Unmute Channel" : "Mute Channel"}
+          </ContextMenuItem>
           <ContextMenuItem onClick={handleTogglePin}>
             {channelPinned ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
             {channelPinned ? "Unpin Channel" : "Pin Channel"}
@@ -264,30 +289,17 @@ export const ChannelContextMenu = ({
             {channelHidden ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
             {channelHidden ? "Unhide Channel" : "Hide Channel"}
           </ContextMenuItem>
-          {onMarkAsRead && (
-            <ContextMenuItem onClick={onMarkAsRead}>
-              <Check className="w-4 h-4" />
-              Mark as Read
-            </ContextMenuItem>
-          )}
-          <ContextMenuItem onClick={() => handleNotImplemented("Mark as Unread")}>
-            <BookOpen className="w-4 h-4" />
-            Mark as Unread
-          </ContextMenuItem>
 
           <ContextMenuSeparator />
-          <ContextMenuLabel className="font-normal text-xs text-muted-foreground">Notifications</ContextMenuLabel>
-          <ContextMenuItem onClick={handleToggleMute}>
-            {channelMuted ? <Volume2 className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
-            {channelMuted ? "Unmute Channel" : "Mute Channel"}
-          </ContextMenuItem>
 
+          {/* Notifications submenu */}
           <ContextMenuSub>
             <ContextMenuSubTrigger>
               <Bell className="w-4 h-4" />
-              Notification Settings
+              Notifications
             </ContextMenuSubTrigger>
             <ContextMenuSubContent className="w-48">
+              <ContextMenuLabel className="font-normal text-xs text-muted-foreground">Notification Level</ContextMenuLabel>
               <ContextMenuItem onClick={() => handleSetNotifLevel("all")}>
                 <BellRing className="w-4 h-4" />
                 All Messages
@@ -303,15 +315,8 @@ export const ChannelContextMenu = ({
                 Nothing
                 {notifLevel === "nothing" && <Check className="w-3 h-3 ml-auto" />}
               </ContextMenuItem>
-            </ContextMenuSubContent>
-          </ContextMenuSub>
-
-          <ContextMenuSub>
-            <ContextMenuSubTrigger>
-              <Clock className="w-4 h-4" />
-              Mute for Duration
-            </ContextMenuSubTrigger>
-            <ContextMenuSubContent className="w-44">
+              <ContextMenuSeparator />
+              <ContextMenuLabel className="font-normal text-xs text-muted-foreground">Mute for Duration</ContextMenuLabel>
               <ContextMenuItem onClick={() => handleMuteFor(15)}>
                 <Clock className="w-4 h-4" />
                 15 Minutes
@@ -336,16 +341,23 @@ export const ChannelContextMenu = ({
             </ContextMenuSubContent>
           </ContextMenuSub>
 
-          <ContextMenuSeparator />
-          <ContextMenuLabel className="font-normal text-xs text-muted-foreground">Sharing</ContextMenuLabel>
-          <ContextMenuItem onClick={onCopyLink}>
-            <Link className="w-4 h-4" />
-            Copy Channel Link
-          </ContextMenuItem>
-          <ContextMenuItem onClick={handleCopyChannelId}>
-            <Copy className="w-4 h-4" />
-            Copy Channel ID
-          </ContextMenuItem>
+          {/* Sharing submenu */}
+          <ContextMenuSub>
+            <ContextMenuSubTrigger>
+              <Link className="w-4 h-4" />
+              Sharing
+            </ContextMenuSubTrigger>
+            <ContextMenuSubContent className="w-48">
+              <ContextMenuItem onClick={onCopyLink}>
+                <Link className="w-4 h-4" />
+                Copy Channel Link
+              </ContextMenuItem>
+              <ContextMenuItem onClick={handleCopyChannelId}>
+                <Copy className="w-4 h-4" />
+                Copy Channel ID
+              </ContextMenuItem>
+            </ContextMenuSubContent>
+          </ContextMenuSub>
         </>
       )}
     </ContextMenuContent>
