@@ -20,7 +20,7 @@ export const HeroImage = () => {
         src={heroVideo}
       />
       <div className="absolute inset-0 bg-background/60" />
-      <div className="relative z-10 h-[75vh] flex flex-col items-center justify-center px-4 sm:px-6">
+      <div className="relative z-10 min-h-[75vh] flex flex-col items-center justify-center px-4 sm:px-6">
         <div className="w-full max-w-4xl mx-auto text-center">
           {/* Main title */}
           <div className="mb-8">
