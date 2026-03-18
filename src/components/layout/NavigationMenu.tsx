@@ -41,7 +41,7 @@ export const NavigationMenu = () => {
           "mx-auto transition-all duration-300",
           scrolled
             ? "max-w-3xl border border-border/40 bg-background/70 backdrop-blur-xl rounded-2xl shadow-lg shadow-black/10"
-            : "max-w-full bg-background/80 backdrop-blur-xl border-b border-border/30"
+            : "max-w-full bg-transparent border-b border-transparent"
         )}
       >
         <div
