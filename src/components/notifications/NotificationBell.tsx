@@ -168,33 +168,47 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
 
   const handleNotificationClick = (notificationId: string, link: string | null, notificationType: string) => {
     markAsRead(notificationId);
-    if (link) {
-      // Parse the link to extract server, channel, and message IDs
-      const url = new URL(link, window.location.origin);
-      const serverId = url.searchParams.get("server");
-      const channelId = url.searchParams.get("channel");
-      const messageId = url.searchParams.get("message");
-      const conversationId = url.searchParams.get("conversation");
-
-      // For mentions, navigate to the proper server/channel route
-      if (notificationType === "mention" && serverId && channelId) {
-        // Clear current server state to force a fresh load
-        useServerStore.getState().clearServerState();
-
-        // Navigate with message ID for scroll-to-message
-        if (messageId) {
-          navigate(`/app/servers/${serverId}/channels/${channelId}?message=${messageId}`);
-        } else {
-          navigate(`/app/servers/${serverId}/channels/${channelId}`);
-        }
-      } else if (conversationId) {
-        // DM navigation
-        navigate(`/app?conversation=${conversationId}`);
-      } else {
-        // Fallback to the link as-is
-        navigate(link);
-      }
+    if (!link) {
+      setIsOpen(false);
+      return;
     }
+
+    const url = new URL(link, window.location.origin);
+    const serverId = url.searchParams.get("server");
+    const channelId = url.searchParams.get("channel");
+    const messageId = url.searchParams.get("message");
+    const conversationId = url.searchParams.get("conversation");
+
+    // Mention: navigate to channel with message highlight
+    if (notificationType === "mention" && serverId && channelId) {
+      const path = `/app/servers/${serverId}/channels/${channelId}`;
+      const params = messageId ? `?message=${messageId}` : '';
+      setIsOpen(false);
+      setTimeout(() => {
+        navigate(path + params);
+        if (messageId) {
+          setTimeout(() => {
+            window.dispatchEvent(
+              new CustomEvent("scrollToMessage", { detail: { messageId } })
+            );
+          }, 500);
+        }
+      }, 100);
+      return;
+    }
+
+    // DM: clear server context and navigate to conversation
+    if (conversationId) {
+      setIsOpen(false);
+      useServerStore.getState().setCurrentServer(null);
+      setTimeout(() => {
+        navigate(`/app?conversation=${conversationId}`);
+      }, 100);
+      return;
+    }
+
+    // Fallback
+    navigate(link);
     setIsOpen(false);
   };
 
