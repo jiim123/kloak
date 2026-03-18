@@ -584,25 +584,25 @@ const HorizontalSortableServerItem = forwardRef<
         </ContextMenuTrigger>
         <ContextMenuContent>
           <ContextMenuItem onSelect={() => onMarkAsRead?.()}>
-            <CheckCheck className="w-4 h-4 mr-2" />
+            <CheckCheck className="w-4 h-4" />
             Mark as Read
           </ContextMenuItem>
           <ContextMenuItem onSelect={() => onToggleMute?.()}>
             {server.is_muted ? (
               <>
-                <Bell className="w-4 h-4 mr-2" />
+                <Bell className="w-4 h-4" />
                 Unmute Server
               </>
             ) : (
               <>
-                <BellOff className="w-4 h-4 mr-2" />
+                <BellOff className="w-4 h-4" />
                 Mute Server
               </>
             )}
           </ContextMenuItem>
           {canManageServer && onOpenSettings && (
             <ContextMenuItem onSelect={() => onOpenSettings()}>
-              <Settings className="w-4 h-4 mr-2" />
+              <Settings className="w-4 h-4" />
               Server Settings
             </ContextMenuItem>
           )}
@@ -615,7 +615,7 @@ const HorizontalSortableServerItem = forwardRef<
               }}
               className="text-destructive focus:text-destructive"
             >
-              <LogOut className="w-4 h-4 mr-2" />
+              <LogOut className="w-4 h-4" />
               Leave Server
             </ContextMenuItem>
           )}
