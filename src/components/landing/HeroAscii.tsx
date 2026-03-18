@@ -10,7 +10,16 @@ export const HeroImage = () => {
 
   return (
     <section ref={sectionRef} className="relative overflow-hidden bg-[hsl(var(--neutral-0))]">
-      {/* Top hero area — 75vh */}
+      {/* Background video */}
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover"
+        src={heroVideo}
+      />
+      <div className="absolute inset-0 bg-background/60" />
       <div className="relative h-[75vh] flex flex-col items-center justify-center px-4 sm:px-6">
         <div className="w-full max-w-4xl mx-auto text-center">
           {/* Pre-title */}
