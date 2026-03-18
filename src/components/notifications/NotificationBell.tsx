@@ -14,6 +14,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useUIStore } from "@/stores/uiStore";
 import { requestNotificationPermission } from "@/hooks/useRealtimeNotifications";
+import { openUserProfileModal } from "@/lib/userProfilePopover";
 import { cn } from "@/lib/utils";
 import type { Notification } from "@/types";
 
