@@ -9,13 +9,13 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        // Primary - Main action button (silver-grey, black text)
+        // Primary - Main action button (solid foreground, pill shape)
         primary:
-          "rounded-[4px] bg-primary text-primary-foreground hover:bg-primary-hover hover:shadow-[0_4px_12px_hsl(var(--primary)/0.2)] active:bg-primary-active",
+          "rounded-full bg-foreground text-background hover:bg-foreground/90 active:bg-foreground/80 border-0 tracking-wide",
 
-        // Secondary - Supporting action (subtle fill)
+        // Secondary - Supporting action (ghost, pill shape)
         secondary:
-          "rounded-[4px] bg-secondary text-secondary-foreground hover:bg-secondary-hover active:bg-secondary-active",
+          "rounded-full bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted active:bg-muted/80 tracking-wide",
 
         // Tertiary - Subtle/ghost action
         tertiary:
@@ -46,7 +46,7 @@ const buttonVariants = cva(
 
         // Legacy default (maps to primary)
         default:
-          "rounded-[4px] bg-primary text-primary-foreground hover:bg-primary-hover hover:shadow-[0_4px_12px_hsl(var(--primary)/0.2)] active:bg-primary-active",
+          "rounded-full bg-foreground text-background hover:bg-foreground/90 active:bg-foreground/80 border-0 tracking-wide",
 
         // Legacy destructive (maps to error)
         destructive:
