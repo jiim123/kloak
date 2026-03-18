@@ -320,10 +320,12 @@ export const useRealtimeUsers = () => {
         }
       }
 
-      targetIds.forEach((targetId) => {
+    targetIds.forEach((targetId) => {
+        // Skip own user — usePresence hook manages our own status
+        if (targetId === userId) return;
+
         const meta = latestByUser.get(targetId);
         if (!meta) {
-          if (targetId === userId) return;
           const absentSince = absenceStartedAtByUser.get(targetId);
           if (typeof absentSince !== 'number') {
             absenceStartedAtByUser.set(targetId, nowMs);
