@@ -1134,6 +1134,13 @@ export const MembersSidebar = () => {
   if (isMobile) {
     return (
       <Drawer direction="right" open={isMemberSidebarOpen} onOpenChange={setMemberSidebarOpen} modal={false}>
+        {/* Manual overlay for tap-outside-to-close since modal={false} disables the built-in overlay */}
+        {isMemberSidebarOpen && (
+          <div
+            className="fixed inset-0 z-50 bg-black/80"
+            onClick={() => setMemberSidebarOpen(false)}
+          />
+        )}
         <DrawerContent
           className="p-0 w-60 max-w-[80vw]"
         >
