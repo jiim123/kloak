@@ -22,18 +22,8 @@ export const HeroImage = () => {
       <div className="absolute inset-0 bg-background/60" />
       <div className="relative z-10 h-[75vh] flex flex-col items-center justify-center px-4 sm:px-6">
         <div className="w-full max-w-4xl mx-auto text-center">
-          {/* Pre-title */}
-          <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="font-mono text-[10px] sm:text-xs tracking-[0.3em] text-foreground mb-6 sm:mb-8 md:mb-12"
-          >
-            Talk privately
-          </motion.p>
-
           {/* Main title */}
-          <div className="mb-4 sm:mb-6 md:mb-8">
+          <div className="mb-8">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -46,16 +36,6 @@ export const HeroImage = () => {
               </h1>
             </motion.div>
           </div>
-
-          {/* Subtitle */}
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.8 }}
-            className="text-sm sm:text-base md:text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed font-light mb-8"
-          >
-            Where your conversations actually belong to you.
-          </motion.p>
 
           {/* CTA */}
           <motion.div
