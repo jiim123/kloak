@@ -228,9 +228,9 @@
     /* Status colors */
     --kloak-success: var(--success-500);
     --kloak-warning: var(--warning-500);
-    --kloak-online: 150 50% 50%;
-    --kloak-idle: 38 85% 58%;
-    --kloak-dnd: 0 65% 58%;
+    --kloak-online: 160 92% 39%;
+    --kloak-idle: 24 97% 57%;
+    --kloak-dnd: 352 50% 47%;
     --kloak-offline: var(--neutral-400);
 
     /* Code block */
@@ -291,9 +291,9 @@
 
     --kloak-success: 142 76% 52%;
     --kloak-warning: 38 95% 60%;
-    --kloak-online: 142 76% 52%;
-    --kloak-idle: 38 95% 60%;
-    --kloak-dnd: 358 70% 55%;
+    --kloak-online: 160 92% 39%;
+    --kloak-idle: 24 97% 57%;
+    --kloak-dnd: 352 50% 47%;
     --kloak-offline: 210 2% 40%;
 
     --code-block-bg: 356 28% 12%;
@@ -354,9 +354,9 @@
 
     --kloak-success: 142 76% 52%;
     --kloak-warning: 38 95% 60%;
-    --kloak-online: 142 76% 52%;
-    --kloak-idle: 38 95% 60%;
-    --kloak-dnd: 4 43% 46%;
+    --kloak-online: 160 92% 39%;
+    --kloak-idle: 24 97% 57%;
+    --kloak-dnd: 352 50% 47%;
     --kloak-offline: 230 30% 45%;
 
     --code-block-bg: 228 41% 12%;
@@ -416,9 +416,9 @@
 
     --kloak-success: 142 76% 52%;
     --kloak-warning: 38 95% 60%;
-    --kloak-online: 142 76% 52%;
-    --kloak-idle: 38 95% 60%;
-    --kloak-dnd: 358 70% 55%;
+    --kloak-online: 160 92% 39%;
+    --kloak-idle: 24 97% 57%;
+    --kloak-dnd: 352 50% 47%;
     --kloak-offline: 24 15% 45%;
 
     --code-block-bg: 24 31% 10%;
@@ -478,9 +478,9 @@
 
     --kloak-success: 142 76% 52%;
     --kloak-warning: 38 95% 60%;
-    --kloak-online: 142 76% 52%;
-    --kloak-idle: 38 95% 60%;
-    --kloak-dnd: 0 76% 55%;
+    --kloak-online: 160 92% 39%;
+    --kloak-idle: 24 97% 57%;
+    --kloak-dnd: 352 50% 47%;
     --kloak-offline: 0 0% 35%;
 
     --code-block-bg: 0 0% 5%;
