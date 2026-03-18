@@ -1052,11 +1052,11 @@ export const MessageItem = memo(function MessageItem({
                                 freezeGifUntilHover
                               />
                             </ContextMenuTrigger>
-                            <ContextMenuContent className="w-48 rounded-xl border-border/50 p-1.5 z-[60]">
+                            <ContextMenuContent className="w-48 z-[60]">
                               {canKickUser && (
                                 <ContextMenuItem
                                   onClick={handleKickUser}
-                                  className="rounded-lg gap-3 text-orange-400 focus:text-orange-400"
+                                  className="text-orange-400 focus:text-orange-400"
                                 >
                                   <UserX className="w-4 h-4" />
                                   Kick {displayName}

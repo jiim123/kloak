@@ -789,15 +789,15 @@ export const MembersSidebar = () => {
     return (
       <ContextMenu>
         <ContextMenuTrigger asChild>{content}</ContextMenuTrigger>
-        <ContextMenuContent className="w-52 rounded-xl border-border/50 p-1.5 z-[60]">
+        <ContextMenuContent className="w-52 z-[60]">
           {/* Basic actions */}
-          <ContextMenuItem onClick={() => handleMessage(member)} className="rounded-lg gap-3 hover:bg-primary/80">
+          <ContextMenuItem onClick={() => handleMessage(member)}>
             <MessageSquare className="w-4 h-4" />
             Message
           </ContextMenuItem>
 
           {canChangeNickname && (
-            <ContextMenuItem onClick={() => handleChangeNickname(member)} className="rounded-lg gap-3">
+            <ContextMenuItem onClick={() => handleChangeNickname(member)}>
               <Edit3 className="w-4 h-4" />
               Change Nickname
             </ContextMenuItem>
@@ -806,12 +806,12 @@ export const MembersSidebar = () => {
           {/* Moderation actions */}
           {(canKick || canBan) && (
             <>
-              <ContextMenuSeparator className="my-1.5" />
+              <ContextMenuSeparator />
 
               {canKick && (
                 <ContextMenuItem
                   onClick={() => handleKick(member)}
-                  className="rounded-lg gap-3 text-orange-400 focus:text-orange-400"
+                  className="text-orange-400 focus:text-orange-400"
                 >
                   <UserX className="w-4 h-4" />
                   Kick
@@ -821,7 +821,7 @@ export const MembersSidebar = () => {
               {canBan && (
                 <ContextMenuItem
                   onClick={() => handleBan(member)}
-                  className="rounded-lg gap-3 text-destructive focus:text-destructive"
+                  className="text-destructive focus:text-destructive"
                 >
                   <Ban className="w-4 h-4" />
                   Ban
@@ -834,7 +834,7 @@ export const MembersSidebar = () => {
                     setMassBanMode(true);
                     setMassBanSelected(new Set([member.user_id]));
                   }}
-                  className="rounded-lg gap-3 text-destructive focus:text-destructive"
+                  className="text-destructive focus:text-destructive"
                 >
                   <ListChecks className="w-4 h-4" />
                   Select for Mass Ban
@@ -846,13 +846,13 @@ export const MembersSidebar = () => {
           {/* Role management */}
           {canManageRoles && (
             <>
-              <ContextMenuSeparator className="my-1.5" />
+              <ContextMenuSeparator />
               <ContextMenuSub>
-                <ContextMenuSubTrigger className="rounded-lg gap-3">
+                <ContextMenuSubTrigger>
                   <Shield className="w-4 h-4" />
                   Roles
                 </ContextMenuSubTrigger>
-                <ContextMenuSubContent className="w-44 rounded-xl border-border/50 p-1.5" sideOffset={4}>
+                <ContextMenuSubContent className="w-44" sideOffset={4}>
                   {/* Custom roles */}
                   {roles.length > 0 && (
                     <>
@@ -867,7 +867,6 @@ export const MembersSidebar = () => {
                           <ContextMenuItem
                             key={role.id}
                             onClick={() => toggleServerRole(member, role.id)}
-                            className="rounded-lg gap-3"
                           >
                             <div
                               className="w-3 h-3 rounded-full flex-shrink-0"
@@ -888,10 +887,10 @@ export const MembersSidebar = () => {
           {/* Ownership transfer */}
           {canTransfer && (
             <>
-              <ContextMenuSeparator className="my-1.5" />
+              <ContextMenuSeparator />
               <ContextMenuItem
                 onClick={() => handleTransferOwnership(member)}
-                className="rounded-lg gap-3 text-amber-400 focus:text-amber-400"
+                className="text-amber-400 focus:text-amber-400"
               >
                 <Crown className="w-4 h-4" />
                 Transfer Ownership

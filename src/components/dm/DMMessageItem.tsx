@@ -586,28 +586,28 @@ export const DMMessageItem = memo(function DMMessageItem({
           {/* Context Menu */}
           <ContextMenuContent>
             <ContextMenuItem onClick={() => onReply(message)}>
-              <Reply className="w-4 h-4 mr-2" />
+              <Reply className="w-4 h-4" />
               Reply
             </ContextMenuItem>
             {isOwnMessage && (
               <ContextMenuItem onClick={handleStartEditing}>
-                <Pencil className="w-4 h-4 mr-2" />
+                <Pencil className="w-4 h-4" />
                 Edit Message
               </ContextMenuItem>
             )}
             <ContextMenuItem onClick={handleCopyText}>
-              <Copy className="w-4 h-4 mr-2" />
+              <Copy className="w-4 h-4" />
               Copy Text
             </ContextMenuItem>
             <ContextMenuItem onClick={handleCopyMessageId}>
-              <Copy className="w-4 h-4 mr-2" />
+              <Copy className="w-4 h-4" />
               Copy Message ID
             </ContextMenuItem>
             {isOwnMessage && (
               <>
                 <ContextMenuSeparator />
                 <ContextMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive">
-                  <Trash2 className="w-4 h-4 mr-2" />
+                  <Trash2 className="w-4 h-4" />
                   Delete Message
                 </ContextMenuItem>
               </>
