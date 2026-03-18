@@ -29,7 +29,7 @@ export const HeroImage = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
             >
-              <h1 className="text-[clamp(1.5rem,5vw,6rem)] font-medium tracking-tight text-foreground leading-[1.1]">
+              <h1 className="text-[clamp(1.25rem,4vw,5rem)] font-medium tracking-tight text-foreground leading-[1.1]">
                 Finally, a Place to Just Be
                 <br />
                 Together.
