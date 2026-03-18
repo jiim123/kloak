@@ -180,7 +180,7 @@ export const ServerOverviewView = () => {
           )}
           <div
             className={cn(
-              "p-5 sm:p-6 flex items-center gap-4",
+              "p-5 sm:p-6 flex flex-col items-center text-center gap-3",
               currentServer.banner_url && "-mt-10 sm:-mt-12 relative",
             )}
           >
@@ -190,10 +190,8 @@ export const ServerOverviewView = () => {
                 {currentServer.name?.[0]?.toUpperCase() || "S"}
               </AvatarFallback>
             </Avatar>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl sm:text-2xl font-medium truncate">{currentServer.name}</h1>
-              </div>
+            <div className="min-w-0 max-w-full">
+              <h1 className="text-xl sm:text-2xl font-medium truncate">{currentServer.name}</h1>
             </div>
           </div>
         </div>
