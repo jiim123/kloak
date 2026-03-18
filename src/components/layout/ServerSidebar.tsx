@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, forwardRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Folder, Plus, Settings, Home, Mail, Columns3, ChevronDown, ChevronRight, Trash2, Edit2, Palette, LogOut, CheckCheck, BellOff, Bell } from "lucide-react";
+import { Folder, FolderPlus, Plus, Settings, Home, Mail, Columns3, ChevronDown, ChevronRight, Trash2, Edit2, Palette, LogOut, CheckCheck, BellOff, Bell, GripVertical } from "lucide-react";
 import { evaluatePermission } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
