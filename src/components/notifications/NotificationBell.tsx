@@ -390,7 +390,35 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
                         </p>
                         {notification.body && (
                           <p className="text-xs text-muted-foreground line-clamp-1 mt-1 break-all">
-                            {notification.body}
+                            {notification.type === 'friend_request' ? (
+                              (() => {
+                                const username = extractUsernameFromBody(notification.body);
+                                if (username) {
+                                  const request = pendingRequests.find(
+                                    (r) => r.username?.toLowerCase() === username.toLowerCase()
+                                  );
+                                  return (
+                                    <>
+                                      <span
+                                        className="font-medium text-foreground hover:underline cursor-pointer"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (request?.requester_id) {
+                                            openUserProfileModal(openModal, request.requester_id);
+                                          }
+                                        }}
+                                      >
+                                        {username}
+                                      </span>
+                                      {' sent you a friend request'}
+                                    </>
+                                  );
+                                }
+                                return notification.body;
+                              })()
+                            ) : (
+                              notification.body
+                            )}
                           </p>
                         )}
                         <p className="text-xs text-muted-foreground/70 mt-1.5">
