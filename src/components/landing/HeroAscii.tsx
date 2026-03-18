@@ -3,41 +3,10 @@ import { Link } from "react-router-dom";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import promoVideo from "@/assets/kloak-promo.mp4";
+import heroVideo from "@/assets/kloak-hero.mp4";
 
 export const HeroImage = () => {
   const sectionRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start start", "end start"],
-  });
-
-  // Video frame: scale up and fade in as user scrolls down
-  const videoScale = useTransform(scrollYProgress, [0.15, 0.45], [0.85, 1]);
-  const videoOpacity = useTransform(scrollYProgress, [0.1, 0.35], [0, 1]);
-  const videoY = useTransform(scrollYProgress, [0.15, 0.45], [60, 0]);
-
-  // Autoplay when video scrolls into view
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          video.play().catch(() => {});
-        } else {
-          video.pause();
-        }
-      },
-      { threshold: 0.3 },
-    );
-
-    observer.observe(video);
-    return () => observer.disconnect();
-  }, []);
 
   return (
     <section ref={sectionRef} className="relative overflow-hidden bg-[hsl(var(--neutral-0))]">
