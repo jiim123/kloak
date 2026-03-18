@@ -1360,9 +1360,13 @@ export const HorizontalServerSidebar = () => {
             </div>
           </ContextMenuTrigger>
           <ContextMenuContent>
-            <ContextMenuItem onSelect={() => setIsCreateFolderOpen(true)}>Create folder…</ContextMenuItem>
+            <ContextMenuItem onSelect={() => setIsCreateFolderOpen(true)}>
+              <FolderPlus className="w-4 h-4" />
+              Create folder…
+            </ContextMenuItem>
             <ContextMenuSeparator />
             <ContextMenuItem disabled className="text-muted-foreground">
+              <GripVertical className="w-4 h-4" />
               Drag servers onto a folder to organize
             </ContextMenuItem>
           </ContextMenuContent>
