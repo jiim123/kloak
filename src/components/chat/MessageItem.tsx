@@ -1065,7 +1065,7 @@ export const MessageItem = memo(function MessageItem({
                               {canBanUser && (
                                 <ContextMenuItem
                                   onClick={handleBanUser}
-                                  className="rounded-lg gap-3 text-destructive focus:text-destructive"
+                                  className="text-destructive focus:text-destructive"
                                 >
                                   <Ban className="w-4 h-4" />
                                   Ban {displayName}
