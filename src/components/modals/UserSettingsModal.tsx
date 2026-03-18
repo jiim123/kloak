@@ -139,11 +139,6 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showSecretKey, _setShowSecretKey] = useState(false);
   const [showKeyConfirm, setShowKeyConfirm] = useState(false);
-  const [showResetKeyConfirm, setShowResetKeyConfirm] = useState(false);
-  const [newSecretKey, setNewSecretKey] = useState<string | null>(null);
-  const [showNewKeyModal, setShowNewKeyModal] = useState(false);
-  const [isResettingKey, setIsResettingKey] = useState(false);
-  const [resetCooldownEndsAt, setResetCooldownEndsAt] = useState<Date | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDeletePreview, setShowDeletePreview] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
