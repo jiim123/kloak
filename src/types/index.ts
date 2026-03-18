@@ -264,6 +264,7 @@ export interface Task {
   channel_id: string;
   server_id: string;
   category_id: string | null;
+  parent_task_id?: string | null;
   created_by: string;
   title: string;
   description: string | null;
