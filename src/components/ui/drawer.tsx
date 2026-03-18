@@ -3,8 +3,18 @@ import { Drawer as DrawerPrimitive } from "vaul";
 
 import { cn } from "@/lib/utils";
 
-const Drawer = ({ shouldScaleBackground = true, ...props }: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
-  <DrawerPrimitive.Root shouldScaleBackground={shouldScaleBackground} {...props} />
+type DrawerDirection = "top" | "bottom" | "left" | "right";
+
+const DrawerContext = React.createContext<{ direction?: DrawerDirection }>({});
+
+const Drawer = ({
+  shouldScaleBackground = true,
+  direction = "bottom",
+  ...props
+}: React.ComponentProps<typeof DrawerPrimitive.Root> & { direction?: DrawerDirection }) => (
+  <DrawerContext.Provider value={{ direction }}>
+    <DrawerPrimitive.Root shouldScaleBackground={shouldScaleBackground} direction={direction} {...props} />
+  </DrawerContext.Provider>
 );
 Drawer.displayName = "Drawer";
 
@@ -25,22 +35,37 @@ DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName;
 const DrawerContent = React.forwardRef<
   React.ElementRef<typeof DrawerPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-  <DrawerPortal>
-    <DrawerOverlay />
-    <DrawerPrimitive.Content
-      ref={ref}
-      className={cn(
-        "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] border bg-background",
-        className,
-      )}
-      {...props}
-    >
-      <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />
-      {children}
-    </DrawerPrimitive.Content>
-  </DrawerPortal>
-));
+>(({ className, children, ...props }, ref) => {
+  const { direction } = React.useContext(DrawerContext);
+
+  const isHorizontal = direction === "left" || direction === "right";
+
+  return (
+    <DrawerPortal>
+      <DrawerOverlay />
+      <DrawerPrimitive.Content
+        ref={ref}
+        className={cn(
+          "fixed z-50 flex bg-background",
+          // Bottom (default)
+          !isHorizontal && "inset-x-0 bottom-0 mt-24 h-auto flex-col rounded-t-[10px] border-t",
+          // Left
+          direction === "left" && "inset-y-0 left-0 h-full w-3/4 max-w-sm flex-col border-r",
+          // Right
+          direction === "right" && "inset-y-0 right-0 h-full w-3/4 max-w-sm flex-col border-l",
+          // Top
+          direction === "top" && "inset-x-0 top-0 mb-24 h-auto flex-col rounded-b-[10px] border-b",
+          className,
+        )}
+        {...props}
+      >
+        {/* Only show the drag handle for vertical drawers */}
+        {!isHorizontal && <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />}
+        {children}
+      </DrawerPrimitive.Content>
+    </DrawerPortal>
+  );
+});
 DrawerContent.displayName = "DrawerContent";
 
 const DrawerHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (

@@ -9,7 +9,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { useDMStore } from "@/stores/dmStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { useRealtimeMembers } from "@/hooks/useRealtimeMembers";
 import { canModerateByRoles } from "@/lib/permissions";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
@@ -1133,25 +1133,16 @@ export const MembersSidebar = () => {
   // Mobile: render as a right-side drawer (Sheet)
   if (isMobile) {
     return (
-      <Sheet open={isMemberSidebarOpen} onOpenChange={setMemberSidebarOpen} modal={false}>
-        <SheetContent
-          side="right"
+      <Drawer direction="right" open={isMemberSidebarOpen} onOpenChange={setMemberSidebarOpen} modal={false}>
+        <DrawerContent
           className="p-0 w-60 max-w-[80vw]"
-          hideCloseButton
-          onInteractOutside={(event) => {
-            // Prevent closing when interacting with context menus or dropdowns
-            const target = event.target as HTMLElement | null;
-            if (target?.closest("[data-radix-popper-content-wrapper]") || target?.closest('[role="menu"]')) {
-              event.preventDefault();
-            }
-          }}
         >
-          <SheetHeader className="sr-only">
-            <SheetTitle>Members</SheetTitle>
-          </SheetHeader>
+          <DrawerHeader className="sr-only">
+            <DrawerTitle>Members</DrawerTitle>
+          </DrawerHeader>
           <div className="h-full bg-transparent p-1.5">{sidebarContent}</div>
-        </SheetContent>
-      </Sheet>
+        </DrawerContent>
+      </Drawer>
     );
   }
 
